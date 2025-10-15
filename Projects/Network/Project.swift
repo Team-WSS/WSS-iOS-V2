@@ -8,23 +8,21 @@
 import ProjectDescription
 
 let project = Project(
-    name: "Core",
+    name: "Network",
     targets: [
         .target(
-            name: "Core",
+            name: "Network",
             destinations: .iOS,
             product: .framework,
-            bundleId: "io.tuist.Core",
+            bundleId: "io.tuist.Network",
             infoPlist: .extendingDefault(
                 with: [
-                    "UILaunchScreen": [:]
+                    "UILaunchScreen": [:],
+                    "CFBundleDisplayName": "Network"
                 ]
             ),
             sources: ["Sources/**"],
             dependencies: [
-                .project(target: "Network", path: "../Network"),
-                .project(target: "Home", path: "../Feature/Home"),
-                .project(target: "Search", path: "../Feature/Search")
             ]
         )
     ]

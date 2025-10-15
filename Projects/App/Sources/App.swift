@@ -6,14 +6,14 @@
 //
 
 import SwiftUI
-import Home
+
+import Core
 
 @main
 struct Websoso_V2: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            WSSRoutingView()
         }
     }
 }
-
