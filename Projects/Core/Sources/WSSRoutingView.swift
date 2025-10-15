@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+import FeatureMain
+
 public struct WSSRoutingView: View {
     @State var coordinator: WSSCoordinator = .init()
     

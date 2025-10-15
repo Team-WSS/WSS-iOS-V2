@@ -7,15 +7,15 @@
 
 import SwiftUI
 
-enum WSSRoute: Hashable {
+public enum WSSRoute: Hashable {
     case home
     case search
 }
 
-enum WSSSheet: Identifiable {
+public enum WSSSheet: Identifiable {
     case none
     
-    var id: String {
+    public var id: String {
         switch self {
         case .none:
             return "none"
@@ -23,10 +23,10 @@ enum WSSSheet: Identifiable {
     }
 }
 
-enum WSSFullScreenCover: Identifiable {
+public enum WSSFullScreenCover: Identifiable {
     case none
     
-    var id: String {
+    public var id: String {
         switch self {
         case .none:
             return "none"

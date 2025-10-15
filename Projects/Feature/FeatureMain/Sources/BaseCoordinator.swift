@@ -1,6 +1,6 @@
 //
 //  BaseCoordinator.swift
-//  Core
+//  FeatureMain
 //
 //  Created by Seoyeon Choi on 10/15/25.
 //
@@ -9,10 +9,10 @@ import Foundation
 import SwiftUI
 
 @Observable
-class BaseCoordinator<Route: Hashable, Sheet: Identifiable, FullScreenCover: Identifiable> {
-    var path: NavigationPath = .init()
-    var sheet: Sheet?
-    var fullScreenCover: FullScreenCover?
+public class BaseCoordinator<Route: Hashable, Sheet: Identifiable, FullScreenCover: Identifiable> {
+    public var path: NavigationPath = .init()
+    public var sheet: Sheet?
+    public var fullScreenCover: FullScreenCover?
     var onDismiss: (() -> Void)?
     
     func push(route: Route) {
@@ -45,4 +45,3 @@ class BaseCoordinator<Route: Hashable, Sheet: Identifiable, FullScreenCover: Ide
         self.fullScreenCover = nil
     }
 }
-
