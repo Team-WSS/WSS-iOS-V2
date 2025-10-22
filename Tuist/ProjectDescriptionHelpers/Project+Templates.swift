@@ -57,7 +57,6 @@ extension Project {
                         "CFBundleDisplayName": "\(name) Demo"
                     ]),
                     sources: ["Demo/**"],
-                    resources: ["Demo/Resources/**"],
                     dependencies: [.target(name: name)] + dependencies
                 )
             )
