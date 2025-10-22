@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - String Helpers
-public extension KeychainStoring {
+public extension KeychainStore {
     func create(value: String, forKey key: String) throws {
         guard let data = value.data(using: .utf8) else {
             throw KeychainError.dataEncodingFailed
@@ -30,7 +30,7 @@ public extension KeychainStoring {
 }
 
 // MARK: - Codable Helpers
-public extension KeychainStoring {
+public extension KeychainStore {
     func create<T: Codable>(_ value: T, forKey key: String) throws {
         let data = try JSONEncoder().encode(value)
         try create(data: data, forKey: key)
