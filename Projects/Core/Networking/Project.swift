@@ -10,7 +10,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project.framework(
-    name: "Network",
+    name: "Networking",
     hasTests: true,
     hasDemo: true
 )
