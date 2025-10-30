@@ -7,7 +7,7 @@
 
 import Foundation
 
-public extension NetworkRequestable {
+public extension NetworkingRequestable {
     func request<T: Decodable>(
         _ endPoint: Endpoint,
         decodeTo type: T.Type
