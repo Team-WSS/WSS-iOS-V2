@@ -11,6 +11,9 @@ import ProjectDescriptionHelpers
 
 let project = Project.framework(
     name: "Networking",
+    dependencies: [
+        .project(target: "Logger", path: "../Logger")
+    ],
     hasTests: true,
     hasDemo: true
 )
