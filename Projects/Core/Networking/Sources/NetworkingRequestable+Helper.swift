@@ -13,6 +13,11 @@ public extension NetworkingRequestable {
         decodeTo type: T.Type
     ) async throws -> T {
         let data = try await request(endPoint)
-        return try JSONDecoder().decode(type, from: data)
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        }
+        catch {
+            throw NetworkingError.decoding
+        }
     }
 }
