@@ -13,6 +13,7 @@ let workspace = Workspace(
     projects: [
         "Projects/App",
         "Projects/Core/Keychain",
-        "Projects/Core/Networking"
+        "Projects/Core/Networking",
+        "Projects/Core/Logger"
     ]
 )
