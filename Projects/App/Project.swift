@@ -1,10 +1,10 @@
 import ProjectDescription
 
 let project = Project(
-    name: "WSS-iOS-V2",
+    name: "App",
     targets: [
         .target(
-            name: "WSS-iOS-V2",
+            name: "App",
             destinations: .iOS,
             product: .app,
             bundleId: "io.tuist.WSS-iOS-V2",
@@ -14,21 +14,22 @@ let project = Project(
                         "UIColorName": "",
                         "UIImageName": "",
                     ],
+                    "CFBundleDisplayName": "WSS-iOS-V2"
                 ]
             ),
-            sources: ["WSS-iOS-V2/Sources/**"],
-            resources: ["WSS-iOS-V2/Resources/**"],
+            sources: ["Sources/**"],
+            resources: ["Resources/**"],
             dependencies: []
         ),
         .target(
-            name: "WSS-iOS-V2Tests",
+            name: "AppTests",
             destinations: .iOS,
             product: .unitTests,
             bundleId: "io.tuist.WSS-iOS-V2Tests",
             infoPlist: .default,
-            sources: ["WSS-iOS-V2/Tests/**"],
+            sources: ["Tests/**"],
             resources: [],
-            dependencies: [.target(name: "WSS-iOS-V2")]
+            dependencies: [.target(name: "App")]
         ),
     ]
 )
