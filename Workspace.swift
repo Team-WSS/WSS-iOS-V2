@@ -14,6 +14,7 @@ let workspace = Workspace(
         "Projects/App",
         "Projects/Core/Keychain",
         "Projects/Core/Networking",
-        "Projects/Core/Logger"
+        "Projects/Core/Logger",
+        "Projects/Data/**"
     ]
 )
