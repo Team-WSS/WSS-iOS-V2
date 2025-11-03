@@ -3,8 +3,8 @@ import ProjectDescription
 let settings = Settings.settings(
     base: [:],
     configurations: [
-        .debug(name: "Debug", xcconfig: "Sources/Config.xcconfig"),
-        .release(name: "Release", xcconfig: "Sources/Config.xcconfig"),
+        .debug(name: .debug, xcconfig: "Sources/Config/Config_Debug.xcconfig"),
+        .release(name: .release, xcconfig: "Sources/Config/Config_Release.xcconfig")
     ]
 )
 
@@ -21,19 +21,19 @@ let project = Project(
                 with: [
                     "UILaunchScreen": [
                         "UIColorName": "",
-                        "UIImageName": "",
-                        "TEST_TOKEN": "$(TEST_TOKEN)",
-                        "BASE_URL": "$(BASE_URL)",
-                        "BUCKET_URL": "$(BUCKET_URL)",
-                        "KAKAO_APP_KEY": "$(KAKAO_APP_KEY)",
-                        "AMPLITUDE_API_KEY": "$(AMPLITUDE_API_KEY)",
+                        "UIImageName": ""
                     ],
-                    "CFBundleDisplayName": "WSS-iOS-V2"
+                    "CFBundleDisplayName": "WSS-iOS-V2",
+                    "TEST_TOKEN": "$(TEST_TOKEN)",
+                    "BASE_URL": "$(BASE_URL)",
+                    "BUCKET_URL": "$(BUCKET_URL)",
+                    "KAKAO_APP_KEY": "$(KAKAO_APP_KEY)",
+                    "AMPLITUDE_API_KEY": "$(AMPLITUDE_API_KEY)"
                 ]
             ),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
-            dependencies: []
+            dependencies: [.project(target: "Utilites", path: "../Core/Utilites")]
         ),
         .target(
             name: "AppTests",
@@ -44,6 +44,22 @@ let project = Project(
             sources: ["Tests/**"],
             resources: [],
             dependencies: [.target(name: "App")]
-        ),
+        )
+    ],
+    schemes: [
+        Scheme.scheme(name: "DEBUG-WSS",
+                      buildAction: .buildAction(targets: ["App"]),
+                      runAction: .runAction(configuration: .debug),
+                      archiveAction: .archiveAction(configuration: .debug),
+                      profileAction: .profileAction(configuration: .debug),
+                      analyzeAction: .analyzeAction(configuration: .debug)
+                     ),
+        Scheme.scheme(name: "RELEASE-WSS",
+                      buildAction: .buildAction(targets: ["App"]),
+                      runAction: .runAction(configuration: .release),
+                      archiveAction: .archiveAction(configuration: .release),
+                      profileAction: .profileAction(configuration: .release),
+                      analyzeAction: .analyzeAction(configuration: .release)
+                     )
     ]
 )
