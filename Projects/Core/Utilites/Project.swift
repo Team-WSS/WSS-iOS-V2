@@ -1,15 +1,15 @@
 //
-//  Package.swift
-//  AppManifests
+//  Project.swift
+//  Manifests
 //
-//  Created by YunhakLee on 10/21/25.
+//  Created by Seoyeon Choi on 11/3/25.
 //
 
 import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project.framework(
-    name: "Logger",
+    name: "Utilites",
     hasTests: false,
     hasDemo: true
 )

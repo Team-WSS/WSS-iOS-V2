@@ -5,7 +5,6 @@
 //  Created by Seoyeon Choi on 10/31/25.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectDescriptionHelpers
 
