@@ -13,9 +13,8 @@ public enum Config {
             public static let baseURL = "BASE_URL"
             public static let testToken = "TEST_TOKEN"
             public static let bucketURL = "BUCKET_URL"
-            static let kakaoAppKey = "KAKAO_APP_KEY"
-            static let appStoreID = "APPSTORE_ID"
-            static let amplitudeAPIKey = "AMPLITUDE_API_KEY"
+            public static let kakaoAppKey = "KAKAO_APP_KEY"
+            public static let amplitudeAPIKey = "AMPLITUDE_API_KEY"
         }
     }
     
