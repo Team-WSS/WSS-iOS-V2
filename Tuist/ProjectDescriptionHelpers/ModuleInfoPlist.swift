@@ -30,14 +30,15 @@ public enum ModuleInfoPlist {
         case .data:
             return [
                 "CFBundleIdentifier": "$(PRODUCT_BUNDLE_IDENTIFIER)",
-                "CFBundleName": "$(TARGET_NAME)"
+                "CFBundleName": "$(TARGET_NAME)",
+                "AMPLITUDE_API_KEY": "$(AMPLITUDE_API_KEY)",
+                "BASE_URL": "$(BASE_URL)",
+                "TEST_API_KEY": "$(TEST_API_KEY)"
             ]
         case .core:
             return [
                 "CFBundleIdentifier": "$(PRODUCT_BUNDLE_IDENTIFIER)",
-                "CFBundleName": "$(TARGET_NAME)",
-                "BASE_URL": "$(BASE_URL)",
-                "AMPLITUDE_API_KEY": "$(AMPLITUDE_API_KEY)"
+                "CFBundleName": "$(TARGET_NAME)"
             ]
         case .ui:
             return [
