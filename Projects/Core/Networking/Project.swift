@@ -5,15 +5,15 @@
 //  Created by YunhakLee on 10/21/25.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectDescriptionHelpers
+import DependencyPlugin
 
-let project = Project.framework(
-    name: "Networking",
-    dependencies: [
-        .project(target: "Logger", path: "../Logger")
-    ],
-    hasTests: true,
-    hasDemo: true
+let project = Project.createModule(
+    name: ModuleType.Core.Networking.name,
+    product: .framework,
+    targets: [.sources, .demo, .tests],
+    internalDependencies: [
+        .Core.Logger
+    ]
 )

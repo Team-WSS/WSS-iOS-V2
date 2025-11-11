@@ -5,12 +5,12 @@
 //  Created by YunhakLee on 10/21/25.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectDescriptionHelpers
+import DependencyPlugin
 
-let project = Project.framework(
-    name: "Keychain",
-    hasTests: false,
-    hasDemo: true
+let project = Project.createModule(
+    name: ModuleType.Core.Keychain.name,
+    product: .framework,
+    targets: [.sources, .demo]
 )
