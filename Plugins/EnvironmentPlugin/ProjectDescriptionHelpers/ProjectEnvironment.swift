@@ -21,7 +21,7 @@ public let env = ProjectEnvironment(
     appName: "Websoso",
     targetName: "WSS-iOS",
     targetTestName: "WSS-iOSTests",
-    organizationName: "io.tuist.WSS",
+    organizationName: "com.wss.ios",
     deploymentTarget: .iOS("15.0"),
     destination: .iOS,
     baseSetting: [:]
