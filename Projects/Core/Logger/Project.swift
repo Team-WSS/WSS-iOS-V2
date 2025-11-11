@@ -9,8 +9,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 import DependencyPlugin
 
-let project = Project.createModule(
+let project = Project.createCoreModule(
     name: ModuleType.Core.Logger.name,
-    product: .framework,
     targets: [.sources, .demo]
 )

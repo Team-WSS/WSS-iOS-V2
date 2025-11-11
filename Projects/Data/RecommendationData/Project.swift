@@ -9,9 +9,8 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 import DependencyPlugin
 
-let project = Project.createModule(
+let project = Project.createDataModule(
     name: ModuleType.Data.RecommendationData.name,
-    product: .framework,
     targets: [.sources, .demo, .tests],
     internalDependencies: [
         .Core.Networking
