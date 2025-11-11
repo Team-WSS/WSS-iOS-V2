@@ -118,7 +118,6 @@ extension Project {
             organizationName: env.organizationName,
             settings: .settings(
                 base: env.baseSetting,
-                configurations: configurations,
                 defaultSettings: .recommended
             ),
             targets: allTargets
@@ -153,7 +152,6 @@ extension Project {
             organizationName: env.organizationName,
             settings: .settings(
                 base: env.baseSetting,
-                configurations: configurations,
                 defaultSettings: .recommended
             ),
             targets: allTargets
@@ -258,7 +256,6 @@ extension Project {
             organizationName: env.organizationName,
             settings: .settings(
                 base: env.baseSetting,
-                configurations: configurations,
                 defaultSettings: .recommended
             ),
             targets: allTargets
