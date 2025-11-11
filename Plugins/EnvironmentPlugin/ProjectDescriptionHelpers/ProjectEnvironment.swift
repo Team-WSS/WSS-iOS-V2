@@ -22,7 +22,7 @@ public let env = ProjectEnvironment(
     targetName: "WSS-iOS",
     targetTestName: "WSS-iOSTests",
     organizationName: "com.wss.ios",
-    deploymentTarget: .iOS("15.0"),
+    deploymentTarget: .iOS("17.0"),
     destination: .iOS,
     baseSetting: [:]
 )
