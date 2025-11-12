@@ -8,6 +8,6 @@
 import ProjectDescription
 
 public extension ConfigurationName {
-    static var dev: ConfigurationName { configuration(ProjectConfiguration.dev.rawValue) }
-    static var prod: ConfigurationName { configuration(ProjectConfiguration.prod.rawValue) }
+    static var dev: ConfigurationName { ProjectConfiguration.dev.configurationName }
+    static var prod: ConfigurationName { ProjectConfiguration.prod.configurationName }
 }
