@@ -12,19 +12,19 @@ public extension ProjectDescription.Path {
         return .relativeToRoot("Projects/\(path)")
     }
     static func relativeToFeature(_ path: ModuleType.Feature) -> Self {
-        return .relativeToRoot("Projects/Feature/\(path)")
+        return .relativeToRoot("Projects/Feature/\(path.name)")
     }
     static func relativeToDomain(_ path: ModuleType.Domain) -> Self {
-        return .relativeToRoot("Projects/Domain/\(path)")
+        return .relativeToRoot("Projects/Domain/\(path.name)")
     }
     static func relativeToData(_ path: ModuleType.Data) -> Self {
-        return .relativeToRoot("Projects/Data/\(path)")
+        return .relativeToRoot("Projects/Data/\(path.name)")
     }
     static func relativeToCore(_ path: ModuleType.Core) -> Self {
-        return .relativeToRoot("Projects/Core/\(path)")
+        return .relativeToRoot("Projects/Core/\(path.name)")
     }
     static func relativeToUI(_ path: ModuleType.UI) -> Self {
-        return .relativeToRoot("Projects/UI/\(path)")
+        return .relativeToRoot("Projects/UI/\(path.name)")
     }
     static var app: Self {
         return .relativeToRoot("Projects/App")

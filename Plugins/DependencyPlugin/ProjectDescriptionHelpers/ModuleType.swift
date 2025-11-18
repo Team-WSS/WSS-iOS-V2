@@ -53,13 +53,13 @@ public enum ModuleType {
     }
     
     public enum Core: String {
-        case keyChain
+        case keychain
         case networking
         case logger
         
         public var name: String {
             switch self {
-            case .keyChain: "KeyChain"
+            case .keychain: "Keychain"
             case .networking: "Networking"
             case .logger: "Logger"
             }

@@ -10,7 +10,7 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createCoreModule(
-    name: ModuleType.Core.Networking.name,
+    name: ModuleType.Core.networking.name,
     targets: [.sources, .demo, .tests],
     internalDependencies: [
         .Core.Logger

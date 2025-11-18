@@ -63,13 +63,18 @@ public extension TargetDependency.Data {
 
 public extension TargetDependency.Core {
     static let Keychain = TargetDependency.project(
-        target: ModuleType.Core.keyChain.targetName(type: .sources),
-        path: .relativeToCore(.keyChain)
+        target: ModuleType.Core.keychain.targetName(type: .sources),
+        path: .relativeToCore(.keychain)
     )
     
     static let KeychainDemo = TargetDependency.project(
-        target: ModuleType.Core.keyChain.targetName(type: .demo),
-        path: .relativeToCore(.keyChain)
+        target: ModuleType.Core.keychain.targetName(type: .demo),
+        path: .relativeToCore(.keychain)
+    )
+    
+    static let KeychainTests = TargetDependency.project(
+        target: ModuleType.Core.keychain.targetName(type: .tests),
+        path: .relativeToCore(.keychain)
     )
     
     static let Logger = TargetDependency.project(

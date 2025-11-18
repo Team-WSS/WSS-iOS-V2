@@ -10,7 +10,7 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.RecommendationData.name,
+    name: ModuleType.Data.recommendation.name,
     targets: [.sources, .demo, .tests],
     internalDependencies: [
         .Core.Networking
