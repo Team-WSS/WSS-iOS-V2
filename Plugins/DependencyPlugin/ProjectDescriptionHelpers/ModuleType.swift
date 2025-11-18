@@ -8,79 +8,81 @@
 import Foundation
 
 public enum ModuleType {
-    case feature(Feature)
-    case domain(Domain)
-    case data(Data)
-    case core(Core)
-    case ui(UI)
-}
-
-public extension ModuleType {
-    enum Feature: String {
-        case HomeFeature
-        case FeedFeature
+    public enum Feature: String {
+        case home
+        case feed
         
-        public var name: String { self.rawValue }
-
-        func targetName(type: TargetType) -> String {
-            "\(self.rawValue)\(type.rawValue)"
+        public var name: String {
+            switch self {
+            case .home: "HomeFeature"
+            case .feed: "FeedFeature"
+            }
         }
-    }
-}
-
-public extension ModuleType {
-    enum Domain: String {
-        case RecommendationDomain
-        
-        public var name: String { self.rawValue }
-
-        func targetName(type: TargetType) -> String {
-            "\(self.rawValue)\(type.rawValue)"
-        }
-    }
-}
-
-public extension ModuleType {
-    enum Data: String {
-        case RecommendationData
-        
-        public var name: String { self.rawValue }
-
-        func targetName(type: TargetType) -> String {
-            "\(self.rawValue)\(type.rawValue)"
-        }
-    }
-}
-
-public extension ModuleType {
-    enum Core: String {
-        case Keychain
-        case Networking
-        case Logger
-        
-        public var name: String { self.rawValue }
-
-        func targetName(type: TargetType) -> String {
-            "\(self.rawValue)\(type.rawValue)"
-        }
-    }
-}
-
-public extension ModuleType {
-    enum UI: String {
-        case DesignSystem
-        case WSSComponent
-        
-        public var name: String { self.rawValue }
         
         func targetName(type: TargetType) -> String {
-            "\(self.rawValue)\(type.rawValue)"
+            name + type.suffix
         }
     }
-}
-
-public enum TargetType: String {
-    case sources = ""
-    case demo = "Demo"
-    case tests = "Tests"
+    
+    public enum Domain: String {
+        case recommendation
+        
+        public var name: String {
+            switch self {
+            case .recommendation: "RecommendationDomain"
+            }
+        }
+        
+        func targetName(type: TargetType) -> String {
+            name + type.suffix
+        }
+    }
+    
+    public enum Data: String {
+        case recommendation
+        
+        public var name: String {
+            switch self {
+            case .recommendation: "RecommendationData"
+            }
+        }
+        
+        func targetName(type: TargetType) -> String {
+            name + type.suffix
+        }
+    }
+    
+    public enum Core: String {
+        case keyChain
+        case networking
+        case logger
+        
+        public var name: String {
+            switch self {
+            case .keyChain: "KeyChain"
+            case .networking: "Networking"
+            case .logger: "Logger"
+            }
+        }
+        
+        func targetName(type: TargetType) -> String {
+            name + type.suffix
+        }
+    }
+    
+    public enum UI: String {
+        case designSystem
+        case wssComponent
+        
+        public var name: String {
+            switch self {
+            case .designSystem: "DesignSystem"
+            case .wssComponent: "WSSComponent"
+            }
+        }
+        
+        func targetName(type: TargetType) -> String {
+            name + type.suffix
+        }
+    }
 }
