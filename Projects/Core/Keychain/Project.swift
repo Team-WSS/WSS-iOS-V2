@@ -10,6 +10,6 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createCoreModule(
-    name: ModuleType.Core.Keychain.name,
-    targets: [.sources, .demo]
+    name: ModuleType.Core.keychain.name,
+    targets: [.sources, .demo, .tests]
 )
