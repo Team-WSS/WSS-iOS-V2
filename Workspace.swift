@@ -11,10 +11,6 @@ import ProjectDescription
 let workspace = Workspace(
     name: "WSS-iOS-V2",
     projects: [
-        "Projects/App",
-        "Projects/Core/Keychain",
-        "Projects/Core/Networking",
-        "Projects/Core/Logger",
-        "Projects/Data/**"
+        "Projects/**"
     ]
 )

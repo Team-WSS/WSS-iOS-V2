@@ -5,15 +5,14 @@
 //  Created by Seoyeon Choi on 10/31/25.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectDescriptionHelpers
+import DependencyPlugin
 
-let project = Project.framework(
-    name: "RecommendationData",
-    dependencies: [
-        .project(target: "Networking", path: "../../Core/Networking")
-    ],
-    hasTests: true,
-    hasDemo: true
+let project = Project.createDataModule(
+    name: ModuleType.Data.recommendation.name,
+    targets: [.sources, .demo, .tests],
+    internalDependencies: [
+        .Core.Networking
+    ]
 )

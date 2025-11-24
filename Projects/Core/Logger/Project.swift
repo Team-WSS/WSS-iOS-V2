@@ -5,12 +5,11 @@
 //  Created by YunhakLee on 10/21/25.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectDescriptionHelpers
+import DependencyPlugin
 
-let project = Project.framework(
-    name: "Logger",
-    hasTests: false,
-    hasDemo: true
+let project = Project.createCoreModule(
+    name: ModuleType.Core.logger.name,
+    targets: [.sources, .demo]
 )

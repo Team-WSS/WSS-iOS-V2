@@ -1,74 +1,264 @@
 import ProjectDescription
 
-// MARK: - Common Framework Template
+import ConfigurationPlugin
+import EnvironmentPlugin
+import DependencyPlugin
+
+let configurations: [Configuration] = [
+    .debug(name: .debug,
+           xcconfig: .relativeToXCConfig(type: .dev, name: env.targetName)),
+    .release(name: .release,
+             xcconfig: .relativeToXCConfig(type: .prod, name: env.targetName))
+]
 
 extension Project {
-    public static func framework(
+    
+    //MARK: - 공통으로 Target을 생성하는 함수
+    
+    private static func makeBaseTargets(
         name: String,
-        bundleIdPrefix: String = "io.tuist",
-        dependencies: [TargetDependency] = [],
-        hasTests: Bool = false,
-        hasDemo: Bool = false,
-        infoPlist: InfoPlist = .default
-    ) -> Project {
-        let lowerName = name.lowercased()
-        let bundleId = "\(bundleIdPrefix).\(lowerName)"
-
-        var targets: [Target] = [
+        product: Product,
+        targets: Set<TargetType>,
+        sources: SourceFilesList,
+        resources: ResourceFileElements?,
+        internalDependencies: [TargetDependency],
+        externalDependencies: [TargetDependency],
+        demoDependencies: [TargetDependency],
+        testDependencies: [TargetDependency],
+        deploymentTarget: DeploymentTargets?,
+        infoPlist: InfoPlist
+    ) -> [Target] {
+        
+        var allTargets: [Target] = []
+        let dependencies = internalDependencies + externalDependencies
+        
+        // Sources
+        allTargets.append(
             .target(
                 name: name,
-                destinations: .iOS,
-                product: .framework,
-                bundleId: bundleId,
-                deploymentTargets: .iOS("16.0"),
+                destinations: env.destination,
+                product: product,
+                bundleId: "\(env.organizationName).\(name)",
+                deploymentTargets: deploymentTarget,
                 infoPlist: infoPlist,
-                sources: ["Sources/**"],
-                resources: [],
+                sources: sources,
+                resources: resources,
                 dependencies: dependencies
             )
-        ]
-
-        if hasTests {
-            targets.append(
-                .target(
-                    name: "\(name)Tests",
-                    destinations: .iOS,
-                    product: .unitTests,
-                    bundleId: "\(bundleIdPrefix).\(lowerName).tests",
-                    deploymentTargets: .iOS("16.0"),
-                    infoPlist: .default,
-                    sources: ["Tests/**"],
-                    resources: [],
-                    dependencies: [.target(name: name)]
-                )
-            )
-        }
-
-        if hasDemo {
-            targets.append(
+        )
+        
+        // Demo 
+        if targets.contains(.demo) {
+            var demoDeps = demoDependencies
+            demoDeps.append(.target(name: name))
+            
+            allTargets.append(
                 .target(
                     name: "\(name)Demo",
-                    destinations: .iOS,
+                    destinations: env.destination,
                     product: .app,
-                    bundleId: "\(bundleIdPrefix).\(lowerName).demo",
-                    deploymentTargets: .iOS("16.0"),
-                    infoPlist: .extendingDefault(with: [
-                        "UILaunchScreen": [:],
-                        "CFBundleDisplayName": "\(name) Demo"
-                    ]),
+                    bundleId: "\(env.organizationName).\(name)Demo",
+                    deploymentTargets: deploymentTarget,
+                    infoPlist: infoPlist,
                     sources: ["Demo/**"],
-                    dependencies: [.target(name: name)] + dependencies
+                    resources: [],
+                    dependencies: demoDeps
                 )
             )
         }
-
+        
+        // Tests
+        if targets.contains(.tests) {
+            var testDeps = testDependencies
+            testDeps.append(.target(name: name))
+            
+            allTargets.append(
+                .target(
+                    name: "\(name)Tests",
+                    destinations: env.destination,
+                    product: .unitTests,
+                    bundleId: "\(env.organizationName).\(name)Tests",
+                    deploymentTargets: deploymentTarget,
+                    infoPlist: infoPlist,
+                    sources: ["Tests/**"],
+                    resources: [],
+                    dependencies: testDeps
+                )
+            )
+        }
+        
+        return allTargets
+    }
+    
+    // MARK: - Feature Module
+    
+    public static func createFeatureModule(
+        name: String,
+        targets: Set<TargetType>,
+        internalDependencies: [TargetDependency] = [],
+        externalDependencies: [TargetDependency] = []
+    ) -> Project {
+        
+        let allTargets = makeBaseTargets(
+            name: name,
+            product: .framework,
+            targets: targets,
+            sources: ["Sources/**"],
+            resources: nil,
+            internalDependencies: internalDependencies,
+            externalDependencies: externalDependencies,
+            demoDependencies: [],
+            testDependencies: [],
+            deploymentTarget: env.deploymentTarget,
+            infoPlist: ModuleInfoPlist.feature.infoPlist
+        )
+        
         return Project(
             name: name,
-            settings: .settings(configurations: [
-                .debug(name: .debug),
-                .release(name: .release)
-            ]),
-            targets: targets
+            organizationName: env.organizationName,
+            settings: .settings(
+                base: env.baseSetting,
+                defaultSettings: .recommended
+            ),
+            targets: allTargets
+        )
+    }
+    
+    // MARK: - Domain Module
+    
+    public static func createDomainModule(
+        name: String,
+        targets: Set<TargetType>,
+        internalDependencies: [TargetDependency] = [],
+        externalDependencies: [TargetDependency] = []
+    ) -> Project {
+
+        let allTargets = makeBaseTargets(
+            name: name,
+            product: .framework,
+            targets: targets,
+            sources: ["Sources/**"],
+            resources: nil,
+            internalDependencies: internalDependencies,
+            externalDependencies: externalDependencies,
+            demoDependencies: [],
+            testDependencies: [],
+            deploymentTarget: env.deploymentTarget,
+            infoPlist: ModuleInfoPlist.domain.infoPlist
+        )
+        
+        return Project(
+            name: name,
+            organizationName: env.organizationName,
+            settings: .settings(
+                base: env.baseSetting,
+                defaultSettings: .recommended
+            ),
+            targets: allTargets
+        )
+    }
+    
+    // MARK: - Data Module
+    
+    public static func createDataModule(
+        name: String,
+        targets: Set<TargetType>,
+        internalDependencies: [TargetDependency] = [],
+        externalDependencies: [TargetDependency] = []
+    ) -> Project {
+        
+        let allTargets = makeBaseTargets(
+            name: name,
+            product: .framework,
+            targets: targets,
+            sources: ["Sources/**"],
+            resources: nil,
+            internalDependencies: internalDependencies,
+            externalDependencies: externalDependencies,
+            demoDependencies: [],
+            testDependencies: [],
+            deploymentTarget: env.deploymentTarget,
+            infoPlist: ModuleInfoPlist.data.infoPlist
+        )
+        
+        return Project(
+            name: name,
+            organizationName: env.organizationName,
+            settings: .settings(
+                base: env.baseSetting,
+                configurations: configurations,
+                defaultSettings: .recommended
+            ),
+            targets: allTargets
+        )
+    }
+    
+    // MARK: - Core Module
+    
+    public static func createCoreModule(
+        name: String,
+        targets: Set<TargetType>,
+        internalDependencies: [TargetDependency] = [],
+        externalDependencies: [TargetDependency] = []
+    ) -> Project {
+
+        let allTargets = makeBaseTargets(
+            name: name,
+            product: .framework,
+            targets: targets,
+            sources: ["Sources/**"],
+            resources: nil,
+            internalDependencies: internalDependencies,
+            externalDependencies: externalDependencies,
+            demoDependencies: [],
+            testDependencies: [],
+            deploymentTarget: env.deploymentTarget,
+            infoPlist: ModuleInfoPlist.core.infoPlist
+        )
+        
+        return Project(
+            name: name,
+            organizationName: env.organizationName,
+            settings: .settings(
+                base: env.baseSetting,
+                configurations: configurations,
+                defaultSettings: .recommended
+            ),
+            targets: allTargets
+        )
+    }
+    
+    // MARK: - UI Module
+    
+    public static func createUIModule(
+        name: String,
+        targets: Set<TargetType>,
+        internalDependencies: [TargetDependency] = [],
+        externalDependencies: [TargetDependency] = []
+    ) -> Project {
+
+        let allTargets = makeBaseTargets(
+            name: name,
+            product: .framework,
+            targets: targets,
+            sources: ["Sources/**"],
+            resources: ["Resources/**"],
+            internalDependencies: internalDependencies,
+            externalDependencies: externalDependencies,
+            demoDependencies: [],
+            testDependencies: [],
+            deploymentTarget: env.deploymentTarget,
+            infoPlist: ModuleInfoPlist.ui.infoPlist
+        )
+        
+        return Project(
+            name: name,
+            organizationName: env.organizationName,
+            settings: .settings(
+                base: env.baseSetting,
+                defaultSettings: .recommended
+            ),
+            targets: allTargets
         )
     }
 }
