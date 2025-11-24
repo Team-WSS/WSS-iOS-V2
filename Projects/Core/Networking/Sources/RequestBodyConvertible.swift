@@ -14,7 +14,6 @@ protocol RequestBodyConvertible: Encodable {
 
 extension RequestBodyConvertible {
     func asRequestBody() -> Data? {
-        // 나중에 여기서 공통 encoder, date 전략, key 전략 등도 통일 가능
         try? JSONEncoder().encode(self)
     }
     

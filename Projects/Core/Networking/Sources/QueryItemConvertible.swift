@@ -13,7 +13,7 @@ protocol QueryItemConvertible: Encodable {
 }
 
 extension QueryItemConvertible {
-    var asQueryItems: [URLQueryItem] {
+    func asQueryItems() -> [URLQueryItem] {
         // Encodable -> Data -> [String: Any]
         guard let data = try? JSONEncoder().encode(self),
               let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
