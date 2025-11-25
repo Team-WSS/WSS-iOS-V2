@@ -8,11 +8,11 @@
 
 import Foundation
 
-protocol QueryItemConvertible: Encodable {
+public protocol QueryItemConvertible: Encodable {
     var asQueryItems: [URLQueryItem] { get }
 }
 
-extension QueryItemConvertible {
+public extension QueryItemConvertible {
     func asQueryItems() -> [URLQueryItem] {
         // Encodable -> Data -> [String: Any]
         guard let data = try? JSONEncoder().encode(self),

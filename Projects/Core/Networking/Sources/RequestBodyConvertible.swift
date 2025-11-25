@@ -8,11 +8,11 @@
 
 import Foundation
 
-protocol RequestBodyConvertible: Encodable {
+public protocol RequestBodyConvertible: Encodable {
     func asRequestBody() -> Data?
 }
 
-extension RequestBodyConvertible {
+public extension RequestBodyConvertible {
     func asRequestBody() -> Data? {
         try? JSONEncoder().encode(self)
     }
