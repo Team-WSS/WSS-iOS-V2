@@ -12,7 +12,6 @@ import Networking
 
 final class DefaultNovelReviewService: NovelReviewService {
     private let client: NetworkingRequestable
-    private let decoder: JSONDecoder = JSONDecoder()
 
     init(client: NetworkingRequestable) {
         self.client = client
