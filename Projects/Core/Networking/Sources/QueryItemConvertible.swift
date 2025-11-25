@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol QueryItemConvertible: Encodable {
-    var asQueryItems: [URLQueryItem] { get }
+    func asQueryItems() -> [URLQueryItem]
 }
 
 public extension QueryItemConvertible {
