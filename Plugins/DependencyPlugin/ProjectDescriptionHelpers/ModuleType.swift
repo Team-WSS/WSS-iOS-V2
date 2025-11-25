@@ -63,10 +63,12 @@ public enum ModuleType {
     
     public enum Data: String {
         case recommendation
+        case novelReview
         
         public var name: String {
             switch self {
             case .recommendation: "RecommendationData"
+            case .novelReview: "NovelReviewData"
             }
         }
         
