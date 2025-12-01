@@ -85,7 +85,7 @@ public extension WSSFontStyle {
     
     var letterSpacing: CGFloat {
         switch self {
-        case .headline1: -0.6
+        case .headline1: -1.2
             
         case .title1: -0.6
         case .title2: -0.6
@@ -106,22 +106,19 @@ public extension WSSFontStyle {
     
     var lineHeight: CGFloat {
         switch self {
-        case .headline1: 140
-            
-        case .title1: 140
-        case .title2: 140
-        case .title3: 100
-            
-        case .body1: 140
-        case .body2: 150
-        case .body3: 150
-        case .body4: 145
-        case .body4_2: 145
-        case .body5: 145
-        case .body5_2: 145
-            
-        case .label1: 145
-        case .label2: 100
+        case .headline1: return 1.4
+        case .title1: return 1.4
+        case .title2: return 1.4
+        case .title3: return 1.0
+        case .body1: return 1.4
+        case .body2: return 1.5
+        case .body3: return 1.5
+        case .body4: return 1.45
+        case .body4_2: return 1.45
+        case .body5: return 1.45
+        case .body5_2: return 1.45
+        case .label1: return 1.45
+        case .label2: return 1.0
         }
     }
 }
