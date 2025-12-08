@@ -61,8 +61,12 @@ public extension WSSFontStyle {
             return DesignSystemFontFamily.Pretendard.medium
         }
     }
+}
+
+extension WSSFontStyle {
+    private static let scaleRatio: CGFloat = max(1.adjustedHeight, 1.adjustedWidth)
     
-    var fontSize: CGFloat {
+    var defaultFontSize: CGFloat {
         switch self {
         case .headline1: 20
             
@@ -83,9 +87,21 @@ public extension WSSFontStyle {
         }
     }
     
+    private var adjustedSize: CGFloat {
+        return defaultFontSize * WSSFontStyle.scaleRatio
+    }
+    
+    func uiFontGuide() -> UIFont {
+        switch self {
+        default: return UIFont(name: self.fontName.name, size: self.adjustedSize)!
+        }
+    }
+}
+
+extension WSSFontStyle {
     var letterSpacing: CGFloat {
         switch self {
-        case .headline1: -1.2
+        case .headline1: -0.6
             
         case .title1: -0.6
         case .title2: -0.6
@@ -107,9 +123,11 @@ public extension WSSFontStyle {
     var lineHeight: CGFloat {
         switch self {
         case .headline1: return 1.4
+            
         case .title1: return 1.4
         case .title2: return 1.4
-        case .title3: return 1.0
+        case .title3: return 1.5
+            
         case .body1: return 1.4
         case .body2: return 1.5
         case .body3: return 1.5
@@ -117,6 +135,7 @@ public extension WSSFontStyle {
         case .body4_2: return 1.45
         case .body5: return 1.45
         case .body5_2: return 1.45
+            
         case .label1: return 1.45
         case .label2: return 1.0
         }
