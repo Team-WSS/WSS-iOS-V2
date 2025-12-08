@@ -12,45 +12,17 @@ import DesignSystem
 struct WSSFontDemoView: View {
     var body: some View {
         VStack {
-            Text("Headline1")
+            Text("제목입니다 제목이라구요 제목이야 이게 제목이라고")
                 .applyWSSFont(.headline1)
-                .background(DesignSystemAsset.PrimaryColor.wssPrimary100.swiftUIColor)
-            
-            Text("Title1")
-                .applyWSSFont(.title1)
-            
-            Text("Title2")
-                .applyWSSFont(.title2)
-            
-            Text("Title3")
+                .border(DesignSystemAsset.PrimaryColors.wssPrimary100.swiftUIColor)
+           
+            Text("마법학교 마법사로 살아가는 법마법학교 마법사로 살아가는 법마법학교 마법사로 살아가는 법")
                 .applyWSSFont(.title3)
+                .border(DesignSystemAsset.PrimaryColors.wssPrimary100.swiftUIColor)
             
-            Text("Body1")
-                .applyWSSFont(.body1)
-            
-            Text("Body2")
+            Text("대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고설정을 짠게 느껴져서 좋아요. 요즘 하도 라이트하고 가짜 마법물이 많아서 ㅠ 찐 성장+마법물!!글고 일단 작가님 필력이 무난하게 잘뽑으시고 연재도 빠르")
                 .applyWSSFont(.body2)
-            
-            Text("Body3")
-                .applyWSSFont(.body3)
-            
-            Text("Body4")
-                .applyWSSFont(.body4)
-            
-            Text("Body4_2")
-                .applyWSSFont(.body4_2)
-            
-            Text("Body5")
-                .applyWSSFont(.body5)
-            
-            Text("Body5_2")
-                .applyWSSFont(.body5)
-            
-            Text("Label1")
-                .applyWSSFont(.label1)
-            
-            Text("Label2")
-                .applyWSSFont(.label2)
+                .border(DesignSystemAsset.PrimaryColors.wssPrimary100.swiftUIColor)
         }
         .padding(40)
     }
