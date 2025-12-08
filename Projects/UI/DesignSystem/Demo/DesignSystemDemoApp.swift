@@ -7,9 +7,13 @@
 //
 
 import SwiftUI
+import DesignSystem
 
 @main
-struct KeychainDemoApp: App {
+struct DesignSystemDemoApp: App {
+    init() {
+        DesignSystemFontFamily.registerAllCustomFonts()
+    }
     var body: some Scene {
         WindowGroup {
             WSSFontDemoView()
