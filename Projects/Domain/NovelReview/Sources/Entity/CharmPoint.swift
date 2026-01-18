@@ -8,7 +8,10 @@
 
 import Foundation
 
-public struct CharmPoint: Hashable, Equatable {
-    public let name: String
-    public init(_ name: String) { self.name = name }
+public enum CharmPoint: Hashable, Equatable {
+    case worldview
+    case material
+    case character
+    case relationship
+    case vibe
 }
