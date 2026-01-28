@@ -58,7 +58,7 @@ struct FeedDraftPolicyTests {
             attachedImageURLs: []
         )
         
-        #expect(entity.isSubmittable == true)
+        #expect(entity.submissionValidationResult == .valid)
     }
     
     @Test
@@ -72,7 +72,7 @@ struct FeedDraftPolicyTests {
             attachedImageURLs: []
         )
         
-        #expect(entity.isSubmittable == false)
+        #expect(entity.submissionValidationResult == .invalid(reason: .emptyContent))
     }
     
     @Test
@@ -86,6 +86,6 @@ struct FeedDraftPolicyTests {
             attachedImageURLs: []
         )
         
-        #expect(entity.isSubmittable == false)
+        #expect(entity.submissionValidationResult == .invalid(reason: .emptyGenre))
     }
 }

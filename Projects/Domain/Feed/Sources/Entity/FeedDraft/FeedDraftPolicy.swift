@@ -21,9 +21,26 @@ public extension FeedDraftEntity {
     }
     
     // 피드 제출 유효성 검증 기준
-    
-    var isSubmittable: Bool {
-        !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && genre.count > 0
+    var submissionValidationResult: FeedDraftSubmissionValidationResult {
+        if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .invalid(reason: .emptyContent)
+        }
+        
+        if genre.isEmpty {
+            return .invalid(reason: .emptyGenre)
+        }
+        
+        return .valid
     }
+}
+
+// 피드 유효성 규칙
+public enum FeedDraftInvalidReason: Equatable {
+    case emptyContent
+    case emptyGenre
+}
+
+public enum FeedDraftSubmissionValidationResult: Equatable {
+    case valid
+    case invalid(reason: FeedDraftInvalidReason)
 }
