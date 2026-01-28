@@ -42,6 +42,21 @@ public extension TargetDependency.Domain {
         target: ModuleType.Domain.recommendation.targetName(type: .tests),
         path: .relativeToDomain(.recommendation)
     )
+    
+    static let FeedDomain = TargetDependency.project(
+        target: ModuleType.Domain.feed.targetName(type: .sources),
+        path: .relativeToDomain(.feed)
+    )
+    
+    static let FeedDomainDemo = TargetDependency.project(
+        target: ModuleType.Domain.feed.targetName(type: .demo),
+        path: .relativeToDomain(.feed)
+    )
+    
+    static let FeedDomainTests = TargetDependency.project(
+        target: ModuleType.Domain.feed.targetName(type: .tests),
+        path: .relativeToDomain(.feed)
+    )
 }
 
 public extension TargetDependency.Data {
