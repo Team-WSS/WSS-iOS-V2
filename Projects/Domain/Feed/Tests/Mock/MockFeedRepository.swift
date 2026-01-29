@@ -14,11 +14,13 @@ final class MockFeedRepository: FeedRepositoryProtocol {
     private(set) var submitCalled = false
     private(set) var editCalled = false
     private(set) var deleteCalled = false
+    private(set) var getDetailCalled = false
     
     private(set) var receivedFeedID: FeedID?
     private(set) var receivedDraft: FeedDraftEntity?
     
     var stubbedError: Error?
+    var stubbedFeedDetail: FeedDetailEntity?
     
     func submitFeed(_ draft: FeedDraftEntity) async throws {
         submitCalled = true
@@ -36,5 +38,17 @@ final class MockFeedRepository: FeedRepositoryProtocol {
         if let error = stubbedError { throw error }
         deleteCalled = true
         receivedFeedID = id
+    }
+    
+    func getFeedDetail(id: FeedID) async throws -> FeedDetailEntity {
+        if let error = stubbedError { throw error }
+        getDetailCalled = true
+        receivedFeedID = id
+        
+        guard let detail = stubbedFeedDetail else {
+            fatalError("stubbedFeedDetail must be set before calling getFeedDetail")
+        }
+        
+        return detail
     }
 }

@@ -12,4 +12,6 @@ public protocol FeedUsecaseProtocol {
     func createFeed(draft: FeedDraftEntity) async throws
     func editFeed(id: FeedID, draft: FeedDraftEntity) async throws
     func deleteFeed(id: FeedID) async throws
+    
+    func getFeedDetail(id: FeedID) async throws -> FeedDetailEntity
 }

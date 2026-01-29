@@ -37,4 +37,8 @@ public struct FeedUsecase: FeedUsecaseProtocol {
     public func deleteFeed(id: FeedID) async throws {
         try await repository.deleteFeed(id: id)
     }
+    
+    public func getFeedDetail(id: FeedID) async throws -> FeedDetailEntity {
+        try await repository.getFeedDetail(id: id)
+    }
 }

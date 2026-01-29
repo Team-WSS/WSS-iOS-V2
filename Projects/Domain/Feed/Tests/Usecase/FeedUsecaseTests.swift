@@ -106,4 +106,35 @@ struct FeedUsecaseTests {
         #expect(repository.deleteCalled == true)
         #expect(repository.receivedFeedID == feedId)
     }
+    
+    @Test
+    func getFeedDetail_callsRepository_withFeedId() async throws {
+        let repository = MockFeedRepository()
+        let usecase = FeedUsecase(repository: repository)
+        
+        let feedId = FeedID(99)
+        
+        let stubDetail = FeedDetailEntity(
+            userId: UserID(1),
+            userProfileImageURL: nil,
+            userName: "서연",
+            createdDate: "2026-01-01",
+            isModified: false,
+            feedContent: "피드 내용",
+            feedImageURLs: [],
+            connectedNovel: nil,
+            likeCount: 10,
+            isLiked: false,
+            commentCount: 3
+        )
+        
+        repository.stubbedFeedDetail = stubDetail
+        
+        let result = try await usecase.getFeedDetail(id: feedId)
+        
+        #expect(repository.getDetailCalled == true)
+        #expect(repository.receivedFeedID == feedId)
+        #expect(result.feedContent == stubDetail.feedContent)
+        #expect(result.createdDate == stubDetail.createdDate)
+    }
 }
