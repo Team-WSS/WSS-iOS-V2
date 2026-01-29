@@ -1,5 +1,5 @@
 //
-//  CreateFeedUsecase.swift
+//  FeedUsecase.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 1/28/26.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct CreateFeedUseCase {
+public struct FeedUsecase: FeedUsecaseProtocol {
     
     private let repository: FeedRepositoryProtocol
     
@@ -16,7 +16,7 @@ public struct CreateFeedUseCase {
         self.repository = repository
     }
     
-    public func execute(draft: FeedDraftEntity) async throws {
+    public func createFeed(draft: FeedDraftEntity) async throws {
         switch draft.submissionValidationResult {
         case .valid:
             try await repository.submitFeed(draft)
