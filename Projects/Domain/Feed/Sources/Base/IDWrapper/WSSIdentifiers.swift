@@ -10,3 +10,4 @@ import Foundation
 
 public typealias UserID = IDWrapper<Int>
 public typealias FeedID = IDWrapper<Int>
+public typealias NovelID = IDWrapper<Int>
