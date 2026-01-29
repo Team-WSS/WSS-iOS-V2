@@ -24,4 +24,17 @@ public struct FeedUsecase: FeedUsecaseProtocol {
             throw CreateFeedError.invalidDraft(reason: reason)
         }
     }
+    
+    public func editFeed(id: FeedID, draft: FeedDraftEntity) async throws {
+        switch draft.submissionValidationResult {
+        case .valid:
+            try await repository.editFeed(id: id, draft: draft)
+        case .invalid(let reason):
+            throw CreateFeedError.invalidDraft(reason: reason)
+        }
+    }
+    
+    public func deleteFeed(id: FeedID) async throws {
+        try await repository.deleteFeed(id: id)
+    }
 }

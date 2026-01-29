@@ -1,5 +1,5 @@
 //
-//  UserID.swift
+//  WSSIdentifiers.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 1/29/26.
@@ -9,3 +9,4 @@
 import Foundation
 
 public typealias UserID = IDWrapper<Int>
+public typealias FeedID = IDWrapper<Int>

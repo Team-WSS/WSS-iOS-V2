@@ -10,4 +10,6 @@ import Foundation
 
 public protocol FeedRepositoryProtocol {
     func submitFeed(_ draft: FeedDraftEntity) async throws
+    func editFeed(id: FeedID, draft: FeedDraftEntity) async throws
+    func deleteFeed(id: FeedID) async throws
 }
