@@ -9,9 +9,13 @@
 import Foundation
 
 public protocol FeedRepositoryProtocol {
-    func submitFeed(_ draft: FeedDraftEntity) async throws
-    func editFeed(id: FeedID, draft: FeedDraftEntity) async throws
+    func submitFeed(_ draft: FeedDraft) async throws
+    func editFeed(id: FeedID, draft: FeedDraft) async throws
     func deleteFeed(id: FeedID) async throws
     
-    func getFeedDetail(id: FeedID) async throws -> FeedDetailEntity
+    func fetchFeedDetail(id: FeedID) async throws -> FeedDetail
+    
+    func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
+    func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
+    func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
 }

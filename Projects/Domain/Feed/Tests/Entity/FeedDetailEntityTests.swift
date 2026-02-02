@@ -13,7 +13,7 @@ import Testing
 struct FeedDetailEntityTests {
     @Test
     func feedDetailEntity_initializesCorrectly() {
-        let entity = FeedDetailEntity(
+        let entity = FeedDetail(
             userId: UserID(1),
             userProfileImageURL: nil,
             userName: "서연",
