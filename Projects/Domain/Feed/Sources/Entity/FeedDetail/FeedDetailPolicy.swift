@@ -8,7 +8,7 @@
 
 import Foundation
 
-public extension FeedDetailEntity {
+public extension FeedDetail {
     
     //MARK: - Image
     

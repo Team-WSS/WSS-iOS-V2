@@ -16,7 +16,7 @@ struct FeedUsecaseTests {
         let repository = MockFeedRepository()
         let usecase = FeedUsecase(repository: repository)
         
-        let validDraft = FeedDraftEntity(
+        let validDraft = FeedDraft(
             content: "정상 내용",
             genre: [.fantasy],
             isSpoiler: false,
@@ -35,7 +35,7 @@ struct FeedUsecaseTests {
         let repository = MockFeedRepository()
         let usecase = FeedUsecase(repository: repository)
         
-        let invalidDraft = FeedDraftEntity(
+        let invalidDraft = FeedDraft(
             content: "   ",
             genre: [],
             isSpoiler: false,
@@ -57,7 +57,7 @@ struct FeedUsecaseTests {
         let usecase = FeedUsecase(repository: repository)
         
         let feedId = FeedID(1)
-        let validDraft = FeedDraftEntity(
+        let validDraft = FeedDraft(
             content: "수정된 내용",
             genre: [.fantasy],
             isSpoiler: false,
@@ -78,7 +78,7 @@ struct FeedUsecaseTests {
         let usecase = FeedUsecase(repository: repository)
         
         let feedId = FeedID(1)
-        let invalidDraft = FeedDraftEntity(
+        let invalidDraft = FeedDraft(
             content: "   ",
             genre: [],
             isSpoiler: false,
@@ -114,7 +114,7 @@ struct FeedUsecaseTests {
         
         let feedId = FeedID(99)
         
-        let stubDetail = FeedDetailEntity(
+        let stubDetail = FeedDetail(
             userId: UserID(1),
             userProfileImageURL: nil,
             userName: "서연",

@@ -16,19 +16,19 @@ struct FeedDetailPolicyTests {
         
         @Test
         func imageDisplayStyle_returnsNone_whenImageCountIsZero() {
-            let result = FeedDetailEntity.imageDisplayStyle(for: 0)
+            let result = FeedDetail.imageDisplayStyle(for: 0)
             #expect(result == .none)
         }
         
         @Test
         func imageDisplayStyle_returnsSingle_whenImageCountIsOne() {
-            let result = FeedDetailEntity.imageDisplayStyle(for: 1)
+            let result = FeedDetail.imageDisplayStyle(for: 1)
             #expect(result == .single)
         }
         
         @Test
         func imageDisplayStyle_returnsHorizontalScroll_whenImageCountIsMoreThanOne() {
-            let result = FeedDetailEntity.imageDisplayStyle(for: 3)
+            let result = FeedDetail.imageDisplayStyle(for: 3)
             #expect(result == .horizontalScroll)
         }
     }
@@ -38,13 +38,13 @@ struct FeedDetailPolicyTests {
         
         @Test
         func availableMoreActions_returnsMyFeed_whenFeedIsMine() {
-            let result = FeedDetailEntity.availableMoreActions(isMyFeed: true)
+            let result = FeedDetail.availableMoreActions(isMyFeed: true)
             #expect(result == .myFeed)
         }
         
         @Test
         func availableMoreActions_returnsOtherUserFeed_whenFeedIsNotMine() {
-            let result = FeedDetailEntity.availableMoreActions(isMyFeed: false)
+            let result = FeedDetail.availableMoreActions(isMyFeed: false)
             #expect(result == .otherUserFeed)
         }
     }

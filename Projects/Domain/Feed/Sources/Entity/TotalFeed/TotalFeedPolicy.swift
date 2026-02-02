@@ -8,7 +8,7 @@
 
 import Foundation
 
-public extension TotalFeedEntity {
+public extension TotalFeed {
     
     func isMyFeed(myID: UserID) -> Bool {
         author.userId == myID

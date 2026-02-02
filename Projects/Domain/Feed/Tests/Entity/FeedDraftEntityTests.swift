@@ -24,7 +24,7 @@ struct FeedDraftEntityTests {
             URL(string: "https://example.com/image.png")!
         ]
         
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: content,
             genre: genres,
             isSpoiler: isSpoiler,

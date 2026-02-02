@@ -17,17 +17,17 @@ final class MockFeedRepository: FeedRepositoryProtocol {
     private(set) var getDetailCalled = false
     
     private(set) var receivedFeedID: FeedID?
-    private(set) var receivedDraft: FeedDraftEntity?
+    private(set) var receivedDraft: FeedDraft?
     
     var stubbedError: Error?
-    var stubbedFeedDetail: FeedDetailEntity?
+    var stubbedFeedDetail: FeedDetail?
     
-    func submitFeed(_ draft: FeedDraftEntity) async throws {
+    func submitFeed(_ draft: FeedDraft) async throws {
         submitCalled = true
         receivedDraft = draft
     }
     
-    func editFeed(id: FeedID, draft: FeedDraftEntity) async throws {
+    func editFeed(id: FeedID, draft: FeedDraft) async throws {
         if let error = stubbedError { throw error }
         editCalled = true
         receivedFeedID = id
@@ -40,7 +40,7 @@ final class MockFeedRepository: FeedRepositoryProtocol {
         receivedFeedID = id
     }
     
-    func getFeedDetail(id: FeedID) async throws -> FeedDetailEntity {
+    func getFeedDetail(id: FeedID) async throws -> FeedDetail {
         if let error = stubbedError { throw error }
         getDetailCalled = true
         receivedFeedID = id

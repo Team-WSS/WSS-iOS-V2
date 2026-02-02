@@ -14,12 +14,12 @@ struct FeedDraftPolicyTests {
     
     @Test
     func maxContentCount_is2000() {
-        #expect(FeedDraftEntity.maxContentCount == 2000)
+        #expect(FeedDraft.maxContentCount == 2000)
     }
     
     @Test
     func contentCount_returnsCorrectCount() {
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: "12345",
             genre: [.fantasy],
             isSpoiler: false,
@@ -33,7 +33,7 @@ struct FeedDraftPolicyTests {
     
     @Test
     func remainingContentCount_calculatesCorrectly() {
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: String(repeating: "a", count: 100),
             genre: [.fantasy],
             isSpoiler: false,
@@ -49,7 +49,7 @@ struct FeedDraftPolicyTests {
     
     @Test
     func isSubmittable_returnsTrue_whenContentIsNotEmpty_andGenreExists() {
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: "유효한 피드 내용",
             genre: [.fantasy],
             isSpoiler: false,
@@ -63,7 +63,7 @@ struct FeedDraftPolicyTests {
     
     @Test
     func isSubmittable_returnsFalse_whenContentIsOnlyWhitespace() {
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: "   \n",
             genre: [.fantasy],
             isSpoiler: false,
@@ -77,7 +77,7 @@ struct FeedDraftPolicyTests {
     
     @Test
     func isSubmittable_returnsFalse_whenGenreIsEmpty() {
-        let entity = FeedDraftEntity(
+        let entity = FeedDraft(
             content: "내용은 있음",
             genre: [],
             isSpoiler: false,

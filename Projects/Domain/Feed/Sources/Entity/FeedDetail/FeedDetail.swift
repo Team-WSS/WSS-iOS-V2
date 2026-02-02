@@ -1,5 +1,5 @@
 //
-//  FeedDetailEntity.swift
+//  FeedDetail.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 1/29/26.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct FeedDetailEntity {
+public struct FeedDetail {
     
     public let userId: UserID
     public let userProfileImageURL: URL?

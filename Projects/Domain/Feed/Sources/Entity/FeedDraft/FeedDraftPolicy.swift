@@ -8,7 +8,7 @@
 
 import Foundation
 
-public extension FeedDraftEntity {
+public extension FeedDraft {
    
     static let maxContentCount: Int = 2000
     

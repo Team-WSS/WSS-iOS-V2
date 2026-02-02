@@ -1,5 +1,5 @@
 //
-//  TotalFeedEntity.swift
+//  TotalFeed.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 1/29/26.
@@ -8,11 +8,12 @@
 
 import Foundation
 
-public struct TotalFeedEntity {
+public struct TotalFeed {
 
     public let feedId: FeedID
     public let createdDate: String
     public let content: String
+    
     public let author: FeedAuthor
 
     public let likeCount: Int
