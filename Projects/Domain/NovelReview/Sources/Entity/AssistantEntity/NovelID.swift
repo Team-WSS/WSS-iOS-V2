@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NovelID: Hashable, Equatable {
+public struct NovelID: Equatable {
     public let value: Int
     public init(_ value: Int) { self.value = value }
 }

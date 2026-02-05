@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum ReadingStatus: String, Hashable, Equatable {
+public enum ReadingStatus: String, Equatable {
     case watching
     case watched
     case quit
