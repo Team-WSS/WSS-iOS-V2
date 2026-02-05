@@ -1,5 +1,5 @@
 //
-//  CharmPoint.swift
+//  AttractivePoint.swift
 //  NovelReviewDomain
 //
 //  Created by YunhakLee on 1/18/26.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum CharmPoint: Hashable, Equatable {
+public enum AttractivePoint: Equatable, CaseIterable {
     case worldview
     case material
     case character

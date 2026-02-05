@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Keyword: Hashable, Equatable {
+public struct Keyword: Equatable, Identifiable {
     public let id: Int
     public let name: String
     
