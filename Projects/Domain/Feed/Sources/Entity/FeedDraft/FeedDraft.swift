@@ -8,8 +8,6 @@
 
 import Foundation
 
-/// 피드를 작성 “초안 상태”를 표현하는 도메인 엔티티
-
 public struct FeedDraft {
     
     public private(set) var content: String
@@ -19,17 +17,45 @@ public struct FeedDraft {
     public private(set) var connectedNovel: ConnectedNovel?
     public private(set) var attachedImageURLs: [URL]
     
-    public init(content: String,
-                genre: [NovelGenre],
-                isSpoiler: Bool,
-                isPrivate: Bool,
-                connectedNovel: ConnectedNovel?,
-                attachedImageURLs: [URL]) {
-        self.content = content
-        self.genre = genre
-        self.isSpoiler = isSpoiler
-        self.isPrivate = isPrivate
-        self.connectedNovel = connectedNovel
-        self.attachedImageURLs = attachedImageURLs
+    //MARK: - Policy
+    
+    static let maxContentCount: Int = 2000
+    
+    public enum FeedDraftError: Error, Equatable {
+        case contentOverLimit
+        case emptyContent
+        case emptyGenre
+    }
+    
+    public mutating func updateContent(_ newValue: String) throws {
+        guard newValue.count < Self.maxContentCount else {
+            throw FeedDraftError.contentOverLimit
+        }
+        
+        content = newValue
+    }
+    
+    public mutating func updateSelecteGenres(_ selectedGenres: [NovelGenre]) {
+        genre = selectedGenres
+    }
+    
+    public mutating func selectPrivate(_ isSelected: Bool) {
+        isPrivate = isSelected
+    }
+    
+    public mutating func selectSpoiler(_ isSelected: Bool) {
+        isSpoiler = isSelected
+    }
+        
+    public mutating func validateForSubmission() throws(FeedDraftError) {
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if trimmedContent.isEmpty {
+            throw .emptyContent
+        }
+        
+        if genre.isEmpty {
+            throw .emptyGenre
+        }
     }
 }

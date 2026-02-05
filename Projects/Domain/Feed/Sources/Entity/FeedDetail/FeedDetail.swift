@@ -11,42 +11,22 @@ import Foundation
 public struct FeedDetail {
     
     public let userId: UserID
-    public let userProfileImageURL: URL?
-    public let userName: String
-    public let createdDate: String
-    public let isModified: Bool
     
-    public let feedContent: String
-    public let feedImageURLs: [URL?]
+    public private(set) var userProfileImageURL: URL?
+    public private(set) var userName: String
+    public private(set) var createdDate: String
+    public private(set) var isModified: Bool
     
-    public let connectedNovel: ConnectedNovelDetail?
+    public private(set) var feedContent: String
+    public private(set) var feedImageURLs: [URL?]
     
-    public let likeCount: Int
-    public let isLiked: Bool
-    public let commentCount: Int
+    public private(set) var connectedNovel: ConnectedNovelDetail?
     
-    public init(userId: UserID,
-                userProfileImageURL: URL?,
-                userName: String,
-                createdDate: String,
-                isModified: Bool,
-                feedContent: String,
-                feedImageURLs: [URL?],
-                connectedNovel: ConnectedNovelDetail?,
-                likeCount: Int,
-                isLiked: Bool,
-                commentCount: Int)
-    {
-        self.userId = userId
-        self.userProfileImageURL = userProfileImageURL
-        self.userName = userName
-        self.createdDate = createdDate
-        self.isModified = isModified
-        self.feedContent = feedContent
-        self.feedImageURLs = feedImageURLs
-        self.connectedNovel = connectedNovel
-        self.likeCount = likeCount
-        self.isLiked = isLiked
-        self.commentCount = commentCount
-    }
+    public private(set) var likeCount: Int
+    public private(set) var isLiked: Bool
+    public private(set) var commentCount: Int
+    
+    //MARK: - Policy
+    
+    
 }

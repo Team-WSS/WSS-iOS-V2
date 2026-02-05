@@ -11,49 +11,47 @@ import Foundation
 public struct TotalFeed {
 
     public let feedId: FeedID
-    public let createdDate: String
-    public let content: String
+    public private(set) var createdDate: String
+    public private(set) var content: String
     
-    public let author: FeedAuthor
+    public private(set) var author: FeedAuthor
 
-    public let likeCount: Int
-    public let isLiked: Bool
-    public let commentCount: Int
+    public private(set) var likeCount: Int
+    public private(set) var isLiked: Bool
+    public private(set) var commentCount: Int
 
-    public let connectedNovel: ConnectedNovel?
+    public private(set) var connectedNovel: ConnectedNovel?
 
-    public let isSpoiler: Bool
-    public let isModified: Bool
-    public let isPublic: Bool
+    public private(set) var isSpoiler: Bool
+    public private(set) var isModified: Bool
+    public private(set) var isPublic: Bool
     
-    public let thumbnailImageURL: URL?
-    public let imageCount: Int
+    public private(set) var thumbnailImageURL: URL?
+    public private(set) var imageCount: Int
     
-    public init(feedId: FeedID,
-                createdDate: String,
-                content: String,
-                author: FeedAuthor,
-                likeCount: Int,
-                isLiked: Bool,
-                commentCount: Int,
-                connectedNovel: ConnectedNovel?,
-                isSpoiler: Bool,
-                isModified: Bool,
-                isPublic: Bool,
-                thumbnailImageURL: URL?,
-                imageCount: Int) {
-        self.feedId = feedId
-        self.createdDate = createdDate
-        self.content = content
-        self.author = author
-        self.likeCount = likeCount
-        self.isLiked = isLiked
-        self.commentCount = commentCount
-        self.connectedNovel = connectedNovel
-        self.isSpoiler = isSpoiler
-        self.isModified = isModified
-        self.isPublic = isPublic
-        self.thumbnailImageURL = thumbnailImageURL
-        self.imageCount = imageCount
+    //MARK: - Policy
+    
+    public mutating func isMyFeed(myID: UserID) -> Bool {
+        author.userId == myID
+    }
+    
+    public mutating func addLike() {
+        likeCount += 1
+        isLiked = true
+    }
+    
+    public mutating func removeLike() {
+        likeCount -= 1
+        isLiked = false
+    }
+    
+    public mutating func hasImage() -> Bool {
+        imageCount > 0 && thumbnailImageURL != nil
+    }
+    
+    public mutating func roundedRating() {
+        if let rating = connectedNovel?.rating {
+            let rounded = round(rating * 10) / 10
+        }
     }
 }
