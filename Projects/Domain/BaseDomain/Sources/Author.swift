@@ -1,5 +1,9 @@
 //
+<<<<<<<< HEAD:Projects/Domain/BaseDomain/Sources/Author.swift
 //  Author.swift
+========
+//  FeedAuthor.swift
+>>>>>>>> 111d6aa ([Chore] #21 - BaseDomain 추가 및 FeedDomain에 의존성 주입):Projects/Domain/BaseDomain/Sources/FeedAuthor.swift
 //  BaseDomain
 //
 //  Created by Seoyeon Choi on 1/30/26.
