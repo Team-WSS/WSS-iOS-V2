@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol FeedRepository {
     func submitFeed(_ draft: FeedDraft) async throws

@@ -25,13 +25,18 @@ public enum ModuleType {
     }
     
     public enum Domain: String {
+        case base
+        
         case recommendation
         case feed
+        case keyword
         
         public var name: String {
             switch self {
+            case .base: "BaseDomain"
             case .recommendation: "RecommendationDomain"
             case .feed: "FeedDomain"
+            case .keyword: "KeywordDomain"
             }
         }
         

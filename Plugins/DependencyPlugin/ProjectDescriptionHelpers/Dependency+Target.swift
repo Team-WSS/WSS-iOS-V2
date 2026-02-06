@@ -28,6 +28,21 @@ public extension TargetDependency.Feature {
 }
 
 public extension TargetDependency.Domain {
+    static let BaseDomain = TargetDependency.project(
+        target: ModuleType.Domain.base.targetName(type: .sources),
+        path: .relativeToDomain(.base)
+    )
+    
+    static let BaseDomainDemo = TargetDependency.project(
+        target: ModuleType.Domain.base.targetName(type: .demo),
+        path: .relativeToDomain(.base)
+    )
+    
+    static let BaseDomainTests = TargetDependency.project(
+        target: ModuleType.Domain.base.targetName(type: .tests),
+        path: .relativeToDomain(.base)
+    )
+    
     static let RecommendationDomain = TargetDependency.project(
         target: ModuleType.Domain.recommendation.targetName(type: .sources),
         path: .relativeToDomain(.recommendation)

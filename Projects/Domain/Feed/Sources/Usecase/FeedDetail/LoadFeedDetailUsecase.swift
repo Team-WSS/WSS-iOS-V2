@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol LoadFeedDetailUsecase {
     func execute(feedID: FeedID) async throws -> FeedDetail
