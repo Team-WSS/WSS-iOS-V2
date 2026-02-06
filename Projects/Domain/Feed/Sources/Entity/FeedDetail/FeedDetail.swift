@@ -28,7 +28,26 @@ public struct FeedDetail {
     
     //MARK: - Policy
     
-    public mutating func isMyFeed(myID: UserID) -> Bool {
-        userId == myID
+    public enum PolicyError: Error, Equatable {
+        case negativeLikeCount
+        case notLikedYet
+    }
+    
+    public mutating func addLike() {
+        likeCount += 1
+        isLiked = true
+    }
+    
+    public mutating func removeLike() throws(FeedDetail.PolicyError) {
+        guard isLiked else {
+            throw .notLikedYet
+        }
+        
+        guard likeCount > 0 else {
+            throw .negativeLikeCount
+        }
+        
+        likeCount -= 1
+        isLiked = false
     }
 }

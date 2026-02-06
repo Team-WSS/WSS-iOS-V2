@@ -21,22 +21,27 @@ public struct FeedDraft {
     
     static let maxContentCount: Int = 2000
     
-    public enum FeedDraftError: Error, Equatable {
+    public enum PolicyError: Error, Equatable {
         case contentOverLimit
         case emptyContent
         case emptyGenre
     }
     
     public mutating func updateContent(_ newValue: String) throws {
-        guard newValue.count < Self.maxContentCount else {
-            throw FeedDraftError.contentOverLimit
+        guard newValue.count <= Self.maxContentCount else {
+            throw PolicyError.contentOverLimit
         }
         
         content = newValue
     }
     
-    public mutating func updateSelecteGenres(_ selectedGenres: [NovelGenre]) {
-        genre = selectedGenres
+    public mutating func selectGenre(_ newGenre: NovelGenre) {
+        guard !genre.contains(newGenre) else { return }
+        genre.append(newGenre)
+    }
+    
+    public mutating func deselectGenre(_ targetGenre: NovelGenre) {
+        genre.removeAll { $0 == targetGenre }
     }
     
     public mutating func selectPrivate(_ isSelected: Bool) {
@@ -47,7 +52,7 @@ public struct FeedDraft {
         isSpoiler = isSelected
     }
         
-    public mutating func validateForSubmission() throws(FeedDraftError) {
+    public mutating func validateForSubmission() throws(PolicyError) {
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if trimmedContent.isEmpty {

@@ -12,15 +12,15 @@ public struct FeedAuthor {
     
     public let userId: UserID
     public let nickname: String
-    public let avatarImageURL: URL?
+    public let profileImage: ImageWrapper
     
     public init(
         userId: UserID,
         nickname: String,
-        avatarImageURL: URL?
+        profileImage: ImageWrapper
     ) {
         self.userId = userId
         self.nickname = nickname
-        self.avatarImageURL = avatarImageURL
+        self.profileImage = profileImage
     }
 }

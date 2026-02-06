@@ -18,5 +18,9 @@ public struct ConnectedNovel {
     
     //MARK: - Policy
     
-    
+    public mutating func roundedRating() {
+        if let novelRating = rating {
+            rating = round(novelRating * 10) / 10
+        }
+    }
 }
