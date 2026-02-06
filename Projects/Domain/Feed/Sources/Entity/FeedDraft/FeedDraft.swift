@@ -15,7 +15,7 @@ public struct FeedDraft {
     public private(set) var isSpoiler: Bool
     public private(set) var isPrivate: Bool
     public private(set) var connectedNovel: ConnectedNovel?
-    public private(set) var attachedImageURLs: [URL]
+    public private(set) var attachedImages: [ImageWrapper]
     
     //MARK: - Policy
     

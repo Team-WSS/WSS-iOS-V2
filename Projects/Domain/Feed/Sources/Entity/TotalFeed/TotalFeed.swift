@@ -26,7 +26,7 @@ public struct TotalFeed {
     public private(set) var isModified: Bool
     public private(set) var isPublic: Bool
     
-    public private(set) var thumbnailImageURL: URL?
+    public private(set) var thumbnailImageURL: ImageWrapper?
     public private(set) var imageCount: Int
     
     //MARK: - Policy

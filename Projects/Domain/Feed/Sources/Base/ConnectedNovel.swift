@@ -9,18 +9,14 @@
 import Foundation
 
 public struct ConnectedNovel {
-    public let id: NovelID
-    public let title: String
-    public let genre: NovelGenre
-    public let rating: Float?
     
-    public init(id: NovelID,
-                title: String,
-                genre: NovelGenre,
-                rating: Float) {
-        self.id = id
-        self.title = title
-        self.genre = genre
-        self.rating = rating
-    }
+    public let id: NovelID
+    
+    public private(set) var title: String
+    public private(set) var genre: NovelGenre
+    public private(set) var rating: Float?
+    
+    //MARK: - Policy
+    
+    
 }
