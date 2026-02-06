@@ -9,16 +9,26 @@
 import Foundation
 
 public struct NovelReviewDraft: Equatable {
-
+    
     public let novelID: NovelID
     public private(set) var status: ReadingStatus
     public private(set) var period: ReadingPeriod?
     public private(set) var rating: Rating?
     public private(set) var attractivePoints: [AttractivePoint]
     public private(set) var keywords: [Keyword]
-
+    
+    // MARK: - Policy
+    
+    private static let maxAttractivePoints = 3
+    private static let maxKeywords = 20
+    
+    public enum ValidationError: Error, Equatable {
+        case tooManyAttractivePoints(max: Int)
+        case tooManyKeywords(max: Int)
+    }
+    
     // MARK: - Init
-
+    
     public init(
         novelID: NovelID,
         status: ReadingStatus,
@@ -27,57 +37,46 @@ public struct NovelReviewDraft: Equatable {
         attractivePoints: [AttractivePoint],
         keywords: [Keyword]
     ) {
+        let uniqueAttractivePoints = Array(Set(attractivePoints))
+        let uniqueKeywords = Array(Set(keywords))
+#if DEBUG
+        if uniqueAttractivePoints.count != attractivePoints.count {
+            assertionFailure("AttractivePoints contains duplicates")
+        }
+        if uniqueKeywords.count != keywords.count {
+            assertionFailure("Keywords contains duplicates")
+        }
+        if uniqueAttractivePoints.count > Self.maxAttractivePoints {
+            assertionFailure("AttractivePoints overflow: \(uniqueAttractivePoints.count) (max: \(Self.maxAttractivePoints))")
+        }
+        if uniqueKeywords.count > Self.maxKeywords {
+            assertionFailure("Keywords overflow: \(uniqueKeywords.count) (max: \(Self.maxKeywords))")
+        }
+#endif
+        
         self.novelID = novelID
         self.status = status
-        self.period = period
+        self.period = period?.normalized(for: status)
         self.rating = rating
-        self.attractivePoints = attractivePoints
-        self.keywords = keywords
+        self.attractivePoints = Array(uniqueAttractivePoints.prefix(Self.maxAttractivePoints))
+        self.keywords = Array(uniqueKeywords.prefix(Self.maxKeywords))
     }
-
-    // MARK: - Policy
     
-    private static let maxAttractivePoints = 3
-
-    public enum ValidationError: Error, Equatable {
-        case tooManyAttractivePoints(max: Int)
-    }
-
     // MARK: - Draft Editing
-
+    
     public mutating func changeStatus(_ newStatus: ReadingStatus) {
         status = newStatus
-        period = normalizePeriod(period, for: newStatus)
+        period = period?.normalized(for: newStatus)
     }
     
     public mutating func setPeriod(_ newPeriod: ReadingPeriod?) {
-        period = normalizePeriod(newPeriod, for: status)
+        period = newPeriod?.normalized(for: status)
     }
     
-    private func normalizePeriod(_ period: ReadingPeriod?, for status: ReadingStatus) -> ReadingPeriod? {
-        guard let period else { return nil }
-
-        switch status {
-        case .watching:
-            guard let start = period.start ?? period.end else { return nil }
-            return try! ReadingPeriod(start: start, end: nil)
-
-        case .watched:
-            let s = period.start ?? period.end
-            let e = period.end ?? period.start
-            guard let start = s, let end = e else { return nil }
-            return try! ReadingPeriod(start: start, end: end)
-
-        case .quit:
-            guard let end = period.end ?? period.start else { return nil }
-            return try! ReadingPeriod(start: nil, end: end)
-        }
-    }
-
     public mutating func setRating(_ newRating: Rating?) {
         rating = newRating
     }
-
+    
     public mutating func addAttractivePoint(_ point: AttractivePoint) throws {
         guard !attractivePoints.contains(point) else {
             return
@@ -87,13 +86,22 @@ public struct NovelReviewDraft: Equatable {
         }
         attractivePoints.append(point)
     }
-
+    
     public mutating func removeAttractivePoint(_ point: AttractivePoint) {
         attractivePoints.removeAll { $0 == point }
     }
     
-    public mutating func setKeywords(_ newKeywords: [Keyword]) {
-        keywords = newKeywords
+    public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
+        let uniqueKeywords = Array(Set(newKeywords))
+#if DEBUG
+        if uniqueKeywords.count != keywords.count {
+            assertionFailure("Keywords contains duplicates")
+        }
+#endif
+        guard uniqueKeywords.count <= Self.maxKeywords else {
+            throw ValidationError.tooManyKeywords(max: Self.maxKeywords)
+        }
+        keywords = uniqueKeywords
     }
     
     public mutating func removeKeyword(_ keyword: Keyword) {
