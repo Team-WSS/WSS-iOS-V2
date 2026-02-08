@@ -10,11 +10,10 @@ import Foundation
 
 public struct FeedDetail {
     
-    public let userId: UserID
+    public let id: FeedID
+    public let author: Author
+    public let createdDate: String
     
-    public private(set) var userProfileImageURL: ImageWrapper
-    public private(set) var userName: String
-    public private(set) var createdDate: String
     public private(set) var isModified: Bool
     
     public private(set) var feedContent: String
@@ -30,24 +29,17 @@ public struct FeedDetail {
     
     public enum PolicyError: Error, Equatable {
         case negativeLikeCount
-        case notLikedYet
     }
     
-    public mutating func addLike() {
-        likeCount += 1
-        isLiked = true
-    }
-    
-    public mutating func removeLike() throws(FeedDetail.PolicyError) {
-        guard isLiked else {
-            throw .notLikedYet
+    public mutating func toggleLike() throws {
+        if isLiked {
+            guard likeCount > 0 else {
+                throw PolicyError.negativeLikeCount
+            }
+            likeCount -= 1
+        } else {
+            likeCount += 1
         }
-        
-        guard likeCount > 0 else {
-            throw .negativeLikeCount
-        }
-        
-        likeCount -= 1
-        isLiked = false
+        isLiked.toggle()
     }
 }

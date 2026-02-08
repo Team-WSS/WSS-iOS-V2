@@ -10,16 +10,9 @@ import Foundation
 
 public struct ConnectedNovelDetail {
     
-    public private(set) var basicInfo: ConnectedNovel
-    public private(set) var thumbnailImage: URL?
-    public private(set) var descirption: String
+    public let basicInfo: ConnectedNovel
+    public let thumbnailImage: ImageWrapper
+    public let descirption: String
     public private(set) var feedWriterRating: Float?
     
-    //MARK: - Policy
-    
-    public mutating func roundedRating() {
-        if let rating = feedWriterRating {
-            feedWriterRating = round(rating * 10) / 10
-        }
-    }
 }

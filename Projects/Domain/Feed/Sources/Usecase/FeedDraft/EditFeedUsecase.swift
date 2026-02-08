@@ -14,9 +14,9 @@ public protocol EditFeedUsecase {
 
 public final class DefaultEditFeedUseCase: EditFeedUsecase {
 
-    private let repository: FeedRepositoryProtocol
+    private let repository: FeedRepository
 
-    public init(repository: FeedRepositoryProtocol) {
+    public init(repository: FeedRepository) {
         self.repository = repository
     }
 

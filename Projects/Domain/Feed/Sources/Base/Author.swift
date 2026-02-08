@@ -1,5 +1,5 @@
 //
-//  FeedAuthor.swift
+//  Author.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 1/30/26.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct FeedAuthor {
+public struct Author {
     
     public let userId: UserID
     public let nickname: String

@@ -13,9 +13,10 @@ public protocol LoadFeedDetailUsecase {
 }
 
 public final class DefaultLoadFeedUsecase: LoadFeedDetailUsecase {
-    private let feedRepository: FeedRepositoryProtocol
     
-    public init(feedRepository: FeedRepositoryProtocol) {
+    private let feedRepository: FeedRepository
+    
+    public init(feedRepository: FeedRepository) {
         self.feedRepository = feedRepository
     }
     

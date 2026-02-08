@@ -1,5 +1,5 @@
 //
-//  LoadUserFeedUsecase.swift
+//  LoadUserFeedsUsecase.swift
 //  FeedDomain
 //
 //  Created by Seoyeon Choi on 2/6/26.
@@ -8,16 +8,16 @@
 
 import Foundation
 
-public protocol LoadUserUsecase {
+public protocol LoadUserFeedsUsecase {
     func execute(userID: UserID,
                  lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
 }
 
-public final class DefaultLoadUserFeedUsecase: LoadUserUsecase {
+public final class DefaultLoadUserFeedsUsecase: LoadUserFeedsUsecase {
     
-    private let feedRepository: FeedRepositoryProtocol
+    private let feedRepository: FeedRepository
     
-    public init(feedRepository: FeedRepositoryProtocol) {
+    public init(feedRepository: FeedRepository) {
         self.feedRepository = feedRepository
     }
     

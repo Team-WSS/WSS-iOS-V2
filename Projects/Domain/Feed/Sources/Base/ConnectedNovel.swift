@@ -9,18 +9,9 @@
 import Foundation
 
 public struct ConnectedNovel {
-    
+
     public let id: NovelID
-    
-    public private(set) var title: String
-    public private(set) var genre: NovelGenre
+    public let title: String
+    public let genre: NovelGenre
     public private(set) var rating: Float?
-    
-    //MARK: - Policy
-    
-    public mutating func roundedRating() {
-        if let novelRating = rating {
-            rating = round(novelRating * 10) / 10
-        }
-    }
 }

@@ -9,7 +9,7 @@
 import Testing
 @testable import FeedDomain
 
-@Suite
+@Suite(.tags(.entity))
 struct FeedDraftTests {
     
     // MARK: - Helpers

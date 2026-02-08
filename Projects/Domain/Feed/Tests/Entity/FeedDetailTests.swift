@@ -9,28 +9,13 @@
 import Testing
 @testable import FeedDomain
 
-@Suite
+@Suite(.tags(.entity))
 struct FeedDetailTests {
-    @Test func `연결 작품의 전체 별점은 소수 첫째자리까지 나타낸다.`() {
-        var mock = makeMock().connectedNovel?.basicInfo
-        
-        mock?.roundedRating()
-        
-        #expect(mock?.rating == 4.7)
-    }
     
-    @Test func `연결 작품의 피드 작성자 별점은 소수 첫째자리까지 나타낸다.`() {
-        var mock = makeMock().connectedNovel
-        
-        mock?.roundedRating()
-        
-        #expect(mock?.feedWriterRating == 2.3)
-    }
-    
-    @Test func `좋아요를 누를 수 있다.`() {
+    @Test func `좋아요를 누를 수 있다.`() throws {
         var mock = makeMock(likeCount: 3, isLiked: false)
         
-        mock.addLike()
+        try mock.toggleLike()
         
         #expect(mock.likeCount == 4)
         #expect(mock.isLiked == true)
@@ -39,25 +24,17 @@ struct FeedDetailTests {
     @Test func `좋아요를 삭제할 수 있다.`() throws {
         var mock = makeMock(likeCount: 3, isLiked: true)
         
-        try mock.removeLike()
+        try mock.toggleLike()
         
         #expect(mock.likeCount == 2)
         #expect(mock.isLiked == false)
-    }
-    
-    @Test func `좋아요를 안 눌렀을 때 좋아요를 삭제할 수 없다.`() throws {
-        var mock = makeMock(likeCount: 3, isLiked: false)
-        
-        #expect(throws: FeedDetail.PolicyError.notLikedYet) {
-            try mock.removeLike()
-        }
     }
     
     @Test func `좋아요 수는 음수가 될 수 없다.`() {
         var mock = makeMock(likeCount: 0, isLiked: true)
         
         #expect(throws: FeedDetail.PolicyError.negativeLikeCount) {
-            try mock.removeLike()
+            try mock.toggleLike()
         }
     }
 }
@@ -75,6 +52,7 @@ extension FeedDetailTests {
     private func makeMockConnectedNovelDetail() -> ConnectedNovelDetail {
         ConnectedNovelDetail(
             basicInfo: makeMockConnectedNovel(),
+            thumbnailImage: ImageWrapper(identifier: "https://test.com"),
             descirption: "안녕하세요",
             feedWriterRating: 2.33333)
     }
@@ -85,9 +63,12 @@ extension FeedDetailTests {
         isLiked: Bool = false
     ) -> FeedDetail {
         FeedDetail(
-            userId: userId,
-            userProfileImageURL: ImageWrapper(identifier: "https://test.com"),
-            userName: "tester",
+            id: FeedID(1),
+            author: Author(
+                userId: UserID(2),
+                nickname: "구리스",
+                profileImage: ImageWrapper(identifier: "2")
+            ),
             createdDate: "2026-02-06",
             isModified: false,
             feedContent: "content",

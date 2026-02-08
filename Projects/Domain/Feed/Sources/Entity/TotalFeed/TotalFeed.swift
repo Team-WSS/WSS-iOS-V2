@@ -8,14 +8,17 @@
 
 import Foundation
 
-public struct TotalFeed {
+public struct TotalFeed: Equatable {
     
     public let feedId: FeedID
+    public static func == (lhs: TotalFeed, rhs: TotalFeed) -> Bool {
+        lhs.feedId == rhs.feedId
+    }
     
-    public private(set) var createdDate: String
-    public private(set) var content: String
+    public let createdDate: String
+    public let content: String
     
-    public private(set) var author: FeedAuthor
+    public private(set) var author: Author
     
     public private(set) var likeCount: Int
     public private(set) var isLiked: Bool
@@ -34,24 +37,17 @@ public struct TotalFeed {
     
     public enum PolicyError: Error, Equatable {
         case negativeLikeCount
-        case notLikedYet
     }
     
-    public mutating func addLike() {
-        likeCount += 1
-        isLiked = true
-    }
-    
-    public mutating func removeLike() throws(TotalFeed.PolicyError) {
-        guard isLiked else {
-            throw .notLikedYet
+    public mutating func toggleLike() throws {
+        if isLiked {
+            guard likeCount > 0 else {
+                throw PolicyError.negativeLikeCount
+            }
+            likeCount -= 1
+        } else {
+            likeCount += 1
         }
-        
-        guard likeCount > 0 else {
-            throw .negativeLikeCount
-        }
-        
-        likeCount -= 1
-        isLiked = false
+        isLiked.toggle()
     }
 }

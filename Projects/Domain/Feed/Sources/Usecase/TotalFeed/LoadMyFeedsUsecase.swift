@@ -8,16 +8,16 @@
 
 import Foundation
 
-public protocol LoadMyFeedUsecase {
+public protocol LoadMyFeedsUsecase {
     func execute(option: MyFeedOption,
                  lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
 }
 
-public final class DefaultLoadMyFeedUsecase: LoadMyFeedUsecase {
+public final class DefaultLoadMyFeedsUsecase: LoadMyFeedsUsecase {
     
-    private let feedRepository: FeedRepositoryProtocol
+    private let feedRepository: FeedRepository
     
-    public init(feedRepository: FeedRepositoryProtocol) {
+    public init(feedRepository: FeedRepository) {
         self.feedRepository = feedRepository
     }
     
