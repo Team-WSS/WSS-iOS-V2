@@ -10,10 +10,6 @@ import Foundation
 import BaseDomain
 
 public struct Keyword {
-    
     public let id: KeywordID
-    
-    public private(set) var name: String
-    
-    //MARK: - Policy
+    public let name: String
 }

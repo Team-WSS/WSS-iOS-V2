@@ -10,10 +10,7 @@ import Foundation
 import BaseDomain
 
 public struct KeywordGroup {
-    
-    public private(set) var name: String
-    public private(set) var profileImage: ImageWrapper
-    public private(set) var keywords: [Keyword]
-    
-    //MARK: - Policy
+    public let name: String
+    public let profileImage: ImageWrapper
+    public let keywords: [Keyword]
 }
