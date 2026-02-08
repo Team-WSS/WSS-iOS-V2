@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum NovelGenre: String {
+public enum NovelGenre {
     case lightNovel
     case wuxia
     case fantasy
@@ -18,20 +18,6 @@ public enum NovelGenre: String {
     case modernFantasy
     case drama
     case mystery
-    
-    var title: String {
-        switch self {
-        case .lightNovel:       return "라노벨"
-        case .wuxia:            return "무협"
-        case .fantasy:          return "판타지"
-        case .romance:          return "로맨스"
-        case .BL:               return "BL"
-        case .romanceFantasy:   return "로판"
-        case .modernFantasy:    return "현판"
-        case .drama:            return "드라마"
-        case .mystery:          return "미스터리"
-        }
-    }
 }
 
 extension NovelGenre {

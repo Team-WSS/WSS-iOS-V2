@@ -17,50 +17,103 @@ public struct FeedDraft {
     public private(set) var connectedNovel: ConnectedNovel?
     public private(set) var attachedImages: [ImageWrapper]
     
+    //MARK: - init
+    
+    public init(
+        content: String,
+        genre: [NovelGenre],
+        isSpoiler: Bool,
+        isPrivate: Bool,
+        connectedNovel: ConnectedNovel? = nil,
+        attachedImages: [ImageWrapper]
+    ) {
+        let uniqueGenre = Array(Set(genre))
+        let limitedImages = Array(attachedImages.prefix(Self.maxImageCount))
+        
+#if DEBUG
+        if content.count > Self.maxContentCount {
+            assertionFailure("Content overflow: \(content.count) (max: \(Self.maxContentCount))")
+        }
+        if uniqueGenre.count != genre.count {
+            assertionFailure("Genre contains duplicates")
+        }
+        if attachedImages.count > Self.maxImageCount {
+            assertionFailure("Image overflow: \(attachedImages.count) (max: \(Self.maxImageCount))")
+        }
+#endif
+        
+        self.content = content
+        self.genre = uniqueGenre
+        self.isSpoiler = isSpoiler
+        self.isPrivate = isPrivate
+        self.connectedNovel = connectedNovel
+        self.attachedImages = limitedImages
+    }
+    
     //MARK: - Policy
     
-    static let maxContentCount: Int = 2000
+    private static let maxContentCount: Int = 2000
+    private static let maxImageCount: Int = 5
     
-    public enum PolicyError: Error, Equatable {
-        case contentOverLimit
+    public enum ValidationError: Error, Equatable {
+        case contentOverLimit(max: Int)
+        case imageOverLimit(max: Int)
+        case connectedNovelOverLimit
         case emptyContent
         case emptyGenre
     }
     
     public mutating func updateContent(_ newValue: String) throws {
         guard newValue.count <= Self.maxContentCount else {
-            throw PolicyError.contentOverLimit
+            throw ValidationError.contentOverLimit(max: Self.maxContentCount)
         }
         
         content = newValue
     }
     
-    public mutating func selectGenre(_ newGenre: NovelGenre) {
+    public func remainsContentCount() -> Int {
+        Self.maxContentCount - content.count
+    }
+    
+    public mutating func addGenre(_ newGenre: NovelGenre) {
         guard !genre.contains(newGenre) else { return }
+        
         genre.append(newGenre)
     }
     
-    public mutating func deselectGenre(_ targetGenre: NovelGenre) {
+    public mutating func removeGenre(_ targetGenre: NovelGenre) {
         genre.removeAll { $0 == targetGenre }
     }
     
-    public mutating func selectPrivate(_ isSelected: Bool) {
-        isPrivate = isSelected
+    public mutating func togglePrivate() {
+        isPrivate.toggle()
     }
     
-    public mutating func selectSpoiler(_ isSelected: Bool) {
-        isSpoiler = isSelected
+    public mutating func toggleSpoiler() {
+        isSpoiler.toggle()
     }
-        
-    public mutating func validateForSubmission() throws(PolicyError) {
-        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if trimmedContent.isEmpty {
-            throw .emptyContent
+    
+    public mutating func setConnectedNovel(_ newValue: ConnectedNovel) throws {
+        guard connectedNovel == nil else {
+            throw ValidationError.connectedNovelOverLimit
         }
         
-        if genre.isEmpty {
-            throw .emptyGenre
+        connectedNovel = newValue
+    }
+    
+    public mutating func removeConnectedNovel() {
+        connectedNovel = nil
+    }
+    
+    public mutating func addImage(_ image: ImageWrapper) throws {
+        guard attachedImages.count < Self.maxImageCount else {
+            throw ValidationError.imageOverLimit(max: Self.maxImageCount)
         }
+        
+        attachedImages.append(image)
+    }
+    
+    public mutating func removeImage(_ image: ImageWrapper) {
+        attachedImages.removeAll { $0 == image }
     }
 }

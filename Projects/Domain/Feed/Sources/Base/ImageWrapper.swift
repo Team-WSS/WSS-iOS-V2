@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ImageWrapper {
+public struct ImageWrapper: Equatable {
     public let identifier: String
     
     public init(identifier: String) {
