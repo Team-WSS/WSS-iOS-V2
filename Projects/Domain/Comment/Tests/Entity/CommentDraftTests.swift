@@ -8,8 +8,9 @@
 
 import Testing
 @testable import CommentDomain
+@testable import BaseDomain
 
-@Suite(.tags(.entity))
+@Suite
 struct CommentDraftTests {
 
     // MARK: - Helpers

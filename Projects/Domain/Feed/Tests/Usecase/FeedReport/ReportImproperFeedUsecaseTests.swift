@@ -9,7 +9,7 @@
 import Testing
 @testable import FeedDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct ReportImproperFeedUsecaseTests {
     
     @Test func `부적절한 피드 신고를 성공적으로 요청한다.`() async throws {

@@ -10,7 +10,7 @@ import Testing
 @testable import CommentDomain
 @testable import BaseDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct CreateCommentUsecaseTests {
 
     @Test func `댓글을 생성하면 레포지토리에 feedID와 draft가 전달된다.`() async throws {

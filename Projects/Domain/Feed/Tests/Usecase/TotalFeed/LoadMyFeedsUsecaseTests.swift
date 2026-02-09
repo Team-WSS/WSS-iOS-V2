@@ -9,7 +9,7 @@
 import Testing
 @testable import FeedDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct LoadMyFeedsUsecaseTests {
     
     func `내 피드를 정상적으로 불러온다`() async throws {

@@ -10,7 +10,7 @@ import Testing
 @testable import CommentDomain
 @testable import BaseDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct LoadCommentsUsecaseTests {
     
     @Test func `댓글 목록을 성공적으로 불러온다.`() async throws {

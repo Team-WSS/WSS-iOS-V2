@@ -9,7 +9,7 @@
 import Testing
 @testable import FeedDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct CreateFeedUsecaseTests {
     
     @Test func `피드를 생성하면 레포지토리에 draft가 전달된다.`() async throws {
