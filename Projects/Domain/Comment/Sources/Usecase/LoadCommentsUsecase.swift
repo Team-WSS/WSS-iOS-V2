@@ -9,19 +9,19 @@
 import Foundation
 import BaseDomain
 
-public protocol FetchCommentsUsecase {
-    func execute(feedID: FeedID) async throws -> [Comment]
+public protocol LoadCommentsUsecase {
+    func execute(feedID: FeedID) async throws -> [FeedComment]
 }
 
-public final class DefaultFetchCommentsUsecase: FetchCommentsUsecase {
+public final class DefaultFetchCommentsUsecase: LoadCommentsUsecase {
     
     private let repository: CommentRepositoryProtocol
     
-    init(repository: CommentRepositoryProtocol) {
+    public init(repository: CommentRepositoryProtocol) {
         self.repository = repository
     }
     
-    func execute(feedID: FeedID) async throws -> [Comment] {
+    public func execute(feedID: FeedID) async throws -> [FeedComment] {
         try await repository.fetchComments(feedID: feedID)
     }
 }

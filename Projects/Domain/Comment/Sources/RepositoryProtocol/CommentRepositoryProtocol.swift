@@ -7,9 +7,10 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol CommentRepositoryProtocol {
-    func fetchComments(feedID: FeedID) async throws -> [Comment]
+    func fetchComments(feedID: FeedID) async throws -> [FeedComment]
     
     func submitComment(feedID: FeedID, draft: CommentDraft) async throws
     func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws

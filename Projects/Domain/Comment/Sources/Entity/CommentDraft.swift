@@ -12,28 +12,36 @@ public struct CommentDraft {
     
     public private(set) var content: String
     
+    //MARK: - init
+    
+    public init(content: String) {
+#if DEBUG
+        if content.count > Self.maxContentCount {
+            assertionFailure("Content overflow: \(content.count) (max: \(Self.maxContentCount))")
+        }
+#endif
+        
+        self.content = content
+    }
+    
     //MARK: - Policy
     
     static let maxContentCount: Int = 500
     
-    public enum PolicyError: Error, Equatable {
+    public enum ValidationError: Error, Equatable {
         case emptyContent
         case contentOverLimit
     }
     
     public mutating func updateContent(_ newValue: String) throws {
+        guard !newValue.isEmpty else {
+            throw ValidationError.emptyContent
+        }
+
         guard newValue.count <= Self.maxContentCount else {
-            throw PolicyError.contentOverLimit
+            throw ValidationError.contentOverLimit
         }
-        
+
         content = newValue
-    }
-    
-    public mutating func validateForSubmission() throws(PolicyError) {
-        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if trimmedContent.isEmpty {
-            throw .emptyContent
-        }
     }
 }
