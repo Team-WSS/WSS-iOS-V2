@@ -21,6 +21,6 @@ public final class DefaultSaveTermsAgreementDraftUseCase: SaveTermsAgreementDraf
     }
 
     public func execute(draft: TermsAgreementDraft) async throws {
-        try await repository.saveTermsAgreementDraft(draft)
+        try await repository.save(draft: draft)
     }
 }

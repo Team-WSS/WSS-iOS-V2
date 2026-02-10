@@ -23,7 +23,7 @@ final class MockTermsAgreementRepository: TermsAgreementRepository {
         return try loadResult.get()
     }
 
-    func saveTermsAgreementDraft(_ draft: TermsAgreementDraft) async throws(RepositoryError) {
+    func save(draft: TermsAgreementDraft) async throws(RepositoryError) {
         saveCallCount += 1
         savedDrafts.append(draft)
         try saveResult.get()
