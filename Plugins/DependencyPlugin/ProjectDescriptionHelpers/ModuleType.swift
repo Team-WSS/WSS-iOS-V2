@@ -27,11 +27,13 @@ public enum ModuleType {
     public enum Domain: String {
         case recommendation
         case novelReview
+        case setting
         
         public var name: String {
             switch self {
             case .recommendation: "RecommendationDomain"
             case .novelReview: "NovelReviewDomain"
+            case .setting: "SettingDomain"
             }
         }
         
