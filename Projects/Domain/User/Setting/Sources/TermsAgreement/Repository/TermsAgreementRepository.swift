@@ -10,6 +10,10 @@
 // TermsAgreementRepository.swift
 
 public protocol TermsAgreementRepository {
+    
     func loadTermsAgreementDraft() async throws(RepositoryError) -> TermsAgreementDraft
-    func saveTermsAgreementDraft(_ draft: TermsAgreementDraft) async throws(RepositoryError)
+    
+    func save(
+        draft: TermsAgreementDraft
+    ) async throws(RepositoryError)
 }
