@@ -39,7 +39,7 @@ struct NovelReviewDraftTests {
 
     // MARK: - Init rules
 
-    @Test("init removes duplicates and clips attractivePoints to max(3)")
+    @Test("초기화 시 매력 포인트는 중복이 제거되고 최대 3개까지만 유지된다")
     func initNormalizesAttractivePoints() {
         // duplicates + more than 3
         let input: [AttractivePoint] = [
@@ -54,7 +54,7 @@ struct NovelReviewDraftTests {
         #expect(Set(draft.attractivePoints).count == draft.attractivePoints.count)
     }
 
-    @Test("init removes duplicates and clips keywords to max(20)")
+    @Test("초기화 시 키워드는 중복이 제거되고 최대 20개까지만 유지된다")
     func initNormalizesKeywords() {
         // 25 items with duplicates
         let base = (1...25).map(makeKeyword)
@@ -66,7 +66,7 @@ struct NovelReviewDraftTests {
         #expect(Set(draft.keywords).count == draft.keywords.count)
     }
 
-    @Test("init normalizes period based on initial status")
+    @Test("초기화 시 읽기 상태에 따라 기간이 정규화된다")
     func initNormalizesPeriodByStatus() throws {
         let d = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -86,7 +86,8 @@ struct NovelReviewDraftTests {
 
     // MARK: - Status/period editing
 
-    @Test("changeStatus keeps period nil across all statuses")
+    
+    @Test("기간이 nil일 때 상태를 변경해도 기간은 그대로 nil을 유지한다")
     func changeStatusKeepsNilPeriodAcrossStatuses() {
         var draft = makeDraft(status: .watching, period: nil)
 
@@ -103,7 +104,7 @@ struct NovelReviewDraftTests {
         #expect(draft.period == nil)
     }
 
-    @Test("changeStatus normalizes period for all status transitions")
+    @Test("상태를 변경하면 기존 기간은 새로운 상태 기준으로 정규화된다")
     func changeStatusNormalizesPeriodForAllTransitions() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
@@ -163,7 +164,7 @@ struct NovelReviewDraftTests {
         }
     }
 
-    @Test("setPeriod normalizes input for each current status")
+    @Test("setPeriod는 현재 상태에 맞게 기간을 정규화하여 저장한다")
     func setPeriodNormalizesForEachStatus() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
@@ -205,7 +206,7 @@ struct NovelReviewDraftTests {
 
     // MARK: - Rating
 
-    @Test("setRating updates rating (including nil)")
+    @Test("평점은 설정 및 nil 초기화가 가능하다")
     func setRatingUpdates() throws {
         var draft = makeDraft(rating: nil)
         let r = try Rating(4.5)
@@ -219,7 +220,7 @@ struct NovelReviewDraftTests {
 
     // MARK: - Attractive points editing rules
 
-    @Test("addAttractivePoint is idempotent for duplicates")
+    @Test("이미 선택된 매력 포인트를 다시 추가해도 중복되지 않는다")
     func addAttractivePointIgnoresDuplicates() throws {
         var draft = makeDraft(attractivePoints: [.worldview])
 
@@ -227,7 +228,7 @@ struct NovelReviewDraftTests {
         #expect(draft.attractivePoints == [.worldview])
     }
 
-    @Test("addAttractivePoint throws when exceeding max(3)")
+    @Test("매력 포인트가 3개를 초과하면 예외가 발생한다")
     func addAttractivePointThrowsOnOverflow() throws {
         var draft = makeDraft(attractivePoints: [.worldview, .material, .character])
 
@@ -236,7 +237,7 @@ struct NovelReviewDraftTests {
         }
     }
 
-    @Test("removeAttractivePoint is idempotent")
+    @Test("매력 포인트 삭제는 여러 번 호출해도 안전하다")
     func removeAttractivePointIsIdempotent() {
         var draft = makeDraft(attractivePoints: [.vibe, .material])
 
@@ -250,7 +251,7 @@ struct NovelReviewDraftTests {
 
     // MARK: - Keywords editing rules
 
-    @Test("setKeywords throws when exceeding max(20)")
+    @Test("키워드를 20개 초과로 설정하면 예외가 발생한다")
     func setKeywordsThrowsOnOverflow() async throws {
         var draft = makeDraft()
         let twentyOne = (1...21).map(makeKeyword)
@@ -260,7 +261,7 @@ struct NovelReviewDraftTests {
         }
     }
 
-    @Test("setKeywords accepts <= 20 (current implementation does not dedupe)")
+    @Test("키워드는 20개 이하일 경우 정상적으로 설정된다")
     func setKeywordsAcceptsUnderMax() throws {
         var draft = makeDraft()
         let input = (1...20).map(makeKeyword)
@@ -269,7 +270,7 @@ struct NovelReviewDraftTests {
         #expect(draft.keywords.count == 20)
     }
 
-    @Test("removeKeyword is idempotent")
+    @Test("키워드 삭제는 여러 번 호출해도 안전하다")
     func removeKeywordIsIdempotent() {
         let k1 = makeKeyword(1)
         let k2 = makeKeyword(2)
