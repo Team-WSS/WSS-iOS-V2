@@ -13,7 +13,7 @@ import Foundation
 // 지피티 ㄱㄱ -> ImageWrapper로 감싸라~
 
 //TODO:  좀 더 수정을 해봐야겠따..
-public struct ImageWrapper {
+public struct ImageWrapper: Equatable {
     // url..?
     public let identifier: String
     

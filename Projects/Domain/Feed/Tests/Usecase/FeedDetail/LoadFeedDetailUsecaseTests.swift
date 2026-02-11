@@ -8,8 +8,9 @@
 
 import Testing
 @testable import FeedDomain
+@testable import BaseDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct LoadFeedDetailUsecaseTests {
     
     @Test func `피드 상세를 성공적으로 불러온다`() async throws {

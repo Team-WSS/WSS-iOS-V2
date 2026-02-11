@@ -8,8 +8,9 @@
 
 import Testing
 @testable import FeedDomain
+@testable import BaseDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct FeedLikeUsecaseTests {
     
     @Test func `좋아요를 클릭하면 레포지토리의 addLike가 호출된다.`() async throws {

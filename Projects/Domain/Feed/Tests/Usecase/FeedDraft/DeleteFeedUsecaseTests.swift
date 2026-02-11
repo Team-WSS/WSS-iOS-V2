@@ -8,8 +8,9 @@
 
 import Testing
 @testable import FeedDomain
+@testable import BaseDomain
 
-@Suite(.tags(.usecase))
+@Suite
 struct DeleteFeedUsecaseTests {
     
     @Test func `피드를 삭제하면 레포지토리에 id가 전달된다.`() async throws {
