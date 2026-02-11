@@ -17,7 +17,7 @@ import NovelReviewDomain
 @Suite("DeleteNovelReviewUseCase")
 struct DeleteNovelReviewUseCaseTests {
 
-    @Test("deletes by novelID successfully")
+    @Test("주어진 작품 ID로 작품 평가를 삭제한다")
     func deletesByID() async throws {
         let repo = MockNovelReviewRepository()
         let sut = DefaultDeleteNovelReviewUseCase(repository: repo)
@@ -28,7 +28,7 @@ struct DeleteNovelReviewUseCaseTests {
         #expect(repo.deletedNovelIDs == [novelID])
     }
 
-    @Test("propagates repository error on delete")
+    @Test("삭제 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func deletePropagatesError() async {
         let repo = MockNovelReviewRepository()
         repo.deleteResult = .failure(.networkUnavailable)
