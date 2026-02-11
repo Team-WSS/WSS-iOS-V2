@@ -31,6 +31,7 @@ public enum ModuleType {
         case feed
         case keyword
         case comment
+        case novel
         case novelReview
         case setting
         case notification
@@ -42,6 +43,7 @@ public enum ModuleType {
             case .feed: "FeedDomain"
             case .keyword: "KeywordDomain"
             case .comment: "CommentDomain"
+            case .novel: "NovelDomain"
             case .novelReview: "NovelReviewDomain"
             case .setting: "SettingDomain"
             case .notification: "NotificationDomain"
