@@ -28,11 +28,11 @@ struct CreateCommentUsecaseTests {
 
     @Test func `댓글 생성에 실패하면 에러를 던진다.`() async {
         let mock = MockCommentRepository()
-        mock.submitResult = .failure(MockError.networkUnavailable)
+        mock.submitResult = .failure(RepositoryError.networkUnavailable)
 
         let usecase = DefaultCreateCommentUsecase(repository: mock)
 
-        await #expect(throws: MockError.networkUnavailable) {
+        await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute(feedID: FeedID(1), makeCommentDraft())
         }
     }

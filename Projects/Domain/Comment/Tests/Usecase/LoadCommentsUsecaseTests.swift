@@ -40,11 +40,11 @@ struct LoadCommentsUsecaseTests {
     
     @Test func `댓글 목록을 불러오다 실패하면 에러를 던진다.`() async {
         let mock = MockCommentRepository()
-        mock.fetchCommentsResult = .failure(MockError.networkUnavailable)
+        mock.fetchCommentsResult = .failure(RepositoryError.networkUnavailable)
         
         let usecase = DefaultFetchCommentsUsecase(repository: mock)
         
-        await #expect(throws: MockError.networkUnavailable) {
+        await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute(feedID: FeedID(1))
         }
     }

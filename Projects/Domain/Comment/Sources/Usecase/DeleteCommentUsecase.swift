@@ -15,13 +15,13 @@ public protocol DeleteCommentUsecase {
 
 public final class DefaultDeleteCommentUsecase: DeleteCommentUsecase {
     
-    private let repository: CommentRepositoryProtocol
+    private let commentRepository: CommentRepository
     
-    public init(repository: CommentRepositoryProtocol) {
-        self.repository = repository
+    public init(repository: CommentRepository) {
+        self.commentRepository = repository
     }
     
     public func execute(commentID: CommentID, feedID: FeedID) async throws {
-        try await repository.deleteComment(id: commentID, feedID: feedID)
+        try await commentRepository.deleteComment(id: commentID, feedID: feedID)
     }
 }

@@ -15,13 +15,13 @@ public protocol LoadCommentsUsecase {
 
 public final class DefaultFetchCommentsUsecase: LoadCommentsUsecase {
     
-    private let repository: CommentRepositoryProtocol
+    private let commentRepository: CommentRepository
     
-    public init(repository: CommentRepositoryProtocol) {
-        self.repository = repository
+    public init(repository: CommentRepository) {
+        self.commentRepository = repository
     }
     
     public func execute(feedID: FeedID) async throws -> [FeedComment] {
-        try await repository.fetchComments(feedID: feedID)
+        try await commentRepository.fetchComments(feedID: feedID)
     }
 }

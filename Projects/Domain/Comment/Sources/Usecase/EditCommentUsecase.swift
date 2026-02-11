@@ -15,13 +15,13 @@ public protocol EditCommentUsecase {
 
 public final class DefaultEditCommentUsecase: EditCommentUsecase {
     
-    private let repository: CommentRepositoryProtocol
+    private let commentRepository: CommentRepository
     
-    public init(repository: CommentRepositoryProtocol) {
-        self.repository = repository
+    public init(repository: CommentRepository) {
+        self.commentRepository = repository
     }
     
     public func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws {
-        try await repository.editComment(id: commentID, feedID: feedID, draft: draft)
+        try await commentRepository.editComment(id: commentID, feedID: feedID, draft: draft)
     }
 }

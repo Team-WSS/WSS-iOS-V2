@@ -31,11 +31,11 @@ struct DeleteCommentUsecaseTests {
 
     @Test func `댓글 삭제에 실패하면 에러를 던진다.`() async {
         let mock = MockCommentRepository()
-        mock.deleteResult = .failure(MockError.notFound)
+        mock.deleteResult = .failure(RepositoryError.networkUnavailable)
 
         let usecase = DefaultDeleteCommentUsecase(repository: mock)
 
-        await #expect(throws: MockError.notFound) {
+        await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute(commentID: CommentID(1), feedID: FeedID(1))
         }
     }

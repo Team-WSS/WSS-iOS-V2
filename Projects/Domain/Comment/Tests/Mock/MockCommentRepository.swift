@@ -10,12 +10,7 @@ import Foundation
 import CommentDomain
 import BaseDomain
 
-enum MockError: Error, Equatable {
-    case networkUnavailable
-    case notFound
-}
-
-final class MockCommentRepository: CommentRepositoryProtocol {
+final class MockCommentRepository: CommentRepository {
 
     var fetchedFeedIDs: [FeedID] = []
     var submittedComments: [(feedID: FeedID, draft: CommentDraft)] = []
@@ -26,6 +21,11 @@ final class MockCommentRepository: CommentRepositoryProtocol {
     var submitResult: Result<Void, Error> = .success(())
     var editResult: Result<Void, Error> = .success(())
     var deleteResult: Result<Void, Error> = .success(())
+    
+    var reportedSpoilerCommentID: CommentID?
+    var reportSpoilerResult: Result<Void, Error> = .success(())
+    var reportedImproperCommentID: CommentID?
+    var reportImproperResult: Result<Void, Error> = .success(())
 
     func fetchComments(feedID: FeedID) async throws -> [FeedComment] {
         fetchedFeedIDs.append(feedID)
@@ -60,6 +60,30 @@ final class MockCommentRepository: CommentRepositoryProtocol {
     func deleteComment(id: CommentID, feedID: FeedID) async throws {
         deletedComments.append((id, feedID))
         switch deleteResult {
+        case .success:
+            return
+        case .failure(let error):
+            throw error
+        }
+    }
+    
+    // MARK: - Report
+    
+    func reportSpoilerComment(id: CommentID) async throws {
+        reportedSpoilerCommentID = id
+        
+        switch reportSpoilerResult {
+        case .success:
+            return
+        case .failure(let error):
+            throw error
+        }
+    }
+    
+    func reportImproperComment(id: CommentID) async throws {
+        reportedImproperCommentID = id
+        
+        switch reportImproperResult {
         case .success:
             return
         case .failure(let error):

@@ -34,11 +34,11 @@ struct EditCommentUsecaseTests {
 
     @Test func `댓글 수정에 실패하면 에러를 던진다.`() async {
         let mock = MockCommentRepository()
-        mock.editResult = .failure(MockError.notFound)
+        mock.editResult = .failure(RepositoryError.networkUnavailable)
 
         let usecase = DefaultEditCommentUsecase(repository: mock)
 
-        await #expect(throws: MockError.notFound) {
+        await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute(
                 commentID: CommentID(1),
                 feedID: FeedID(1),
