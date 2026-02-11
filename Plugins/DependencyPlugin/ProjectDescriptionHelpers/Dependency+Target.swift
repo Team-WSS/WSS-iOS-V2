@@ -87,6 +87,21 @@ public extension TargetDependency.Domain {
         target: ModuleType.Domain.keyword.targetName(type: .tests),
         path: .relativeToDomain(.keyword)
     )
+    
+    static let NovelDomain = TargetDependency.project(
+        target: ModuleType.Domain.novel.targetName(type: .sources),
+        path: .relativeToDomain(.novel)
+    )
+    
+    static let NovelDomainDemo = TargetDependency.project(
+        target: ModuleType.Domain.novel.targetName(type: .demo),
+        path: .relativeToDomain(.novel)
+    )
+    
+    static let NovelDomainTests = TargetDependency.project(
+        target: ModuleType.Domain.novel.targetName(type: .tests),
+        path: .relativeToDomain(.novel)
+    )
 }
 
 public extension TargetDependency.Data {
