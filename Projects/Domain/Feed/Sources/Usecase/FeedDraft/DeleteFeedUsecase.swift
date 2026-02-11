@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol DeleteFeedUsecase {
     func execute(feedID: FeedID) async throws

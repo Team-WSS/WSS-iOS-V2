@@ -2,7 +2,7 @@
 //  Project.swift
 //  Manifests
 //
-//  Created by Seoyeon Choi on 1/28/26.
+//  Created by Seoyeon Choi on 2/6/26.
 //
 
 import ProjectDescription
@@ -10,7 +10,6 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDomainModule(
-    name: ModuleType.Domain.feed.name,
-    targets: [.sources, .demo, .tests],
-    internalDependencies: [.Domain.BaseDomain]
+    name: ModuleType.Domain.base.name,
+    targets: [.sources, .demo, .tests]
 )

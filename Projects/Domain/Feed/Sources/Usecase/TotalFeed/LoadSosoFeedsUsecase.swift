@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol LoadSosoFeedsUsecase {
     func execute(option: SosoFeedOption,

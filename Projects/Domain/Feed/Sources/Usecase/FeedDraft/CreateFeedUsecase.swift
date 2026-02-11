@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol CreateFeedUsecase {
     func execute(_ draft: FeedDraft) async throws

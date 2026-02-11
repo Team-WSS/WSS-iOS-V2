@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public struct MyFeedOption {
     public let genres: [NovelGenre]

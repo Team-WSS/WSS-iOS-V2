@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol LoadUserFeedsUsecase {
     func execute(userID: UserID,
