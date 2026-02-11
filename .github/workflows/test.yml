@@ -35,9 +35,16 @@ jobs:
           tuist generate --no-open
 
       # 5. FeedDomain 테스트 실행
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
       - name: Run FeedDomain Tests
         run: |
+          set -o pipefail
           xcodebuild test \
             -scheme FeedDomain \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -enableCodeCoverage YES
+            -enableCodeCoverage YES \
+            -resultBundlePath FeedDomain.xcresult \
+            -quiet \
+          | xcbeautify
