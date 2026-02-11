@@ -8,6 +8,7 @@
 
 import Testing
 @testable import FeedDomain
+@testable import BaseDomain
 
 @Suite
 struct LoadFeedDetailUsecaseTests {

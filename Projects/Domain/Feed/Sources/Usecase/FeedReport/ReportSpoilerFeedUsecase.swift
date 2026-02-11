@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol ReportSpoilerFeedUsecase {
     func execute(feedID: FeedID) async throws

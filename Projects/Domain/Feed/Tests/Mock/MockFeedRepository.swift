@@ -8,6 +8,7 @@
 
 import Foundation
 import FeedDomain
+import BaseDomain
 
 final class MockFeedRepository: FeedRepository {
     

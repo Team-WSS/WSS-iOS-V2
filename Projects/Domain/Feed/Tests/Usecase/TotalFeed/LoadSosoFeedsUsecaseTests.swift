@@ -7,6 +7,7 @@
 //
 
 import Testing
+@testable import BaseDomain
 @testable import FeedDomain
 
 @Suite
