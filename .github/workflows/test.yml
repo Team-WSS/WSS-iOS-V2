@@ -1,0 +1,43 @@
+name: Run Domain Tests
+
+on:
+  pull_request:
+    branches: [ develop ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  test:
+    name: FeedDomain Test (Minimal)
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      # 1. Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Placeholder xcconfig 생성
+      - name: Create placeholder xcconfig
+        run: |
+          mkdir -p Config
+          touch Config/Config_Debug.xcconfig
+          touch Config/Config_Release.xcconfig
+          touch Config/Config_Shared.xcconfig
+
+      # 3. mise + Tuist 설치
+      - name: Setup mise & install tools
+        uses: jdx/mise-action@v2
+
+      # 4. Tuist install + generate
+      - name: Generate project
+        run: |
+          tuist install
+          tuist generate --no-open
+
+      # 5. FeedDomain 테스트 실행
+      - name: Run FeedDomain Tests
+        run: |
+          xcodebuild test \
+            -scheme FeedDomain \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -enableCodeCoverage YES
