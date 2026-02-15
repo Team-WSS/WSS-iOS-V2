@@ -5,9 +5,13 @@ on:
     branches: [ develop ]
     types: [ opened, synchronize, reopened ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: FeedDomain Test (Minimal)
+    name: Run Domain Tests
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -16,35 +20,144 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Placeholder xcconfig 생성
+      # 2. Placeholder xcconfig 생성 (gitignore 되어 있어 CI에서 필요)
       - name: Create placeholder xcconfig
         run: |
           mkdir -p Config
-          touch Config/Config_Debug.xcconfig
-          touch Config/Config_Release.xcconfig
-          touch Config/Config_Shared.xcconfig
+          cat > Config/Config_Shared.xcconfig << 'EOF'
+          BUCKET_URL = https://placeholder
+          KAKAO_APP_KEY = placeholder
+          APPSTORE_ID = placeholder
+          EOF
+          cat > Config/Config_Debug.xcconfig << 'EOF'
+          #include "./Config_Shared.xcconfig"
+          BASE_URL = https://placeholder
+          TEST_API_KEY = placeholder
+          EOF
+          cat > Config/Config_Release.xcconfig << 'EOF'
+          #include "./Config_Shared.xcconfig"
+          BASE_URL = https://placeholder
+          AMPLITUDE_API_KEY = placeholder
+          EOF
 
       # 3. mise + Tuist 설치
       - name: Setup mise & install tools
         uses: jdx/mise-action@v2
 
-      # 4. Tuist install + generate
+      # 4. Tuist 캐시
+      - name: Cache Tuist
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/com.tuist.Tuist
+            Tuist/.build
+          key: tuist-${{ runner.os }}-${{ hashFiles('Tuist/Package.swift', 'Tuist/Package.resolved') }}
+          restore-keys: |
+            tuist-${{ runner.os }}-
+
+      # 5. 프로젝트 생성
       - name: Generate project
         run: |
           tuist install
           tuist generate --no-open
 
-      # 5. FeedDomain 테스트 실행
+      # 6. DerivedData 캐시
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/Project.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-
+
+      # 7. xcbeautify 설치
       - name: Install xcbeautify
         run: brew install xcbeautify
 
+      # 8. 테스트 실행 — 3개 Domain 순차 실행
       - name: Run FeedDomain Tests
         run: |
           set -o pipefail
           xcodebuild test \
+            -workspace WSS-iOS-V2.xcworkspace \
             -scheme FeedDomain \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -enableCodeCoverage YES \
-            -resultBundlePath FeedDomain.xcresult \
-            -quiet \
-          | xcbeautify
+            -resultBundlePath TestResults/FeedDomain.xcresult \
+          | xcbeautify --renderer github-actions
+
+      - name: Run KeywordDomain Tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace WSS-iOS-V2.xcworkspace \
+            -scheme KeywordDomain \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults/KeywordDomain.xcresult \
+          | xcbeautify --renderer github-actions
+
+      - name: Run CommentDomain Tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace WSS-iOS-V2.xcworkspace \
+            -scheme CommentDomain \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults/CommentDomain.xcresult \
+          | xcbeautify --renderer github-actions
+
+      # 9. 커버리지 리포트 생성
+      - name: Generate coverage report
+        if: always()
+        run: |
+          echo "## 🧪 Domain Test Coverage Report" > coverage.md
+          echo "" >> coverage.md
+          echo "| Module | Coverage |" >> coverage.md
+          echo "|--------|----------|" >> coverage.md
+
+          for domain in FeedDomain KeywordDomain CommentDomain; do
+            RESULT_PATH="TestResults/${domain}.xcresult"
+            if [ -d "$RESULT_PATH" ]; then
+              COV_JSON=$(xcrun xccov view --report --json "$RESULT_PATH" 2>/dev/null || echo "")
+              if [ -n "$COV_JSON" ]; then
+                PERCENT=$(echo "$COV_JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          targets = data.get('targets', [])
+          for t in targets:
+              if '${domain}' in t.get('name', '') and 'Tests' not in t.get('name', ''):
+                  print(f\"{t['lineCoverage'] * 100:.1f}%\")
+                  sys.exit(0)
+          print('N/A')
+          ")
+                echo "| ${domain} | ${PERCENT} |" >> coverage.md
+              else
+                echo "| ${domain} | ⚠️ Report unavailable |" >> coverage.md
+              fi
+            else
+              echo "| ${domain} | ❌ Test failed |" >> coverage.md
+            fi
+          done
+
+          echo "" >> coverage.md
+          echo "<sub>Generated by CI on $(date -u '+%Y-%m-%d %H:%M UTC')</sub>" >> coverage.md
+
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+
+      # 10. PR 코멘트 게시
+      - name: Post coverage comment on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: coverage.md
+
+      # 11. xcresult 아티팩트 업로드
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.xcresult
+          retention-days: 7
