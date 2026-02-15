@@ -57,7 +57,8 @@ struct FeedDraftTests {
         #expect(mock.content == newContent)
     }
     
-    @Test func `글은 2000자를 초과할 수 없다.`() throws {
+    @Test("글은 2000자를 초과할 수 없다.")
+    func contentOverLimitThrows() throws {
         var mock = makeDraft()
         let longText = String(repeating: "a", count: 2001)
         
@@ -66,7 +67,8 @@ struct FeedDraftTests {
         }
     }
     
-    @Test func `2000자 초과 시 기존 작성한 글은 유지한다.`() throws {
+    @Test("2000자 초과 시 기존 작성한 글은 유지한다.")
+    func contentPreservedOnOverLimit() throws {
         var mock = makeDraft(content: "원래 내용")
         let longText = String(repeating: "a", count: 2001)
         
@@ -147,7 +149,8 @@ struct FeedDraftTests {
         #expect(draft.connectedNovel != nil)
     }
     
-    @Test func `작품은 1개만 연결할 수 있다.`() throws {
+    @Test("작품은 1개만 연결할 수 있다.")
+    func connectedNovelLimitedToOne() throws {
         var draft = makeDraft(connectedNovel: makeConnectedNovel())
         
         #expect(throws: FeedDraft.ValidationError.connectedNovelOverLimit) {
@@ -173,7 +176,8 @@ struct FeedDraftTests {
         #expect(draft.attachedImages.count == 1)
     }
     
-    @Test func `이미지는 최대 5장까지 첨부할 수 있다.`() throws {
+    @Test("이미지는 최대 5장까지 첨부할 수 있다.")
+    func imageLimitedToFive() throws {
         let images = Array(repeating: makeImageWrapper(id: "1"), count: 5)
         var draft = makeDraft(attachedImages: images)
         
