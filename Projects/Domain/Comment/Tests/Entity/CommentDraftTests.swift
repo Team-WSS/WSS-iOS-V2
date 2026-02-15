@@ -21,7 +21,8 @@ struct CommentDraftTests {
 
     //MARK: - Content
 
-    @Test func `댓글을 작성할 수 있다.`() throws {
+    @Test("댓글을 작성할 수 있다.")
+    func writeComment() throws {
         var draft = makeDraft()
         let newContent = "새로운 댓글"
 
@@ -62,7 +63,8 @@ struct CommentDraftTests {
         #expect(draft.content == "원래 댓글")
     }
 
-    @Test func `빈 문자열로 수정할 수 없다.`() throws {
+    @Test("빈 문자열로 수정할 수 없다.")
+    func emptyContentThrows() throws {
         var draft = makeDraft()
 
         #expect(throws: CommentDraft.ValidationError.emptyContent) {
@@ -70,7 +72,8 @@ struct CommentDraftTests {
         }
     }
 
-    @Test func `빈 문자열 입력 시 기존 작성한 글은 유지한다.`() throws {
+    @Test("빈 문자열 입력 시 기존 작성한 글은 유지한다.")
+    func contentPreservedOnEmptyInput() throws {
         var draft = makeDraft(content: "원래 댓글")
 
         #expect(throws: CommentDraft.ValidationError.emptyContent) {

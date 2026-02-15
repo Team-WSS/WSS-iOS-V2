@@ -12,16 +12,17 @@ import Testing
 
 @Suite
 struct EditFeedUsecaseTests {
-    
-    @Test func `피드를 수정하면 레포지토리에 id와 draft가 전달된다.`() async throws {
+
+    @Test("피드를 수정하면 레포지토리에 id와 draft가 전달된다.")
+    func editFeedPassesIDAndDraft() async throws {
         let mock = MockFeedRepository()
         let usecase = DefaultEditFeedUseCase(repository: mock)
-        
+
         let feedID = FeedID(1)
         let draft = makeFeedDraft()
-        
+
         try await usecase.execute(feedID: feedID, editedFeed: draft)
-        
+
         #expect(
             mock.editedFeeds.contains { element in
                 element.id == feedID
@@ -31,13 +32,14 @@ struct EditFeedUsecaseTests {
             }
         )
     }
-    
-    @Test func `피드 수정에 실패하면 에러를 던진다.`() async {
+
+    @Test("피드 수정에 실패하면 에러를 던진다.")
+    func editFeedFailureThrows() async {
         let mock = MockFeedRepository()
         mock.editResult = .failure(RepositoryError.notFound)
-        
+
         let usecase = DefaultEditFeedUseCase(repository: mock)
-        
+
         await #expect(throws: RepositoryError.notFound) {
             try await usecase.execute(feedID: FeedID(1), editedFeed: makeFeedDraft())
         }

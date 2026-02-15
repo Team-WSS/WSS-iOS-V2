@@ -12,28 +12,30 @@ import Testing
 
 @Suite
 struct LoadFeedDetailUsecaseTests {
-    
-    @Test func `피드 상세를 성공적으로 불러온다`() async throws {
+
+    @Test("피드 상세를 성공적으로 불러온다")
+    func loadFeedDetailSuccess() async throws {
         let mockRepository = MockFeedRepository()
         let expectedFeed = makeFeedDetail()
         mockRepository.fetchDetailResult = .success(expectedFeed)
-        
+
         let usecase = DefaultLoadFeedUsecase(feedRepository: mockRepository)
         let feedID = FeedID(1)
-        
+
         let result = try await usecase.execute(feedID: feedID)
-        
+
         #expect(result.id == expectedFeed.id)
         #expect(mockRepository.fetchedDetailIDs == feedID)
     }
-    
-    @Test func `피드 상세를 불러오다 실패하면 에러를 던진다`() async {
+
+    @Test("피드 상세를 불러오다 실패하면 에러를 던진다")
+    func loadFeedDetailFailureThrows() async {
         let mockRepository = MockFeedRepository()
         mockRepository.fetchDetailResult = .failure(RepositoryError.networkUnavailable)
-        
+
         let usecase = DefaultLoadFeedUsecase(feedRepository: mockRepository)
         let feedID = FeedID(1)
-        
+
         await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute(feedID: feedID)
         }

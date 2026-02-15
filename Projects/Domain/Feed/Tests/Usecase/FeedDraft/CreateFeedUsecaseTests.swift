@@ -12,23 +12,25 @@ import Testing
 
 @Suite
 struct CreateFeedUsecaseTests {
-    
-    @Test func `피드를 생성하면 레포지토리에 draft가 전달된다.`() async throws {
+
+    @Test("피드를 생성하면 레포지토리에 draft가 전달된다.")
+    func createFeedPassesDraft() async throws {
         let mock = MockFeedRepository()
         let usecase = DefaultCreateFeedUseCase(repository: mock)
         let draft = makeFeedDraft()
-        
+
         try await usecase.execute(draft)
-        
+
         #expect(mock.submittedDrafts.count == 1)
     }
-    
-    @Test func `피드 생성에 실패하면 에러를 던진다.`() async {
+
+    @Test("피드 생성에 실패하면 에러를 던진다.")
+    func createFeedFailureThrows() async {
         let mock = MockFeedRepository()
         mock.submitResult = .failure(RepositoryError.notFound)
-        
+
         let usecase = DefaultCreateFeedUseCase(repository: mock)
-        
+
         await #expect(throws: RepositoryError.notFound) {
             try await usecase.execute(makeFeedDraft())
         }

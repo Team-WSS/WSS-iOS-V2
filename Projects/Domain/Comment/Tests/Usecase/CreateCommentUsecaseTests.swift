@@ -13,7 +13,8 @@ import Testing
 @Suite
 struct CreateCommentUsecaseTests {
 
-    @Test func `댓글을 생성하면 레포지토리에 feedID와 draft가 전달된다.`() async throws {
+    @Test("댓글을 생성하면 레포지토리에 feedID와 draft가 전달된다.")
+    func createCommentPassesFeedIDAndDraft() async throws {
         let mock = MockCommentRepository()
         let usecase = DefaultCreateCommentUsecase(repository: mock)
         let feedID = FeedID(1)
@@ -26,7 +27,8 @@ struct CreateCommentUsecaseTests {
         #expect(mock.submittedComments.first?.draft.content == draft.content)
     }
 
-    @Test func `댓글 생성에 실패하면 에러를 던진다.`() async {
+    @Test("댓글 생성에 실패하면 에러를 던진다.")
+    func createCommentFailureThrows() async {
         let mock = MockCommentRepository()
         mock.submitResult = .failure(RepositoryError.networkUnavailable)
 
