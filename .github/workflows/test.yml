@@ -112,7 +112,7 @@ jobs:
       - name: Generate coverage report
         if: always()
         run: |
-          echo "## 🧪 Domain Test Coverage Report" > coverage.md
+          echo "## 도메인 테스트 커버리지 리포트" > coverage.md
           echo "" >> coverage.md
           echo "| Module | Coverage |" >> coverage.md
           echo "|--------|----------|" >> coverage.md

@@ -11,7 +11,8 @@
 - XCTest 사용 금지
 
 ### Naming
-- 테스트 함수명은 **한국어**로 작성 (backtick 사용)
+- 테스트 함수명은 `@Test("한글 이름") func englishName()` 패턴으로 작성 (GitHub Actions CI 호환)
+- backtick 한글 함수명 사용 금지 (`@Test func \`한글\`()` ← 사용하지 않음)
 - Helper 함수는 `make~` prefix (e.g., `makeDraft()`, `makeComment()`)
 - Mock 클래스는 `Mock[ProtocolName]` (e.g., `MockCommentRepository`)
 
@@ -49,6 +50,10 @@ Projects/Domain/[Module]/Tests/
 └── Usecase/
     └── [Usecase]Tests.swift
 ```
+
+## Test Scope
+- **Domain 모듈에만 테스트 코드를 작성한다** (Data, Feature, Core 등 다른 레이어는 아직 적용하지 않음)
+- 새로운 Domain 모듈 추가 시 `.github/workflows/test.yml`에 해당 도메인 테스트 step을 함께 추가한다
 
 ## Project Structure
 - Tuist 기반 모듈화
