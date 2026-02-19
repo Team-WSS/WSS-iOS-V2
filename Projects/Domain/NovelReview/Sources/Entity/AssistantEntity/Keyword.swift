@@ -7,12 +7,13 @@
 //
 
 import Foundation
+import BaseDomain
 
 public struct Keyword: Equatable, Identifiable, Hashable {
-    public let id: Int
+    public let id: KeywordID
     public let name: String
     
-    public init(id: Int, name: String) {
+    public init(id: KeywordID, name: String) {
         self.id = id
         self.name = name
     }
