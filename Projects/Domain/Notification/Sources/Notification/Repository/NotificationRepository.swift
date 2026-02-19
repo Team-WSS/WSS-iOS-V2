@@ -9,12 +9,13 @@
 
 public protocol NotificationRepository: Sendable {
     func loadNotifications(
-        lastNotificationID: NotificationID?
+        lastNotificationID: NotificationID?,
+        size: Int
     ) async throws(RepositoryError) -> PagedNotifications
 
     func loadNotificationDetail(
         id: NotificationID
-    ) async throws(RepositoryError) -> NotificationItem
+    ) async throws(RepositoryError) -> NotificationDetail
 
     func markAsRead(
         id: NotificationID
