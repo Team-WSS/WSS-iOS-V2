@@ -10,6 +10,7 @@
 import Foundation
 import Testing
 import NovelReviewDomain
+import BaseDomain
 
 @Suite("NovelReviewDraft")
 struct NovelReviewDraftTests {
@@ -17,7 +18,7 @@ struct NovelReviewDraftTests {
     // MARK: - Helpers
 
     private func makeKeyword(_ id: Int) -> Keyword {
-        Keyword(id: id, name: "K\(id)")
+        Keyword(id: KeywordID(id), name: "K\(id)")
     }
 
     private func makeDraft(

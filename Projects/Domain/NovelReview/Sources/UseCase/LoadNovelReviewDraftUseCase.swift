@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public protocol LoadNovelReviewDraftUseCase {
     func execute(novelID: NovelID) async throws -> NovelReviewDraft?

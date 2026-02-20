@@ -8,11 +8,12 @@
 
 import SwiftUI
 import NovelReviewDomain
+import BaseDomain
 
 struct ContentView: View {
 
     // 25개 키워드 (토글 선택용)
-    private let demoKeywords: [Keyword] = (1...25).map { Keyword(id: $0, name: "키워드 \($0)") }
+    private let demoKeywords: [Keyword] = (1...25).map { Keyword(id: KeywordID($0), name: "키워드 \($0)") }
 
     // Draft (도메인 기능 테스트 대상)
     @State private var draft = NovelReviewDraft(

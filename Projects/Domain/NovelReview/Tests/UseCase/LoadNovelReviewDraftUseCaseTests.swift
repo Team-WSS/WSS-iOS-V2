@@ -13,6 +13,7 @@
 
 import Testing
 import NovelReviewDomain
+import BaseDomain
 
 @Suite("LoadNovelReviewDraftUseCase")
 struct LoadNovelReviewDraftUseCaseTests {

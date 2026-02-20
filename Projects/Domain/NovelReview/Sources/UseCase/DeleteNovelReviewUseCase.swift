@@ -8,6 +8,7 @@
 
 
 import Foundation
+import BaseDomain
 
 public protocol DeleteNovelReviewUseCase {
     func execute(novelID: NovelID) async throws
