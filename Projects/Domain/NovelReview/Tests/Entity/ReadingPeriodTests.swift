@@ -13,7 +13,7 @@ import NovelReviewDomain
 @Suite("ReadingPeriod")
 struct ReadingPeriodTests {
 
-    @Test("accepts start and end when start < end")
+    @Test("시작일이 종료일보다 이전이면 기간 생성이 가능하다")
     func acceptsStartBeforeEnd() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
@@ -24,7 +24,7 @@ struct ReadingPeriodTests {
         #expect(period.end == end)
     }
 
-    @Test("accepts start equal to end")
+    @Test("시작일과 종료일이 같아도 기간 생성이 가능하다")
     func acceptsStartEqualToEnd() throws {
         let d = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -34,7 +34,7 @@ struct ReadingPeriodTests {
         #expect(period.end == d)
     }
 
-    @Test("accepts only start date")
+    @Test("시작일만 있어도 기간 생성이 가능하다")
     func acceptsOnlyStart() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -44,7 +44,7 @@ struct ReadingPeriodTests {
         #expect(period.end == nil)
     }
 
-    @Test("accepts only end date")
+    @Test("종료일만 있어도 기간 생성이 가능하다")
     func acceptsOnlyEnd() throws {
         let end = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -54,14 +54,14 @@ struct ReadingPeriodTests {
         #expect(period.end == end)
     }
 
-    @Test("rejects when both start and end are nil")
+    @Test("시작일과 종료일이 모두 없으면 기간 생성에 실패한다")
     func rejectsBothNil() {
         #expect(throws: ReadingPeriod.ValidationError.invalidPeriod) {
             _ = try ReadingPeriod(start: nil, end: nil)
         }
     }
 
-    @Test("rejects when start is after end")
+    @Test("시작일이 종료일보다 늦으면 기간 생성에 실패한다")
     func rejectsStartAfterEnd() {
         let start = Date(timeIntervalSince1970: 1_700_000_100)
         let end   = Date(timeIntervalSince1970: 1_700_000_000)
@@ -71,7 +71,7 @@ struct ReadingPeriodTests {
         }
     }
 
-    @Test("equatable compares by start and end")
+    @Test("같은 시작일과 종료일을 가지면 동일한 기간으로 비교된다")
     func equatableByDates() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)

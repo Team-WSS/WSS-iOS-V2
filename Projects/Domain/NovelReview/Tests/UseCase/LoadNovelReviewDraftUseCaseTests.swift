@@ -13,6 +13,7 @@
 
 import Testing
 import NovelReviewDomain
+import BaseDomain
 
 @Suite("LoadNovelReviewDraftUseCase")
 struct LoadNovelReviewDraftUseCaseTests {
@@ -34,7 +35,7 @@ struct LoadNovelReviewDraftUseCaseTests {
         )
     }
     
-    @Test("loads draft by novelID successfully")
+    @Test("주어진 작품 ID로 초안 데이터를 조회한다")
     func loadsDraftSuccessfully() async throws {
         let repo = MockNovelReviewRepository()
         let expectedDraft = makeDraft()
@@ -48,7 +49,7 @@ struct LoadNovelReviewDraftUseCaseTests {
         #expect(result == expectedDraft)
     }
 
-    @Test("returns nil when repository returns nil")
+    @Test("해당 작품의 초안이 없으면 nil을 반환한다")
     func returnsNilWhenNoDraftExists() async throws {
         let repo = MockNovelReviewRepository()
         repo.loadResult = .success(nil)
@@ -60,7 +61,7 @@ struct LoadNovelReviewDraftUseCaseTests {
         #expect(result == nil)
     }
 
-    @Test("propagates repository error")
+    @Test("조회 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryError() async {
         let repo = MockNovelReviewRepository()
         repo.loadResult = .failure(.networkUnavailable)

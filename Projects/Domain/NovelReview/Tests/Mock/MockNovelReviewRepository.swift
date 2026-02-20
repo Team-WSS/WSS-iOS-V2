@@ -11,6 +11,7 @@
 import Foundation
 import Testing
 import NovelReviewDomain
+import BaseDomain
 
 // MARK: - Test Doubles
 

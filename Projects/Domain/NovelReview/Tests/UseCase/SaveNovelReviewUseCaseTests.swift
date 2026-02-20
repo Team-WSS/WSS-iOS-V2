@@ -13,6 +13,7 @@
 
 import Testing
 import NovelReviewDomain
+import BaseDomain
 
 @Suite("SaveNovelReviewUseCase")
 struct SaveNovelReviewUseCaseTests {
@@ -34,7 +35,7 @@ struct SaveNovelReviewUseCaseTests {
         )
     }
     
-    @Test("saves draft successfully")
+    @Test("초안 데이터를 저장한다")
     func savesDraftSuccessfully() async throws {
         let repo = MockNovelReviewRepository()
         let draft = makeDraft()
@@ -46,7 +47,7 @@ struct SaveNovelReviewUseCaseTests {
         #expect(repo.savedDrafts == [draft])
     }
 
-    @Test("propagates repository error")
+    @Test("저장 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryError() async {
         let repo = MockNovelReviewRepository()
         repo.saveResult = .failure(.serverUnavailable)
