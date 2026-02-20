@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public struct NotificationItem: Equatable {
     public let id: NotificationID

@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol NotificationRepository: Sendable {
     func loadNotifications(
@@ -20,4 +21,7 @@ public protocol NotificationRepository: Sendable {
     func markAsRead(
         id: NotificationID
     ) async throws(RepositoryError)
+    
+    func loadUnreadNotificationStatus(
+    ) async throws(RepositoryError) -> UnreadNotificationStatus
 }

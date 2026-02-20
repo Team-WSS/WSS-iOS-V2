@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol LoadNotificationDetailUseCase: Sendable {
     func execute(id: NotificationID) async throws(RepositoryError) -> NotificationDetail

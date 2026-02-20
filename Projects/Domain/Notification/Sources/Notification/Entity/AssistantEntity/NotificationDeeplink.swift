@@ -6,8 +6,10 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public enum NotificationDeeplink: Equatable {
-    case feedDetail(feedID: Int)
+    case feedDetail(id: FeedID)
+    case notificationDetail(id: NotificationID)
     case unknown
 }

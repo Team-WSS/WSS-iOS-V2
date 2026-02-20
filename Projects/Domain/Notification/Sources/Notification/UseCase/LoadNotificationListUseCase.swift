@@ -6,12 +6,13 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
-public protocol LoadNotificationListUseCase: Sendable {
+public protocol LoadPagedNotificationsUseCase: Sendable {
     func execute(lastNotificationID: NotificationID?, size: Int) async throws(RepositoryError) -> PagedNotifications
 }
 
-public final class DefaultLoadNotificationListUseCase: LoadNotificationListUseCase {
+public final class DefaultLoadPagedNotificationsUseCase: LoadPagedNotificationsUseCase {
     private let repository: NotificationRepository
     private static let defaultSize = 20
     

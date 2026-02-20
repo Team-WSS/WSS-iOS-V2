@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
- public enum NotificationType {
+public enum NotificationType {
     case feed
     case like
     case hot
