@@ -8,12 +8,11 @@
 
 
 public enum WithdrawalReasonOption: CaseIterable, Equatable {
-    case noLongerInterested
-    case tooManyNotifications
-    case foundBetterService
-    case privacyConcern
-    case inconvenientToUse
-    case customReason
+    case notFrequentlyUsed
+    case inconvenientAndBuggy
+    case wantToDeleteContent
+    case noDesiredContent
+    case custom
 
-    public var requiresText: Bool { self == .customReason }
+    public var requiresText: Bool { self == .custom }
 }

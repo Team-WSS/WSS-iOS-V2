@@ -8,8 +8,8 @@
 
 
 public struct WithdrawalReasonDraft: Equatable {
-    public private(set) var option: WithdrawalReasonOption
-    public private(set) var customReasonText: String
+    public private(set) var option: WithdrawalReasonOption = WithdrawalReasonOption.allCases.first ?? .notFrequentlyUsed
+    public private(set) var customReasonText: String = ""
     
     // MARK: - Policy
 
@@ -24,13 +24,7 @@ public struct WithdrawalReasonDraft: Equatable {
     
     // MARK: - Init
 
-    public init(
-        option: WithdrawalReasonOption = .noLongerInterested,
-        customReasonText: String = ""
-    ) {
-        self.option = option
-        self.customReasonText = customReasonText
-    }
+    public init() {}
 
     // MARK: - Mutating
     
@@ -40,6 +34,7 @@ public struct WithdrawalReasonDraft: Equatable {
     }
 
     public mutating func setOtherText(_ text: String) {
+        guard option.requiresText else { return }
         self.customReasonText = String(text.prefix(Self.maxOtherLength))
     }
 }
