@@ -6,4 +6,13 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Foundation
+import SwiftUI
+
+@main
+struct AuthDomainDemoApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
