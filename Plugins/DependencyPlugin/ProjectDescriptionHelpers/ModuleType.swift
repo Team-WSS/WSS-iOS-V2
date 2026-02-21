@@ -27,6 +27,7 @@ public enum ModuleType {
     public enum Domain: String {
         case base
         
+        case auth
         case recommendation
         case feed
         case keyword
@@ -39,6 +40,7 @@ public enum ModuleType {
         public var name: String {
             switch self {
             case .base: "BaseDomain"
+            case .auth: "AuthDomain"
             case .recommendation: "RecommendationDomain"
             case .feed: "FeedDomain"
             case .keyword: "KeywordDomain"
@@ -47,6 +49,7 @@ public enum ModuleType {
             case .novelReview: "NovelReviewDomain"
             case .setting: "SettingDomain"
             case .notification: "NotificationDomain"
+                
             }
         }
         
