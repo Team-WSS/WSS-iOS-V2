@@ -10,9 +10,11 @@ import Foundation
 import BaseDomain
 
 public protocol NovelRepository {
-    func fetchNovelDetail(id: NovelID) async throws -> NovelDetail
-    func fetchNovelInformation(id: NovelID) async throws -> NovelInformation
+    func fetchNovel(id: NovelID) async throws -> (Novel, NovelInformation)
     
     func searchNovelByText(_ text: String) async throws -> Paginated<Novel>
     func searchNovelByFilter(_ filter: NovelSearchFilter) async throws -> Paginated<Novel>
+    
+    func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws -> Paginated<LibraryNovel>
+    func fetchUserLibraryNovels(id: UserID) async throws -> Paginated<LibraryNovel>
 }

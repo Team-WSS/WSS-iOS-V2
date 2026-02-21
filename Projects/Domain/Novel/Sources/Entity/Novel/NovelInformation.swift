@@ -29,15 +29,3 @@ public struct NovelInformation {
         return (dominant.key, dominant.value)
     }
 }
-
-public struct NovelPlatform {
-    public let name: String
-    public let image: ImageWrapper
-    public let url: URL
-}
-
-public enum ReadStatus {
-    case watching
-    case watched
-    case quit
-}
