@@ -58,6 +58,11 @@ public extension TargetDependency.Domain {
         path: .relativeToDomain(.recommendation)
     )
     
+    static let RecommendationDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.recommendation.targetName(type: .testing),
+        path: .relativeToDomain(.recommendation)
+    )
+    
     static let FeedDomain = TargetDependency.project(
         target: ModuleType.Domain.feed.targetName(type: .sources),
         path: .relativeToDomain(.feed)
