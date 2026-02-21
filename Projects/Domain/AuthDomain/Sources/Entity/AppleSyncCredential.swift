@@ -10,4 +10,9 @@
 public struct AppleSyncCredential: Equatable {
     public let authorizationCode: String
     public let idToken: String
+    
+    public init(authorizationCode: String, idToken: String) {
+        self.authorizationCode = authorizationCode
+        self.idToken = idToken
+    }
 }
