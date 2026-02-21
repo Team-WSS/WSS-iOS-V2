@@ -7,7 +7,7 @@
 //
 
 
-public struct DevicePushToken {
+public struct DevicePushToken: Equatable {
     public let token: String
     public let deviceID: String
 

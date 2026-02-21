@@ -11,4 +11,10 @@ public struct NotificationDetail: Equatable {
     public let title: String
     public let createdAtText: String
     public let body: String
+    
+    public init(title: String, createdAtText: String, body: String) {
+        self.title = title
+        self.createdAtText = createdAtText
+        self.body = body
+    }
 }

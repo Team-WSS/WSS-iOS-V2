@@ -9,7 +9,7 @@
 
 import Foundation
 
-public struct UnreadNotificationStatus {
+public struct UnreadNotificationStatus: Equatable {
     public let hasUnreadNotifications: Bool
 
     public init(hasUnreadNotifications: Bool) {

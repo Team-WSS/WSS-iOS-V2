@@ -7,7 +7,7 @@
 //
 
 
-public struct PushPreference {
+public struct PushPreference: Equatable {
     public let isEnabled: Bool
     public init(isEnabled: Bool) { self.isEnabled = isEnabled }
 }
