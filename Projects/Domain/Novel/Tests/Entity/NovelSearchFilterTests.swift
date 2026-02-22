@@ -16,7 +16,8 @@ struct NovelSearchFilterTests {
 
     // MARK: - Genre
 
-    @Test func `장르를 추가할 수 있다.`() {
+    @Test("장르를 추가할 수 있다")
+    func addGenre() {
         var filter = makeFilter()
 
         filter.addGenre(.fantasy)
@@ -24,7 +25,8 @@ struct NovelSearchFilterTests {
         #expect(filter.genres == [.fantasy])
     }
 
-    @Test func `이미 추가된 장르는 중복 추가되지 않는다.`() {
+    @Test("이미 추가된 장르는 중복 추가되지 않는다")
+    func addGenreDuplicate() {
         var filter = makeFilter(genres: [.fantasy])
 
         filter.addGenre(.fantasy)
@@ -32,7 +34,8 @@ struct NovelSearchFilterTests {
         #expect(filter.genres == [.fantasy])
     }
 
-    @Test func `장르를 제거할 수 있다.`() {
+    @Test("장르를 제거할 수 있다")
+    func removeGenre() {
         var filter = makeFilter(genres: [.fantasy, .romance])
 
         filter.removeGenre(.fantasy)
@@ -40,7 +43,8 @@ struct NovelSearchFilterTests {
         #expect(filter.genres == [.romance])
     }
 
-    @Test func `장르를 전체 초기화할 수 있다.`() {
+    @Test("장르를 전체 초기화할 수 있다")
+    func clearGenres() {
         var filter = makeFilter(genres: [.fantasy, .romance, .BL])
 
         filter.clearGenres()
@@ -48,46 +52,51 @@ struct NovelSearchFilterTests {
         #expect(filter.genres.isEmpty)
     }
 
-    // MARK: - Completion Status
+    // MARK: - Publication Status
 
-    @Test func `완결 상태를 설정할 수 있다.`() {
+    @Test("출판 상태를 설정할 수 있다")
+    func setPublicationStatus() {
         var filter = makeFilter()
 
-        filter.setCompletion(.completed)
+        filter.setPublicationStatus(.completed)
 
-        #expect(filter.completionStatus == .completed)
+        #expect(filter.publicationStatus == .completed)
     }
 
-    @Test func `같은 완결 상태를 다시 설정하면 해제된다.`() {
+    @Test("같은 출판 상태를 다시 설정하면 해제된다")
+    func setPublicationStatusToggle() {
         var filter = makeFilter()
 
-        filter.setCompletion(.completed)
-        filter.setCompletion(.completed)
+        filter.setPublicationStatus(.completed)
+        filter.setPublicationStatus(.completed)
 
-        #expect(filter.completionStatus == nil)
+        #expect(filter.publicationStatus == nil)
     }
 
-    @Test func `다른 완결 상태를 설정하면 변경된다.`() {
+    @Test("다른 출판 상태를 설정하면 변경된다")
+    func setPublicationStatusChange() {
         var filter = makeFilter()
 
-        filter.setCompletion(.completed)
-        filter.setCompletion(.onGoing)
+        filter.setPublicationStatus(.completed)
+        filter.setPublicationStatus(.onGoing)
 
-        #expect(filter.completionStatus == .onGoing)
+        #expect(filter.publicationStatus == .onGoing)
     }
 
-    @Test func `완결 상태를 초기화할 수 있다.`() {
+    @Test("출판 상태를 초기화할 수 있다")
+    func clearPublicationStatus() {
         var filter = makeFilter()
-        filter.setCompletion(.completed)
+        filter.setPublicationStatus(.completed)
 
-        filter.clearCompletion()
+        filter.clearPublicationStatus()
 
-        #expect(filter.completionStatus == nil)
+        #expect(filter.publicationStatus == nil)
     }
 
     // MARK: - Rating Threshold
 
-    @Test func `별점 기준을 설정할 수 있다.`() {
+    @Test("별점 기준을 설정할 수 있다")
+    func setRatingThreshold() {
         var filter = makeFilter()
 
         filter.setRatingThreshold(.over4_0)
@@ -95,7 +104,8 @@ struct NovelSearchFilterTests {
         #expect(filter.ratingThreshold == .over4_0)
     }
 
-    @Test func `같은 별점 기준을 다시 설정하면 해제된다.`() {
+    @Test("같은 별점 기준을 다시 설정하면 해제된다")
+    func setRatingThresholdToggle() {
         var filter = makeFilter()
 
         filter.setRatingThreshold(.over4_0)
@@ -104,7 +114,8 @@ struct NovelSearchFilterTests {
         #expect(filter.ratingThreshold == nil)
     }
 
-    @Test func `다른 별점 기준을 설정하면 변경된다.`() {
+    @Test("다른 별점 기준을 설정하면 변경된다")
+    func setRatingThresholdChange() {
         var filter = makeFilter()
 
         filter.setRatingThreshold(.over3_5)
@@ -113,7 +124,8 @@ struct NovelSearchFilterTests {
         #expect(filter.ratingThreshold == .over4_8)
     }
 
-    @Test func `별점 기준을 초기화할 수 있다.`() {
+    @Test("별점 기준을 초기화할 수 있다")
+    func clearRatingThreshold() {
         var filter = makeFilter()
         filter.setRatingThreshold(.over4_5)
 
@@ -124,7 +136,8 @@ struct NovelSearchFilterTests {
 
     // MARK: - Keyword
 
-    @Test func `키워드를 설정할 수 있다.`() throws {
+    @Test("키워드를 설정할 수 있다")
+    func setKeywords() throws {
         var filter = makeFilter()
         let keywords = [Keyword(id: 1, name: "이세계"), Keyword(id: 2, name: "환생")]
 
@@ -133,7 +146,8 @@ struct NovelSearchFilterTests {
         #expect(filter.keywords.count == 2)
     }
 
-    @Test func `키워드는 최대 20개까지 설정할 수 있다.`() throws {
+    @Test("키워드는 최대 20개까지 설정할 수 있다")
+    func setKeywordsMax() throws {
         var filter = makeFilter()
         let keywords = (1...20).map { Keyword(id: $0, name: "키워드\($0)") }
 
@@ -142,7 +156,8 @@ struct NovelSearchFilterTests {
         #expect(filter.keywords.count == 20)
     }
 
-    @Test func `키워드가 20개를 초과하면 에러를 던진다.`() {
+    @Test("키워드가 20개를 초과하면 에러를 던진다")
+    func setKeywordsOverLimit() {
         var filter = makeFilter()
         let keywords = (1...21).map { Keyword(id: $0, name: "키워드\($0)") }
 
@@ -151,7 +166,8 @@ struct NovelSearchFilterTests {
         }
     }
 
-    @Test func `특정 키워드를 제거할 수 있다.`() throws {
+    @Test("특정 키워드를 제거할 수 있다")
+    func removeKeyword() throws {
         var filter = makeFilter()
         let keyword = Keyword(id: 1, name: "이세계")
         try filter.setKeywords([keyword, Keyword(id: 2, name: "환생")])
@@ -162,7 +178,8 @@ struct NovelSearchFilterTests {
         #expect(filter.keywords.first?.name == "환생")
     }
 
-    @Test func `키워드를 전체 초기화할 수 있다.`() throws {
+    @Test("키워드를 전체 초기화할 수 있다")
+    func clearKeywords() throws {
         var filter = makeFilter()
         try filter.setKeywords([Keyword(id: 1, name: "이세계")])
 
@@ -173,16 +190,17 @@ struct NovelSearchFilterTests {
 
     // MARK: - Clear All
 
-    @Test func `전체 필터를 초기화할 수 있다.`() throws {
+    @Test("전체 필터를 초기화할 수 있다")
+    func clearAll() throws {
         var filter = makeFilter(genres: [.fantasy, .romance])
-        filter.setCompletion(.completed)
+        filter.setPublicationStatus(.completed)
         filter.setRatingThreshold(.over4_0)
         try filter.setKeywords([Keyword(id: 1, name: "이세계")])
 
         filter.clearAll()
 
         #expect(filter.genres.isEmpty)
-        #expect(filter.completionStatus == nil)
+        #expect(filter.publicationStatus == nil)
         #expect(filter.ratingThreshold == nil)
         #expect(filter.keywords.isEmpty)
     }
@@ -191,13 +209,13 @@ struct NovelSearchFilterTests {
 extension NovelSearchFilterTests {
     private func makeFilter(
         genres: [NovelGenre] = [],
-        completionStatus: CompletionStatus? = nil,
-        ratingThreshold: RatingThreshold? = nil,
+        publicationStatus: NovelPublicationStatus? = nil,
+        ratingThreshold: NovelRatingThreshold? = nil,
         keywords: [Keyword] = []
     ) -> NovelSearchFilter {
         NovelSearchFilter(
             genres: genres,
-            completionStatus: completionStatus,
+            publicationStatus: publicationStatus,
             ratingThreshold: ratingThreshold,
             keywords: keywords
         )

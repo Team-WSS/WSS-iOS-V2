@@ -10,8 +10,8 @@ import Foundation
 import BaseDomain
 
 public protocol SearchNovelUsecase {
-    func searchByText(_ query: String) async throws -> Paginated<Novel>
-    func searchByFilter(_ filter: NovelSearchFilter) async throws -> Paginated<Novel>
+    func searchByText(_ query: String) async throws -> (Paginated<Novel>, Int)
+    func searchByFilter(_ filter: NovelSearchFilter) async throws -> (Paginated<Novel>, Int)
 }
 
 public final class DefaultSearchNovelUsecase: SearchNovelUsecase {
@@ -22,11 +22,11 @@ public final class DefaultSearchNovelUsecase: SearchNovelUsecase {
         self.novelRepository = novelRepository
     }
     
-    public func searchByText(_ query: String) async throws -> Paginated<Novel> {
+    public func searchByText(_ query: String) async throws -> (Paginated<Novel>, Int) {
         try await novelRepository.searchNovelByText(query)
     }
     
-    public func searchByFilter(_ filter: NovelSearchFilter) async throws -> Paginated<Novel> {
+    public func searchByFilter(_ filter: NovelSearchFilter) async throws -> (Paginated<Novel>, Int) {
         try await novelRepository.searchNovelByFilter(filter)
     }
 }

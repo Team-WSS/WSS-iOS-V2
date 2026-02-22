@@ -10,27 +10,41 @@ import Testing
 
 @testable import NovelDomain
 @testable import BaseDomain
+import NovelDomainTesting
 
 @Suite
 struct SearchNovelUsecaseTests {
 
     // MARK: - Text Search
 
-    @Test func `텍스트로 소설을 검색할 수 있다.`() async throws {
+    @Test("텍스트로 소설을 검색할 수 있다")
+    func searchByTextSuccess() async throws {
         let mock = MockNovelRepository()
         let expected = Paginated(items: [makeNovel()], hasNext: false)
-        mock.searchByTextResult = .success(expected)
+        mock.searchByTextResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
         let result = try await usecase.searchByText("전지적")
 
-        #expect(result.items.count == 1)
-        #expect(result.items.first?.title == "전지적 독자 시점")
+        #expect(result.0.items.count == 1)
+        #expect(result.0.items.first?.title == "전지적 독자 시점")
         #expect(mock.searchByTextCallCount == 1)
         #expect(mock.lastSearchQuery == "전지적")
     }
 
-    @Test func `텍스트 검색에 실패하면 에러를 던진다.`() async {
+    @Test("텍스트 검색 결과에 전체 작품 수가 포함된다")
+    func searchByTextReturnsCount() async throws {
+        let mock = MockNovelRepository()
+        mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 42))
+
+        let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
+        let result = try await usecase.searchByText("전지적")
+
+        #expect(result.1 == 42)
+    }
+
+    @Test("텍스트 검색에 실패하면 에러를 던진다")
+    func searchByTextFailureThrows() async {
         let mock = MockNovelRepository()
         mock.searchByTextResult = .failure(TestError.searchFail)
 
@@ -45,34 +59,48 @@ struct SearchNovelUsecaseTests {
 
     // MARK: - Filter Search
 
-    @Test func `필터로 소설을 검색할 수 있다.`() async throws {
+    @Test("필터로 소설을 검색할 수 있다")
+    func searchByFilterSuccess() async throws {
         let mock = MockNovelRepository()
         let expected = Paginated(items: [makeNovel(), makeNovel(id: 2, title: "나 혼자만 레벨업")], hasNext: true)
-        mock.searchByFilterResult = .success(expected)
+        mock.searchByFilterResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
         let filter = NovelSearchFilter(
             genres: [.fantasy],
-            completionStatus: .completed,
+            publicationStatus: .completed,
             ratingThreshold: .over4_0,
             keywords: []
         )
 
         let result = try await usecase.searchByFilter(filter)
 
-        #expect(result.items.count == 2)
-        #expect(result.hasNext == true)
+        #expect(result.0.items.count == 2)
+        #expect(result.0.hasNext == true)
         #expect(mock.searchByFilterCallCount == 1)
     }
 
-    @Test func `필터 검색에 실패하면 에러를 던진다.`() async {
+    @Test("필터 검색 결과에 전체 작품 수가 포함된다")
+    func searchByFilterReturnsCount() async throws {
+        let mock = MockNovelRepository()
+        mock.searchByFilterResult = .success((Paginated(items: [makeNovel()], hasNext: true), 128))
+
+        let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
+        let filter = NovelSearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
+        let result = try await usecase.searchByFilter(filter)
+
+        #expect(result.1 == 128)
+    }
+
+    @Test("필터 검색에 실패하면 에러를 던진다")
+    func searchByFilterFailureThrows() async {
         let mock = MockNovelRepository()
         mock.searchByFilterResult = .failure(TestError.searchFail)
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
         let filter = NovelSearchFilter(
             genres: [],
-            completionStatus: nil,
+            publicationStatus: nil,
             ratingThreshold: nil,
             keywords: []
         )
@@ -95,12 +123,13 @@ extension SearchNovelUsecaseTests {
     ) -> Novel {
         Novel(
             id: NovelID(id),
-            thumbnailImage: ImageWrapper(identifier: "\(id)"),
+            thumbnailImage: nil,
             title: title,
             author: ["싱숑"],
             interestCount: 100,
-            novelRating: 4.5,
-            novelRatingCount: 50
+            rating: 4.5,
+            ratingCount: 50,
+            isInterested: nil
         )
     }
 }
