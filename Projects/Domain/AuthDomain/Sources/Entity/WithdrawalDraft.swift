@@ -10,16 +10,16 @@
 public struct WithdrawalReasonDraft: Equatable {
     public private(set) var option: WithdrawalReasonOption = WithdrawalReasonOption.allCases.first ?? .notFrequentlyUsed
     public private(set) var customReasonText: String = ""
+    public private(set) var policyAgreed: Bool = false
     
     // MARK: - Policy
 
     public static let maxOtherLength = 80
     
     public var isSubmittable: Bool {
-        guard !option.requiresText else {
-            return !customReasonText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
-        return true
+        let validOption = !option.requiresText || !customReasonText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        
+        return validOption && policyAgreed
     }
     
     // MARK: - Init
@@ -33,8 +33,12 @@ public struct WithdrawalReasonDraft: Equatable {
         self.option = option
     }
 
-    public mutating func setOtherText(_ text: String) {
+    public mutating func setCustomReasonText(_ text: String) {
         guard option.requiresText else { return }
         self.customReasonText = String(text.prefix(Self.maxOtherLength))
+    }
+    
+    public mutating func setPolicyAgreed(_ isAgreed: Bool) {
+        self.policyAgreed = isAgreed
     }
 }

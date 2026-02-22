@@ -21,100 +21,70 @@ struct WithdrawalReasonDraftTests {
 
         #expect(draft.option == (WithdrawalReasonOption.allCases.first ?? .notFrequentlyUsed))
         #expect(draft.customReasonText == "")
-        #expect(draft.isSubmittable == true)
-    }
-
-    // MARK: - isSubmittable
-
-    @Test("직접 입력이 아닌 옵션은 텍스트가 없어도 제출 가능하다")
-    func isSubmittableIsTrueWhenOptionDoesNotRequireText() {
-        var draft = WithdrawalReasonDraft()
-
-        draft.setOption(.notFrequentlyUsed)
-        draft.setOtherText("무시되어야 함") // requiresText가 아니므로 setOtherText는 no-op
-        #expect(draft.customReasonText == "")
-        #expect(draft.isSubmittable == true)
-
-        draft.setOption(.inconvenientAndBuggy)
-        #expect(draft.isSubmittable == true)
-
-        draft.setOption(.wantToDeleteContent)
-        #expect(draft.isSubmittable == true)
-
-        draft.setOption(.noDesiredContent)
-        #expect(draft.isSubmittable == true)
-    }
-
-    @Test("직접 입력 옵션은 텍스트가 비어있으면 제출할 수 없다")
-    func isSubmittableIsFalseWhenCustomTextIsEmptyOrWhitespace() {
-        var draft = WithdrawalReasonDraft()
-        draft.setOption(.custom)
-
-        draft.setOtherText("")
-        #expect(draft.isSubmittable == false)
-
-        draft.setOtherText("   ")
-        #expect(draft.isSubmittable == false)
-
-        draft.setOtherText("\n\t ")
+        #expect(draft.policyAgreed == false)
         #expect(draft.isSubmittable == false)
     }
-
-    @Test("직접 입력 옵션은 텍스트가 있으면 제출할 수 있다")
-    func isSubmittableIsTrueWhenCustomTextIsNotEmpty() {
-        var draft = WithdrawalReasonDraft()
-        draft.setOption(.custom)
-
-        draft.setOtherText("원하는 이유를 적었습니다")
-        #expect(draft.isSubmittable == true)
-    }
-
+    
     // MARK: - setOption
-
-    @Test("옵션을 직접 입력이 아닌 값으로 바꾸면 입력 텍스트는 초기화된다")
+    
+    @Test("탈퇴 사유 옵션을 변경 가능하며, 직접 입력 옵션의 경우 이유를 작성할 수 있다")
+    func canChangeWithdrawalReasonOptionAndEditCustomReasonWhenSelected() {
+        var draft = WithdrawalReasonDraft()
+        
+        for option in WithdrawalReasonOption.allCases {
+            draft.setOption(option)
+            #expect(draft.option == option)
+        }
+        
+        draft.setOption(.custom)
+        draft.setCustomReasonText("어떤 이유")
+        #expect(draft.customReasonText == "어떤 이유")
+    }
+    
+    @Test("직접 입력이 아닌 옵션으로 바꾸면 입력 텍스트는 초기화된다")
     func setOptionClearsCustomTextWhenSwitchingToNonCustom() {
         var draft = WithdrawalReasonDraft()
-
-        draft.setOption(.custom)
-        draft.setOtherText("어떤 이유")
-        #expect(draft.customReasonText == "어떤 이유")
-
-        draft.setOption(.notFrequentlyUsed)
-        #expect(draft.option == .notFrequentlyUsed)
-        #expect(draft.customReasonText == "")
-        #expect(draft.isSubmittable == true)
+        let reason = "어떤 이유"
+        
+        for option in WithdrawalReasonOption.allCases {
+            draft.setOption(.custom)
+            draft.setCustomReasonText(reason)
+            #expect(draft.customReasonText == reason)
+            
+            draft.setOption(option)
+            
+            if case .custom = option {
+                #expect(draft.customReasonText == reason)
+            } else {
+                #expect(draft.customReasonText == "")
+            }
+        }
     }
 
-    // MARK: - setOtherText
-
-    @Test("직접 입력이 아닌 옵션에서는 setOtherText가 아무 일도 하지 않는다")
+    @Test("직접 입력이 아닌 옵션에서는 이유 작성 함수가 아무 일도 하지 않는다")
     func setOtherTextIsNoOpWhenOptionDoesNotRequireText() {
         var draft = WithdrawalReasonDraft()
-
-        draft.setOption(.notFrequentlyUsed)
-        draft.setOtherText("저장되면 안 됨")
-        #expect(draft.customReasonText == "")
-
-        draft.setOption(.inconvenientAndBuggy)
-        draft.setOtherText("저장되면 안 됨")
-        #expect(draft.customReasonText == "")
-
-        draft.setOption(.wantToDeleteContent)
-        draft.setOtherText("저장되면 안 됨")
-        #expect(draft.customReasonText == "")
-
-        draft.setOption(.noDesiredContent)
-        draft.setOtherText("저장되면 안 됨")
-        #expect(draft.customReasonText == "")
+        let reason = "저장되면 안 됨"
+        
+        for option in WithdrawalReasonOption.allCases {
+            draft.setOption(option)
+            draft.setCustomReasonText(reason)
+            
+            if case .custom = option {
+                #expect(draft.customReasonText == reason)
+            } else {
+                #expect(draft.customReasonText == "")
+            }
+        }
     }
 
-    @Test("직접 입력 옵션에서는 입력 텍스트가 최대 80자로 잘린다")
+    @Test("직접 입력 옵션의 입력 텍스트가 최대 80자로 잘린다")
     func setOtherTextClipsToMaxLengthWhenCustom() {
         var draft = WithdrawalReasonDraft()
         draft.setOption(.custom)
 
         let long = String(repeating: "a", count: WithdrawalReasonDraft.maxOtherLength + 10)
-        draft.setOtherText(long)
+        draft.setCustomReasonText(long)
 
         #expect(draft.customReasonText.count == WithdrawalReasonDraft.maxOtherLength)
     }
@@ -125,8 +95,62 @@ struct WithdrawalReasonDraftTests {
         draft.setOption(.custom)
 
         let text = "짧은 텍스트"
-        draft.setOtherText(text)
+        draft.setCustomReasonText(text)
 
         #expect(draft.customReasonText == text)
+    }
+
+    // MARK: - isSubmittable
+    
+    @Test("탈퇴 정책 동의를 하지 않으면 제출 불가능하다")
+    func isSubmittableIsFalseWhenPolicyDoesNotRequireText() {
+        var draft = WithdrawalReasonDraft()
+        draft.setPolicyAgreed(false)
+        
+        for option in WithdrawalReasonOption.allCases {
+            draft.setOption(option)
+            draft.setCustomReasonText("그냥 이유")
+            #expect(draft.isSubmittable == false)
+        }
+    }
+
+
+    @Test("탈퇴 정책 동의를 한 경우, 직접 입력이 아닌 옵션은 텍스트가 없어도 제출 가능하다")
+    func isSubmittableIsTrueWhenOptionDoesNotRequireText() {
+        var draft = WithdrawalReasonDraft()
+        draft.setPolicyAgreed(true)
+        
+        for option in WithdrawalReasonOption.allCases {
+            if case .custom = option { continue }
+            draft.setOption(option)
+            draft.setCustomReasonText("")
+            #expect(draft.isSubmittable == true)
+        }
+    }
+
+    @Test("탈퇴 정책 동의를 한 경우, 직접 입력 옵션은 텍스트가 비어있으면 제출할 수 없다")
+    func isSubmittableIsFalseWhenCustomTextIsEmptyOrWhitespace() {
+        var draft = WithdrawalReasonDraft()
+        draft.setPolicyAgreed(true)
+        draft.setOption(.custom)
+
+        draft.setCustomReasonText("")
+        #expect(draft.isSubmittable == false)
+
+        draft.setCustomReasonText("   ")
+        #expect(draft.isSubmittable == false)
+
+        draft.setCustomReasonText("\n\t ")
+        #expect(draft.isSubmittable == false)
+    }
+
+    @Test("탈퇴 정책 동의를 한 경우, 직접 입력 옵션은 텍스트가 있으면 제출할 수 있다")
+    func isSubmittableIsTrueWhenCustomTextIsNotEmpty() {
+        var draft = WithdrawalReasonDraft()
+        draft.setPolicyAgreed(true)
+        draft.setOption(.custom)
+
+        draft.setCustomReasonText("원하는 이유를 적었습니다")
+        #expect(draft.isSubmittable == true)
     }
 }
