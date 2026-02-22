@@ -10,24 +10,26 @@ import Foundation
 import CommentDomain
 import BaseDomain
 
-final class MockCommentRepository: CommentRepository {
+public final class MockCommentRepository: CommentRepository {
 
-    var fetchedFeedIDs: [FeedID] = []
-    var submittedComments: [(feedID: FeedID, draft: CommentDraft)] = []
-    var editedComments: [(id: CommentID, feedID: FeedID, draft: CommentDraft)] = []
-    var deletedComments: [(id: CommentID, feedID: FeedID)] = []
+    public var fetchedFeedIDs: [FeedID] = []
+    public var submittedComments: [(feedID: FeedID, draft: CommentDraft)] = []
+    public var editedComments: [(id: CommentID, feedID: FeedID, draft: CommentDraft)] = []
+    public var deletedComments: [(id: CommentID, feedID: FeedID)] = []
 
-    var fetchCommentsResult: Result<[FeedComment], Error> = .success([])
-    var submitResult: Result<Void, Error> = .success(())
-    var editResult: Result<Void, Error> = .success(())
-    var deleteResult: Result<Void, Error> = .success(())
-    
-    var reportedSpoilerCommentID: CommentID?
-    var reportSpoilerResult: Result<Void, Error> = .success(())
-    var reportedImproperCommentID: CommentID?
-    var reportImproperResult: Result<Void, Error> = .success(())
+    public var fetchCommentsResult: Result<[FeedComment], Error> = .success([])
+    public var submitResult: Result<Void, Error> = .success(())
+    public var editResult: Result<Void, Error> = .success(())
+    public var deleteResult: Result<Void, Error> = .success(())
 
-    func fetchComments(feedID: FeedID) async throws -> [FeedComment] {
+    public var reportedSpoilerCommentID: CommentID?
+    public var reportSpoilerResult: Result<Void, Error> = .success(())
+    public var reportedImproperCommentID: CommentID?
+    public var reportImproperResult: Result<Void, Error> = .success(())
+
+    public init() {}
+
+    public func fetchComments(feedID: FeedID) async throws -> [FeedComment] {
         fetchedFeedIDs.append(feedID)
         switch fetchCommentsResult {
         case .success(let value):
@@ -37,7 +39,7 @@ final class MockCommentRepository: CommentRepository {
         }
     }
 
-    func submitComment(feedID: FeedID, draft: CommentDraft) async throws {
+    public func submitComment(feedID: FeedID, draft: CommentDraft) async throws {
         submittedComments.append((feedID, draft))
         switch submitResult {
         case .success:
@@ -47,7 +49,7 @@ final class MockCommentRepository: CommentRepository {
         }
     }
 
-    func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws {
+    public func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws {
         editedComments.append((id, feedID, draft))
         switch editResult {
         case .success:
@@ -57,7 +59,7 @@ final class MockCommentRepository: CommentRepository {
         }
     }
 
-    func deleteComment(id: CommentID, feedID: FeedID) async throws {
+    public func deleteComment(id: CommentID, feedID: FeedID) async throws {
         deletedComments.append((id, feedID))
         switch deleteResult {
         case .success:
@@ -66,12 +68,12 @@ final class MockCommentRepository: CommentRepository {
             throw error
         }
     }
-    
+
     // MARK: - Report
-    
-    func reportSpoilerComment(id: CommentID) async throws {
+
+    public func reportSpoilerComment(id: CommentID) async throws {
         reportedSpoilerCommentID = id
-        
+
         switch reportSpoilerResult {
         case .success:
             return
@@ -79,10 +81,10 @@ final class MockCommentRepository: CommentRepository {
             throw error
         }
     }
-    
-    func reportImproperComment(id: CommentID) async throws {
+
+    public func reportImproperComment(id: CommentID) async throws {
         reportedImproperCommentID = id
-        
+
         switch reportImproperResult {
         case .success:
             return

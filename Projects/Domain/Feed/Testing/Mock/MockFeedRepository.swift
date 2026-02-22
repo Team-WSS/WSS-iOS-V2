@@ -10,40 +10,42 @@ import Foundation
 import FeedDomain
 import BaseDomain
 
-final class MockFeedRepository: FeedRepository {
-    
-    var submittedDrafts: [FeedDraft] = []
-    var editedFeeds: [(id: FeedID, draft: FeedDraft)] = []
-    var deletedFeedIDs: [FeedID] = []
-    
-    var fetchedDetailIDs: FeedID?
-    
-    var fetchedSosoFeeds: [(option: SosoFeedOption, lastFeedID: FeedID)] = []
-    var fetchedUserFeeds: [(id: UserID, lastFeedID: FeedID)] = []
-    var fetchedMyFeeds: [(option: MyFeedOption, lastFeedID: FeedID)] = []
-    
-    var addedLikeIDs: [FeedID] = []
-    var deletedLikeIDs: [FeedID] = []
-    
-    var submitResult: Result<Void, Error> = .success(())
-    var editResult: Result<Void, Error> = .success(())
-    var deleteResult: Result<Void, Error> = .success(())
-    
-    var fetchDetailResult: Result<FeedDetail, Error>!
-    
-    var fetchSosoFeedsResult: Result<Paginated<TotalFeed>, Error>!
-    var fetchUserFeedsResult: Result<Paginated<TotalFeed>, Error>!
-    var fetchMyFeedsResult: Result<Paginated<TotalFeed>, Error>!
-    
-    var addLikeResult: Result<Void, Error> = .success(())
-    var deleteLikeResult: Result<Void, Error> = .success(())
-    
-    var reportedSpoilerFeedID: FeedID?
-    var reportSpoilerResult: Result<Void, Error> = .success(())
-    var reportedImproperFeedID: FeedID?
-    var reportImproperResult: Result<Void, Error> = .success(())
-    
-    func submitFeed(_ draft: FeedDraft) async throws {
+public final class MockFeedRepository: FeedRepository {
+
+    public var submittedDrafts: [FeedDraft] = []
+    public var editedFeeds: [(id: FeedID, draft: FeedDraft)] = []
+    public var deletedFeedIDs: [FeedID] = []
+
+    public var fetchedDetailIDs: FeedID?
+
+    public var fetchedSosoFeeds: [(option: SosoFeedOption, lastFeedID: FeedID)] = []
+    public var fetchedUserFeeds: [(id: UserID, lastFeedID: FeedID)] = []
+    public var fetchedMyFeeds: [(option: MyFeedOption, lastFeedID: FeedID)] = []
+
+    public var addedLikeIDs: [FeedID] = []
+    public var deletedLikeIDs: [FeedID] = []
+
+    public var submitResult: Result<Void, Error> = .success(())
+    public var editResult: Result<Void, Error> = .success(())
+    public var deleteResult: Result<Void, Error> = .success(())
+
+    public var fetchDetailResult: Result<FeedDetail, Error>!
+
+    public var fetchSosoFeedsResult: Result<Paginated<TotalFeed>, Error>!
+    public var fetchUserFeedsResult: Result<Paginated<TotalFeed>, Error>!
+    public var fetchMyFeedsResult: Result<Paginated<TotalFeed>, Error>!
+
+    public var addLikeResult: Result<Void, Error> = .success(())
+    public var deleteLikeResult: Result<Void, Error> = .success(())
+
+    public var reportedSpoilerFeedID: FeedID?
+    public var reportSpoilerResult: Result<Void, Error> = .success(())
+    public var reportedImproperFeedID: FeedID?
+    public var reportImproperResult: Result<Void, Error> = .success(())
+
+    public init() {}
+
+    public func submitFeed(_ draft: FeedDraft) async throws {
         submittedDrafts.append(draft)
         switch submitResult {
         case .success:
@@ -52,8 +54,8 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
-    func editFeed(id: FeedID, draft: FeedDraft) async throws {
+
+    public func editFeed(id: FeedID, draft: FeedDraft) async throws {
         editedFeeds.append((id, draft))
         switch editResult {
         case .success:
@@ -62,8 +64,8 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
-    func deleteFeed(id: FeedID) async throws {
+
+    public func deleteFeed(id: FeedID) async throws {
         deletedFeedIDs.append(id)
         switch deleteResult {
         case .success:
@@ -72,8 +74,8 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
-    func fetchFeedDetail(id: FeedID) async throws -> FeedDetail {
+
+    public func fetchFeedDetail(id: FeedID) async throws -> FeedDetail {
         fetchedDetailIDs = id
         switch fetchDetailResult {
         case .success(let value):
@@ -84,8 +86,8 @@ final class MockFeedRepository: FeedRepository {
             fatalError("fetchDetailResult must be set before calling fetchFeedDetail")
         }
     }
-    
-    func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
+
+    public func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
         fetchedSosoFeeds.append((option, lastFeedID))
         switch fetchSosoFeedsResult {
         case .success(let value):
@@ -96,8 +98,8 @@ final class MockFeedRepository: FeedRepository {
             fatalError("fetchSosoFeedsResult must be set before calling fetchSosoFeeds")
         }
     }
-    
-    func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
+
+    public func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
         fetchedUserFeeds.append((id, lastFeedID))
         switch fetchUserFeedsResult {
         case .success(let value):
@@ -108,8 +110,8 @@ final class MockFeedRepository: FeedRepository {
             fatalError("fetchUserFeedsResult must be set before calling fetchUserFeeds")
         }
     }
-    
-    func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
+
+    public func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
         fetchedMyFeeds.append((option, lastFeedID))
         switch fetchMyFeedsResult {
         case .success(let value):
@@ -120,11 +122,11 @@ final class MockFeedRepository: FeedRepository {
             fatalError("fetchMyFeedsResult must be set before calling fetchMyFeeds")
         }
     }
-    
-    
+
+
     // MARK: - Like
-    
-    func addLike(id: FeedID) async throws {
+
+    public func addLike(id: FeedID) async throws {
         addedLikeIDs.append(id)
         switch addLikeResult {
         case .success:
@@ -133,8 +135,8 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
-    func deleteLike(id: FeedID) async throws {
+
+    public func deleteLike(id: FeedID) async throws {
         deletedLikeIDs.append(id)
         switch deleteLikeResult {
         case .success:
@@ -143,12 +145,12 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
+
     // MARK: - Report
-    
-    func reportSpoilerFeed(id: FeedID) async throws {
+
+    public func reportSpoilerFeed(id: FeedID) async throws {
         reportedSpoilerFeedID = id
-        
+
         switch reportSpoilerResult {
         case .success:
             return
@@ -156,10 +158,10 @@ final class MockFeedRepository: FeedRepository {
             throw error
         }
     }
-    
-    func reportImproperFeed(id: FeedID) async throws {
+
+    public func reportImproperFeed(id: FeedID) async throws {
         reportedImproperFeedID = id
-        
+
         switch reportImproperResult {
         case .success:
             return

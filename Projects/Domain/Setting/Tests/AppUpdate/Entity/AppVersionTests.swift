@@ -10,6 +10,7 @@
 import Testing
 import Foundation
 @testable import SettingDomain
+import SettingDomainTesting
 
 @Suite("AppVersion")
 struct AppVersionTests {

@@ -9,6 +9,7 @@
 
 import Testing
 @testable import SettingDomain
+import SettingDomainTesting
 
 @Suite("SaveTermsAgreementDraftUseCase")
 struct SaveTermsAgreementDraftUseCaseTests {

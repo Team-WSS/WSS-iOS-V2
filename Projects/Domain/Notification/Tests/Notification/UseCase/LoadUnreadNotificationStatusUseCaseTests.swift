@@ -11,6 +11,7 @@ import Testing
 
 import BaseDomain
 import NotificationDomain
+import NotificationDomainTesting
 
 @Suite("LoadUnreadNotificationStatusUseCase")
 struct LoadUnreadNotificationStatusUseCaseTests {

@@ -9,6 +9,7 @@
 
 import Testing
 import NotificationDomain
+import NotificationDomainTesting
 
 @Suite("UpdatePushPreferenceUseCase")
 struct UpdatePushPreferenceUseCaseTests {

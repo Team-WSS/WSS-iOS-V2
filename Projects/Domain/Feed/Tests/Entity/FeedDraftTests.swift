@@ -8,6 +8,7 @@
 
 import Testing
 @testable import FeedDomain
+import FeedDomainTesting
 @testable import BaseDomain
 
 @Suite
