@@ -7,8 +7,8 @@
 //
 
 import Testing
-@testable import KeywordDomain
 import KeywordDomainTesting
+@testable import KeywordDomain
 @testable import BaseDomain
 
 @Suite

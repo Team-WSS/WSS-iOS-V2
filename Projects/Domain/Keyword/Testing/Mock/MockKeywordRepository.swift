@@ -12,23 +12,32 @@ import BaseDomain
 
 public final class MockKeywordRepository: KeywordRepository {
 
+    public enum MockError: Error {
+        case fetchFailed
+        case searchFailed
+    }
+
     public var fetchKeywordsResult: Result<[KeywordGroup], Error> = .success([])
     public var searchKeywordsResult: Result<[Keyword], Error> = .success([])
 
     public private(set) var fetchKeywordsCallCount = 0
-    public private(set) var searchKeywordsCallCount = 0
-    public private(set) var lastSearchQuery: String?
-
+    public private(set) var searchedQueries: [String] = []
+    
     public init() {}
 
     public func fetchKeywords() async throws -> [KeywordGroup] {
         fetchKeywordsCallCount += 1
-        return try fetchKeywordsResult.get()
+        switch fetchKeywordsResult {
+        case .success(let value): return value
+        case .failure(let error): throw error
+        }
     }
 
     public func searchKeywords(_ query: String) async throws -> [Keyword] {
-        searchKeywordsCallCount += 1
-        lastSearchQuery = query
-        return try searchKeywordsResult.get()
+        searchedQueries.append(query)
+        switch searchKeywordsResult {
+        case .success(let value): return value
+        case .failure(let error): throw error
+        }
     }
 }
