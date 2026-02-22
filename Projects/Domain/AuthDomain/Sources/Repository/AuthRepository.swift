@@ -10,7 +10,7 @@
 public protocol AuthRepository {
     func login(
         with credential: SocialLoginCredential
-    ) async throws(AuthError) -> AuthSession
+    ) async throws(AuthError) -> NeedOnboarding
     
     /// 토큰과 개인 정보 삭제도 필요
     func logout() async throws(RepositoryError)

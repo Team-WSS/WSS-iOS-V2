@@ -10,7 +10,7 @@
 public protocol SocialLoginUseCase {
     func execute(
         credential: SocialLoginCredential
-    ) async throws(AuthError) -> Bool
+    ) async throws(AuthError) -> NeedOnboarding
 }
 
 public final class DefaultSocialLoginUseCase: SocialLoginUseCase {
@@ -23,9 +23,7 @@ public final class DefaultSocialLoginUseCase: SocialLoginUseCase {
 
     public func execute(
         credential: SocialLoginCredential
-    ) async throws(AuthError) -> Bool {
-
-        let session = try await authRepository.login(with: credential)
-        return session.needOnboarding
+    ) async throws(AuthError) -> NeedOnboarding {
+        return try await authRepository.login(with: credential)
     }
 }

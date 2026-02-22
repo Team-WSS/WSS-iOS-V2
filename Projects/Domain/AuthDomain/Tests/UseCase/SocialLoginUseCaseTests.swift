@@ -17,7 +17,7 @@ struct SocialLoginUseCaseTests {
     func savesSessionAndReturnsNeedOnboarding() async throws {
         let repo = MockAuthRepository()
         
-        let session = AuthSession(accessToken: "A", refreshToken: "R", needOnboarding: true)
+        let session = NeedOnboarding(value: true)
         repo.loginResult = .success(session)
         
         let sut = DefaultSocialLoginUseCase(authRepository: repo)
@@ -25,16 +25,16 @@ struct SocialLoginUseCaseTests {
         let needOnboarding = try await sut.execute(credential: .kakao(accessToken: "kakao_token"))
         
         #expect(repo.loginCallCount == 1)
+        #expect(needOnboarding.value == true)
     }
 
     @Test("소셜 로그인 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryErrorForApple() async {
         let repo = MockAuthRepository()
-        let tokenStore = MockTokenStore()
         
         repo.loginResult = .failure(.networkUnavailable)
         
-        let sut = DefaultSocialLoginUseCase(authRepository: repo, tokenStore: tokenStore)
+        let sut = DefaultSocialLoginUseCase(authRepository: repo)
         
         await #expect(throws: AuthError.networkUnavailable) {
             _ = try await sut.execute(
@@ -46,6 +46,5 @@ struct SocialLoginUseCaseTests {
         }
         
         #expect(repo.loginCallCount == 1)
-        #expect(tokenStore.savedSessions.isEmpty)
     }
 }

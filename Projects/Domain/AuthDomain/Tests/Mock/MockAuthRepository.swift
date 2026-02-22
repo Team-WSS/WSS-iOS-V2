@@ -13,11 +13,11 @@ import AuthDomain
 final class MockAuthRepository: AuthRepository {
     
     // login
-    var loginResult: Result<AuthSession, AuthError> = .failure(.unknown)
+    var loginResult: Result<NeedOnboarding, AuthError> = .failure(.unknown)
     private(set) var loginCallCount: Int = 0
     private(set) var loginReceivedCredential: SocialLoginCredential?
 
-    func login(with credential: SocialLoginCredential) async throws(AuthError) -> AuthSession {
+    func login(with credential: SocialLoginCredential) async throws(AuthError) -> NeedOnboarding {
         loginCallCount += 1
         loginReceivedCredential = credential
         return try loginResult.get()
