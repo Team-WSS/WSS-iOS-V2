@@ -126,7 +126,7 @@ jobs:
           xcodebuild test \
             -workspace WSS-iOS-V2.xcworkspace \
             -scheme ${{ matrix.domain }} \
-            -destination 'platform=macOS' \
+            -destination 'platform=iOS Simulator' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults/${{ matrix.domain }}.xcresult \
           | xcbeautify --renderer github-actions
