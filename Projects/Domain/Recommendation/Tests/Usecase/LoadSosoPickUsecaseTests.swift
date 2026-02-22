@@ -14,7 +14,8 @@ import Testing
 @Suite
 struct LoadSosoPickUsecaseTests {
 
-    @Test func `소소픽을 성공적으로 불러온다.`() async throws {
+    @Test("소소픽을 성공적으로 불러온다")
+    func loadsSosoPickSuccessfully() async throws {
         let mock = MockRecommendationRepository()
         let expectedPicks = [makeSosoPick(novelID: NovelID(1)), makeSosoPick(novelID: NovelID(2))]
         mock.fetchSosoPickResult = .success(expectedPicks)
@@ -26,7 +27,8 @@ struct LoadSosoPickUsecaseTests {
         #expect(mock.fetchSosoPickCallCount == 1)
     }
 
-    @Test func `소소픽 목록이 비어있어도 정상적으로 반환한다.`() async throws {
+    @Test("소소픽 목록이 비어있어도 정상적으로 반환한다")
+    func returnsEmptySosoPickListNormally() async throws {
         let mock = MockRecommendationRepository()
         mock.fetchSosoPickResult = .success([])
 
@@ -36,7 +38,8 @@ struct LoadSosoPickUsecaseTests {
         #expect(result.isEmpty)
     }
 
-    @Test func `소소픽 불러오기에 실패하면 에러를 던진다.`() async {
+    @Test("소소픽 불러오기에 실패하면 에러를 던진다")
+    func throwsErrorWhenLoadSosoPickFails() async {
         let mock = MockRecommendationRepository()
         mock.fetchSosoPickResult = .failure(MockError.networkError)
 

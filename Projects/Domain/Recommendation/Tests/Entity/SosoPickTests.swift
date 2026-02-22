@@ -30,14 +30,16 @@ struct SosoPickTests {
 
     // MARK: - Tests
 
-    @Test func `소소픽을 생성할 수 있다.`() {
+    @Test("소소픽을 생성할 수 있다")
+    func canCreateSosoPick() {
         let pick = makeSosoPick(novelID: NovelID(42), novelTitle: "추천 소설")
 
         #expect(pick.novelID == NovelID(42))
         #expect(pick.novelTitle == "추천 소설")
     }
 
-    @Test func `썸네일 이미지를 포함하여 생성할 수 있다.`() {
+    @Test("썸네일 이미지를 포함하여 생성할 수 있다")
+    func canCreateSosoPickWithThumbnailImage() {
         let url = URL(string: "https://example.com/thumbnail.jpg")
         let pick = makeSosoPick(novelThumbnailimage: url)
 

@@ -39,7 +39,8 @@ struct InterestFeedTests {
 
     // MARK: - feeds 상태
 
-    @Test func `feeds 상태에서 피드 목록을 확인할 수 있다.`() {
+    @Test("feeds 상태에서 피드 목록을 확인할 수 있다")
+    func feedsStateContainsFeedList() {
         let feed = makeInterestFeed(novelTitle: "소설 제목")
         let state = InterestFeedState.feeds([feed])
 
@@ -52,7 +53,8 @@ struct InterestFeedTests {
         #expect(feeds.first?.novelTitle == "소설 제목")
     }
 
-    @Test func `feeds 상태에서 여러 피드를 포함할 수 있다.`() {
+    @Test("feeds 상태에서 여러 피드를 포함할 수 있다")
+    func feedsStateCanContainMultipleFeeds() {
         let feeds = [makeInterestFeed(), makeInterestFeed(), makeInterestFeed()]
         let state = InterestFeedState.feeds(feeds)
 
@@ -64,7 +66,8 @@ struct InterestFeedTests {
         #expect(result.count == 3)
     }
 
-    @Test func `feeds 상태에서 피드 목록이 비어있을 수 있다.`() {
+    @Test("feeds 상태에서 피드 목록이 비어있을 수 있다")
+    func feedsStateCanBeEmpty() {
         let state = InterestFeedState.feeds([])
 
         guard case .feeds(let feeds) = state else {
@@ -77,7 +80,8 @@ struct InterestFeedTests {
 
     // MARK: - 비활성 상태
 
-    @Test func `관심 설정을 하지 않은 상태를 표현할 수 있다.`() {
+    @Test("관심 설정을 하지 않은 상태를 표현할 수 있다")
+    func canRepresentNoInterestSettingsState() {
         let state = InterestFeedState.noInterestSettings
 
         var isMatch = false
@@ -86,7 +90,8 @@ struct InterestFeedTests {
         #expect(isMatch)
     }
 
-    @Test func `관련 피드가 없는 상태를 표현할 수 있다.`() {
+    @Test("관련 피드가 없는 상태를 표현할 수 있다")
+    func canRepresentNoAssociatedFeedsState() {
         let state = InterestFeedState.noAssociatedFeeds
 
         var isMatch = false

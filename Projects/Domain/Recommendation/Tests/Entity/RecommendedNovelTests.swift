@@ -34,7 +34,8 @@ struct RecommendedNovelTests {
 
     // MARK: - novels 상태
 
-    @Test func `novels 상태에서 소설 목록을 확인할 수 있다.`() {
+    @Test("novels 상태에서 소설 목록을 확인할 수 있다")
+    func novelsStateContainsNovelList() {
         let novel = makeRecommendedNovel(novelTitle: "판타지 소설")
         let state = RecommendedNovelState.novels([novel])
 
@@ -47,7 +48,8 @@ struct RecommendedNovelTests {
         #expect(novels.first?.novelTitle == "판타지 소설")
     }
 
-    @Test func `novels 상태에서 여러 소설을 포함할 수 있다.`() {
+    @Test("novels 상태에서 여러 소설을 포함할 수 있다")
+    func novelsStateCanContainMultipleNovels() {
         let novels = [makeRecommendedNovel(), makeRecommendedNovel(), makeRecommendedNovel()]
         let state = RecommendedNovelState.novels(novels)
 
@@ -59,7 +61,8 @@ struct RecommendedNovelTests {
         #expect(result.count == 3)
     }
 
-    @Test func `novels 상태에서 소설 목록이 비어있을 수 있다.`() {
+    @Test("novels 상태에서 소설 목록이 비어있을 수 있다")
+    func novelsStateCanBeEmpty() {
         let state = RecommendedNovelState.novels([])
 
         guard case .novels(let novels) = state else {
@@ -72,7 +75,8 @@ struct RecommendedNovelTests {
 
     // MARK: - 비활성 상태
 
-    @Test func `선호 장르가 미설정된 상태를 표현할 수 있다.`() {
+    @Test("선호 장르가 미설정된 상태를 표현할 수 있다")
+    func canRepresentNoGenreSettingsState() {
         let state = RecommendedNovelState.noGenreSettings
 
         var isMatch = false
@@ -83,7 +87,8 @@ struct RecommendedNovelTests {
 
     // MARK: - RecommendedNovel 속성
 
-    @Test func `소설에 여러 저자를 담을 수 있다.`() {
+    @Test("소설에 여러 저자를 담을 수 있다")
+    func novelCanContainMultipleAuthors() {
         let authors = ["작가A", "작가B", "작가C"]
         let novel = makeRecommendedNovel(novelAuthors: authors)
 
@@ -91,7 +96,8 @@ struct RecommendedNovelTests {
         #expect(novel.novelAuthors == authors)
     }
 
-    @Test func `소설의 관심 수와 평가 수를 포함한다.`() {
+    @Test("소설의 관심 수와 평가 수를 포함한다")
+    func novelIncludesInterestAndRatingCount() {
         let novel = makeRecommendedNovel(interestCount: 123, ratingCount: 456)
 
         #expect(novel.interestCount == 123)

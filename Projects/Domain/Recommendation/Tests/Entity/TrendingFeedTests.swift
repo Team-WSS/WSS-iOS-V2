@@ -31,21 +31,24 @@ struct TrendingFeedTests {
 
     // MARK: - Tests
 
-    @Test func `지금 뜨는 글을 생성할 수 있다.`() {
+    @Test("지금 뜨는 글을 생성할 수 있다")
+    func canCreateTrendingFeed() {
         let feed = makeTrendingFeed(feedID: FeedID(99), description: "인기 글 내용")
 
         #expect(feed.feedID == FeedID(99))
         #expect(feed.description == "인기 글 내용")
     }
 
-    @Test func `좋아요 수와 댓글 수를 포함한다.`() {
+    @Test("좋아요 수와 댓글 수를 포함한다")
+    func includesLikeCountAndCommentCount() {
         let feed = makeTrendingFeed(likeCount: 150, commentCount: 30)
 
         #expect(feed.likeCount == 150)
         #expect(feed.commentCount == 30)
     }
 
-    @Test func `서로 다른 feedID로 구별할 수 있다.`() {
+    @Test("서로 다른 feedID로 구별할 수 있다")
+    func canDistinguishByDifferentFeedIDs() {
         let feed1 = makeTrendingFeed(feedID: FeedID(1))
         let feed2 = makeTrendingFeed(feedID: FeedID(2))
 

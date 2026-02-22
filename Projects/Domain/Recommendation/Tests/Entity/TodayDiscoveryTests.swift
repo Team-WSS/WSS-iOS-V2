@@ -40,7 +40,8 @@ struct TodayDiscoveryTests {
 
     // MARK: - Content 타입
 
-    @Test func `novel 타입으로 오늘의 발견을 생성할 수 있다.`() {
+    @Test("novel 타입으로 오늘의 발견을 생성할 수 있다")
+    func canCreateTodayDiscoveryWithNovelType() {
         let discovery = makeTodayDiscovery(content: .novel(description: "흥미로운 소설입니다"))
 
         var isMatch = false
@@ -49,7 +50,8 @@ struct TodayDiscoveryTests {
         #expect(isMatch)
     }
 
-    @Test func `userComment 타입으로 오늘의 발견을 생성할 수 있다.`() {
+    @Test("userComment 타입으로 오늘의 발견을 생성할 수 있다")
+    func canCreateTodayDiscoveryWithUserCommentType() {
         let discovery = makeTodayDiscovery(
             content: .userComment(user: makeAuthor(), comment: "강추합니다!")
         )
@@ -60,7 +62,8 @@ struct TodayDiscoveryTests {
         #expect(isMatch)
     }
 
-    @Test func `novel 타입에서 설명 텍스트를 가져올 수 있다.`() {
+    @Test("novel 타입에서 설명 텍스트를 가져올 수 있다")
+    func canGetDescriptionFromNovelType() {
         let description = "이 소설은 매우 흥미롭습니다"
         let discovery = makeTodayDiscovery(content: .novel(description: description))
 
@@ -72,7 +75,8 @@ struct TodayDiscoveryTests {
         #expect(result == description)
     }
 
-    @Test func `userComment 타입에서 유저 정보와 한마디를 가져올 수 있다.`() {
+    @Test("userComment 타입에서 유저 정보와 한마디를 가져올 수 있다")
+    func canGetUserInfoAndCommentFromUserCommentType() {
         let author = makeAuthor()
         let comment = "이 작품은 정말 최고입니다"
         let discovery = makeTodayDiscovery(

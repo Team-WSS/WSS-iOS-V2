@@ -14,7 +14,8 @@ import Testing
 @Suite
 struct LoadHomeDataUsecaseTests {
 
-    @Test func `모든 데이터를 성공적으로 불러온다.`() async throws {
+    @Test("모든 데이터를 성공적으로 불러온다")
+    func loadsAllDataSuccessfully() async throws {
         let mock = MockRecommendationRepository()
         mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
         mock.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
@@ -41,7 +42,8 @@ struct LoadHomeDataUsecaseTests {
         #expect(isNovels)
     }
 
-    @Test func `todayDiscoveries 실패 시 해당 필드만 failure로 반환한다.`() async {
+    @Test("todayDiscoveries 실패 시 해당 필드만 failure로 반환한다")
+    func returnsTodayDiscoveriesFailureWhenItFails() async {
         let mock = MockRecommendationRepository()
         mock.fetchTodayDiscoveriesResult = .failure(MockError.networkError)
 
@@ -53,7 +55,8 @@ struct LoadHomeDataUsecaseTests {
         }
     }
 
-    @Test func `특정 API 실패 시 나머지 필드는 성공으로 반환한다.`() async throws {
+    @Test("특정 API 실패 시 나머지 필드는 성공으로 반환한다")
+    func returnsRemainingFieldsSuccessWhenOneApiFails() async throws {
         let mock = MockRecommendationRepository()
         mock.fetchTodayDiscoveriesResult = .failure(MockError.networkError)
         mock.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
@@ -83,7 +86,8 @@ struct LoadHomeDataUsecaseTests {
         #expect(isNoGenre)
     }
 
-    @Test func `네 가지 API가 모두 동시에 호출된다.`() async {
+    @Test("네 가지 API가 모두 동시에 호출된다")
+    func callsAllFourApisSimultaneously() async {
         let mock = MockRecommendationRepository()
 
         let usecase = DefaultLoadDataUsecase(repository: mock)
