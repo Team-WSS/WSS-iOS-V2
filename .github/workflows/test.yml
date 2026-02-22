@@ -1,26 +1,26 @@
 name: Run Domain Tests
 
 on:
-  pull_request:
+    pull_request:
     branches: [ develop ]
     types: [ opened, synchronize, reopened ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
 
 jobs:
-  # 0) Domain 폴더를 스캔해서 matrix 만들기
-  discover:
+    # 0) Domain 폴더를 스캔해서 matrix 만들기
+    discover:
     name: Discover Domain Modules
     runs-on: ubuntu-latest
     outputs:
-      domains_json: ${{ steps.set-matrix.outputs.domains_json }}
+        domains_json: ${{ steps.set-matrix.outputs.domains_json }}
     steps:
-      - name: Checkout
+        - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Build matrix from Projects/Domain
+        
+        - name: Build matrix from Projects/Domain
         id: set-matrix
         run: |
           python3 - << 'PY' >> "$GITHUB_OUTPUT"
@@ -28,36 +28,36 @@ jobs:
           domain_dir = "Projects/Domain"
           domains = []
           if os.path.isdir(domain_dir):
-            for name in sorted(os.listdir(domain_dir)):
-              p = os.path.join(domain_dir, name)
-              if os.path.isdir(p):
+                for name in sorted(os.listdir(domain_dir)):
+                p = os.path.join(domain_dir, name)
+                if os.path.isdir(p):
                 domains.append(name)
           print("domains_json=" + json.dumps(domains))
           PY
-
-      - name: Print discovered domains
+        
+        - name: Print discovered domains
         run: |
           echo '${{ steps.set-matrix.outputs.domains_json }}'
-
-  # 1) 도메인별 테스트 (병렬)
-  test:
+    
+    # 1) 도메인별 테스트 (병렬)
+    test:
     name: Test ${{ matrix.domain }}
     runs-on: macos-15
     needs: discover
     timeout-minutes: 30
-
+    
     strategy:
-      fail-fast: false
-      matrix:
+        fail-fast: false
+        matrix:
         domain: ${{ fromJson(needs.discover.outputs.domains_json) }}
-
+    
     steps:
-      # 1. Checkout
-      - name: Checkout
+        # 1. Checkout
+        - name: Checkout
         uses: actions/checkout@v4
-
-      # 2. Placeholder xcconfig 생성
-      - name: Create placeholder xcconfig
+        
+        # 2. Placeholder xcconfig 생성
+        - name: Create placeholder xcconfig
         run: |
           mkdir -p Config
           cat > Config/Config_Shared.xcconfig << 'EOF'
@@ -75,47 +75,47 @@ jobs:
           BASE_URL = https://placeholder
           AMPLITUDE_API_KEY = placeholder
           EOF
-
-      # 3. mise + Tuist 설치
-      - name: Setup mise & install tools
+        
+        # 3. mise + Tuist 설치
+        - name: Setup mise & install tools
         uses: jdx/mise-action@v2
-
-      # 4. Tuist 캐시
-      - name: Cache Tuist
+        
+        # 4. Tuist 캐시
+        - name: Cache Tuist
         uses: actions/cache@v4
         with:
-          path: |
+            path: |
             ~/Library/Caches/com.tuist.Tuist
             Tuist/.build
-          key: tuist-${{ runner.os }}-${{ hashFiles('Tuist/Package.swift', 'Tuist/Package.resolved') }}
-          restore-keys: |
+            key: tuist-${{ runner.os }}-${{ hashFiles('Tuist/Package.swift', 'Tuist/Package.resolved') }}
+            restore-keys: |
             tuist-${{ runner.os }}-
-
-      # 5. 프로젝트 생성
-      - name: Generate project
+        
+        # 5. 프로젝트 생성
+        - name: Generate project
         run: |
           tuist install
           tuist generate --no-open
-
-      # 6. DerivedData 캐시
-      - name: Cache DerivedData
+        
+        # 6. DerivedData 캐시
+        - name: Cache DerivedData
         uses: actions/cache@v4
         with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/Project.swift') }}
-          restore-keys: |
+            path: ~/Library/Developer/Xcode/DerivedData
+            key: deriveddata-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/Project.swift') }}
+            restore-keys: |
             deriveddata-${{ runner.os }}-
-
-      # 7. xcbeautify 설치
-      - name: Install xcbeautify
+        
+        # 7. xcbeautify 설치
+        - name: Install xcbeautify
         run: brew install xcbeautify
-
-      # 8. 테스트 실행 (matrix.domain)
-      - name: Run ${{ matrix.domain }} Tests
+        
+        # 8. 테스트 실행 (matrix.domain)
+        - name: Run ${{ matrix.domain }} Tests
         run: |
           set -o pipefail
           mkdir -p TestResults
-
+          
           xcodebuild test \
             -workspace WSS-iOS-V2.xcworkspace \
             -scheme ${{ matrix.domain }} \
@@ -123,20 +123,20 @@ jobs:
             -enableCodeCoverage YES \
             -resultBundlePath TestResults/${{ matrix.domain }}.xcresult \
           | xcbeautify --renderer github-actions
-
-      # 9. 도메인 단일 커버리지 파일 생성 (나중에 report job이 모아서 종합)
-      - name: Generate per-domain coverage snippet
+        
+        # 9. 도메인 단일 커버리지 파일 생성 (나중에 report job이 모아서 종합)
+        - name: Generate per-domain coverage snippet
         if: always()
         run: |
-          set -euo pipefail
-          DOMAIN="${{ matrix.domain }}"
-          RESULT_PATH="TestResults/${DOMAIN}.xcresult"
-
-          mkdir -p CoverageParts
-
-          if [ -d "$RESULT_PATH" ]; then
-            COV_JSON=$(xcrun xccov view --report --json "$RESULT_PATH" 2>/dev/null || echo "")
-            if [ -n "$COV_JSON" ]; then
+              set -euo pipefail
+              DOMAIN="${{ matrix.domain }}"
+              RESULT_PATH="TestResults/${DOMAIN}.xcresult"
+              
+              mkdir -p CoverageParts
+              
+              if [ -d "$RESULT_PATH" ]; then
+              COV_JSON=$(xcrun xccov view --report --json "$RESULT_PATH" 2>/dev/null || echo "")
+              if [ -n "$COV_JSON" ]; then
               PERCENT=$(echo "$COV_JSON" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
@@ -147,85 +147,85 @@ for t in targets:
         print(f\"{t.get('lineCoverage', 0) * 100:.1f}%\")
         sys.exit(0)
 print('N/A')
-")
+              ")
               echo "${DOMAIN}|${PERCENT}" > "CoverageParts/${DOMAIN}.txt"
-            else
+              else
               echo "${DOMAIN}|⚠️ Report unavailable" > "CoverageParts/${DOMAIN}.txt"
-            fi
-          else
-            echo "${DOMAIN}|❌ Test failed" > "CoverageParts/${DOMAIN}.txt"
-          fi
-
-      # 10. xcresult 아티팩트 업로드 (도메인별)
-      - name: Upload xcresult
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcresult-${{ matrix.domain }}
-          path: TestResults/${{ matrix.domain }}.xcresult
-          retention-days: 7
-
-      # 11. 커버리지 파트 업로드 (도메인별)
-      - name: Upload coverage part
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-part-${{ matrix.domain }}
-          path: CoverageParts/${{ matrix.domain }}.txt
-          retention-days: 7
-
-  # 2) 모든 도메인 결과를 모아서 PR 코멘트 + Summary 작성
-  report:
-    name: Report Coverage (All Domains)
-    runs-on: ubuntu-latest
-    needs: [discover, test]
-    if: always() && github.event_name == 'pull_request'
-    steps:
-      - name: Download all coverage parts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-part-*
-          path: coverage_parts
-          merge-multiple: true
-
-      - name: Build coverage.md
-        run: |
-          set -euo pipefail
-
-          echo "## 도메인 테스트 커버리지 리포트" > coverage.md
-          echo "" >> coverage.md
-          echo "| Module | Coverage |" >> coverage.md
-          echo "|--------|----------|" >> coverage.md
-
-          # discover job에서 얻은 도메인 순서대로 출력(안정적인 정렬)
-          python3 - << 'PY'
-          import json, os
-          domains = json.loads(r'''${{ needs.discover.outputs.domains_json }}''')
-          lines = []
-          for d in domains:
-            p = os.path.join("coverage_parts", f"{d}.txt")
-            if os.path.exists(p):
+              fi
+              else
+              echo "${DOMAIN}|❌ Test failed" > "CoverageParts/${DOMAIN}.txt"
+              fi
+              
+              # 10. xcresult 아티팩트 업로드 (도메인별)
+              - name: Upload xcresult
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+              name: xcresult-${{ matrix.domain }}
+              path: TestResults/${{ matrix.domain }}.xcresult
+              retention-days: 7
+              
+              # 11. 커버리지 파트 업로드 (도메인별)
+              - name: Upload coverage part
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+              name: coverage-part-${{ matrix.domain }}
+              path: CoverageParts/${{ matrix.domain }}.txt
+              retention-days: 7
+              
+              # 2) 모든 도메인 결과를 모아서 PR 코멘트 + Summary 작성
+              report:
+              name: Report Coverage (All Domains)
+              runs-on: ubuntu-latest
+              needs: [discover, test]
+              if: always() && github.event_name == 'pull_request'
+              steps:
+              - name: Download all coverage parts
+              uses: actions/download-artifact@v4
+              with:
+              pattern: coverage-part-*
+              path: coverage_parts
+              merge-multiple: true
+              
+              - name: Build coverage.md
+              run: |
+              set -euo pipefail
+              
+              echo "## 도메인 테스트 커버리지 리포트" > coverage.md
+              echo "" >> coverage.md
+              echo "| Module | Coverage |" >> coverage.md
+              echo "|--------|----------|" >> coverage.md
+              
+              # discover job에서 얻은 도메인 순서대로 출력(안정적인 정렬)
+              python3 - << 'PY'
+              import json, os
+              domains = json.loads(r'''${{ needs.discover.outputs.domains_json }}''')
+              lines = []
+              for d in domains:
+              p = os.path.join("coverage_parts", f"{d}.txt")
+              if os.path.exists(p):
               with open(p, "r", encoding="utf-8") as f:
-                raw = f.read().strip()
+                  raw = f.read().strip()
               # format: Domain|xx.x%
               if "|" in raw:
-                module, cov = raw.split("|", 1)
+                  module, cov = raw.split("|", 1)
               else:
-                module, cov = d, "N/A"
+                  module, cov = d, "N/A"
               lines.append((module, cov))
-            else:
+              else:
               lines.append((d, "⚠️ Missing coverage"))
-          with open("coverage.md", "a", encoding="utf-8") as out:
-            for m, c in lines:
+              with open("coverage.md", "a", encoding="utf-8") as out:
+              for m, c in lines:
               out.write(f"| {m} | {c} |\\n")
-          PY
-
-          echo "" >> coverage.md
-          echo "<sub>Generated by CI on $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')</sub>" >> coverage.md
-
-          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Post coverage comment on PR (sticky)
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: coverage.md
+              PY
+              
+              echo "" >> coverage.md
+              echo "<sub>Generated by CI on $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M KST')</sub>" >> coverage.md
+              
+              cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+              
+              - name: Post coverage comment on PR (sticky)
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+    path: coverage.md
