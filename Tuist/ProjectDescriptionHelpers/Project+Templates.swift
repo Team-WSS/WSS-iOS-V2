@@ -67,11 +67,34 @@ extension Project {
             )
         }
         
+        // Testing
+        if targets.contains(.testing) {
+            var testingDeps = internalDependencies + externalDependencies
+            testingDeps.append(.target(name: name))
+
+            allTargets.append(
+                .target(
+                    name: "\(name)Testing",
+                    destinations: env.destination,
+                    product: .framework,
+                    bundleId: "\(env.organizationName).\(name)Testing",
+                    deploymentTargets: deploymentTarget,
+                    infoPlist: infoPlist,
+                    sources: ["Testing/**"],
+                    resources: [],
+                    dependencies: testingDeps
+                )
+            )
+        }
+
         // Tests
         if targets.contains(.tests) {
             var testDeps = testDependencies
             testDeps.append(.target(name: name))
-            
+            if targets.contains(.testing) {
+                testDeps.append(.target(name: "\(name)Testing"))
+            }
+
             allTargets.append(
                 .target(
                     name: "\(name)Tests",

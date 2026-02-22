@@ -62,45 +62,75 @@ public extension TargetDependency.Domain {
         target: ModuleType.Domain.feed.targetName(type: .sources),
         path: .relativeToDomain(.feed)
     )
-    
+
     static let FeedDomainDemo = TargetDependency.project(
         target: ModuleType.Domain.feed.targetName(type: .demo),
         path: .relativeToDomain(.feed)
     )
-    
+
+    static let FeedDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.feed.targetName(type: .testing),
+        path: .relativeToDomain(.feed)
+    )
+
     static let FeedDomainTests = TargetDependency.project(
         target: ModuleType.Domain.feed.targetName(type: .tests),
         path: .relativeToDomain(.feed)
     )
-    
+
     static let KeywordDomain = TargetDependency.project(
         target: ModuleType.Domain.keyword.targetName(type: .sources),
         path: .relativeToDomain(.keyword)
     )
-    
+
     static let KeywordDomainDemo = TargetDependency.project(
         target: ModuleType.Domain.keyword.targetName(type: .demo),
         path: .relativeToDomain(.keyword)
     )
-    
+
+    static let KeywordDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.keyword.targetName(type: .testing),
+        path: .relativeToDomain(.keyword)
+    )
+
     static let KeywordDomainTests = TargetDependency.project(
         target: ModuleType.Domain.keyword.targetName(type: .tests),
         path: .relativeToDomain(.keyword)
     )
-    
+
     static let CommentDomain = TargetDependency.project(
         target: ModuleType.Domain.comment.targetName(type: .sources),
         path: .relativeToDomain(.comment)
     )
-    
+
     static let CommentDomainDemo = TargetDependency.project(
         target: ModuleType.Domain.comment.targetName(type: .demo),
         path: .relativeToDomain(.comment)
     )
-    
+
+    static let CommentDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.comment.targetName(type: .testing),
+        path: .relativeToDomain(.comment)
+    )
+
     static let CommentDomainTests = TargetDependency.project(
         target: ModuleType.Domain.comment.targetName(type: .tests),
         path: .relativeToDomain(.comment)
+    )
+
+    static let NotificationDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.notification.targetName(type: .testing),
+        path: .relativeToDomain(.notification)
+    )
+
+    static let NovelReviewDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.novelReview.targetName(type: .testing),
+        path: .relativeToDomain(.novelReview)
+    )
+
+    static let SettingDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.setting.targetName(type: .testing),
+        path: .relativeToDomain(.setting)
     )
 }
 
