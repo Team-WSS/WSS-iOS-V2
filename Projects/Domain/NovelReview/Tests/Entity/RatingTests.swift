@@ -9,6 +9,7 @@
 
 import Testing
 import NovelReviewDomain
+import NovelReviewDomainTesting
 
 @Suite("Rating")
 struct RatingTests {

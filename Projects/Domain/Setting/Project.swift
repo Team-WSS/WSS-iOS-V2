@@ -11,5 +11,5 @@ import DependencyPlugin
 
 let project = Project.createDomainModule(
     name: ModuleType.Domain.setting.name,
-    targets: [.sources, .demo, .tests]
+    targets: [.sources, .demo, .testing, .tests]
 )

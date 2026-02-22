@@ -8,6 +8,7 @@
 
 import Testing
 @testable import CommentDomain
+import CommentDomainTesting
 @testable import BaseDomain
 
 @Suite

@@ -9,6 +9,7 @@
 import Foundation
 import Testing
 import NovelReviewDomain
+import NovelReviewDomainTesting
 
 @Suite("ReadingPeriod")
 struct ReadingPeriodTests {

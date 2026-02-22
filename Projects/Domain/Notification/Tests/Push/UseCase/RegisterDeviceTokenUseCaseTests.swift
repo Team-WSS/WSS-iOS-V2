@@ -9,6 +9,7 @@
 
 import Testing
 import NotificationDomain
+import NotificationDomainTesting
 
 @Suite("RegisterDeviceTokenUseCase")
 struct RegisterDeviceTokenUseCaseTests {

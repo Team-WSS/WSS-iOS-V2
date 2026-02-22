@@ -8,6 +8,7 @@
 
 import Testing
 import NotificationDomain
+import NotificationDomainTesting
 import BaseDomain
 
 @Suite("LoadPushPreferenceUseCase")

@@ -8,6 +8,7 @@
 
 import Testing
 @testable import KeywordDomain
+import KeywordDomainTesting
 @testable import BaseDomain
 
 @Suite

@@ -7,6 +7,7 @@
 //
 
 import Testing
+import KeywordDomainTesting
 @testable import KeywordDomain
 @testable import BaseDomain
 

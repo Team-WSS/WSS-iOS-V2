@@ -6,21 +6,20 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
 import NotificationDomain
 import BaseDomain
 
-final class MockNotificationRepository: NotificationRepository {
+public final class MockNotificationRepository: NotificationRepository {
 
     // MARK: - loadNotifications
 
-    var loadedLastNotificationID: NotificationID?
-    var loadedSize: Int?
-    var loadNotificationsCallCount = 0
-    var loadNotificationsResult: Result<PagedNotifications, RepositoryError>?
+    public var loadedLastNotificationID: NotificationID?
+    public var loadedSize: Int?
+    public var loadNotificationsCallCount = 0
+    public var loadNotificationsResult: Result<PagedNotifications, RepositoryError>?
 
-    func loadNotifications(
+    public func loadNotifications(
         lastNotificationID: NotificationID?,
         size: Int
     ) async throws(RepositoryError) -> PagedNotifications {
@@ -40,11 +39,11 @@ final class MockNotificationRepository: NotificationRepository {
 
     // MARK: - loadNotificationDetail
 
-    var loadedDetailID: NotificationID?
-    var loadDetailCallCount = 0
-    var loadDetailResult: Result<NotificationDetail, RepositoryError>?
+    public var loadedDetailID: NotificationID?
+    public var loadDetailCallCount = 0
+    public var loadDetailResult: Result<NotificationDetail, RepositoryError>?
 
-    func loadNotificationDetail(
+    public func loadNotificationDetail(
         id: NotificationID
     ) async throws(RepositoryError) -> NotificationDetail {
         loadDetailCallCount += 1
@@ -62,11 +61,11 @@ final class MockNotificationRepository: NotificationRepository {
 
     // MARK: - markAsRead
 
-    var markedIDs: [NotificationID] = []
-    var markAsReadCallCount = 0
-    var markAsReadResult: Result<Void, RepositoryError>?
+    public var markedIDs: [NotificationID] = []
+    public var markAsReadCallCount = 0
+    public var markAsReadResult: Result<Void, RepositoryError>?
 
-    func markAsRead(
+    public func markAsRead(
         id: NotificationID
     ) async throws(RepositoryError) {
         markAsReadCallCount += 1
@@ -84,10 +83,10 @@ final class MockNotificationRepository: NotificationRepository {
 
     // MARK: - loadUnreadNotificationStatus
 
-    var loadUnreadStatusCallCount = 0
-    var loadUnreadStatusResult: Result<UnreadNotificationStatus, RepositoryError>?
+    public var loadUnreadStatusCallCount = 0
+    public var loadUnreadStatusResult: Result<UnreadNotificationStatus, RepositoryError>?
 
-    func loadUnreadNotificationStatus(
+    public func loadUnreadNotificationStatus(
     ) async throws(RepositoryError) -> UnreadNotificationStatus {
         loadUnreadStatusCallCount += 1
 
@@ -100,4 +99,6 @@ final class MockNotificationRepository: NotificationRepository {
         case .failure(let error): throw error
         }
     }
+
+    public init() {}
 }

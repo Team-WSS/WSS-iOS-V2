@@ -9,7 +9,7 @@
 import Testing
 @testable import BaseDomain
 @testable import FeedDomain
-@testable import BaseDomain
+import FeedDomainTesting
 
 @Suite
 struct LoadSosoFeedsUsecaseTests {

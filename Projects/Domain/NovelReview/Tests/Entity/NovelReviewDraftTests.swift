@@ -10,6 +10,7 @@
 import Foundation
 import Testing
 import NovelReviewDomain
+import NovelReviewDomainTesting
 import BaseDomain
 
 @Suite("NovelReviewDraft")

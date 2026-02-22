@@ -7,15 +7,17 @@
 //
 
 import Foundation
-@testable import SettingDomain
+import SettingDomain
 
-final class MockAppUpdateRepository: AppUpdateRepository {
-    var loadCallCount = 0
-    var result: Result<AppUpdatePolicy, RepositoryError> = .success(
+public final class MockAppUpdateRepository: AppUpdateRepository {
+    public var loadCallCount = 0
+    public var result: Result<AppUpdatePolicy, RepositoryError> = .success(
         AppUpdatePolicy(minimumVersion: .zero, updateDate: nil)
     )
 
-    func loadAppUpdatePolicy() async throws(RepositoryError) -> AppUpdatePolicy {
+    public init() {}
+
+    public func loadAppUpdatePolicy() async throws(RepositoryError) -> AppUpdatePolicy {
         loadCallCount += 1
         return try result.get()
     }
