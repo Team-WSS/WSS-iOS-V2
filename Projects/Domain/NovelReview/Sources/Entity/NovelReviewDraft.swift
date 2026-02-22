@@ -95,7 +95,7 @@ public struct NovelReviewDraft: Equatable {
     public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
         let uniqueKeywords = Array(Set(newKeywords))
 #if DEBUG
-        if uniqueKeywords.count != keywords.count {
+        if uniqueKeywords.count != newKeywords.count {
             assertionFailure("Keywords contains duplicates")
         }
 #endif
