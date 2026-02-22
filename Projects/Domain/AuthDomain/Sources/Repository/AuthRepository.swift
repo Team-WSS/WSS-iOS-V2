@@ -12,8 +12,10 @@ public protocol AuthRepository {
         with credential: SocialLoginCredential
     ) async throws(AuthError) -> AuthSession
     
+    /// 토큰과 개인 정보 삭제도 필요
     func logout() async throws(RepositoryError)
     
+    /// 토큰과 개인 정보 삭제도 필요
     func withdraw(
         draft: WithdrawalReasonDraft
     ) async throws(RepositoryError)

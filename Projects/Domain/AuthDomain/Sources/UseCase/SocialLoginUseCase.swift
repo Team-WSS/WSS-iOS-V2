@@ -16,11 +16,9 @@ public protocol SocialLoginUseCase {
 public final class DefaultSocialLoginUseCase: SocialLoginUseCase {
 
     private let authRepository: AuthRepository
-    private let tokenStore: TokenStore
 
-    public init(authRepository: AuthRepository, tokenStore: TokenStore) {
+    public init(authRepository: AuthRepository) {
         self.authRepository = authRepository
-        self.tokenStore = tokenStore
     }
 
     public func execute(
@@ -28,7 +26,6 @@ public final class DefaultSocialLoginUseCase: SocialLoginUseCase {
     ) async throws(AuthError) -> Bool {
 
         let session = try await authRepository.login(with: credential)
-        tokenStore.save(session)
         return session.needOnboarding
     }
 }

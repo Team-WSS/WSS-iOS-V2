@@ -15,22 +15,12 @@ public protocol LogoutUseCase {
 
 public final class DefaultLogoutUseCase: LogoutUseCase {
     private let authRepository: AuthRepository
-    private let tokenStore: TokenStore
-    private let userDataStore: UserDataStore
 
-    public init(
-        authRepository: AuthRepository,
-        tokenStore: TokenStore,
-        userDataStore: UserDataStore
-    ) {
+    public init(authRepository: AuthRepository) {
         self.authRepository = authRepository
-        self.tokenStore = tokenStore
-        self.userDataStore = userDataStore
     }
 
     public func execute() async throws {
         try await authRepository.logout()
-        tokenStore.clear()
-        userDataStore.clearUserData()
     }
 }
