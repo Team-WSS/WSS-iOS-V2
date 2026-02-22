@@ -9,23 +9,11 @@
 import Foundation
 import BaseDomain
 
-public enum CompletionStatus: Equatable {
-    case completed
-    case onGoing
-}
-
-public enum RatingThreshold: Float, CaseIterable, Equatable {
-    case over3_5 = 3.5
-    case over4_0 = 4.0
-    case over4_5 = 4.5
-    case over4_8 = 4.8
-}
-
 public struct NovelSearchFilter {
     
     public private(set) var genres: [NovelGenre]
-    public private(set) var completionStatus: CompletionStatus?
-    public private(set) var ratingThreshold: RatingThreshold?
+    public private(set) var publicationStatus: NovelPublicationStatus?
+    public private(set) var ratingThreshold: NovelRatingThreshold?
     public private(set) var keywords: [Keyword]
     
     //MARK: - Policy
@@ -50,23 +38,23 @@ public struct NovelSearchFilter {
         genres.removeAll()
     }
     
-    // - Completion
+    // - PublicationStatus
     
-    public mutating func setCompletion(_ status: CompletionStatus) {
-        if completionStatus == status {
-            completionStatus = nil
+    public mutating func setPublicationStatus(_ status: NovelPublicationStatus) {
+        if publicationStatus == status {
+            publicationStatus = nil
         } else {
-            completionStatus = status
+            publicationStatus = status
         }
     }
     
-    public mutating func clearCompletion() {
-        completionStatus = nil
+    public mutating func clearPublicationStatus() {
+        publicationStatus = nil
     }
     
     // - RatingThreshold
     
-    public mutating func setRatingThreshold(_ threshold: RatingThreshold) {
+    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold) {
         if ratingThreshold == threshold {
             ratingThreshold = nil
         } else {
@@ -102,7 +90,7 @@ public struct NovelSearchFilter {
     
     public mutating func clearAll() {
         clearGenres()
-        clearCompletion()
+        clearPublicationStatus()
         clearRatingThreshold()
         clearKeywords()
     }

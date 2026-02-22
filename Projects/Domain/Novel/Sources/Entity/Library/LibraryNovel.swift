@@ -11,18 +11,16 @@ import BaseDomain
 
 public struct LibraryNovel {
     
+    // 작품 정보
     public let id: NovelID
-    
     public let title: String
     public let thumbnailImage: URL?
-    
-    public let readStatus: ReadStatus?
     public let totalRating: Float?
-    public let userRating: Rating?
-    public let attractivePoint: [AttractivePoint]?
-    public let readPeriod: ReadPeriod?
-    public let keywords: [Keyword]?
-    public let isInterested: Bool
     
+    // 유저의 작품 평가
+    public let isInterested: Bool
+    public let userReview: UserNovelReview?
+    
+    // 유저가 작품에 남긴 피드
     public let writtenFeeds: [String]
 }

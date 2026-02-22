@@ -10,6 +10,13 @@ import Foundation
 import BaseDomain
 
 public struct NovelInformation {
+    // 작품 기본 정보
+    public let novel: Novel
+    
+    // 작품에 대한 유저 평가
+    public let userReview: UserNovelReview?
+    
+    // 작품 정보 탭
     public let description: String
     public let platforms: [NovelPlatform]
     public let attractivePoints: [AttractivePoint]

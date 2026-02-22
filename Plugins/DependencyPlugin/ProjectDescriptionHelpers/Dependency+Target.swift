@@ -132,6 +132,11 @@ public extension TargetDependency.Domain {
         target: ModuleType.Domain.novel.targetName(type: .tests),
         path: .relativeToDomain(.novel)
     )
+    
+    static let NovelDomainTesting = TargetDependency.project(
+        target: ModuleType.Domain.novel.targetName(type: .testing),
+        path: .relativeToDomain(.novel)
+    )
 
     static let NotificationDomainTesting = TargetDependency.project(
         target: ModuleType.Domain.notification.targetName(type: .testing),

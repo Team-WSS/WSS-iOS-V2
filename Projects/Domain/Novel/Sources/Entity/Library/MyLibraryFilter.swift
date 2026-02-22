@@ -12,7 +12,7 @@ public struct MyLibraryFilter {
     
     public private(set) var readStatus: [ReadStatus]
     public private(set) var attractivePoint: [AttractivePoint]
-    public private(set) var ratingThreshold: RatingThreshold?
+    public private(set) var ratingThreshold: NovelRatingThreshold?
     
     // MARK: - Policy
     
@@ -50,7 +50,7 @@ public struct MyLibraryFilter {
     
     // - RatingThreshold
     
-    public mutating func setRatingThreshold(_ threshold: RatingThreshold) {
+    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold) {
         if ratingThreshold == threshold {
             ratingThreshold = nil
         } else {
