@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol LoadHomeDataUsecase {
-    func execute() async -> HomeData
+    func execute() async throws -> HomeData
 }
 
 public final class DefaultLoadDataUsecase: LoadHomeDataUsecase {
@@ -20,29 +20,17 @@ public final class DefaultLoadDataUsecase: LoadHomeDataUsecase {
         self.recommendationRepository = repository
     }
     
-    public func execute() async -> HomeData {
-        async let todayDiscoveries: Result<[TodayDiscovery], Error> = {
-            do { return .success(try await recommendationRepository.fetchTodayDiscoveries()) }
-            catch { return .failure(error) }
-        }()
-        async let trendingFeeds: Result<[TrendingFeed], Error> = {
-            do { return .success(try await recommendationRepository.fetchTrendingFeeds()) }
-            catch { return .failure(error) }
-        }()
-        async let interestFeeds: Result<InterestFeedState, Error> = {
-            do { return .success(try await recommendationRepository.fetchInterestFeeds()) }
-            catch { return .failure(error) }
-        }()
-        async let recommendedNovels: Result<RecommendedNovelState, Error> = {
-            do { return .success(try await recommendationRepository.fetchRecommendedNovels()) }
-            catch { return .failure(error) }
-        }()
+    public func execute() async throws -> HomeData {
+        async let todayDiscoveries = recommendationRepository.fetchTodayDiscoveries()
+        async let trendingFeeds = recommendationRepository.fetchTrendingFeeds()
+        async let interestFeedState = recommendationRepository.fetchInterestFeeds()
+        async let recommendedNovelState = recommendationRepository.fetchRecommendedNovels()
         
         return await HomeData(
-            todayDiscoveries: todayDiscoveries,
-            trendingFeeds: trendingFeeds,
-            interestFeedState: interestFeeds,
-            recommendedNovelState: recommendedNovels
+            todayDiscoveries: try todayDiscoveries,
+            trendingFeeds: try trendingFeeds,
+            interestFeedState: try interestFeedState,
+            recommendedNovelState: try recommendedNovelState
         )
     }
 }

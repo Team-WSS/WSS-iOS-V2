@@ -9,8 +9,8 @@
 import Foundation
 
 public struct HomeData {
-    public let todayDiscoveries: Result<[TodayDiscovery], Error>
-    public let trendingFeeds: Result<[TrendingFeed], Error>
-    public let interestFeedState: Result<InterestFeedState, Error>
-    public let recommendedNovelState: Result<RecommendedNovelState, Error>
+    public let todayDiscoveries: [TodayDiscovery]
+    public let trendingFeeds: [TrendingFeed]
+    public let interestFeedState: InterestFeedState
+    public let recommendedNovelState: RecommendedNovelState
 }
