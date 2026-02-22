@@ -42,7 +42,9 @@ jobs:
             for name in sorted(os.listdir(domain_dir)):
               p = os.path.join(domain_dir, name)
               if os.path.isdir(p):
-                domains.append(name)
+                # 폴더명이 이미 'Domain'으로 끝나면 그대로, 아니면 'Domain' 붙이기
+                scheme = name if name.endswith('Domain') else name + 'Domain'
+                domains.append(scheme)
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             f.write("domains_json=" + json.dumps(domains) + "\n")
           PY
@@ -52,7 +54,7 @@ jobs:
 
   # 1) 도메인별 테스트 (병렬)
   test:
-    name: Test ${{ matrix.domain }}Domain
+    name: Test ${{ matrix.domain }}
     runs-on: macos-15
     needs: discover
     timeout-minutes: 30
@@ -116,15 +118,15 @@ jobs:
       - name: Install xcbeautify
         run: brew install xcbeautify
 
-      - name: Run ${{ matrix.domain }}Domain Tests
+      - name: Run ${{ matrix.domain }} Tests
         run: |
           set -o pipefail
           mkdir -p TestResults
 
           xcodebuild test \
             -workspace WSS-iOS-V2.xcworkspace \
-            -scheme ${{ matrix.domain }}Domain \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -scheme ${{ matrix.domain }} \
+            -destination 'platform=macOS' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults/${{ matrix.domain }}.xcresult \
           | xcbeautify --renderer github-actions
