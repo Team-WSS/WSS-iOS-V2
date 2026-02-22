@@ -42,14 +42,18 @@
 
 ### Test 디렉토리 구조
 ```
-Projects/Domain/[Module]/Tests/
-├── Entity/
-│   └── [Entity]Tests.swift
-├── Mock/
+Projects/Domain/[Module]/
+├── Testing/
 │   └── Mock[Repository].swift
-└── Usecase/
-    └── [Usecase]Tests.swift
+└── Tests/
+    ├── Entity/
+    │   └── [Entity]Tests.swift
+    └── Usecase/
+        └── [Usecase]Tests.swift
 ```
+
+- **Testing 폴더**: Mock 파일 위치 (e.g., `MockCommentRepository.swift`)
+- **Tests 폴더**: 테스트 함수 구현 파일 위치 (Entity, Usecase 하위 분류)
 
 ## Test Scope
 - **Domain 모듈에만 테스트 코드를 작성한다** (Data, Feature, Core 등 다른 레이어는 아직 적용하지 않음)
