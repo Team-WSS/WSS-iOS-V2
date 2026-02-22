@@ -15,10 +15,9 @@ public struct LibraryNovel {
     public let id: NovelID
     public let title: String
     public let thumbnailImage: URL?
-    public let totalRating: Float?
+    public let rating: Float
     
     // 유저의 작품 평가
-    public let isInterested: Bool
     public let userReview: UserNovelReview?
     
     // 유저가 작품에 남긴 피드

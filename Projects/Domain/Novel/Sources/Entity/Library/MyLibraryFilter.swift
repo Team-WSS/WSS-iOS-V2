@@ -10,7 +10,7 @@ import Foundation
 
 public struct MyLibraryFilter {
     
-    public private(set) var readStatus: [ReadStatus]
+    public private(set) var readStatus: [ReadingStatus]
     public private(set) var attractivePoint: [AttractivePoint]
     public private(set) var ratingThreshold: NovelRatingThreshold?
     
@@ -18,13 +18,13 @@ public struct MyLibraryFilter {
     
     // - readStatus
     
-    public mutating func addReadStatus(_ newStatus: ReadStatus) {
+    public mutating func addReadStatus(_ newStatus: ReadingStatus) {
         guard !readStatus.contains(newStatus) else { return }
         
         readStatus.append(newStatus)
     }
     
-    public mutating func removeGenre(_ targetReadStatus: ReadStatus) {
+    public mutating func removeGenre(_ targetReadStatus: ReadingStatus) {
         readStatus.removeAll { $0 == targetReadStatus }
     }
     

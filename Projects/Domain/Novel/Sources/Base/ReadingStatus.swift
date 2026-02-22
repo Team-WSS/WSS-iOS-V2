@@ -1,14 +1,14 @@
 //
-//  ReadStatus.swift
-//  NovelDomain
+//  ReadingStatus.swift
+//  NovelReviewDomain
 //
-//  Created by Seoyeon Choi on 2/22/26.
+//  Created by YunhakLee on 1/18/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
 import Foundation
 
-public enum ReadStatus {
+public enum ReadingStatus: String, Equatable {
     case watching
     case watched
     case quit

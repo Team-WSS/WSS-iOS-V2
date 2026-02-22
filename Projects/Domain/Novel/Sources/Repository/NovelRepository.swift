@@ -21,13 +21,13 @@ public protocol NovelRepository {
     func addNovelInterest(id: NovelID) async throws
     func removeNovelInterest(id: NovelID) async throws
     
-    func searchNovelByText(_ text: String) async throws -> Paginated<Novel>
-    func searchNovelByFilter(_ filter: NovelSearchFilter) async throws -> Paginated<Novel>
+    func searchNovelByText(_ text: String) async throws -> (Paginated<Novel>, Int)
+    func searchNovelByFilter(_ filter: NovelSearchFilter) async throws -> (Paginated<Novel>, Int)
     
     /// 현재 로그인한 사용자의 서재 작품 목록을 조회한다.
     ///
     /// 내부적으로 저장된 userID를 기반으로
     /// 필터 조건을 적용하여 서재 작품을 페이지네이션 형태로 반환한다.
-    func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws -> Paginated<LibraryNovel>
-    func fetchUserLibraryNovels(id: UserID) async throws -> Paginated<LibraryNovel>
+    func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws -> (Paginated<LibraryNovel>, Int)
+    func fetchUserLibraryNovels(id: UserID) async throws -> (Paginated<LibraryNovel>, Int)
 }

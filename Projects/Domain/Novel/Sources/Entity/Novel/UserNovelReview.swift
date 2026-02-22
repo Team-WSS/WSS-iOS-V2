@@ -8,9 +8,10 @@
 
 import Foundation
 
+// 서재 / 작품상세에서 사용되는 작품 평가 엔티티
 public struct UserNovelReview {
     public let rating: Rating?
-    public let readStatus: ReadStatus?
+    public let readStatus: ReadingStatus?
     public let attractivePoint: [AttractivePoint]
     public let period: ReadingPeriod?
     public let keywords: [Keyword]

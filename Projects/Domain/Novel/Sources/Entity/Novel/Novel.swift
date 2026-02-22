@@ -20,10 +20,6 @@ public struct Novel {
     public private(set) var interestCount: Int
     public let rating: Float
     public let ratingCount: Int
-    public let feedCount: Int?
-    
-    public let genre: NovelGenre?
-    public let publicationStatus: NovelPublicationStatus?
     
     public private(set) var isInterested: Bool?
     
