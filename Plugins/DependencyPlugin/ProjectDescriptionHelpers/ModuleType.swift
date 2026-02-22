@@ -35,6 +35,7 @@ public enum ModuleType {
         case novelReview
         case setting
         case notification
+        case profile
         
         public var name: String {
             switch self {
@@ -47,6 +48,7 @@ public enum ModuleType {
             case .novelReview: "NovelReviewDomain"
             case .setting: "SettingDomain"
             case .notification: "NotificationDomain"
+            case .profile: "ProfileDomain"
             }
         }
         
