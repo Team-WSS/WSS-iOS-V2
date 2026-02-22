@@ -8,8 +8,11 @@
 
 import SwiftUI
 
-struct KeywordDomainDemoApp: View {
-    var body: some View {
-        ContentView()
+@main
+struct KeywordDomainDemoApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
     }
 }

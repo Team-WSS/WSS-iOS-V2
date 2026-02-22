@@ -9,34 +9,36 @@
 import Testing
 @testable import BaseDomain
 @testable import FeedDomain
+@testable import BaseDomain
 
 @Suite
 struct LoadSosoFeedsUsecaseTests {
-    
-    func `소소 피드를 정상적으로 불러온다`() async throws {
+
+    @Test("소소 피드를 정상적으로 불러온다")
+    func loadSosoFeedsSuccess() async throws {
         let mock = MockFeedRepository()
         let expected = makeSosoFeeds()
         mock.fetchSosoFeedsResult = .success(expected)
-        
+
         let usecase = DefaultLoadSosoFeedsUsecase(feedRepository: mock)
-        
+
         let option: SosoFeedOption = .all
         let lastFeedID = FeedID(10)
-        
+
         let result = try await usecase.execute(option: option, lastFeedID: lastFeedID)
-        
+
         #expect(result.items == expected.items)
         #expect(mock.fetchedSosoFeeds.last?.0 == option)
         #expect(mock.fetchedSosoFeeds.last?.1 == lastFeedID)
     }
-    
-    @Test
-    func `소소 피드 조회에 실패하면 에러를 던진다`() async {
+
+    @Test("소소 피드 조회에 실패하면 에러를 던진다")
+    func loadSosoFeedsFailureThrows() async {
         let mock = MockFeedRepository()
         mock.fetchSosoFeedsResult = .failure(RepositoryError.serverUnavailable)
-        
+
         let usecase = DefaultLoadSosoFeedsUsecase(feedRepository: mock)
-        
+
         await #expect(throws: RepositoryError.serverUnavailable) {
             try await usecase.execute(option: .all, lastFeedID: FeedID(0))
         }

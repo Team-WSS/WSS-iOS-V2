@@ -13,7 +13,8 @@ import Testing
 @Suite
 struct EditCommentUsecaseTests {
 
-    @Test func `댓글을 수정하면 레포지토리에 commentID와 feedID와 draft가 전달된다.`() async throws {
+    @Test("댓글을 수정하면 레포지토리에 commentID와 feedID와 draft가 전달된다.")
+    func editCommentPassesIDsAndDraft() async throws {
         let mock = MockCommentRepository()
         let usecase = DefaultEditCommentUsecase(repository: mock)
 
@@ -32,7 +33,8 @@ struct EditCommentUsecaseTests {
         )
     }
 
-    @Test func `댓글 수정에 실패하면 에러를 던진다.`() async {
+    @Test("댓글 수정에 실패하면 에러를 던진다.")
+    func editCommentFailureThrows() async {
         let mock = MockCommentRepository()
         mock.editResult = .failure(RepositoryError.networkUnavailable)
 

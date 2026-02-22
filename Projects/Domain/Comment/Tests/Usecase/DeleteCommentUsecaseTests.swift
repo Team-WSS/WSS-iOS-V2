@@ -13,7 +13,8 @@ import Testing
 @Suite
 struct DeleteCommentUsecaseTests {
 
-    @Test func `댓글을 삭제하면 레포지토리에 commentID와 feedID가 전달된다.`() async throws {
+    @Test("댓글을 삭제하면 레포지토리에 commentID와 feedID가 전달된다.")
+    func deleteCommentPassesIDs() async throws {
         let mock = MockCommentRepository()
         let usecase = DefaultDeleteCommentUsecase(repository: mock)
 
@@ -29,7 +30,8 @@ struct DeleteCommentUsecaseTests {
         )
     }
 
-    @Test func `댓글 삭제에 실패하면 에러를 던진다.`() async {
+    @Test("댓글 삭제에 실패하면 에러를 던진다.")
+    func deleteCommentFailureThrows() async {
         let mock = MockCommentRepository()
         mock.deleteResult = .failure(RepositoryError.networkUnavailable)
 

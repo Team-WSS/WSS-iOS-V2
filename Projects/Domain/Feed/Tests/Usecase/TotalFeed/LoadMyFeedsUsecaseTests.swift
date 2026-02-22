@@ -12,33 +12,34 @@ import Testing
 
 @Suite
 struct LoadMyFeedsUsecaseTests {
-    
-    func `내 피드를 정상적으로 불러온다`() async throws {
+
+    @Test("내 피드를 정상적으로 불러온다")
+    func loadMyFeedsSuccess() async throws {
         let mock = MockFeedRepository()
         let expected = makeMyFeeds()
         mock.fetchMyFeedsResult = .success(expected)
-        
+
         let usecase = DefaultLoadMyFeedsUsecase(feedRepository: mock)
-        
+
         let option: MyFeedOption = makeMyFeedOption()
         let lastFeedID = FeedID(10)
-        
+
         let result = try await usecase.execute(option: option, lastFeedID: lastFeedID)
-        
+
         #expect(result.items == expected.items)
         #expect(mock.fetchedMyFeeds.last?.0.genres == option.genres)
         #expect(mock.fetchedMyFeeds.last?.0.visibilityType == option.visibilityType)
         #expect(mock.fetchedMyFeeds.last?.0.sortType == option.sortType)
         #expect(mock.fetchedMyFeeds.last?.1 == lastFeedID)
     }
-    
-    @Test
-    func `내 피드 조회에 실패하면 에러를 던진다`() async {
+
+    @Test("내 피드 조회에 실패하면 에러를 던진다")
+    func loadMyFeedsFailureThrows() async {
         let mock = MockFeedRepository()
         mock.fetchMyFeedsResult = .failure(RepositoryError.serverUnavailable)
-        
+
         let usecase = DefaultLoadMyFeedsUsecase(feedRepository: mock)
-        
+
         await #expect(throws: RepositoryError.serverUnavailable) {
             try await usecase.execute(option: makeMyFeedOption(), lastFeedID: FeedID(0))
         }
