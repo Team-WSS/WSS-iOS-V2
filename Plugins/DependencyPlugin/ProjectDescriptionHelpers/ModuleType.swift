@@ -36,6 +36,7 @@ public enum ModuleType {
         case novelReview
         case setting
         case notification
+        case profile
         case social
         
         public var name: String {
@@ -50,6 +51,7 @@ public enum ModuleType {
             case .novelReview: "NovelReviewDomain"
             case .setting: "SettingDomain"
             case .notification: "NotificationDomain"
+            case .profile: "ProfileDomain"
             case .social: "SocialDomain"
             }
         }
