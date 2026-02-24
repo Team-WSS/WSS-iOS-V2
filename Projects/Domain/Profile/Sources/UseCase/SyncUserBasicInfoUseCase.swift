@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol SyncUserBasicInfoUseCase {
-    func excute() async throws
+    func execute() async throws
 }
 
 public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
@@ -19,7 +19,7 @@ public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
         self.repository = repository
     }
     
-    public func excute() async throws {
+    public func execute() async throws {
         _ = try await repository.syncUserBasicInfo()
     }
 }
