@@ -12,4 +12,7 @@ public protocol ProfileRepository {
     func syncUserBasicInfo() async throws(RepositoryError)
     func validateNickname(_ nickname: String) async throws(RepositoryError) -> Bool
     func registerProfile(_ profile: ProfileRegistration) async throws(RepositoryError)
+    
+    func loadAccountInfoDraft() async throws(RepositoryError) -> AccountInfoDraft
+    func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError)
 }

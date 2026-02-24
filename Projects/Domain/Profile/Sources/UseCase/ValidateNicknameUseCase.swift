@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol ValidateNicknameUseCase {
-    func excute(_ nickname: String) async throws -> Bool
+    func execute(_ nickname: String) async throws -> Bool
 }
 
 public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
@@ -19,7 +19,7 @@ public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
         self.repository = repository
     }
     
-    public func excute(_ nickname: String) async throws -> Bool {
+    public func execute(_ nickname: String) async throws -> Bool {
         return try await repository.validateNickname(nickname)
     }
 }
