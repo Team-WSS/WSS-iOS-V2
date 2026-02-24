@@ -15,4 +15,7 @@ public protocol ProfileRepository {
     
     func loadAccountInfoDraft() async throws(RepositoryError) -> AccountInfoDraft
     func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError)
+    
+    func loadProfileVisibility() async throws(RepositoryError) -> ProfileVisibility
+    func updateProfileVisibility(_ visibility: ProfileVisibility) async throws(RepositoryError)
 }
