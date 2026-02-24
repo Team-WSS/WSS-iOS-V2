@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol RegisterProfileUseCase {
-    func excute(_ profile: ProfileRegistration) async throws
+    func execute(_ profile: ProfileRegistration) async throws
 }
 
 public class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
@@ -19,7 +19,7 @@ public class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
         self.repository = repository
     }
     
-    public func excute(_ profile: ProfileRegistration) async throws {
+    public func execute(_ profile: ProfileRegistration) async throws {
         _ = try await repository.registerProfile(profile)
     }
 }
