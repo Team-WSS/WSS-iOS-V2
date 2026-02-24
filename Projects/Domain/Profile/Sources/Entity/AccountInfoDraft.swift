@@ -7,7 +7,7 @@
 //
 
 
-public struct AccountInfoDraft {
+public struct AccountInfoDraft: Equatable {
     
     public let email: String?
     public private(set) var gender: Gender
