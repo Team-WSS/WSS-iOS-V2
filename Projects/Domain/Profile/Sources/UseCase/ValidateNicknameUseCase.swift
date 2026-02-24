@@ -8,18 +8,18 @@
 
 import Foundation
 
-public protocol SyncUserBasicInfoUseCase {
-    func excute() async throws
+public protocol ValidateNicknameUseCase {
+    func excute(_ nickname: String) async throws -> Bool
 }
 
-public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
+public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
     let repository: ProfileRepository
     
     public init(repository: ProfileRepository) {
         self.repository = repository
     }
     
-    public func excute() async throws {
-        _ = try await repository.syncUserBasicInfo()
+    public func excute(_ nickname: String) async throws -> Bool {
+        return try await repository.validateNickname(nickname)
     }
 }
