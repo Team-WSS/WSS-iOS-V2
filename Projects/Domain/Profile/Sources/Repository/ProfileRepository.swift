@@ -18,4 +18,13 @@ public protocol ProfileRepository {
     
     func loadProfileVisibility() async throws(RepositoryError) -> ProfileVisibility
     func updateProfileVisibility(_ visibility: ProfileVisibility) async throws(RepositoryError)
+    
+    /// target에 따라 로직을 분리한다.
+    ///  .me: 저장되어있는 userDefaults로부터 userID를 받아온다.
+    ///  .user: 다른 repository로부터 userID를 받아온다.
+    func fetchUserProfile(target: ProfileTarget) async throws(RepositoryError) -> Profile
+    func fetchGenrePreferences(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference]
+    func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference
+    
+    func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter]
 }
