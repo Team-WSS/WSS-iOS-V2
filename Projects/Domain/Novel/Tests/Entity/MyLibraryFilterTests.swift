@@ -14,7 +14,7 @@ import Testing
 @Suite
 struct MyLibraryFilterTests {
 
-    // MARK: - ReadStatus
+    // MARK: - ReadingStatus
 
     @Test("읽기 상태를 추가할 수 있다")
     func addReadingStatus() {
@@ -41,15 +41,6 @@ struct MyLibraryFilterTests {
         filter.removeReadingStatus(.watching)
 
         #expect(filter.readingStatus == [.watched])
-    }
-
-    @Test("읽기 상태를 전체 초기화할 수 있다")
-    func clearReadingStatuses() {
-        var filter = makeFilter(readingStatus: [.watching, .watched, .quit])
-
-        filter.clearReadingStatuses()
-
-        #expect(filter.readingStatus.isEmpty)
     }
 
     // MARK: - AttractivePoint
@@ -81,15 +72,6 @@ struct MyLibraryFilterTests {
         #expect(filter.attractivePoint == [.character])
     }
 
-    @Test("매력 포인트를 전체 초기화할 수 있다")
-    func clearAttractivePoints() {
-        var filter = makeFilter(attractivePoint: [.worldview, .character, .vibe])
-
-        filter.clearAttractivePoints()
-
-        #expect(filter.attractivePoint.isEmpty)
-    }
-
     // MARK: - RatingThreshold
 
     @Test("별점 기준을 설정할 수 있다")
@@ -119,16 +101,6 @@ struct MyLibraryFilterTests {
         filter.setRatingThreshold(.over4_8)
 
         #expect(filter.ratingThreshold == .over4_8)
-    }
-
-    @Test("별점 기준을 초기화할 수 있다")
-    func clearRatingThreshold() {
-        var filter = makeFilter()
-        filter.setRatingThreshold(.over4_5)
-
-        filter.clearRatingThreshold()
-
-        #expect(filter.ratingThreshold == nil)
     }
 
     // MARK: - Clear All

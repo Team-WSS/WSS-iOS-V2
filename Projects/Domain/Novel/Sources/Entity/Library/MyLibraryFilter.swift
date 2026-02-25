@@ -28,7 +28,7 @@ public struct MyLibraryFilter {
         readingStatus.removeAll { $0 == targetReadStatus }
     }
     
-    public mutating func clearReadingStatuses() {
+    private mutating func clearReadingStatuses() {
         readingStatus.removeAll()
     }
     
@@ -44,7 +44,7 @@ public struct MyLibraryFilter {
         attractivePoint.removeAll { $0 == targetAttractivePoint }
     }
     
-    public mutating func clearAttractivePoints() {
+    private mutating func clearAttractivePoints() {
         attractivePoint.removeAll()
     }
     
@@ -58,7 +58,7 @@ public struct MyLibraryFilter {
         }
     }
     
-    public mutating func clearRatingThreshold() {
+    private mutating func clearRatingThreshold() {
         ratingThreshold = nil
     }
     

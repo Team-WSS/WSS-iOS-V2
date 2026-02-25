@@ -49,7 +49,7 @@ struct LoadMyLibraryUsecaseTests {
 
         let usecase = DefaultLoadMyLibraryUsecase(novelRepository: mock)
         var filter = makeFilter()
-        filter.addReadStatus(.watching)
+        filter.addReadingStatus(.watching)
         filter.addAttractivePoint(.worldview)
 
         _ = try await usecase.execute(filter)
@@ -77,7 +77,7 @@ extension LoadMyLibraryUsecaseTests {
     private enum TestError: Error { case networkFail }
 
     private func makeFilter() -> MyLibraryFilter {
-        MyLibraryFilter(readStatus: [], attractivePoint: [], ratingThreshold: nil)
+        MyLibraryFilter(readingStatus: [], attractivePoint: [], ratingThreshold: nil)
     }
 
     private func makeLibraryPage() -> Paginated<LibraryNovel> {
