@@ -50,12 +50,8 @@ public struct MyLibraryFilter {
     
     // - RatingThreshold
     
-    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold) {
-        if ratingThreshold == threshold {
-            ratingThreshold = nil
-        } else {
-            ratingThreshold = threshold
-        }
+    public mutating func updateRatingThreshold(_ threshold: NovelRatingThreshold?) {
+        ratingThreshold = threshold
     }
     
     private mutating func clearRatingThreshold() {

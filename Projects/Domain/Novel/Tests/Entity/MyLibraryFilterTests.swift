@@ -75,30 +75,30 @@ struct MyLibraryFilterTests {
     // MARK: - RatingThreshold
 
     @Test("별점 기준을 설정할 수 있다")
-    func setRatingThreshold() {
+    func updateRatingThreshold_setsValue() {
         var filter = makeFilter()
 
-        filter.setRatingThreshold(.over4_0)
+        filter.updateRatingThreshold(.over4_0)
 
         #expect(filter.ratingThreshold == .over4_0)
     }
 
-    @Test("같은 별점 기준을 다시 설정하면 해제된다")
-    func setRatingThresholdToggle() {
+    @Test("nil을 전달하면 별점 기준이 해제된다")
+    func updateRatingThreshold_clearsValue() {
         var filter = makeFilter()
 
-        filter.setRatingThreshold(.over4_0)
-        filter.setRatingThreshold(.over4_0)
+        filter.updateRatingThreshold(.over4_0)
+        filter.updateRatingThreshold(nil)
 
         #expect(filter.ratingThreshold == nil)
     }
 
     @Test("다른 별점 기준을 설정하면 변경된다")
-    func setRatingThresholdChange() {
+    func updateRatingThreshold_changesValue() {
         var filter = makeFilter()
 
-        filter.setRatingThreshold(.over3_5)
-        filter.setRatingThreshold(.over4_8)
+        filter.updateRatingThreshold(.over3_5)
+        filter.updateRatingThreshold(.over4_8)
 
         #expect(filter.ratingThreshold == .over4_8)
     }
@@ -111,7 +111,7 @@ struct MyLibraryFilterTests {
             readingStatus: [.watching, .watched],
             attractivePoint: [.worldview]
         )
-        filter.setRatingThreshold(.over4_0)
+        filter.updateRatingThreshold(.over4_0)
 
         filter.clearAll()
 
