@@ -10,7 +10,7 @@ import Foundation
 
 public struct MyLibraryFilter {
     
-    public private(set) var readStatus: [ReadingStatus]
+    public private(set) var readingStatus: [ReadingStatus]
     public private(set) var attractivePoint: [AttractivePoint]
     public private(set) var ratingThreshold: NovelRatingThreshold?
     
@@ -18,18 +18,18 @@ public struct MyLibraryFilter {
     
     // - readStatus
     
-    public mutating func addReadStatus(_ newStatus: ReadingStatus) {
-        guard !readStatus.contains(newStatus) else { return }
+    public mutating func addReadingStatus(_ newStatus: ReadingStatus) {
+        guard !readingStatus.contains(newStatus) else { return }
         
-        readStatus.append(newStatus)
+        readingStatus.append(newStatus)
     }
     
-    public mutating func removeGenre(_ targetReadStatus: ReadingStatus) {
-        readStatus.removeAll { $0 == targetReadStatus }
+    public mutating func removeReadingStatus(_ targetReadStatus: ReadingStatus) {
+        readingStatus.removeAll { $0 == targetReadStatus }
     }
     
-    public mutating func clearReadStatuses() {
-        readStatus.removeAll()
+    public mutating func clearReadingStatuses() {
+        readingStatus.removeAll()
     }
     
     // - attractivePoint
@@ -40,7 +40,7 @@ public struct MyLibraryFilter {
         attractivePoint.append(newAttractivePoint)
     }
     
-    public mutating func removeGenre(_ targetAttractivePoint: AttractivePoint) {
+    public mutating func removeAttractivePoint(_ targetAttractivePoint: AttractivePoint) {
         attractivePoint.removeAll { $0 == targetAttractivePoint }
     }
     
@@ -65,7 +65,7 @@ public struct MyLibraryFilter {
     // - Clear
     
     public mutating func clearAll() {
-        clearReadStatuses()
+        clearReadingStatuses()
         clearAttractivePoints()
         clearRatingThreshold()
     }

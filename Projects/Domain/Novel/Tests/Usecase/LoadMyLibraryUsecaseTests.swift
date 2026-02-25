@@ -55,7 +55,7 @@ struct LoadMyLibraryUsecaseTests {
         _ = try await usecase.execute(filter)
 
         let passedFilter = mock.fetchedMyLibraryFilters.last
-        #expect(passedFilter?.readStatus == [.watching])
+        #expect(passedFilter?.readingStatus == [.watching])
         #expect(passedFilter?.attractivePoint == [.worldview])
     }
 

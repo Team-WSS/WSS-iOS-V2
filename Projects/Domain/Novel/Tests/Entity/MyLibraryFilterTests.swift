@@ -17,39 +17,39 @@ struct MyLibraryFilterTests {
     // MARK: - ReadStatus
 
     @Test("읽기 상태를 추가할 수 있다")
-    func addReadStatus() {
+    func addReadingStatus() {
         var filter = makeFilter()
 
-        filter.addReadStatus(.watching)
+        filter.addReadingStatus(.watching)
 
-        #expect(filter.readStatus == [.watching])
+        #expect(filter.readingStatus == [.watching])
     }
 
     @Test("이미 추가된 읽기 상태는 중복 추가되지 않는다")
-    func addReadStatusDuplicate() {
-        var filter = makeFilter(readStatus: [.watching])
+    func addReadingStatusDuplicate() {
+        var filter = makeFilter(readingStatus: [.watching])
 
-        filter.addReadStatus(.watching)
+        filter.addReadingStatus(.watching)
 
-        #expect(filter.readStatus == [.watching])
+        #expect(filter.readingStatus == [.watching])
     }
 
     @Test("특정 읽기 상태를 제거할 수 있다")
-    func removeReadStatus() {
-        var filter = makeFilter(readStatus: [.watching, .watched])
+    func removeReadingStatus() {
+        var filter = makeFilter(readingStatus: [.watching, .watched])
 
-        filter.removeGenre(.watching)
+        filter.removeReadingStatus(.watching)
 
-        #expect(filter.readStatus == [.watched])
+        #expect(filter.readingStatus == [.watched])
     }
 
     @Test("읽기 상태를 전체 초기화할 수 있다")
-    func clearReadStatuses() {
-        var filter = makeFilter(readStatus: [.watching, .watched, .quit])
+    func clearReadingStatuses() {
+        var filter = makeFilter(readingStatus: [.watching, .watched, .quit])
 
-        filter.clearReadStatuses()
+        filter.clearReadingStatuses()
 
-        #expect(filter.readStatus.isEmpty)
+        #expect(filter.readingStatus.isEmpty)
     }
 
     // MARK: - AttractivePoint
@@ -76,7 +76,7 @@ struct MyLibraryFilterTests {
     func removeAttractivePoint() {
         var filter = makeFilter(attractivePoint: [.worldview, .character])
 
-        filter.removeGenre(.worldview)
+        filter.removeAttractivePoint(.worldview)
 
         #expect(filter.attractivePoint == [.character])
     }
@@ -136,14 +136,14 @@ struct MyLibraryFilterTests {
     @Test("전체 필터를 초기화할 수 있다")
     func clearAll() {
         var filter = makeFilter(
-            readStatus: [.watching, .watched],
+            readingStatus: [.watching, .watched],
             attractivePoint: [.worldview]
         )
         filter.setRatingThreshold(.over4_0)
 
         filter.clearAll()
 
-        #expect(filter.readStatus.isEmpty)
+        #expect(filter.readingStatus.isEmpty)
         #expect(filter.attractivePoint.isEmpty)
         #expect(filter.ratingThreshold == nil)
     }
@@ -151,12 +151,12 @@ struct MyLibraryFilterTests {
 
 extension MyLibraryFilterTests {
     private func makeFilter(
-        readStatus: [ReadingStatus] = [],
+        readingStatus: [ReadingStatus] = [],
         attractivePoint: [AttractivePoint] = [],
         ratingThreshold: NovelRatingThreshold? = nil
     ) -> MyLibraryFilter {
         MyLibraryFilter(
-            readStatus: readStatus,
+            readingStatus: readingStatus,
             attractivePoint: attractivePoint,
             ratingThreshold: ratingThreshold
         )
