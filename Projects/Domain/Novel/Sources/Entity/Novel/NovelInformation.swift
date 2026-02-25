@@ -26,18 +26,22 @@ public struct NovelInformation {
     public let platforms: [NovelPlatform]
     public let attractivePoints: [AttractivePoint]
     public let keywords: [Keyword]
-    public let readStatusCount: [ReadingStatus : Int]
+    public let readingStatusCount: [ReadingStatus : Int]
     
     //MARK: - Policy
     
-    public enum ValidationError: Error, Equatable {
-        case emptyReadStatus
-    }
+    static let dominantReadingStatusOrder: [ReadingStatus] = [
+        .watching, .watched, .quit
+    ]
     
-    public func dominantReadStatus() throws -> (status: ReadingStatus, count: Int)? {
-        guard let dominant = readStatusCount.max(by: { $0.value < $1.value }) else {
-            throw ValidationError.emptyReadStatus
-        }
-        return (dominant.key, dominant.value)
+    ///   - count가 모두 0이면 nil
+    ///   - 최댓값이 동률이면 우선순위(watching → watched → quit)에 따라 결정
+    public var dominantReadStatus: (status: ReadingStatus, count: Int)? {
+        let positive = readingStatusCount.filter { $0.value > 0 }
+        guard let maxCount = positive.values.max() else { return nil }
+        
+        return Self.dominantReadingStatusOrder
+            .first(where: { positive[$0] == maxCount })
+            .map { ($0, maxCount) }
     }
 }

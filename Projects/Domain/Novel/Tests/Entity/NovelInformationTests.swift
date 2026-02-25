@@ -14,37 +14,64 @@ import Testing
 @Suite
 struct NovelInformationTests {
 
-    @Test("가장 많은 읽기 상태를 반환한다")
-    func dominantReadStatusReturnsMax() throws {
-        let info = makeInformation(readStatusCount: [
-            .watching: 10,
-            .watched: 30,
-            .quit: 5
+    // - 가장 많은 읽기 상태 반환
+    
+    @Test("readingStatusCount가 비어있으면 dominantReadStatus는 nil이다")
+    func dominantReadStatus_emptyDictionary_returnsNil() {
+        let info = makeNovelInformation(readingStatusCount: [:])
+
+        #expect(info.dominantReadStatus == nil)
+    }
+
+    @Test("모든 count가 0이면 dominantReadStatus는 nil이다")
+    func dominantReadStatus_allZero_returnsNil() {
+        let info = makeNovelInformation(readingStatusCount: [
+            .watching: 0,
+            .watched: 0,
+            .quit: 0
         ])
 
-        let dominant = try info.dominantReadStatus()
+        #expect(info.dominantReadStatus == nil)
+    }
 
+    @Test("최댓값 count를 가진 읽기 상태를 반환한다")
+    func dominantReadStatus_returnsMaxStatus() {
+        let info = makeNovelInformation(readingStatusCount: [
+            .watching: 3,
+            .watched: 6,
+            .quit: 4
+        ])
+
+        let dominant = info.dominantReadStatus
         #expect(dominant?.status == .watched)
-        #expect(dominant?.count == 30)
+        #expect(dominant?.count == 6)
     }
 
-    @Test("읽기 상태가 비어있으면 에러를 던진다")
-    func dominantReadStatusThrowsWhenEmpty() {
-        let info = makeInformation(readStatusCount: [:])
+    @Test("동률이면 우선순위(watching → watched → quit)에 따라 결정한다")
+    func dominantReadStatus_tieBreakByOrder() {
+        let info = makeNovelInformation(readingStatusCount: [
+            .watching: 6,
+            .watched: 6,
+            .quit: 4
+        ])
 
-        #expect(throws: NovelInformation.ValidationError.emptyReadStatus) {
-            try info.dominantReadStatus()
-        }
-    }
-
-    @Test("읽기 상태가 하나만 있으면 해당 상태를 반환한다")
-    func dominantReadStatusReturnsSingleStatus() throws {
-        let info = makeInformation(readStatusCount: [.watching: 7])
-
-        let dominant = try info.dominantReadStatus()
-
+        let dominant = info.dominantReadStatus
         #expect(dominant?.status == .watching)
-        #expect(dominant?.count == 7)
+        #expect(dominant?.count == 6)
+    }
+
+    @Test("동률이더라도 우선순위 상 앞선 값이 딕셔너리에 없으면 다음 우선순위를 선택한다")
+    func dominantReadStatus_tieBreak_skipsMissingKey() {
+        let info = makeNovelInformation(readingStatusCount: [
+            .watched: 6,
+            .quit: 6
+            // .watching 없음
+        ])
+
+        let dominant = info.dominantReadStatus
+        // watched가 quit보다 우선
+        #expect(dominant?.status == .watched)
+        #expect(dominant?.count == 6)
     }
 }
 
@@ -62,12 +89,12 @@ extension NovelInformationTests {
         )
     }
 
-    private func makeInformation(
+    private func makeNovelInformation(
         description: String = "재밌는 소설입니다.",
         platforms: [NovelPlatform] = [],
         attractivePoints: [AttractivePoint] = [],
         keywords: [Keyword] = [],
-        readStatusCount: [ReadingStatus: Int] = [:]
+        readingStatusCount: [ReadingStatus: Int] = [:]
     ) -> NovelInformation {
         NovelInformation(
             novel: makeNovel(),
@@ -79,7 +106,7 @@ extension NovelInformationTests {
             platforms: platforms,
             attractivePoints: attractivePoints,
             keywords: keywords,
-            readStatusCount: readStatusCount
+            readingStatusCount: readingStatusCount
         )
     }
 }

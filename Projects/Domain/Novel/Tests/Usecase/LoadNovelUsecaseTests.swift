@@ -73,7 +73,7 @@ extension LoadNovelUsecaseTests {
             platforms: [],
             attractivePoints: [.worldview, .character],
             keywords: [Keyword(id: 1, name: "이세계")],
-            readStatusCount: [.watching: 10, .watched: 30]
+            readingStatusCount: [.watching: 10, .watched: 30]
         )
     }
 }
