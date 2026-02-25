@@ -66,7 +66,7 @@ struct SearchNovelUsecaseTests {
         mock.searchByFilterResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
-        let filter = NovelSearchFilter(
+        let filter = SearchFilter(
             genres: [.fantasy],
             publicationStatus: .completed,
             ratingThreshold: .over4_0,
@@ -86,7 +86,7 @@ struct SearchNovelUsecaseTests {
         mock.searchByFilterResult = .success((Paginated(items: [makeNovel()], hasNext: true), 128))
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
-        let filter = NovelSearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
+        let filter = SearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
         let result = try await usecase.searchByFilter(filter)
 
         #expect(result.1 == 128)
@@ -98,7 +98,7 @@ struct SearchNovelUsecaseTests {
         mock.searchByFilterResult = .failure(TestError.searchFail)
 
         let usecase = DefaultSearchNovelUsecase(novelRepository: mock)
-        let filter = NovelSearchFilter(
+        let filter = SearchFilter(
             genres: [],
             publicationStatus: nil,
             ratingThreshold: nil,

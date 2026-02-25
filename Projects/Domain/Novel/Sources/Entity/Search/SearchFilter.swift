@@ -1,5 +1,5 @@
 //
-//  NovelSearchFilter.swift
+//  SearchFilter.swift
 //  NovelDomain
 //
 //  Created by Seoyeon Choi on 2/11/26.
@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct NovelSearchFilter {
+public struct SearchFilter {
     
     public private(set) var genres: [NovelGenre]
     public private(set) var publicationStatus: NovelPublicationStatus?
@@ -22,7 +22,7 @@ public struct NovelSearchFilter {
         case keywordOverLimit(max: Int)
     }
     
-    // - genres
+    // - genres (장르)
     
     public mutating func addGenre(_ newGenre: NovelGenre) {
         guard !genres.contains(newGenre) else { return }
@@ -34,55 +34,47 @@ public struct NovelSearchFilter {
         genres.removeAll { $0 == targetGenre }
     }
     
-    public mutating func clearGenres() {
+    private mutating func clearGenres() {
         genres.removeAll()
     }
     
-    // - PublicationStatus
+    // - PublicationStatus (연재상태)
     
-    public mutating func setPublicationStatus(_ status: NovelPublicationStatus) {
-        if publicationStatus == status {
-            publicationStatus = nil
-        } else {
-            publicationStatus = status
-        }
+    public mutating func setPublicationStatus(_ status: NovelPublicationStatus?) {
+        publicationStatus = status
     }
     
-    public mutating func clearPublicationStatus() {
+    private mutating func clearPublicationStatus() {
         publicationStatus = nil
     }
     
-    // - RatingThreshold
+    // - RatingThreshold (별점)
     
-    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold) {
-        if ratingThreshold == threshold {
-            ratingThreshold = nil
-        } else {
-            ratingThreshold = threshold
-        }
+    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold?) {
+        ratingThreshold = threshold
     }
     
-    public mutating func clearRatingThreshold() {
+    private mutating func clearRatingThreshold() {
         ratingThreshold = nil
     }
     
-    // - Keyword
+    // - Keyword (키워드)
     
     private static let maxKeywordCount = 20
     
-    public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
-        guard newKeywords.count <= Self.maxKeywordCount else {
+    public mutating func addKeyword(_ newKeyword: Keyword) throws {
+        guard keywords.count < Self.maxKeywordCount else {
             throw ValidationError.keywordOverLimit(max: Self.maxKeywordCount)
         }
         
-        keywords = newKeywords
+        keywords.append(newKeyword)
     }
     
     public mutating func removeKeyword(_ keyword: Keyword) {
         keywords.removeAll { $0 == keyword }
     }
     
-    public mutating func clearKeywords() {
+    private mutating func clearKeywords() {
         keywords.removeAll()
     }
     
@@ -95,4 +87,3 @@ public struct NovelSearchFilter {
         clearKeywords()
     }
 }
-

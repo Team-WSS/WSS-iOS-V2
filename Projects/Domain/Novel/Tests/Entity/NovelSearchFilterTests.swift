@@ -43,15 +43,6 @@ struct NovelSearchFilterTests {
         #expect(filter.genres == [.romance])
     }
 
-    @Test("장르를 전체 초기화할 수 있다")
-    func clearGenres() {
-        var filter = makeFilter(genres: [.fantasy, .romance, .BL])
-
-        filter.clearGenres()
-
-        #expect(filter.genres.isEmpty)
-    }
-
     // MARK: - Publication Status
 
     @Test("출판 상태를 설정할 수 있다")
@@ -63,12 +54,12 @@ struct NovelSearchFilterTests {
         #expect(filter.publicationStatus == .completed)
     }
 
-    @Test("같은 출판 상태를 다시 설정하면 해제된다")
+    @Test("nil을 전달하면 출판 상태가 해제된다")
     func setPublicationStatusToggle() {
         var filter = makeFilter()
 
         filter.setPublicationStatus(.completed)
-        filter.setPublicationStatus(.completed)
+        filter.setPublicationStatus(nil)
 
         #expect(filter.publicationStatus == nil)
     }
@@ -83,16 +74,6 @@ struct NovelSearchFilterTests {
         #expect(filter.publicationStatus == .onGoing)
     }
 
-    @Test("출판 상태를 초기화할 수 있다")
-    func clearPublicationStatus() {
-        var filter = makeFilter()
-        filter.setPublicationStatus(.completed)
-
-        filter.clearPublicationStatus()
-
-        #expect(filter.publicationStatus == nil)
-    }
-
     // MARK: - Rating Threshold
 
     @Test("별점 기준을 설정할 수 있다")
@@ -104,12 +85,12 @@ struct NovelSearchFilterTests {
         #expect(filter.ratingThreshold == .over4_0)
     }
 
-    @Test("같은 별점 기준을 다시 설정하면 해제된다")
+    @Test("nil을 전달하면 별점 기준이 해제된다")
     func setRatingThresholdToggle() {
         var filter = makeFilter()
 
         filter.setRatingThreshold(.over4_0)
-        filter.setRatingThreshold(.over4_0)
+        filter.setRatingThreshold(nil)
 
         #expect(filter.ratingThreshold == nil)
     }
@@ -124,45 +105,40 @@ struct NovelSearchFilterTests {
         #expect(filter.ratingThreshold == .over4_8)
     }
 
-    @Test("별점 기준을 초기화할 수 있다")
-    func clearRatingThreshold() {
-        var filter = makeFilter()
-        filter.setRatingThreshold(.over4_5)
-
-        filter.clearRatingThreshold()
-
-        #expect(filter.ratingThreshold == nil)
-    }
-
     // MARK: - Keyword
 
-    @Test("키워드를 설정할 수 있다")
-    func setKeywords() throws {
+    @Test("키워드를 추가할 수 있다")
+    func addKeyword() throws {
         var filter = makeFilter()
-        let keywords = [Keyword(id: 1, name: "이세계"), Keyword(id: 2, name: "환생")]
+        let keyword = Keyword(id: 1, name: "이세계")
 
-        try filter.setKeywords(keywords)
+        try filter.addKeyword(keyword)
 
-        #expect(filter.keywords.count == 2)
+        #expect(filter.keywords.count == 1)
+        #expect(filter.keywords.first == keyword)
     }
 
-    @Test("키워드는 최대 20개까지 설정할 수 있다")
-    func setKeywordsMax() throws {
+    @Test("키워드는 최대 20개까지 추가할 수 있다")
+    func addKeywordMax() throws {
         var filter = makeFilter()
-        let keywords = (1...20).map { Keyword(id: $0, name: "키워드\($0)") }
 
-        try filter.setKeywords(keywords)
+        for i in 1...20 {
+            try filter.addKeyword(Keyword(id: i, name: "키워드\(i)"))
+        }
 
         #expect(filter.keywords.count == 20)
     }
 
     @Test("키워드가 20개를 초과하면 에러를 던진다")
-    func setKeywordsOverLimit() {
+    func addKeywordOverLimit() throws {
         var filter = makeFilter()
-        let keywords = (1...21).map { Keyword(id: $0, name: "키워드\($0)") }
 
-        #expect(throws: NovelSearchFilter.ValidationError.keywordOverLimit(max: 20)) {
-            try filter.setKeywords(keywords)
+        for i in 1...20 {
+            try filter.addKeyword(Keyword(id: i, name: "키워드\(i)"))
+        }
+
+        #expect(throws: SearchFilter.ValidationError.keywordOverLimit(max: 20)) {
+            try filter.addKeyword(Keyword(id: 21, name: "키워드21"))
         }
     }
 
@@ -170,24 +146,15 @@ struct NovelSearchFilterTests {
     func removeKeyword() throws {
         var filter = makeFilter()
         let keyword = Keyword(id: 1, name: "이세계")
-        try filter.setKeywords([keyword, Keyword(id: 2, name: "환생")])
-
+        try filter.addKeyword(keyword)
+        try filter.addKeyword(Keyword(id: 2, name: "현대"))
+        
         filter.removeKeyword(keyword)
 
         #expect(filter.keywords.count == 1)
-        #expect(filter.keywords.first?.name == "환생")
+        #expect(filter.keywords.first?.name == "현대")
     }
-
-    @Test("키워드를 전체 초기화할 수 있다")
-    func clearKeywords() throws {
-        var filter = makeFilter()
-        try filter.setKeywords([Keyword(id: 1, name: "이세계")])
-
-        filter.clearKeywords()
-
-        #expect(filter.keywords.isEmpty)
-    }
-
+    
     // MARK: - Clear All
 
     @Test("전체 필터를 초기화할 수 있다")
@@ -195,7 +162,7 @@ struct NovelSearchFilterTests {
         var filter = makeFilter(genres: [.fantasy, .romance])
         filter.setPublicationStatus(.completed)
         filter.setRatingThreshold(.over4_0)
-        try filter.setKeywords([Keyword(id: 1, name: "이세계")])
+        try filter.addKeyword(Keyword(id: 1, name: "이세계"))
 
         filter.clearAll()
 
@@ -212,8 +179,8 @@ extension NovelSearchFilterTests {
         publicationStatus: NovelPublicationStatus? = nil,
         ratingThreshold: NovelRatingThreshold? = nil,
         keywords: [Keyword] = []
-    ) -> NovelSearchFilter {
-        NovelSearchFilter(
+    ) -> SearchFilter {
+        SearchFilter(
             genres: genres,
             publicationStatus: publicationStatus,
             ratingThreshold: ratingThreshold,

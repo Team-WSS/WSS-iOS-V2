@@ -22,7 +22,7 @@ public protocol NovelRepository {
     func removeNovelInterest(id: NovelID) async throws
     
     func searchNovelByText(_ text: String) async throws -> (Paginated<Novel>, Int)
-    func searchNovelByFilter(_ filter: NovelSearchFilter) async throws -> (Paginated<Novel>, Int)
+    func searchNovelByFilter(_ filter: SearchFilter) async throws -> (Paginated<Novel>, Int)
     
     /// 현재 로그인한 사용자의 서재 작품 목록을 조회한다.
     ///

@@ -26,7 +26,7 @@ public final class MockNovelRepository: NovelRepository {
     public private(set) var searchByTextCallCount = 0
     public private(set) var lastSearchQuery: String?
     public private(set) var searchByFilterCallCount = 0
-    public private(set) var lastSearchFilter: NovelSearchFilter?
+    public private(set) var lastSearchFilter: SearchFilter?
     public private(set) var fetchedMyLibraryFilters: [MyLibraryFilter] = []
     public private(set) var fetchedUserLibraryIDs: [UserID] = []
 
@@ -53,7 +53,7 @@ public final class MockNovelRepository: NovelRepository {
         return try searchByTextResult.get()
     }
 
-    public func searchNovelByFilter(_ filter: NovelSearchFilter) async throws -> (Paginated<Novel>, Int) {
+    public func searchNovelByFilter(_ filter: SearchFilter) async throws -> (Paginated<Novel>, Int) {
         searchByFilterCallCount += 1
         lastSearchFilter = filter
         return try searchByFilterResult.get()
