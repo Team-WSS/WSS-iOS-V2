@@ -21,6 +21,7 @@ public final class MockFeedRepository: FeedRepository {
     public var fetchedSosoFeeds: [(option: SosoFeedOption, lastFeedID: FeedID)] = []
     public var fetchedUserFeeds: [(id: UserID, lastFeedID: FeedID)] = []
     public var fetchedMyFeeds: [(option: MyFeedOption, lastFeedID: FeedID)] = []
+    public var fetchedNovelFeeds: [(novelID: NovelID, lastFeedID: FeedID)] = []
 
     public var addedLikeIDs: [FeedID] = []
     public var deletedLikeIDs: [FeedID] = []
@@ -34,6 +35,7 @@ public final class MockFeedRepository: FeedRepository {
     public var fetchSosoFeedsResult: Result<Paginated<TotalFeed>, Error>!
     public var fetchUserFeedsResult: Result<Paginated<TotalFeed>, Error>!
     public var fetchMyFeedsResult: Result<Paginated<TotalFeed>, Error>!
+    public var fetchNovelFeedsResult: Result<Paginated<TotalFeed>, Error>!
 
     public var addLikeResult: Result<Void, Error> = .success(())
     public var deleteLikeResult: Result<Void, Error> = .success(())
@@ -123,6 +125,17 @@ public final class MockFeedRepository: FeedRepository {
         }
     }
 
+    public func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
+        fetchedNovelFeeds.append((id, lastFeedID))
+        switch fetchNovelFeedsResult {
+        case .success(let value):
+            return value
+        case .failure(let error):
+            throw error
+        case .none:
+            fatalError("fetchNovelFeedsResult must be set before calling fetchNovelFeeds")
+        }
+    }
 
     // MARK: - Like
 
