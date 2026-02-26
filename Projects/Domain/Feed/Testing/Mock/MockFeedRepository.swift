@@ -40,11 +40,6 @@ public final class MockFeedRepository: FeedRepository {
     public var addLikeResult: Result<Void, Error> = .success(())
     public var deleteLikeResult: Result<Void, Error> = .success(())
 
-    public var reportedSpoilerFeedID: FeedID?
-    public var reportSpoilerResult: Result<Void, Error> = .success(())
-    public var reportedImproperFeedID: FeedID?
-    public var reportImproperResult: Result<Void, Error> = .success(())
-
     public init() {}
 
     public func submitFeed(_ draft: FeedDraft) async throws {
@@ -152,30 +147,6 @@ public final class MockFeedRepository: FeedRepository {
     public func deleteLike(id: FeedID) async throws {
         deletedLikeIDs.append(id)
         switch deleteLikeResult {
-        case .success:
-            return
-        case .failure(let error):
-            throw error
-        }
-    }
-
-    // MARK: - Report
-
-    public func reportSpoilerFeed(id: FeedID) async throws {
-        reportedSpoilerFeedID = id
-
-        switch reportSpoilerResult {
-        case .success:
-            return
-        case .failure(let error):
-            throw error
-        }
-    }
-
-    public func reportImproperFeed(id: FeedID) async throws {
-        reportedImproperFeedID = id
-
-        switch reportImproperResult {
         case .success:
             return
         case .failure(let error):
