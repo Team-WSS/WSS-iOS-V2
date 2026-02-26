@@ -11,5 +11,5 @@ import BaseDomain
 
 public protocol SocialRepository {
     func blockUser(id: UserID) async throws(RepositoryError)
-    func loadBlockedUsers() async throws(RepositoryError)
+    func loadBlockedUsers() async throws(RepositoryError) -> [BlockedUser]
 }
