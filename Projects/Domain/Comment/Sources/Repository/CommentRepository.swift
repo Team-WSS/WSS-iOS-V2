@@ -15,7 +15,4 @@ public protocol CommentRepository {
     func submitComment(feedID: FeedID, draft: CommentDraft) async throws
     func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws
     func deleteComment(id: CommentID, feedID: FeedID) async throws
-    
-    func reportSpoilerComment(id: CommentID) async throws
-    func reportImproperComment(id: CommentID) async throws
 }

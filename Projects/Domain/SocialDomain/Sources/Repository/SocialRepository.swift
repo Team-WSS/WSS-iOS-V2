@@ -21,4 +21,6 @@ public protocol SocialRepository {
     
     func reportSpoilerFeed(id: FeedID) async throws(RepositoryError)
     func reportImproperFeed(id: FeedID) async throws(RepositoryError)
+    func reportSpoilerComment(id: CommentID) async throws(RepositoryError)
+    func reportImproperComment(id: CommentID) async throws(RepositoryError)
 }
