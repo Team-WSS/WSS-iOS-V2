@@ -1,5 +1,5 @@
 //
-//  NovelSearchFilterTests.swift
+//  SearchFilterTests.swift
 //  NovelDomain
 //
 //  Created by Seoyeon Choi on 2/11/26.
@@ -12,7 +12,7 @@ import Testing
 @testable import BaseDomain
 
 @Suite
-struct NovelSearchFilterTests {
+struct SearchFilterTests {
 
     // MARK: - Genre
 
@@ -173,7 +173,7 @@ struct NovelSearchFilterTests {
     }
 }
 
-extension NovelSearchFilterTests {
+extension SearchFilterTests {
     private func makeFilter(
         genres: [NovelGenre] = [],
         publicationStatus: NovelPublicationStatus? = nil,
