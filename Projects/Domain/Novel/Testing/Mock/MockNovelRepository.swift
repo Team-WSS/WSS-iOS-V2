@@ -19,6 +19,7 @@ public final class MockNovelRepository: NovelRepository {
     public var searchByFilterResult: Result<(Paginated<Novel>, Int), Error>!
     public var fetchMyLibraryResult: Result<(Paginated<LibraryNovel>, Int), Error>!
     public var fetchUserLibraryResult: Result<(Paginated<LibraryNovel>, Int), Error>!
+    public var fetchRegisteredNovelStatsResult: Result<RegisteredNovelStats, Error>!
 
     public private(set) var fetchedNovelIDs: [NovelID] = []
     public private(set) var addedInterestIDs: [NovelID] = []
@@ -29,6 +30,7 @@ public final class MockNovelRepository: NovelRepository {
     public private(set) var lastSearchFilter: SearchFilter?
     public private(set) var fetchedMyLibraryFilters: [MyLibraryFilter] = []
     public private(set) var fetchedUserLibraryIDs: [UserID] = []
+    public private(set) var fetchRegisteredNovelStatsCallCount = 0
 
     public init() {}
 
@@ -67,5 +69,10 @@ public final class MockNovelRepository: NovelRepository {
     public func fetchUserLibraryNovels(id: UserID) async throws -> (Paginated<LibraryNovel>, Int) {
         fetchedUserLibraryIDs.append(id)
         return try fetchUserLibraryResult.get()
+    }
+
+    public func fetchRegisteredNovelStats() async throws -> RegisteredNovelStats {
+        fetchRegisteredNovelStatsCallCount += 1
+        return try fetchRegisteredNovelStatsResult.get()
     }
 }

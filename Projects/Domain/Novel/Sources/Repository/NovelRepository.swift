@@ -30,4 +30,6 @@ public protocol NovelRepository {
     /// 필터 조건을 적용하여 서재 작품을 페이지네이션 형태로 반환한다.
     func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws -> (Paginated<LibraryNovel>, Int)
     func fetchUserLibraryNovels(id: UserID) async throws -> (Paginated<LibraryNovel>, Int)
+    
+    func fetchRegisteredNovelStats() async throws -> RegisteredNovelStats
 }
