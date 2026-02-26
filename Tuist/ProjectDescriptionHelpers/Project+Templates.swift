@@ -69,9 +69,6 @@ extension Project {
         
         // Testing
         if targets.contains(.testing) {
-            var testingDeps = internalDependencies + externalDependencies
-            testingDeps.append(.target(name: name))
-
             allTargets.append(
                 .target(
                     name: "\(name)Testing",
@@ -82,7 +79,7 @@ extension Project {
                     infoPlist: infoPlist,
                     sources: ["Testing/**"],
                     resources: [],
-                    dependencies: testingDeps
+                    dependencies: [.target(name: name)]
                 )
             )
         }
@@ -109,7 +106,7 @@ extension Project {
                 )
             )
         }
-        
+
         return allTargets
     }
     

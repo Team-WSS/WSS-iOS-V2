@@ -19,6 +19,7 @@ public enum TargetType {
         case .demo: return "Demo"
         case .testing: return "Testing"
         case .tests: return "Tests"
+        case .testing: return "Testing"
         }
     }
 }
