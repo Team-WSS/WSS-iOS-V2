@@ -27,4 +27,10 @@ public protocol ProfileRepository {
     func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference
     
     func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter]
+    
+    /// userDefaults에 저장된 닉네임, 프로필캐릭터ID를 가져온다.
+    /// 서버 api를 통해 소개글, 선택한 선호 장르를 가져온다.
+    func loadInitialProfile() async throws(RepositoryError) -> ProfileDraft
+    /// 수정된 닉네임, 프로필 캐릭터 ID를 userDefaults에 저장
+    func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError)
 }
