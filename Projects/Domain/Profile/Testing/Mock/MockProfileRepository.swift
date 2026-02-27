@@ -38,6 +38,22 @@ final class MockProfileRepository: ProfileRepository {
     private(set) var updateProfileVisibilityCallCount = 0
     private(set) var updatedVisibilities: [ProfileVisibility] = []
 
+    private(set) var fetchUserProfileCallCount = 0
+    private(set) var fetchedUserProfileTargets: [ProfileTarget] = []
+
+    private(set) var fetchGenrePreferencesCallCount = 0
+    private(set) var fetchedGenrePreferenceTargets: [ProfileTarget] = []
+
+    private(set) var fetchNovelPreferencesCallCount = 0
+    private(set) var fetchedNovelPreferenceTargets: [ProfileTarget] = []
+
+    private(set) var fetchProfileCharactersCallCount = 0
+
+    private(set) var loadInitialProfileCallCount = 0
+
+    private(set) var updateProfileCallCount = 0
+    private(set) var updatedDrafts: [ProfileDraft] = []
+
     // MARK: - Results (set by tests)
 
     var syncUserBasicInfoResult: Result<Void, RepositoryError> = .success(())
@@ -49,6 +65,14 @@ final class MockProfileRepository: ProfileRepository {
 
     var loadProfileVisibilityResult: Result<ProfileVisibility, RepositoryError>!
     var updateProfileVisibilityResult: Result<Void, RepositoryError> = .success(())
+
+    var fetchUserProfileResult: Result<Profile, RepositoryError>!
+    var fetchGenrePreferencesResult: Result<[GenrePreference], RepositoryError>!
+    var fetchNovelPreferencesResult: Result<NovelPreference, RepositoryError>!
+    var fetchProfileCharactersResult: Result<[ProfileCharacter], RepositoryError>!
+
+    var loadInitialProfileResult: Result<ProfileDraft, RepositoryError>!
+    var updateProfileResult: Result<Void, RepositoryError> = .success(())
 
     // MARK: - ProfileRepository
 
@@ -129,6 +153,59 @@ final class MockProfileRepository: ProfileRepository {
             return
         case .failure(let e):
             throw e
+        }
+    }
+
+    func fetchUserProfile(target: ProfileTarget) async throws(RepositoryError) -> Profile {
+        fetchUserProfileCallCount += 1
+        fetchedUserProfileTargets.append(target)
+        switch fetchUserProfileResult! {
+        case .success(let value): return value
+        case .failure(let e): throw e
+        }
+    }
+
+    func fetchGenrePreferences(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {
+        fetchGenrePreferencesCallCount += 1
+        fetchedGenrePreferenceTargets.append(target)
+        switch fetchGenrePreferencesResult! {
+        case .success(let value): return value
+        case .failure(let e): throw e
+        }
+    }
+
+    func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
+        fetchNovelPreferencesCallCount += 1
+        fetchedNovelPreferenceTargets.append(target)
+        switch fetchNovelPreferencesResult! {
+        case .success(let value): return value
+        case .failure(let e): throw e
+        }
+    }
+
+    func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter] {
+        fetchProfileCharactersCallCount += 1
+        switch fetchProfileCharactersResult! {
+        case .success(let value): return value
+        case .failure(let e): throw e
+        }
+    }
+
+    func loadInitialProfile() async throws(RepositoryError) -> ProfileDraft {
+        loadInitialProfileCallCount += 1
+        switch loadInitialProfileResult! {
+        case .success(let value): return value
+        case .failure(let e): throw e
+        }
+    }
+
+    func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError) {
+        updateProfileCallCount += 1
+        updatedDrafts.append(profile)
+
+        switch updateProfileResult {
+        case .success: return
+        case .failure(let e): throw e
         }
     }
 }
