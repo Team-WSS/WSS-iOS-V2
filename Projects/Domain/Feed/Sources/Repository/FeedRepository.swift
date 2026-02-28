@@ -23,7 +23,4 @@ public protocol FeedRepository {
     
     func addLike(id: FeedID) async throws
     func deleteLike(id: FeedID) async throws
-    
-    func reportSpoilerFeed(id: FeedID) async throws
-    func reportImproperFeed(id: FeedID) async throws
 }
