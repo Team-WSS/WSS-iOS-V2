@@ -10,45 +10,47 @@
 import Foundation
 import AuthDomain
 
-final class MockAuthRepository: AuthRepository {
+public final class MockAuthRepository: AuthRepository {
+    
+    public init() {}
     
     // login
-    var loginResult: Result<NeedOnboarding, AuthError> = .failure(.unknown)
-    private(set) var loginCallCount: Int = 0
-    private(set) var loginReceivedCredential: SocialLoginCredential?
+    public var loginResult: Result<NeedOnboarding, AuthError> = .failure(.unknown)
+    public private(set) var loginCallCount: Int = 0
+    public private(set) var loginReceivedCredential: SocialLoginCredential?
 
-    func login(with credential: SocialLoginCredential) async throws(AuthError) -> NeedOnboarding {
+    public func login(with credential: SocialLoginCredential) async throws(AuthError) -> NeedOnboarding {
         loginCallCount += 1
         loginReceivedCredential = credential
         return try loginResult.get()
     }
     
     // logout
-    var logoutResult: Result<Void, RepositoryError> = .success(())
-    private(set) var logoutCallCount: Int = 0
+    public var logoutResult: Result<Void, RepositoryError> = .success(())
+    public private(set) var logoutCallCount: Int = 0
 
-    func logout() async throws(RepositoryError) {
+    public func logout() async throws(RepositoryError) {
         logoutCallCount += 1
         _ = try logoutResult.get()
     }
     
     // withdraw
-    var withdrawResult: Result<Void, RepositoryError> = .success(())
-    private(set) var withdrawCallCount: Int = 0
-    private(set) var withdrawReceivedDraft: WithdrawalReasonDraft?
+    public var withdrawResult: Result<Void, RepositoryError> = .success(())
+    public private(set) var withdrawCallCount: Int = 0
+    public private(set) var withdrawReceivedDraft: WithdrawalReasonDraft?
 
-    func withdraw(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
+    public func withdraw(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
         withdrawCallCount += 1
         withdrawReceivedDraft = draft
         _ = try withdrawResult.get()
     }
     
     // syncAppleCredential
-    var syncResult: Result<Void, AuthError> = .success(())
-    private(set) var syncCallCount: Int = 0
-    private(set) var syncReceivedCredential: AppleSyncCredential?
+    public var syncResult: Result<Void, AuthError> = .success(())
+    public private(set) var syncCallCount: Int = 0
+    public private(set) var syncReceivedCredential: AppleSyncCredential?
 
-    func syncAppleCredential(_ credential: AppleSyncCredential) async throws(AuthError) {
+    public func syncAppleCredential(_ credential: AppleSyncCredential) async throws(AuthError) {
         syncCallCount += 1
         syncReceivedCredential = credential
         _ = try syncResult.get()

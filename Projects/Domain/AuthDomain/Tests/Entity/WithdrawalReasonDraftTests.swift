@@ -83,10 +83,10 @@ struct WithdrawalReasonDraftTests {
         var draft = WithdrawalReasonDraft()
         draft.setOption(.custom)
 
-        let long = String(repeating: "a", count: WithdrawalReasonDraft.maxOtherLength + 10)
+        let long = String(repeating: "a", count: WithdrawalReasonDraft.maxCustomReasonLength + 10)
         draft.setCustomReasonText(long)
 
-        #expect(draft.customReasonText.count == WithdrawalReasonDraft.maxOtherLength)
+        #expect(draft.customReasonText.count == WithdrawalReasonDraft.maxCustomReasonLength)
     }
 
     @Test("직접 입력 옵션에서는 80자 이하면 그대로 저장된다")

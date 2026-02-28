@@ -8,6 +8,7 @@
 
 
 import Testing
+import AuthDomainTesting
 @testable import AuthDomain
 
 @Suite("SyncAppleCredentialUseCase")

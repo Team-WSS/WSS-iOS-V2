@@ -35,7 +35,7 @@ public struct WithdrawalReasonDraft: Equatable {
 
     public mutating func setCustomReasonText(_ text: String) {
         guard option.requiresText else { return }
-        self.customReasonText = String(text.prefix(Self.maxOtherLength))
+        self.customReasonText = String(text.prefix(Self.maxCustomReasonLength))
     }
     
     public mutating func setPolicyAgreed(_ isAgreed: Bool) {
