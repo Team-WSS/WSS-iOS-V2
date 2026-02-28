@@ -14,7 +14,7 @@ public protocol BlockUserUseCase {
 }
 
 public final class DefaultBlockUserUseCase: BlockUserUseCase {
-    let repository: SocialRepository
+    private let repository: SocialRepository
     
     public init(repository: SocialRepository) {
         self.repository = repository

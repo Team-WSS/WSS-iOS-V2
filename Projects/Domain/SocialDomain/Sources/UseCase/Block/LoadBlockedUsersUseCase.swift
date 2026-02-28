@@ -14,7 +14,7 @@ public protocol LoadBlockedUsersUseCase {
 }
 
 public final class DefaultLoadBlockedUsersUseCase: LoadBlockedUsersUseCase {
-    let repository: SocialRepository
+    private let repository: SocialRepository
     
     public init(repository: SocialRepository) {
         self.repository = repository

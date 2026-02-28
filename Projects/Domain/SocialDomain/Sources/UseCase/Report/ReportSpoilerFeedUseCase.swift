@@ -13,7 +13,6 @@ public protocol ReportSpoilerFeedUseCase {
 }
 
 public final class DefaultReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
-
     private let repository: SocialRepository
 
     public init(repository: SocialRepository) {

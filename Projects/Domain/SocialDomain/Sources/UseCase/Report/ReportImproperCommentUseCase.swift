@@ -15,7 +15,6 @@ public protocol ReportImproperCommentUseCase {
 }
 
 public final class DefaultReportImproperCommentUseCase: ReportImproperCommentUseCase {
-
     private let repository: SocialRepository
     
     public init(repository: SocialRepository) {

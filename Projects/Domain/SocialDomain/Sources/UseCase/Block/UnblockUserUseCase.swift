@@ -14,7 +14,7 @@ public protocol UnblockUserUseCase {
 }
 
 public final class DefaultUnblockUserUseCase: UnblockUserUseCase {
-    let repository: SocialRepository
+    private let repository: SocialRepository
     
     public init(repository: SocialRepository) {
         self.repository = repository

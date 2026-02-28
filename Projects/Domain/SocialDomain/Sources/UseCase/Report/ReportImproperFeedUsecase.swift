@@ -13,7 +13,6 @@ public protocol ReportImproperFeedUsecase {
 }
 
 public final class DefaultReportImproperFeedUsecase: ReportImproperFeedUsecase {
-
     private let repository: SocialRepository
 
     public init(repository: SocialRepository) {

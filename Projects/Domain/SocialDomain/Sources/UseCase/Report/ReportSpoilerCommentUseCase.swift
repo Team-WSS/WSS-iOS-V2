@@ -14,7 +14,6 @@ public protocol ReportSpoilerCommentUseCase {
 }
 
 public final class DefaultReportSpoilerCommentUseCase: ReportSpoilerCommentUseCase {
-
     private let repository: SocialRepository
     
     public init(repository: SocialRepository) {
