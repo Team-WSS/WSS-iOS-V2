@@ -7,11 +7,6 @@
 //
 
 
-//
-//  BlockUserUseCaseTests.swift
-//  SocialDomainTests
-//
-
 import Testing
 @testable import SocialDomain
 import BaseDomain
