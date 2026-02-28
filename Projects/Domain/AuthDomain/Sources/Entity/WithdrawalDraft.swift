@@ -14,7 +14,7 @@ public struct WithdrawalReasonDraft: Equatable {
     
     // MARK: - Policy
 
-    public static let maxOtherLength = 80
+    public static let maxCustomReasonLength = 80
     
     public var isSubmittable: Bool {
         let validOption = !option.requiresText || !customReasonText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
