@@ -10,7 +10,7 @@ import Foundation
 import BaseDomain
 
 public struct BlockedUser: Equatable {
-    public let blockId: BlockID
+    public let blockID: BlockID
     public let userID: UserID
     public let nickname: String
     public let profileImageURL: URL?
