@@ -22,11 +22,6 @@ public final class MockCommentRepository: CommentRepository {
     public var editResult: Result<Void, Error> = .success(())
     public var deleteResult: Result<Void, Error> = .success(())
 
-    public var reportedSpoilerCommentID: CommentID?
-    public var reportSpoilerResult: Result<Void, Error> = .success(())
-    public var reportedImproperCommentID: CommentID?
-    public var reportImproperResult: Result<Void, Error> = .success(())
-
     public init() {}
 
     public func fetchComments(feedID: FeedID) async throws -> [FeedComment] {
@@ -62,30 +57,6 @@ public final class MockCommentRepository: CommentRepository {
     public func deleteComment(id: CommentID, feedID: FeedID) async throws {
         deletedComments.append((id, feedID))
         switch deleteResult {
-        case .success:
-            return
-        case .failure(let error):
-            throw error
-        }
-    }
-
-    // MARK: - Report
-
-    public func reportSpoilerComment(id: CommentID) async throws {
-        reportedSpoilerCommentID = id
-
-        switch reportSpoilerResult {
-        case .success:
-            return
-        case .failure(let error):
-            throw error
-        }
-    }
-
-    public func reportImproperComment(id: CommentID) async throws {
-        reportedImproperCommentID = id
-
-        switch reportImproperResult {
         case .success:
             return
         case .failure(let error):
