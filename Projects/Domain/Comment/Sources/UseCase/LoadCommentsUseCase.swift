@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadCommentsUseCase {
-    func execute(feedID: FeedID) async throws -> [FeedComment]
+    func execute(feedID: FeedID) async throws(RepositoryError) -> [FeedComment]
 }
 
 public final class DefaultLoadCommentsUseCase: LoadCommentsUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadCommentsUseCase: LoadCommentsUseCase {
         self.commentRepository = repository
     }
     
-    public func execute(feedID: FeedID) async throws -> [FeedComment] {
+    public func execute(feedID: FeedID) async throws(RepositoryError) -> [FeedComment] {
         try await commentRepository.fetchComments(feedID: feedID)
     }
 }

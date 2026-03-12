@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol EditFeedUseCase {
-    func execute(feedID: FeedID, editedFeed: FeedDraft) async throws
+    func execute(feedID: FeedID, editedFeed: FeedDraft) async throws(RepositoryError)
 }
 
 public final class DefaultEditFeedUseCase: EditFeedUseCase {
@@ -21,7 +22,7 @@ public final class DefaultEditFeedUseCase: EditFeedUseCase {
         self.repository = repository
     }
 
-    public func execute(feedID: FeedID, editedFeed: FeedDraft) async throws {
+    public func execute(feedID: FeedID, editedFeed: FeedDraft) async throws(RepositoryError) {
         try await repository.editFeed(id: feedID, draft: editedFeed)
     }
 }

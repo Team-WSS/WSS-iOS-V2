@@ -6,12 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
+
 import BaseDomain
 
 public protocol ReportImproperCommentUseCase {
-    func execute(id: CommentID) async throws
+    func execute(id: CommentID) async throws(RepositoryError)
 }
 
 public final class DefaultReportImproperCommentUseCase: ReportImproperCommentUseCase {
@@ -21,7 +21,7 @@ public final class DefaultReportImproperCommentUseCase: ReportImproperCommentUse
         self.repository = repository
     }
     
-    public func execute(id: CommentID) async throws {
+    public func execute(id: CommentID) async throws(RepositoryError) {
         try await repository.reportImproperComment(id: id)
     }
 }

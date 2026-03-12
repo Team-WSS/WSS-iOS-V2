@@ -8,6 +8,7 @@
 
 
 import Testing
+
 @testable import ProfileDomain
 
 @Suite("NicknameDraft")

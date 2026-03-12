@@ -7,9 +7,10 @@
 //
 
 import Testing
-@testable import BaseDomain
+
 @testable import FeedDomain
 import FeedDomainTesting
+import BaseDomain
 
 @Suite
 struct LoadSosoFeedsUseCaseTests {

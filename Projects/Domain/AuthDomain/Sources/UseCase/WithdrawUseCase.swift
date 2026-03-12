@@ -9,10 +9,12 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol WithdrawUseCase {
     func execute(
         draft: WithdrawalReasonDraft
-    ) async throws
+    ) async throws(RepositoryError)
 }
 
 public struct DefaultWithdrawUseCase: WithdrawUseCase {
@@ -22,7 +24,7 @@ public struct DefaultWithdrawUseCase: WithdrawUseCase {
         self.repository = repository
     }
 
-    public func execute(draft: WithdrawalReasonDraft) async throws {
+    public func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
         try await repository.withdraw(draft: draft)
     }
 }

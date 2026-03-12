@@ -8,8 +8,10 @@
 
 
 import Testing
-import AuthDomainTesting
+
 @testable import AuthDomain
+import AuthDomainTesting
+import BaseDomain
 
 @Suite("LogoutUseCase")
 struct LogoutUseCaseTests {

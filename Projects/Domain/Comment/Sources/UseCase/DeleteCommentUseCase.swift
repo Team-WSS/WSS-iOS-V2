@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol DeleteCommentUseCase {
-    func execute(commentID: CommentID, feedID: FeedID) async throws
+    func execute(commentID: CommentID, feedID: FeedID) async throws(RepositoryError)
 }
 
 public final class DefaultDeleteCommentUseCase: DeleteCommentUseCase {
@@ -21,7 +22,7 @@ public final class DefaultDeleteCommentUseCase: DeleteCommentUseCase {
         self.commentRepository = repository
     }
     
-    public func execute(commentID: CommentID, feedID: FeedID) async throws {
+    public func execute(commentID: CommentID, feedID: FeedID) async throws(RepositoryError) {
         try await commentRepository.deleteComment(id: commentID, feedID: feedID)
     }
 }

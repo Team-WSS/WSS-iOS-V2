@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadRegisteredNovelStatsUseCase {
-    func execute() async throws -> RegisteredNovelStats
+    func execute() async throws(RepositoryError) -> RegisteredNovelStats
 }
 
 public final class DefaultLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelSt
         self.novelRepository = novelRepository
     }
     
-    public func execute() async throws -> RegisteredNovelStats {
+    public func execute() async throws(RepositoryError) -> RegisteredNovelStats {
         try await novelRepository.fetchRegisteredNovelStats()
     }
 }

@@ -9,8 +9,8 @@
 import Testing
 
 @testable import NovelDomain
-@testable import BaseDomain
 import NovelDomainTesting
+import BaseDomain
 
 @Suite
 struct NovelInterestUseCaseTests {
@@ -32,11 +32,11 @@ struct NovelInterestUseCaseTests {
     @Test("작품 관심 추가에 실패하면 에러를 던진다")
     func addInterestFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.addInterestResult = .failure(TestError.networkFail)
+        mock.addInterestResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultNovelInterestUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.networkFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.add(id: NovelID(1))
         }
     }
@@ -58,11 +58,11 @@ struct NovelInterestUseCaseTests {
     @Test("작품 관심 삭제에 실패하면 에러를 던진다")
     func removeInterestFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.removeInterestResult = .failure(TestError.networkFail)
+        mock.removeInterestResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultNovelInterestUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.networkFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.remove(id: NovelID(1))
         }
     }

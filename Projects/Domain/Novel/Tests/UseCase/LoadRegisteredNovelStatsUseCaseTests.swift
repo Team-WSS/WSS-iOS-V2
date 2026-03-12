@@ -9,8 +9,8 @@
 import Testing
 
 @testable import NovelDomain
-@testable import BaseDomain
 import NovelDomainTesting
+import BaseDomain
 
 @Suite
 struct LoadRegisteredNovelStatsUseCaseTests {
@@ -44,20 +44,17 @@ struct LoadRegisteredNovelStatsUseCaseTests {
     @Test("조회에 실패하면 에러를 던진다")
     func loadRegisteredNovelStatsFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.fetchRegisteredNovelStatsResult = .failure(TestError.networkFail)
+        mock.fetchRegisteredNovelStatsResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultLoadRegisteredNovelStatsUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.networkFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute()
         }
     }
 }
 
 extension LoadRegisteredNovelStatsUseCaseTests {
-
-    private enum TestError: Error { case networkFail }
-
     private func makeStats(
         interest: Int = 10,
         watching: Int = 20,

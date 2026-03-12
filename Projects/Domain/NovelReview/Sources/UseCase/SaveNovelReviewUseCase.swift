@@ -9,8 +9,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol SaveNovelReviewUseCase {
-    func execute(draft: NovelReviewDraft) async throws
+    func execute(draft: NovelReviewDraft) async throws(RepositoryError)
 }
 
 public final class DefaultSaveNovelReviewUseCase: SaveNovelReviewUseCase {
@@ -21,7 +23,7 @@ public final class DefaultSaveNovelReviewUseCase: SaveNovelReviewUseCase {
         self.repository = repository
     }
 
-    public func execute(draft: NovelReviewDraft) async throws {
+    public func execute(draft: NovelReviewDraft) async throws(RepositoryError) {
         try await repository.save(draft: draft)
     }
 }

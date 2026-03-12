@@ -46,11 +46,11 @@ struct SearchNovelUseCaseTests {
     @Test("텍스트 검색에 실패하면 에러를 던진다")
     func searchByTextFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.searchByTextResult = .failure(TestError.searchFail)
+        mock.searchByTextResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.searchFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.searchByText("전지적")
         }
 
@@ -95,7 +95,7 @@ struct SearchNovelUseCaseTests {
     @Test("필터 검색에 실패하면 에러를 던진다")
     func searchByFilterFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.searchByFilterResult = .failure(TestError.searchFail)
+        mock.searchByFilterResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
         let filter = SearchFilter(
@@ -105,7 +105,7 @@ struct SearchNovelUseCaseTests {
             keywords: []
         )
 
-        await #expect(throws: TestError.searchFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.searchByFilter(filter)
         }
 
@@ -114,9 +114,6 @@ struct SearchNovelUseCaseTests {
 }
 
 extension SearchNovelUseCaseTests {
-
-    private enum TestError: Error { case searchFail }
-
     private func makeNovel(
         id: Int = 1,
         title: String = "전지적 독자 시점"

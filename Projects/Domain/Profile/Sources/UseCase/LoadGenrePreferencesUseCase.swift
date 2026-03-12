@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadGenrePreferencesUseCase {
-    func execute(_ target: ProfileTarget) async throws -> [GenrePreference]
+    func execute(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference]
 }
 
 public final class DefaultLoadGenrePreferencesUseCase: LoadGenrePreferencesUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadGenrePreferencesUseCase: LoadGenrePreferencesUseCa
         self.profileRepository = profileRepository
     }
     
-    public func execute(_ target: ProfileTarget) async throws -> [GenrePreference] {
+    public func execute(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {
         try await profileRepository.fetchGenrePreferences(target)
     }
 }

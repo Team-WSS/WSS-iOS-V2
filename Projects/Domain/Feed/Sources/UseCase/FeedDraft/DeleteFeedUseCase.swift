@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol DeleteFeedUseCase {
-    func execute(feedID: FeedID) async throws
+    func execute(feedID: FeedID) async throws(RepositoryError)
 }
 
 public final class DefaultDeleteFeedUseCase: DeleteFeedUseCase {
@@ -21,7 +22,7 @@ public final class DefaultDeleteFeedUseCase: DeleteFeedUseCase {
         self.repository = repository
     }
 
-    public func execute(feedID: FeedID) async throws {
+    public func execute(feedID: FeedID) async throws(RepositoryError) {
         try await repository.deleteFeed(id: feedID)
     }
 }

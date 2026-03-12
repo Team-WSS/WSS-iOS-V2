@@ -7,6 +7,8 @@
 //
 
 
+import Foundation
+
 public struct TermsAgreementDraft: Equatable {
     
     public private(set) var agreements: [TermsType: Bool]

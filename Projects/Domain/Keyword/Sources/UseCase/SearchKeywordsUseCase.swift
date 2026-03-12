@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol SearchKeywordsUseCase {
-    func execute(searchText: String) async throws -> [Keyword]
+    func execute(searchText: String) async throws(RepositoryError) -> [Keyword]
 }
 
 public final class DefaultSearchKeywordUseCase: SearchKeywordsUseCase {
@@ -20,7 +22,7 @@ public final class DefaultSearchKeywordUseCase: SearchKeywordsUseCase {
         self.keywordRepository = keywordRepository
     }
     
-    public func execute(searchText: String) async throws -> [Keyword] {
+    public func execute(searchText: String) async throws(RepositoryError) -> [Keyword] {
         try await keywordRepository.searchKeywords(searchText)
     }
 }

@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadUserLibraryUseCase {
-    func execute(id: UserID) async throws -> (Paginated<LibraryNovel>, Int)
+    func execute(id: UserID) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
 }
 
 public final class DefaultLoadUserLibraryUseCase: LoadUserLibraryUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadUserLibraryUseCase: LoadUserLibraryUseCase {
         self.novelRepository = novelRepository
     }
     
-    public func execute(id: UserID) async throws -> (Paginated<LibraryNovel>, Int) {
+    public func execute(id: UserID) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         return try await novelRepository.fetchUserLibraryNovels(id: id)
     }
 }

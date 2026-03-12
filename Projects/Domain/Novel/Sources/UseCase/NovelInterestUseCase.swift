@@ -7,11 +7,12 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol NovelInterestUseCase {
-    func add(id: NovelID) async throws
-    func remove(id: NovelID) async throws
+    func add(id: NovelID) async throws(RepositoryError)
+    func remove(id: NovelID) async throws(RepositoryError)
 }
 
 public final class DefaultNovelInterestUseCase: NovelInterestUseCase {
@@ -22,11 +23,11 @@ public final class DefaultNovelInterestUseCase: NovelInterestUseCase {
         self.novelRepository = novelRepository
     }
     
-    public func add(id: NovelID) async throws {
+    public func add(id: NovelID) async throws(RepositoryError) {
         try await novelRepository.addNovelInterest(id: id)
     }
     
-    public func remove(id: NovelID) async throws {
+    public func remove(id: NovelID) async throws(RepositoryError) {
         try await novelRepository.removeNovelInterest(id: id)
     }
 }

@@ -7,9 +7,10 @@
 //
 
 import Testing
-import KeywordDomainTesting
+
 @testable import KeywordDomain
-@testable import BaseDomain
+import KeywordDomainTesting
+import BaseDomain
 
 @Suite
 struct SearchKeywordsUseCaseTests {
@@ -58,11 +59,11 @@ struct SearchKeywordsUseCaseTests {
     @Test("키워드 검색 실패 시 에러를 던진다.")
     func searchKeywordsFailureThrows() async {
         let mock = MockKeywordRepository()
-        mock.searchKeywordsResult = .failure(MockKeywordRepository.MockError.searchFailed)
+        mock.searchKeywordsResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultSearchKeywordUseCase(keywordRepository: mock)
 
-        await #expect(throws: MockKeywordRepository.MockError.searchFailed) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute(searchText: "집착")
         }
 

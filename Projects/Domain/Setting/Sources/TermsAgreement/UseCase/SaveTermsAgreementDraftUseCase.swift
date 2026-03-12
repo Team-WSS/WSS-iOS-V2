@@ -7,10 +7,12 @@
 //
 
 
-// SaveTermsAgreementDraftUseCase.swift
+import Foundation
+
+import BaseDomain
 
 public protocol SaveTermsAgreementDraftUseCase {
-    func execute(draft: TermsAgreementDraft) async throws
+    func execute(draft: TermsAgreementDraft) async throws(RepositoryError)
 }
 
 public final class DefaultSaveTermsAgreementDraftUseCase: SaveTermsAgreementDraftUseCase {
@@ -20,7 +22,7 @@ public final class DefaultSaveTermsAgreementDraftUseCase: SaveTermsAgreementDraf
         self.repository = repository
     }
 
-    public func execute(draft: TermsAgreementDraft) async throws {
+    public func execute(draft: TermsAgreementDraft) async throws(RepositoryError) {
         try await repository.save(draft: draft)
     }
 }

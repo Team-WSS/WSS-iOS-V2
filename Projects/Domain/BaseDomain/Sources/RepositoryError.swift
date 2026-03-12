@@ -1,6 +1,6 @@
 //
 //  RepositoryError.swift
-//  FeedDomain
+//  BaseDomain
 //
 //  Created by Seoyeon Choi on 2/8/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.

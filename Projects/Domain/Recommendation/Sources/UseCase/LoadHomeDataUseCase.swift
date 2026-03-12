@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadHomeDataUseCase {
-    func execute() async throws -> HomeData
+    func execute() async throws(RepositoryError) -> HomeData
 }
 
 public final class DefaultLoadDataUseCase: LoadHomeDataUseCase {
@@ -20,17 +22,17 @@ public final class DefaultLoadDataUseCase: LoadHomeDataUseCase {
         self.recommendationRepository = repository
     }
     
-    public func execute() async throws -> HomeData {
-        async let todayDiscoveries = recommendationRepository.fetchTodayDiscoveries()
-        async let trendingFeeds = recommendationRepository.fetchTrendingFeeds()
-        async let interestFeedState = recommendationRepository.fetchInterestFeeds()
-        async let recommendedNovelState = recommendationRepository.fetchRecommendedNovels()
+    public func execute() async throws(RepositoryError) -> HomeData {
+        let todayDiscoveries = try await recommendationRepository.fetchTodayDiscoveries()
+        let trendingFeeds = try await recommendationRepository.fetchTrendingFeeds()
+        let interestFeedState = try await recommendationRepository.fetchInterestFeeds()
+        let recommendedNovelState = try await recommendationRepository.fetchRecommendedNovels()
         
-        return await HomeData(
-            todayDiscoveries: try todayDiscoveries,
-            trendingFeeds: try trendingFeeds,
-            interestFeedState: try interestFeedState,
-            recommendedNovelState: try recommendedNovelState
+        return HomeData(
+            todayDiscoveries: todayDiscoveries,
+            trendingFeeds: trendingFeeds,
+            interestFeedState: interestFeedState,
+            recommendedNovelState: recommendedNovelState
         )
     }
 }

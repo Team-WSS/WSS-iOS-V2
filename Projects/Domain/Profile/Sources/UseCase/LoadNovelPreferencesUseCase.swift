@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadNovelPreferencesUseCase {
-    func execute(_ target: ProfileTarget) async throws -> NovelPreference
+    func execute(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference
 }
 
 public final class DefaultLoadNovelPreferencesUseCase: LoadNovelPreferencesUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadNovelPreferencesUseCase: LoadNovelPreferencesUseCa
         self.profileRepository = profileRepository
     }
     
-    public func execute(_ target: ProfileTarget) async throws -> NovelPreference {
+    public func execute(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
         try await profileRepository.fetchNovelPreferences(target)
     }
 }

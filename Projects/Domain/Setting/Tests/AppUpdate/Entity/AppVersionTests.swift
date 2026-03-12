@@ -8,9 +8,10 @@
 
 
 import Testing
-import Foundation
+
 @testable import SettingDomain
 import SettingDomainTesting
+import BaseDomain
 
 @Suite("AppVersion")
 struct AppVersionTests {

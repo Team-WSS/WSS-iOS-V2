@@ -7,7 +7,9 @@
 //
 
 
-// TermsAgreementRepository.swift
+import Foundation
+
+import BaseDomain
 
 public protocol TermsAgreementRepository {
     func loadTermsAgreementDraft() async throws(RepositoryError) -> TermsAgreementDraft

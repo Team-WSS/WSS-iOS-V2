@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadNovelUseCase {
-    func execute(id: NovelID) async throws -> NovelInformation
+    func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation
 }
 
 public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
         self.novelRepository = novelRepository
     }
 
-    public func execute(id: NovelID) async throws -> NovelInformation {
+    public func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation {
         return try await novelRepository.fetchNovel(id: id)
     }
 }

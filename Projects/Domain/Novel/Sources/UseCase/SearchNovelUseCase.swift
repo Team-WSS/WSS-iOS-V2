@@ -7,11 +7,12 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol SearchNovelUseCase {
-    func searchByText(_ query: String) async throws -> (Paginated<Novel>, Int)
-    func searchByFilter(_ filter: SearchFilter) async throws -> (Paginated<Novel>, Int)
+    func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int)
+    func searchByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int)
 }
 
 public final class DefaultSearchNovelUseCase: SearchNovelUseCase {
@@ -22,11 +23,11 @@ public final class DefaultSearchNovelUseCase: SearchNovelUseCase {
         self.novelRepository = novelRepository
     }
     
-    public func searchByText(_ query: String) async throws -> (Paginated<Novel>, Int) {
+    public func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         try await novelRepository.searchNovelByText(query)
     }
     
-    public func searchByFilter(_ filter: SearchFilter) async throws -> (Paginated<Novel>, Int) {
+    public func searchByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         try await novelRepository.searchNovelByFilter(filter)
     }
 }

@@ -6,6 +6,10 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
+import BaseDomain
+
 public protocol ProfileRepository {
     
     /// 받아온 성별, userID, 닉네임을 userDefaults에 저장

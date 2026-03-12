@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadSosoPickUseCase {
-    func execute() async throws -> [SosoPick]
+    func execute() async throws(RepositoryError) -> [SosoPick]
 }
 
 public final class DefaultLoadSosoPickUseCase: LoadSosoPickUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadSosoPickUseCase: LoadSosoPickUseCase {
         self.recommendationRepository = recommendationRepository
     }
     
-    public func execute() async throws -> [SosoPick] {
+    public func execute() async throws(RepositoryError) -> [SosoPick] {
         return try await recommendationRepository.fetchSosoPick()
     }
 }

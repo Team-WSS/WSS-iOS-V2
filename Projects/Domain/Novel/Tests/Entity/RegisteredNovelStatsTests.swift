@@ -9,6 +9,8 @@
 import Testing
 
 @testable import NovelDomain
+import NovelDomainTesting
+import BaseDomain
 
 @Suite
 struct RegisteredNovelStatsTests {

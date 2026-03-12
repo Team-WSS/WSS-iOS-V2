@@ -7,8 +7,10 @@
 //
 
 import Testing
+
 @testable import ProfileDomain
-@testable import ProfileDomainTesting
+import ProfileDomainTesting
+import BaseDomain
 
 @Suite("LoadProfileCharacterUseCase")
 struct LoadProfileCharacterUseCaseTests {

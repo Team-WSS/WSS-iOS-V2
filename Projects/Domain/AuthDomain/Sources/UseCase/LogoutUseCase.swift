@@ -9,8 +9,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LogoutUseCase {
-    func execute() async throws
+    func execute() async throws(RepositoryError)
 }
 
 public final class DefaultLogoutUseCase: LogoutUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLogoutUseCase: LogoutUseCase {
         self.authRepository = authRepository
     }
 
-    public func execute() async throws {
+    public func execute() async throws(RepositoryError) {
         try await authRepository.logout()
     }
 }

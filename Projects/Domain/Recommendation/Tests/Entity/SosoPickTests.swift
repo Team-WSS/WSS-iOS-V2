@@ -6,10 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Testing
 import Foundation
+import Testing
+
 @testable import RecommendationDomain
-@testable import BaseDomain
+import RecommendationDomainTesting
+import BaseDomain
 
 @Suite
 struct SosoPickTests {

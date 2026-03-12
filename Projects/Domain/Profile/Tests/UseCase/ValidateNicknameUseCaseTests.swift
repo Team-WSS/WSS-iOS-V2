@@ -7,15 +7,11 @@
 //
 
 
-//
-//  ValidateNicknameUseCaseTests.swift
-//  ProfileDomainTests
-//
-
 import Testing
-import BaseDomain
+
 @testable import ProfileDomain
-@testable import ProfileDomainTesting
+import ProfileDomainTesting
+import BaseDomain
 
 @Suite("ValidateNicknameUseCase")
 struct ValidateNicknameUseCaseTests {

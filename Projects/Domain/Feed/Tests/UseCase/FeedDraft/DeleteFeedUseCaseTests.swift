@@ -7,9 +7,10 @@
 //
 
 import Testing
+
 @testable import FeedDomain
 import FeedDomainTesting
-@testable import BaseDomain
+import BaseDomain
 
 @Suite
 struct DeleteFeedUseCaseTests {

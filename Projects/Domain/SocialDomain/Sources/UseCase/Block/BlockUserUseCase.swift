@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol BlockUserUseCase {
-    func execute(id: UserID) async throws
+    func execute(id: UserID) async throws(RepositoryError)
 }
 
 public final class DefaultBlockUserUseCase: BlockUserUseCase {
@@ -20,7 +21,7 @@ public final class DefaultBlockUserUseCase: BlockUserUseCase {
         self.repository = repository
     }
     
-    public func execute(id: UserID) async throws {
+    public func execute(id: UserID) async throws(RepositoryError) {
         try await repository.blockUser(id: id)
     }
 }

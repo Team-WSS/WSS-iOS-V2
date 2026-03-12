@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol UpdateProfileUseCase {
-    func execute(_ draft: ProfileDraft) async throws
+    func execute(_ draft: ProfileDraft) async throws(RepositoryError)
 }
 
 public final class DefaultUpdateProfileUseCase: UpdateProfileUseCase {
@@ -20,7 +22,7 @@ public final class DefaultUpdateProfileUseCase: UpdateProfileUseCase {
         self.profileRepository = profileRepository
     }
 
-    public func execute(_ draft: ProfileDraft) async throws {
+    public func execute(_ draft: ProfileDraft) async throws(RepositoryError) {
         try await profileRepository.updateProfile(draft)
     }
 }

@@ -14,4 +14,14 @@ public struct ConnectedNovel {
     public let title: String
     public let genre: NovelGenre
     public private(set) var rating: Float?
+    
+    public init(id: NovelID,
+                title: String,
+                genre: NovelGenre,
+                rating: Float? = nil) {
+        self.id = id
+        self.title = title
+        self.genre = genre
+        self.rating = rating
+    }
 }

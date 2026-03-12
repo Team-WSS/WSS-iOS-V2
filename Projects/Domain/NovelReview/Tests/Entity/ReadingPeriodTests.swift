@@ -8,8 +8,10 @@
 
 import Foundation
 import Testing
-import NovelReviewDomain
+
+@testable import NovelReviewDomain
 import NovelReviewDomainTesting
+import BaseDomain
 
 @Suite("ReadingPeriod")
 struct ReadingPeriodTests {

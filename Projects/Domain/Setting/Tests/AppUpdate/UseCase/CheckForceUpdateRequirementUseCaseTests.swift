@@ -7,10 +7,12 @@
 //
 
 
-import Testing
 import Foundation
+import Testing
+
 @testable import SettingDomain
 import SettingDomainTesting
+import BaseDomain
 
 @Suite("CheckForceUpdateRequirementUseCase")
 struct CheckForceUpdateRequirementUseCaseTests {

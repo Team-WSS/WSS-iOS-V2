@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol SyncUserBasicInfoUseCase {
-    func execute() async throws
+    func execute() async throws(RepositoryError)
 }
 
 public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
@@ -19,7 +21,7 @@ public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
         self.repository = repository
     }
     
-    public func execute() async throws {
+    public func execute() async throws(RepositoryError) {
         _ = try await repository.syncUserBasicInfo()
     }
 }

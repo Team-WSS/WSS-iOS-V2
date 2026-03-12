@@ -6,9 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+
 import Testing
+
 @testable import ProfileDomain
-@testable import ProfileDomainTesting
+import ProfileDomainTesting
+import BaseDomain
 
 @Suite("UpdateProfileUseCase")
 struct UpdateProfileUseCaseTests {

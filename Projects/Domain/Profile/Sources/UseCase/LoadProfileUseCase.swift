@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadProfileUseCase {
-    func execute(target: ProfileTarget) async throws -> Profile
+    func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile
 }
 
 public final class DefaultLoadProfileUseCase: LoadProfileUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadProfileUseCase: LoadProfileUseCase {
         self.profileRepository = profileRepository
     }
     
-    public func execute(target: ProfileTarget) async throws -> Profile {
+    public func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         try await profileRepository.fetchUserProfile(target: target)
     }
 }

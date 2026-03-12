@@ -8,7 +8,9 @@
 
 
 import Foundation
+
 import AuthDomain
+import BaseDomain
 
 public final class MockAuthRepository: AuthRepository {
     

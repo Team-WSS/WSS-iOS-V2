@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol SaveAccountInfoDraftUseCase {
-    func execute(_ info: AccountInfoDraft) async throws
+    func execute(_ info: AccountInfoDraft) async throws(RepositoryError)
 }
 
 public class DefaultSaveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase {
@@ -19,7 +21,7 @@ public class DefaultSaveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase {
         self.repository = repository
     }
     
-    public func execute(_ info: AccountInfoDraft) async throws {
+    public func execute(_ info: AccountInfoDraft) async throws(RepositoryError) {
         return try await repository.saveAccountInfo(info)
     }
 }

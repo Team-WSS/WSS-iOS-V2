@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadInitialProfileUseCase {
-    func execute() async throws -> ProfileDraft
+    func execute() async throws(RepositoryError) -> ProfileDraft
 }
 
 public final class DefaultLoadProfileDraftUseCase: LoadInitialProfileUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadProfileDraftUseCase: LoadInitialProfileUseCase {
         self.profileRepository = profileRepository
     }
 
-    public func execute() async throws -> ProfileDraft {
+    public func execute() async throws(RepositoryError) -> ProfileDraft {
         try await profileRepository.loadInitialProfile()
     }
 }

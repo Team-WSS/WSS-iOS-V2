@@ -10,8 +10,8 @@ import Foundation
 import Testing
 
 @testable import NovelDomain
-@testable import BaseDomain
 import NovelDomainTesting
+import BaseDomain
 
 @Suite
 struct LoadUserLibraryUseCaseTests {
@@ -47,20 +47,18 @@ struct LoadUserLibraryUseCaseTests {
     @Test("유저 서재 조회에 실패하면 에러를 던진다")
     func loadUserLibraryFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.fetchUserLibraryResult = .failure(TestError.networkFail)
+        mock.fetchUserLibraryResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultLoadUserLibraryUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.networkFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute(id: UserID(1))
         }
     }
 }
 
 extension LoadUserLibraryUseCaseTests {
-
-    private enum TestError: Error { case networkFail }
-
+    
     private func makeLibraryPage() -> Paginated<LibraryNovel> {
         Paginated(
             items: [

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+
 import NovelReviewDomain
 import BaseDomain
 

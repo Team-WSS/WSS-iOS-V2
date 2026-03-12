@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadProfileCharacterUseCase {
-    func execute() async throws -> [ProfileCharacter]
+    func execute() async throws(RepositoryError) -> [ProfileCharacter]
 }
 
 public final class DefaultLoadProfileCharacterUseCase: LoadProfileCharacterUseCase {
@@ -20,7 +22,7 @@ public final class DefaultLoadProfileCharacterUseCase: LoadProfileCharacterUseCa
         self.profileRepository = profileRepository
     }
     
-    public func execute() async throws -> [ProfileCharacter] {
+    public func execute() async throws(RepositoryError) -> [ProfileCharacter] {
         try await profileRepository.fetchProfileCharacters()
     }
 }

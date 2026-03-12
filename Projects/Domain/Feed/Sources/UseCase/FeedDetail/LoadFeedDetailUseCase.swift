@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadFeedDetailUseCase {
-    func execute(feedID: FeedID) async throws -> FeedDetail
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail
 }
 
 public final class DefaultLoadFeedUseCase: LoadFeedDetailUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadFeedUseCase: LoadFeedDetailUseCase {
         self.feedRepository = feedRepository
     }
     
-    public func execute(feedID: FeedID) async throws -> FeedDetail {
+    public func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
         try await feedRepository.fetchFeedDetail(id: feedID)
     }
 }

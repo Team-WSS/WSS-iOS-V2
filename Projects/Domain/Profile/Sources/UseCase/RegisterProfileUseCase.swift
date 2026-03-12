@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol RegisterProfileUseCase {
-    func execute(_ profile: ProfileRegistration) async throws
+    func execute(_ profile: ProfileRegistration) async throws(RepositoryError)
 }
 
 public class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
@@ -19,7 +21,7 @@ public class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
         self.repository = repository
     }
     
-    public func execute(_ profile: ProfileRegistration) async throws {
+    public func execute(_ profile: ProfileRegistration) async throws(RepositoryError) {
         _ = try await repository.registerProfile(profile)
     }
 }

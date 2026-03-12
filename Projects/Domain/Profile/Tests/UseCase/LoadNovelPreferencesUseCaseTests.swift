@@ -7,9 +7,10 @@
 //
 
 import Testing
-import BaseDomain
+
 @testable import ProfileDomain
-@testable import ProfileDomainTesting
+import ProfileDomainTesting
+import BaseDomain
 
 @Suite("LoadNovelPreferencesUseCase")
 struct LoadNovelPreferencesUseCaseTests {

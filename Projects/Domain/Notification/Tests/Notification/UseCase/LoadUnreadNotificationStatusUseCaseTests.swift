@@ -9,9 +9,9 @@
 
 import Testing
 
-import BaseDomain
-import NotificationDomain
+@testable import NotificationDomain
 import NotificationDomainTesting
+import BaseDomain
 
 @Suite("LoadUnreadNotificationStatusUseCase")
 struct LoadUnreadNotificationStatusUseCaseTests {

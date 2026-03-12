@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol UnblockUserUseCase {
-    func execute(id: BlockID) async throws
+    func execute(id: BlockID) async throws(RepositoryError)
 }
 
 public final class DefaultUnblockUserUseCase: UnblockUserUseCase {
@@ -20,7 +21,7 @@ public final class DefaultUnblockUserUseCase: UnblockUserUseCase {
         self.repository = repository
     }
     
-    public func execute(id: BlockID) async throws {
+    public func execute(id: BlockID) async throws(RepositoryError) {
         try await repository.unblockUser(id: id)
     }
 }

@@ -11,4 +11,9 @@ import Foundation
 public struct Paginated<T> {
     public let items: [T]
     public let hasNext: Bool
+    
+    public init(items: [T], hasNext: Bool) {
+        self.items = items
+        self.hasNext = hasNext
+    }
 }

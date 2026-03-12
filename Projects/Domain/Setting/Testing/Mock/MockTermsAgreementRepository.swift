@@ -7,7 +7,9 @@
 //
 
 import Foundation
+
 import SettingDomain
+import BaseDomain
 
 public final class MockTermsAgreementRepository: TermsAgreementRepository {
     public var loadCallCount = 0

@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol EditCommentUseCase {
-    func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws
+    func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError)
 }
 
 public final class DefaultEditCommentUseCase: EditCommentUseCase {
@@ -21,7 +22,7 @@ public final class DefaultEditCommentUseCase: EditCommentUseCase {
         self.commentRepository = repository
     }
     
-    public func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws {
+    public func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError) {
         try await commentRepository.editComment(id: commentID, feedID: feedID, draft: draft)
     }
 }

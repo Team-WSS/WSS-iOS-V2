@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol LoadUnreadNotificationStatusUseCase: Sendable {
     func execute() async throws(RepositoryError) -> UnreadNotificationStatus

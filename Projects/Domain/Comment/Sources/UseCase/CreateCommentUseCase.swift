@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol CreateCommentUseCase {
-    func execute(feedID: FeedID, _ draft: CommentDraft) async throws
+    func execute(feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError)
 }
 
 public final class DefaultCreateCommentUseCase: CreateCommentUseCase {
@@ -21,7 +22,7 @@ public final class DefaultCreateCommentUseCase: CreateCommentUseCase {
         self.commentRepository = repository
     }
     
-    public func execute(feedID: FeedID, _ draft: CommentDraft) async throws {
+    public func execute(feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError) {
         try await commentRepository.submitComment(feedID: feedID, draft: draft)
     }
 }

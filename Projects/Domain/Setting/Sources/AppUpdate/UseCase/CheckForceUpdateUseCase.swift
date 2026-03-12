@@ -6,9 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
+import BaseDomain
 
 public protocol CheckForceUpdateRequirementUseCase {
-    func execute() async throws -> Bool
+    func execute() async throws(RepositoryError) -> Bool
 }
 
 public final class DefaultCheckForceUpdateRequirementUseCase: CheckForceUpdateRequirementUseCase {
@@ -20,7 +23,7 @@ public final class DefaultCheckForceUpdateRequirementUseCase: CheckForceUpdateRe
         self.versionProvider = versionProvider
     }
 
-    public func execute() async throws -> Bool {
+    public func execute() async throws(RepositoryError) -> Bool {
         let policy = try await repository.loadAppUpdatePolicy()
         return policy.requiresForceUpdate(current: versionProvider.currentVersion)
     }

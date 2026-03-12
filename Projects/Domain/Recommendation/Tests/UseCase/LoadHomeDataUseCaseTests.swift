@@ -49,11 +49,11 @@ struct LoadHomeDataUseCaseTests {
     @Test("todayDiscoveries 실패 시 전체를 실패로 반환한다")
     func throwsWhenTodayDiscoveriesFails() async {
         let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .failure(MockError.networkError)
+        mock.fetchTodayDiscoveriesResult = .failure(RepositoryError.unknown)
         
         let usecase = DefaultLoadDataUseCase(repository: mock)
         
-        await #expect(throws: MockError.networkError) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute()
         }
     }
@@ -62,13 +62,13 @@ struct LoadHomeDataUseCaseTests {
     func throwsWhenAnyApiFails() async {
         let mock = MockRecommendationRepository()
         mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
-        mock.fetchTrendingFeedsResult = .failure(MockError.networkError)
+        mock.fetchTrendingFeedsResult = .failure(RepositoryError.unknown)
         mock.fetchInterestFeedsResult = .success(.noInterestSettings)
         mock.fetchRecommendedNovelsResult = .success(.noGenreSettings)
         
         let usecase = DefaultLoadDataUseCase(repository: mock)
         
-        await #expect(throws: MockError.networkError) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute()
         }
     }

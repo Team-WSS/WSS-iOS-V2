@@ -7,11 +7,12 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadMyFeedsUseCase {
     func execute(option: MyFeedOption,
-                 lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
+                 lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
 }
 
 public final class DefaultLoadMyFeedsUseCase: LoadMyFeedsUseCase {
@@ -23,7 +24,7 @@ public final class DefaultLoadMyFeedsUseCase: LoadMyFeedsUseCase {
     }
     
     public func execute(option: MyFeedOption,
-                        lastFeedID: FeedID) async throws -> Paginated<TotalFeed> {
+                        lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         try await feedRepository.fetchMyFeeds(option: option, lastFeedID: lastFeedID)
     }
 }

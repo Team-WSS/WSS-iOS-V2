@@ -7,12 +7,8 @@
 //
 
 
-//
-//  AccountInfoDraftTests.swift
-//  ProfileDomainTests
-//
-
 import Testing
+
 @testable import ProfileDomain
 
 @Suite("AccountInfoDraft")

@@ -8,8 +8,9 @@
 
 
 import Testing
-import AuthDomainTesting
+
 @testable import AuthDomain
+import AuthDomainTesting
 
 @Suite("SyncAppleCredentialUseCase")
 struct SyncAppleCredentialUseCaseTests {

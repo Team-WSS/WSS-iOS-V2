@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol LoadTotalKeywordsUseCase {
-    func execute() async throws -> [KeywordGroup]
+    func execute() async throws(RepositoryError) -> [KeywordGroup]
 }
 
 public final class DefaultFetchTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
@@ -20,7 +22,7 @@ public final class DefaultFetchTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
         self.keywordRepository = keywordRepository
     }
     
-    public func execute() async throws -> [KeywordGroup] {
+    public func execute() async throws(RepositoryError) -> [KeywordGroup] {
         try await keywordRepository.fetchKeywords()
     }
 }

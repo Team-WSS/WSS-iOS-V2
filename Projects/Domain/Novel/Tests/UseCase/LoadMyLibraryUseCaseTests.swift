@@ -9,8 +9,8 @@
 import Testing
 
 @testable import NovelDomain
-@testable import BaseDomain
 import NovelDomainTesting
+import BaseDomain
 
 @Suite
 struct LoadMyLibraryUseCaseTests {
@@ -62,19 +62,17 @@ struct LoadMyLibraryUseCaseTests {
     @Test("내 서재 조회에 실패하면 에러를 던진다")
     func loadMyLibraryFailureThrows() async {
         let mock = MockNovelRepository()
-        mock.fetchMyLibraryResult = .failure(TestError.networkFail)
+        mock.fetchMyLibraryResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
 
-        await #expect(throws: TestError.networkFail) {
+        await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute(makeFilter())
         }
     }
 }
 
 extension LoadMyLibraryUseCaseTests {
-
-    private enum TestError: Error { case networkFail }
 
     private func makeFilter() -> MyLibraryFilter {
         MyLibraryFilter(readingStatus: [], attractivePoint: [], ratingThreshold: nil)

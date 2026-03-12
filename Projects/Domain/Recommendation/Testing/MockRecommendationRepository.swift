@@ -7,13 +7,9 @@
 //
 
 import Foundation
+
 import RecommendationDomain
 import BaseDomain
-
-public enum MockError: Error, Equatable {
-    case networkError
-    case serverError
-}
 
 public final class MockRecommendationRepository: RecommendationRepository {
 
@@ -23,15 +19,15 @@ public final class MockRecommendationRepository: RecommendationRepository {
     public var fetchRecommendedNovelsCallCount = 0
     public var fetchSosoPickCallCount = 0
 
-    public var fetchTodayDiscoveriesResult: Result<[TodayDiscovery], Error> = .success([])
-    public var fetchTrendingFeedsResult: Result<[TrendingFeed], Error> = .success([])
-    public var fetchInterestFeedsResult: Result<InterestFeedState, Error> = .success(.noInterestSettings)
-    public var fetchRecommendedNovelsResult: Result<RecommendedNovelState, Error> = .success(.noGenreSettings)
-    public var fetchSosoPickResult: Result<[SosoPick], Error> = .success([])
+    public var fetchTodayDiscoveriesResult: Result<[TodayDiscovery], RepositoryError> = .success([])
+    public var fetchTrendingFeedsResult: Result<[TrendingFeed], RepositoryError> = .success([])
+    public var fetchInterestFeedsResult: Result<InterestFeedState, RepositoryError> = .success(.noInterestSettings)
+    public var fetchRecommendedNovelsResult: Result<RecommendedNovelState, RepositoryError> = .success(.noGenreSettings)
+    public var fetchSosoPickResult: Result<[SosoPick], RepositoryError> = .success([])
 
     public init() {}
 
-    public func fetchTodayDiscoveries() async throws -> [TodayDiscovery] {
+    public func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery] {
         fetchTodayDiscoveriesCallCount += 1
         switch fetchTodayDiscoveriesResult {
         case .success(let value): return value
@@ -39,7 +35,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
         }
     }
 
-    public func fetchTrendingFeeds() async throws -> [TrendingFeed] {
+    public func fetchTrendingFeeds() async throws(RepositoryError) -> [TrendingFeed] {
         fetchTrendingFeedsCallCount += 1
         switch fetchTrendingFeedsResult {
         case .success(let value): return value
@@ -47,7 +43,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
         }
     }
 
-    public func fetchInterestFeeds() async throws -> InterestFeedState {
+    public func fetchInterestFeeds() async throws(RepositoryError) -> InterestFeedState {
         fetchInterestFeedsCallCount += 1
         switch fetchInterestFeedsResult {
         case .success(let value): return value
@@ -55,7 +51,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
         }
     }
 
-    public func fetchRecommendedNovels() async throws -> RecommendedNovelState {
+    public func fetchRecommendedNovels() async throws(RepositoryError) -> RecommendedNovelState {
         fetchRecommendedNovelsCallCount += 1
         switch fetchRecommendedNovelsResult {
         case .success(let value): return value
@@ -63,7 +59,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
         }
     }
 
-    public func fetchSosoPick() async throws -> [SosoPick] {
+    public func fetchSosoPick() async throws(RepositoryError) -> [SosoPick] {
         fetchSosoPickCallCount += 1
         switch fetchSosoPickResult {
         case .success(let value): return value

@@ -7,6 +7,8 @@
 //
 
 
+import Foundation
+
 public enum TermsType: CaseIterable, Hashable {
     case serviceAgreement
     case privacyPolicy

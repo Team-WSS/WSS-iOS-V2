@@ -7,9 +7,10 @@
 //
 
 import Testing
+
 @testable import KeywordDomain
 import KeywordDomainTesting
-@testable import BaseDomain
+import BaseDomain
 
 @Suite
 struct LoadTotalKeywordsUseCaseTests {
@@ -58,11 +59,11 @@ struct LoadTotalKeywordsUseCaseTests {
     @Test("전체 키워드 조회 실패 시 에러를 던진다.")
     func loadTotalKeywordsFailureThrows() async {
         let mock = MockKeywordRepository()
-        mock.fetchKeywordsResult = .failure(MockKeywordRepository.MockError.fetchFailed)
+        mock.fetchKeywordsResult = .failure(RepositoryError.unknown)
 
         let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
 
-        await #expect(throws: MockKeywordRepository.MockError.fetchFailed) {
+        await #expect(throws:RepositoryError.unknown) {
             try await usecase.execute()
         }
 

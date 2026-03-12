@@ -41,11 +41,11 @@ struct LoadSosoPickUseCaseTests {
     @Test("소소픽 불러오기에 실패하면 에러를 던진다")
     func throwsErrorWhenLoadSosoPickFails() async {
         let mock = MockRecommendationRepository()
-        mock.fetchSosoPickResult = .failure(MockError.networkError)
+        mock.fetchSosoPickResult = .failure(RepositoryError.networkUnavailable)
 
         let usecase = DefaultLoadSosoPickUseCase(recommendationRepository: mock)
 
-        await #expect(throws: MockError.networkError) {
+        await #expect(throws: RepositoryError.networkUnavailable) {
             try await usecase.execute()
         }
     }

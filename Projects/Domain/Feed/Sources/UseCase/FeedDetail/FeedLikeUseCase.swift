@@ -7,11 +7,12 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol FeedLikeUseCase {
-    func like(feedID: FeedID) async throws
-    func unlike(feedID: FeedID) async throws
+    func like(feedID: FeedID) async throws(RepositoryError)
+    func unlike(feedID: FeedID) async throws(RepositoryError)
 }
 
 public final class DefaultLikeUseCase: FeedLikeUseCase {
@@ -22,11 +23,11 @@ public final class DefaultLikeUseCase: FeedLikeUseCase {
         self.feedRepository = feedRepository
     }
     
-    public func like(feedID: FeedID) async throws {
+    public func like(feedID: FeedID) async throws(RepositoryError) {
         try await feedRepository.addLike(id: feedID)
     }
     
-    public func unlike(feedID: FeedID) async throws {
+    public func unlike(feedID: FeedID) async throws(RepositoryError) {
         try await feedRepository.deleteLike(id: feedID)
     }
 }

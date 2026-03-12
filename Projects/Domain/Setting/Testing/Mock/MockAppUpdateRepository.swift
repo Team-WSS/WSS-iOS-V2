@@ -7,7 +7,9 @@
 //
 
 import Foundation
+
 import SettingDomain
+import BaseDomain
 
 public final class MockAppUpdateRepository: AppUpdateRepository {
     public var loadCallCount = 0

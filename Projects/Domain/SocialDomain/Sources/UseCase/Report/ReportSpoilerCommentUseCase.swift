@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol ReportSpoilerCommentUseCase {
-    func execute(id: CommentID) async throws
+    func execute(id: CommentID) async throws(RepositoryError)
 }
 
 public final class DefaultReportSpoilerCommentUseCase: ReportSpoilerCommentUseCase {
@@ -20,7 +21,7 @@ public final class DefaultReportSpoilerCommentUseCase: ReportSpoilerCommentUseCa
         self.repository = repository
     }
     
-    public func execute(id: CommentID) async throws {
+    public func execute(id: CommentID) async throws(RepositoryError) {
         try await repository.reportSpoilerComment(id: id)
     }
 }

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+
 import CommentDomain
 import BaseDomain
 
@@ -17,14 +18,14 @@ public final class MockCommentRepository: CommentRepository {
     public var editedComments: [(id: CommentID, feedID: FeedID, draft: CommentDraft)] = []
     public var deletedComments: [(id: CommentID, feedID: FeedID)] = []
 
-    public var fetchCommentsResult: Result<[FeedComment], Error> = .success([])
-    public var submitResult: Result<Void, Error> = .success(())
-    public var editResult: Result<Void, Error> = .success(())
-    public var deleteResult: Result<Void, Error> = .success(())
+    public var fetchCommentsResult: Result<[FeedComment], RepositoryError> = .success([])
+    public var submitResult: Result<Void, RepositoryError> = .success(())
+    public var editResult: Result<Void, RepositoryError> = .success(())
+    public var deleteResult: Result<Void, RepositoryError> = .success(())
 
     public init() {}
 
-    public func fetchComments(feedID: FeedID) async throws -> [FeedComment] {
+    public func fetchComments(feedID: FeedID) async throws(RepositoryError) -> [FeedComment] {
         fetchedFeedIDs.append(feedID)
         switch fetchCommentsResult {
         case .success(let value):
@@ -34,7 +35,7 @@ public final class MockCommentRepository: CommentRepository {
         }
     }
 
-    public func submitComment(feedID: FeedID, draft: CommentDraft) async throws {
+    public func submitComment(feedID: FeedID, draft: CommentDraft) async throws(RepositoryError) {
         submittedComments.append((feedID, draft))
         switch submitResult {
         case .success:
@@ -44,7 +45,7 @@ public final class MockCommentRepository: CommentRepository {
         }
     }
 
-    public func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws {
+    public func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws(RepositoryError) {
         editedComments.append((id, feedID, draft))
         switch editResult {
         case .success:
@@ -54,7 +55,7 @@ public final class MockCommentRepository: CommentRepository {
         }
     }
 
-    public func deleteComment(id: CommentID, feedID: FeedID) async throws {
+    public func deleteComment(id: CommentID, feedID: FeedID) async throws(RepositoryError) {
         deletedComments.append((id, feedID))
         switch deleteResult {
         case .success:
