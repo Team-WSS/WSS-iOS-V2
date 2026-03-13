@@ -8,6 +8,8 @@
 
 import Foundation
 
+import BaseDomain
+
 // 서재 / 작품상세에서 사용되는 작품 평가 엔티티
 public struct UserNovelReview {
     public let readingStatus: ReadingStatus

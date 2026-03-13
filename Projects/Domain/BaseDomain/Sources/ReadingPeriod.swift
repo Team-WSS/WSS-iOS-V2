@@ -1,6 +1,6 @@
 //
 //  ReadingPeriod.swift
-//  NovelReviewDomain
+//  BaseDomain
 //
 //  Created by YunhakLee on 1/18/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.

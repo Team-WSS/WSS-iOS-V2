@@ -8,6 +8,8 @@
 
 import Foundation
 
+import BaseDomain
+
 public struct MyLibraryFilter {
     
     public private(set) var readingStatus: [ReadingStatus]
@@ -16,7 +18,7 @@ public struct MyLibraryFilter {
     
     // MARK: - Policy
     
-    // - readStatus
+    // - reading status
     
     public mutating func addReadingStatus(_ newStatus: ReadingStatus) {
         guard !readingStatus.contains(newStatus) else { return }
@@ -32,7 +34,7 @@ public struct MyLibraryFilter {
         readingStatus.removeAll()
     }
     
-    // - attractivePoint
+    // - attractive point
     
     public mutating func addAttractivePoint(_ newAttractivePoint: AttractivePoint) {
         guard !attractivePoint.contains(newAttractivePoint) else { return }
