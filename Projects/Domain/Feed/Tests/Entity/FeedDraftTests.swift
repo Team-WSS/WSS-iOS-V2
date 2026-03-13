@@ -48,7 +48,7 @@ struct FeedDraftTests {
         )
     }
 
-    //MARK: - Content
+    // MARK: - Content
 
     @Test("글을 작성할 수 있다.")
     func writeContent() throws {
@@ -89,7 +89,7 @@ struct FeedDraftTests {
         #expect(mock.remainsContentCount() == 2000 - 5)
     }
 
-    //MARK: - Genre
+    // MARK: - Genre
 
     @Test("장르를 추가할 수 있다.")
     func addGenre() {
@@ -109,7 +109,7 @@ struct FeedDraftTests {
         #expect(mock.genre.isEmpty)
     }
 
-    //MARK: - Private
+    // MARK: - Private
 
     @Test("비공개로 설정할 수 있다.")
     func setPrivate() {
@@ -129,7 +129,7 @@ struct FeedDraftTests {
         #expect(mock.isPrivate == false)
     }
 
-    //MARK: - Spoiler
+    // MARK: - Spoiler
 
     @Test("스포일러성 글로 설정할 수 있다.")
     func setSpoiler() {
@@ -149,7 +149,7 @@ struct FeedDraftTests {
         #expect(mock.isSpoiler == false)
     }
 
-    //MARK: - Connected Novel
+    // MARK: - Connected Novel
 
     @Test("글과 관련된 작품을 연결할 수 있다.")
     func connectNovel() throws {
@@ -178,7 +178,7 @@ struct FeedDraftTests {
         #expect(draft.connectedNovel == nil)
     }
 
-    //MARK: - Image
+    // MARK: - Image
 
     @Test("글에 이미지를 첨부할 수 있다.")
     func attachImage() throws {

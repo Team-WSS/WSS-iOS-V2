@@ -18,7 +18,7 @@ public final class DefaultSearchKeywordUseCase: SearchKeywordsUseCase {
     
     private let keywordRepository: KeywordRepository
     
-    init(keywordRepository: KeywordRepository) {
+    public init(keywordRepository: KeywordRepository) {
         self.keywordRepository = keywordRepository
     }
     

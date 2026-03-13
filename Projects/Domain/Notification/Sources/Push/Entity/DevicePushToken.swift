@@ -6,7 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 public struct DevicePushToken: Equatable {
     public let token: String
     public let deviceID: String

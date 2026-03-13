@@ -18,7 +18,7 @@ public struct FeedDraft {
     public private(set) var connectedNovel: ConnectedNovel?
     public private(set) var attachedImages: [ImageWrapper]
     
-    //MARK: - init
+    // MARK: - init
     
     public init(
         content: String,
@@ -51,7 +51,7 @@ public struct FeedDraft {
         self.attachedImages = limitedImages
     }
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     private static let maxContentCount: Int = 2000
     private static let maxImageCount: Int = 5

@@ -12,7 +12,7 @@ public struct CommentDraft {
     
     public private(set) var content: String
     
-    //MARK: - init
+    // MARK: - init
     
     public init(content: String) {
 #if DEBUG
@@ -24,7 +24,7 @@ public struct CommentDraft {
         self.content = content
     }
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     static let maxContentCount: Int = 500
     

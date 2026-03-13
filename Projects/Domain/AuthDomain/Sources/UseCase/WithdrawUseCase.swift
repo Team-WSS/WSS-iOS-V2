@@ -6,7 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
 
 import BaseDomain
@@ -17,7 +16,7 @@ public protocol WithdrawUseCase {
     ) async throws(RepositoryError)
 }
 
-public struct DefaultWithdrawUseCase: WithdrawUseCase {
+public final class DefaultWithdrawUseCase: WithdrawUseCase {
     private let repository: AuthRepository
 
     public init(repository: AuthRepository) {

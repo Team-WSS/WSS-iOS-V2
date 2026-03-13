@@ -6,14 +6,13 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 public struct AccountInfoDraft: Equatable {
     
     public let email: String?
     public private(set) var gender: Gender
     public private(set) var birth: BirthYear
     
-    // MARK: Init
+    // MARK: - Init
     
     public init(email: String?, gender: Gender, birth: BirthYear) {
         self.email = email
@@ -21,7 +20,7 @@ public struct AccountInfoDraft: Equatable {
         self.birth = birth
     }
     
-    // MARK: Mutating
+    // MARK: - Mutating
     
     mutating func setGender(_ gender: Gender) {
         self.gender = gender

@@ -12,14 +12,14 @@ public struct NicknameDraft {
     
     public private(set) var text: String = ""
     
-    // MARK: INIT
+    // MARK: - Init
     
     public init(_ initialName: String) {
         lastNickname = initialName
         text = initialName
     }
 
-    // MARK: Policy
+    // MARK: - Policy
     
     private let lastNickname: String
     private var duplicationCheckState: DuplicationCheckState = .notYet
@@ -84,7 +84,7 @@ public struct NicknameDraft {
         case notDuplicated
     }
     
-    // MARK: Mutating
+    // MARK: - Mutating
     
     public mutating func setText(
         _ newValue: String

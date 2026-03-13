@@ -26,7 +26,7 @@ public struct FeedDetail {
     public private(set) var isLiked: Bool
     public private(set) var commentCount: Int
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     public enum PolicyError: Error, Equatable {
         case negativeLikeCount

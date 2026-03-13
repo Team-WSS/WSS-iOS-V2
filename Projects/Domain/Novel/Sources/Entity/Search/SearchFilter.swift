@@ -16,7 +16,7 @@ public struct SearchFilter {
     public private(set) var ratingThreshold: NovelRatingThreshold?
     public private(set) var keywords: [Keyword]
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     public enum ValidationError: Error, Equatable {
         case keywordOverLimit(max: Int)
