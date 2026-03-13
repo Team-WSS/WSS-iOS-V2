@@ -111,7 +111,7 @@ struct SearchFilterTests {
     @Test("키워드를 추가할 수 있다")
     func addKeyword() throws {
         var filter = makeFilter()
-        let keyword = Keyword(id: 1, name: "이세계")
+        let keyword = Keyword(id: KeywordID(1), name: "이세계")
 
         try filter.addKeyword(keyword)
 
@@ -124,7 +124,7 @@ struct SearchFilterTests {
         var filter = makeFilter()
 
         for i in 1...20 {
-            try filter.addKeyword(Keyword(id: i, name: "키워드\(i)"))
+            try filter.addKeyword(Keyword(id: KeywordID(i), name: "키워드\(i)"))
         }
 
         #expect(filter.keywords.count == 20)
@@ -135,20 +135,20 @@ struct SearchFilterTests {
         var filter = makeFilter()
 
         for i in 1...20 {
-            try filter.addKeyword(Keyword(id: i, name: "키워드\(i)"))
+            try filter.addKeyword(Keyword(id: KeywordID(i), name: "키워드\(i)"))
         }
 
         #expect(throws: SearchFilter.ValidationError.keywordOverLimit(max: 20)) {
-            try filter.addKeyword(Keyword(id: 21, name: "키워드21"))
+            try filter.addKeyword(Keyword(id: KeywordID(21), name: "키워드21"))
         }
     }
 
     @Test("특정 키워드를 제거할 수 있다")
     func removeKeyword() throws {
         var filter = makeFilter()
-        let keyword = Keyword(id: 1, name: "이세계")
+        let keyword = Keyword(id: KeywordID(1), name: "이세계")
         try filter.addKeyword(keyword)
-        try filter.addKeyword(Keyword(id: 2, name: "현대"))
+        try filter.addKeyword(Keyword(id: KeywordID(2), name: "현대"))
         
         filter.removeKeyword(keyword)
 
@@ -163,7 +163,7 @@ struct SearchFilterTests {
         var filter = makeFilter(genres: [.fantasy, .romance])
         filter.setPublicationStatus(.completed)
         filter.setRatingThreshold(.over4_0)
-        try filter.addKeyword(Keyword(id: 1, name: "이세계"))
+        try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
 
         filter.clearAll()
 

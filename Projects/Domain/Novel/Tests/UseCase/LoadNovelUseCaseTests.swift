@@ -70,7 +70,7 @@ extension LoadNovelUseCaseTests {
             description: "재밌는 소설입니다.",
             platforms: [],
             attractivePoints: [.worldview, .character],
-            keywords: [Keyword(id: 1, name: "이세계")],
+            keywords: [Keyword(id: KeywordID(1), name: "이세계")],
             readingStatusCount: [.watching: 10, .watched: 30]
         )
     }
