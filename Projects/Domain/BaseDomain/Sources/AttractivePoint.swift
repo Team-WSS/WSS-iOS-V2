@@ -14,4 +14,5 @@ public enum AttractivePoint: Equatable, CaseIterable {
     case character
     case relationship
     case vibe
+    case writingSkill
 }
