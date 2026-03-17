@@ -38,29 +38,12 @@ public struct NovelReviewDraft: Equatable {
         attractivePoints: [AttractivePoint],
         keywords: [Keyword]
     ) {
-        let uniqueAttractivePoints = Array(Set(attractivePoints))
-        let uniqueKeywords = Array(Set(keywords))
-#if DEBUG
-        if uniqueAttractivePoints.count != attractivePoints.count {
-            assertionFailure("AttractivePoints contains duplicates")
-        }
-        if uniqueKeywords.count != keywords.count {
-            assertionFailure("Keywords contains duplicates")
-        }
-        if uniqueAttractivePoints.count > Self.maxAttractivePoints {
-            assertionFailure("AttractivePoints overflow: \(uniqueAttractivePoints.count) (max: \(Self.maxAttractivePoints))")
-        }
-        if uniqueKeywords.count > Self.maxKeywords {
-            assertionFailure("Keywords overflow: \(uniqueKeywords.count) (max: \(Self.maxKeywords))")
-        }
-#endif
-        
         self.novelID = novelID
         self.status = status
         self.period = period?.normalized(for: status)
         self.rating = rating
-        self.attractivePoints = Array(uniqueAttractivePoints.prefix(Self.maxAttractivePoints))
-        self.keywords = Array(uniqueKeywords.prefix(Self.maxKeywords))
+        self.attractivePoints = attractivePoints
+        self.keywords = keywords
     }
     
     // MARK: - Draft Editing
