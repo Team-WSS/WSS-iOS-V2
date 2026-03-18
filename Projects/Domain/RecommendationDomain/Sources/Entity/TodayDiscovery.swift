@@ -18,24 +18,37 @@ public struct TodayDiscovery {
     public let novelTitle: String
     public let novelThumbnailImage: URL?
     public let content: Content
+    public let contentDescription: String
     
-    // 타입에 따른 Content 분기 처리
-    // novel: 작품 설명
-    // userComment: 유저의 작품에 대한 한마디
     public enum Content {
-        case novel(description: String)
-        case userComment(user: Author, comment: String)
+        case novel
+        case userComment(user: Author)
+    }
+    
+    public var title: String {
+        switch content {
+        case .novel:
+            return "작품 소개"
+        case .userComment(let user):
+            return "\(user.nickname)의 한마디"
+        }
+    }
+    
+    public var description: String {
+        contentDescription
     }
     
     public init(
         novelID: NovelID,
         novelTitle: String,
         novelThumbnailImage: URL?,
-        content: Content
+        content: Content,
+        contentDescription: String
     ) {
         self.novelID = novelID
         self.novelTitle = novelTitle
         self.novelThumbnailImage = novelThumbnailImage
         self.content = content
+        self.contentDescription = contentDescription
     }
 }
