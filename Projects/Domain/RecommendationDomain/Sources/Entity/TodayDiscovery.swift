@@ -12,7 +12,7 @@ import BaseDomain
 /// 홈 - 오늘의 발견
 
 public struct TodayDiscovery {
-
+    
     public let novelID: NovelID
     
     public let novelTitle: String
@@ -25,5 +25,17 @@ public struct TodayDiscovery {
     public enum Content {
         case novel(description: String)
         case userComment(user: Author, comment: String)
+    }
+    
+    public init(
+        novelID: NovelID,
+        novelTitle: String,
+        novelThumbnailImage: URL?,
+        content: Content
+    ) {
+        self.novelID = novelID
+        self.novelTitle = novelTitle
+        self.novelThumbnailImage = novelThumbnailImage
+        self.content = content
     }
 }
