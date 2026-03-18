@@ -21,4 +21,15 @@ public struct RecommendedNovel {
     
     public let interestCount: Int
     public let ratingCount: Int
+    public let rating: Float
+    
+    public init(novelID: NovelID, novelTitle: String, novelThumbnailImage: URL?, novelAuthors: [String], interestCount: Int, ratingCount: Int, rating: Float) {
+        self.novelID = novelID
+        self.novelTitle = novelTitle
+        self.novelThumbnailImage = novelThumbnailImage
+        self.novelAuthors = novelAuthors
+        self.interestCount = interestCount
+        self.ratingCount = ratingCount
+        self.rating = rating
+    }
 }

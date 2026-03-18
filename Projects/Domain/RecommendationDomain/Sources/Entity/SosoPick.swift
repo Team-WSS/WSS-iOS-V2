@@ -15,4 +15,14 @@ public struct SosoPick {
     
     public let novelTitle: String
     public let novelThumbnailimage: URL?
+    
+    public init(
+        novelID: NovelID,
+        novelTitle: String,
+        novelThumbnailimage: URL?
+    ) {
+        self.novelID = novelID
+        self.novelTitle = novelTitle
+        self.novelThumbnailimage = novelThumbnailimage
+    }
 }
