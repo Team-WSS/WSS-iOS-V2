@@ -12,5 +12,5 @@ public struct HomeData {
     public let todayDiscoveries: [TodayDiscovery]
     public let trendingFeeds: [TrendingFeed]
     public let interestFeedState: InterestFeedState
-    public let recommendedNovelState: RecommendedNovelState
+    public let preferenceGenreNovelState: PreferenceGenreNovelState
 }

@@ -26,13 +26,13 @@ public final class DefaultLoadDataUseCase: LoadHomeDataUseCase {
         let todayDiscoveries = try await recommendationRepository.fetchTodayDiscoveries()
         let trendingFeeds = try await recommendationRepository.fetchTrendingFeeds()
         let interestFeedState = try await recommendationRepository.fetchInterestFeeds()
-        let recommendedNovelState = try await recommendationRepository.fetchRecommendedNovels()
+        let preferenceGenreNovelState = try await recommendationRepository.fetchPreferenceGenreNovels()
         
         return HomeData(
             todayDiscoveries: todayDiscoveries,
             trendingFeeds: trendingFeeds,
             interestFeedState: interestFeedState,
-            recommendedNovelState: recommendedNovelState
+            preferenceGenreNovelState: preferenceGenreNovelState
         )
     }
 }
