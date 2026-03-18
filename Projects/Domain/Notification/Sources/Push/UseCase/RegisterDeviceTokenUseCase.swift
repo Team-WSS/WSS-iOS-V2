@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol RegisterDeviceTokenUseCase: Sendable {
     func execute(devicePushToken: DevicePushToken) async throws(RepositoryError)

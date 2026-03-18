@@ -6,13 +6,9 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-//
-//  DeleteNovelReviewUseCaseTests.swift
-//
-
 import Testing
-import NovelReviewDomain
+
+@testable import NovelReviewDomain
 import NovelReviewDomainTesting
 import BaseDomain
 

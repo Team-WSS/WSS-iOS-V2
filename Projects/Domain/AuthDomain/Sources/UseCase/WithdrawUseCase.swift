@@ -6,23 +6,24 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
+
+import BaseDomain
 
 public protocol WithdrawUseCase {
     func execute(
         draft: WithdrawalReasonDraft
-    ) async throws
+    ) async throws(RepositoryError)
 }
 
-public struct DefaultWithdrawUseCase: WithdrawUseCase {
+public final class DefaultWithdrawUseCase: WithdrawUseCase {
     private let repository: AuthRepository
 
     public init(repository: AuthRepository) {
         self.repository = repository
     }
 
-    public func execute(draft: WithdrawalReasonDraft) async throws {
+    public func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
         try await repository.withdraw(draft: draft)
     }
 }

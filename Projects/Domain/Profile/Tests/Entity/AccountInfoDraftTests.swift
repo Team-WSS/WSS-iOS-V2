@@ -6,13 +6,8 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-//
-//  AccountInfoDraftTests.swift
-//  ProfileDomainTests
-//
-
 import Testing
+
 @testable import ProfileDomain
 
 @Suite("AccountInfoDraft")

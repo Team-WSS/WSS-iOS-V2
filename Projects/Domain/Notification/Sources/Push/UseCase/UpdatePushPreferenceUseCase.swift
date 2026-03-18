@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol UpdatePushPreferenceUseCase: Sendable {
     func execute(pushPreference: PushPreference) async throws(RepositoryError)

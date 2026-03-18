@@ -7,9 +7,10 @@
 //
 
 import Testing
+
 @testable import CommentDomain
 import CommentDomainTesting
-@testable import BaseDomain
+import BaseDomain
 
 @Suite
 struct CommentDraftTests {
@@ -20,7 +21,7 @@ struct CommentDraftTests {
         CommentDraft(content: content)
     }
 
-    //MARK: - Content
+    // MARK: - Content
 
     @Test("댓글을 작성할 수 있다.")
     func writeComment() throws {

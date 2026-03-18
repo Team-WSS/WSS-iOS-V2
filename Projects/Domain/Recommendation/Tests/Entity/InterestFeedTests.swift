@@ -7,8 +7,10 @@
 //
 
 import Testing
+
 @testable import RecommendationDomain
-@testable import BaseDomain
+import RecommendationDomainTesting
+import BaseDomain
 
 @Suite
 struct InterestFeedTests {

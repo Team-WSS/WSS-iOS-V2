@@ -28,7 +28,7 @@ public struct NovelInformation {
     public let keywords: [Keyword]
     public let readingStatusCount: [ReadingStatus : Int]
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     static let dominantReadingStatusOrder: [ReadingStatus] = [
         .watching, .watched, .quit

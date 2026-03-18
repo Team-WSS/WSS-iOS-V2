@@ -6,8 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-
 import Foundation
 
 public protocol SyncAppleCredentialUseCase {
@@ -16,7 +14,7 @@ public protocol SyncAppleCredentialUseCase {
     ) async throws
 }
 
-public struct DefaultSyncAppleCredentialUseCase: SyncAppleCredentialUseCase {
+public final class DefaultSyncAppleCredentialUseCase: SyncAppleCredentialUseCase {
     private let repository: AuthRepository
 
     public init(repository: AuthRepository) {

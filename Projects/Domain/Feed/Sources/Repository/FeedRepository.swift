@@ -7,20 +7,21 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol FeedRepository {
-    func submitFeed(_ draft: FeedDraft) async throws
-    func editFeed(id: FeedID, draft: FeedDraft) async throws
-    func deleteFeed(id: FeedID) async throws
+    func submitFeed(_ draft: FeedDraft) async throws(RepositoryError)
+    func editFeed(id: FeedID, draft: FeedDraft) async throws(RepositoryError)
+    func deleteFeed(id: FeedID) async throws(RepositoryError)
     
-    func fetchFeedDetail(id: FeedID) async throws -> FeedDetail
+    func fetchFeedDetail(id: FeedID) async throws(RepositoryError) -> FeedDetail
     
-    func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
-    func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
-    func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
-    func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID) async throws -> Paginated<TotalFeed>
+    func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
+    func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
+    func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
+    func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
     
-    func addLike(id: FeedID) async throws
-    func deleteLike(id: FeedID) async throws
+    func addLike(id: FeedID) async throws(RepositoryError)
+    func deleteLike(id: FeedID) async throws(RepositoryError)
 }

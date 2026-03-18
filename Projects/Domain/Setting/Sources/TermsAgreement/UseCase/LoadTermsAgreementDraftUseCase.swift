@@ -6,9 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
+import BaseDomain
 
 public protocol LoadTermsAgreementDraftUseCase {
-    func execute() async throws -> TermsAgreementDraft
+    func execute() async throws(RepositoryError) -> TermsAgreementDraft
 }
 
 public final class DefaultLoadTermsAgreementDraftUseCase: LoadTermsAgreementDraftUseCase {
@@ -18,7 +21,7 @@ public final class DefaultLoadTermsAgreementDraftUseCase: LoadTermsAgreementDraf
         self.repository = repository
     }
 
-    public func execute() async throws -> TermsAgreementDraft {
+    public func execute() async throws(RepositoryError) -> TermsAgreementDraft {
         try await repository.loadTermsAgreementDraft()
     }
 }

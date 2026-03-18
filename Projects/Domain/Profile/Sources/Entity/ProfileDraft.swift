@@ -18,7 +18,7 @@ public struct ProfileDraft {
     private let initialIntroduction: String
     private let initialGenrePreferences: [GenrePreference]
     
-    // MARK: Init
+    // MARK: - Init
     
     public init(
         characterID: Int,
@@ -36,14 +36,14 @@ public struct ProfileDraft {
         self.initialGenrePreferences = genrePreferences
     }
     
-    // MARK: Change Detection
+    // MARK: - Change Detection
 
     public var isCharacterChanged: Bool { characterID != initialCharacterID }
     public var isNicknameChanged: Bool { nickname.validationState == .available }
     public var isIntroductionChanged: Bool { introduction != initialIntroduction }
     public var isGenrePreferencesChanged: Bool { genrePreferences != initialGenrePreferences }
 
-    // MARK: Policy
+    // MARK: - Policy
 
     public var isSubmittable: Bool {
         // 닉네임이 변경 중인데 유효하지 않은 경우 제출 불가
@@ -59,7 +59,7 @@ public struct ProfileDraft {
         return isNicknameChanged || isIntroductionChanged || isCharacterChanged || isGenrePreferencesChanged
     }
     
-    // MARK: Mutating
+    // MARK: - Mutating
     
     // - character
     

@@ -8,10 +8,12 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol RecommendationRepository {
-    func fetchTodayDiscoveries() async throws -> [TodayDiscovery]
-    func fetchTrendingFeeds() async throws -> [TrendingFeed]
-    func fetchInterestFeeds() async throws -> InterestFeedState
-    func fetchRecommendedNovels() async throws -> RecommendedNovelState
-    func fetchSosoPick() async throws -> [SosoPick]
+    func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery]
+    func fetchTrendingFeeds() async throws(RepositoryError) -> [TrendingFeed]
+    func fetchInterestFeeds() async throws(RepositoryError) -> InterestFeedState
+    func fetchRecommendedNovels() async throws(RepositoryError) -> RecommendedNovelState
+    func fetchSosoPick() async throws(RepositoryError) -> [SosoPick]
 }

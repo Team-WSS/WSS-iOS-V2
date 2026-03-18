@@ -6,10 +6,11 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Testing
+
 @testable import SettingDomain
 import SettingDomainTesting
+import BaseDomain
 
 @Suite("SaveTermsAgreementDraftUseCase")
 struct SaveTermsAgreementDraftUseCaseTests {

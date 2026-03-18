@@ -6,8 +6,9 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 
-// TermsAgreementRepository.swift
+import BaseDomain
 
 public protocol TermsAgreementRepository {
     func loadTermsAgreementDraft() async throws(RepositoryError) -> TermsAgreementDraft

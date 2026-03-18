@@ -6,8 +6,8 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
+
 import BaseDomain
 
 public protocol NovelReviewRepository {

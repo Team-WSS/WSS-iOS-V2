@@ -6,7 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 public protocol AppVersionProviding {
     var currentVersion: AppVersion { get }
 }

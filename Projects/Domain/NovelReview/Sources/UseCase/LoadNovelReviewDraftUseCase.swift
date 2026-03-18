@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadNovelReviewDraftUseCase {
-    func execute(novelID: NovelID) async throws -> NovelReviewDraft?
+    func execute(novelID: NovelID) async throws(RepositoryError) -> NovelReviewDraft?
 }
 
 public final class DefaultLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
@@ -21,7 +22,7 @@ public final class DefaultLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCa
         self.repository = repository
     }
 
-    public func execute(novelID: NovelID) async throws -> NovelReviewDraft? {
+    public func execute(novelID: NovelID) async throws(RepositoryError) -> NovelReviewDraft? {
         try await repository.loadNovelReviewDraft(novelID: novelID)
     }
 }

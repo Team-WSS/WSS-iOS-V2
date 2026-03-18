@@ -7,7 +7,9 @@
 //
 
 import Foundation
+
 import NotificationDomain
+import BaseDomain
 
 public final class MockPushSettingRepository: PushSettingRepository {
 

@@ -6,10 +6,10 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
 import Testing
-import NovelReviewDomain
+
+@testable import NovelReviewDomain
 import NovelReviewDomainTesting
 import BaseDomain
 

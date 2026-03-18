@@ -6,10 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
 import BaseDomain
 
 public protocol ReportSpoilerFeedUseCase {
-    func execute(id: FeedID) async throws
+    func execute(id: FeedID) async throws(RepositoryError)
 }
 
 public final class DefaultReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
@@ -19,7 +21,7 @@ public final class DefaultReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
         self.repository = repository
     }
 
-    public func execute(id: FeedID) async throws {
+    public func execute(id: FeedID) async throws(RepositoryError) {
         try await repository.reportSpoilerFeed(id: id)
     }
 }

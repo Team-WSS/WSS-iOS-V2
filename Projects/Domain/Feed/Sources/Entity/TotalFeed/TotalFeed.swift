@@ -34,7 +34,7 @@ public struct TotalFeed: Equatable {
     public private(set) var thumbnailImageURL: ImageWrapper?
     public private(set) var imageCount: Int
     
-    //MARK: - Policy
+    // MARK: - Policy
     
     public enum PolicyError: Error, Equatable {
         case negativeLikeCount

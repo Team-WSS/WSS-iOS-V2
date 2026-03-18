@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import BaseDomain
 
 public protocol PushSettingRepository {
     func loadPushPreference() async throws(RepositoryError) -> PushPreference

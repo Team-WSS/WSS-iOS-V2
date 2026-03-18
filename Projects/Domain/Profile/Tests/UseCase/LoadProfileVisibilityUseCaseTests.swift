@@ -6,16 +6,11 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-//
-//  LoadProfileVisibilityUseCaseTests.swift
-//  ProfileDomainTests
-//
-
 import Testing
-import BaseDomain
+
 @testable import ProfileDomain
-@testable import ProfileDomainTesting
+import ProfileDomainTesting
+import BaseDomain
 
 @Suite("LoadProfileVisibilityUseCase")
 struct LoadProfileVisibilityUseCaseTests {

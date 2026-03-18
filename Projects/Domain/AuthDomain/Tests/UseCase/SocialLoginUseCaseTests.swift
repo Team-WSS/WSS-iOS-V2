@@ -6,10 +6,10 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Testing
-import AuthDomainTesting
+
 @testable import AuthDomain
+import AuthDomainTesting
 
 @Suite("SocialLoginUseCase")
 struct SocialLoginUseCaseTests {

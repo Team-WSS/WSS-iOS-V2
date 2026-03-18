@@ -6,14 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
 import Testing
 
-import NotificationDomain
+@testable import NotificationDomain
 import NotificationDomainTesting
 import BaseDomain
-
 
 @Suite("LoadPagedNotificationsUseCase")
 struct LoadPagedNotificationsUseCaseTests {

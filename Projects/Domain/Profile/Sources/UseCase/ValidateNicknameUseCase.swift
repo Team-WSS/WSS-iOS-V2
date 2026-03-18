@@ -8,8 +8,10 @@
 
 import Foundation
 
+import BaseDomain
+
 public protocol ValidateNicknameUseCase {
-    func execute(_ nickname: String) async throws -> Bool
+    func execute(_ nickname: String) async throws(RepositoryError) -> Bool
 }
 
 public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
@@ -19,7 +21,7 @@ public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
         self.repository = repository
     }
     
-    public func execute(_ nickname: String) async throws -> Bool {
+    public func execute(_ nickname: String) async throws(RepositoryError) -> Bool {
         return try await repository.validateNickname(nickname)
     }
 }

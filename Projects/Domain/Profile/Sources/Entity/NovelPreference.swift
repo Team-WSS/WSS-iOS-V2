@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BaseDomain
 
 public struct NovelPreference {
     public let attractivePoints: [AttractivePoint]

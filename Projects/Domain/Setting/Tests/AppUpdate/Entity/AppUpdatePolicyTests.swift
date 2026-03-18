@@ -6,11 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-import Testing
 import Foundation
+import Testing
+
 @testable import SettingDomain
 import SettingDomainTesting
+import BaseDomain
 
 @Suite("AppUpdatePolicy")
 struct AppUpdatePolicyTests {

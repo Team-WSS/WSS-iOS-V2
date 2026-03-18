@@ -7,10 +7,11 @@
 //
 
 import Foundation
+
 import BaseDomain
 
 public protocol LoadBlockedUsersUseCase {
-    func execute() async throws -> [BlockedUser]
+    func execute() async throws(RepositoryError) -> [BlockedUser]
 }
 
 public final class DefaultLoadBlockedUsersUseCase: LoadBlockedUsersUseCase {
@@ -20,7 +21,7 @@ public final class DefaultLoadBlockedUsersUseCase: LoadBlockedUsersUseCase {
         self.repository = repository
     }
     
-    public func execute() async throws -> [BlockedUser] {
+    public func execute() async throws(RepositoryError) -> [BlockedUser] {
         try await repository.loadBlockedUsers()
     }
 }

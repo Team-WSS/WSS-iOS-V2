@@ -6,10 +6,11 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Testing
-import NovelReviewDomain
+
+@testable import NovelReviewDomain
 import NovelReviewDomainTesting
+import BaseDomain
 
 @Suite("Rating")
 struct RatingTests {

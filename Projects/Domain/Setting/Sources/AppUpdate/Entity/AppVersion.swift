@@ -6,7 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
 
 /// Semantic-ish version: "1.2.3" 형태를 비교 가능하게 만드는 VO

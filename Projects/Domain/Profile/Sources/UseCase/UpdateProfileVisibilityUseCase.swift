@@ -6,9 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
+import BaseDomain
 
 public protocol UpdateProfileVisibilityUseCase {
-    func execute(_ visibility: ProfileVisibility) async throws
+    func execute(_ visibility: ProfileVisibility) async throws(RepositoryError)
 }
 
 public final class DefaultUpdateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase {
@@ -18,7 +21,7 @@ public final class DefaultUpdateProfileVisibilityUseCase: UpdateProfileVisibilit
         self.repository = repository
     }
 
-    public func execute(_ visibility: ProfileVisibility) async throws {
+    public func execute(_ visibility: ProfileVisibility) async throws(RepositoryError) {
         try await repository.updateProfileVisibility(visibility)
     }
 }

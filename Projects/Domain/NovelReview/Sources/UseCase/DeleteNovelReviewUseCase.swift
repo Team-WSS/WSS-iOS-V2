@@ -6,12 +6,12 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
 import Foundation
+
 import BaseDomain
 
 public protocol DeleteNovelReviewUseCase {
-    func execute(novelID: NovelID) async throws
+    func execute(novelID: NovelID) async throws(RepositoryError)
 }
 
 public final class DefaultDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
@@ -22,7 +22,7 @@ public final class DefaultDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
         self.repository = repository
     }
 
-    public func execute(novelID: NovelID) async throws {
+    public func execute(novelID: NovelID) async throws(RepositoryError) {
         try await repository.deleteNovelReview(novelID: novelID)
     }
 }

@@ -6,77 +6,74 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-
-//
-//  MockProfileRepository.swift
-//  ProfileDomainTests
-//
-
 import Foundation
-import BaseDomain
-@testable import ProfileDomain
 
-final class MockProfileRepository: ProfileRepository {
+import ProfileDomain
+import BaseDomain
+
+public final class MockProfileRepository: ProfileRepository {
 
     // MARK: - Call tracking
 
-    private(set) var syncUserBasicInfoCallCount = 0
+    public private(set) var syncUserBasicInfoCallCount = 0
 
-    private(set) var validateNicknameCallCount = 0
-    private(set) var validatedNicknames: [String] = []
+    public private(set) var validateNicknameCallCount = 0
+    public private(set) var validatedNicknames: [String] = []
 
-    private(set) var registerProfileCallCount = 0
-    private(set) var registeredProfiles: [ProfileRegistration] = []
+    public private(set) var registerProfileCallCount = 0
+    public private(set) var registeredProfiles: [ProfileRegistration] = []
 
-    private(set) var loadAccountInfoDraftCallCount = 0
+    public private(set) var loadAccountInfoDraftCallCount = 0
 
-    private(set) var saveAccountInfoCallCount = 0
-    private(set) var savedAccountInfos: [AccountInfoDraft] = []
+    public private(set) var saveAccountInfoCallCount = 0
+    public private(set) var savedAccountInfos: [AccountInfoDraft] = []
 
-    private(set) var loadProfileVisibilityCallCount = 0
+    public private(set) var loadProfileVisibilityCallCount = 0
 
-    private(set) var updateProfileVisibilityCallCount = 0
-    private(set) var updatedVisibilities: [ProfileVisibility] = []
+    public private(set) var updateProfileVisibilityCallCount = 0
+    public private(set) var updatedVisibilities: [ProfileVisibility] = []
 
-    private(set) var fetchUserProfileCallCount = 0
-    private(set) var fetchedUserProfileTargets: [ProfileTarget] = []
+    public private(set) var fetchUserProfileCallCount = 0
+    public private(set) var fetchedUserProfileTargets: [ProfileTarget] = []
 
-    private(set) var fetchGenrePreferencesCallCount = 0
-    private(set) var fetchedGenrePreferenceTargets: [ProfileTarget] = []
+    public private(set) var fetchGenrePreferencesCallCount = 0
+    public private(set) var fetchedGenrePreferenceTargets: [ProfileTarget] = []
 
-    private(set) var fetchNovelPreferencesCallCount = 0
-    private(set) var fetchedNovelPreferenceTargets: [ProfileTarget] = []
+    public private(set) var fetchNovelPreferencesCallCount = 0
+    public private(set) var fetchedNovelPreferenceTargets: [ProfileTarget] = []
 
-    private(set) var fetchProfileCharactersCallCount = 0
+    public private(set) var fetchProfileCharactersCallCount = 0
 
-    private(set) var loadInitialProfileCallCount = 0
+    public private(set) var loadInitialProfileCallCount = 0
 
-    private(set) var updateProfileCallCount = 0
-    private(set) var updatedDrafts: [ProfileDraft] = []
+    public private(set) var updateProfileCallCount = 0
+    public private(set) var updatedDrafts: [ProfileDraft] = []
 
     // MARK: - Results (set by tests)
 
-    var syncUserBasicInfoResult: Result<Void, RepositoryError> = .success(())
-    var validateNicknameResult: Result<Bool, RepositoryError> = .success(false)
-    var registerProfileResult: Result<Void, RepositoryError> = .success(())
+    public var syncUserBasicInfoResult: Result<Void, RepositoryError> = .success(())
+    public var validateNicknameResult: Result<Bool, RepositoryError> = .success(false)
+    public var registerProfileResult: Result<Void, RepositoryError> = .success(())
 
-    var loadAccountInfoDraftResult: Result<AccountInfoDraft, RepositoryError>!
-    var saveAccountInfoResult: Result<Void, RepositoryError> = .success(())
+    public var loadAccountInfoDraftResult: Result<AccountInfoDraft, RepositoryError>!
+    public var saveAccountInfoResult: Result<Void, RepositoryError> = .success(())
 
-    var loadProfileVisibilityResult: Result<ProfileVisibility, RepositoryError>!
-    var updateProfileVisibilityResult: Result<Void, RepositoryError> = .success(())
+    public var loadProfileVisibilityResult: Result<ProfileVisibility, RepositoryError>!
+    public var updateProfileVisibilityResult: Result<Void, RepositoryError> = .success(())
 
-    var fetchUserProfileResult: Result<Profile, RepositoryError>!
-    var fetchGenrePreferencesResult: Result<[GenrePreference], RepositoryError>!
-    var fetchNovelPreferencesResult: Result<NovelPreference, RepositoryError>!
-    var fetchProfileCharactersResult: Result<[ProfileCharacter], RepositoryError>!
+    public var fetchUserProfileResult: Result<Profile, RepositoryError>!
+    public var fetchGenrePreferencesResult: Result<[GenrePreference], RepositoryError>!
+    public var fetchNovelPreferencesResult: Result<NovelPreference, RepositoryError>!
+    public var fetchProfileCharactersResult: Result<[ProfileCharacter], RepositoryError>!
 
-    var loadInitialProfileResult: Result<ProfileDraft, RepositoryError>!
-    var updateProfileResult: Result<Void, RepositoryError> = .success(())
+    public var loadInitialProfileResult: Result<ProfileDraft, RepositoryError>!
+    public var updateProfileResult: Result<Void, RepositoryError> = .success(())
+    
+    public init() {}
 
     // MARK: - ProfileRepository
 
-    func syncUserBasicInfo() async throws(RepositoryError) {
+    public func syncUserBasicInfo() async throws(RepositoryError) {
         syncUserBasicInfoCallCount += 1
         switch syncUserBasicInfoResult {
         case .success:
@@ -86,7 +83,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func validateNickname(_ nickname: String) async throws(RepositoryError) -> Bool {
+    public func validateNickname(_ nickname: String) async throws(RepositoryError) -> Bool {
         validateNicknameCallCount += 1
         validatedNicknames.append(nickname)
 
@@ -98,7 +95,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func registerProfile(_ profile: ProfileRegistration) async throws(RepositoryError) {
+    public func registerProfile(_ profile: ProfileRegistration) async throws(RepositoryError) {
         registerProfileCallCount += 1
         registeredProfiles.append(profile)
 
@@ -110,7 +107,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func loadAccountInfoDraft() async throws(RepositoryError) -> AccountInfoDraft {
+    public func loadAccountInfoDraft() async throws(RepositoryError) -> AccountInfoDraft {
         loadAccountInfoDraftCallCount += 1
 
         switch loadAccountInfoDraftResult! {
@@ -121,7 +118,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError) {
+    public func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError) {
         saveAccountInfoCallCount += 1
         savedAccountInfos.append(info)
 
@@ -133,7 +130,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func loadProfileVisibility() async throws(RepositoryError) -> ProfileVisibility {
+    public func loadProfileVisibility() async throws(RepositoryError) -> ProfileVisibility {
         loadProfileVisibilityCallCount += 1
 
         switch loadProfileVisibilityResult! {
@@ -144,7 +141,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func updateProfileVisibility(_ visibility: ProfileVisibility) async throws(RepositoryError) {
+    public func updateProfileVisibility(_ visibility: ProfileVisibility) async throws(RepositoryError) {
         updateProfileVisibilityCallCount += 1
         updatedVisibilities.append(visibility)
 
@@ -156,7 +153,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func fetchUserProfile(target: ProfileTarget) async throws(RepositoryError) -> Profile {
+    public func fetchUserProfile(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         fetchUserProfileCallCount += 1
         fetchedUserProfileTargets.append(target)
         switch fetchUserProfileResult! {
@@ -165,7 +162,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func fetchGenrePreferences(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {
+    public func fetchGenrePreferences(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {
         fetchGenrePreferencesCallCount += 1
         fetchedGenrePreferenceTargets.append(target)
         switch fetchGenrePreferencesResult! {
@@ -174,7 +171,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
+    public func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
         fetchNovelPreferencesCallCount += 1
         fetchedNovelPreferenceTargets.append(target)
         switch fetchNovelPreferencesResult! {
@@ -183,7 +180,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter] {
+    public func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter] {
         fetchProfileCharactersCallCount += 1
         switch fetchProfileCharactersResult! {
         case .success(let value): return value
@@ -191,7 +188,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func loadInitialProfile() async throws(RepositoryError) -> ProfileDraft {
+    public func loadInitialProfile() async throws(RepositoryError) -> ProfileDraft {
         loadInitialProfileCallCount += 1
         switch loadInitialProfileResult! {
         case .success(let value): return value
@@ -199,7 +196,7 @@ final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError) {
+    public func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError) {
         updateProfileCallCount += 1
         updatedDrafts.append(profile)
 

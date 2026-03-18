@@ -7,6 +7,7 @@
 //
 
 import Foundation
+
 import SettingDomain
 
 public struct MockAppVersionProvider: AppVersionProviding {
