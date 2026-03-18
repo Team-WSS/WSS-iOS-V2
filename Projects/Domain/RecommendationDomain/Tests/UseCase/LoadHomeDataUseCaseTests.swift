@@ -88,6 +88,7 @@ extension LoadHomeDataUseCaseTests {
         TrendingFeed(
             feedID: FeedID(1),
             description: "뜨는 글 내용",
+            isSpoiler: false,
             likeCount: 10,
             commentCount: 3
         )
