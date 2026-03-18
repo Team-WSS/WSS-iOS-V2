@@ -22,7 +22,7 @@ struct TodayDiscoveryTests {
         Author(
             userId: UserID(1),
             nickname: "테스트유저",
-            profileImage: ImageWrapper(identifier: "profile")
+            profileImage: URL(string: "")
         )
     }
 

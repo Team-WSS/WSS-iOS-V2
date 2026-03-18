@@ -10,14 +10,14 @@ import Foundation
 
 public struct Author {
     
-    public let userId: UserID
+    public let userId: UserID?
     public let nickname: String
-    public let profileImage: ImageWrapper
+    public let profileImage: URL?
     
     public init(
-        userId: UserID,
+        userId: UserID? = nil,
         nickname: String,
-        profileImage: ImageWrapper
+        profileImage: URL?
     ) {
         self.userId = userId
         self.nickname = nickname

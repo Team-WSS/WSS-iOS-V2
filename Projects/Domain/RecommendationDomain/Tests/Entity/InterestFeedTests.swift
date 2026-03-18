@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import RecommendationDomain
@@ -33,7 +34,7 @@ struct InterestFeedTests {
             user: Author(
                 userId: UserID(1),
                 nickname: "테스트유저",
-                profileImage: ImageWrapper(identifier: "profile")
+                profileImage: URL(string: "")
             ),
             userComment: userComment
         )
