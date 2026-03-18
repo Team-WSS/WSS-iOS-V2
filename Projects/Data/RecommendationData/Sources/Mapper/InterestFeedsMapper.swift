@@ -11,9 +11,21 @@ import Foundation
 import RecommendationDomain
 import BaseDomain
 
+private enum InterestFeedsMessage: String {
+    case noInterestNovels = "NO_INTEREST_NOVELS"
+    case noAssociatedFeeds = "NO_ASSOCIATED_FEEDS"
+}
+
 extension InterestFeedsResponse {
-    public func toEntity() -> [InterestFeed] {
-        return self.recommendFeeds.map { $0.toEntity() }
+    public func toEntity() -> InterestFeedState {
+        switch InterestFeedsMessage(rawValue: self.message) {
+        case .noInterestNovels:
+            return .noInterestSettings
+        case .noAssociatedFeeds:
+            return .noAssociatedFeeds
+        default:
+            return .feeds(self.recommendFeeds.map { $0.toEntity() })
+        }
     }
 }
 

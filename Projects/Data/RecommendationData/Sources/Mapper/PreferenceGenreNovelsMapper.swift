@@ -12,8 +12,11 @@ import RecommendationDomain
 import BaseDomain
 
 extension PreferenceGenreNovelsResponse {
-    public func toEntity() -> [PreferenceGenreNovel] {
-        return self.tasteNovels.map { $0.toEntity() }
+    public func toEntity() -> PreferenceGenreNovelState {
+        if self.tasteNovels.isEmpty {
+            return .noGenreSettings
+        }
+        return .novels(self.tasteNovels.map { $0.toEntity() })
     }
 }
 
