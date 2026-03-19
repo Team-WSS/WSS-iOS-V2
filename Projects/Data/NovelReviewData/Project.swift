@@ -14,6 +14,7 @@ let project = Project.createDataModule(
     targets: [.sources, .demo, .tests],
     internalDependencies: [
         .Core.Networking,
-        .Domain.makeDependency(for: .novelReview, type: .sources)
+        .Domain.makeDependency(for: .novelReview, type: .sources),
+        .Domain.makeDependency(for: .base, type: .sources)
     ]
 )
