@@ -13,13 +13,8 @@ protocol NovelReviewService {
     
     // MARK: - Review
     
-    func postReview(_ request: PostNovelReviewRequest) async throws
     func getReview(novelId: Int) async throws -> NovelReviewResponse
+    func postReview(_ request: PostNovelReviewRequest) async throws
     func putReview(novelId: Int, _ request: PutNovelReviewRequest) async throws
     func deleteReview(novelId: Int) async throws
-
-    // MARK: - Interest
-    
-    func postInterest(novelId: Int) async throws
-    func deleteInterest(novelId: Int) async throws
 }

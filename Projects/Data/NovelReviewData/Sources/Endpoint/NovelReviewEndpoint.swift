@@ -15,8 +15,6 @@ enum NovelReviewEndpoint: Endpoint {
     case getReview(novelId: Int)
     case putReview(novelId: Int, PutNovelReviewRequest)
     case deleteReview(novelId: Int)
-    case postInterest(novelId: Int)
-    case deleteInterest(novelId: Int)
     
     
     var method: HTTPMethod {
@@ -25,8 +23,6 @@ enum NovelReviewEndpoint: Endpoint {
         case .getReview:        return .get
         case .putReview:        return .put
         case .deleteReview:     return .delete
-        case .postInterest:     return .post
-        case .deleteInterest:   return .delete
         }
     }
     
@@ -41,8 +37,6 @@ enum NovelReviewEndpoint: Endpoint {
         case .getReview(let novelId):       return "/user-novels/\(novelId)"
         case .putReview(let novelId, _):    return "/user-novels/\(novelId)"
         case .deleteReview(let novelId):    return "/user-novels/\(novelId)"
-        case .postInterest(let novelId):    return "/novels/\(novelId)/is-interest"
-        case .deleteInterest(let novelId):  return "/novels/\(novelId)/is-interest"
         }
     }
     

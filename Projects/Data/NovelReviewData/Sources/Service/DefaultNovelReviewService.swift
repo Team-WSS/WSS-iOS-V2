@@ -38,16 +38,4 @@ final class DefaultNovelReviewService: NovelReviewService {
         let endpoint = NovelReviewEndpoint.deleteReview(novelId: novelId)
         _ = try await client.request(endpoint)
     }
-
-    // MARK: - Interest
-
-    func postInterest(novelId: Int) async throws {
-        let endpoint = NovelReviewEndpoint.postInterest(novelId: novelId)
-        _ = try await client.request(endpoint)
-    }
-
-    func deleteInterest(novelId: Int) async throws {
-        let endpoint = NovelReviewEndpoint.deleteInterest(novelId: novelId)
-        _ = try await client.request(endpoint)
-    }
 }
