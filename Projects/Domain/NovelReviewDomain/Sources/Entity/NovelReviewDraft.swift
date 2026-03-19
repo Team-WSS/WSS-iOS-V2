@@ -20,8 +20,8 @@ public struct NovelReviewDraft: Equatable {
     
     // MARK: - Policy
     
-    private static let maxAttractivePoints = 3
-    private static let maxKeywords = 20
+    public static let maxAttractivePoints = 3
+    public static let maxKeywords = 20
     
     public enum ValidationError: Error, Equatable {
         case tooManyAttractivePoints(max: Int)
@@ -33,10 +33,10 @@ public struct NovelReviewDraft: Equatable {
     public init(
         novelID: NovelID,
         status: ReadingStatus,
-        period: ReadingPeriod?,
-        rating: Rating?,
-        attractivePoints: [AttractivePoint],
-        keywords: [Keyword]
+        period: ReadingPeriod? = nil,
+        rating: Rating? = nil,
+        attractivePoints: [AttractivePoint] = [],
+        keywords: [Keyword] = []
     ) {
         let uniqueAttractivePoints = Array(Set(attractivePoints))
         let uniqueKeywords = Array(Set(keywords))
