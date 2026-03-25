@@ -44,22 +44,25 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
 
         do {
             try await novelReviewService.postReview(postRequest)
+            return
         } catch let error as NetworkingError {
+            // Put으로 넘겨야 하는 경우에는 throw가 실행되지 않도록
             guard shouldFallbackToPut(from: error) else {
                 throw error.toRepositoryError()
             }
+        } catch {
+            throw .unknown
+        }
 
-            do {
-                let putRequest = NovelReviewMapper.putNovelReviewRequest(from: draft)
-                try await novelReviewService.putReview(
-                    novelId: draft.novelID.value,
-                    putRequest
-                )
-            } catch let putError as NetworkingError {
-                throw putError.toRepositoryError()
-            } catch {
-                throw .unknown
-            }
+        let putRequest = NovelReviewMapper.putNovelReviewRequest(from: draft)
+
+        do {
+            try await novelReviewService.putReview(
+                novelId: draft.novelID.value,
+                putRequest
+            )
+        } catch let error as NetworkingError {
+            throw error.toRepositoryError()
         } catch {
             throw .unknown
         }
