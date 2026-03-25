@@ -20,4 +20,9 @@ enum DateParser {
     static func date(from string: String) -> Date? {
         dateFormatter.date(from: string)
     }
+    
+    static func dateString(from date: Date?) -> String? {
+        guard let date else { return nil }
+        return dateFormatter.string(from: date)
+    }
 }

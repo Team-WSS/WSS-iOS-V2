@@ -10,7 +10,6 @@ import Networking
 import BaseDomain
 
 extension NetworkingError {
-    
     func toRepositoryError() -> RepositoryError {
         switch self {
         
