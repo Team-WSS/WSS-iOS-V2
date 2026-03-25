@@ -15,7 +15,10 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
     private let novelReviewService: NovelReviewService
     private let logger: NovelReviewLogger?
     
-    init(novelReviewService: NovelReviewService, logger: NovelReviewLogger? = nil) {
+    init(
+        novelReviewService: NovelReviewService,
+        logger: NovelReviewLogger?
+    ) {
         self.novelReviewService = novelReviewService
         self.logger = logger
     }

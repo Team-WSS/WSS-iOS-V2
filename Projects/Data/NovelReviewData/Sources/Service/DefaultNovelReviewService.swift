@@ -10,7 +10,7 @@
 import Foundation
 import Networking
 
-final class DefaultNovelReviewService: NovelReviewService {
+struct DefaultNovelReviewService: NovelReviewService {
     private let client: NetworkingRequestable
 
     init(client: NetworkingRequestable) {
