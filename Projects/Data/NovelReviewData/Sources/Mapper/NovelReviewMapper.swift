@@ -24,8 +24,6 @@ enum NovelReviewMapper {
         case tooManyKeywords
     }
     
-    // MARK: - DTO -> Entity
-    
     static func novelReviewDraft(
            from review: NovelReviewResponse,
            novelID: NovelID
@@ -75,6 +73,37 @@ enum NovelReviewMapper {
                keywords: keywords
            )
        }
+    
+    static func postNovelReviewRequest(
+        from draft: NovelReviewDraft
+    ) -> PostNovelReviewRequest {
+        PostNovelReviewRequest(
+            novelId: draft.novelID.value,
+            userNovelRating: Float(draft.rating?.value ?? 0.0),
+            status: readingStatusString(from: draft.status),
+            startDate: DateParser.dateString(from: draft.period?.start),
+            endDate: DateParser.dateString(from: draft.period?.end),
+            attractivePoints: draft.attractivePoints.map{attractivePointString(from: $0)} ,
+            keywordIds: draft.keywords.map{ $0.id.value })
+    }
+    
+    static func putNovelReviewRequest(
+        from draft: NovelReviewDraft
+    ) -> PutNovelReviewRequest {
+        PutNovelReviewRequest(
+            userNovelRating: Float(draft.rating?.value ?? 0.0),
+            status: readingStatusString(from: draft.status),
+            startDate: DateParser.dateString(from: draft.period?.start),
+            endDate: DateParser.dateString(from: draft.period?.end),
+            attractivePoints: draft.attractivePoints.map { attractivePointString(from: $0) },
+            keywordIds: draft.keywords.map { $0.id.value }
+        )
+    }
+}
+
+extension NovelReviewMapper {
+    
+    // MARK: - DTO -> Entity Helper
     
     static private func readingStatus(
         from text: String?
@@ -140,33 +169,7 @@ enum NovelReviewMapper {
         }
     }
     
-    // MARK: - Entity -> DTO
-    
-    static func postNovelReviewRequest(
-        from draft: NovelReviewDraft
-    ) -> PostNovelReviewRequest {
-        PostNovelReviewRequest(
-            novelId: draft.novelID.value,
-            userNovelRating: Float(draft.rating?.value ?? 0.0),
-            status: readingStatusString(from: draft.status),
-            startDate: DateParser.dateString(from: draft.period?.start),
-            endDate: DateParser.dateString(from: draft.period?.end),
-            attractivePoints: draft.attractivePoints.map{attractivePointString(from: $0)} ,
-            keywordIds: draft.keywords.map{ $0.id.value })
-    }
-    
-    static func putNovelReviewRequest(
-        from draft: NovelReviewDraft
-    ) -> PutNovelReviewRequest {
-        PutNovelReviewRequest(
-            userNovelRating: Float(draft.rating?.value ?? 0.0),
-            status: readingStatusString(from: draft.status),
-            startDate: DateParser.dateString(from: draft.period?.start),
-            endDate: DateParser.dateString(from: draft.period?.end),
-            attractivePoints: draft.attractivePoints.map { attractivePointString(from: $0) },
-            keywordIds: draft.keywords.map { $0.id.value }
-        )
-    }
+    // MARK: - Entity -> DTO Helper
     
     static private func readingStatusString(
         from status: ReadingStatus
