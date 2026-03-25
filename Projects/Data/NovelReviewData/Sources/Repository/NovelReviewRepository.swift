@@ -66,6 +66,12 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
     }
     
     public func deleteNovelReview(novelID: NovelID) async throws(RepositoryError) {
-        <#code#>
+        do {
+            try await novelReviewService.deleteReview(novelId: novelID.value)
+        } catch let error as NetworkingError {
+            throw error.toRepositoryError()
+        } catch {
+            throw .unknown
+        }
     }
 }
