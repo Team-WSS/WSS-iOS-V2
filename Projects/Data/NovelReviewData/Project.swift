@@ -11,7 +11,7 @@ import DependencyPlugin
 
 let project = Project.createDataModule(
     name: ModuleType.Data.novelReview.name,
-    targets: [.sources, .demo, .tests],
+    targets: [.sources, .tests, .testing],
     internalDependencies: [
         .Core.Networking,
         .Core.Logger,
