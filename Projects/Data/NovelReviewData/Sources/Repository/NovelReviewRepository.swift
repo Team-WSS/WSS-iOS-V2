@@ -25,7 +25,7 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
             let response = try await novelReviewService.getReview(novelId: novelID.value)
             return try NovelReviewMapper.novelReviewDraft(from: response,
                                                           novelID: novelID)
-        } catch let error as NovelReviewMapper.MappingError {
+        } catch let error as MappingError {
             logger?.logError(type: .mapping, action: .load, error: error)
             throw .invalidData
         } catch let error as NetworkingError {

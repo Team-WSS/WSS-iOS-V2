@@ -11,19 +11,6 @@ import NovelReviewDomain
 import BaseDomain
 
 enum NovelReviewMapper {
-    
-    enum MappingError: Error, Equatable {
-        case invalidConversion(type: String, rawValue: String)
-        case invalidPayload(reason: InvalidPayloadReason)
-    }
-    
-    enum InvalidPayloadReason: Equatable {
-        case duplicatedAttractivePoints
-        case tooManyAttractivePoints
-        case duplicatedKeywords
-        case tooManyKeywords
-    }
-    
     static func novelReviewDraft(
            from review: NovelReviewResponse,
            novelID: NovelID
@@ -118,7 +105,7 @@ extension NovelReviewMapper {
         case "WATCHING": return .watching
         case "WATCHED": return .watched
         case "QUIT": return .quit
-        default: throw MappingError.invalidConversion(type: "ReadingStatus",
+        default: throw MappingError.invalidConversion(type: .readingStatus,
                                                       rawValue: text)
         }
     }
@@ -135,14 +122,14 @@ extension NovelReviewMapper {
         
         if let startDate {
             guard let parsed = DateParser.date(from: startDate) else {
-                throw MappingError.invalidConversion(type: "ReadingPeriod",
+                throw MappingError.invalidConversion(type: .startDate,
                                                      rawValue: startDate)
             }
             start = parsed
         }
         if let endDate {
             guard let parsed = DateParser.date(from: endDate) else {
-                throw MappingError.invalidConversion(type: "ReadingPeriod",
+                throw MappingError.invalidConversion(type: .endDate,
                                                      rawValue: endDate)
             }
             end = parsed
@@ -168,7 +155,7 @@ extension NovelReviewMapper {
         case "relationship": return .relationship
         case "vibe": return .vibe
         case "writingskill": return .writingSkill
-        default: throw MappingError.invalidConversion(type: "AttractivePoint",
+        default: throw MappingError.invalidConversion(type: .attractivePoint,
                                                       rawValue: text)
         }
     }
