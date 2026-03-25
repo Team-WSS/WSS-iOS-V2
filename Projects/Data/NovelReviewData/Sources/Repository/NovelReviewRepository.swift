@@ -36,7 +36,7 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
     
     private func shouldFallbackToPut(from error: NetworkingError) -> Bool {
         guard case let .responseFailure(_, body) = error else { return false }
-        return body?.code == "USER_NOVEL-001"
+        return NovelReviewMapper.isAlreadyReviewed(code: body?.code)
     }
     
     public func save(draft: NovelReviewDraft) async throws(RepositoryError) {

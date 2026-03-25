@@ -99,6 +99,10 @@ enum NovelReviewMapper {
             keywordIds: draft.keywords.map { $0.id.value }
         )
     }
+    
+    static func isAlreadyReviewed(code: String?) -> Bool {
+        return code == "USER_NOVEL-001"
+    }
 }
 
 extension NovelReviewMapper {
