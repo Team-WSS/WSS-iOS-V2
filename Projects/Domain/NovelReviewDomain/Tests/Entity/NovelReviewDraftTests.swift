@@ -207,7 +207,7 @@ struct NovelReviewDraftTests {
     func addAttractivePointThrowsOnOverflow() throws {
         var draft = makeDraft(attractivePoints: [.worldview, .material, .character])
 
-        #expect(throws: NovelReviewDraft.ValidationError.tooManyAttractivePoints(max: 3)) {
+        #expect(throws: NovelReviewDraft.ValidationError.tooManyAttractivePoints(max: NovelReviewDraft.maxAttractivePoints)) {
             try draft.addAttractivePoint(.relationship)
         }
     }
@@ -226,11 +226,29 @@ struct NovelReviewDraftTests {
 
     // MARK: - Keywords editing rules
 
-    @Test("키워드는 받은 입력값을 그대로 설정된다")
-    func setKeywordsAcceptsUnderMax() throws {
+    @Test("키워드 설정은 중복된 키워드가 있는 값으로 설정하려는 경우 예외가 발생한다.")
+    func setKeywordsThrowsOnDuplicates() throws {
+        var draft = makeDraft()
+        var input = (1...19).map(makeKeyword)
+        input.append(makeKeyword(19))
+        #expect(throws: NovelReviewDraft.ValidationError.duplicateKeyword) {
+            try draft.setKeywords(input)
+        }
+    }
+    
+    @Test("키워드 설정은 키워드가 20개를 초과한 값으로 설정하려는 경우 예외가 발생한다.")
+    func setKeywordsThrowsOnOverflow() throws {
+        var draft = makeDraft()
+        let input = (1...21).map(makeKeyword)
+        #expect(throws: NovelReviewDraft.ValidationError.tooManyKeywords(max: NovelReviewDraft.maxKeywords)) {
+            try draft.setKeywords(input)
+        }
+    }
+    
+    @Test("키워드 설정은 중복되지 않고, 20개 이하이면 설정 가능하다.")
+    func setKeywordsUpdates() throws {
         var draft = makeDraft()
         let input = (1...20).map(makeKeyword)
-
         try draft.setKeywords(input)
         #expect(draft.keywords.count == 20)
     }
