@@ -11,7 +11,7 @@ import DependencyPlugin
 
 let project = Project.createDataModule(
     name: ModuleType.Data.notification.name,
-    targets: [.sources, .demo, .tests],
+    targets: [.sources, .testing, .tests],
     internalDependencies: [
         .Core.Networking,
         .Core.Logger,
