@@ -40,14 +40,34 @@ public struct DefaultNotificationRepository: NotificationRepository {
     }
     
     public func loadNotificationDetail(id: NotificationID) async throws(RepositoryError) -> NotificationDetail {
-        <#code#>
+        do {
+            let response = try await notificationService.getNotificationDetail(notificationId: id.value)
+            return NotificationMapper.notificationDetail(from: response)
+        } catch let error as NetworkingError {
+            throw error.toRepositoryError()
+        } catch {
+            throw .unknown
+        }
     }
     
     public func markAsRead(id: NotificationID) async throws(RepositoryError) {
-        <#code#>
+        do {
+            try await notificationService.postNotificationRead(notificationId: id.value)
+        } catch let error as NetworkingError {
+            throw error.toRepositoryError()
+        } catch {
+            throw .unknown
+        }
     }
     
     public func loadUnreadNotificationStatus() async throws(RepositoryError) -> UnreadNotificationStatus {
-        <#code#>
+        do {
+            let response = try await notificationService.getNotificationUnreadStatus()
+            return NotificationMapper.unreadNotificationStatus(from: response)
+        } catch let error as NetworkingError {
+            throw error.toRepositoryError()
+        } catch {
+            throw .unknown
+        }
     }
 }

@@ -44,4 +44,20 @@ enum NotificationMapper {
             deeplink: deepLink
         )
     }
+    
+    static func notificationDetail(
+        from response: NotificationDetailResponse
+    ) -> NotificationDetail {
+        return NotificationDetail(
+            title: response.notificationTitle,
+            createdAtText: response.notificationCreatedDate,
+            body: response.notificationDetail
+        )
+    }
+    
+    static func unreadNotificationStatus(
+        from response: NotificationUnreadStatusResponse
+    ) -> UnreadNotificationStatus {
+        return UnreadNotificationStatus(hasUnreadNotifications: response.hasUnreadNotifications)
+    }
 }
