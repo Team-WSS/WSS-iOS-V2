@@ -13,6 +13,9 @@ let project = Project.createDataModule(
     name: ModuleType.Data.notification.name,
     targets: [.sources, .demo, .tests],
     internalDependencies: [
-        .Core.Networking
+        .Core.Networking,
+        .Core.Logger,
+        .Domain.makeDependency(for: .base, type: .sources),
+        .Domain.makeDependency(for: .notification, type: .sources)
     ]
 )
