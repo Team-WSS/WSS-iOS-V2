@@ -15,9 +15,7 @@ import Networking
 public struct DefaultNotificationRepository: NotificationRepository {
     private let notificationService: NotificationService
     
-    init(
-        notificationService: NotificationService,
-    ) {
+    init(notificationService: NotificationService) {
         self.notificationService = notificationService
     }
     

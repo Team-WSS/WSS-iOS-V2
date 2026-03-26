@@ -10,7 +10,7 @@
 import Foundation
 import Networking
 
-struct DefaultPushService: PushService {
+struct DefaultPushSettingService: PushSettingService {
     private let client: NetworkingRequestable
     
     init(client: NetworkingRequestable) {
@@ -18,17 +18,17 @@ struct DefaultPushService: PushService {
     }
     
     func postFCMToken(_ request: FCMTokenRequest) async throws {
-        let endpoint = NotificationEndpoint.postFCMToken(request)
+        let endpoint = PushEndpoint.postFCMToken(request)
         _ = try await client.request(endpoint)
     }
     
     func postPushNotificationSetting(_ request: PushNotificationSettingRequest) async throws {
-        let endpoint = NotificationEndpoint.postPushNotificationSetting(request)
+        let endpoint = PushEndpoint.postPushNotificationSetting(request)
         _ = try await client.request(endpoint)
     }
     
     func getPushNotificationSetting() async throws -> PushNotificationSettingResponse {
-        let endpoint = NotificationEndpoint.getPushNotificationSetting
+        let endpoint = PushEndpoint.getPushNotificationSetting
         return try await client.request(endpoint, decodeTo: PushNotificationSettingResponse.self)
     }
 }

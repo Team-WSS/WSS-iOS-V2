@@ -9,7 +9,7 @@
 
 import Foundation
 
-protocol PushService {
+protocol PushSettingService {
     
     func postFCMToken(_ request: FCMTokenRequest) async throws
     func postPushNotificationSetting(_ request: PushNotificationSettingRequest) async throws

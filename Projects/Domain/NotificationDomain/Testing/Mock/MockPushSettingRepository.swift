@@ -35,9 +35,9 @@ public final class MockPushSettingRepository: PushSettingRepository {
     public var lastUpdatedPreference: PushPreference?
     public var updateResult: Result<Void, RepositoryError>?
 
-    public func updatePushPreference(_ pref: PushPreference) async throws(RepositoryError) {
+    public func updatePushPreference(_ preference: PushPreference) async throws(RepositoryError) {
         updateCallCount += 1
-        lastUpdatedPreference = pref
+        lastUpdatedPreference = preference
 
         if let updateResult {
             switch updateResult {

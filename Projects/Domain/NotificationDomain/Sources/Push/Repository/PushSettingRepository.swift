@@ -10,6 +10,6 @@ import BaseDomain
 
 public protocol PushSettingRepository {
     func loadPushPreference() async throws(RepositoryError) -> PushPreference
-    func updatePushPreference(_ pref: PushPreference) async throws(RepositoryError)
+    func updatePushPreference(_ preference: PushPreference) async throws(RepositoryError)
     func registerDeviceToken(_ token: DevicePushToken) async throws(RepositoryError)
 }
