@@ -26,6 +26,7 @@ public struct NovelReviewDraft: Equatable {
     public enum ValidationError: Error, Equatable {
         case tooManyAttractivePoints(max: Int)
         case tooManyKeywords(max: Int)
+        case duplicateKeyword
     }
     
     // MARK: - Init
@@ -77,11 +78,9 @@ public struct NovelReviewDraft: Equatable {
     
     public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
         let uniqueKeywords = Array(Set(newKeywords))
-#if DEBUG
-        if uniqueKeywords.count != newKeywords.count {
-            assertionFailure("Keywords contains duplicates")
+        guard uniqueKeywords.count == newKeywords.count else {
+            throw ValidationError.duplicateKeyword
         }
-#endif
         guard uniqueKeywords.count <= Self.maxKeywords else {
             throw ValidationError.tooManyKeywords(max: Self.maxKeywords)
         }
