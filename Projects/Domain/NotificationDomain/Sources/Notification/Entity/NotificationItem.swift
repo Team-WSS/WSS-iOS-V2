@@ -11,7 +11,6 @@ import BaseDomain
 
 public struct NotificationItem: Equatable {
     public let id: NotificationID
-    public let type: NotificationType
     public let iconURL: URL?
     public let title: String
     public let body: String
@@ -21,7 +20,6 @@ public struct NotificationItem: Equatable {
     
     public init(
         id: NotificationID,
-        type: NotificationType,
         iconURL: URL?,
         title: String,
         body: String,
@@ -30,7 +28,6 @@ public struct NotificationItem: Equatable {
         deeplink: NotificationDeeplink?
     ) {
         self.id = id
-        self.type = type
         self.iconURL = iconURL
         self.title = title
         self.body = body

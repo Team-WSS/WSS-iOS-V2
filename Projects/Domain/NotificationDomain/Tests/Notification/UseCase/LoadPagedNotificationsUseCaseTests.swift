@@ -22,7 +22,6 @@ struct LoadPagedNotificationsUseCaseTests {
     ) -> NotificationItem {
         NotificationItem(
             id: NotificationID(id),
-            type: .notice, // 프로젝트 enum에 맞게 수정
             iconURL: URL(string: "https://example.com/icon.png"),
             title: "테스트 알림 제목",
             body: "테스트 알림 내용입니다.",
