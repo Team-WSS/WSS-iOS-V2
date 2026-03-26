@@ -13,20 +13,20 @@ import Logger
 import Networking
 
 public struct DefaultNovelReviewRepository: NovelReviewRepository {
-    private let novelReviewService: NovelReviewService
+    private let service: NovelReviewService
     private let logger: NovelReviewLogger?
     
     init(
         novelReviewService: NovelReviewService,
         logger: NovelReviewLogger?
     ) {
-        self.novelReviewService = novelReviewService
+        self.service = novelReviewService
         self.logger = logger
     }
     
     public func loadNovelReviewDraft(novelID: NovelID) async throws(RepositoryError) -> NovelReviewDraft? {
         do {
-            let response = try await novelReviewService.getReview(novelId: novelID.value)
+            let response = try await service.getReview(novelId: novelID.value)
             return try NovelReviewMapper.novelReviewDraft(from: response,
                                                           novelID: novelID)
         } catch let error as MappingError {
@@ -50,7 +50,7 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
         let postRequest = NovelReviewMapper.postNovelReviewRequest(from: draft)
 
         do {
-            try await novelReviewService.postReview(postRequest)
+            try await service.postReview(postRequest)
             return
         } catch let error as NetworkingError {
             guard shouldFallbackToPut(from: error) else {
@@ -65,7 +65,7 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
         let putRequest = NovelReviewMapper.putNovelReviewRequest(from: draft)
 
         do {
-            try await novelReviewService.putReview(
+            try await service.putReview(
                 novelId: draft.novelID.value,
                 putRequest
             )
@@ -80,7 +80,7 @@ public struct DefaultNovelReviewRepository: NovelReviewRepository {
     
     public func deleteNovelReview(novelID: NovelID) async throws(RepositoryError) {
         do {
-            try await novelReviewService.deleteReview(novelId: novelID.value)
+            try await service.deleteReview(novelId: novelID.value)
         } catch let error as NetworkingError {
             logger?.logError(type: .network, action: .delete, error: error)
             throw error.toRepositoryError()

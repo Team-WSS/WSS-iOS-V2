@@ -10,7 +10,7 @@
 import Networking
 import NovelReviewDomain
 
-public enum NovelReviewFactory {
+public enum NovelReviewDataFactory {
     public static func makeRepository(
         client: NetworkingRequestable,
         logger: NovelReviewLogger? = nil
