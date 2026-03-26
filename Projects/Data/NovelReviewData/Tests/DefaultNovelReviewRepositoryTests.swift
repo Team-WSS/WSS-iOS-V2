@@ -7,11 +7,6 @@
 //
 
 
-//
-//  DefaultNovelReviewRepositoryTests.swift
-//  NovelReviewDataTests
-//
-
 import Foundation
 import Testing
 @testable import NovelReviewData

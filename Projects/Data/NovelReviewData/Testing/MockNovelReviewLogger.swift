@@ -7,11 +7,6 @@
 //
 
 
-//
-//  MockNovelReviewLogger.swift
-//  NovelReviewDataTests
-//
-
 @testable import NovelReviewData
 
 final class MockNovelReviewLogger: NovelReviewLogger {

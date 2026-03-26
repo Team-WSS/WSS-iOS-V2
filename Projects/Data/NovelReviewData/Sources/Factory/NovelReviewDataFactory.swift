@@ -6,9 +6,9 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+
 import Networking
 import NovelReviewDomain
-
 
 public enum NovelReviewFactory {
     public static func makeRepository(
