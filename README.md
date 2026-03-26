@@ -21,28 +21,38 @@
 
 <br/>
 
+## ⚖️ Architecture: As-Is vs To-Be
+
+| 구분 | 🚨 As-Is (V1) | ✨ To-Be (V2) |
+| --- | --- | --- |
+| **의존성 방향** | 양방향 및 복잡한 의존성 존재 | **단방향 (UI -> Domain <- Data)** |
+| **비동기 처리** | RxSwift 중심 | **Swift Concurrency 중심** |
+| **테스트 환경** | UI/비즈니스 로직 경계가 모호함 | **Domain 중심 테스트 가능한 구조** |
+| **빌드/확장성** | 단일 프로젝트 중심 | **Tuist 기반 멀티 모듈 + 모듈 단위 확장** |
+
+<br/>
+
 ## 🚧 현재 상황
 
-- 현재 서비스는 기존 `WSS-iOS`(V1) 클라이언트로 운영되고 있습니다.
-- 이 저장소는 V1을 한 번에 교체하는 완성형 앱이 아니라, 장기 운영에 적합한 구조로 점진적으로 전환하기 위한 V2 코드베이스입니다.
-- 현재는 App 화면 구현보다 **Core / Domain / Data 레이어 정비와 테스트 가능한 기반 구축**을 우선적으로 진행하고 있습니다.
-- 실제 App 타깃은 아직 최소한의 SwiftUI 셸 수준이며, 기능 연결은 이후 단계적으로 확장할 예정입니다.
+- `WSS-iOS`(V1)는 현재 운영 중인 클라이언트입니다.
+- `WSS-iOS-V2`는 구조 개선과 점진적 기능 이전을 위한 차세대 코드베이스입니다.
+- 현재 우선순위는 **Core / Domain / Data 정비와 테스트 가능한 기반 구축**입니다.
 
 ## 🔄 진행 중인 작업
 
-- V1 기능을 도메인 단위로 분리해 V2 구조에 맞게 순차적으로 이전
-- Domain 계층의 비즈니스 로직 정리와 테스트 보강
-- Data 계층의 Repository, Mapper, Service 책임 분리
-- Swift Concurrency 기반 비동기 흐름 정비
-- App 레이어와 실제 화면 기능 연결 준비
+- V1 기능의 도메인 단위 이전
+- Domain 비즈니스 로직 정리와 테스트 보강
+- Data 계층 역할 분리와 의존성 정비
+- Swift Concurrency 기반 비동기 흐름 전환
+- App / Feature 연결 구조 준비
 
 ## ✅ 현재까지의 변화
 
-- Tuist 템플릿을 이용해 `Core 3개`, `Data 3개`, `Domain 12개` 프로젝트가 분리되어 있습니다.
-- 외부 패키지 의존성 없이 Apple 프레임워크 중심으로 동작하도록 구성했습니다.
-- Typed Throws와 Swift Testing을 활용한 테스트 코드가 Domain/Data 모듈에 작성되어 있습니다.
-- GitHub Actions에서 `/domain-test` 트리거로 Domain 스킴을 병렬 테스트하는 워크플로를 운영하고 있습니다.
-- 현재 워크스페이스는 빌드 가능한 상태입니다.
+- `Core 3개`, `Data 3개`, `Domain 12개` 모듈 분리
+- 외부 패키지 의존성 0개
+- Swift Testing 기반 모듈 테스트 작성
+- `/domain-test` 기반 Domain 테스트 워크플로 운영
+- 현재 워크스페이스 빌드 가능
 
 <br/>
 
@@ -114,6 +124,34 @@ tuist generate
 README에서 설명하는 아키텍처는 이미 완성된 화면 레이어까지 모두 구현된 상태가 아니라,
 **비즈니스 로직과 데이터 흐름을 먼저 분리하고 이후 App에 연결해 나가는 구조적 방향**을 의미합니다.
 
+### 최종적으로 지향하는 구조
+
+현재는 `Core / Domain / Data` 레이어를 먼저 정리하고 있으며,
+이후 `Feature`와 `App` 레이어를 연결해 실제 기능과 화면까지 포함하는 앱 구조로 확장해갈 계획입니다.
+
+```text
+App
+└── DI와 전역 흐름 조립
+
+Feature
+└── 실제 기능 구현(UI 포함)
+
+Domain
+└── 비즈니스 로직과 Repository 프로토콜
+
+Data
+└── Repository 구현
+
+Core
+└── 의존성을 최소화한 외부 기술 자체
+```
+
+- `App`: 각 Feature와 Data 구현체를 조립하고, 앱 진입점과 전역 DI를 담당합니다.
+- `Feature`: 화면과 사용자 인터랙션을 포함한 실제 기능 구현 레이어이며, 필요한 Domain 모듈만 import합니다.
+- `Domain`: Entity, UseCase, Repository 프로토콜 등 순수 비즈니스 로직을 담당합니다.
+- `Data`: Domain의 Repository를 구현하고, API/저장소/매핑 책임을 맡습니다.
+- `Core`: Networking, Keychain, Logger처럼 외부 기술을 얇고 재사용 가능한 형태로 제공합니다.
+
 ### 현재 구현된 레이어
 
 ```text
@@ -156,7 +194,8 @@ Data
 
 - 이미 구현된 구조: Core / Domain / Data 중심의 멀티 모듈
 - 진행 중인 구조: V1 기능의 점진적 이전과 App 연결
-- 아직 구현되지 않은 항목: 독립적인 Feature / UI 모듈 분리
+- 다음 단계 목표: Feature 레이어를 도입해 화면 단위 기능 구현과 DI 흐름 정리
+- 아직 구현되지 않은 항목: 독립적인 Feature / UI 모듈 분리의 본격 적용
 
 <br/>
 
