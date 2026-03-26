@@ -7,11 +7,6 @@
 //
 
 
-//
-//  PushSettingLogger.swift
-//  NotificationData
-//
-
 import Logger
 
 public protocol PushSettingLogger {
