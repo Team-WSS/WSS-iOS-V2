@@ -300,7 +300,7 @@ struct NovelReviewMapperTests {
             attractivePoints: ["worldview", "worldview"]
         )
 
-        await #expect(throws: MappingError.invalidPayload(reason: .duplicatedAttractivePoints)) {
+        #expect(throws: MappingError.invalidPayload(reason: .duplicatedAttractivePoints)) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -314,7 +314,7 @@ struct NovelReviewMapperTests {
             attractivePoints: ["worldview", "material", "character", "vibe"]
         )
 
-        await #expect(throws: MappingError.invalidPayload(reason: .tooManyAttractivePoints)) {
+        #expect(throws: MappingError.invalidPayload(reason: .tooManyAttractivePoints)) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
