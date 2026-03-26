@@ -4,11 +4,11 @@
 <img src="https://github.com/user-attachments/assets/6a77d2c5-2f10-4889-a2e8-5a8838c3bf71">
 <br/><br/>
 
-**웹소소** 앱의 차세대 iOS 클라이언트입니다.
+**웹소소** 앱의 차세대 iOS 클라이언트 저장소입니다.
 
-장기 운영으로 누적된 의존성 문제를 정리하고,<br/>
+장기 운영 과정에서 복잡해진 의존성을 정리하고,<br/>
 기능 확장과 테스트가 쉬운 구조를 만들기 위해<br/>
-**Tuist 기반 멀티 모듈 + Clean Architecture**로 재설계를 진행하고 있습니다.
+**Tuist 기반 멀티 모듈 + Clean Architecture** 방향으로 재설계를 진행하고 있습니다.
 
 <a href="https://apps.apple.com/kr/app/%EC%9B%B9%EC%86%8C%EC%86%8C-%EC%9B%B9%EC%86%8C%EC%84%A4%EB%8F%84-%EC%86%8C%EC%84%A4%EC%9D%B4%EB%8B%A4/id6738299124">
     <img src="https://github.com/user-attachments/assets/ff532d33-22b8-40a0-bfa0-76375c0742ca" width="180" alt="App Store">
@@ -24,60 +24,62 @@
 ## 🚧 현재 상황
 
 - 현재 서비스는 기존 `WSS-iOS`(V1) 클라이언트로 운영되고 있습니다.
-- `WSS-iOS-V2`는 기존 앱을 한 번에 교체하는 프로젝트가 아니라, 장기 운영에 적합한 구조로 점진적으로 전환하기 위한 차세대 클라이언트 저장소입니다.
-- 기능 이전과 구조 개선을 병행하며, 아키텍처 안정화와 테스트 가능한 개발 환경 구축을 우선적으로 진행하고 있습니다.
+- 이 저장소는 V1을 한 번에 교체하는 완성형 앱이 아니라, 장기 운영에 적합한 구조로 점진적으로 전환하기 위한 V2 코드베이스입니다.
+- 현재는 App 화면 구현보다 **Core / Domain / Data 레이어 정비와 테스트 가능한 기반 구축**을 우선적으로 진행하고 있습니다.
+- 실제 App 타깃은 아직 최소한의 SwiftUI 셸 수준이며, 기능 연결은 이후 단계적으로 확장할 예정입니다.
 
 ## 🔄 진행 중인 작업
 
 - V1 기능을 도메인 단위로 분리해 V2 구조에 맞게 순차적으로 이전
-- Domain 중심 비즈니스 로직 정리 및 테스트 코드 보강
-- Data 계층의 책임 분리와 모듈 간 의존성 정비
-- Swift Concurrency 기반 비동기 흐름 전환
-- SwiftUI 기반 Feature 모듈과 공통 UI 자산 정리
+- Domain 계층의 비즈니스 로직 정리와 테스트 보강
+- Data 계층의 Repository, Mapper, Service 책임 분리
+- Swift Concurrency 기반 비동기 흐름 정비
+- App 레이어와 실제 화면 기능 연결 준비
 
 ## ✅ 현재까지의 변화
 
-- Tuist 기반 멀티 모듈 구조를 도입해 모듈 생성과 의존성 관리를 표준화했습니다.
-- Domain 계층을 외부 구현으로부터 분리해 테스트 가능한 비즈니스 로직 구조를 만들었습니다.
-- RxSwift 의존성을 제거하고 Swift Concurrency 기반으로 전환했습니다.
-- Swift Testing과 CI 파이프라인을 도입해 모듈 단위 검증 기반을 갖췄습니다.
+- Tuist 템플릿을 이용해 `Core 3개`, `Data 3개`, `Domain 12개` 프로젝트가 분리되어 있습니다.
+- 외부 패키지 의존성 없이 Apple 프레임워크 중심으로 동작하도록 구성했습니다.
+- Typed Throws와 Swift Testing을 활용한 테스트 코드가 Domain/Data 모듈에 작성되어 있습니다.
+- GitHub Actions에서 `/domain-test` 트리거로 Domain 스킴을 병렬 테스트하는 워크플로를 운영하고 있습니다.
+- 현재 워크스페이스는 빌드 가능한 상태입니다.
 
 <br/>
 
 ## 🤔 왜 V2를 만들었는가
 
 기존 `WSS-iOS`는 실제 서비스 운영을 거치며 기능이 확장되었지만, 그 과정에서 프로젝트 내부 의존성도 함께 복잡해졌습니다.
-UI, 비즈니스 로직, 네트워크 구현, 외부 라이브러리 의존성이 여러 계층에 걸쳐 섞이기 시작하면서 특정 기능을 수정할 때 영향 범위를 파악하기 어려웠고,
-새로운 기능을 추가하거나 테스트 환경을 구축하는 데 드는 비용도 계속 커졌습니다.
+UI, 비즈니스 로직, 네트워크 구현, 외부 라이브러리 의존성이 여러 계층에 걸쳐 섞이면서 특정 기능을 수정할 때 영향 범위를 파악하기 어려웠고,
+새로운 기능을 추가하거나 테스트 환경을 구축하는 데 드는 비용도 점점 커졌습니다.
 
-특히 장기적으로 서비스를 운영하려면 다음 문제가 반복되지 않는 구조가 필요했습니다.
+특히 장기적으로 서비스를 운영하려면 다음 조건을 만족하는 구조가 필요했습니다.
 
-- 기능이 늘어나도 모듈 간 의존성이 통제될 것
-- 비즈니스 로직이 UI나 외부 라이브러리 변화에 흔들리지 않을 것
+- 기능이 늘어나도 모듈 간 의존성을 통제할 수 있을 것
+- 비즈니스 로직이 UI나 외부 구현 세부사항에 흔들리지 않을 것
 - 기능 단위로 빠르게 테스트하고 검증할 수 있을 것
-- 신규 기능과 리팩토링을 동시에 진행해도 구조가 유지될 것
+- 신규 기능 개발과 리팩토링을 동시에 진행해도 구조가 무너지지 않을 것
 
 V2는 이러한 문제를 해결하기 위해 시작한 리빌드 프로젝트입니다.
-핵심 목표는 비즈니스 로직을 Domain 계층으로 독립시키고, Tuist 기반 멀티 모듈 구조 안에서 기능을 점진적으로 이전하며,
-장기적으로 유지보수와 확장이 가능한 iOS 코드베이스를 만드는 것입니다.
+핵심 목표는 비즈니스 로직을 Domain 계층으로 분리하고, Core / Domain / Data 레이어를 먼저 안정화한 뒤,
+필요한 기능을 점진적으로 App에 연결해 나가면서 유지보수와 확장이 가능한 iOS 코드베이스를 만드는 것입니다.
 
 <br/>
 
 ## 🛠 어떤 구조로 재설계했는가
 
-V2는 서비스 기능을 계속 확장할 수 있도록 프로젝트 구조 자체를 재정비하는 데 초점을 맞췄습니다.
-기존 구조와 비교하면 다음과 같은 변화가 있습니다.
+현재 V2는 서비스 기능을 한 번에 모두 옮기기보다, 기반 구조를 먼저 분리하고 검증 가능한 단위로 쪼개는 데 초점을 맞추고 있습니다.
+지금까지 정리된 방향은 아래와 같습니다.
 
 | | V1 (WSS-iOS) | V2 (WSS-iOS-V2) |
 |---|---|---|
-| **프로젝트 관리** | 단일 Xcode 프로젝트 | Tuist 기반 멀티 모듈 |
-| **아키텍처** | MVC / MVVM 혼재 | Clean Architecture (Feature → Domain → Data → Core) |
-| **비동기 처리** | RxSwift | Swift Concurrency (async/await) |
-| **에러 처리** | 일반 throws | Typed Throws (`throws(RepositoryError)`) |
-| **UI 프레임워크** | UIKit | SwiftUI |
-| **테스트** | 미비 | Swift Testing + Domain 중심 테스트 |
-| **CI/CD** | - | GitHub Actions (모듈별 테스트 + 커버리지 리포트) |
-| **외부 의존성** | SnapKit, RxSwift, Then 등 | 0개 (Apple 프레임워크만 사용) |
+| **프로젝트 관리** | 단일 Xcode 프로젝트 | Tuist 기반 멀티 프로젝트 |
+| **아키텍처 방향** | MVC / MVVM 혼재 | Core / Domain / Data 분리 중심 |
+| **비동기 처리** | RxSwift | Swift Concurrency 중심 |
+| **에러 처리** | 일반 throws | 일부 Domain / Data 모듈에서 Typed Throws 사용 |
+| **UI 상태** | UIKit 기반 운영 앱 | SwiftUI App 셸 + 단계적 기능 이전 |
+| **테스트** | 제한적 | Swift Testing 기반 모듈 테스트 확장 중 |
+| **CI/CD** | - | Domain 스킴 병렬 테스트 워크플로 운영 |
+| **외부 의존성** | SnapKit, RxSwift, Then 등 | 0개 |
 
 <br/>
 
@@ -85,15 +87,15 @@ V2는 서비스 기능을 계속 확장할 수 있도록 프로젝트 구조 자
 
 | 구분 | 기술 |
 |---|---|
-| **Language** | Swift 6.0 |
+| **Language** | Swift |
 | **UI** | SwiftUI |
 | **Minimum Target** | iOS 17.0 |
-| **비동기 처리** | Swift Concurrency (async/await, Sendable) |
+| **비동기 처리** | Swift Concurrency |
 | **프로젝트 관리** | Tuist |
-| **아키텍처** | Clean Architecture + 멀티 모듈 |
-| **테스트** | Swift Testing (@Suite, @Test, #expect) |
+| **아키텍처 방향** | Clean Architecture 기반 멀티 모듈 |
+| **테스트** | Swift Testing |
 | **CI/CD** | GitHub Actions |
-| **외부 의존성** | 없음 (Apple 프레임워크만 사용) |
+| **외부 의존성** | 없음 |
 
 ```bash
 # Tuist 설치
@@ -108,166 +110,127 @@ tuist generate
 
 ## 🏗 아키텍처
 
-### Clean Architecture + 멀티 모듈
+현재 코드베이스는 `App / Core / Domain / Data` 구조를 중심으로 분리되어 있습니다.
+README에서 설명하는 아키텍처는 이미 완성된 화면 레이어까지 모두 구현된 상태가 아니라,
+**비즈니스 로직과 데이터 흐름을 먼저 분리하고 이후 App에 연결해 나가는 구조적 방향**을 의미합니다.
 
-비즈니스 로직을 **Domain 계층으로 완전히 독립**시켜, UI나 외부 라이브러리 변화에 영향을 받지 않는 안정적인 구조를 설계했습니다.
+### 현재 구현된 레이어
 
+```text
+App
+├── WSS-iOS
+│
+Core
+├── Logger
+├── Networking
+└── Keychain
+│
+Domain
+├── AuthDomain
+├── BaseDomain
+├── Comment
+├── Feed
+├── Keyword
+├── NotificationDomain
+├── Novel
+├── NovelReviewDomain
+├── Profile
+├── Recommendation
+├── Setting
+└── SocialDomain
+│
+Data
+├── NotificationData
+├── NovelReviewData
+└── RecommendationData
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Feature Layer                                               │
-│  SwiftUI 기반 화면 단위 모듈                                    │
-│  HomeFeature · FeedFeature                                   │
-├──────────────────────────────────────────────────────────────┤
-│  Domain Layer                                                │
-│  순수 비즈니스 로직 · 외부 의존성 없음                             │
-│  Entity · UseCase · Repository(Protocol)                     │
-├──────────────────────────────────────────────────────────────┤
-│  Data Layer                                                  │
-│  Repository 구현체 · DTO · Mapper · API Service               │
-├──────────────────────────────────────────────────────────────┤
-│  Core Layer                                                  │
-│  Networking · Keychain · Logger                              │
-└──────────────────────────────────────────────────────────────┘
-```
 
-**의존성 방향은 항상 안쪽(Domain)으로만 향합니다.** Data 계층이 Domain의 Repository 프로토콜을 구현하며, Domain은 외부 구현을 알지 못합니다.
+### 레이어 역할
 
-### 모듈 구성
+- `Core`: 네트워킹, 키체인, 로깅처럼 여러 모듈에서 공통으로 사용하는 기반 기능
+- `Domain`: Entity, Repository 프로토콜, UseCase 등 순수 비즈니스 로직
+- `Data`: API 연동, DTO, Mapper, Repository 구현체
+- `App`: 현재는 최소한의 SwiftUI 진입점이며, 이후 기능 모듈 연결 예정
 
-<table>
-  <tr>
-    <th>Layer</th>
-    <th>Module</th>
-    <th>역할</th>
-  </tr>
-  <tr>
-    <td rowspan="12"><b>Domain</b></td>
-    <td>BaseDomain</td>
-    <td>공통 Entity, RepositoryError, ID Wrapper 등 공유 타입</td>
-  </tr>
-  <tr><td>AuthDomain</td><td>인증 · 회원가입</td></tr>
-  <tr><td>NovelDomain</td><td>웹소설 정보</td></tr>
-  <tr><td>NovelReviewDomain</td><td>웹소설 리뷰</td></tr>
-  <tr><td>FeedDomain</td><td>피드 CRUD</td></tr>
-  <tr><td>CommentDomain</td><td>댓글</td></tr>
-  <tr><td>KeywordDomain</td><td>키워드 · 태그</td></tr>
-  <tr><td>RecommendationDomain</td><td>추천</td></tr>
-  <tr><td>NotificationDomain</td><td>알림 · 푸시 설정</td></tr>
-  <tr><td>ProfileDomain</td><td>프로필</td></tr>
-  <tr><td>SocialDomain</td><td>소셜</td></tr>
-  <tr><td>SettingDomain</td><td>설정</td></tr>
-  <tr>
-    <td rowspan="3"><b>Data</b></td>
-    <td>NotificationData</td><td>알림 API 연동 · Repository 구현</td>
-  </tr>
-  <tr><td>NovelReviewData</td><td>리뷰 API 연동 · Repository 구현</td></tr>
-  <tr><td>RecommendationData</td><td>추천 API 연동 · Repository 구현</td></tr>
-  <tr>
-    <td rowspan="3"><b>Core</b></td>
-    <td>Networking</td><td>URLSession 기반 네트워크 클라이언트</td>
-  </tr>
-  <tr><td>Keychain</td><td>보안 저장소 (토큰 관리)</td></tr>
-  <tr><td>Logger</td><td>로깅 추상화</td></tr>
-  <tr>
-    <td rowspan="2"><b>UI</b></td>
-    <td>DesignSystem</td><td>디자인 토큰 · 공통 스타일</td>
-  </tr>
-  <tr><td>WSSComponent</td><td>재사용 UI 컴포넌트</td></tr>
-</table>
+### 현재 문서화 기준
+
+- 이미 구현된 구조: Core / Domain / Data 중심의 멀티 모듈
+- 진행 중인 구조: V1 기능의 점진적 이전과 App 연결
+- 아직 구현되지 않은 항목: 독립적인 Feature / UI 모듈 분리
 
 <br/>
 
 ## 💡 왜 이런 선택을 했는가
 
-### 1. Swift Concurrency 전면 도입 — RxSwift 의존성 제거
+### 1. Tuist 기반 모듈화
 
-V1에서 전역적으로 사용하던 **RxSwift를 완전히 제거**하고, Swift Concurrency(async/await)로 마이그레이션했습니다.
+Tuist 템플릿을 사용해 Core / Domain / Data 모듈 생성 방식을 통일했습니다.
+현재 `Project+Templates.swift`에 모듈 생성 규칙이 정리되어 있고, 각 모듈은 동일한 패턴으로 확장할 수 있습니다.
 
 ```swift
-// V2: async/await + Typed Throws
+Project.createDomainModule(
+    name: ModuleType.Domain.recommendation.name,
+    targets: [.sources, .tests, .testing],
+    internalDependencies: [.Domain.BaseDomain]
+)
+```
+
+- 모듈별 설정 방식이 일관됩니다.
+- Domain / Data / Core 프로젝트를 같은 규칙으로 확장할 수 있습니다.
+- 의존성 정리를 코드 수준에서 반복 가능한 방식으로 관리할 수 있습니다.
+
+### 2. Domain 계층 분리
+
+비즈니스 로직을 외부 구현으로부터 분리하기 위해 Domain 모듈을 먼저 정리했습니다.
+Repository 프로토콜과 UseCase를 Domain에 두고, Data가 이를 구현하는 방향을 채택했습니다.
+
+- UI 변경과 비즈니스 로직 변경의 영향을 분리할 수 있습니다.
+- 테스트에서 Mock Repository를 주입하기 쉽습니다.
+- 실제 기능 이전 전에 정책과 흐름을 먼저 검증할 수 있습니다.
+
+### 3. Swift Concurrency와 Typed Throws 사용
+
+현재 Domain / Data 모듈 다수는 `async/await` 기반으로 작성되어 있고, 일부 Repository와 UseCase는 Typed Throws를 사용합니다.
+
+```swift
 public protocol NotificationRepository: Sendable {
     func loadNotifications(lastNotificationID: NotificationID?, size: Int)
         async throws(RepositoryError) -> PagedNotifications
 }
 ```
 
-- **Sendable 프로토콜 준수**로 동시성 안전성을 컴파일 타임에 보장
-- **Typed Throws** (`throws(RepositoryError)`)로 에러 타입이 명확해져 호출부에서 에러 처리를 단순화
-- 서드파티 의존성 없이 Apple 프레임워크만으로 동작
+- 비동기 흐름을 언어 차원에서 다룰 수 있습니다.
+- 에러 타입을 명시해 호출부에서 더 분명하게 처리할 수 있습니다.
+- V1의 RxSwift 의존성 없이 새로운 계층을 구성할 수 있습니다.
 
-### 2. Tuist 기반 모듈화 — 복잡한 의존성 해소
+### 4. Data 계층의 역할 분리
 
-Tuist Plugin DSL을 직접 설계해 모듈 생성을 템플릿화했습니다.
-
-```swift
-Project.createDomainModule(
-    name: "NotificationDomain",
-    targets: [.sources, .testing, .tests],
-    internalDependencies: [.Domain.BaseDomain]
-)
-```
-
-- **모듈 간 의존성이 단방향**으로 강제되어 순환 참조를 예방
-- 새로운 도메인 추가 시 같은 규칙으로 모듈을 확장 가능
-- 모듈별 **독립 빌드 · 독립 테스트** 기반 확보
-
-### 3. Domain 계층 독립 — 테스트 가능한 비즈니스 로직
-
-Domain 모듈은 **외부 프레임워크에 대한 의존성이 없는 순수 Swift 계층**으로 구성했습니다.
-
-- UI 프레임워크 변화에 영향받지 않음
-- 네트워크나 저장소 구현 교체에 영향받지 않음
-- Mock 주입만으로 단위 테스트 가능
-
-### 4. Data 계층의 관심사 분리
-
-Data 계층은 `Service → Repository → Mapper` 패턴으로 역할을 분리했습니다.
+현재 Data 모듈은 `Service → Repository → Mapper` 역할을 나누는 방향으로 작성되어 있습니다.
 
 ```text
 Data/NotificationData/
-├── DTO/
-├── Endpoint/
-├── Service/
-├── Repository/
-├── Mapper/
-├── Logger/
-└── Factory/
+├── Sources/Notification
+│   ├── DTO
+│   ├── Endpoint
+│   ├── Logger
+│   ├── Mapper
+│   ├── Repository
+│   └── Service
+└── Sources/Push
 ```
 
-- DTO와 Domain Entity의 경계를 분리해 서버 응답 변경 영향 최소화
-- 객체 생성과 의존성 조립을 한 곳에서 관리
+- DTO와 Domain Entity를 분리해 서버 응답 변화의 영향을 줄입니다.
+- 네트워크 호출, 매핑, 저장 로직의 책임을 분리할 수 있습니다.
+- 도메인별 로깅과 오류 매핑을 구분해 관리할 수 있습니다.
 
-### 5. Testing 인프라
+### 5. Swift Testing과 CI
 
-**Swift Testing** 프레임워크를 채택하고, 테스트 전용 모듈을 분리해 Mock 재사용 구조를 만들었습니다.
+테스트는 Swift Testing 기반으로 작성되어 있으며, Domain/Data 모듈에 테스트와 Testing 타깃이 함께 구성되어 있습니다.
+CI는 모든 앱 기능을 검증하는 형태가 아니라, 현재는 **Domain 스킴 병렬 테스트**에 초점을 맞추고 있습니다.
 
-```swift
-@Suite("LoadPushPreferenceUseCase")
-struct LoadPushPreferenceUseCaseTests {
-    @Test("푸시 알림 수신 여부를 조회할 수 있다")
-    func loadsPushPreferenceSuccessfully() async throws {
-        let repo = MockPushSettingRepository()
-        repo.loadResult = .success(PushPreference(isEnabled: false))
-        let sut = DefaultLoadPushPreferenceUseCase(repository: repo)
-
-        let result = try await sut.execute()
-
-        #expect(repo.loadCallCount == 1)
-        #expect(result == PushPreference(isEnabled: false))
-    }
-}
-```
-
-- Mock 객체를 별도 Testing 모듈로 분리
-- 호출 횟수와 인자 추적이 가능한 패턴 정리
-- 정책 위반, 상태 변화, 경계값 관점의 테스트 확장 가능
-
-### 6. CI/CD 파이프라인
-
-GitHub Actions로 **모듈별 병렬 테스트 + 커버리지 리포트**를 구축했습니다.
-
-- 모듈 추가 시 CI 설정 수정 없이 자동 탐색 가능
-- Tuist와 DerivedData 캐싱으로 빌드 시간 최적화
+- 테스트 더블을 재사용할 수 있는 Testing 타깃이 있습니다.
+- Domain 스킴을 자동 탐색해 `/domain-test` 트리거로 실행합니다.
+- 현재 구조가 유지되는지 지속적으로 검증할 수 있습니다.
 
 <br/>
 
