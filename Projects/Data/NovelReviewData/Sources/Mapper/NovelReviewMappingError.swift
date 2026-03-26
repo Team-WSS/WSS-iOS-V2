@@ -43,7 +43,7 @@ enum InvalidPayloadReason: Equatable, CustomStringConvertible {
 }
 
 enum ConversionType: CustomStringConvertible {
-    case readingStatus, attractivePoint, startDate, endDate
+    case readingStatus, attractivePoint, startDate, endDate, readingPeriod, rating
     
     var description: String {
         switch self {
@@ -51,6 +51,8 @@ enum ConversionType: CustomStringConvertible {
         case .attractivePoint: return "AttractivePoint"
         case .startDate: return "StartDate"
         case .endDate: return "EndDate"
+        case .readingPeriod: return "ReadingPeriod"
+        case .rating: return "Rating"
         }
     }
 }

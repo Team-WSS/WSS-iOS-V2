@@ -12,54 +12,54 @@ import BaseDomain
 
 enum NovelReviewMapper {
     static func novelReviewDraft(
-           from review: NovelReviewResponse,
-           novelID: NovelID
-       ) throws -> NovelReviewDraft? {
-           guard let status = try readingStatus(from: review.status) else {
-               return nil
-           }
-
-           let period = try readingPeriod(
-               startDate: review.startDate,
-               endDate: review.endDate
-           )
-           
-           let ratingSource = review.userNovelRating == 0.0 ? nil: Double(review.userNovelRating)
-           let rating = try rating(from: ratingSource)
-
-           let attractivePoints = try review.attractivePoints.map {
-               try attractivePoint(from: $0)
-           }
-
-           let keywords = review.keywords.map {
-               Keyword(id: KeywordID($0.keywordId), name: $0.keywordName)
-           }
-
-           if Set(attractivePoints).count != attractivePoints.count {
-               throw MappingError.invalidPayload(reason: .duplicatedAttractivePoints)
-           }
-
-           if attractivePoints.count > NovelReviewDraft.maxAttractivePoints {
-               throw MappingError.invalidPayload(reason: .tooManyAttractivePoints)
-           }
-
-           if Set(keywords).count != keywords.count {
-               throw MappingError.invalidPayload(reason: .duplicatedKeywords)
-           }
-
-           if keywords.count > NovelReviewDraft.maxKeywords {
-               throw MappingError.invalidPayload(reason: .tooManyKeywords)
-           }
-
-           return NovelReviewDraft(
-               novelID: novelID,
-               status: status,
-               period: period,
-               rating: rating,
-               attractivePoints: attractivePoints,
-               keywords: keywords
-           )
-       }
+        from review: NovelReviewResponse,
+        novelID: NovelID
+    ) throws -> NovelReviewDraft? {
+        guard let status = try readingStatus(from: review.status) else {
+            return nil
+        }
+        
+        let period = try readingPeriod(
+            startDate: review.startDate,
+            endDate: review.endDate
+        )
+        
+        let ratingSource = review.userNovelRating == 0.0 ? nil: Double(review.userNovelRating)
+        let rating = try rating(from: ratingSource)
+        
+        let attractivePoints = try review.attractivePoints.map {
+            try attractivePoint(from: $0)
+        }
+        
+        let keywords = review.keywords.map {
+            Keyword(id: KeywordID($0.keywordId), name: $0.keywordName)
+        }
+        
+        if Set(attractivePoints).count != attractivePoints.count {
+            throw MappingError.invalidPayload(reason: .duplicatedAttractivePoints)
+        }
+        
+        if attractivePoints.count > NovelReviewDraft.maxAttractivePoints {
+            throw MappingError.invalidPayload(reason: .tooManyAttractivePoints)
+        }
+        
+        if Set(keywords).count != keywords.count {
+            throw MappingError.invalidPayload(reason: .duplicatedKeywords)
+        }
+        
+        if keywords.count > NovelReviewDraft.maxKeywords {
+            throw MappingError.invalidPayload(reason: .tooManyKeywords)
+        }
+        
+        return NovelReviewDraft(
+            novelID: novelID,
+            status: status,
+            period: period,
+            rating: rating,
+            attractivePoints: attractivePoints,
+            keywords: keywords
+        )
+    }
     
     static func postNovelReviewRequest(
         from draft: NovelReviewDraft
@@ -117,6 +117,7 @@ extension NovelReviewMapper {
         if startDate == nil && endDate == nil {
             return nil
         }
+        
         var start: Date? = nil
         var end: Date? = nil
         
@@ -127,6 +128,7 @@ extension NovelReviewMapper {
             }
             start = parsed
         }
+        
         if let endDate {
             guard let parsed = DateParser.date(from: endDate) else {
                 throw MappingError.invalidConversion(type: .endDate,
@@ -135,14 +137,29 @@ extension NovelReviewMapper {
             end = parsed
         }
         
-        return try ReadingPeriod(start: start, end: end)
+        do {
+            return try ReadingPeriod(start: start, end: end)
+        } catch {
+            throw MappingError.invalidConversion(
+                type: .readingPeriod,
+                rawValue: "start: \(startDate ?? "nil"), end: \(endDate ?? "nil")"
+            )
+        }
     }
     
-    static private func rating(
+    private static func rating(
         from rating: Double?
     ) throws -> Rating? {
         guard let rating else { return nil }
-        return try Rating(rating)
+        
+        do {
+            return try Rating(rating)
+        } catch {
+            throw MappingError.invalidConversion(
+                type: .rating,
+                rawValue: String(rating)
+            )
+        }
     }
     
     static private func attractivePoint(
