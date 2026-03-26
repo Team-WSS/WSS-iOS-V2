@@ -13,19 +13,26 @@ import Logger
 import Networking
 
 public struct DefaultPushSettingRepository: PushSettingRepository {
-    private let pushSettingService: PushSettingService
+    private let service: PushSettingService
+    private let logger: PushSettingLogger?
     
-    init(pushSettingService: PushSettingService) {
-        self.pushSettingService = pushSettingService
+    init(
+        pushSettingService: PushSettingService,
+        logger: PushSettingLogger?
+    ) {
+        self.service = pushSettingService
+        self.logger = logger
     }
     
     public func loadPushPreference() async throws(RepositoryError) -> PushPreference {
         do {
-            let response = try await pushSettingService.getPushNotificationSetting()
+            let response = try await service.getPushNotificationSetting()
             return PushSettingMapper.pushPreference(from: response)
         } catch let error as NetworkingError {
+            logger?.logError(type: .network, action: .loadPreference, error: error)
             throw error.toRepositoryError()
         } catch {
+            logger?.logError(type: .unknown, action: .loadPreference, error: error)
             throw .unknown
         }
     }
@@ -33,10 +40,12 @@ public struct DefaultPushSettingRepository: PushSettingRepository {
     public func updatePushPreference(_ preference: PushPreference) async throws(RepositoryError) {
         do {
             let request = PushSettingMapper.pushNotificationSettingRequest(from: preference)
-            try await pushSettingService.postPushNotificationSetting(request)
+            try await service.postPushNotificationSetting(request)
         } catch let error as NetworkingError {
+            logger?.logError(type: .network, action: .updatePreference, error: error)
             throw error.toRepositoryError()
         } catch {
+            logger?.logError(type: .unknown, action: .updatePreference, error: error)
             throw .unknown
         }
     }
@@ -44,10 +53,12 @@ public struct DefaultPushSettingRepository: PushSettingRepository {
     public func registerDeviceToken(_ token: DevicePushToken) async throws(RepositoryError) {
         do {
             let request = PushSettingMapper.fcmTokenRequest(from: token)
-            try await pushSettingService.postFCMToken(request)
+            try await service.postFCMToken(request)
         } catch let error as NetworkingError {
+            logger?.logError(type: .network, action: .registerToken, error: error)
             throw error.toRepositoryError()
         } catch {
+            logger?.logError(type: .unknown, action: .registerToken, error: error)
             throw .unknown
         }
     }
