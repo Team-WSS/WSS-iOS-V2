@@ -1,5 +1,5 @@
 //
-//  NotificationEndpoint.swift
+//  PushEndpoint.swift
 //  NotificationData
 //
 //  Created by YunhakLee on 11/25/25.
@@ -10,16 +10,7 @@
 import Foundation
 import Networking
 
-enum NotificationEndpoint: Endpoint {
-    
-    // MARK: - 앱 내 알림
-    
-    case getNotifications(NotificationQeury)
-    case getNotificationDetail(notificationId: Int)
-    case getNotificationUnreadStatus
-    case postNotificationRead(notificationId: Int)
-    
-    // MARK: - Push 알림
+enum PushEndpoint: Endpoint {
     
     case postFCMToken(FCMTokenRequest)
     case postPushNotificationSetting(PushNotificationSettingRequest)
@@ -27,10 +18,6 @@ enum NotificationEndpoint: Endpoint {
     
     var method: HTTPMethod {
         switch self {
-        case .getNotifications:             return .get
-        case .getNotificationDetail:        return .get
-        case .getNotificationUnreadStatus:  return .get
-        case .postNotificationRead:         return .post
         case .postFCMToken:                 return .post
         case .postPushNotificationSetting:  return .post
         case .getPushNotificationSetting:   return .get
@@ -44,10 +31,6 @@ enum NotificationEndpoint: Endpoint {
     
     var path: String {
         switch self {
-        case .getNotifications:                 return "/notifications"
-        case .getNotificationDetail(let id):    return "/notifications/\(id)"
-        case .getNotificationUnreadStatus:      return "/notifications/unread"
-        case .postNotificationRead(let id):     return "/notifications/\(id)/read"
         case .postFCMToken:                     return "/users/fcm-token"
         case .postPushNotificationSetting:      return "/users/push-settings"
         case .getPushNotificationSetting:       return "/users/push-settings"
@@ -55,12 +38,7 @@ enum NotificationEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? {
-        switch self {
-        case .getNotifications(let query): return query.asQueryItems()
-        default: return nil
-        }
-    }
+    var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
         ["Content-Type": "application/json",
