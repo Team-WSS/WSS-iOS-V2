@@ -10,7 +10,7 @@
 import Foundation
 import Networking
 
-struct FCMTokenRequest: RequestBodyConvertible {
+struct FCMTokenRequest: RequestBodyConvertible, Equatable {
     let fcmToken: String
     let deviceIdentifier: String
 }

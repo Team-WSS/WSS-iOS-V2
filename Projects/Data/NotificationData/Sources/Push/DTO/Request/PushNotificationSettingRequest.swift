@@ -10,6 +10,6 @@
 import Foundation
 import Networking
 
-struct PushNotificationSettingRequest: RequestBodyConvertible {
+struct PushNotificationSettingRequest: RequestBodyConvertible, Equatable {
     let isPushEnabled: Bool
 }

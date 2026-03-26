@@ -12,7 +12,7 @@ import BaseDomain
 
 enum NotificationMapper {
     static func pagedNotifications(
-        from response: NotificationListResponse
+        from response: PagedNotificationsResponse
     ) -> PagedNotifications {
         PagedNotifications(
             items: response.notifications.map { notificationItem(from: $0) },

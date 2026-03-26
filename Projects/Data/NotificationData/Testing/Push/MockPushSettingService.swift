@@ -7,11 +7,6 @@
 //
 
 
-//
-//  MockPushSettingService.swift
-//  NotificationDataTests
-//
-
 @testable import NotificationData
 
 final class MockPushSettingService: PushSettingService {

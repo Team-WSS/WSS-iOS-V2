@@ -1,5 +1,5 @@
 //
-//  NotificationListResponse.swift
+//  PagedNotificationsResponse.swift
 //  NotificationData
 //
 //  Created by YunhakLee on 11/25/25.
@@ -9,7 +9,7 @@
 
 import Foundation
 
-struct NotificationListResponse: Decodable {
+struct PagedNotificationsResponse: Decodable {
     var isLoadable: Bool
     var notifications: [NotificationResponse]
 }

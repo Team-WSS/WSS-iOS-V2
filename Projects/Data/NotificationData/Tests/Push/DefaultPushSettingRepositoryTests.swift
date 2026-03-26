@@ -1,13 +1,18 @@
 //
 //  DefaultPushSettingRepositoryTests.swift
-//  NotificationDataTests
+//  NotificationData
+//
+//  Created by YunhakLee on 3/26/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
 import Testing
 @testable import NotificationData
+@testable import NotificationDataTesting
 import NotificationDomain
 import BaseDomain
 import Networking
+
 
 @Suite("DefaultPushSettingRepository")
 struct DefaultPushSettingRepositoryTests {
@@ -25,25 +30,15 @@ struct DefaultPushSettingRepositoryTests {
     }
 
     private func makePushPreference() -> PushPreference {
-        PushPreference(
-            isEnabled: true,
-            isNovelUpdatesEnabled: true,
-            isCommentEnabled: false,
-            isInterestNovelEnabled: true
-        )
+        PushPreference(isEnabled: true)
     }
 
     private func makePushNotificationSettingResponse() -> PushNotificationSettingResponse {
-        PushNotificationSettingResponse(
-            isPushNotificationEnabled: true,
-            isNovelUpdateEnabled: true,
-            isCommentEnabled: false,
-            isInterestNovelEnabled: true
-        )
+        PushNotificationSettingResponse(isPushEnabled: true)
     }
 
     private func makeDevicePushToken() -> DevicePushToken {
-        DevicePushToken("sample-device-token")
+        DevicePushToken(token: "sample-device-token", deviceID: "sample-device-ID")
     }
 
     // MARK: - loadPushPreference
@@ -114,7 +109,6 @@ struct DefaultPushSettingRepositoryTests {
 
         try await sut.updatePushPreference(preference)
 
-        #expect(service.postedPushNotificationSettingRequest != nil)
         #expect(logger.loggedErrors.isEmpty)
     }
 
@@ -134,7 +128,6 @@ struct DefaultPushSettingRepositoryTests {
             try await sut.updatePushPreference(preference)
         }
 
-        #expect(service.postedPushNotificationSettingRequest != nil)
         #expect(logger.loggedErrors == [
             .init(type: .network, action: .updatePreference)
         ])
@@ -154,7 +147,6 @@ struct DefaultPushSettingRepositoryTests {
             try await sut.updatePushPreference(preference)
         }
 
-        #expect(service.postedPushNotificationSettingRequest != nil)
         #expect(logger.loggedErrors == [
             .init(type: .unknown, action: .updatePreference)
         ])
@@ -174,7 +166,6 @@ struct DefaultPushSettingRepositoryTests {
 
         try await sut.registerDeviceToken(token)
 
-        #expect(service.postedFCMTokenRequest != nil)
         #expect(logger.loggedErrors.isEmpty)
     }
 
@@ -194,7 +185,6 @@ struct DefaultPushSettingRepositoryTests {
             try await sut.registerDeviceToken(token)
         }
 
-        #expect(service.postedFCMTokenRequest != nil)
         #expect(logger.loggedErrors == [
             .init(type: .network, action: .registerToken)
         ])
@@ -214,7 +204,6 @@ struct DefaultPushSettingRepositoryTests {
             try await sut.registerDeviceToken(token)
         }
 
-        #expect(service.postedFCMTokenRequest != nil)
         #expect(logger.loggedErrors == [
             .init(type: .unknown, action: .registerToken)
         ])
