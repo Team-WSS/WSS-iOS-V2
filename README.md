@@ -6,8 +6,9 @@
 
 **웹소소** 앱의 차세대 iOS 클라이언트입니다.
 
-장기 운영으로 쌓인 의존성 문제를 해결하고 확장성을 확보하고자,<br/>
-**Tuist 기반 멀티 모듈 + Clean Architecture**로 전면 재설계했습니다.
+장기 운영으로 누적된 의존성 문제를 정리하고,<br/>
+기능 확장과 테스트가 쉬운 구조를 만들기 위해<br/>
+**Tuist 기반 멀티 모듈 + Clean Architecture**로 재설계를 진행하고 있습니다.
 
 <a href="https://apps.apple.com/kr/app/%EC%9B%B9%EC%86%8C%EC%86%8C-%EC%9B%B9%EC%86%8C%EC%84%A4%EB%8F%84-%EC%86%8C%EC%84%A4%EC%9D%B4%EB%8B%A4/id6738299124">
     <img src="https://github.com/user-attachments/assets/ff532d33-22b8-40a0-bfa0-76375c0742ca" width="180" alt="App Store">
@@ -20,22 +21,92 @@
 
 <br/>
 
-## V1 → V2: 무엇이 달라졌는가
+## 🚧 현재 상황
+
+- 현재 서비스는 기존 `WSS-iOS`(V1) 클라이언트로 운영되고 있습니다.
+- `WSS-iOS-V2`는 기존 앱을 한 번에 교체하는 프로젝트가 아니라, 장기 운영에 적합한 구조로 점진적으로 전환하기 위한 차세대 클라이언트 저장소입니다.
+- 기능 이전과 구조 개선을 병행하며, 아키텍처 안정화와 테스트 가능한 개발 환경 구축을 우선적으로 진행하고 있습니다.
+
+## 🔄 진행 중인 작업
+
+- V1 기능을 도메인 단위로 분리해 V2 구조에 맞게 순차적으로 이전
+- Domain 중심 비즈니스 로직 정리 및 테스트 코드 보강
+- Data 계층의 책임 분리와 모듈 간 의존성 정비
+- Swift Concurrency 기반 비동기 흐름 전환
+- SwiftUI 기반 Feature 모듈과 공통 UI 자산 정리
+
+## ✅ 현재까지의 변화
+
+- Tuist 기반 멀티 모듈 구조를 도입해 모듈 생성과 의존성 관리를 표준화했습니다.
+- Domain 계층을 외부 구현으로부터 분리해 테스트 가능한 비즈니스 로직 구조를 만들었습니다.
+- RxSwift 의존성을 제거하고 Swift Concurrency 기반으로 전환했습니다.
+- Swift Testing과 CI 파이프라인을 도입해 모듈 단위 검증 기반을 갖췄습니다.
+
+<br/>
+
+## 🤔 왜 V2를 만들었는가
+
+기존 `WSS-iOS`는 실제 서비스 운영을 거치며 기능이 확장되었지만, 그 과정에서 프로젝트 내부 의존성도 함께 복잡해졌습니다.
+UI, 비즈니스 로직, 네트워크 구현, 외부 라이브러리 의존성이 여러 계층에 걸쳐 섞이기 시작하면서 특정 기능을 수정할 때 영향 범위를 파악하기 어려웠고,
+새로운 기능을 추가하거나 테스트 환경을 구축하는 데 드는 비용도 계속 커졌습니다.
+
+특히 장기적으로 서비스를 운영하려면 다음 문제가 반복되지 않는 구조가 필요했습니다.
+
+- 기능이 늘어나도 모듈 간 의존성이 통제될 것
+- 비즈니스 로직이 UI나 외부 라이브러리 변화에 흔들리지 않을 것
+- 기능 단위로 빠르게 테스트하고 검증할 수 있을 것
+- 신규 기능과 리팩토링을 동시에 진행해도 구조가 유지될 것
+
+V2는 이러한 문제를 해결하기 위해 시작한 리빌드 프로젝트입니다.
+핵심 목표는 비즈니스 로직을 Domain 계층으로 독립시키고, Tuist 기반 멀티 모듈 구조 안에서 기능을 점진적으로 이전하며,
+장기적으로 유지보수와 확장이 가능한 iOS 코드베이스를 만드는 것입니다.
+
+<br/>
+
+## 🛠 어떤 구조로 재설계했는가
+
+V2는 서비스 기능을 계속 확장할 수 있도록 프로젝트 구조 자체를 재정비하는 데 초점을 맞췄습니다.
+기존 구조와 비교하면 다음과 같은 변화가 있습니다.
 
 | | V1 (WSS-iOS) | V2 (WSS-iOS-V2) |
 |---|---|---|
 | **프로젝트 관리** | 단일 Xcode 프로젝트 | Tuist 기반 멀티 모듈 |
-| **아키텍처** | MVC / MVVM 혼재 | Clean Architecture (Domain → Data → Feature) |
+| **아키텍처** | MVC / MVVM 혼재 | Clean Architecture (Feature → Domain → Data → Core) |
 | **비동기 처리** | RxSwift | Swift Concurrency (async/await) |
 | **에러 처리** | 일반 throws | Typed Throws (`throws(RepositoryError)`) |
 | **UI 프레임워크** | UIKit | SwiftUI |
-| **테스트** | 미비 | Swift Testing + Domain 전 모듈 커버리지 |
-| **CI/CD** | — | GitHub Actions (도메인별 병렬 테스트 + 커버리지 리포트) |
-| **외부 의존성** | SnapKit, RxSwift, Then 등 8개+ | 0개 (Apple 프레임워크만 사용) |
+| **테스트** | 미비 | Swift Testing + Domain 중심 테스트 |
+| **CI/CD** | - | GitHub Actions (모듈별 테스트 + 커버리지 리포트) |
+| **외부 의존성** | SnapKit, RxSwift, Then 등 | 0개 (Apple 프레임워크만 사용) |
 
 <br/>
 
-## 아키텍처
+## ⚖️ 기술 스택
+
+| 구분 | 기술 |
+|---|---|
+| **Language** | Swift 6.0 |
+| **UI** | SwiftUI |
+| **Minimum Target** | iOS 17.0 |
+| **비동기 처리** | Swift Concurrency (async/await, Sendable) |
+| **프로젝트 관리** | Tuist |
+| **아키텍처** | Clean Architecture + 멀티 모듈 |
+| **테스트** | Swift Testing (@Suite, @Test, #expect) |
+| **CI/CD** | GitHub Actions |
+| **외부 의존성** | 없음 (Apple 프레임워크만 사용) |
+
+```bash
+# Tuist 설치
+mise install
+
+# 의존성 설치 + 프로젝트 생성
+tuist install
+tuist generate
+```
+
+<br/>
+
+## 🏗 아키텍처
 
 ### Clean Architecture + 멀티 모듈
 
@@ -106,7 +177,7 @@
 
 <br/>
 
-## 기술적 개선 포인트
+## 💡 왜 이런 선택을 했는가
 
 ### 1. Swift Concurrency 전면 도입 — RxSwift 의존성 제거
 
@@ -121,15 +192,14 @@ public protocol NotificationRepository: Sendable {
 ```
 
 - **Sendable 프로토콜 준수**로 동시성 안전성을 컴파일 타임에 보장
-- **Typed Throws** (`throws(RepositoryError)`)로 에러 타입이 명확해져, 호출부에서 exhaustive한 에러 처리 가능
-- 서드파티 의존성 0개 — Apple 프레임워크만으로 동작
+- **Typed Throws** (`throws(RepositoryError)`)로 에러 타입이 명확해져 호출부에서 에러 처리를 단순화
+- 서드파티 의존성 없이 Apple 프레임워크만으로 동작
 
 ### 2. Tuist 기반 모듈화 — 복잡한 의존성 해소
 
 Tuist Plugin DSL을 직접 설계해 모듈 생성을 템플릿화했습니다.
 
 ```swift
-// 한 줄로 모듈 생성 — 4가지 타겟(Sources, Testing, Tests, Demo) 자동 구성
 Project.createDomainModule(
     name: "NotificationDomain",
     targets: [.sources, .testing, .tests],
@@ -137,132 +207,71 @@ Project.createDomainModule(
 )
 ```
 
-- **모듈 간 의존성이 단방향**으로 강제되어 순환 참조 원천 차단
-- 새로운 도메인 추가 시 `ModuleType` enum에 case 하나 추가 + `Project.swift` 생성으로 완료
-- 모듈별 **독립 빌드 · 독립 테스트** 가능 → 빌드 시간 단축
+- **모듈 간 의존성이 단방향**으로 강제되어 순환 참조를 예방
+- 새로운 도메인 추가 시 같은 규칙으로 모듈을 확장 가능
+- 모듈별 **독립 빌드 · 독립 테스트** 기반 확보
 
 ### 3. Domain 계층 독립 — 테스트 가능한 비즈니스 로직
 
-Domain 모듈은 **외부 프레임워크에 대한 의존성이 전혀 없습니다.** 순수 Swift 코드로만 구성되어 있어:
+Domain 모듈은 **외부 프레임워크에 대한 의존성이 없는 순수 Swift 계층**으로 구성했습니다.
 
-- UI 프레임워크(SwiftUI/UIKit) 변경에 영향받지 않음
-- 네트워크 계층 교체에 영향받지 않음
-- Mock 주입만으로 빠르게 단위 테스트 가능
-
-```
-Domain/NotificationDomain/
-├── Sources/
-│   ├── Notification/
-│   │   ├── Entity/          # 불변 값 객체
-│   │   ├── Repository/      # 프로토콜 (인터페이스)
-│   │   └── UseCase/         # 비즈니스 규칙
-│   └── Push/
-│       ├── Entity/
-│       ├── Repository/
-│       └── UseCase/
-├── Testing/                 # Mock 객체 (테스트 전용 모듈)
-└── Tests/                   # 단위 테스트
-```
+- UI 프레임워크 변화에 영향받지 않음
+- 네트워크나 저장소 구현 교체에 영향받지 않음
+- Mock 주입만으로 단위 테스트 가능
 
 ### 4. Data 계층의 관심사 분리
 
-Data 계층은 `Service → Repository → Mapper` 패턴으로 역할을 명확히 분리했습니다.
+Data 계층은 `Service → Repository → Mapper` 패턴으로 역할을 분리했습니다.
 
-```
+```text
 Data/NotificationData/
-├── DTO/          # 서버 응답/요청 모델 (Codable)
-├── Endpoint/     # API 경로 + HTTP 메서드 정의
-├── Service/      # 네트워크 호출 (저수준)
-├── Repository/   # Domain Repository 구현체
-├── Mapper/       # DTO ↔ Domain Entity 변환
-├── Logger/       # 도메인별 로깅
-└── Factory/      # 의존성 조립
+├── DTO/
+├── Endpoint/
+├── Service/
+├── Repository/
+├── Mapper/
+├── Logger/
+└── Factory/
 ```
 
-- **Mapper**가 DTO와 Entity 사이 변환을 전담 → 서버 응답 구조가 바뀌어도 Domain은 영향 없음
-- **Factory 패턴**으로 객체 생성과 의존성 주입을 한 곳에서 관리
+- DTO와 Domain Entity의 경계를 분리해 서버 응답 변경 영향 최소화
+- 객체 생성과 의존성 조립을 한 곳에서 관리
 
 ### 5. Testing 인프라
 
-**Swift Testing** 프레임워크를 채택하고, 체계적인 Mock 패턴을 도입했습니다.
+**Swift Testing** 프레임워크를 채택하고, 테스트 전용 모듈을 분리해 Mock 재사용 구조를 만들었습니다.
 
 ```swift
 @Suite("LoadPushPreferenceUseCase")
 struct LoadPushPreferenceUseCaseTests {
     @Test("푸시 알림 수신 여부를 조회할 수 있다")
     func loadsPushPreferenceSuccessfully() async throws {
-        // Given
         let repo = MockPushSettingRepository()
         repo.loadResult = .success(PushPreference(isEnabled: false))
         let sut = DefaultLoadPushPreferenceUseCase(repository: repo)
 
-        // When
         let result = try await sut.execute()
 
-        // Then
         #expect(repo.loadCallCount == 1)
         #expect(result == PushPreference(isEnabled: false))
     }
 }
 ```
 
-- **Testing 모듈 분리** — Mock 객체를 별도 프레임워크(`~Testing`)로 빌드해, 테스트 코드 간 재사용
-- **Tracking Array + Result 패턴** — 호출 횟수·인자를 추적하고, 반환값을 자유롭게 제어
-- 정상 / 경계값 / 정책 위반 / 상태 변화 — 4가지 관점의 커버리지 확보
+- Mock 객체를 별도 Testing 모듈로 분리
+- 호출 횟수와 인자 추적이 가능한 패턴 정리
+- 정책 위반, 상태 변화, 경계값 관점의 테스트 확장 가능
 
 ### 6. CI/CD 파이프라인
 
-GitHub Actions로 **도메인별 병렬 테스트 + 자동 커버리지 리포트**를 구축했습니다.
+GitHub Actions로 **모듈별 병렬 테스트 + 커버리지 리포트**를 구축했습니다.
 
-```
-PR 코멘트 "/domain-test" 트리거
-    │
-    ├─ Discover ──→ Domain 모듈 자동 탐색
-    │
-    ├─ Test (병렬) ──→ 모듈별 독립 테스트 + 커버리지 수집
-    │   ├─ BaseDomain
-    │   ├─ FeedDomain
-    │   ├─ NotificationDomain
-    │   └─ ...
-    │
-    └─ Report ──→ PR에 커버리지 테이블 자동 코멘트
-```
-
-- 모듈 추가 시 CI 설정 수정 불필요 — `Projects/Domain/` 하위를 자동 탐색
-- Tuist + DerivedData **캐싱**으로 CI 빌드 시간 최적화
+- 모듈 추가 시 CI 설정 수정 없이 자동 탐색 가능
+- Tuist와 DerivedData 캐싱으로 빌드 시간 최적화
 
 <br/>
 
-## 기술 스택
-
-| 구분 | 기술 |
-|---|---|
-| **Language** | Swift 6.0 |
-| **UI** | SwiftUI |
-| **Minimum Target** | iOS 17.0 |
-| **비동기 처리** | Swift Concurrency (async/await, Sendable) |
-| **프로젝트 관리** | Tuist |
-| **아키텍처** | Clean Architecture + 멀티 모듈 |
-| **테스트** | Swift Testing (@Suite, @Test, #expect) |
-| **CI/CD** | GitHub Actions |
-| **외부 의존성** | 없음 (Apple 프레임워크만 사용) |
-
-<br/>
-
-## 개발 환경 설정
-
-```bash
-# 1. Tuist 설치 (mise 사용)
-mise install
-
-# 2. 의존성 설치 + 프로젝트 생성
-tuist install
-tuist generate
-```
-
-<br/>
-
-## Contributors
+## 🧑‍💻 Contributors
 
 <table>
   <tr>
@@ -280,7 +289,7 @@ tuist generate
 
 <br/>
 
-## 관련 링크
+## 🔗 관련 링크
 
 - [WSS-iOS (V1)](https://github.com/Team-WSS/WSS-iOS) — 기존 프로젝트
 - [웹소소 공식 사이트](https://www.websoso.kr)
