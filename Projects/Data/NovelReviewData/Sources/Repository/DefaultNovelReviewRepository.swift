@@ -1,5 +1,5 @@
 //
-//  NovelReviewRepository.swift
+//  DefaultNovelReviewRepository.swift
 //  NovelReviewData
 //
 //  Created by YunhakLee on 3/19/26.
