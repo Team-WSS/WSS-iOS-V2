@@ -23,11 +23,11 @@ enum RecommendationEndpoint: Endpoint {
     
     var path: String {
         switch self {
-        case .getTodayDiscovery: return "/novels/popular"
-        case .getTrendingFeeds: return "/feeds/popular"
-        case .getInterestFeeds: return "/feeds/interest"
-        case .getPreferenceGenreNovels: return "/novels/taste"
-        case .sosopickNovels: return "/soso-picks"
+        case .getTodayDiscovery:            return "/novels/popular"
+        case .getTrendingFeeds:             return "/feeds/popular"
+        case .getInterestFeeds:             return "/feeds/interest"
+        case .getPreferenceGenreNovels:     return "/novels/taste"
+        case .sosopickNovels:               return "/soso-picks"
         }
     }
     

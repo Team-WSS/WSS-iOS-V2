@@ -8,6 +8,8 @@
 
 import Foundation
 
+// TODO: - 공통 Data 모듈에 뺴놓기
+
 enum Config {
     enum Keys {
         enum Plist {
