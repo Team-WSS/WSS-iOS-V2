@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-enum NovelReviewEndpoint: Endpoint {
+enum NovelEndpoint: Endpoint {
     case getUserLibraryNovels(userID: Int, UserLibraryQuery)
     
     case getNovelBasicInfo(novelID: Int)
