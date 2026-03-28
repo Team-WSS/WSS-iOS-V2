@@ -157,6 +157,13 @@ public extension TargetDependency.Domain {
         target: ModuleType.Domain.setting.targetName(type: .testing),
         path: .relativeToDomain(.setting)
     )
+    
+    static func makeDependency(for domain: ModuleType.Domain, type: TargetType) -> TargetDependency {
+        return .project(
+            target: domain.targetName(type: type),
+            path: .relativeToDomain(domain)
+        )
+    }
 }
 
 public extension TargetDependency.Data {

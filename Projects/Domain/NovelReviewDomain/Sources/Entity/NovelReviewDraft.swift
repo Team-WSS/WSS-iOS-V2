@@ -20,12 +20,13 @@ public struct NovelReviewDraft: Equatable {
     
     // MARK: - Policy
     
-    private static let maxAttractivePoints = 3
-    private static let maxKeywords = 20
+    public static let maxAttractivePoints = 3
+    public static let maxKeywords = 20
     
     public enum ValidationError: Error, Equatable {
         case tooManyAttractivePoints(max: Int)
         case tooManyKeywords(max: Int)
+        case duplicateKeyword
     }
     
     // MARK: - Init
@@ -33,34 +34,17 @@ public struct NovelReviewDraft: Equatable {
     public init(
         novelID: NovelID,
         status: ReadingStatus,
-        period: ReadingPeriod?,
-        rating: Rating?,
-        attractivePoints: [AttractivePoint],
-        keywords: [Keyword]
+        period: ReadingPeriod? = nil,
+        rating: Rating? = nil,
+        attractivePoints: [AttractivePoint] = [],
+        keywords: [Keyword] = []
     ) {
-        let uniqueAttractivePoints = Array(Set(attractivePoints))
-        let uniqueKeywords = Array(Set(keywords))
-#if DEBUG
-        if uniqueAttractivePoints.count != attractivePoints.count {
-            assertionFailure("AttractivePoints contains duplicates")
-        }
-        if uniqueKeywords.count != keywords.count {
-            assertionFailure("Keywords contains duplicates")
-        }
-        if uniqueAttractivePoints.count > Self.maxAttractivePoints {
-            assertionFailure("AttractivePoints overflow: \(uniqueAttractivePoints.count) (max: \(Self.maxAttractivePoints))")
-        }
-        if uniqueKeywords.count > Self.maxKeywords {
-            assertionFailure("Keywords overflow: \(uniqueKeywords.count) (max: \(Self.maxKeywords))")
-        }
-#endif
-        
         self.novelID = novelID
         self.status = status
         self.period = period?.normalized(for: status)
         self.rating = rating
-        self.attractivePoints = Array(uniqueAttractivePoints.prefix(Self.maxAttractivePoints))
-        self.keywords = Array(uniqueKeywords.prefix(Self.maxKeywords))
+        self.attractivePoints = attractivePoints
+        self.keywords = keywords
     }
     
     // MARK: - Draft Editing
@@ -94,11 +78,9 @@ public struct NovelReviewDraft: Equatable {
     
     public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
         let uniqueKeywords = Array(Set(newKeywords))
-#if DEBUG
-        if uniqueKeywords.count != newKeywords.count {
-            assertionFailure("Keywords contains duplicates")
+        guard uniqueKeywords.count == newKeywords.count else {
+            throw ValidationError.duplicateKeyword
         }
-#endif
         guard uniqueKeywords.count <= Self.maxKeywords else {
             throw ValidationError.tooManyKeywords(max: Self.maxKeywords)
         }
