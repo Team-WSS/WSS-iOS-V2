@@ -14,6 +14,5 @@ public enum RepositoryError: Error, Equatable {
     case serverUnavailable
     case invalidData
     case notFound
-    case invalidData
     case unknown
 }

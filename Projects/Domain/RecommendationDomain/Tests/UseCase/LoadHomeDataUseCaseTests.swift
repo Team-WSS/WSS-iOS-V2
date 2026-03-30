@@ -80,7 +80,8 @@ extension LoadHomeDataUseCaseTests {
             novelID: NovelID(1),
             novelTitle: "오늘의 발견",
             novelThumbnailImage: nil,
-            content: .novel(description: "소설 설명")
+            content: .novel,
+            contentDescription: "소설 설명"
         )
     }
     

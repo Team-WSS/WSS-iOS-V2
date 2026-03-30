@@ -10,7 +10,7 @@ import Foundation
 
 //MARK: - 홈 - 관심글
 
-private enum InterestFeedsMessage: String {
+public enum InterestFeedsMessage: String {
     case noInterestNovels = "NO_INTEREST_NOVELS"
     case noAssociatedFeeds = "NO_ASSOCIATED_FEEDS"
 }
