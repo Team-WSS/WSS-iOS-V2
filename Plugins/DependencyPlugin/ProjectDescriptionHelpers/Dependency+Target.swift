@@ -166,23 +166,6 @@ public extension TargetDependency.Domain {
     }
 }
 
-public extension TargetDependency.Data {
-    static let RecommendationData = TargetDependency.project(
-        target: ModuleType.Data.recommendation.targetName(type: .sources),
-        path: .relativeToDomain(.recommendation)
-    )
-    
-    static let RecommendationDataDemo = TargetDependency.project(
-        target: ModuleType.Data.recommendation.targetName(type: .demo),
-        path: .relativeToDomain(.recommendation)
-    )
-    
-    static let RecommendationDataTests = TargetDependency.project(
-        target: ModuleType.Data.recommendation.targetName(type: .tests),
-        path: .relativeToDomain(.recommendation)
-    )
-}
-
 public extension TargetDependency.Core {
     static let Keychain = TargetDependency.project(
         target: ModuleType.Core.keychain.targetName(type: .sources),
