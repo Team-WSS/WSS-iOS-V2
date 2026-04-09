@@ -75,8 +75,21 @@ public final class KeychainClient: KeychainStore {
         ]
 
         let status = SecItemUpdate(query as CFDictionary, updateAttributes as CFDictionary)
-        guard status == errSecSuccess else {
+        switch status {
+        case errSecSuccess:
+            return
+        case errSecItemNotFound:
+            throw KeychainError.itemNotFound
+        default:
             throw KeychainError.unhandledError(status: status)
+        }
+    }
+
+    public func save(data: Data?, forKey key: String) throws {
+        do {
+            try create(data: data, forKey: key)
+        } catch KeychainError.duplicateItem {
+            try update(data: data, forKey: key)
         }
     }
 

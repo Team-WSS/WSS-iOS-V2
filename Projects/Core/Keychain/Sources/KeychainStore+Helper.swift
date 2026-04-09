@@ -27,6 +27,13 @@ public extension KeychainStore {
         }
         try update(data: data, forKey: key)
     }
+
+    func save(value: String, forKey key: String) throws {
+        guard let data = value.data(using: .utf8) else {
+            throw KeychainError.dataEncodingFailed
+        }
+        try save(data: data, forKey: key)
+    }
 }
 
 // MARK: - Codable Helpers
@@ -44,5 +51,10 @@ public extension KeychainStore {
     func update<T: Codable>(_ value: T, forKey key: String) throws {
         let data = try JSONEncoder().encode(value)
         try update(data: data, forKey: key)
+    }
+
+    func save<T: Codable>(_ value: T, forKey key: String) throws {
+        let data = try JSONEncoder().encode(value)
+        try save(data: data, forKey: key)
     }
 }
