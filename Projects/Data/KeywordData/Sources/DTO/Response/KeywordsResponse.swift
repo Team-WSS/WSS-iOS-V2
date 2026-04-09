@@ -8,10 +8,14 @@
 
 import Foundation
 
-public struct KeywordsResponse: Decodable {
+public struct KeywordGroupsResponse: Decodable {
+    let categories: [KeywordGroupResponse]
+}
+
+public struct KeywordGroupResponse: Decodable {
     let categoryName: String
     let categoryImage: String
-    let categories: [KeywordResponse]
+    let keywords: [KeywordResponse]
 }
 
 public struct KeywordResponse: Decodable {

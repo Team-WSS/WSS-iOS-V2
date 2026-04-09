@@ -14,7 +14,6 @@ import Networking
 enum KeywordEndpoint: Endpoint {
     case searchKeywords(SearchKeywordRequest)
     
-    
     var method: HTTPMethod {
         switch self {
         case .searchKeywords: return .get

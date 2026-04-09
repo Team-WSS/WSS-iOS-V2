@@ -11,13 +11,17 @@ import KeywordDomain
 import BaseDomain
 
 enum KeywordMapper {
-    static func keywordGroup(from dto: KeywordsResponse) -> KeywordGroup {
+    static func keywordGroups(from dto: KeywordGroupsResponse) -> [KeywordGroup] {
+        return dto.categories.map { keywordGroup(from: $0) }
+    }
+    
+    static func keywordGroup(from dto: KeywordGroupResponse) -> KeywordGroup {
         let groupImageURL = URL(string: dto.categoryImage)
         
         return KeywordGroup(
             name: dto.categoryName,
             image: groupImageURL,
-            keywords: dto.categories.map { keyword(from: $0) })
+            keywords: dto.keywords.map { keyword(from: $0) })
     }
     
     static func keyword(from dto: KeywordResponse) -> Keyword {
