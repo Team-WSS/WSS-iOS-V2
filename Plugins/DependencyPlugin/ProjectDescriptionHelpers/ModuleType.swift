@@ -63,7 +63,7 @@ public enum UIModule: String, ModuleSpec {
     case designSystem
     case wssComponent
     
-    var name: String {
+    public var name: String {
         switch self {
         case .wssComponent: return "WSSComponent"
         default: return rawValue.pascalCased + moduleSuffix
