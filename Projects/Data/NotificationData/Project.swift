@@ -10,12 +10,12 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.notification.name,
+    name: ModuleType.data(.notification).name,
     targets: [.sources, .testing, .tests],
     internalDependencies: [
-        .Core.Networking,
-        .Core.Logger,
-        .Domain.makeDependency(for: .base, type: .sources),
-        .Domain.makeDependency(for: .notification, type: .sources)
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.domain(.base)),
+        .module(.domain(.notification))
     ]
 )

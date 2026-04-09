@@ -10,7 +10,7 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDomainModule(
-    name: ModuleType.Domain.notification.name,
+    name: ModuleType.domain(.notification).name,
     targets: [.sources, .testing, .tests],
-    internalDependencies: [.Domain.BaseDomain]
+    internalDependencies: [.module(.domain(.base))]
 )

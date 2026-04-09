@@ -10,7 +10,7 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDomainModule(
-    name: ModuleType.Domain.recommendation.name,
-    targets: [.sources, .tests, .testing],
-    internalDependencies: [.Domain.BaseDomain]
+    name: ModuleType.domain(.recommendation).name,
+    targets: [.sources, .testing, .tests],
+    internalDependencies: [.module(.domain(.base))]
 )

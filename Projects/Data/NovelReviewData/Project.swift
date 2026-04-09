@@ -10,12 +10,12 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.novelReview.name,
-    targets: [.sources, .tests, .testing],
+    name: ModuleType.data(.novelReview).name,
+    targets: [.sources, .testing, .tests],
     internalDependencies: [
-        .Core.Networking,
-        .Core.Logger,
-        .Domain.makeDependency(for: .novelReview, type: .sources),
-        .Domain.makeDependency(for: .base, type: .sources)
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.domain(.novelReview)),
+        .module(.domain(.base))
     ]
 )

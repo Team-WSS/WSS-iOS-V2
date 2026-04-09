@@ -10,6 +10,6 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createCoreModule(
-    name: ModuleType.Core.logger.name,
+    name: ModuleType.core(.logger).name,
     targets: [.sources, .demo]
 )
