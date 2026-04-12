@@ -20,12 +20,12 @@ public struct UserLibraryNovelResponse: Decodable {
     public let title: String
     public let novelImage: String
     public let novelRating: Float
-    public let readStatus: String
+    public let readStatus: String?
     public let isInterest: Bool
     public let userNovelRating: Float
     public let attractivePoints: [String]
-    public let startDate: String
-    public let endDate: String
+    public let startDate: String?
+    public let endDate: String?
     public let keywords: [String]
     public let myFeeds: [String]
 }

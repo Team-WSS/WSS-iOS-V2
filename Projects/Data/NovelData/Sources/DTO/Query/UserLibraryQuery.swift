@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-struct UserLibraryQuery: QueryItemConvertible {
+public struct UserLibraryQuery: QueryItemConvertible {
     let lastUserNovelId: Int
     let size: Int
     let sortCriteria: String

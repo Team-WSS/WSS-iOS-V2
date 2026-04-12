@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-struct NormalSearchQuery: QueryItemConvertible {
+public struct NormalSearchQuery: QueryItemConvertible {
     let query: String
     let page: Int
     let size: Int

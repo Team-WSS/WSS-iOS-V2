@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-struct DetailSearchQuery: QueryItemConvertible {
+public struct DetailSearchQuery: QueryItemConvertible {
     let genres: [String]
     let isCompleted: Bool
     let novelRating: Float
