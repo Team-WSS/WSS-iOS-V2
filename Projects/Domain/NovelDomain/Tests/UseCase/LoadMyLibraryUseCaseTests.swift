@@ -74,8 +74,8 @@ struct LoadMyLibraryUseCaseTests {
 
 extension LoadMyLibraryUseCaseTests {
 
-    private func makeFilter() -> MyLibraryFilter {
-        MyLibraryFilter(readingStatus: [], attractivePoint: [], ratingThreshold: nil)
+    private func makeFilter() -> LibraryFilter {
+        LibraryFilter(readingStatus: [], attractivePoint: [], ratingThreshold: nil)
     }
 
     private func makeLibraryPage() -> Paginated<LibraryNovel> {

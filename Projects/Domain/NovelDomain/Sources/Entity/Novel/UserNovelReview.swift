@@ -17,4 +17,18 @@ public struct UserNovelReview {
     public let attractivePoint: [AttractivePoint]
     public let period: ReadingPeriod?
     public let keywords: [Keyword]
+    
+    public init(
+        readingStatus: ReadingStatus,
+        rating: Rating?,
+        attractivePoint: [AttractivePoint],
+        period: ReadingPeriod?,
+        keywords: [Keyword]
+    ) {
+        self.readingStatus = readingStatus
+        self.rating = rating
+        self.attractivePoint = attractivePoint
+        self.period = period
+        self.keywords = keywords
+    }
 }

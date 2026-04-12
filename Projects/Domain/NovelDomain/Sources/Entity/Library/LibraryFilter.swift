@@ -1,5 +1,5 @@
 //
-//  MyLibraryFilter.swift
+//  LibraryFilter.swift
 //  NovelDomain
 //
 //  Created by Seoyeon Choi on 2/22/26.
@@ -11,6 +11,9 @@ import Foundation
 import BaseDomain
 
 public struct LibraryFilter {
+    
+    // TODO: - 관심 여부 추가
+    // TODO: - 최신 순 / 오래된 순 추가
     
     public private(set) var readingStatus: [ReadingStatus]
     public private(set) var attractivePoint: [AttractivePoint]

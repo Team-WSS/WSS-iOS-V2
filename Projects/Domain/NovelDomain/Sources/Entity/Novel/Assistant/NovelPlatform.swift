@@ -12,4 +12,10 @@ public struct NovelPlatform {
     public let name: String
     public let image: URL?
     public let url: URL
+    
+    public init(name: String, image: URL?, url: URL) {
+        self.name = name
+        self.image = image
+        self.url = url
+    }
 }

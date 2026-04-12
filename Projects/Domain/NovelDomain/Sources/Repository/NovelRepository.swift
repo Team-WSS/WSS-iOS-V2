@@ -29,8 +29,8 @@ public protocol NovelRepository {
     ///
     /// 내부적으로 저장된 userID를 기반으로
     /// 필터 조건을 적용하여 서재 작품을 페이지네이션 형태로 반환한다.
-    func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
-    func fetchUserLibraryNovels(id: UserID) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+    func fetchMyLibraryNovels(_ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+    func fetchUserLibraryNovels(id: UserID, _ filter: ) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
     
     func fetchRegisteredNovelStats() async throws(RepositoryError) -> RegisteredNovelStats
 }

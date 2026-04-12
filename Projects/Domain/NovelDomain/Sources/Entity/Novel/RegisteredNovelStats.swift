@@ -13,4 +13,16 @@ public struct RegisteredNovelStats {
     public let watching: Int
     public let watched: Int
     public let quit: Int
+    
+    public init(
+        interest: Int,
+        watching: Int,
+        watched: Int, 
+        quit: Int
+    ) {
+        self.interest = interest
+        self.watching = watching
+        self.watched = watched
+        self.quit = quit
+    }
 }

@@ -15,7 +15,7 @@ public struct NovelInformation {
     
     // 작품 부가 정보
     public let feedCount: Int
-    public let genre: NovelGenre
+    public let genres: [NovelGenre]
     public let publicationStatus: NovelPublicationStatus
     
     // 작품에 대한 유저 평가
@@ -25,8 +25,32 @@ public struct NovelInformation {
     public let description: String
     public let platforms: [NovelPlatform]
     public let attractivePoints: [AttractivePoint]
-    public let keywords: [Keyword]
+    public let keywords: [Keyword : Int]
     public let readingStatusCount: [ReadingStatus : Int]
+    
+    public init(
+        novel: Novel,
+        feedCount: Int,
+        genres: [NovelGenre],
+        publicationStatus: NovelPublicationStatus,
+        userReview: UserNovelReview?,
+        description: String,
+        platforms: [NovelPlatform],
+        attractivePoints: [AttractivePoint],
+        keywords: [Keyword : Int],
+        readingStatusCount: [ReadingStatus : Int]
+    ) {
+        self.novel = novel
+        self.feedCount = feedCount
+        self.genres = genres
+        self.publicationStatus = publicationStatus
+        self.userReview = userReview
+        self.description = description
+        self.platforms = platforms
+        self.attractivePoints = attractivePoints
+        self.keywords = keywords
+        self.readingStatusCount = readingStatusCount
+    }
     
     // MARK: - Policy
     

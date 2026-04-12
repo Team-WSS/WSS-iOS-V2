@@ -24,4 +24,22 @@ public struct LibraryNovel {
     
     // 유저가 작품에 남긴 피드
     public let writtenFeeds: [String]
+    
+    public init(
+        id: NovelID,
+        title: String, 
+        thumbnailImage: URL?,
+        rating: Float,
+        isInterested: Bool,
+        userReview: UserNovelReview?,
+        writtenFeeds: [String]
+    ) {
+        self.id = id
+        self.title = title
+        self.thumbnailImage = thumbnailImage
+        self.rating = rating
+        self.isInterested = isInterested
+        self.userReview = userReview
+        self.writtenFeeds = writtenFeeds
+    }
 }
