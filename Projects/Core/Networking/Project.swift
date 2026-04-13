@@ -11,8 +11,9 @@ import DependencyPlugin
 
 let project = Project.createCoreModule(
     name: ModuleType.core(.networking).name,
-    targets: [.sources, .demo, .tests],
+    targets: [.sources, .demo, .testing, .tests],
     internalDependencies: [
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        .module(.core(.keychain))
     ]
 )
