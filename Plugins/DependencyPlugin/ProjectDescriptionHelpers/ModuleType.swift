@@ -7,109 +7,114 @@
 
 import Foundation
 
+public protocol ModuleSpec: RawRepresentable where RawValue == String {
+    var moduleSuffix: String { get }
+}
+
+public extension ModuleSpec {
+    var name: String {
+        rawValue.pascalCased + moduleSuffix
+    }
+}
+
+public enum FeatureModule: String, ModuleSpec {
+    public var moduleSuffix: String { "Feature" }
+    
+    case home
+    case feed
+}
+
+public enum DomainModule: String, ModuleSpec {
+    public var moduleSuffix: String { "Domain" }
+    
+    case base
+    case auth
+    case recommendation
+    case feed
+    case keyword
+    case comment
+    case novel
+    case novelReview
+    case setting
+    case notification
+    case profile
+    case social
+}
+
+public enum DataModule: String, ModuleSpec {
+    public var moduleSuffix: String { "Data" }
+    
+    case recommendation
+    case novelReview
+    case notification
+}
+
+public enum CoreModule: String, ModuleSpec {
+    public var moduleSuffix: String { "" }
+    
+    case keychain
+    case networking
+    case logger
+}
+
+public enum UIModule: String, ModuleSpec {
+    public var moduleSuffix: String { "" }
+    
+    case designSystem
+    case wssComponent
+    
+    public var name: String {
+        switch self {
+        case .wssComponent: return "WSSComponent"
+        default: return rawValue.pascalCased + moduleSuffix
+        }
+    }
+}
+
 public enum ModuleType {
-    public enum Feature: String {
-        case home
-        case feed
-        
-        public var name: String {
-            switch self {
-            case .home: "HomeFeature"
-            case .feed: "FeedFeature"
-            }
-        }
-        
-        func targetName(type: TargetType) -> String {
-            name + type.suffix
-        }
-    }
-    
-    public enum Domain: String {
-        case base
-        
-        case auth
-        case recommendation
-        case feed
-        case keyword
-        case comment
-        case novel
-        case novelReview
-        case setting
-        case notification
-        case profile
-        case social
-        
-        public var name: String {
-            switch self {
-            case .base: "BaseDomain"
-            case .auth: "AuthDomain"
-            case .recommendation: "RecommendationDomain"
-            case .feed: "FeedDomain"
-            case .keyword: "KeywordDomain"
-            case .comment: "CommentDomain"
-            case .novel: "NovelDomain"
-            case .novelReview: "NovelReviewDomain"
-            case .setting: "SettingDomain"
-            case .notification: "NotificationDomain"
-            case .profile: "ProfileDomain"
-            case .social: "SocialDomain"
-            }
-        }
-        
-        func targetName(type: TargetType) -> String {
-            name + type.suffix
+    case feature(FeatureModule)
+    case domain(DomainModule)
+    case data(DataModule)
+    case core(CoreModule)
+    case ui(UIModule)
+
+    public var name: String {
+        switch self {
+        case let .feature(module):  module.name
+        case let .domain(module):   module.name
+        case let .data(module):     module.name
+        case let .core(module):     module.name
+        case let .ui(module):       module.name
         }
     }
-    
-    public enum Data: String {
-        case recommendation
-        case novelReview
-        case notification
-        
-        public var name: String {
-            switch self {
-            case .recommendation: "RecommendationData"
-            case .novelReview: "NovelReviewData"
-            case .notification: "NotificationData"
-            }
-        }
-        
-        func targetName(type: TargetType) -> String {
-            name + type.suffix
+
+    public var directoryName: String {
+        switch self {
+        case .feature:  "Feature"
+        case .domain:   "Domain"
+        case .data:     "Data"
+        case .core:     "Core"
+        case .ui:       "UI"
         }
     }
-    
-    public enum Core: String {
-        case keychain
-        case networking
-        case logger
-        
-        public var name: String {
-            switch self {
-            case .keychain: "Keychain"
-            case .networking: "Networking"
-            case .logger: "Logger"
-            }
-        }
-        
-        func targetName(type: TargetType) -> String {
-            name + type.suffix
-        }
+
+    public func targetName(type: TargetType) -> String {
+        name + type.suffix
     }
-    
-    public enum UI: String {
-        case designSystem
-        case wssComponent
-        
-        public var name: String {
-            switch self {
-            case .designSystem: "DesignSystem"
-            case .wssComponent: "WSSComponent"
-            }
-        }
-        
-        func targetName(type: TargetType) -> String {
-            name + type.suffix
-        }
+}
+
+private extension String {
+    var pascalCased: String {
+        let pattern = "([a-z0-9])([A-Z])"
+        let spaced = replacingOccurrences(
+            of: pattern,
+            with: "$1 $2",
+            options: .regularExpression
+        )
+
+        return spaced
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined()
     }
 }
