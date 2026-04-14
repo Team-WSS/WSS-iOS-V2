@@ -10,13 +10,21 @@ import Foundation
 
 import BaseDomain
 
-public struct LibraryFilter {
+public struct MyLibraryFilter {
     
+    public private(set) var isInterest: Bool
     public private(set) var readingStatus: [ReadingStatus]
     public private(set) var attractivePoint: [AttractivePoint]
     public private(set) var ratingThreshold: NovelRatingThreshold?
+    public private(set) var sortType: SortType
     
     // MARK: - Policy
+    
+    // - isInterest
+    
+    public mutating func toggleInterest() {
+        isInterest.toggle()
+    }
     
     // - reading status
     
@@ -58,6 +66,12 @@ public struct LibraryFilter {
     
     private mutating func clearRatingThreshold() {
         ratingThreshold = nil
+    }
+    
+    // - SortType
+    
+    public mutating func setSortType(_ sortType: SortType) {
+        self.sortType = sortType
     }
     
     // - Clear

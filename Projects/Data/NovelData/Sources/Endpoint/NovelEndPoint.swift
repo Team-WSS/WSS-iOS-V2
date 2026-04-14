@@ -41,7 +41,7 @@ enum NovelEndpoint: Endpoint {
     
     var path: String {
         switch self {
-        case .getUserLibraryNovels(let userID, _):       return "/users/\(userID)/novels"
+        case .getUserLibraryNovels(let userID, _):      return "/users/\(userID)/novels"
         case .getNovelBasicInfo(let novelID):           return "/novels/\(novelID)"
         case .getNovelDetailInfo(let novelID):          return "/novels/\(novelID)/info"
         case .getRegisteredNovelStats(let userID):      return "/users/\(userID)/user-novel-stats"

@@ -15,11 +15,6 @@ public struct MyFeedOption {
     public let sortType: SortType
 }
 
-public enum SortType: String {
-    case recent = "RECENT"
-    case old = "OLD"
-}
-
 public enum VisibilityType {
     case privateOnly
     case publicOnly
