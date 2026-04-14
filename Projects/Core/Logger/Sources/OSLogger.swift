@@ -10,7 +10,6 @@ import Foundation
 import os
 
 /// OSLog 기반 Logger 구현체
-/// Console.app에서 subsystem / category 로 필터링 가능
 public final class OSLogger: Logger {
     private let logger: os.Logger
 
