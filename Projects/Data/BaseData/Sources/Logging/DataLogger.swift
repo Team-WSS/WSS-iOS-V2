@@ -10,7 +10,6 @@ import Logger
 import Networking
 
 /// Data 레이어 Repository용 구조화 로거.
-/// 모듈 이름을 prefix로 갖는 일관된 포맷으로 에러를 기록.
 public struct DataLogger {
     private let moduleName: String
     private let underlying: Logger?
