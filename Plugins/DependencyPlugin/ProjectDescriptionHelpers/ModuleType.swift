@@ -44,6 +44,7 @@ public enum DomainModule: String, ModuleSpec {
 public enum DataModule: String, ModuleSpec {
     public var moduleSuffix: String { "Data" }
     
+    case base
     case recommendation
     case novelReview
     case notification
