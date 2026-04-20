@@ -2,7 +2,7 @@
 //  SettingDataFactory.swift
 //  SettingData
 //
-//  Created by Codex on 5/20/26.
+//  Created by YunhakLee on 5/20/26.
 //
 
 import BaseData
