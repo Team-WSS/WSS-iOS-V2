@@ -17,6 +17,6 @@ let project = Project.createDataModule(
         .module(.core(.logger)),
         .module(.data(.base)),
         .module(.domain(.base)),
-        .module(.domain(.notification))
+        .module(.domain(.setting))
     ]
 )
