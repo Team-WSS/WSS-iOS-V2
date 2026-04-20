@@ -7,15 +7,6 @@
 //
 
 
-//
-//  SettingEndpoint.swift
-//  SettingData
-//
-//  Created by YunhakLee on 11/25/25.
-//  Copyright © 2025 kr.websoso.app. All rights reserved.
-//
-
-
 import Foundation
 import Networking
 
@@ -30,25 +21,11 @@ enum SettingEndpoint: Endpoint {
     
     case getAppMinimumVersion
     
-    //MARK: - ProfileVisibility
-    
-    case getProfileVisibility
-    case patchProfileVisibility(ProfileVisibilityRequest)
-    
-    // MARK: - Push 알림
-    
-    case postPushNotificationSetting(PushNotificationSettingRequest)
-    case getPushNotificationSetting
-    
     var method: HTTPMethod {
         switch self {
         case .getTermSetting:           return .get
         case .patchTermSetting:         return .patch
         case .getAppMinimumVersion:     return .get
-        case .getProfileVisibility:     return .get
-        case .patchProfileVisibility:   return .patch
-        case .postPushNotificationSetting:  return .post
-        case .getPushNotificationSetting:   return .get
         }
     }
     
@@ -62,25 +39,18 @@ enum SettingEndpoint: Endpoint {
         case .getTermSetting:               return "/users/terms-settings"
         case .patchTermSetting:             return "/users/terms-settings"
         case .getAppMinimumVersion:         return "/minimum-version"
-        case .getProfileVisibility:         return "/users/profile-status"
-        case .patchProfileVisibility:       return "/users/profile-status"
-        case .postPushNotificationSetting:  return "/users/push-settings"
-        case .getPushNotificationSetting:   return "/users/push-settings"
         }
     }
     
     var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+        ["Content-Type": "application/json"]
     }
     
     var body: Data? {
         switch self {
         case .patchTermSetting(let request):        return request.asRequestBody()
-        case .patchProfileVisibility(let request):  return request.asRequestBody()
-        case .postPushNotificationSetting(let request): return request.asRequestBody()
         default:
             return nil
         }
