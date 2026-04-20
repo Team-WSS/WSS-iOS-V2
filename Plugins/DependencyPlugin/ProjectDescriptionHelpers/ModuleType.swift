@@ -51,6 +51,7 @@ public enum DataModule: String, ModuleSpec {
     case setting
     case keyword
     case comment
+    case auth
 }
 
 public enum CoreModule: String, ModuleSpec {
