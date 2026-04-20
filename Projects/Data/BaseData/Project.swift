@@ -10,11 +10,11 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.base.name,
+    name: ModuleType.data(.base).name,
     targets: [.sources],
     internalDependencies: [
-        .Core.Networking,
-        .Core.Logger,
-        .Domain.BaseDomain
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.domain(.base))
     ]
 )
