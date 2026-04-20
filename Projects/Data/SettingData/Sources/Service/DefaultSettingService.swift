@@ -10,7 +10,7 @@
 import Foundation
 import Networking
 
-final class DefaultSettingService: SettingService {
+struct DefaultSettingService: SettingService {
     private let client: NetworkingRequestable
     
     init(client: NetworkingRequestable) {
