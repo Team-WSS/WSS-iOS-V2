@@ -25,5 +25,5 @@ public protocol AuthRepository {
     /// 사용하여 서버에 저장된 사용자 정보를 갱신합니다.
     func syncAppleCredential(
         _ credential: AppleSyncCredential
-    ) async throws(AuthError)
+    ) async throws(RepositoryError)
 }
