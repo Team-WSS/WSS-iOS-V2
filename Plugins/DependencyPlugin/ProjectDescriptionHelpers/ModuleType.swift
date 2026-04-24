@@ -54,6 +54,7 @@ public enum DataModule: String, ModuleSpec {
     case auth
     case social
     case profile
+    case novel
 }
 
 public enum CoreModule: String, ModuleSpec {

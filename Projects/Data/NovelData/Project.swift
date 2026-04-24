@@ -10,11 +10,12 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.novel.name,
-    targets: [.sources, .demo, .tests],
+    name: ModuleType.data(.novel).name,
+    targets: [.sources, .demo, .testing, .tests],
     internalDependencies: [
-        .Core.Networking,
-        .Domain.NovelDomain,
-        .Domain.BaseDomain
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.domain(.base)),
+        .module(.domain(.novel))
     ]
 )
