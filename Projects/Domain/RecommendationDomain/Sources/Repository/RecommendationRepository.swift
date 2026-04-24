@@ -14,6 +14,6 @@ public protocol RecommendationRepository {
     func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery]
     func fetchTrendingFeeds() async throws(RepositoryError) -> [TrendingFeed]
     func fetchInterestFeeds() async throws(RepositoryError) -> InterestFeedState
-    func fetchRecommendedNovels() async throws(RepositoryError) -> RecommendedNovelState
+    func fetchPreferenceGenreNovels() async throws(RepositoryError) -> PreferenceGenreNovelState
     func fetchSosoPick() async throws(RepositoryError) -> [SosoPick]
 }

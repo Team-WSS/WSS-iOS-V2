@@ -20,12 +20,14 @@ struct TrendingFeedTests {
     private func makeTrendingFeed(
         feedID: FeedID = FeedID(1),
         description: String = "지금 뜨는 글 내용",
+        isSpoiler: Bool = false,
         likeCount: Int = 10,
         commentCount: Int = 5
     ) -> TrendingFeed {
         TrendingFeed(
             feedID: feedID,
             description: description,
+            isSpoiler: isSpoiler,
             likeCount: likeCount,
             commentCount: commentCount
         )
@@ -55,5 +57,21 @@ struct TrendingFeedTests {
         let feed2 = makeTrendingFeed(feedID: FeedID(2))
 
         #expect(feed1.feedID != feed2.feedID)
+    }
+
+    @Test("스포일러가 포함된 글은 displayDescription이 스포일러 안내 문구로 대체된다")
+    func spoilerFeedReplacesDisplayDescription() {
+        let feed = makeTrendingFeed(description: "원본 내용", isSpoiler: true)
+
+        #expect(feed.displayDescription == "스포일러가 포함된 글 보기")
+        #expect(feed.description == "원본 내용")
+    }
+
+    @Test("스포일러가 아닌 글은 displayDescription이 원본 description과 동일하다")
+    func nonSpoilerFeedKeepsOriginalDisplayDescription() {
+        let feed = makeTrendingFeed(description: "원본 내용", isSpoiler: false)
+
+        #expect(feed.displayDescription == "원본 내용")
+        #expect(feed.description == "원본 내용")
     }
 }

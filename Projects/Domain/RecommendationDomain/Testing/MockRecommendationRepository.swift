@@ -22,7 +22,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
     public var fetchTodayDiscoveriesResult: Result<[TodayDiscovery], RepositoryError> = .success([])
     public var fetchTrendingFeedsResult: Result<[TrendingFeed], RepositoryError> = .success([])
     public var fetchInterestFeedsResult: Result<InterestFeedState, RepositoryError> = .success(.noInterestSettings)
-    public var fetchRecommendedNovelsResult: Result<RecommendedNovelState, RepositoryError> = .success(.noGenreSettings)
+    public var fetchRecommendedNovelsResult: Result<PreferenceGenreNovelState, RepositoryError> = .success(.noGenreSettings)
     public var fetchSosoPickResult: Result<[SosoPick], RepositoryError> = .success([])
 
     public init() {}
@@ -51,7 +51,7 @@ public final class MockRecommendationRepository: RecommendationRepository {
         }
     }
 
-    public func fetchRecommendedNovels() async throws(RepositoryError) -> RecommendedNovelState {
+    public func fetchPreferenceGenreNovels() async throws(RepositoryError) -> PreferenceGenreNovelState {
         fetchRecommendedNovelsCallCount += 1
         switch fetchRecommendedNovelsResult {
         case .success(let value): return value
