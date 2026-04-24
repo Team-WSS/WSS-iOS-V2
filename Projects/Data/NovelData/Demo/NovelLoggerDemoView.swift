@@ -10,12 +10,13 @@ import SwiftUI
 import Logger
 import Networking
 import NovelData
+import BaseData
 
 struct NovelLoggerDemoView: View {
     @State private var logs: [LogEntry] = []
 
     private let osLogger = OSLogger.novel
-    private let novelLogger = DefaultNovelLogger(base: OSLogger.novel)
+    private let dataLogger = DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
     private let service: NovelService = DefaultNovelService(
         client: NetworkingClient(
             logger: ConsoleNetworkLogger(base: OSLogger.network)
@@ -151,9 +152,9 @@ struct NovelLoggerDemoView: View {
 
                 Divider()
 
-                // MARK: OSLogger / NovelLogger
+                // MARK: OSLogger / DataLogger
 
-                sectionHeader("OSLogger / NovelLogger")
+                sectionHeader("OSLogger / DataLogger")
 
                 HStack(spacing: 12) {
                     logButton("Debug", color: .blue) {
@@ -167,9 +168,9 @@ struct NovelLoggerDemoView: View {
                     }
 
                     logButton("Error", color: .red) {
-                        novelLogger.logError(type: .network, action: .fetchNovel,
-                                             error: NSError(domain: "Test", code: 401))
-                        appendLog(level: .error, message: "NovelLogger: network error 401")
+                        dataLogger.logUnknownError(action: NovelAction.fetchNovel.text,
+                                                   error: NSError(domain: "Test", code: 401))
+                        appendLog(level: .error, message: "DataLogger: unknown error 401")
                     }
                 }
 
@@ -191,8 +192,7 @@ struct NovelLoggerDemoView: View {
             appendLog(level: .info,
                       message: "성공: \(response.novelTitle) | 장르: \(response.novelGenres) | 평점: \(response.novelRating)")
         } catch {
-            novelLogger.logError(type: .network, action: .fetchNovel, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .fetchNovel, error: error)
         }
     }
 
@@ -203,8 +203,7 @@ struct NovelLoggerDemoView: View {
             appendLog(level: .info,
                       message: "성공: 설명 \(response.novelDescription.prefix(50))... | 플랫폼 \(response.platforms.count)개 | 보는중 \(response.watchingCount)")
         } catch {
-            novelLogger.logError(type: .network, action: .fetchNovel, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .fetchNovel, error: error)
         }
     }
 
@@ -214,8 +213,7 @@ struct NovelLoggerDemoView: View {
             try await service.postNovelInterest(novelID: novelID)
             appendLog(level: .info, message: "성공: 관심 등록 완료")
         } catch {
-            novelLogger.logError(type: .network, action: .addInterest, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .addInterest, error: error)
         }
     }
 
@@ -225,8 +223,7 @@ struct NovelLoggerDemoView: View {
             try await service.deleteNovelInterest(novelID: novelID)
             appendLog(level: .info, message: "성공: 관심 해제 완료")
         } catch {
-            novelLogger.logError(type: .network, action: .removeInterest, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .removeInterest, error: error)
         }
     }
 
@@ -239,8 +236,7 @@ struct NovelLoggerDemoView: View {
             appendLog(level: .info,
                       message: "성공: 총 \(response.resultCount)건 | \(titles)\(response.novels.count > 3 ? " ..." : "")")
         } catch {
-            novelLogger.logError(type: .network, action: .searchByText, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .searchByText, error: error)
         }
     }
 
@@ -257,8 +253,7 @@ struct NovelLoggerDemoView: View {
             appendLog(level: .info,
                       message: "성공: 총 \(response.userNovelCount)건 | \(titles)\(response.userNovels.count > 3 ? " ..." : "")")
         } catch {
-            novelLogger.logError(type: .network, action: .fetchUserLibrary, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .fetchUserLibrary, error: error)
         }
     }
 
@@ -269,9 +264,17 @@ struct NovelLoggerDemoView: View {
             appendLog(level: .info,
                       message: "성공: 관심 \(response.interestNovelCount) | 보는중 \(response.watchingNovelCount) | 봤어요 \(response.watchedNovelCount) | 하차 \(response.quitNovelCount)")
         } catch {
-            novelLogger.logError(type: .network, action: .fetchRegisteredStats, error: error)
-            appendLog(level: .error, message: "실패: \(error)")
+            logDataError(action: .fetchRegisteredStats, error: error)
         }
+    }
+
+    private func logDataError(action: NovelAction, error: Error) {
+        if let networkError = error as? NetworkingError {
+            dataLogger.logNetworkError(action: action.text, error: networkError)
+        } else {
+            dataLogger.logUnknownError(action: action.text, error: error)
+        }
+        appendLog(level: .error, message: "실패: \(error)")
     }
 
     // MARK: - Helpers

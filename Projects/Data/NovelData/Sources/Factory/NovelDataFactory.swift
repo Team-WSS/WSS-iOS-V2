@@ -10,12 +10,13 @@
 import Logger
 import Networking
 import NovelDomain
+import BaseData
 
 public enum NovelDataFactory {
     
     public static func makeNovelRepository(
         client: NetworkingRequestable,
-        logger: NovelLogger? = DefaultNovelLogger(base: OSLogger.novel)
+        logger: DataLogger? = nil
     ) -> NovelRepository {
         let service = DefaultNovelService(client: client)
         return DefaultNovelRepository(

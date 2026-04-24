@@ -15,6 +15,7 @@ let project = Project.createDataModule(
     internalDependencies: [
         .module(.core(.networking)),
         .module(.core(.logger)),
+        .module(.data(.base)),
         .module(.domain(.base)),
         .module(.domain(.novel))
     ]

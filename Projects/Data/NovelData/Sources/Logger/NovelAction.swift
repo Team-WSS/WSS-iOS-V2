@@ -9,35 +9,6 @@
 
 import Logger
 
-public protocol NovelLogger {
-    func logError(
-        type: DataErrorType,
-        action: NovelAction,
-        error: Error?
-    )
-}
-
-public struct DefaultNovelLogger: NovelLogger {
-    private let base: Logger
-    
-    public init(base: Logger) {
-        self.base = base
-    }
-    
-    public func logError(
-        type: DataErrorType,
-        action: NovelAction,
-        error: Error?
-    ) {
-        var message = "[NovelData] \(action.text) \(type.text) error"
-        if let error {
-            message += ": \(error)"
-        }
-        
-        base.error(message)
-    }
-}
-
 public enum NovelAction {
     case fetchNovel
     case addInterest
@@ -48,7 +19,7 @@ public enum NovelAction {
     case fetchUserLibrary
     case fetchRegisteredStats
     
-    var text: String {
+    public var text: String {
         switch self {
         case .fetchNovel:           return "작품 정보 조회"
         case .addInterest:          return "관심 등록"
