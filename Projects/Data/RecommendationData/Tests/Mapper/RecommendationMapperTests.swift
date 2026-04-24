@@ -112,7 +112,7 @@ struct RecommendationMapperTests {
     @Test("nickname이 nil이면 novel 타입으로 매핑된다")
     func mapsToNovelTypeWhenNicknameIsNil() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(avatarImage: "https://example.com/avatar.jpg", nickname: nil)
             ]
         )
@@ -127,7 +127,7 @@ struct RecommendationMapperTests {
     @Test("avatarImage가 nil이면 novel 타입으로 매핑된다")
     func mapsToNovelTypeWhenAvatarImageIsNil() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(avatarImage: nil, nickname: "유저닉네임")
             ]
         )
@@ -142,7 +142,7 @@ struct RecommendationMapperTests {
     @Test("nickname과 avatarImage가 모두 nil이면 novel 타입으로 매핑된다")
     func mapsToNovelTypeWhenBothNil() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(avatarImage: nil, nickname: nil)
             ]
         )
@@ -157,7 +157,7 @@ struct RecommendationMapperTests {
     @Test("nickname과 avatarImage가 모두 존재하면 userComment 타입으로 매핑된다")
     func mapsToUserCommentTypeWhenBothPresent() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(
                     avatarImage: "https://example.com/avatar.jpg",
                     nickname: "테스트유저"
@@ -177,7 +177,7 @@ struct RecommendationMapperTests {
     @Test("DTO의 feedContent가 contentDescription에 매핑된다")
     func mapsFeedContentToContentDescription() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(feedContent: "흥미로운 소설 소개")
             ]
         )
@@ -190,7 +190,7 @@ struct RecommendationMapperTests {
     @Test("여러 TodayDiscovery를 배열로 변환한다")
     func mapsMultipleTodayDiscoveries() {
         let dto = TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 makeTodayDiscoveryNovelResponse(novelId: 1, title: "소설1"),
                 makeTodayDiscoveryNovelResponse(novelId: 2, title: "소설2"),
                 makeTodayDiscoveryNovelResponse(novelId: 3, title: "소설3")
@@ -209,7 +209,7 @@ struct RecommendationMapperTests {
     @Test("DTO에서 TrendingFeed로 정상 변환된다")
     func mapsTrendingFeedResponseToDomain() {
         let dto = TrendingFeedsResponse(
-            popularNovels: [
+            popularFeeds: [
                 makeTrendingFeedResponse(feedId: 42, feedContent: "인기 피드", likeCount: 100, commentCount: 20)
             ]
         )
@@ -225,7 +225,7 @@ struct RecommendationMapperTests {
     @Test("isSpoiler 값이 그대로 매핑된다")
     func mapsSpoilerFlagCorrectly() {
         let dto = TrendingFeedsResponse(
-            popularNovels: [
+            popularFeeds: [
                 makeTrendingFeedResponse(isSpoiler: true)
             ]
         )
@@ -238,7 +238,7 @@ struct RecommendationMapperTests {
     @Test("여러 TrendingFeed를 배열로 변환한다")
     func mapsMultipleTrendingFeeds() {
         let dto = TrendingFeedsResponse(
-            popularNovels: [
+            popularFeeds: [
                 makeTrendingFeedResponse(feedId: 1),
                 makeTrendingFeedResponse(feedId: 2)
             ]

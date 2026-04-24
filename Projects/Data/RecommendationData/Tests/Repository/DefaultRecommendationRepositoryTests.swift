@@ -1,10 +1,11 @@
 import Foundation
 import Testing
 @testable import RecommendationData
+@testable import RecommendationDataTesting
 import RecommendationDomain
 import BaseDomain
+import BaseData
 import Networking
-@testable import RecommendationDataTesting
 
 @Suite("DefaultRecommendationRepository")
 struct DefaultRecommendationRepositoryTests {
@@ -13,14 +14,20 @@ struct DefaultRecommendationRepositoryTests {
 
     private func makeRepository(
         service: MockRecommendationService,
-        logger: MockRecommendationLogger? = nil
+        logger: DataLogger? = nil
     ) -> DefaultRecommendationRepository {
         DefaultRecommendationRepository(service: service, logger: logger)
     }
 
+    private func makeLogger() -> (DataLogger, MockLogger) {
+        let mock = MockLogger()
+        let logger = DataLogger(moduleName: "Recommendation", underlying: mock)
+        return (logger, mock)
+    }
+
     private func makeTodayDiscoveryResponse() -> TodayDiscoveryNovelsResponse {
         TodayDiscoveryNovelsResponse(
-            discoveries: [
+            popularNovels: [
                 TodayDiscoveryNovelResponse(
                     novelId: 1,
                     title: "오늘의 발견",
@@ -35,7 +42,7 @@ struct DefaultRecommendationRepositoryTests {
 
     private func makeTrendingFeedsResponse() -> TrendingFeedsResponse {
         TrendingFeedsResponse(
-            popularNovels: [
+            popularFeeds: [
                 TrendingFeedResponse(
                     feedId: 1,
                     feedContent: "인기 피드",
@@ -99,7 +106,7 @@ struct DefaultRecommendationRepositoryTests {
     @Test("오늘의 발견 조회에 성공하면 TodayDiscovery 배열을 반환한다")
     func fetchesTodayDiscoveriesSuccessfully() async throws {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTodayDiscoveryResult = .success(makeTodayDiscoveryResponse())
 
         let sut = makeRepository(service: service, logger: logger)
@@ -109,13 +116,13 @@ struct DefaultRecommendationRepositoryTests {
         #expect(service.todayDiscoveryCallCount == 1)
         #expect(result.count == 1)
         #expect(result.first?.novelTitle == "오늘의 발견")
-        #expect(logger.loggedErrors.isEmpty)
+        #expect(mockLogger.errorMessages.isEmpty)
     }
 
     @Test("오늘의 발견 조회 시 networking 에러가 발생하면 RepositoryError로 변환하고 network 로그를 남긴다")
     func translatesNetworkingErrorOnFetchTodayDiscoveries() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTodayDiscoveryResult = .failure(
             NetworkingError.responseFailure(code: 404, body: nil)
         )
@@ -126,15 +133,14 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchTodayDiscoveries()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .network, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("network error") == true)
     }
 
     @Test("오늘의 발견 조회 시 알 수 없는 에러가 발생하면 unknown 에러를 던지고 unknown 로그를 남긴다")
     func throwsUnknownWhenFetchTodayDiscoveriesFails() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTodayDiscoveryResult = .failure(MockError.sample)
 
         let sut = makeRepository(service: service, logger: logger)
@@ -143,9 +149,8 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchTodayDiscoveries()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .unknown, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("unknown error") == true)
     }
 
     // MARK: - fetchTrendingFeeds
@@ -153,7 +158,7 @@ struct DefaultRecommendationRepositoryTests {
     @Test("지금 뜨는 글 조회에 성공하면 TrendingFeed 배열을 반환한다")
     func fetchesTrendingFeedsSuccessfully() async throws {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTrendingFeedsResult = .success(makeTrendingFeedsResponse())
 
         let sut = makeRepository(service: service, logger: logger)
@@ -163,13 +168,13 @@ struct DefaultRecommendationRepositoryTests {
         #expect(service.trendingFeedsCallCount == 1)
         #expect(result.count == 1)
         #expect(result.first?.feedID == FeedID(1))
-        #expect(logger.loggedErrors.isEmpty)
+        #expect(mockLogger.errorMessages.isEmpty)
     }
 
     @Test("지금 뜨는 글 조회 시 networking 에러가 발생하면 RepositoryError로 변환하고 network 로그를 남긴다")
     func translatesNetworkingErrorOnFetchTrendingFeeds() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTrendingFeedsResult = .failure(
             NetworkingError.responseFailure(code: 401, body: nil)
         )
@@ -180,15 +185,14 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchTrendingFeeds()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .network, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("network error") == true)
     }
 
     @Test("지금 뜨는 글 조회 시 알 수 없는 에러가 발생하면 unknown 에러를 던지고 unknown 로그를 남긴다")
     func throwsUnknownWhenFetchTrendingFeedsFails() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getTrendingFeedsResult = .failure(MockError.sample)
 
         let sut = makeRepository(service: service, logger: logger)
@@ -197,9 +201,8 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchTrendingFeeds()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .unknown, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("unknown error") == true)
     }
 
     // MARK: - fetchInterestFeeds
@@ -207,7 +210,7 @@ struct DefaultRecommendationRepositoryTests {
     @Test("관심글 조회에 성공하면 InterestFeedState를 반환한다")
     func fetchesInterestFeedsSuccessfully() async throws {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getInterestFeedsResult = .success(makeInterestFeedsResponse())
 
         let sut = makeRepository(service: service, logger: logger)
@@ -220,13 +223,13 @@ struct DefaultRecommendationRepositoryTests {
             return
         }
         #expect(feeds.count == 1)
-        #expect(logger.loggedErrors.isEmpty)
+        #expect(mockLogger.errorMessages.isEmpty)
     }
 
     @Test("관심글 조회 시 networking 에러가 발생하면 RepositoryError로 변환하고 network 로그를 남긴다")
     func translatesNetworkingErrorOnFetchInterestFeeds() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getInterestFeedsResult = .failure(
             NetworkingError.responseFailure(code: 500, body: nil)
         )
@@ -237,15 +240,14 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchInterestFeeds()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .network, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("network error") == true)
     }
 
     @Test("관심글 조회 시 알 수 없는 에러가 발생하면 unknown 에러를 던지고 unknown 로그를 남긴다")
     func throwsUnknownWhenFetchInterestFeedsFails() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getInterestFeedsResult = .failure(MockError.sample)
 
         let sut = makeRepository(service: service, logger: logger)
@@ -254,9 +256,8 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchInterestFeeds()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .unknown, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("unknown error") == true)
     }
 
     // MARK: - fetchPreferenceGenreNovels
@@ -264,7 +265,7 @@ struct DefaultRecommendationRepositoryTests {
     @Test("선호 장르 소설 조회에 성공하면 PreferenceGenreNovelState를 반환한다")
     func fetchesPreferenceGenreNovelsSuccessfully() async throws {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getPreferenceGenreNovelsResult = .success(makePreferenceGenreNovelsResponse())
 
         let sut = makeRepository(service: service, logger: logger)
@@ -277,13 +278,13 @@ struct DefaultRecommendationRepositoryTests {
             return
         }
         #expect(novels.count == 1)
-        #expect(logger.loggedErrors.isEmpty)
+        #expect(mockLogger.errorMessages.isEmpty)
     }
 
     @Test("선호 장르 소설 조회 시 networking 에러가 발생하면 RepositoryError로 변환하고 network 로그를 남긴다")
     func translatesNetworkingErrorOnFetchPreferenceGenreNovels() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getPreferenceGenreNovelsResult = .failure(
             NetworkingError.decoding
         )
@@ -294,15 +295,14 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchPreferenceGenreNovels()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .network, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("network error") == true)
     }
 
     @Test("선호 장르 소설 조회 시 알 수 없는 에러가 발생하면 unknown 에러를 던지고 unknown 로그를 남긴다")
     func throwsUnknownWhenFetchPreferenceGenreNovelsFails() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getPreferenceGenreNovelsResult = .failure(MockError.sample)
 
         let sut = makeRepository(service: service, logger: logger)
@@ -311,9 +311,8 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchPreferenceGenreNovels()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .unknown, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("unknown error") == true)
     }
 
     // MARK: - fetchSosoPick
@@ -321,7 +320,7 @@ struct DefaultRecommendationRepositoryTests {
     @Test("소소픽 조회에 성공하면 SosoPick 배열을 반환한다")
     func fetchesSosoPickSuccessfully() async throws {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getSosopickNovelsResult = .success(makeSosopickNovelsResponse())
 
         let sut = makeRepository(service: service, logger: logger)
@@ -331,13 +330,13 @@ struct DefaultRecommendationRepositoryTests {
         #expect(service.sosopickNovelsCallCount == 1)
         #expect(result.count == 1)
         #expect(result.first?.novelTitle == "소소픽 소설")
-        #expect(logger.loggedErrors.isEmpty)
+        #expect(mockLogger.errorMessages.isEmpty)
     }
 
     @Test("소소픽 조회 시 networking 에러가 발생하면 RepositoryError로 변환하고 network 로그를 남긴다")
     func translatesNetworkingErrorOnFetchSosoPick() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getSosopickNovelsResult = .failure(
             NetworkingError.responseFailure(code: 500, body: nil)
         )
@@ -348,15 +347,14 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchSosoPick()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .network, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("network error") == true)
     }
 
     @Test("소소픽 조회 시 알 수 없는 에러가 발생하면 unknown 에러를 던지고 unknown 로그를 남긴다")
     func throwsUnknownWhenFetchSosoPickFails() async {
         let service = MockRecommendationService()
-        let logger = MockRecommendationLogger()
+        let (logger, mockLogger) = makeLogger()
         service.getSosopickNovelsResult = .failure(MockError.sample)
 
         let sut = makeRepository(service: service, logger: logger)
@@ -365,8 +363,7 @@ struct DefaultRecommendationRepositoryTests {
             _ = try await sut.fetchSosoPick()
         }
 
-        #expect(logger.loggedErrors == [
-            .init(type: .unknown, action: .load)
-        ])
+        #expect(mockLogger.errorMessages.count == 1)
+        #expect(mockLogger.errorMessages.first?.contains("unknown error") == true)
     }
 }
