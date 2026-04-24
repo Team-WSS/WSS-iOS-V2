@@ -13,6 +13,10 @@ let project = Project.createDataModule(
     name: ModuleType.data(.recommendation).name,
     targets: [.sources, .demo, .tests],
     internalDependencies: [
-        .module(.core(.networking))
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.data(.base)),
+        .module(.domain(.base)),
+        .module(.domain(.recommendation))
     ]
 )

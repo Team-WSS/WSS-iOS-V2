@@ -16,7 +16,7 @@ public enum RecommendationMapper {
     //MARK: - 오늘의 발견
     
     public static func todayDiscoveryNovels(from dto: TodayDiscoveryNovelsResponse) -> [TodayDiscovery] {
-        return dto.discoveries.map { todayDiscoveryNovel(from: $0) }
+        return dto.popularNovels.map { todayDiscoveryNovel(from: $0) }
     }
     
     static func todayDiscoveryNovel(from dto: TodayDiscoveryNovelResponse) -> TodayDiscovery {
@@ -45,7 +45,7 @@ public enum RecommendationMapper {
     //MARK: - 지금 뜨는 글
     
     public static func trendingFeeds(from dto: TrendingFeedsResponse) -> [TrendingFeed] {
-        return dto.popularNovels.map { trendingFeed(from: $0) }
+        return dto.popularFeeds.map { trendingFeed(from: $0) }
     }
     
     static func trendingFeed(from dto: TrendingFeedResponse) -> TrendingFeed {

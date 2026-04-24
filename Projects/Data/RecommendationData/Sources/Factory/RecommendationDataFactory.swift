@@ -10,11 +10,12 @@ import Foundation
 
 import Networking
 import RecommendationDomain
+import BaseData
 
 public enum RecommendationDataFactory {
     public static func makeRepository(
         network: NetworkingRequestable,
-        logger: RecommendationLogger? = nil
+        logger: DataLogger? = nil
     ) -> RecommendationRepository {
         let service = DefaultRecommendationService(network: network)
         
