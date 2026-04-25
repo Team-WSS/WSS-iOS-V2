@@ -8,13 +8,13 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum CommentEndpoint: Endpoint {
     case getComments(feedId: Int)
     case postComment(feedId: Int, CommentRequest)
     case putComment(feedId: Int, commentId: Int, CommentRequest)
     case deleteComment(feedId: Int, commentId: Int)
-    
     
     var method: HTTPMethod {
         switch self {
@@ -26,8 +26,7 @@ enum CommentEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
     
     var path: String {
@@ -43,7 +42,7 @@ enum CommentEndpoint: Endpoint {
     
     var headers: [String : String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
     }
     
     var body: Data? {
