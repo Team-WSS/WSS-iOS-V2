@@ -9,11 +9,11 @@
 import Foundation
 import Networking
 
-struct DefaultCommentService: CommentService {
+public struct DefaultCommentService: CommentService {
     
     private let client: NetworkingRequestable
 
-    init(client: NetworkingRequestable) {
+    public init(client: NetworkingRequestable) {
         self.client = client
     }
     
