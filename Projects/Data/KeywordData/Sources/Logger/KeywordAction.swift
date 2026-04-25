@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum KeywordAction {
+enum KeywordAction {
     case searchByText
     case searchByFilter(query: String)
     
