@@ -8,14 +8,17 @@
 
 import Networking
 import KeywordDomain
+import BaseData
 
 public enum KeywordDataFactory {
     public static func makeRepository(
-        client: NetworkingRequestable
+        client: NetworkingRequestable,
+        logger: DataLogger? = nil
     ) -> KeywordRepository {
         let service = DefaultKeywordService(client: client)
         return DefaultKeywordRepository(
-            keywordService: service
+            keywordService: service,
+            logger: logger
         )
     }
 }
