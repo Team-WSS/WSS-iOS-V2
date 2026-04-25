@@ -10,12 +10,13 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createDataModule(
-    name: ModuleType.Data.comment.name,
-    targets: [.sources, .testing, .tests],
+    name: ModuleType.data(.comment).name,
+    targets: [.sources, .demo, .tests],
     internalDependencies: [
-        .Core.Networking,
-        .Core.Logger,
-        .Domain.makeDependency(for: .base, type: .sources),
-        .Domain.makeDependency(for: .comment, type: .sources)
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.data(.base)),
+        .module(.domain(.base)),
+        .module(.domain(.comment))
     ]
 )
