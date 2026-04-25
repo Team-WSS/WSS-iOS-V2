@@ -12,4 +12,14 @@ public struct GenrePreference: Equatable {
     public let name: String
     public let image: URL?
     public let count: Int
+    
+    public init(
+        name: String,
+        image: URL?,
+        count: Int
+    ) {
+        self.name = name
+        self.image = image
+        self.count = count
+    }
 }

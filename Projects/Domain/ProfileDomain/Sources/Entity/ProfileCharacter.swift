@@ -19,4 +19,20 @@ public struct ProfileCharacter {
     public let thumbnailImage: URL?
 
     public let isRepresentative: Bool
+    
+    public init(
+        id: Int,
+        name: String,
+        line: String,
+        representativeImage: URL?,
+        thumbnailImage: URL?,
+        isRepresentative: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.line = line
+        self.representativeImage = representativeImage
+        self.thumbnailImage = thumbnailImage
+        self.isRepresentative = isRepresentative
+    }
 }

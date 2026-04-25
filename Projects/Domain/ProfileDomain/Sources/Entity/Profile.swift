@@ -15,4 +15,18 @@ public struct Profile {
     public let characterImage: URL?
     public let isPublic: Bool
     public let genrePreferences: [NovelGenre]
+    
+    public init(
+        nickname: String,
+        introduction: String,
+        characterImage: URL?,
+        isPublic: Bool,
+        genrePreferences: [NovelGenre]
+    ) {
+        self.nickname = nickname
+        self.introduction = introduction
+        self.characterImage = characterImage
+        self.isPublic = isPublic
+        self.genrePreferences = genrePreferences
+    }
 }
