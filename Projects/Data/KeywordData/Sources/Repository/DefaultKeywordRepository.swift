@@ -10,6 +10,7 @@ import Foundation
 import KeywordDomain
 import BaseDomain
 import BaseData
+import Networking
 
 public struct DefaultKeywordRepository: KeywordRepository {
     
@@ -31,7 +32,9 @@ public struct DefaultKeywordRepository: KeywordRepository {
         do {
             let query = SearchKeywordRequest(query: "")
             let response = try await keywordService.searchKeyword(query)
-            return KeywordMapper.keywordGroups(from: response)
+            let result = KeywordMapper.keywordGroups(from: response)
+            logger?.logSuccess(action: action.text)
+            return result
         } catch let error as NetworkingError{
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -51,15 +54,17 @@ public struct DefaultKeywordRepository: KeywordRepository {
         do {
             let request = SearchKeywordRequest(query: query)
             let response = try await keywordService.searchKeyword(request)
-            return KeywordMapper.keywordGroups(from: response)
+            let result = KeywordMapper.keywordGroups(from: response)
+            logger?.logSuccess(action: action(query).text)
+            return result
         } catch let error as NetworkingError{
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action(query).text, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action(query).text, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action(query).text, error: error)
             throw .unknown
         }
     }

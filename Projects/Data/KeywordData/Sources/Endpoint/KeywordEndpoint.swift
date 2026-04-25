@@ -10,6 +10,7 @@ import Foundation
 
 import Foundation
 import Networking
+import BaseData
 
 enum KeywordEndpoint: Endpoint {
     case searchKeywords(SearchKeywordRequest)
@@ -21,8 +22,7 @@ enum KeywordEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
     
     var path: String {
@@ -31,18 +31,18 @@ enum KeywordEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
-    var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
-    }
-    
-    var body: Data? {
+    var queryItems: [URLQueryItem]? {
         switch self {
-        case .searchKeywords(let request): return request.asRequestBody()
+        case .searchKeywords(let request): return request.asQueryItems()
         }
     }
+
+    var headers: [String : String]? {
+        ["Content-Type": "application/json",
+         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
+    }
+
+    var body: Data? { nil }
     
     var requireTokenRefresh: Bool { false }
 }

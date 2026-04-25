@@ -11,6 +11,8 @@ import SwiftUI
 import KeywordData
 import KeywordDomain
 import Networking
+import BaseData
+import Logger
 
 struct KeywordDataDemoView: View {
     @State private var log: String = "버튼을 눌러 API를 호출하세요."
@@ -21,7 +23,8 @@ struct KeywordDataDemoView: View {
 
     init() {
         let client = NetworkingClient()
-        self.repository = KeywordDataFactory.makeRepository(client: client)
+        let logger = DataLogger(moduleName: "KeywordData", underlying: OSLogger.keyword)
+        self.repository = KeywordDataFactory.makeRepository(client: client, logger: logger)
     }
 
     var body: some View {
