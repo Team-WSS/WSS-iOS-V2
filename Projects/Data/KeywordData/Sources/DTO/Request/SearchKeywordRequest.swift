@@ -9,6 +9,6 @@
 import Foundation
 import Networking
 
-struct SearchKeywordRequest: RequestBodyConvertible {
+struct SearchKeywordRequest: QueryItemConvertible {
     let query: String
 }
