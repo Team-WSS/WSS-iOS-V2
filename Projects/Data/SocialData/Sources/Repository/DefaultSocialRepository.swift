@@ -29,6 +29,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postBlockUser(userID: id.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -43,6 +44,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.deleteBlock(blockID: id.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -57,6 +59,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             let responses = try await service.getBlockedUsers()
+            logger.logSuccess(action: action.name)
             return SocialMapper.blockedUsers(from: responses)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
@@ -72,6 +75,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportSpoilerFeed(feedID: id.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -86,6 +90,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportImproperFeed(feedID: id.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -100,6 +105,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportSpoilerComment(feedID: feedID.value, commentID: commentID.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -114,6 +120,7 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportImproperComment(feedID: feedID.value, commentID: commentID.value)
+            logger.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
