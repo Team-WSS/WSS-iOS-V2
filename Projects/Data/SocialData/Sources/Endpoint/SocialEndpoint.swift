@@ -9,8 +9,6 @@
 import Foundation
 import Networking
 
-// TODO: Domain에 엔드포인트 맞춰서 feedID 추가해둠 말해주기
-
 enum SocialEndpoint: Endpoint {
 
     case blockUser(userID: Int)
