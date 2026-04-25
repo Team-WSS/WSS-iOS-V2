@@ -18,7 +18,6 @@ public enum RecommendationDataFactory {
         logger: DataLogger? = nil
     ) -> RecommendationRepository {
         let service = DefaultRecommendationService(network: network)
-        
         return DefaultRecommendationRepository(
             service: service,
             logger: logger

@@ -13,13 +13,13 @@ import BaseDomain
 import Networking
 import BaseData
 
-public final class DefaultRecommendationRepository: RecommendationRepository {
+public struct DefaultRecommendationRepository: RecommendationRepository {
     
     private let service: RecommendationService
     private let logger: DataLogger?
     
     public init(service: RecommendationService,
-                logger: DataLogger? = nil) {
+                logger: DataLogger?) {
         self.service = service
         self.logger = logger
     }
