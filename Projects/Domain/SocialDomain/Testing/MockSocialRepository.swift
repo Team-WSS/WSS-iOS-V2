@@ -70,22 +70,26 @@ public final class MockSocialRepository: SocialRepository {
     // MARK: - Report comment
 
     public var reportSpoilerCommentCallCount = 0
+    public var reportedSpoilerCommentFeedIDs: [FeedID] = []
     public var reportedSpoilerCommentIDs: [CommentID] = []
     public var reportSpoilerCommentResult: Result<Void, RepositoryError> = .success(())
 
-    public func reportSpoilerComment(id: CommentID) async throws(RepositoryError) {
+    public func reportSpoilerComment(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
         reportSpoilerCommentCallCount += 1
-        reportedSpoilerCommentIDs.append(id)
+        reportedSpoilerCommentFeedIDs.append(feedID)
+        reportedSpoilerCommentIDs.append(commentID)
         _ = try reportSpoilerCommentResult.get()
     }
 
     public var reportImproperCommentCallCount = 0
+    public var reportedImproperCommentFeedIDs: [FeedID] = []
     public var reportedImproperCommentIDs: [CommentID] = []
     public var reportImproperCommentResult: Result<Void, RepositoryError> = .success(())
 
-    public func reportImproperComment(id: CommentID) async throws(RepositoryError) {
+    public func reportImproperComment(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
         reportImproperCommentCallCount += 1
-        reportedImproperCommentIDs.append(id)
+        reportedImproperCommentFeedIDs.append(feedID)
+        reportedImproperCommentIDs.append(commentID)
         _ = try reportImproperCommentResult.get()
     }
 }

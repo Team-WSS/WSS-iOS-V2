@@ -22,10 +22,12 @@ struct ReportSpoilerCommentUseCaseTests {
 
         let sut = DefaultReportSpoilerCommentUseCase(repository: repo)
 
+        let feedID = FeedID(1)
         let commentID = CommentID(7)
-        try await sut.execute(id: commentID)
+        try await sut.execute(feedID: feedID, commentID: commentID)
 
         #expect(repo.reportSpoilerCommentCallCount == 1)
+        #expect(repo.reportedSpoilerCommentFeedIDs == [feedID])
         #expect(repo.reportedSpoilerCommentIDs == [commentID])
     }
 
@@ -37,7 +39,7 @@ struct ReportSpoilerCommentUseCaseTests {
         let sut = DefaultReportSpoilerCommentUseCase(repository: repo)
 
         await #expect(throws: RepositoryError.networkUnavailable) {
-            try await sut.execute(id: CommentID(7))
+            try await sut.execute(feedID: FeedID(1), commentID: CommentID(7))
         }
 
         #expect(repo.reportSpoilerCommentCallCount == 1)
