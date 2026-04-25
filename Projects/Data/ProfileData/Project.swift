@@ -16,6 +16,7 @@ let project = Project.createDataModule(
         .module(.core(.networking)),
         .module(.core(.logger)),
         .module(.domain(.profile)),
-        .module(.domain(.base))
+        .module(.domain(.base)),
+        .module(.data(.base))
     ]
 )
