@@ -9,6 +9,7 @@
 import Foundation
 
 import Networking
+import BaseData
 
 enum RecommendationEndpoint: Endpoint {
     case getTodayDiscovery

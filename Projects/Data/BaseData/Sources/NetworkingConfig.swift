@@ -12,7 +12,7 @@ enum Config {
     enum Keys {
         enum Plist {
             static let baseURL = "BASE_URL"
-            static let testToken = "TEST_TOKEN"
+            static let testToken = "TEST_API_KEY"
             static let bucketURL = "BUCKET_URL"
             static let kakaoAppKey = "KAKAO_APP_KEY"
             static let appStoreID = "APPSTORE_ID"

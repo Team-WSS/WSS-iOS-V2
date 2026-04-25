@@ -10,6 +10,8 @@ import SwiftUI
 import RecommendationData
 import RecommendationDomain
 import Networking
+import BaseData
+import Logger
 
 struct RecommendationDataDemoView: View {
     @State private var log: String = "버튼을 눌러 API를 호출하세요."
@@ -19,7 +21,9 @@ struct RecommendationDataDemoView: View {
 
     init() {
         let client = NetworkingClient()
-        self.repository = RecommendationDataFactory.makeRepository(network: client)
+        let logger = DataLogger(moduleName: "RecommendationData", underlying: OSLogger.recommendation)
+        self.repository = RecommendationDataFactory.makeRepository(network: client,
+                                                                   logger: logger)
     }
 
     var body: some View {
