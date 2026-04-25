@@ -15,7 +15,7 @@ public enum RecommendationAction {
     case fetchPreferenceGenreNovels
     case fetchSosoPick
 
-    var text: String {
+    var name: String {
         switch self {
         case .fetchTodayDiscoveries:        "오늘의 발견 조회"
         case .fetchTrendingFeeds:           "지금 뜨는 글 조회"

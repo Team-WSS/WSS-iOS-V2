@@ -31,13 +31,13 @@ public final class DefaultRecommendationRepository: RecommendationRepository {
             let response = try await service.getTodayDiscovery()
             return RecommendationMapper.todayDiscoveryNovels(from: response)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -49,13 +49,13 @@ public final class DefaultRecommendationRepository: RecommendationRepository {
             let response = try await service.getTrendingFeeds()
             return RecommendationMapper.trendingFeeds(from: response)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -67,13 +67,13 @@ public final class DefaultRecommendationRepository: RecommendationRepository {
             let response = try await service.getInterestFeeds()
             return RecommendationMapper.interestFeeds(from: response)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -85,13 +85,13 @@ public final class DefaultRecommendationRepository: RecommendationRepository {
             let response = try await service.getPreferenceGenreNovels()
             return RecommendationMapper.preferenceGenreNovels(from: response)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -103,13 +103,13 @@ public final class DefaultRecommendationRepository: RecommendationRepository {
             let response = try await service.getSosopickNovels()
             return RecommendationMapper.sosopickNovels(from: response)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
