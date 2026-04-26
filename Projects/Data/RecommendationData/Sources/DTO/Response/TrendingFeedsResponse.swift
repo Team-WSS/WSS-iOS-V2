@@ -11,7 +11,7 @@ import Foundation
 //MARK: - 홈 - 지금 뜨는 글
 
 public struct TrendingFeedsResponse: Decodable {
-    public let popularNovels: [TrendingFeedResponse]
+    public let popularFeeds: [TrendingFeedResponse]
 }
 
 public struct TrendingFeedResponse: Decodable {

@@ -12,7 +12,7 @@ public enum RepositoryError: Error, Equatable {
     case networkUnavailable
     case authenticationRequired
     case serverUnavailable
-    case notFound
     case invalidData
+    case notFound
     case unknown
 }

@@ -11,7 +11,7 @@ import Foundation
 //MARK: - 홈 - 오늘의 발견
 
 public struct TodayDiscoveryNovelsResponse: Decodable {
-    public let discoveries: [TodayDiscoveryNovelResponse]
+    public let popularNovels: [TodayDiscoveryNovelResponse]
 }
 
 public struct TodayDiscoveryNovelResponse: Decodable {

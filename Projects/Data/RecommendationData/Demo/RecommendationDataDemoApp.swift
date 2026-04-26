@@ -12,7 +12,8 @@ import RecommendationData
 struct RecommendationDataDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            RecommendationDataDemo()
+            RecommendationDataDemoView()
         }
     }
 }
+
