@@ -49,6 +49,7 @@ public enum DataModule: String, ModuleSpec {
     case novelReview
     case notification
     case keyword
+    case comment
 }
 
 public enum CoreModule: String, ModuleSpec {
