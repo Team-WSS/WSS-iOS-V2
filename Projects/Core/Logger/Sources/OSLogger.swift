@@ -42,6 +42,7 @@ public extension OSLogger {
     static let notification = OSLogger(category: .notification)
     static let feed         = OSLogger(category: .feed)
     static let recommendation = OSLogger(category: .recommendation)
+    static let keyword      = OSLogger(category: .keyword)
 }
 
 // MARK: - LogCategory
@@ -55,4 +56,5 @@ public enum LogCategory: String {
     case notification
     case feed
     case recommendation
+    case keyword
 }

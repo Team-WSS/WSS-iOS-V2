@@ -14,5 +14,5 @@ public protocol KeywordRepository {
     // 전체 키워드 조회
     func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup]
     // 특정 키워드 검색
-    func searchKeywords(_ query: String) async throws(RepositoryError) -> [Keyword]
+    func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup]
 }

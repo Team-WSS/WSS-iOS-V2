@@ -23,6 +23,7 @@ public final class DefaultSearchKeywordUseCase: SearchKeywordsUseCase {
     }
     
     public func execute(searchText: String) async throws(RepositoryError) -> [Keyword] {
-        try await keywordRepository.searchKeywords(searchText)
+        let groups = try await keywordRepository.searchKeywords(searchText)
+        return groups.flatMap { $0.keywords }
     }
 }

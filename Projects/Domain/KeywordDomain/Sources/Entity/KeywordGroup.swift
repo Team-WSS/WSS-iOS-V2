@@ -11,6 +11,16 @@ import BaseDomain
 
 public struct KeywordGroup {
     public let name: String
-    public let profileImage: ImageWrapper
+    public let image: URL?
     public let keywords: [Keyword]
+    
+    public init(
+        name: String,
+        image: URL?,
+        keywords: [Keyword]
+    ) {
+        self.name = name
+        self.image = image
+        self.keywords = keywords
+    }
 }
