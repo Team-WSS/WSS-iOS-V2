@@ -8,8 +8,9 @@
 import Foundation
 
 public enum AuthorizationPolicy {
-    case required     // Bearer 토큰 주입 + 401시 refresh 재시도
-    case notRequired  // 공개 API (로그인·리이슈 등)
+    case requiresToken          // Bearer 토큰 주입 + 401시 refresh 재시도
+    case withoutToken           // 공개 API (로그인·리이슈 등)
+    case usesTokenIfAvailable   // 토큰이 있으면 주입 + 401시 refresh 재시도
 }
 
 public protocol Endpoint {
@@ -25,7 +26,7 @@ public protocol Endpoint {
 public extension Endpoint {
     var headers: [String: String]? { nil }
     var body: RequestBody { .none }
-    var authorization: AuthorizationPolicy { .required }
+    var authorization: AuthorizationPolicy { .requiresToken }
 
     func makeURLRequest() throws -> URLRequest {
         var components = URLComponents(

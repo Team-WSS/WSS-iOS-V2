@@ -57,4 +57,11 @@ enum SettingEndpoint: Endpoint {
             return .none
         }
     }
+    
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .getAppMinimumVersion: return .withoutToken
+        default: return .requiresToken
+        }
+    }
 }

@@ -34,7 +34,14 @@ enum RecommendationEndpoint: Endpoint {
     
     var method: HTTPMethod { .get }
     
-    var authorization: AuthorizationPolicy { .notRequired }
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .getInterestFeeds, .getPreferenceGenreNovels:
+            return .requiresToken
+        case .getTodayDiscovery, .getTrendingFeeds, .sosopickNovels:
+            return .usesTokenIfAvailable
+        }
+    }
 
     var queryItems: [URLQueryItem]? { nil }
 }

@@ -20,15 +20,20 @@ public final class NetworkingClient: NetworkingRequestable {
     }
     
     public func request(_ endpoint: Endpoint) async throws -> Data {
+        let authorizationContext = makeAuthorizationContext(for: endpoint)
+        
         do {
-            return try await executeRequest(endpoint)
+            return try await executeRequest(endpoint, authorizationContext: authorizationContext)
         } catch let error as NetworkingError {
             switch error {
             case .responseFailure(let code, _) where code == 401:
-                guard endpoint.authorization == .required else {
+                guard authorizationContext.canRefreshSession else {
                     throw NetworkingError.requiresReauthentication
                 }
-                return try await retryAfterRefreshingSession(for: endpoint)
+                return try await retryAfterRefreshingSession(
+                    for: endpoint,
+                    authorizationContext: authorizationContext
+                )
             case .responseFailure(let code, let body) where code == 404 && body?.code == "USER-006":
                 try? tokenStore?.clearTokens()
                 throw NetworkingError.requiresReauthentication
@@ -38,8 +43,14 @@ public final class NetworkingClient: NetworkingRequestable {
         }
     }
     
-    private func executeRequest(_ endpoint: Endpoint) async throws -> Data {
-        let request = try authorizedRequest(for: endpoint)
+    private func executeRequest(
+        _ endpoint: Endpoint,
+        authorizationContext: AuthorizationContext
+    ) async throws -> Data {
+        let request = try authorizedRequest(
+            for: endpoint,
+            authorizationContext: authorizationContext
+        )
         logger?.logRequest(request)
 
         let (data, response): (Data, URLResponse)
@@ -63,7 +74,30 @@ public final class NetworkingClient: NetworkingRequestable {
 }
 
 extension NetworkingClient {
-    private func retryAfterRefreshingSession(for endpoint: Endpoint) async throws -> Data {
+    private struct AuthorizationContext {
+        let canUseToken: Bool
+        let canRefreshSession: Bool
+    }
+    
+    private func makeAuthorizationContext(for endpoint: Endpoint) -> AuthorizationContext {
+        switch endpoint.authorization {
+        case .requiresToken:
+            return AuthorizationContext(canUseToken: true, canRefreshSession: true)
+        case .withoutToken:
+            return AuthorizationContext(canUseToken: false, canRefreshSession: false)
+        case .usesTokenIfAvailable:
+            let hasAccessToken = currentAccessToken()?.isEmpty == false
+            return AuthorizationContext(
+                canUseToken: hasAccessToken,
+                canRefreshSession: hasAccessToken
+            )
+        }
+    }
+    
+    private func retryAfterRefreshingSession(
+        for endpoint: Endpoint,
+        authorizationContext: AuthorizationContext
+    ) async throws -> Data {
         let refreshSuccess: Bool
         do {
             refreshSuccess = try await authSessionRefresher?.refreshSession() ?? false
@@ -77,20 +111,28 @@ extension NetworkingClient {
             throw NetworkingError.requiresReauthentication
         }
        
-        return try await executeRequest(endpoint)
+        return try await executeRequest(endpoint, authorizationContext: authorizationContext)
     }
     
-    private func authorizedRequest(for endpoint: Endpoint) throws -> URLRequest {
+    private func authorizedRequest(
+        for endpoint: Endpoint,
+        authorizationContext: AuthorizationContext
+    ) throws -> URLRequest {
         var request = try endpoint.makeURLRequest()
 
-        guard endpoint.authorization == .required,
-              let accessToken = try? tokenStore?.accessToken(),
+        guard authorizationContext.canUseToken,
+              let accessToken = currentAccessToken(),
               accessToken.isEmpty == false else {
             return request
         }
 
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         return request
+    }
+    
+    private func currentAccessToken() -> String? {
+        guard let tokenStore else { return nil }
+        return try? tokenStore.accessToken()
     }
     
     private func validateResponse(data: Data, response: URLResponse) async throws {

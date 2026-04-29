@@ -9,7 +9,7 @@ struct MockEndpoint: Endpoint {
     init(
         headers: [String: String]? = nil,
         body: RequestBody = .none,
-        authorization: AuthorizationPolicy = .required
+        authorization: AuthorizationPolicy = .requiresToken
     ) {
         self.headers = headers
         self.body = body

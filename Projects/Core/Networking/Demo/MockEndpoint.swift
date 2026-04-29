@@ -9,7 +9,7 @@ import Foundation
 import Networking
 
 enum MockEndpoint: Endpoint {
-    var authorization: AuthorizationPolicy { .notRequired }
+    var authorization: AuthorizationPolicy { .withoutToken }
 
     case getPost(id: Int)
     case createPost(title: String, body: String)
