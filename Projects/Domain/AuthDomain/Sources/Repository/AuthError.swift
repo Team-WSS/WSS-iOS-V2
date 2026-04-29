@@ -10,5 +10,6 @@ public enum AuthError: Error {
     case networkUnavailable
     case invalidCredential
     case providerUnavailable
+    case invalidData
     case unknown
 }
