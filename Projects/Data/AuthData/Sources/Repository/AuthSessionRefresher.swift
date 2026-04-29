@@ -26,6 +26,8 @@ public struct AuthSessionRefresher: AuthSessionRefreshing {
     }
     
     public func refreshSession() async throws -> Bool {
+        let action = AuthAction.refreshSession
+
         do {
             guard let refreshToken = try tokenStore.refreshToken() else {
                 return false
@@ -34,8 +36,13 @@ public struct AuthSessionRefresher: AuthSessionRefreshing {
             let response = try await service.postReissueToken(request)
             try tokenStore.saveAccessToken(response.accessToken)
             try tokenStore.saveRefreshToken(response.refreshToken)
+            logger?.logSuccess(action: action.name)
             return true
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error
         } catch {
+            logger?.logUnknownError(action: action.name, error: error)
             throw error
         }
     }

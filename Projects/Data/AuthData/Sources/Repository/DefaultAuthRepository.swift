@@ -36,7 +36,7 @@ public struct DefaultAuthRepository: AuthRepository {
     public func login(
         with credential: SocialLoginCredential
     ) async throws(AuthError) -> NeedOnboarding {
-        let action = "login"
+        let action = AuthAction.login
         
         do {
             let loginResponse: LoginSuccessResponse
@@ -53,19 +53,19 @@ public struct DefaultAuthRepository: AuthRepository {
             try tokenStore.saveAccessToken(loginResponse.accessToken)
             try tokenStore.saveRefreshToken(loginResponse.refreshToken)
             
-            logger?.logSuccess(action: action)
+            logger?.logSuccess(action: action.name)
             return AuthMapper.needOnboarding(from: loginResponse)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toAuthError()
         } catch {
-            logger?.logUnknownError(action: action, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
     
     public func logout() async throws(RepositoryError) {
-        let action = "logout"
+        let action = AuthAction.logout
         
         do {
             guard let refreshToken = try tokenStore.refreshToken() else {
@@ -76,14 +76,14 @@ public struct DefaultAuthRepository: AuthRepository {
             }
             let request = LogoutRequest(refreshToken: refreshToken,
                                         deviceIdentifier: deviceIdentifier)
-            logger?.logSuccess(action: action)
             try await service.postLogout(request)
+            logger?.logSuccess(action: action.name)
             
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logUnknownError(action: action, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -91,16 +91,17 @@ public struct DefaultAuthRepository: AuthRepository {
     public func withdraw(
         draft: WithdrawalReasonDraft
     ) async throws(RepositoryError) {
-        let action = "withdraw"
+        let action = AuthAction.withdraw
         
         do {
             let request = AuthMapper.withdrawalReason(from: draft)
             try await service.postWithdraw(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logUnknownError(action: action, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -108,16 +109,17 @@ public struct DefaultAuthRepository: AuthRepository {
     public func syncAppleCredential(
         _ credential: AppleSyncCredential
     ) async throws(RepositoryError) {
-        let action = "syncAppleCredential"
+        let action = AuthAction.syncAppleCredential
         
         do {
             let request = AuthMapper.appleSyncRequest(from: credential)
             try await service.patchAppleAccountSync(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logUnknownError(action: action, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }

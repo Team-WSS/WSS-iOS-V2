@@ -28,13 +28,13 @@ public struct DefaultTermsAgreementRepository: TermsAgreementRepository {
         do {
             let response = try await service.getTermSetting()
             let draft = SettingMapper.termsAgreementDraft(from: response)
-            logger?.logSuccess(action: action.text)
+            logger?.logSuccess(action: action.name)
             return draft
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -45,12 +45,12 @@ public struct DefaultTermsAgreementRepository: TermsAgreementRepository {
         do {
             let request = SettingMapper.termSettingRequest(from: draft)
             try await service.patchTermSetting(request)
-            logger?.logSuccess(action: action.text)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }

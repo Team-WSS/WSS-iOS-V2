@@ -2,7 +2,9 @@ import Testing
 @testable import AuthData
 @testable import AuthDataTesting
 import AuthDomain
+import BaseData
 import BaseDomain
+import Logger
 import Networking
 
 @Suite("DefaultAuthRepository")
@@ -12,14 +14,20 @@ struct DefaultAuthRepositoryTests {
 
     private func makeRepository(
         service: MockAuthService = MockAuthService(),
-        tokenStore: MockTokenStore = MockTokenStore()
+        tokenStore: MockTokenStore = MockTokenStore(),
+        deviceIdentifierStore: MockDeviceIdentifierStore = MockDeviceIdentifierStore(),
+        logger: DataLogger? = nil
     ) -> DefaultAuthRepository {
         DefaultAuthRepository(
             service: service,
             tokenStore: tokenStore,
-            deviceIdentifierStore: MockDeviceIdentifierStore(),
-            logger: nil
+            deviceIdentifierStore: deviceIdentifierStore,
+            logger: logger
         )
+    }
+
+    private func makeDataLogger(underlying: Logger) -> DataLogger {
+        DataLogger(moduleName: "AuthData", underlying: underlying)
     }
 
     private func makeLoginSuccessResponse(
@@ -106,5 +114,108 @@ struct DefaultAuthRepositoryTests {
         await #expect(throws: AuthError.unknown) {
             _ = try await sut.login(with: .apple(authorizationCode: "code", idToken: "token"))
         }
+    }
+
+    // MARK: - logout
+
+    @Test("로그아웃 성공 시 요청 완료 후 성공 로그를 남긴다")
+    func logoutSucceedsAndLogsSuccess() async throws {
+        let service = MockAuthService()
+        let tokenStore = MockTokenStore()
+        try tokenStore.saveRefreshToken("refresh")
+        let deviceIdentifierStore = MockDeviceIdentifierStore(deviceIdentifier: "device")
+        let logger = MockLogger()
+
+        let sut = makeRepository(
+            service: service,
+            tokenStore: tokenStore,
+            deviceIdentifierStore: deviceIdentifierStore,
+            logger: makeDataLogger(underlying: logger)
+        )
+
+        try await sut.logout()
+
+        #expect(service.requestedLogout?.refreshToken == "refresh")
+        #expect(service.requestedLogout?.deviceIdentifier == "device")
+        #expect(logger.debugMessages.contains { $0.contains("logout succeeded") })
+    }
+
+    @Test("로그아웃 요청 실패 시 성공 로그를 남기지 않는다")
+    func logoutFailureDoesNotLogSuccess() async {
+        let service = MockAuthService()
+        service.postLogoutResult = .failure(NetworkingError.responseFailure(code: 500, body: nil))
+        let tokenStore = MockTokenStore()
+        try? tokenStore.saveRefreshToken("refresh")
+        let deviceIdentifierStore = MockDeviceIdentifierStore(deviceIdentifier: "device")
+        let logger = MockLogger()
+
+        let sut = makeRepository(
+            service: service,
+            tokenStore: tokenStore,
+            deviceIdentifierStore: deviceIdentifierStore,
+            logger: makeDataLogger(underlying: logger)
+        )
+
+        await #expect(throws: RepositoryError.serverUnavailable) {
+            try await sut.logout()
+        }
+        #expect(logger.debugMessages.isEmpty)
+    }
+
+    // MARK: - withdraw
+
+    @Test("회원 탈퇴 성공 시 성공 로그를 남긴다")
+    func withdrawSucceedsAndLogsSuccess() async throws {
+        let service = MockAuthService()
+        let logger = MockLogger()
+        let sut = makeRepository(
+            service: service,
+            logger: makeDataLogger(underlying: logger)
+        )
+
+        try await sut.withdraw(draft: WithdrawalReasonDraft())
+
+        #expect(service.requestedWithdraw?.reason == "자주 사용하지 않아서")
+        #expect(logger.debugMessages.contains { $0.contains("withdraw succeeded") })
+    }
+
+    // MARK: - syncAppleCredential
+
+    @Test("Apple 계정 연동 성공 시 성공 로그를 남긴다")
+    func syncAppleCredentialSucceedsAndLogsSuccess() async throws {
+        let service = MockAuthService()
+        let logger = MockLogger()
+        let sut = makeRepository(
+            service: service,
+            logger: makeDataLogger(underlying: logger)
+        )
+        let credential = AppleSyncCredential(
+            authorizationCode: "code",
+            idToken: "idToken"
+        )
+
+        try await sut.syncAppleCredential(credential)
+
+        #expect(service.requestedAppleSync?.authorizationCode == "code")
+        #expect(service.requestedAppleSync?.idToken == "idToken")
+        #expect(logger.debugMessages.contains { $0.contains("syncAppleCredential succeeded") })
+    }
+}
+
+private final class MockLogger: Logger {
+    private(set) var debugMessages: [String] = []
+    private(set) var infoMessages: [String] = []
+    private(set) var errorMessages: [String] = []
+
+    func debug(_ message: String) {
+        debugMessages.append(message)
+    }
+
+    func info(_ message: String) {
+        infoMessages.append(message)
+    }
+
+    func error(_ message: String) {
+        errorMessages.append(message)
     }
 }
