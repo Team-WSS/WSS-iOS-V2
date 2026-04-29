@@ -41,8 +41,6 @@ enum NovelReviewEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
     var body: RequestBody {
         switch self {
         case .postReview(let request):    return .json(request)

@@ -43,5 +43,4 @@ enum RecommendationEndpoint: Endpoint {
         }
     }
 
-    var queryItems: [URLQueryItem]? { nil }
 }

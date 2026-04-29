@@ -42,10 +42,10 @@ enum NotificationEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? {
+    var query: QueryParameters {
         switch self {
-        case .getNotifications(let query): return query.asQueryItems()
-        default: return nil
+        case .getNotifications(let query): return .convertible(query)
+        default: return .none
         }
     }
     

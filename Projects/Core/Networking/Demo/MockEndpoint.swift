@@ -38,8 +38,6 @@ enum MockEndpoint: Endpoint {
             return .none
         }
     }
-    
-    var queryItems: [URLQueryItem]? { nil }
 }
 
 private struct CreatePostRequest: Encodable {

@@ -38,8 +38,6 @@ enum CommentEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
     var body: RequestBody {
         switch self {
         case .postComment(_ , let request):     return .json(request)

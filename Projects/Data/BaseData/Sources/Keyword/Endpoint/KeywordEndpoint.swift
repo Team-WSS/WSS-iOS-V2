@@ -27,10 +27,10 @@ enum KeywordEndpoint: Endpoint {
         case .searchKeywords: "/keywords"
         }
     }
-
-    var queryItems: [URLQueryItem]? {
+    
+    var query: QueryParameters {
         switch self {
-        case .searchKeywords(let request): return request.asQueryItems()
+        case .searchKeywords(let request): return .convertible(request)
         }
     }
 

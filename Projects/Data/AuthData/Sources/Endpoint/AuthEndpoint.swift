@@ -48,8 +48,6 @@ enum AuthEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
     var body: RequestBody {
         switch self {
         case .patchAppleAccountSync(let request): return .json(request)

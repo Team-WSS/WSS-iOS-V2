@@ -151,6 +151,38 @@ struct NetworkingClientTests {
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
     }
 
+    @Test("convertible query는 URLQueryItem으로 변환되어 URL에 반영된다")
+    func appliesConvertibleQueryToURL() throws {
+        let request = try MockEndpoint(
+            query: .convertible(SampleQuery(keyword: "fantasy", page: 1, isAdult: false))
+        ).makeURLRequest()
+        let url = try #require(request.url)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+
+        #expect(queryItems.contains(URLQueryItem(name: "keyword", value: "fantasy")))
+        #expect(queryItems.contains(URLQueryItem(name: "page", value: "1")))
+        #expect(queryItems.contains(URLQueryItem(name: "isAdult", value: "false")))
+    }
+
+    @Test("custom query는 전달한 URLQueryItem을 그대로 URL에 반영한다")
+    func appliesCustomQueryToURL() throws {
+        let request = try MockEndpoint(
+            query: .custom([
+                URLQueryItem(name: "ids", value: "1"),
+                URLQueryItem(name: "ids", value: "2")
+            ])
+        ).makeURLRequest()
+        let url = try #require(request.url)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+
+        #expect(queryItems == [
+            URLQueryItem(name: "ids", value: "1"),
+            URLQueryItem(name: "ids", value: "2")
+        ])
+    }
+
     @Test("multipart body는 각 part와 boundary를 포함해 인코딩된다")
     func encodesMultipartBodyWithPartsAndBoundary() throws {
         let formData = MultipartFormData(
@@ -451,6 +483,12 @@ private extension NSLock {
 
 private struct SampleRequest: Codable, Equatable {
     let message: String
+}
+
+private struct SampleQuery: QueryItemConvertible {
+    let keyword: String
+    let page: Int
+    let isAdult: Bool
 }
 
 private struct FailingRequest: Encodable {

@@ -39,8 +39,6 @@ enum PushEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
     var body: RequestBody {
         switch self {
         case .postFCMToken(let request): return .json(request)

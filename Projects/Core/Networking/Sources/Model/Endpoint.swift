@@ -17,13 +17,14 @@ public protocol Endpoint {
     var method: HTTPMethod { get }
     var baseURL: URL { get }
     var path: String { get }
-    var queryItems: [URLQueryItem]? { get }
+    var query: QueryParameters { get }
     var headers: [String: String]? { get }
     var body: RequestBody { get }
     var authorization: AuthorizationPolicy { get }
 }
 
 public extension Endpoint {
+    var query: QueryParameters { .none }
     var headers: [String: String]? { nil }
     var body: RequestBody { .none }
     var authorization: AuthorizationPolicy { .requiresToken }
@@ -33,7 +34,7 @@ public extension Endpoint {
             url: baseURL.appendingPathComponent(path),
             resolvingAgainstBaseURL: false
         )
-        components?.queryItems = queryItems
+        components?.queryItems = query.queryItems
 
         var request = URLRequest(url: components?.url ?? baseURL)
         request.httpMethod = method.rawValue
