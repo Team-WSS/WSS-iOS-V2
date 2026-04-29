@@ -117,7 +117,7 @@ struct NetworkingClientTests {
     @Test("body가 없으면 Content-Type과 httpBody를 넣지 않는다")
     func doesNotSetBodyHeadersWhenRequestBodyIsNone() throws {
         let request = try MockEndpoint(
-            headers: ["Content-Type": "text/plain"],
+            additionalHeaders: ["Content-Type": "text/plain"],
             body: .none
         ).makeURLRequest()
 
@@ -137,10 +137,10 @@ struct NetworkingClientTests {
         #expect(decoded == sample)
     }
 
-    @Test("일반 headers는 유지하고 Content-Type은 RequestBody가 결정한다")
-    func keepsHeadersAndUsesBodyContentType() throws {
+    @Test("additionalHeaders는 유지하고 Content-Type은 RequestBody가 결정한다")
+    func keepsAdditionalHeadersAndUsesBodyContentType() throws {
         let request = try MockEndpoint(
-            headers: [
+            additionalHeaders: [
                 "X-Test": "header",
                 "Content-Type": "text/plain"
             ],

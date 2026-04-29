@@ -18,17 +18,12 @@ public protocol Endpoint {
     var baseURL: URL { get }
     var path: String { get }
     var query: QueryParameters { get }
-    var headers: [String: String]? { get }
+    var additionalHeaders: [String: String]? { get }
     var body: RequestBody { get }
     var authorization: AuthorizationPolicy { get }
 }
 
 public extension Endpoint {
-    var query: QueryParameters { .none }
-    var headers: [String: String]? { nil }
-    var body: RequestBody { .none }
-    var authorization: AuthorizationPolicy { .requiresToken }
-
     func makeURLRequest() throws -> URLRequest {
         var components = URLComponents(
             url: baseURL.appendingPathComponent(path),
@@ -39,7 +34,7 @@ public extension Endpoint {
         var request = URLRequest(url: components?.url ?? baseURL)
         request.httpMethod = method.rawValue
 
-        headers?.forEach { key, value in
+        additionalHeaders?.forEach { key, value in
             guard key.lowercased() != "content-type" else { return }
             request.setValue(value, forHTTPHeaderField: key)
         }

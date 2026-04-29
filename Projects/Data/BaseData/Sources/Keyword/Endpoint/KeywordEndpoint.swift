@@ -34,12 +34,9 @@ enum KeywordEndpoint: Endpoint {
         }
     }
 
-    var headers: [String: String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
-    }
+    var additionalHeaders: [String: String]? { nil }
 
-    var body: Data? { nil }
+    var body: RequestBody { .none }
 
-    var requireTokenRefresh: Bool { false }
+    var authorization: AuthorizationPolicy { .withoutToken }
 }

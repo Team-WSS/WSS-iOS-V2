@@ -38,6 +38,10 @@ enum PushEndpoint: Endpoint {
             
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var body: RequestBody {
         switch self {
@@ -47,4 +51,6 @@ enum PushEndpoint: Endpoint {
             return .none
         }
     }
+
+    var authorization: AuthorizationPolicy { .requiresToken }
 }

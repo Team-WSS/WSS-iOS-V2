@@ -9,8 +9,6 @@ import Foundation
 import Networking
 
 enum MockEndpoint: Endpoint {
-    var authorization: AuthorizationPolicy { .withoutToken }
-
     case getPost(id: Int)
     case createPost(title: String, body: String)
     
@@ -29,6 +27,10 @@ enum MockEndpoint: Endpoint {
         case .createPost: return .post
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var body: RequestBody {
         switch self {
@@ -38,6 +40,8 @@ enum MockEndpoint: Endpoint {
             return .none
         }
     }
+
+    var authorization: AuthorizationPolicy { .withoutToken }
 }
 
 private struct CreatePostRequest: Encodable {

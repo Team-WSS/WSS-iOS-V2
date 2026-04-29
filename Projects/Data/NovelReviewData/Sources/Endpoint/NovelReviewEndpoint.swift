@@ -40,6 +40,10 @@ enum NovelReviewEndpoint: Endpoint {
         case .deleteReview(let novelId):    return "/user-novels/\(novelId)"
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var body: RequestBody {
         switch self {
@@ -48,4 +52,6 @@ enum NovelReviewEndpoint: Endpoint {
         default: return .none
         }
     }
+
+    var authorization: AuthorizationPolicy { .requiresToken }
 }

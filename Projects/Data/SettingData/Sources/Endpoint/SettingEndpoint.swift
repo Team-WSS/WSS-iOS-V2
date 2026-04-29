@@ -42,6 +42,10 @@ enum SettingEndpoint: Endpoint {
         case .getAppMinimumVersion:         return "/minimum-version"
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var queryItems: [URLQueryItem]? {
         switch self {

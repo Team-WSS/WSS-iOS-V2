@@ -33,6 +33,12 @@ enum RecommendationEndpoint: Endpoint {
     }
     
     var method: HTTPMethod { .get }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
+
+    var body: RequestBody { .none }
     
     var authorization: AuthorizationPolicy {
         switch self {

@@ -37,6 +37,10 @@ enum CommentEndpoint: Endpoint {
         case .deleteComment(let feedId, let commentId):         return "/feeds/\(feedId)/comments/\(commentId)"
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var body: RequestBody {
         switch self {
@@ -45,4 +49,6 @@ enum CommentEndpoint: Endpoint {
         default: return .none
         }
     }
+
+    var authorization: AuthorizationPolicy { .requiresToken }
 }

@@ -48,5 +48,11 @@ enum NotificationEndpoint: Endpoint {
         default: return .none
         }
     }
+
+    var additionalHeaders: [String: String]? { nil }
+
+    var body: RequestBody { .none }
+
+    var authorization: AuthorizationPolicy { .requiresToken }
     
 }

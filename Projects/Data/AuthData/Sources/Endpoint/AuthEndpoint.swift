@@ -47,6 +47,10 @@ enum AuthEndpoint: Endpoint {
         case .postReissueToken:         return "/reissue"
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
     var body: RequestBody {
         switch self {
