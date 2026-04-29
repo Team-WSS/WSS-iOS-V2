@@ -34,13 +34,7 @@ enum RecommendationEndpoint: Endpoint {
     
     var method: HTTPMethod { .get }
     
-    var headers: [String : String]? {
-        ["Content-Type": "application/json"]
-    }
-    
     var authorization: AuthorizationPolicy { .notRequired }
-    
-    var body: Data? { nil }
-    
+
     var queryItems: [URLQueryItem]? { nil }
 }

@@ -6,9 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Networking
-
-struct LogoutRequest: RequestBodyConvertible {
+struct LogoutRequest: Encodable {
     let refreshToken: String
     let deviceIdentifier: String
 }

@@ -39,7 +39,7 @@ public final class NetworkingClient: NetworkingRequestable {
     }
     
     private func executeRequest(_ endpoint: Endpoint) async throws -> Data {
-        let request = authorizedRequest(for: endpoint)
+        let request = try authorizedRequest(for: endpoint)
         logger?.logRequest(request)
 
         let (data, response): (Data, URLResponse)
@@ -80,8 +80,8 @@ extension NetworkingClient {
         return try await executeRequest(endpoint)
     }
     
-    private func authorizedRequest(for endpoint: Endpoint) -> URLRequest {
-        var request = endpoint.urlRequest
+    private func authorizedRequest(for endpoint: Endpoint) throws -> URLRequest {
+        var request = try endpoint.makeURLRequest()
 
         guard endpoint.authorization == .required,
               let accessToken = try? tokenStore?.accessToken(),

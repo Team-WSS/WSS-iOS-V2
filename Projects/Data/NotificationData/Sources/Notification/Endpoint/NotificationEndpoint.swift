@@ -49,11 +49,4 @@ enum NotificationEndpoint: Endpoint {
         }
     }
     
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? { nil }
 }

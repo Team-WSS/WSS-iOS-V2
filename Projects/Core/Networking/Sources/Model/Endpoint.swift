@@ -18,14 +18,16 @@ public protocol Endpoint {
     var path: String { get }
     var queryItems: [URLQueryItem]? { get }
     var headers: [String: String]? { get }
-    var body: Data? { get }
+    var body: RequestBody { get }
     var authorization: AuthorizationPolicy { get }
 }
 
 public extension Endpoint {
+    var headers: [String: String]? { nil }
+    var body: RequestBody { .none }
     var authorization: AuthorizationPolicy { .required }
 
-    var urlRequest: URLRequest {
+    func makeURLRequest() throws -> URLRequest {
         var components = URLComponents(
             url: baseURL.appendingPathComponent(path),
             resolvingAgainstBaseURL: false
@@ -34,10 +36,19 @@ public extension Endpoint {
 
         var request = URLRequest(url: components?.url ?? baseURL)
         request.httpMethod = method.rawValue
-        request.httpBody = body
+
         headers?.forEach { key, value in
-            request.addValue(value, forHTTPHeaderField: key)
+            guard key.lowercased() != "content-type" else { return }
+            request.setValue(value, forHTTPHeaderField: key)
         }
+
+        let encodedBody = try body.encoded()
+        request.httpBody = encodedBody.data
+
+        if let contentType = encodedBody.contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        }
+
         return request
     }
 }

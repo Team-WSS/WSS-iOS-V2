@@ -50,16 +50,14 @@ enum AuthEndpoint: Endpoint {
     
     var queryItems: [URLQueryItem]? { nil }
     
-    var headers: [String : String]? { [ "Content-Type": "application/json" ] }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .patchAppleAccountSync(let request): return request.asRequestBody()
-        case .postAppleLogin(let request):        return request.asRequestBody()
-        case .postKakaoLogin:                     return nil
-        case .postLogout(let request):            return request.asRequestBody()
-        case .postWithdraw(let request):          return request.asRequestBody()
-        case .postReissueToken(let request):      return request.asRequestBody()
+        case .patchAppleAccountSync(let request): return .json(request)
+        case .postAppleLogin(let request):        return .json(request)
+        case .postKakaoLogin:                     return .none
+        case .postLogout(let request):            return .json(request)
+        case .postWithdraw(let request):          return .json(request)
+        case .postReissueToken(let request):      return .json(request)
         }
     }
     

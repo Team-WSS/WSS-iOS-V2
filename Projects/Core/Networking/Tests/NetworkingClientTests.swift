@@ -88,6 +88,100 @@ struct NetworkingClientTests {
         _ = try await client.request(MockEndpoint(authorization: .notRequired))
     }
 
+    @Test("body가 없으면 Content-Type과 httpBody를 넣지 않는다")
+    func doesNotSetBodyHeadersWhenRequestBodyIsNone() throws {
+        let request = try MockEndpoint(
+            headers: ["Content-Type": "text/plain"],
+            body: .none
+        ).makeURLRequest()
+
+        #expect(request.httpBody == nil)
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == nil)
+    }
+
+    @Test("json body는 application/json Content-Type과 함께 인코딩된다")
+    func encodesJSONBodyWithContentType() throws {
+        let sample = SampleRequest(message: "hello")
+
+        let request = try MockEndpoint(body: .json(sample)).makeURLRequest()
+        let body = try #require(request.httpBody)
+        let decoded = try JSONDecoder().decode(SampleRequest.self, from: body)
+
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        #expect(decoded == sample)
+    }
+
+    @Test("일반 headers는 유지하고 Content-Type은 RequestBody가 결정한다")
+    func keepsHeadersAndUsesBodyContentType() throws {
+        let request = try MockEndpoint(
+            headers: [
+                "X-Test": "header",
+                "Content-Type": "text/plain"
+            ],
+            body: .json(SampleRequest(message: "hello"))
+        ).makeURLRequest()
+
+        #expect(request.value(forHTTPHeaderField: "X-Test") == "header")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    }
+
+    @Test("multipart body는 각 part와 boundary를 포함해 인코딩된다")
+    func encodesMultipartBodyWithPartsAndBoundary() throws {
+        let formData = MultipartFormData(
+            boundary: "test-boundary",
+            parts: [
+                .json(keyName: "request", value: SampleRequest(message: "hello")),
+                .text(keyName: "description", value: "sample"),
+                .imageData(keyName: "images", data: Data("image".utf8)),
+                .imageData(
+                    keyName: "profileImage",
+                    data: Data("png".utf8),
+                    contentType: .png,
+                    fileName: "profile.png"
+                ),
+                .data(
+                    keyName: "document",
+                    data: Data("pdf".utf8),
+                    contentType: .custom(headerValue: "application/pdf", fileExtension: "pdf")
+                )
+            ]
+        )
+
+        let request = try MockEndpoint(body: .multipart(formData)).makeURLRequest()
+        let body = try #require(request.httpBody)
+        let bodyString = try #require(String(data: body, encoding: .utf8))
+
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "multipart/form-data; boundary=test-boundary")
+        #expect(bodyString.contains("--test-boundary\r\n"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"request\""))
+        #expect(bodyString.contains("Content-Type: application/json"))
+        #expect(bodyString.contains("\"message\":\"hello\""))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"description\""))
+        #expect(bodyString.contains("Content-Type: text/plain"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"images\"; filename=\"image.jpeg\""))
+        #expect(bodyString.contains("Content-Type: image/jpeg"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"profileImage\"; filename=\"profile.png\""))
+        #expect(bodyString.contains("Content-Type: image/png"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"document\"; filename=\"file.pdf\""))
+        #expect(bodyString.contains("Content-Type: application/pdf"))
+        #expect(bodyString.hasSuffix("--test-boundary--\r\n"))
+    }
+
+    @Test("body 인코딩 실패 시 requestEncodingFailed를 던진다")
+    func throwsRequestEncodingFailedWhenBodyEncodingFails() {
+        do {
+            _ = try MockEndpoint(body: .json(FailingRequest())).makeURLRequest()
+            Issue.record("requestEncodingFailed expected")
+        } catch let error as NetworkingError {
+            guard case .requestEncodingFailed = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
     @Test("401 응답이고 토큰 갱신이 가능하면 refresh 후 한 번 재시도한다")
     func retriesOnceAfterRefreshingSessionOnUnauthorizedResponse() async throws {
         MockURLProtocol.requestHandler = nil
@@ -271,5 +365,21 @@ private extension NSLock {
         lock()
         defer { unlock() }
         return body()
+    }
+}
+
+private struct SampleRequest: Codable, Equatable {
+    let message: String
+}
+
+private struct FailingRequest: Encodable {
+    func encode(to encoder: Encoder) throws {
+        throw EncodingError.invalidValue(
+            "failure",
+            EncodingError.Context(
+                codingPath: encoder.codingPath,
+                debugDescription: "Forced encoding failure"
+            )
+        )
     }
 }

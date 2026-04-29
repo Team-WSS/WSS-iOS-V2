@@ -50,17 +50,11 @@ enum SettingEndpoint: Endpoint {
         }
     }
     
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .patchTermSetting(let request):        return request.asRequestBody()
+        case .patchTermSetting(let request):        return .json(request)
         default:
-            return nil
+            return .none
         }
     }
 }

@@ -30,19 +30,20 @@ enum MockEndpoint: Endpoint {
         }
     }
     
-    var headers: [String : String]? {
-        ["Content-Type": "application/json"]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
         case .createPost(let title, let body):
-            let json = ["title": title, "body": body, "userId": 1] as [String: Any]
-            return try? JSONSerialization.data(withJSONObject: json)
+            return .json(CreatePostRequest(title: title, body: body, userId: 1))
         default:
-            return nil
+            return .none
         }
     }
     
     var queryItems: [URLQueryItem]? { nil }
+}
+
+private struct CreatePostRequest: Encodable {
+    let title: String
+    let body: String
+    let userId: Int
 }

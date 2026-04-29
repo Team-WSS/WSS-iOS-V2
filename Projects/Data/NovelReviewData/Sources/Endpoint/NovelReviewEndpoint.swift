@@ -43,17 +43,11 @@ enum NovelReviewEndpoint: Endpoint {
     
     var queryItems: [URLQueryItem]? { nil }
     
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .postReview(let request):    return request.asRequestBody()
-        case .putReview(_, let request):  return request.asRequestBody()
-        default: return nil
+        case .postReview(let request):    return .json(request)
+        case .putReview(_, let request):  return .json(request)
+        default: return .none
         }
     }
 }

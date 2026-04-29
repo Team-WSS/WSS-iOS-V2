@@ -40,15 +40,11 @@ enum CommentEndpoint: Endpoint {
     
     var queryItems: [URLQueryItem]? { nil }
     
-    var headers: [String : String]? {
-        ["Content-Type": "application/json"]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .postComment(_ , let request):     return request.asRequestBody()
-        case .putComment(_, _, let request):    return request.asRequestBody()
-        default: return nil
+        case .postComment(_ , let request):     return .json(request)
+        case .putComment(_, _, let request):    return .json(request)
+        default: return .none
         }
     }
 }
