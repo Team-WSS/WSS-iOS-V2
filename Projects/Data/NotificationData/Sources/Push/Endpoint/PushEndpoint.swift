@@ -55,6 +55,4 @@ enum PushEndpoint: Endpoint {
             return nil
         }
     }
-    
-    var requireTokenRefresh: Bool { true }
 }

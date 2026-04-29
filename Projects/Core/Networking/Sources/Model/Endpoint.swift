@@ -7,6 +7,11 @@
 
 import Foundation
 
+public enum AuthorizationPolicy {
+    case required     // Bearer 토큰 주입 + 401시 refresh 재시도
+    case notRequired  // 공개 API (로그인·리이슈 등)
+}
+
 public protocol Endpoint {
     var method: HTTPMethod { get }
     var baseURL: URL { get }
@@ -14,12 +19,12 @@ public protocol Endpoint {
     var queryItems: [URLQueryItem]? { get }
     var headers: [String: String]? { get }
     var body: Data? { get }
-    
-    /// Access토큰 만료 응답인 401이 왔을때 Refresh가 필요한지 여부
-    var requireTokenRefresh: Bool { get }
+    var authorization: AuthorizationPolicy { get }
 }
 
 public extension Endpoint {
+    var authorization: AuthorizationPolicy { .required }
+
     var urlRequest: URLRequest {
         var components = URLComponents(
             url: baseURL.appendingPathComponent(path),

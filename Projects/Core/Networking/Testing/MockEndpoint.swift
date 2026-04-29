@@ -3,14 +3,14 @@ import Foundation
 
 struct MockEndpoint: Endpoint {
     let headers: [String: String]?
-    let shouldRequireTokenRefresh: Bool
+    let authorization: AuthorizationPolicy
 
     init(
         headers: [String: String]? = nil,
-        requireTokenRefresh: Bool = false
+        authorization: AuthorizationPolicy = .required
     ) {
         self.headers = headers
-        self.shouldRequireTokenRefresh = requireTokenRefresh
+        self.authorization = authorization
     }
 
     var method: HTTPMethod { .get }
@@ -18,5 +18,4 @@ struct MockEndpoint: Endpoint {
     var path: String { "/test" }
     var queryItems: [URLQueryItem]? { nil }
     var body: Data? { nil }
-    var requireTokenRefresh: Bool { shouldRequireTokenRefresh }
 }

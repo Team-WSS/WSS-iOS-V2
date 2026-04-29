@@ -56,6 +56,4 @@ enum NovelReviewEndpoint: Endpoint {
         default: return nil
         }
     }
-    
-    var requireTokenRefresh: Bool { true }
 }

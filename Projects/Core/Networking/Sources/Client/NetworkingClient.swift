@@ -25,11 +25,12 @@ public final class NetworkingClient: NetworkingRequestable {
         } catch let error as NetworkingError {
             switch error {
             case .responseFailure(let code, _) where code == 401:
-                guard endpoint.requireTokenRefresh else {
+                guard endpoint.authorization == .required else {
                     throw NetworkingError.requiresReauthentication
                 }
                 return try await retryAfterRefreshingSession(for: endpoint)
             case .responseFailure(let code, let body) where code == 404 && body?.code == "USER-006":
+                try? tokenStore?.clearTokens()
                 throw NetworkingError.requiresReauthentication
             default:
                 throw error
@@ -67,39 +68,27 @@ extension NetworkingClient {
         do {
             refreshSuccess = try await authSessionRefresher?.refreshSession() ?? false
         } catch {
+            try? tokenStore?.clearTokens()
             throw NetworkingError.requiresReauthentication
         }
-        
+
         guard refreshSuccess else {
+            try? tokenStore?.clearTokens()
             throw NetworkingError.requiresReauthentication
         }
-        
-        do {
-            return try await executeRequest(endpoint)
-        } catch let error as NetworkingError {
-            switch error {
-            case .responseFailure(let code, _) where code == 401:
-                throw NetworkingError.requiresReauthentication
-            case .responseFailure(let code, let body) where code == 404 && body?.code == "USER-006":
-                throw NetworkingError.requiresReauthentication
-            default:
-                throw error
-            }
-        }
+       
+        return try await executeRequest(endpoint)
     }
     
     private func authorizedRequest(for endpoint: Endpoint) -> URLRequest {
         var request = endpoint.urlRequest
-        
-        guard request.value(forHTTPHeaderField: "Authorization") == nil else {
-            return request
-        }
-        
-        guard let accessToken = try? tokenStore?.accessToken(),
+
+        guard endpoint.authorization == .required,
+              let accessToken = try? tokenStore?.accessToken(),
               accessToken.isEmpty == false else {
             return request
         }
-        
+
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         return request
     }

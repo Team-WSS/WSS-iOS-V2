@@ -63,6 +63,4 @@ enum SettingEndpoint: Endpoint {
             return nil
         }
     }
-    
-    var requireTokenRefresh: Bool { true }
 }

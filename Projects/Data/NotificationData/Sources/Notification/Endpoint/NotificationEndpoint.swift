@@ -56,6 +56,4 @@ enum NotificationEndpoint: Endpoint {
     }
     
     var body: Data? { nil }
-    
-    var requireTokenRefresh: Bool { true }
 }

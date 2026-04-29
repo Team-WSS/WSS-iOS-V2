@@ -9,8 +9,8 @@ import Foundation
 import Networking
 
 enum MockEndpoint: Endpoint {
-    var requireTokenRefresh: Bool { false }
-    
+    var authorization: AuthorizationPolicy { .notRequired }
+
     case getPost(id: Int)
     case createPost(title: String, body: String)
     

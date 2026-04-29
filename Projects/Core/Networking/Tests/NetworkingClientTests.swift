@@ -75,17 +75,17 @@ struct NetworkingClientTests {
         _ = try await client.request(MockEndpoint())
     }
 
-    @Test("요청에 Authorization 헤더가 이미 있으면 기존 값을 유지한다")
-    func keepsExistingAuthorizationHeader() async throws {
+    @Test("authorization이 notRequired이면 access token이 있어도 Bearer 헤더를 추가하지 않는다")
+    func doesNotAddBearerHeaderWhenAuthorizationNotRequired() async throws {
         MockURLProtocol.requestHandler = nil
         let client = makeClient(accessToken: "access-token")
 
         MockURLProtocol.requestHandler = { request in
-            #expect(request.value(forHTTPHeaderField: "Authorization") == "Custom token")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
             return try makeResponse(for: request, statusCode: 200)
         }
 
-        _ = try await client.request(MockEndpoint(headers: ["Authorization": "Custom token"]))
+        _ = try await client.request(MockEndpoint(authorization: .notRequired))
     }
 
     @Test("401 응답이고 토큰 갱신이 가능하면 refresh 후 한 번 재시도한다")
@@ -108,7 +108,7 @@ struct NetworkingClientTests {
             return try makeResponse(for: request, statusCode: 200)
         }
 
-        _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+        _ = try await client.request(MockEndpoint(authorization: .required))
 
         #expect(refresher.refreshCallCount == 1)
         #expect(requestCount.value == 2)
@@ -128,7 +128,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: false))
+            _ = try await client.request(MockEndpoint(authorization: .notRequired))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -157,7 +157,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .required))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -182,7 +182,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .required))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, let errorBody) = error else {
@@ -207,7 +207,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .required))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, _) = error else {
@@ -235,7 +235,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .required))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {

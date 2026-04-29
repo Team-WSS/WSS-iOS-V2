@@ -35,12 +35,10 @@ enum RecommendationEndpoint: Endpoint {
     var method: HTTPMethod { .get }
     
     var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
+        ["Content-Type": "application/json"]
     }
     
-    var requireTokenRefresh: Bool { false }
+    var authorization: AuthorizationPolicy { .notRequired }
     
     var body: Data? { nil }
     

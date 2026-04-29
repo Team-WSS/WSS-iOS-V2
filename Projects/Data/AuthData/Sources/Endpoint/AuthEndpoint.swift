@@ -63,12 +63,12 @@ enum AuthEndpoint: Endpoint {
         }
     }
     
-    var requireTokenRefresh: Bool {
+    var authorization: AuthorizationPolicy {
         switch self {
         case .patchAppleAccountSync, .postLogout, .postWithdraw:
-            return true
+            return .required
         case .postAppleLogin, .postKakaoLogin, .postReissueToken:
-            return false
+            return .notRequired
         }
     }
 }

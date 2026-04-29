@@ -41,8 +41,7 @@ enum CommentEndpoint: Endpoint {
     var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
+        ["Content-Type": "application/json"]
     }
     
     var body: Data? {
@@ -52,6 +51,4 @@ enum CommentEndpoint: Endpoint {
         default: return nil
         }
     }
-    
-    var requireTokenRefresh: Bool { true }
 }
