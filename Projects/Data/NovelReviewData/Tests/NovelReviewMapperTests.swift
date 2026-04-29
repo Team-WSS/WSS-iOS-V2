@@ -12,6 +12,7 @@ import Testing
 @testable import NovelReviewData
 import NovelReviewDomain
 import BaseDomain
+import BaseData
 
 @Suite("NovelReviewMapper")
 struct NovelReviewMapperTests {
@@ -137,7 +138,7 @@ struct NovelReviewMapperTests {
             keywords: []
         )
         
-        await #expect(throws: MappingError.invalidConversion(type: .readingStatus, rawValue: "INVALID")) {
+        await #expect(throws: MappingError.invalidConversion(type: "ReadingStatus", value: "INVALID")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -181,7 +182,7 @@ struct NovelReviewMapperTests {
             userNovelRating: 5.5
         )
 
-        await #expect(throws: MappingError.invalidConversion(type: .rating, rawValue: "5.5")) {
+        await #expect(throws: MappingError.invalidConversion(type: "Rating", value: "5.5")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -195,7 +196,7 @@ struct NovelReviewMapperTests {
             userNovelRating: 3.7
         )
 
-        await #expect(throws: MappingError.invalidConversion(type: .rating, rawValue: "3.700000047683716")) {
+        await #expect(throws: MappingError.invalidConversion(type: "Rating", value: "3.700000047683716")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -227,7 +228,7 @@ struct NovelReviewMapperTests {
             endDate: nil
         )
         
-        await #expect(throws: MappingError.invalidConversion(type: .startDate, rawValue: "2024-99-99")) {
+        await #expect(throws: MappingError.invalidConversion(type: "StartDate", value: "2024-99-99")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -242,7 +243,7 @@ struct NovelReviewMapperTests {
             endDate: "2024-99-99"
         )
         
-        await #expect(throws: MappingError.invalidConversion(type: .endDate, rawValue: "2024-99-99")) {
+        await #expect(throws: MappingError.invalidConversion(type: "EndDate", value: "2024-99-99")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -258,7 +259,7 @@ struct NovelReviewMapperTests {
             attractivePoints: ["invalid-point"]
         )
         
-        await #expect(throws: MappingError.invalidConversion(type: .attractivePoint, rawValue: "invalid-point")) {
+        await #expect(throws: MappingError.invalidConversion(type: "AttractivePoint", value: "invalid-point")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -293,7 +294,7 @@ struct NovelReviewMapperTests {
             attractivePoints: ["worldview", "worldview"]
         )
         
-        #expect(throws: MappingError.invalidPayload(reason: .duplicatedAttractivePoints)) {
+        #expect(throws: MappingError.invalidPayload(reason: "duplicated attractivePoints")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -307,7 +308,7 @@ struct NovelReviewMapperTests {
             attractivePoints: ["worldview", "material", "character", "vibe"]
         )
         
-        #expect(throws: MappingError.invalidPayload(reason: .tooManyAttractivePoints)) {
+        #expect(throws: MappingError.invalidPayload(reason: "too many attractivePoints")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -344,7 +345,7 @@ struct NovelReviewMapperTests {
             keywords: [duplicated, duplicated]
         )
         
-        #expect(throws: MappingError.invalidPayload(reason: .duplicatedKeywords)) {
+        #expect(throws: MappingError.invalidPayload(reason: "duplicated keywords")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID
@@ -359,7 +360,7 @@ struct NovelReviewMapperTests {
         }
         let response = makeResponse(keywords: keywords)
         
-        #expect(throws: MappingError.invalidPayload(reason: .tooManyKeywords)) {
+        #expect(throws: MappingError.invalidPayload(reason: "too many keywords")) {
             _ = try NovelReviewMapper.novelReviewDraft(
                 from: response,
                 novelID: novelID

@@ -9,6 +9,7 @@
 import Foundation
 import NovelReviewDomain
 import BaseDomain
+import BaseData
 
 enum NovelReviewMapper {
     static func novelReviewDraft(
@@ -36,19 +37,19 @@ enum NovelReviewMapper {
         }
         
         if Set(attractivePoints).count != attractivePoints.count {
-            throw MappingError.invalidPayload(reason: .duplicatedAttractivePoints)
+            throw MappingError.invalidPayload(reason: "duplicated attractivePoints")
         }
         
         if attractivePoints.count > NovelReviewDraft.maxAttractivePoints {
-            throw MappingError.invalidPayload(reason: .tooManyAttractivePoints)
+            throw MappingError.invalidPayload(reason: "too many attractivePoints")
         }
         
         if Set(keywords).count != keywords.count {
-            throw MappingError.invalidPayload(reason: .duplicatedKeywords)
+            throw MappingError.invalidPayload(reason: "duplicated keywords")
         }
         
         if keywords.count > NovelReviewDraft.maxKeywords {
-            throw MappingError.invalidPayload(reason: .tooManyKeywords)
+            throw MappingError.invalidPayload(reason: "too many keywords")
         }
         
         return NovelReviewDraft(
@@ -105,8 +106,8 @@ extension NovelReviewMapper {
         case "WATCHING": return .watching
         case "WATCHED": return .watched
         case "QUIT": return .quit
-        default: throw MappingError.invalidConversion(type: .readingStatus,
-                                                      rawValue: text)
+        default: throw MappingError.invalidConversion(type: "ReadingStatus",
+                                                      value: text)
         }
     }
     
@@ -123,16 +124,16 @@ extension NovelReviewMapper {
         
         if let startDate {
             guard let parsed = DateParser.date(from: startDate) else {
-                throw MappingError.invalidConversion(type: .startDate,
-                                                     rawValue: startDate)
+                throw MappingError.invalidConversion(type: "StartDate",
+                                                     value: startDate)
             }
             start = parsed
         }
         
         if let endDate {
             guard let parsed = DateParser.date(from: endDate) else {
-                throw MappingError.invalidConversion(type: .endDate,
-                                                     rawValue: endDate)
+                throw MappingError.invalidConversion(type: "EndDate",
+                                                     value: endDate)
             }
             end = parsed
         }
@@ -141,8 +142,8 @@ extension NovelReviewMapper {
             return try ReadingPeriod(start: start, end: end)
         } catch {
             throw MappingError.invalidConversion(
-                type: .readingPeriod,
-                rawValue: "start: \(startDate ?? "nil"), end: \(endDate ?? "nil")"
+                type: "ReadingPeriod",
+                value: "start: \(startDate ?? "nil"), end: \(endDate ?? "nil")"
             )
         }
     }
@@ -156,8 +157,8 @@ extension NovelReviewMapper {
             return try Rating(rating)
         } catch {
             throw MappingError.invalidConversion(
-                type: .rating,
-                rawValue: String(rating)
+                type: "Rating",
+                value: String(rating)
             )
         }
     }
@@ -172,8 +173,8 @@ extension NovelReviewMapper {
         case "relationship": return .relationship
         case "vibe": return .vibe
         case "writingskill": return .writingSkill
-        default: throw MappingError.invalidConversion(type: .attractivePoint,
-                                                      rawValue: text)
+        default: throw MappingError.invalidConversion(type: "AttractivePoint",
+                                                      value: text)
         }
     }
     
@@ -202,4 +203,3 @@ extension NovelReviewMapper {
         }
     }
 }
-

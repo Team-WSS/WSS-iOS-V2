@@ -24,6 +24,8 @@ public extension NetworkingError {
             case 500...599: return .serverUnavailable
             default:       return .unknown
             }
+        case .requiresReauthentication:
+            return .authenticationRequired
         case .unknown:
             return .networkUnavailable
         }

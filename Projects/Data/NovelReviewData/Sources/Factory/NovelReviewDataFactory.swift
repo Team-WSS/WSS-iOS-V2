@@ -7,13 +7,14 @@
 //
 
 
+import BaseData
 import Networking
 import NovelReviewDomain
 
 public enum NovelReviewDataFactory {
     public static func makeRepository(
         client: NetworkingRequestable,
-        logger: NovelReviewLogger? = nil
+        logger: DataLogger? = nil
     ) -> NovelReviewRepository {
         let service = DefaultNovelReviewService(client: client)
         return DefaultNovelReviewRepository(
