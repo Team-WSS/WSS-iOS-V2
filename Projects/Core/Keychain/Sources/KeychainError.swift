@@ -11,6 +11,7 @@ public enum KeychainError: Error, CustomStringConvertible {
     case noData
     case dataEncodingFailed
     case duplicateItem
+    case itemNotFound
     case unhandledError(status: OSStatus)
 
     public var description: String {
@@ -22,6 +23,7 @@ public enum KeychainError: Error, CustomStringConvertible {
         case .noData: return "No data found"
         case .dataEncodingFailed: return "Failed to encode data"
         case .duplicateItem: return "Item already exists"
+        case .itemNotFound: return "Item not found"
         case .unhandledError(let status): return "Unhandled error: \(status)"
         }
     }

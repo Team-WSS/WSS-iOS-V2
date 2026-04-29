@@ -1,5 +1,5 @@
 //
-//  ConsoleNetworkLogger.swift
+//  DefaultNetworkLogger.swift
 //  Networking
 //
 //  Created by YunhakLee on 10/31/25.
@@ -8,7 +8,7 @@
 import Foundation
 import Logger
 
-public final class ConsoleNetworkLogger: NetworkLogging {
+public final class DefaultNetworkLogger: NetworkLogging {
     private let base: Logger
     private let showBody: Bool
     private let showHost: Bool

@@ -18,6 +18,9 @@ final class KeychainTests: XCTestCase {
 
     override func tearDown() {
         try? keychain.delete(forKey: "testKey")
+        try? keychain.delete(forKey: "duplicateTest")
+        try? keychain.delete(forKey: "missingKey")
+        try? keychain.delete(forKey: "saveTest")
         keychain = nil
         super.tearDown()
     }
@@ -52,5 +55,22 @@ final class KeychainTests: XCTestCase {
             }
         }
     }
-}
 
+    func testUpdateMissingItemThrowsItemNotFound() {
+        XCTAssertThrowsError(try keychain.update(value: "Updated", forKey: "missingKey")) { error in
+            guard case KeychainError.itemNotFound = error else {
+                return XCTFail("Expected KeychainError.itemNotFound")
+            }
+        }
+    }
+
+    func testSaveCreatesAndUpdatesItem() throws {
+        let key = "saveTest"
+
+        try keychain.save(value: "One", forKey: key)
+        XCTAssertEqual(try keychain.value(forKey: key), "One")
+
+        try keychain.save(value: "Two", forKey: key)
+        XCTAssertEqual(try keychain.value(forKey: key), "Two")
+    }
+}

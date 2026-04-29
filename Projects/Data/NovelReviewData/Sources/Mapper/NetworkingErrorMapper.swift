@@ -19,7 +19,7 @@ extension NetworkingError {
         
         case .decoding:
             return .invalidData
-        
+
         case .responseFailure(let code, _):
             switch code {
             case 401:
@@ -31,7 +31,10 @@ extension NetworkingError {
             default:
                 return .unknown
             }
-            
+
+        case .requiresReauthentication:
+            return .authenticationRequired
+
         case .unknown:
             return .networkUnavailable
         }

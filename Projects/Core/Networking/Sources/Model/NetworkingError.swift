@@ -11,8 +11,9 @@ public enum NetworkingError: Error, CustomStringConvertible {
     case invalidURL
     case decoding
     case responseFailure(code: Int, body: ErrorResponse?)
+    case requiresReauthentication
     case unknown(Error)
-
+    
     public var description: String {
         switch self {
         case .invalidURL:
@@ -25,6 +26,8 @@ public enum NetworkingError: Error, CustomStringConvertible {
             } else {
                 return "🌐 [NetworkError] HTTP \(code) - No body in response"
             }
+        case .requiresReauthentication:
+            return "🌐 [NetworkError] Reauthentication Required"
         case .unknown(let error):
             return "🌐 [NetworkError] Unknown Error: \(error.localizedDescription)"
         }
