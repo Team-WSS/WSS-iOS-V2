@@ -82,7 +82,7 @@ struct DefaultAuthRepositoryTests {
             (.responseFailure(code: 499, body: nil), .invalidCredential),
             (.responseFailure(code: 500, body: nil), .providerUnavailable),
             (.responseFailure(code: 599, body: nil), .providerUnavailable),
-            (.unknown, .networkUnavailable),
+            (.unknown(MockError.sample), .networkUnavailable),
             (.decoding, .invalidData),
         ]
 
