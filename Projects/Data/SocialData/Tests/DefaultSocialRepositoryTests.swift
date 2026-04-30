@@ -65,10 +65,10 @@ struct DefaultSocialRepositoryTests {
     @Test("loadBlockedUsers 성공 시 BlockedUser 목록 반환")
     func loadBlockedUsers_success_returnsBlockedUsers() async throws {
         let (sut, service, _) = makeRepository()
-        service.getBlockedUsersResult = .success([
-            BlockedUserResponse(blockId: 1, userId: 10, nickname: "차단유저", profileImage: nil),
-            BlockedUserResponse(blockId: 2, userId: 20, nickname: "또차단", profileImage: nil)
-        ])
+        service.getBlockedUsersResult = .success(BlockedUserResponse(blocks: [
+            BlockdUser(blockId: 1, userId: 10, nickname: "차단유저", avatarImage: ""),
+            BlockdUser(blockId: 2, userId: 20, nickname: "또차단", avatarImage: "")
+        ]))
 
         let result = try await sut.loadBlockedUsers()
 
@@ -82,7 +82,7 @@ struct DefaultSocialRepositoryTests {
     @Test("loadBlockedUsers 빈 목록 반환")
     func loadBlockedUsers_emptyList_returnsEmptyArray() async throws {
         let (sut, service, _) = makeRepository()
-        service.getBlockedUsersResult = .success([])
+        service.getBlockedUsersResult = .success(BlockedUserResponse(blocks: []))
 
         let result = try await sut.loadBlockedUsers()
 

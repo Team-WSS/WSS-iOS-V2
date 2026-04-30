@@ -31,7 +31,7 @@ final class MockSocialService: SocialService {
 
     var postBlockUserResult: Result<Void, Error> = .success(())
     var deleteBlockResult: Result<Void, Error> = .success(())
-    var getBlockedUsersResult: Result<[BlockedUserResponse], Error> = .success([])
+    var getBlockedUsersResult: Result<BlockedUserResponse, Error> = .success(BlockedUserResponse(blocks: []))
     var postReportSpoilerFeedResult: Result<Void, Error> = .success(())
     var postReportImproperFeedResult: Result<Void, Error> = .success(())
     var postReportSpoilerCommentResult: Result<Void, Error> = .success(())
@@ -51,7 +51,7 @@ final class MockSocialService: SocialService {
         try deleteBlockResult.get()
     }
 
-    func getBlockedUsers() async throws -> [BlockedUserResponse] {
+    func getBlockedUsers() async throws -> BlockedUserResponse {
         getBlockedUsersCallCount += 1
         return try getBlockedUsersResult.get()
     }
