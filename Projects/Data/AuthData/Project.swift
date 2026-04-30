@@ -13,6 +13,7 @@ let project = Project.createDataModule(
     name: ModuleType.data(.auth).name,
     targets: [.sources, .demo, .testing, .tests],
     internalDependencies: [
+        .module(.data(.base)),
         .module(.core(.networking)),
         .module(.core(.logger)),
         .module(.core(.keychain)),

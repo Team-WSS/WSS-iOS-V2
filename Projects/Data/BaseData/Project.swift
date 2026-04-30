@@ -14,6 +14,7 @@ let project = Project.createDataModule(
     targets: [.sources, .demo],
     internalDependencies: [
         .module(.core(.networking)),
+        .module(.core(.keychain)),
         .module(.core(.logger)),
         .module(.domain(.base))
     ]

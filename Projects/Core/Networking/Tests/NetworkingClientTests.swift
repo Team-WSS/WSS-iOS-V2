@@ -15,9 +15,19 @@ struct NetworkingClientTests {
         accessToken: String?,
         authSessionRefresher: AuthSessionRefreshing? = nil
     ) -> NetworkingClient {
+        makeClient(
+            tokenStore: MockTokenStore(accessToken: accessToken),
+            authSessionRefresher: authSessionRefresher
+        )
+    }
+
+    private func makeClient(
+        tokenStore: SessionTokenStore?,
+        authSessionRefresher: AuthSessionRefreshing? = nil
+    ) -> NetworkingClient {
         NetworkingClient(
             urlSession: makeSession(),
-            tokenStore: MockTokenStore(accessToken: accessToken),
+            tokenStore: tokenStore,
             authSessionRefresher: authSessionRefresher
         )
     }
@@ -353,8 +363,9 @@ struct NetworkingClientTests {
     func throwsReauthenticationErrorWhenUserIsWithdrawn() async throws {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(true))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
         let client = makeClient(
-            accessToken: "access-token",
+            tokenStore: tokenStore,
             authSessionRefresher: refresher
         )
         let body = try makeErrorBody(code: "USER-006")
@@ -376,6 +387,7 @@ struct NetworkingClientTests {
         }
 
         #expect(refresher.refreshCallCount == 0)
+        #expect(tokenStore.clearTokensCallCount == 1)
     }
 
     @Test("404여도 USER-006이 아니면 원래 responseFailure를 유지한다")
@@ -432,8 +444,9 @@ struct NetworkingClientTests {
     func throwsReauthenticationErrorWhenRefreshFails() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(false))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
         let client = makeClient(
-            accessToken: "access-token",
+            tokenStore: tokenStore,
             authSessionRefresher: refresher
         )
 
@@ -454,6 +467,37 @@ struct NetworkingClientTests {
         }
 
         #expect(refresher.refreshCallCount == 1)
+        #expect(tokenStore.clearTokensCallCount == 1)
+    }
+
+    @Test("refresh 중 에러 발생 시 토큰을 삭제하고 재인증 에러를 던진다")
+    func clearsTokensWhenRefreshThrows() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(behavior: .failure(URLError(.cannotConnectToHost)))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
+        let client = makeClient(
+            tokenStore: tokenStore,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            Issue.record("requiresReauthentication expected")
+        } catch let error as NetworkingError {
+            guard case .requiresReauthentication = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(refresher.refreshCallCount == 1)
+        #expect(tokenStore.clearTokensCallCount == 1)
     }
 }
 

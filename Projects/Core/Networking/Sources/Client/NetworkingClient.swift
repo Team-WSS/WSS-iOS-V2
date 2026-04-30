@@ -1,16 +1,22 @@
+//
+//  NetworkingClient.swift
+//  Network
+//
+//  Created by YunhakLee on 10/22/25.
+//
+
 import Foundation
-import Keychain
 
 public final class NetworkingClient: NetworkingRequestable {
     private let urlSession: URLSession
     private let logger: NetworkLogging?
-    private let tokenStore: TokenStore?
+    private let tokenStore: SessionTokenStore?
     private let authSessionRefresher: AuthSessionRefreshing?
     
     public init(
         urlSession: URLSession = .shared,
         logger: NetworkLogging? = nil,
-        tokenStore: TokenStore? = nil,
+        tokenStore: SessionTokenStore? = nil,
         authSessionRefresher: AuthSessionRefreshing? = nil
     ) {
         self.urlSession = urlSession
