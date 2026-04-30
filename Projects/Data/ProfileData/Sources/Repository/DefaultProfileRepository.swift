@@ -15,12 +15,12 @@ import Networking
 public struct DefaultProfileRepository: ProfileRepository {
     private let service: ProfileService
     private let localStorage: ProfileLocalStorage
-    private let logger: DataLogger
+    private let logger: DataLogger?
 
     init(
         service: ProfileService,
         localStorage: ProfileLocalStorage,
-        logger: DataLogger
+        logger: DataLogger?
     ) {
         self.service = service
         self.localStorage = localStorage

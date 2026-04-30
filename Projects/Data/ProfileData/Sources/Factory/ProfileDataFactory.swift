@@ -16,14 +16,13 @@ public enum ProfileDataFactory {
     public static func makeProfileRepository(
         client: NetworkingRequestable,
         localStorage: ProfileLocalStorage,
-        underlying: Logger? = nil
+        logger: DataLogger? = nil
     ) -> ProfileRepository {
         let service = DefaultProfileService(client: client)
-        let logger = DataLogger(moduleName: "ProfileData", underlying: underlying)
         return DefaultProfileRepository(
             service: service,
             localStorage: localStorage,
-            logger: logger
+            logger: logger 
         )
     }
 }
