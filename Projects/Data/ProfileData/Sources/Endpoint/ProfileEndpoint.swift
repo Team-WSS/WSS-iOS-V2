@@ -9,15 +9,13 @@
 import Foundation
 import Networking
 
-// TODO: 혹시 이미지는 무조건 Otional 아니고 내려오는게 맞는지
-
 enum ProfileEndpoint: Endpoint {
 
     case getUserInfo
-    case validateNickname(String)  // USER 에러 케이스
-    case postRegisterProfile(ProfileRegistrationRequest)  // USER 에러케이스
+    case validateNickname(String)
+    case postRegisterProfile(ProfileRegistrationRequest)
     case getAccountInfo
-    case patchAccountInfo(AccountInfoRequest)  // 장르, USER 에러케이스
+    case patchAccountInfo(AccountInfoRequest)
     case getProfileVisibility
     case patchProfileVisibility(ProfileVisibilityRequest)
     case getUserProfile(userID: Int)
@@ -28,7 +26,6 @@ enum ProfileEndpoint: Endpoint {
     case patchProfile(UpdateProfileRequest)
 
     var method: HTTPMethod {
-        // TODO: method끼리 묶을지, 위에 정의한 case 순으로 둘지
         switch self {
         case .getUserInfo:              return .get
         case .validateNickname:         return .get
