@@ -16,6 +16,10 @@ public struct LibraryFilter {
     
     public private(set) var sortType: SortType
     
+    public init(sortType: SortType) {
+        self.sortType = sortType
+    }
+    
     // MARK: - Policy
     
     public mutating func setSortType(_ sortType: SortType) {

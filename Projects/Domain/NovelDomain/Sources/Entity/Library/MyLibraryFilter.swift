@@ -18,6 +18,20 @@ public struct MyLibraryFilter {
     public private(set) var ratingThreshold: NovelRatingThreshold?
     public private(set) var sortType: SortType
     
+    public init(
+        isInterest: Bool,
+        readingStatus: [ReadingStatus],
+        attractivePoint: [AttractivePoint],
+        ratingThreshold: NovelRatingThreshold? = nil,
+        sortType: SortType
+    ) {
+        self.isInterest = isInterest
+        self.readingStatus = readingStatus
+        self.attractivePoint = attractivePoint
+        self.ratingThreshold = ratingThreshold
+        self.sortType = sortType
+    }
+    
     // MARK: - Policy
     
     // - isInterest
