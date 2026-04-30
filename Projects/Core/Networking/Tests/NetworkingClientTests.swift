@@ -302,8 +302,8 @@ struct NetworkingClientTests {
         #expect(requestCount.value == 2)
     }
 
-    @Test("usesTokenIfAvailable 요청에서 access token이 없으면 401 응답 시 refresh하지 않는다")
-    func doesNotRefreshForUsesTokenIfAvailableWithoutAccessToken() async {
+    @Test("usesTokenIfAvailable 요청에서 access token이 없으면 401 응답 시 원래 에러를 유지한다")
+    func keepsUnauthorizedErrorForUsesTokenIfAvailableWithoutAccessToken() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(true))
         let client = makeClient(
@@ -318,12 +318,13 @@ struct NetworkingClientTests {
 
         do {
             _ = try await client.request(MockEndpoint(authorization: .usesTokenIfAvailable))
-            Issue.record("requiresReauthentication expected")
+            Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
-            guard case .requiresReauthentication = error else {
+            guard case .responseFailure(let code, _) = error else {
                 Issue.record("unexpected error: \(error)")
                 return
             }
+            #expect(code == 401)
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -331,8 +332,8 @@ struct NetworkingClientTests {
         #expect(refresher.refreshCallCount == 0)
     }
 
-    @Test("401 응답이어도 토큰 갱신이 불가능한 요청이면 재인증 에러를 던진다")
-    func throwsReauthenticationErrorWhenUnauthorizedEndpointCannotRefreshToken() async {
+    @Test("401 응답이어도 토큰 갱신이 불가능한 요청이면 원래 에러를 유지한다")
+    func keepsUnauthorizedErrorWhenEndpointCannotRefreshToken() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(true))
         let client = makeClient(
@@ -346,12 +347,13 @@ struct NetworkingClientTests {
 
         do {
             _ = try await client.request(MockEndpoint(authorization: .withoutToken))
-            Issue.record("requiresReauthentication expected")
+            Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
-            guard case .requiresReauthentication = error else {
+            guard case .responseFailure(let code, _) = error else {
                 Issue.record("unexpected error: \(error)")
                 return
             }
+            #expect(code == 401)
         } catch {
             Issue.record("unexpected error: \(error)")
         }

@@ -34,7 +34,7 @@ public final class NetworkingClient: NetworkingRequestable {
             switch error {
             case .responseFailure(let code, _) where code == 401:
                 guard authorizationContext.canRefreshSession else {
-                    throw NetworkingError.requiresReauthentication
+                    throw error
                 }
                 return try await retryAfterRefreshingSession(
                     for: endpoint,
