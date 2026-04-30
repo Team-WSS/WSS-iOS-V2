@@ -31,7 +31,10 @@ public struct DefaultNovelRepository: NovelRepository {
         do {
             let basic = try await service.getNovelBasicInfo(novelID: id.value)
             let detail = try await service.getNovelDetailInfo(novelID: id.value)
-            return try NovelMapper.novelInformation(id: id, from: basic, from: detail)
+            
+            let result = try NovelMapper.novelInformation(id: id, from: basic, from: detail)
+            logger?.logSuccess(action: action.text)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -49,6 +52,7 @@ public struct DefaultNovelRepository: NovelRepository {
         
         do {
             try await service.postNovelInterest(novelID: id.value)
+            logger?.logSuccess(action: action.text)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -66,6 +70,7 @@ public struct DefaultNovelRepository: NovelRepository {
         
         do {
             try await service.deleteNovelInterest(novelID: id.value)
+            logger?.logSuccess(action: action.text)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -79,7 +84,7 @@ public struct DefaultNovelRepository: NovelRepository {
     }
 
     public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        let action = NovelAction.searchByText
+        let action = NovelAction.searchByText(query: text)
         let query = NormalSearchQuery(
             query: text,
             page: 0,
@@ -87,10 +92,10 @@ public struct DefaultNovelRepository: NovelRepository {
         )
         
         do {
-            
             let response = try await service.getNormalSearchNovels(query: query)
             let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
             let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            logger?.logSuccess(action: action.text)
             return (paginated, response.resultCount)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
@@ -112,6 +117,7 @@ public struct DefaultNovelRepository: NovelRepository {
             let response = try await service.getDetailSearchNovels(query: query)
             let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
             let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            logger?.logSuccess(action: action.text)
             return (paginated, response.resultCount)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
@@ -129,11 +135,11 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchMyLibrary
         
         do {
-            //TODO: - UserDefaults에 저장된 유저아이디 값을 활용하여 넣어준다.
-            let myID = UserDefaults.standard.integer(forKey: "myID")
+            let myID = UserInfoStore.userID
             let query = NovelMapper.myLibraryQuery(from: filter)
             let response = try await service.getUserLibraryNovels(userID: myID, query: query)
             let libraryNovels = try NovelMapper.libraryNovels(from: response)
+            logger?.logSuccess(action: action.text)
             return (libraryNovels.novels, libraryNovels.totalCount)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
@@ -150,11 +156,12 @@ public struct DefaultNovelRepository: NovelRepository {
     public func fetchUserLibraryNovels(id: UserID,
                                        _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchUserLibrary
-        
+
         do {
             let query = NovelMapper.userLibraryQuery(from: filter)
             let response = try await service.getUserLibraryNovels(userID: id.value, query: query)
             let libraryNovels = try NovelMapper.libraryNovels(from: response)
+            logger?.logSuccess(action: action.text)
             return (libraryNovels.novels, libraryNovels.totalCount)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
@@ -172,10 +179,11 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchRegisteredStats
         
         do {
-            //TODO: - UserDefaults에 저장된 유저아이디 값을 활용하여 넣어준다.
-            let myID = UserDefaults.standard.integer(forKey: "myID")
+            let myID = UserInfoStore.userID
             let response = try await service.getUserRegisteredNovelStats(userID: myID)
-            return NovelMapper.userRegisteredNovelStats(from: response)
+            let result = NovelMapper.userRegisteredNovelStats(from: response)
+            logger?.logSuccess(action: action.text)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
