@@ -35,6 +35,7 @@ public struct DefaultProfileRepository: ProfileRepository {
             localStorage.set(.userID, response.userId)
             localStorage.set(.gender, response.gender)
             localStorage.set(.nickname, response.nickname)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -46,9 +47,10 @@ public struct DefaultProfileRepository: ProfileRepository {
 
     public func validateNickname(_ nickname: String) async throws(RepositoryError) -> Bool {
         let action = ProfileAction.validateNickname
-        
+
         do {
             let response = try await service.validateNickname(nickname)
+            logger?.logSuccess(action: action.name)
             return response.isDuplicated
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -70,6 +72,7 @@ public struct DefaultProfileRepository: ProfileRepository {
                 genrePreferences: profile.genrePreferences.map { ProfileMapper.novelGenreRawValue(from: $0) }
             )
             try await service.postRegisterProfile(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -84,7 +87,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         
         do {
             let response = try await service.getAccountInfo()
-            return try ProfileMapper.accountInfoDraft(from: response)
+            let result = try ProfileMapper.accountInfoDraft(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -106,6 +111,7 @@ public struct DefaultProfileRepository: ProfileRepository {
                 birth: info.birth.value
             )
             try await service.putAccountInfo(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -120,7 +126,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         
         do {
             let response = try await service.getProfileVisibility()
-            return ProfileVisibility(isPublic: response.isProfilePublic)
+            let result = ProfileVisibility(isPublic: response.isProfilePublic)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -136,6 +144,7 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let request = ProfileVisibilityRequest(isProfilePublic: visibility.isPublic)
             try await service.putProfileVisibility(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -151,7 +160,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getUserProfile(userID: userID)
-            return try ProfileMapper.profile(from: response)
+            let result = try ProfileMapper.profile(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -172,7 +183,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getGenrePreferences(userID: userID)
-            return ProfileMapper.genrePreferences(from: response.genrePreferences)
+            let result = ProfileMapper.genrePreferences(from: response.genrePreferences)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -190,7 +203,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getNovelPreferences(userID: userID)
-            return try ProfileMapper.novelPreference(from: response)
+            let result = try ProfileMapper.novelPreference(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -210,7 +225,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         
         do {
             let response = try await service.getProfileCharacters()
-            return ProfileMapper.profileAvatars(from: response)
+            let result = ProfileMapper.profileAvatars(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -227,11 +244,13 @@ public struct DefaultProfileRepository: ProfileRepository {
             let nickname = localStorage.get(.nickname) ?? ""
             let characterID = localStorage.get(.characterID) ?? 0
             let response = try await service.getProfileEditInfo()
-            return ProfileMapper.profileDraft(
+            let result = ProfileMapper.profileDraft(
                 from: response,
                 nickname: nickname,
                 characterID: characterID
             )
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -257,6 +276,7 @@ public struct DefaultProfileRepository: ProfileRepository {
                 genrePreferences: profile.genrePreferences.map { $0.name }
             )
             try await service.putProfile(request)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
