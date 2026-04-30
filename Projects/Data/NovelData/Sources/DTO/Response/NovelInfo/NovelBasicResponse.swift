@@ -9,7 +9,7 @@
 import Foundation
 
 public struct NovelBasicResponse: Decodable {
-    public let userNovelId: Int
+    public let userNovelId: Int?
     public let novelTitle: String
     public let novelImage: String
     public let novelGenres: String

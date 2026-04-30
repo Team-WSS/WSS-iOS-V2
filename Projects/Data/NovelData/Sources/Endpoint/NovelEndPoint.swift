@@ -8,6 +8,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum NovelEndpoint: Endpoint {
     case getUserLibraryNovels(userID: Int, UserLibraryQuery)
@@ -36,7 +37,7 @@ enum NovelEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
     
     var path: String {
@@ -63,7 +64,7 @@ enum NovelEndpoint: Endpoint {
     
     var headers: [String : String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
     }
     
     var body: Data? { return nil }
