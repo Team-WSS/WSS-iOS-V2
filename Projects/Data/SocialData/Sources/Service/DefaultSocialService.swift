@@ -26,9 +26,9 @@ struct DefaultSocialService: SocialService {
         _ = try await client.request(endpoint)
     }
 
-    func getBlockedUsers() async throws -> [BlockedUserResponse] {
+    func getBlockedUsers() async throws -> BlockedUserResponse {
         let endpoint = SocialEndpoint.getBlockedUsers
-        return try await client.request(endpoint, decodeTo: [BlockedUserResponse].self)
+        return try await client.request(endpoint, decodeTo: BlockedUserResponse.self)
     }
 
     func postReportSpoilerFeed(feedID: Int) async throws {

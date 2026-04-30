@@ -12,16 +12,16 @@ import BaseDomain
 
 enum SocialMapper {
 
-    static func blockedUser(from response: BlockedUserResponse) -> BlockedUser {
+    static func blockedUser(from response: BlockdUser) -> BlockedUser {
         BlockedUser(
             blockID: BlockID(response.blockId),
             userID: UserID(response.userId),
             nickname: response.nickname,
-            profileImageURL: response.profileImage.flatMap(URL.init)
+            profileImageURL: URL(string: response.avatarImage)
         )
     }
 
-    static func blockedUsers(from responses: [BlockedUserResponse]) -> [BlockedUser] {
-        responses.map { blockedUser(from: $0) }
+    static func blockedUsers(from response: BlockedUserResponse) -> [BlockedUser] {
+        response.blocks.map { blockedUser(from: $0) }
     }
 }
