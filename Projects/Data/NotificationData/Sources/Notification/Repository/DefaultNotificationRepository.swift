@@ -31,7 +31,7 @@ public struct DefaultNotificationRepository: NotificationRepository {
         let action = NotificationAction.loadNotifications
 
         do {
-            let query = NotificationQeury(
+            let query = NotificationQuery(
                 lastNotificationId: lastNotificationID?.value ?? 0,
                 size: size
             )
