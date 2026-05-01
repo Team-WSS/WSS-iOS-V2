@@ -14,7 +14,7 @@ extension View {
         modifier(
             WSSFontViewModifier(
                 uiFont: style.uiFontGuide(),
-                lineHeight: style.defaultFontSize * style.lineHeight,
+                lineHeight: style.fontSize * style.lineHeight,
                 letterSpacing: style.letterSpacing
             )
         )

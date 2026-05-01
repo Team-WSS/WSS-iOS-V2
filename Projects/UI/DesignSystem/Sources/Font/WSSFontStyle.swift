@@ -64,9 +64,7 @@ public extension WSSFontStyle {
 }
 
 extension WSSFontStyle {
-    private static let scaleRatio: CGFloat = max(1.adjustedHeight, 1.adjustedWidth)
-    
-    var defaultFontSize: CGFloat {
+    var fontSize: CGFloat {
         switch self {
         case .headline1: 20
             
@@ -86,14 +84,10 @@ extension WSSFontStyle {
         case .label2: 10
         }
     }
-    
-    private var adjustedSize: CGFloat {
-        return defaultFontSize * WSSFontStyle.scaleRatio
-    }
-    
+
     func uiFontGuide() -> UIFont {
         switch self {
-        default: return UIFont(name: self.fontName.name, size: self.adjustedSize)!
+        default: return UIFont(name: self.fontName.name, size: self.fontSize)!
         }
     }
 }
