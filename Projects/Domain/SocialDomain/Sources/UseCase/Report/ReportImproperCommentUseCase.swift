@@ -11,17 +11,17 @@ import Foundation
 import BaseDomain
 
 public protocol ReportImproperCommentUseCase {
-    func execute(id: CommentID) async throws(RepositoryError)
+    func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError)
 }
 
 public final class DefaultReportImproperCommentUseCase: ReportImproperCommentUseCase {
     private let repository: SocialRepository
-    
+
     public init(repository: SocialRepository) {
         self.repository = repository
     }
-    
-    public func execute(id: CommentID) async throws(RepositoryError) {
-        try await repository.reportImproperComment(id: id)
+
+    public func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
+        try await repository.reportImproperComment(feedID: feedID, commentID: commentID)
     }
 }

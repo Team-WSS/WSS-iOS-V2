@@ -43,7 +43,7 @@ public enum DomainModule: String, ModuleSpec {
 
 public enum DataModule: String, ModuleSpec {
     public var moduleSuffix: String { "Data" }
-    
+
     case base
     case recommendation
     case novelReview
@@ -52,6 +52,7 @@ public enum DataModule: String, ModuleSpec {
     case keyword
     case comment
     case auth
+    case social
 }
 
 public enum CoreModule: String, ModuleSpec {

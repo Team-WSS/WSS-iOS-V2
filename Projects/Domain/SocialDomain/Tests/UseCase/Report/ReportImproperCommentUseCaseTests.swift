@@ -22,10 +22,12 @@ struct ReportImproperCommentUseCaseTests {
 
         let sut = DefaultReportImproperCommentUseCase(repository: repo)
 
+        let feedID = FeedID(1)
         let commentID = CommentID(8)
-        try await sut.execute(id: commentID)
+        try await sut.execute(feedID: feedID, commentID: commentID)
 
         #expect(repo.reportImproperCommentCallCount == 1)
+        #expect(repo.reportedImproperCommentFeedIDs == [feedID])
         #expect(repo.reportedImproperCommentIDs == [commentID])
     }
 
@@ -37,7 +39,7 @@ struct ReportImproperCommentUseCaseTests {
         let sut = DefaultReportImproperCommentUseCase(repository: repo)
 
         await #expect(throws: RepositoryError.serverUnavailable) {
-            try await sut.execute(id: CommentID(8))
+            try await sut.execute(feedID: FeedID(1), commentID: CommentID(8))
         }
 
         #expect(repo.reportImproperCommentCallCount == 1)
