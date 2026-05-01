@@ -16,4 +16,16 @@ public struct ConnectedNovelDetail {
     public let descirption: String
     public private(set) var feedWriterRating: Float?
     
+    public init(
+        basicInfo: ConnectedNovel,
+        thumbnailImage: ImageWrapper,
+        descirption: String,
+        feedWriterRating: Float? = nil
+    ) {
+        self.basicInfo = basicInfo
+        self.thumbnailImage = thumbnailImage
+        self.descirption = descirption
+        self.feedWriterRating = feedWriterRating
+    }
+    
 }

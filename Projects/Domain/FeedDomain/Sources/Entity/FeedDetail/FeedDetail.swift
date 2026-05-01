@@ -43,4 +43,28 @@ public struct FeedDetail {
         }
         isLiked.toggle()
     }
+    
+    public init(
+        id: FeedID,
+        author: Author,
+        createdDate: String,
+        isModified: Bool,
+        feedContent: String,
+        feedImageURLs: [ImageWrapper?],
+        connectedNovel: ConnectedNovelDetail? = nil,
+        likeCount: Int,
+        isLiked: Bool,
+        commentCount: Int
+    ) {
+        self.id = id
+        self.author = author
+        self.createdDate = createdDate
+        self.isModified = isModified
+        self.feedContent = feedContent
+        self.feedImageURLs = feedImageURLs
+        self.connectedNovel = connectedNovel
+        self.likeCount = likeCount
+        self.isLiked = isLiked
+        self.commentCount = commentCount
+    }
 }
