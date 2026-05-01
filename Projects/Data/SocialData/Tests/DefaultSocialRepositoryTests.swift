@@ -11,6 +11,7 @@ import Testing
 @testable import SocialDataTesting
 import SocialDomain
 import BaseDomain
+import BaseData
 import Networking
 
 @Suite
@@ -20,7 +21,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("blockUser 성공 시 올바른 userID로 service 호출")
     func blockUser_success_callsServiceWithCorrectUserID() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
         try await sut.blockUser(id: UserID(42))
 
@@ -30,7 +31,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("blockUser 네트워크 오류 시 RepositoryError 변환")
     func blockUser_networkError_throwsRepositoryError() async {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.postBlockUserResult = .failure(NetworkingError.unknown(MockError.stub))
 
         await #expect(throws: RepositoryError.self) {
@@ -42,7 +43,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("unblockUser 성공 시 올바른 blockID로 service 호출")
     func unblockUser_success_callsServiceWithCorrectBlockID() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
         try await sut.unblockUser(id: BlockID(7))
 
@@ -52,7 +53,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("unblockUser 네트워크 오류 시 RepositoryError 변환")
     func unblockUser_networkError_throwsRepositoryError() async {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.deleteBlockResult = .failure(NetworkingError.unknown(MockError.stub))
 
         await #expect(throws: RepositoryError.self) {
@@ -64,7 +65,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("loadBlockedUsers 성공 시 BlockedUser 목록 반환")
     func loadBlockedUsers_success_returnsBlockedUsers() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.getBlockedUsersResult = .success(BlockedUserResponse(blocks: [
             BlockdUser(blockId: 1, userId: 10, nickname: "차단유저", avatarImage: ""),
             BlockdUser(blockId: 2, userId: 20, nickname: "또차단", avatarImage: "")
@@ -81,7 +82,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("loadBlockedUsers 빈 목록 반환")
     func loadBlockedUsers_emptyList_returnsEmptyArray() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.getBlockedUsersResult = .success(BlockedUserResponse(blocks: []))
 
         let result = try await sut.loadBlockedUsers()
@@ -91,7 +92,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("loadBlockedUsers 네트워크 오류 시 RepositoryError 변환")
     func loadBlockedUsers_networkError_throwsRepositoryError() async {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.getBlockedUsersResult = .failure(NetworkingError.unknown(MockError.stub))
 
         await #expect(throws: RepositoryError.self) {
@@ -103,7 +104,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("reportSpoilerFeed 성공")
     func reportSpoilerFeed_success() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
         try await sut.reportSpoilerFeed(id: FeedID(5))
 
@@ -115,7 +116,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("reportImproperFeed 성공")
     func reportImproperFeed_success() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
         try await sut.reportImproperFeed(id: FeedID(6))
 
@@ -127,10 +128,11 @@ struct DefaultSocialRepositoryTests {
 
     @Test("reportSpoilerComment 성공")
     func reportSpoilerComment_success() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
-        try await sut.reportSpoilerComment(id: CommentID(3))
+        try await sut.reportSpoilerComment(feedID: FeedID(1), commentID: CommentID(3))
 
+        #expect(service.reportedSpoilerCommentFeedIDs == [1])
         #expect(service.reportedSpoilerCommentIDs == [3])
         #expect(service.postReportSpoilerCommentCallCount == 1)
     }
@@ -139,10 +141,11 @@ struct DefaultSocialRepositoryTests {
 
     @Test("reportImproperComment 성공")
     func reportImproperComment_success() async throws {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
 
-        try await sut.reportImproperComment(id: CommentID(4))
+        try await sut.reportImproperComment(feedID: FeedID(1), commentID: CommentID(4))
 
+        #expect(service.reportedImproperCommentFeedIDs == [1])
         #expect(service.reportedImproperCommentIDs == [4])
         #expect(service.postReportImproperCommentCallCount == 1)
     }
@@ -151,7 +154,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("NetworkingError.responseFailure 401은 authenticationRequired로 변환")
     func networkError_401_convertsToAuthenticationRequired() async {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.postBlockUserResult = .failure(NetworkingError.responseFailure(code: 401, body: nil))
 
         await #expect(throws: RepositoryError.authenticationRequired) {
@@ -161,7 +164,7 @@ struct DefaultSocialRepositoryTests {
 
     @Test("NetworkingError.responseFailure 404는 notFound로 변환")
     func networkError_404_convertsToNotFound() async {
-        let (sut, service, _) = makeRepository()
+        let (sut, service) = makeRepository()
         service.postBlockUserResult = .failure(NetworkingError.responseFailure(code: 404, body: nil))
 
         await #expect(throws: RepositoryError.notFound) {
@@ -174,17 +177,10 @@ struct DefaultSocialRepositoryTests {
 
 private extension DefaultSocialRepositoryTests {
 
-    func makeRepository() -> (
-        DefaultSocialRepository,
-        MockSocialService,
-        MockSocialLogger
-    ) {
+    func makeRepository() -> (DefaultSocialRepository, MockSocialService) {
         let service = MockSocialService()
-        let logger = MockSocialLogger()
-        let sut = DefaultSocialRepository(
-            service: service,
-            logger: logger
-        )
-        return (sut, service, logger)
+        let logger = DataLogger(moduleName: "SocialDataTests", underlying: nil)
+        let sut = DefaultSocialRepository(service: service, logger: logger)
+        return (sut, service)
     }
 }
