@@ -8,6 +8,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum SocialEndpoint: Endpoint {
 
@@ -32,8 +33,7 @@ enum SocialEndpoint: Endpoint {
     }
 
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
 
     var path: String {
@@ -66,7 +66,7 @@ enum SocialEndpoint: Endpoint {
 
     var headers: [String: String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc2MzAxNTQsImV4cCI6MTc3NzYzMTk1NCwidXNlcklkIjoxMDAzM30.tbEdBMlL9k1EAxnmHJfjG_v1EcwVrXQRn8jDOA2kW2M"]
     }
 
     var body: Data? { nil }
