@@ -11,7 +11,7 @@ import DependencyPlugin
 
 let project = Project.createDataModule(
     name: ModuleType.data(.social).name,
-    targets: [.sources, .testing, .tests],
+    targets: [.sources, .demo, .testing, .tests],
     internalDependencies: [
         .module(.core(.networking)),
         .module(.core(.logger)),
