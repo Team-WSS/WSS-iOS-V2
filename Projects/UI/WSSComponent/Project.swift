@@ -10,6 +10,9 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createUIModule(
-    name: ModuleType.UI.wssComponent.name,
-    targets: [.sources, .demo, .tests]
+    name: ModuleType.ui(.wssComponent).name,
+    targets: [.sources, .demo],
+    internalDependencies: [
+        .module(.ui(.designSystem))
+    ]
 )

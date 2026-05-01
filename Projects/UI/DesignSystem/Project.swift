@@ -10,6 +10,6 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createUIModule(
-    name: ModuleType.UI.designSystem.name,
-    targets: [.sources, .demo, .tests]
+    name: ModuleType.ui(.designSystem).name,
+    targets: [.sources, .demo]
 )
