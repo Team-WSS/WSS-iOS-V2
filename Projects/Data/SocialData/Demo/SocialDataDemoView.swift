@@ -18,6 +18,7 @@ struct SocialDataDemoView: View {
     @State private var userIDText: String = ""
     @State private var blockIDText: String = ""
     @State private var feedIDText: String = ""
+    @State private var commentFeedIDText: String = ""
     @State private var commentIDText: String = ""
     @State private var isLoading: Bool = false
 
@@ -106,7 +107,7 @@ struct SocialDataDemoView: View {
             Text("Report Comment").font(.headline).padding(.horizontal)
 
             HStack {
-                TextField("피드 ID", text: $feedIDText)
+                TextField("피드 ID", text: $commentFeedIDText)
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numberPad)
                 TextField("댓글 ID", text: $commentIDText)
@@ -176,6 +177,11 @@ struct SocialDataDemoView: View {
         return FeedID(value)
     }
 
+    private var commentFeedID: FeedID? {
+        guard let value = Int(commentFeedIDText) else { return nil }
+        return FeedID(value)
+    }
+
     private var commentID: CommentID? {
         guard let value = Int(commentIDText) else { return nil }
         return CommentID(value)
@@ -242,28 +248,28 @@ struct SocialDataDemoView: View {
     }
 
     private func reportSpoilerComment() async {
-        guard let feedID else { log = "피드 ID를 입력해주세요."; return }
+        guard let commentFeedID else { log = "피드 ID를 입력해주세요."; return }
         guard let commentID else { log = "댓글 ID를 입력해주세요."; return }
-        feedIDText = ""
+        commentFeedIDText = ""
         commentIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
-            try await repository.reportSpoilerComment(feedID: feedID, commentID: commentID)
-            log = "댓글 스포일러 신고 성공 (feedID: \(feedID.value), commentID: \(commentID.value))"
+            try await repository.reportSpoilerComment(feedID: commentFeedID, commentID: commentID)
+            log = "댓글 스포일러 신고 성공 (feedID: \(commentFeedID.value), commentID: \(commentID.value))"
         } catch {
             log = "댓글 스포일러 신고 실패\n\(error)"
         }
     }
 
     private func reportImproperComment() async {
-        guard let feedID else { log = "피드 ID를 입력해주세요."; return }
+        guard let commentFeedID else { log = "피드 ID를 입력해주세요."; return }
         guard let commentID else { log = "댓글 ID를 입력해주세요."; return }
-        feedIDText = ""
+        commentFeedIDText = ""
         commentIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
-            try await repository.reportImproperComment(feedID: feedID, commentID: commentID)
-            log = "댓글 부적절 신고 성공 (feedID: \(feedID.value), commentID: \(commentID.value))"
+            try await repository.reportImproperComment(feedID: commentFeedID, commentID: commentID)
+            log = "댓글 부적절 신고 성공 (feedID: \(commentFeedID.value), commentID: \(commentID.value))"
         } catch {
             log = "댓글 부적절 신고 실패\n\(error)"
         }
