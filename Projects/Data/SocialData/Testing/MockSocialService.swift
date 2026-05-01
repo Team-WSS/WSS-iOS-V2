@@ -23,8 +23,10 @@ final class MockSocialService: SocialService {
     private(set) var postReportImproperFeedCallCount = 0
     private(set) var reportedImproperFeedIDs: [Int] = []
     private(set) var postReportSpoilerCommentCallCount = 0
+    private(set) var reportedSpoilerCommentFeedIDs: [Int] = []
     private(set) var reportedSpoilerCommentIDs: [Int] = []
     private(set) var postReportImproperCommentCallCount = 0
+    private(set) var reportedImproperCommentFeedIDs: [Int] = []
     private(set) var reportedImproperCommentIDs: [Int] = []
 
     // MARK: - Results
@@ -68,14 +70,16 @@ final class MockSocialService: SocialService {
         try postReportImproperFeedResult.get()
     }
 
-    func postReportSpoilerComment(commentID: Int) async throws {
+    func postReportSpoilerComment(feedID: Int, commentID: Int) async throws {
         postReportSpoilerCommentCallCount += 1
+        reportedSpoilerCommentFeedIDs.append(feedID)
         reportedSpoilerCommentIDs.append(commentID)
         try postReportSpoilerCommentResult.get()
     }
 
-    func postReportImproperComment(commentID: Int) async throws {
+    func postReportImproperComment(feedID: Int, commentID: Int) async throws {
         postReportImproperCommentCallCount += 1
+        reportedImproperCommentFeedIDs.append(feedID)
         reportedImproperCommentIDs.append(commentID)
         try postReportImproperCommentResult.get()
     }
