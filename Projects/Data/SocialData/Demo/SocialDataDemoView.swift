@@ -52,24 +52,31 @@ struct SocialDataDemoView: View {
             Text("Block").font(.headline).padding(.horizontal)
 
             HStack {
-                TextField("유저 ID", text: $userIDText)
+                TextField("차단할 유저 ID", text: $userIDText)
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numberPad)
-                TextField("차단 ID", text: $blockIDText)
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
+                demoButton("차단", bg: Color(red: 1.0, green: 0.92, blue: 0.92), fg: .red) {
+                    Task { await blockUser() }
+                }
             }
             .padding(.horizontal)
 
-            HStack(spacing: 8) {
-                Button("차단") { Task { await blockUser() } }
-                Button("해제") { Task { await unblockUser() } }
-                Button("목록 조회") { Task { await loadBlockedUsers() } }
+            HStack {
+                TextField("해제할 차단 ID (목록의 [ ] 값)", text: $blockIDText)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                demoButton("해제", bg: Color(red: 0.88, green: 0.97, blue: 0.94), fg: .teal) {
+                    Task { await unblockUser() }
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(isLoading)
+            .padding(.horizontal)
+
+            demoButton("목록 조회", bg: Color(red: 0.92, green: 0.90, blue: 0.99), fg: .indigo) {
+                Task { await loadBlockedUsers() }
+            }
             .padding(.horizontal)
         }
+        .disabled(isLoading)
     }
 
     private var reportFeedSection: some View {
@@ -82,10 +89,13 @@ struct SocialDataDemoView: View {
                 .padding(.horizontal)
 
             HStack(spacing: 8) {
-                Button("스포일러 신고") { Task { await reportSpoilerFeed() } }
-                Button("부적절 신고") { Task { await reportImproperFeed() } }
+                demoButton("스포일러 신고", bg: Color(red: 1.0, green: 0.94, blue: 0.88), fg: .orange) {
+                    Task { await reportSpoilerFeed() }
+                }
+                demoButton("부적절 신고", bg: Color(red: 0.99, green: 0.90, blue: 0.95), fg: .pink) {
+                    Task { await reportImproperFeed() }
+                }
             }
-            .buttonStyle(.borderedProminent)
             .disabled(isLoading)
             .padding(.horizontal)
         }
@@ -106,13 +116,34 @@ struct SocialDataDemoView: View {
             .padding(.horizontal)
 
             HStack(spacing: 8) {
-                Button("스포일러 신고") { Task { await reportSpoilerComment() } }
-                Button("부적절 신고") { Task { await reportImproperComment() } }
+                demoButton("스포일러 신고", bg: Color(red: 1.0, green: 0.94, blue: 0.88), fg: .orange) {
+                    Task { await reportSpoilerComment() }
+                }
+                demoButton("부적절 신고", bg: Color(red: 0.99, green: 0.90, blue: 0.95), fg: .pink) {
+                    Task { await reportImproperComment() }
+                }
             }
-            .buttonStyle(.borderedProminent)
             .disabled(isLoading)
             .padding(.horizontal)
         }
+    }
+
+    private func demoButton(
+        _ title: String,
+        bg: Color,
+        fg: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(fg)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(bg)
+                .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
     }
 
     private var logSection: some View {
@@ -154,6 +185,7 @@ struct SocialDataDemoView: View {
 
     private func blockUser() async {
         guard let userID else { log = "유저 ID를 입력해주세요."; return }
+        userIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.blockUser(id: userID)
@@ -165,6 +197,7 @@ struct SocialDataDemoView: View {
 
     private func unblockUser() async {
         guard let blockID else { log = "차단 ID를 입력해주세요."; return }
+        blockIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.unblockUser(id: blockID)
@@ -186,6 +219,7 @@ struct SocialDataDemoView: View {
 
     private func reportSpoilerFeed() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
+        feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.reportSpoilerFeed(id: feedID)
@@ -197,6 +231,7 @@ struct SocialDataDemoView: View {
 
     private func reportImproperFeed() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
+        feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.reportImproperFeed(id: feedID)
@@ -209,6 +244,8 @@ struct SocialDataDemoView: View {
     private func reportSpoilerComment() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
         guard let commentID else { log = "댓글 ID를 입력해주세요."; return }
+        feedIDText = ""
+        commentIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.reportSpoilerComment(feedID: feedID, commentID: commentID)
@@ -221,6 +258,8 @@ struct SocialDataDemoView: View {
     private func reportImproperComment() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
         guard let commentID else { log = "댓글 ID를 입력해주세요."; return }
+        feedIDText = ""
+        commentIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.reportImproperComment(feedID: feedID, commentID: commentID)
