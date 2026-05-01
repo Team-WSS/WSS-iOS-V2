@@ -16,8 +16,15 @@ public enum KeywordDataFactory {
         logger: DataLogger? = nil
     ) -> KeywordRepository {
         let service = DefaultKeywordService(client: client)
-        return DefaultKeywordRepository(
+        let localStore = try! KeywordLocalStore()
+        let syncManager = KeywordSyncManager(
             keywordService: service,
+            localStore: localStore,
+            logger: logger
+        )
+        return DefaultKeywordRepository(
+            localStore: localStore,
+            syncManager: syncManager,
             logger: logger
         )
     }

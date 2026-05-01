@@ -11,8 +11,10 @@ import Foundation
 import BaseDomain
 
 public protocol KeywordRepository {
-    // 전체 키워드 조회
+    /// 로컬 DB에서 전체 키워드를 조회한다.
     func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup]
-    // 특정 키워드 검색
+    /// 로컬 DB에서 키워드를 검색한다.
     func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup]
+    /// 서버에서 키워드를 가져와 로컬 DB와 동기화한다.
+    func syncKeywords() async
 }

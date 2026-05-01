@@ -13,59 +13,50 @@ import BaseData
 import Networking
 
 public struct DefaultKeywordRepository: KeywordRepository {
-    
-    private let keywordService: KeywordService
+
+    private let localStore: KeywordLocalStore
+    private let syncManager: KeywordSyncManager
     private let logger: DataLogger?
-    
+
     init(
-        keywordService: KeywordService,
+        localStore: KeywordLocalStore,
+        syncManager: KeywordSyncManager,
         logger: DataLogger?
     ) {
-        self.keywordService = keywordService
+        self.localStore = localStore
+        self.syncManager = syncManager
         self.logger = logger
     }
-    
-    // 전체 키워드 조회
+
+    @MainActor
     public func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] {
         let action = KeywordAction.searchByText
-        
+
         do {
-            let query = SearchKeywordRequest(query: "")
-            let response = try await keywordService.searchKeyword(query)
-            let result = KeywordMapper.keywordGroups(from: response)
+            let result = try localStore.fetchAll()
             logger?.logSuccess(action: action.text)
             return result
-        } catch let error as NetworkingError{
-            logger?.logNetworkError(action: action.text, error: error)
-            throw error.toRepositoryError()
-        } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
-            throw .invalidData
         } catch {
             logger?.logUnknownError(action: action.text, error: error)
             throw .unknown
         }
     }
-    
-    // 특정 키워드 검색
+
+    @MainActor
     public func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] {
-        let action = KeywordAction.searchByFilter
-        
+        let action = KeywordAction.searchByFilter(query: query)
+
         do {
-            let request = SearchKeywordRequest(query: query)
-            let response = try await keywordService.searchKeyword(request)
-            let result = KeywordMapper.keywordGroups(from: response)
-            logger?.logSuccess(action: action(query).text)
+            let result = try localStore.search(query)
+            logger?.logSuccess(action: action.text)
             return result
-        } catch let error as NetworkingError{
-            logger?.logNetworkError(action: action(query).text, error: error)
-            throw error.toRepositoryError()
-        } catch let error as MappingError {
-            logger?.logMappingError(action: action(query).text, error: error)
-            throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action(query).text, error: error)
+            logger?.logUnknownError(action: action.text, error: error)
             throw .unknown
         }
+    }
+
+    public func syncKeywords() async {
+        await syncManager.syncIfNeeded()
     }
 }
