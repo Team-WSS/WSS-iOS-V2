@@ -22,7 +22,7 @@ struct DefaultSocialService: SocialService {
     }
 
     func deleteBlock(blockID: Int) async throws {
-        let endpoint = SocialEndpoint.unblockUser(userID: blockID)
+        let endpoint = SocialEndpoint.unblockUser(blockId: blockID)
         _ = try await client.request(endpoint)
     }
 

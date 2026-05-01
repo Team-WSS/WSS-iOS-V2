@@ -13,7 +13,7 @@ import BaseData
 enum SocialEndpoint: Endpoint {
 
     case blockUser(userID: Int)
-    case unblockUser(userID: Int)
+    case unblockUser(blockId: Int)
     case getBlockedUsers
     case reportSpoilerFeed(feedID: Int)
     case reportImproperFeed(feedID: Int)
@@ -40,8 +40,8 @@ enum SocialEndpoint: Endpoint {
         switch self {
         case .blockUser:
             return "/blocks"
-        case .unblockUser(let userID):
-            return "/blocks/\(userID)"
+        case .unblockUser(let blockId):
+            return "/blocks/\(blockId)"
         case .getBlockedUsers:
             return "/blocks"
         case .reportSpoilerFeed(let feedID):
@@ -66,7 +66,7 @@ enum SocialEndpoint: Endpoint {
 
     var headers: [String: String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc2MzAxNTQsImV4cCI6MTc3NzYzMTk1NCwidXNlcklkIjoxMDAzM30.tbEdBMlL9k1EAxnmHJfjG_v1EcwVrXQRn8jDOA2kW2M"]
+         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc2MzE5ODUsImV4cCI6MTc3NzYzMzc4NSwidXNlcklkIjoxMDAzM30.shLM9DXSzNvP6YO5WDDQ3WLqnfiCi-M6htmJ2Zi_u6g"]
     }
 
     var body: Data? { nil }
