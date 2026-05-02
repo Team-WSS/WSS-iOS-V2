@@ -9,75 +9,90 @@
 
 import NotificationDomain
 import BaseDomain
-import Logger
+import BaseData
 import Networking
 
 public struct DefaultNotificationRepository: NotificationRepository {
     private let service: NotificationService
-    private let logger: NotificationLogger?
-    
+    private let logger: DataLogger?
+
     init(
         notificationService: NotificationService,
-        logger: NotificationLogger?
+        logger: DataLogger?
     ) {
         self.service = notificationService
         self.logger = logger
     }
-    
+
     public func loadNotifications(
         lastNotificationID: NotificationID?,
         size: Int
     ) async throws(RepositoryError) -> PagedNotifications {
+        let action = NotificationAction.loadNotifications
+
         do {
-            let query = NotificationQeury(
+            let query = NotificationQuery(
                 lastNotificationId: lastNotificationID?.value ?? 0,
                 size: size
             )
             let response = try await service.getNotifications(query)
-            return NotificationMapper.pagedNotifications(from: response)
+            let result = NotificationMapper.pagedNotifications(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
-            logger?.logError(type: .network, action: .loadNotifications, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logError(type: .unknown, action: .loadNotifications, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
-    
+
     public func loadNotificationDetail(id: NotificationID) async throws(RepositoryError) -> NotificationDetail {
+        let action = NotificationAction.loadDetail
+
         do {
             let response = try await service.getNotificationDetail(notificationId: id.value)
-            return NotificationMapper.notificationDetail(from: response)
+            let result = NotificationMapper.notificationDetail(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
-            logger?.logError(type: .network, action: .loadDetail, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logError(type: .unknown, action: .loadDetail, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
-    
+
     public func markAsRead(id: NotificationID) async throws(RepositoryError) {
+        let action = NotificationAction.markAsRead
+
         do {
             try await service.postNotificationRead(notificationId: id.value)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger?.logError(type: .network, action: .markAsRead, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logError(type: .unknown, action: .markAsRead, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
-    
+
     public func loadUnreadNotificationStatus() async throws(RepositoryError) -> UnreadNotificationStatus {
+        let action = NotificationAction.loadUnreadStatus
+
         do {
             let response = try await service.getNotificationUnreadStatus()
-            return NotificationMapper.unreadNotificationStatus(from: response)
+            let result = NotificationMapper.unreadNotificationStatus(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
-            logger?.logError(type: .network, action: .loadUnreadStatus, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger?.logError(type: .unknown, action: .loadUnreadStatus, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }

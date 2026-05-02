@@ -11,7 +11,7 @@ import Foundation
 
 protocol NotificationService {
     
-    func getNotifications(_ query: NotificationQeury) async throws -> PagedNotificationsResponse
+    func getNotifications(_ query: NotificationQuery) async throws -> PagedNotificationsResponse
     func getNotificationDetail(notificationId: Int) async throws -> NotificationDetailResponse
     func getNotificationUnreadStatus() async throws -> NotificationUnreadStatusResponse
     func postNotificationRead(notificationId: Int) async throws

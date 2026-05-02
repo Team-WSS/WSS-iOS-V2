@@ -16,11 +16,11 @@ final class MockNotificationService: NotificationService {
     var postNotificationReadResult: Result<Void, Error> = .success(())
     var getUnreadStatusResult: Result<NotificationUnreadStatusResponse, Error>!
 
-    private(set) var requestedQuery: NotificationQeury?
+    private(set) var requestedQuery: NotificationQuery?
     private(set) var requestedDetailID: Int?
     private(set) var markedAsReadID: Int?
 
-    func getNotifications(_ query: NotificationQeury) async throws -> PagedNotificationsResponse {
+    func getNotifications(_ query: NotificationQuery) async throws -> PagedNotificationsResponse {
         requestedQuery = query
         return try getNotificationsResult.get()
     }

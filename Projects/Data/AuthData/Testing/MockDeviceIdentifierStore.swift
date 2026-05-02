@@ -2,7 +2,17 @@ import Keychain
 
 final class MockDeviceIdentifierStore: DeviceIdentifierStore {
 
-    func deviceIdentifier() throws -> String? { nil }
-    func saveDeviceIdentifier(_ identifier: String) throws { }
-    func clearDeviceIdentifier() throws { }
+    private var storedDeviceIdentifier: String?
+
+    init(deviceIdentifier: String? = nil) {
+        self.storedDeviceIdentifier = deviceIdentifier
+    }
+
+    func deviceIdentifier() throws -> String? { storedDeviceIdentifier }
+    func saveDeviceIdentifier(_ identifier: String) throws {
+        storedDeviceIdentifier = identifier
+    }
+    func clearDeviceIdentifier() throws {
+        storedDeviceIdentifier = nil
+    }
 }

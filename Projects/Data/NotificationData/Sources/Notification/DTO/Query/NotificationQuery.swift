@@ -1,5 +1,5 @@
 //
-//  NotificationQeury.swift
+//  NotificationQuery.swift
 //  NotificationData
 //
 //  Created by YunhakLee on 11/25/25.
@@ -10,7 +10,7 @@
 import Foundation
 import Networking
 
-struct NotificationQeury: QueryItemConvertible {
+struct NotificationQuery: QueryItemConvertible {
     let lastNotificationId: Int
     let size: Int
 }

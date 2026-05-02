@@ -10,7 +10,7 @@ enum SettingAction {
     case loadTermsAgreementDraft
     case saveTermsAgreementDraft
 
-    var text: String {
+    var name: String {
         switch self {
         case .loadAppUpdatePolicy:
             return "loadAppUpdatePolicy"

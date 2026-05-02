@@ -12,7 +12,7 @@ import Networking
 
 enum NotificationEndpoint: Endpoint {
      
-    case getNotifications(NotificationQeury)
+    case getNotifications(NotificationQuery)
     case getNotificationDetail(notificationId: Int)
     case getNotificationUnreadStatus
     case postNotificationRead(notificationId: Int)

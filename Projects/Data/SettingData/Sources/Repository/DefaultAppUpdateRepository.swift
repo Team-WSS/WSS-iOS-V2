@@ -28,16 +28,16 @@ public struct DefaultAppUpdateRepository: AppUpdateRepository {
         do {
             let response = try await service.getAppMinimumVersion()
             let policy = try SettingMapper.appUpdatePolicy(from: response)
-            logger?.logSuccess(action: action.text)
+            logger?.logSuccess(action: action.name)
             return policy
         } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
+            logger?.logMappingError(action: action.name, error: error)
             throw .invalidData
         } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }

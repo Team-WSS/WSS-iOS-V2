@@ -17,7 +17,7 @@ struct DefaultNotificationService: NotificationService {
         self.client = client
     }
 
-    func getNotifications(_ query: NotificationQeury) async throws -> PagedNotificationsResponse {
+    func getNotifications(_ query: NotificationQuery) async throws -> PagedNotificationsResponse {
         let endpoint = NotificationEndpoint.getNotifications(query)
         return try await client.request(endpoint, decodeTo: PagedNotificationsResponse.self)
     }

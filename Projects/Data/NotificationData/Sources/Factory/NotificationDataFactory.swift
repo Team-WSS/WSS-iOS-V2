@@ -7,14 +7,15 @@
 //
 
 
+import BaseData
 import Networking
 import NotificationDomain
 
 public enum NotificationDataFactory {
-    
+
     public static func makeNotificationRepository(
         client: NetworkingRequestable,
-        logger: NotificationLogger? = nil
+        logger: DataLogger? = nil
     ) -> NotificationRepository {
         let service = DefaultNotificationService(client: client)
         return DefaultNotificationRepository(
@@ -22,10 +23,10 @@ public enum NotificationDataFactory {
             logger: logger
         )
     }
-    
+
     public static func makePushSettingRepository(
         client: NetworkingRequestable,
-        logger: PushSettingLogger? = nil
+        logger: DataLogger? = nil
     ) -> PushSettingRepository {
         let service = DefaultPushSettingService(client: client)
         return DefaultPushSettingRepository(
