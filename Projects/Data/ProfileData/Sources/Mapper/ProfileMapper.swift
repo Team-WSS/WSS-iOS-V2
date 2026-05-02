@@ -19,7 +19,7 @@ enum ProfileMapper {
             nickname: response.nickname,
             introduction: response.intro,
             characterImage: URL(string: response.avatarImage),
-            isPublic: response.isProfilePblic,
+            isPublic: response.isProfilePublic ?? false,
             genrePreferences: genrePreferences
         )
     }
@@ -40,7 +40,7 @@ enum ProfileMapper {
         var keywords: [Keyword: Int] = [:]
         for preference in response.keywords {
             let keyword = Keyword(
-                id: KeywordID(preference.keywordId),
+                id: KeywordID(1),
                 name: preference.keywordName
             )
             keywords[keyword] = preference.keywordCount
@@ -65,15 +65,16 @@ enum ProfileMapper {
     }
 
     static func profileDraft(
-        from response: ProfileEditInfoResponse,
-        nickname: String,
+        from response: UserProfileResponse,
         characterID: Int
     ) -> ProfileDraft {
-        let genrePreferences = ProfileMapper.genrePreferences(from: response.genrePreferences)
+        let genrePreferences = response.genrePreferences.map {
+            GenrePreference(name: $0, image: nil, count: 0)
+        }
         return ProfileDraft(
             characterID: characterID,
-            nickname: nickname,
-            introduction: response.introduction,
+            nickname: response.nickname,
+            introduction: response.intro,
             genrePreferences: genrePreferences
         )
     }
@@ -95,15 +96,15 @@ enum ProfileMapper {
 
     static func novelGenre(from text: String) throws -> NovelGenre {
         switch text {
-        case "LIGHT_NOVEL":     return .lightNovel
-        case "WUXIA":           return .wuxia
-        case "FANTASY":         return .fantasy
-        case "ROMANCE":         return .romance
-        case "BL":              return .BL
-        case "ROMANCE_FANTASY": return .romanceFantasy
-        case "MODERN_FANTASY":  return .modernFantasy
-        case "DRAMA":           return .drama
-        case "MYSTERY":         return .mystery
+        case "lightNovel":         return .lightNovel
+        case "wuxia":              return .wuxia
+        case "fantasy":            return .fantasy
+        case "romance":            return .romance
+        case "BL":                 return .BL
+        case "romanceFantasy":     return .romanceFantasy
+        case "modernFantasy":      return .modernFantasy
+        case "drama":              return .drama
+        case "mystery":            return .mystery
         default:
             throw MappingError.invalidConversion(type: "NovelGenre", value: text)
         }
@@ -111,12 +112,12 @@ enum ProfileMapper {
 
     static func attractivePoint(from text: String) throws -> AttractivePoint {
         switch text {
-        case "WORLD_VIEW":      return .worldview
-        case "MATERIAL":        return .material
-        case "CHARACTER":       return .character
-        case "RELATIONSHIP":    return .relationship
-        case "VIBE":            return .vibe
-        case "WRITING_SKILL":   return .writingSkill
+        case "worldView":       return .worldview
+        case "material":        return .material
+        case "character":       return .character
+        case "relationship":    return .relationship
+        case "vibe":            return .vibe
+        case "writingSkill":    return .writingSkill
         default:
             throw MappingError.invalidConversion(type: "AttractivePoint", value: text)
         }
@@ -124,8 +125,8 @@ enum ProfileMapper {
 
     static func gender(from text: String) throws -> Gender {
         switch text {
-        case "MALE":    return .male
-        case "FEMALE":  return .female
+        case "M":   return .male
+        case "F":   return .female
         default:
             throw MappingError.invalidConversion(type: "Gender", value: text)
         }
@@ -133,22 +134,22 @@ enum ProfileMapper {
 
     static func novelGenreRawValue(from genre: NovelGenre) -> String {
         switch genre {
-        case .lightNovel:       return "LIGHT_NOVEL"
-        case .wuxia:            return "WUXIA"
-        case .fantasy:          return "FANTASY"
-        case .romance:          return "ROMANCE"
+        case .lightNovel:       return "lightNovel"
+        case .wuxia:            return "wuxia"
+        case .fantasy:          return "fantasy"
+        case .romance:          return "romance"
         case .BL:               return "BL"
-        case .romanceFantasy:   return "ROMANCE_FANTASY"
-        case .modernFantasy:    return "MODERN_FANTASY"
-        case .drama:            return "DRAMA"
-        case .mystery:          return "MYSTERY"
+        case .romanceFantasy:   return "romanceFantasy"
+        case .modernFantasy:    return "modernFantasy"
+        case .drama:            return "drama"
+        case .mystery:          return "mystery"
         }
     }
 
     static func genderRawValue(from gender: Gender) -> String {
         switch gender {
-        case .male:     return "MALE"
-        case .female:   return "FEMALE"
+        case .male:     return "M"
+        case .female:   return "F"
         }
     }
 }
