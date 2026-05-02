@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum SettingEndpoint: Endpoint {
     
@@ -45,7 +46,9 @@ enum SettingEndpoint: Endpoint {
     var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json"]
+        [ "Content-Type": "application/json",
+          "Authorization": "Bearer " + NetworkingConfig.testApiKey
+        ]
     }
     
     var body: Data? {

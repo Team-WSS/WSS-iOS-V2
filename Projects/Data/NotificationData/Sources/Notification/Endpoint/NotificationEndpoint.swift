@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum NotificationEndpoint: Endpoint {
      
@@ -49,8 +50,9 @@ enum NotificationEndpoint: Endpoint {
     }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+        [ "Content-Type": "application/json",
+          "Authorization": "Bearer " + NetworkingConfig.testApiKey
+        ]
     }
     
     var body: Data? { nil }

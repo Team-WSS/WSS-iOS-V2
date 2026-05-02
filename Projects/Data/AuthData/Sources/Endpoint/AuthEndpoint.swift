@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum AuthEndpoint: Endpoint {
      
@@ -50,7 +51,9 @@ enum AuthEndpoint: Endpoint {
     var queryItems: [URLQueryItem]? { nil }
     
     // TODO: Header 방식 개정 예정
-    var headers: [String : String]? { nil }
+    var headers: [String : String]? {  [ "Content-Type": "application/json",
+                                         "Authorization": "Bearer " + NetworkingConfig.testApiKey
+                                       ]  }
     
     var body: Data? {
         switch self {

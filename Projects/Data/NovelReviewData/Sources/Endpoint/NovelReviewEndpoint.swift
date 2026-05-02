@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum NovelReviewEndpoint: Endpoint {
     case postReview(PostNovelReviewRequest)
@@ -43,8 +44,9 @@ enum NovelReviewEndpoint: Endpoint {
     var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+        [ "Content-Type": "application/json",
+          "Authorization": "Bearer " + NetworkingConfig.testApiKey
+        ]
     }
     
     var body: Data? {
