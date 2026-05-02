@@ -37,7 +37,7 @@ struct DefaultProfileService: ProfileService {
     }
 
     func putAccountInfo(_ request: AccountInfoRequest) async throws {
-        let endpoint = ProfileEndpoint.patchAccountInfo(request)
+        let endpoint = ProfileEndpoint.putAccountInfo(request)
         _ = try await client.request(endpoint)
     }
 
@@ -56,9 +56,9 @@ struct DefaultProfileService: ProfileService {
         return try await client.request(endpoint, decodeTo: UserProfileResponse.self)
     }
 
-    func getGenrePreferences(userID: Int) async throws -> [GenrePreferenceResponse] {
+    func getGenrePreferences(userID: Int) async throws -> GenrePreferenceResponse {
         let endpoint = ProfileEndpoint.getGenrePreferences(userID: userID)
-        return try await client.request(endpoint, decodeTo: [GenrePreferenceResponse].self)
+        return try await client.request(endpoint, decodeTo: GenrePreferenceResponse.self)
     }
 
     func getNovelPreferences(userID: Int) async throws -> NovelPreferenceResponse {
@@ -66,14 +66,14 @@ struct DefaultProfileService: ProfileService {
         return try await client.request(endpoint, decodeTo: NovelPreferenceResponse.self)
     }
 
-    func getProfileCharacters() async throws -> [ProfileAvatarResponse] {
+    func getProfileCharacters() async throws -> ProfileAvatarResponse {
         let endpoint = ProfileEndpoint.getProfileAvatars
-        return try await client.request(endpoint, decodeTo: [ProfileAvatarResponse].self)
+        return try await client.request(endpoint, decodeTo: ProfileAvatarResponse.self)
     }
 
-    func getProfileEditInfo() async throws -> ProfileEditInfoResponse {
+    func getProfileEditInfo() async throws -> UserProfileResponse {
         let endpoint = ProfileEndpoint.getProfileInfo
-        return try await client.request(endpoint, decodeTo: ProfileEditInfoResponse.self)
+        return try await client.request(endpoint, decodeTo: UserProfileResponse.self)
     }
 
     func putProfile(_ request: UpdateProfileRequest) async throws {

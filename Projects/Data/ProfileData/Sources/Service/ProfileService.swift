@@ -20,6 +20,6 @@ protocol ProfileService {
     func getGenrePreferences(userID: Int) async throws -> GenrePreferenceResponse
     func getNovelPreferences(userID: Int) async throws -> NovelPreferenceResponse
     func getProfileCharacters() async throws -> ProfileAvatarResponse
-    func getProfileEditInfo() async throws -> ProfileEditInfoResponse
+    func getProfileEditInfo() async throws -> UserProfileResponse
     func putProfile(_ request: UpdateProfileRequest) async throws
 }

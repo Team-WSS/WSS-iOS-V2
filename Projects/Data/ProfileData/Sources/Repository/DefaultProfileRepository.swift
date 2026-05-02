@@ -51,7 +51,7 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let response = try await service.validateNickname(nickname)
             logger?.logSuccess(action: action.name)
-            return response.isDuplicated
+            return response.isValid
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -241,12 +241,10 @@ public struct DefaultProfileRepository: ProfileRepository {
         let action = ProfileAction.loadInitialProfile
         
         do {
-            let nickname = localStorage.get(.nickname) ?? ""
             let characterID = localStorage.get(.characterID) ?? 0
             let response = try await service.getProfileEditInfo()
             let result = ProfileMapper.profileDraft(
                 from: response,
-                nickname: nickname,
                 characterID: characterID
             )
             logger?.logSuccess(action: action.name)
