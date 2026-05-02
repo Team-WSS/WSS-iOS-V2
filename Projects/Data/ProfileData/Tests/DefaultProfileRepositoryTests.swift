@@ -48,7 +48,7 @@ struct DefaultProfileRepositoryTests {
     @Test("validateNickname 사용 가능한 닉네임")
     func validateNickname_available() async throws {
         let (sut, service, _) = makeRepository()
-        service.validateNicknameResult = .success(NicknameValidationResponse(isAvailable: true))
+        service.validateNicknameResult = .success(NicknameValidationResponse(isDuplicated: false))
 
         let result = try await sut.validateNickname("새닉네임")
 
@@ -59,7 +59,7 @@ struct DefaultProfileRepositoryTests {
     @Test("validateNickname 중복된 닉네임")
     func validateNickname_duplicated() async throws {
         let (sut, service, _) = makeRepository()
-        service.validateNicknameResult = .success(NicknameValidationResponse(isAvailable: false))
+        service.validateNicknameResult = .success(NicknameValidationResponse(isDuplicated: true))
 
         let result = try await sut.validateNickname("기존닉네임")
 
@@ -84,8 +84,8 @@ struct DefaultProfileRepositoryTests {
         localStorage.userID = 99
         service.getUserProfileResult = .success(
             UserProfileResponse(
-                nickname: "testUser", introduction: "소개",
-                characterImage: nil, isPublic: true, genrePreferences: ["ROMANCE"]
+                nickname: "testUser", intro: "소개",
+                avatarImage: "", isProfilePblic: true, genrePreferences: ["ROMANCE"]
             )
         )
 
@@ -108,8 +108,8 @@ struct DefaultProfileRepositoryTests {
         let (sut, service, _) = makeRepository()
         service.getUserProfileResult = .success(
             UserProfileResponse(
-                nickname: "otherUser", introduction: "",
-                characterImage: nil, isPublic: false, genrePreferences: []
+                nickname: "otherUser", intro: "",
+                avatarImage: "", isProfilePblic: false, genrePreferences: []
             )
         )
 
@@ -123,12 +123,14 @@ struct DefaultProfileRepositoryTests {
     @Test("loadInitialProfile 성공 시 localStorage와 API 데이터 결합")
     func loadInitialProfile_success_combinesLocalStorageAndAPI() async throws {
         let (sut, service, localStorage) = makeRepository()
-        localStorage.nickname = "저장된닉네임"
         localStorage.characterID = 7
         service.getProfileEditInfoResult = .success(
-            ProfileEditInfoResponse(
-                introduction: "소개글",
-                genrePreferences: [GenrePreferences(genreName: "로맨스", genreImage: "", genreCount: 3)]
+            UserProfileResponse(
+                nickname: "저장된닉네임",
+                intro: "소개글",
+                avatarImage: "",
+                isProfilePblic: nil,
+                genrePreferences: ["ROMANCE"]
             )
         )
 
@@ -178,7 +180,7 @@ struct DefaultProfileRepositoryTests {
     @Test("loadProfileVisibility 성공")
     func loadProfileVisibility_success() async throws {
         let (sut, service, _) = makeRepository()
-        service.getProfileVisibilityResult = .success(ProfileVisibilityResponse(isPublic: false))
+        service.getProfileVisibilityResult = .success(ProfileVisibilityResponse(isProfilePublic: false))
 
         let visibility = try await sut.loadProfileVisibility()
 

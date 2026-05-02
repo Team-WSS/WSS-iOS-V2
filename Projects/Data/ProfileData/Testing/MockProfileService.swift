@@ -37,31 +37,31 @@ final class MockProfileService: ProfileService {
         UserInfoResponse(userId: 1, gender: "MALE", nickname: "testUser")
     )
     var validateNicknameResult: Result<NicknameValidationResponse, Error> = .success(
-        NicknameValidationResponse(isAvailable: true)
+        NicknameValidationResponse(isValid: false)
     )
     var postRegisterProfileResult: Result<Void, Error> = .success(())
     var getAccountInfoResult: Result<AccountInfoResponse, Error> = .success(
-        AccountInfoResponse(email: nil, gender: "MALE", birthYear: 2000)
+        AccountInfoResponse(email: "", gender: "MALE", birth: 2000)
     )
     var putAccountInfoResult: Result<Void, Error> = .success(())
     var getProfileVisibilityResult: Result<ProfileVisibilityResponse, Error> = .success(
-        ProfileVisibilityResponse(isPublic: true)
+        ProfileVisibilityResponse(isProfilePublic: true)
     )
     var putProfileVisibilityResult: Result<Void, Error> = .success(())
     var getUserProfileResult: Result<UserProfileResponse, Error> = .success(
-        UserProfileResponse(nickname: "testUser", introduction: "", characterImage: nil, isPublic: true, genrePreferences: [])
+        UserProfileResponse(nickname: "testUser", intro: "", avatarImage: "", isProfilePublic: true, genrePreferences: [])
     )
     var getGenrePreferencesResult: Result<GenrePreferenceResponse, Error> = .success(
         GenrePreferenceResponse(genrePreferences: [])
     )
     var getNovelPreferencesResult: Result<NovelPreferenceResponse, Error> = .success(
-        NovelPreferenceResponse(attractivePoints: [], keywordPreferences: [])
+        NovelPreferenceResponse(attractivePoints: [], keywords: [])
     )
     var getProfileCharactersResult: Result<ProfileAvatarResponse, Error> = .success(
         ProfileAvatarResponse(avatarProfiles: [])
     )
-    var getProfileEditInfoResult: Result<ProfileEditInfoResponse, Error> = .success(
-        ProfileEditInfoResponse(introduction: "", genrePreferences: [])
+    var getProfileEditInfoResult: Result<UserProfileResponse, Error> = .success(
+        UserProfileResponse(nickname: "testUser", intro: "", avatarImage: "", isProfilePublic: nil, genrePreferences: [])
     )
     var putProfileResult: Result<Void, Error> = .success(())
 
@@ -126,7 +126,7 @@ final class MockProfileService: ProfileService {
         return try getProfileCharactersResult.get()
     }
 
-    func getProfileEditInfo() async throws -> ProfileEditInfoResponse {
+    func getProfileEditInfo() async throws -> UserProfileResponse {
         getProfileEditInfoCallCount += 1
         return try getProfileEditInfoResult.get()
     }
