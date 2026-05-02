@@ -8,6 +8,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum ProfileEndpoint: Endpoint {
 
@@ -15,7 +16,7 @@ enum ProfileEndpoint: Endpoint {
     case validateNickname(String)
     case postRegisterProfile(ProfileRegistrationRequest)
     case getAccountInfo
-    case patchAccountInfo(AccountInfoRequest)
+    case putAccountInfo(AccountInfoRequest)
     case getProfileVisibility
     case patchProfileVisibility(ProfileVisibilityRequest)
     case getUserProfile(userID: Int)
@@ -39,13 +40,12 @@ enum ProfileEndpoint: Endpoint {
         case .getNovelPreferences:      return .get
         case .getProfileAvatars:        return .get
         case .getAccountInfo:           return .get
-        case .patchAccountInfo:         return .patch
+        case .putAccountInfo:           return .put
         }
     }
 
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
 
     var path: String {
@@ -62,7 +62,7 @@ enum ProfileEndpoint: Endpoint {
         case .getNovelPreferences(let userID):      return "/users/\(userID)/preferences/attractive-points"
         case .getProfileAvatars:                    return "/avatar-profiles"
         case .getAccountInfo:                       return "/users/info"
-        case .patchAccountInfo:                     return "/users/info"
+        case .putAccountInfo:                       return "/users/info"
         }
     }
 
@@ -77,14 +77,14 @@ enum ProfileEndpoint: Endpoint {
 
     var headers: [String: String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc3MTU0NjcsImV4cCI6MTc3NzcxNzI2NywidXNlcklkIjoxMDAzM30.lqDVRk_QO418B_r8P2DVWVy0c6iTbQ9MfuMUvmjbZqM"]
     }
 
     var body: Data? {
         switch self {
         case .postRegisterProfile(let request):
             return request.asRequestBody()
-        case .patchAccountInfo(let request):
+        case .putAccountInfo(let request):
             return request.asRequestBody()
         case .patchProfileVisibility(let request):
             return request.asRequestBody()
