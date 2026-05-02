@@ -53,6 +53,7 @@ public enum DataModule: String, ModuleSpec {
     case comment
     case auth
     case social
+    case profile
 }
 
 public enum CoreModule: String, ModuleSpec {
