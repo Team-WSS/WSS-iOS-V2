@@ -8,10 +8,9 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum FeedEndpoint: Endpoint {
-    
-    // TODO: getMyFeeds는 API가 UserFeeds랑 동일한데 userID에 본인 id 넣는게 맞나용
     
     case postFeed(request: SubmitFeedRequest)
     case patchFeed(feedID: Int, request: SubmitFeedRequest)
@@ -19,7 +18,7 @@ enum FeedEndpoint: Endpoint {
     case getFeedDetail(feedID: Int)
     case getSosoFeeds(query: GetSosoFeedsQuery)
     case getUserFeeds(userID: Int, query: GetUserFeedsQuery)
-    case getMyFeeds(genres: [String], visibilityType: String, sortType: String, lastFeedID: Int)
+    case getMyFeeds(userID: Int, query: GetUserFeedsQuery)
     case getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int)
     case postLike(feedID: Int)
     case deleteLike(feedID: Int)
@@ -40,8 +39,7 @@ enum FeedEndpoint: Endpoint {
     }
 
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
     }
 
     var path: String {
@@ -93,13 +91,18 @@ enum FeedEndpoint: Endpoint {
             if let sortCriteria = query.sortCriteria { items.append(URLQueryItem(name: "sortCriteria", value: sortCriteria)) }
             return items
             
-        case .getMyFeeds(let genres, let visibilityType, let sortType, let lastFeedID):
-            return [
-                URLQueryItem(name: "lastFeedId", value: "\(lastFeedID)"),
-                URLQueryItem(name: "genres", value: genres.joined(separator: ",")),
-                URLQueryItem(name: "visibilityType", value: visibilityType),
-                URLQueryItem(name: "sortType", value: sortType)
+        case .getMyFeeds(_, let query):
+            var items: [URLQueryItem] = [
+                URLQueryItem(name: "lastFeedId", value: "\(query.lastFeedID)"),
+                URLQueryItem(name: "size", value: "\(query.size)")
             ]
+            if let isVisible = query.isVisible { items.append(URLQueryItem(name: "isVisible", value: "\(isVisible)")) }
+            if let isUnVisible = query.isUnVisible { items.append(URLQueryItem(name: "isUnVisible", value: "\(isUnVisible)")) }
+            if let genreNames = query.genreNames, !genreNames.isEmpty {
+                items.append(URLQueryItem(name: "genreNames", value: genreNames.joined(separator: ",")))
+            }
+            if let sortCriteria = query.sortCriteria { items.append(URLQueryItem(name: "sortCriteria", value: sortCriteria)) }
+            return items
             
         case .getNovelFeeds(_, let lastFeedID, let size):
             return [
@@ -114,7 +117,7 @@ enum FeedEndpoint: Endpoint {
     var headers: [String: String]? {
         // TODO: postFeed, patchFeed는 multipart/form-data로 변경 필요
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc3MTU0NjcsImV4cCI6MTc3NzcxNzI2NywidXNlcklkIjoxMDAzM30.lqDVRk_QO418B_r8P2DVWVy0c6iTbQ9MfuMUvmjbZqM"]
     }
 
     var body: Data? {
