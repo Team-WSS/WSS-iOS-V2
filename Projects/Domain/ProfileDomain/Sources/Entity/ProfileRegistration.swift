@@ -13,4 +13,16 @@ public struct ProfileRegistration: Equatable {
     public let gender: Gender
     public let birthYear: BirthYear
     public let genrePreferences: [NovelGenre]
+    
+    public init(
+        nickname: String,
+        gender: Gender,
+        birthYear: BirthYear,
+        genrePreferences: [NovelGenre]
+    ) {
+        self.nickname = nickname
+        self.gender = gender
+        self.birthYear = birthYear
+        self.genrePreferences = genrePreferences
+    }
 }
