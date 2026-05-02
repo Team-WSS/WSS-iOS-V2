@@ -12,6 +12,6 @@ struct UserProfileResponse: Decodable {
     let nickname: String
     let intro: String
     let avatarImage: String
-    let isProfilePblic: Bool
+    let isProfilePublic: Bool?
     let genrePreferences: [String]
 }

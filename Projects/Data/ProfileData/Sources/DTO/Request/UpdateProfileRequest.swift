@@ -10,8 +10,8 @@ import Foundation
 import Networking
 
 struct UpdateProfileRequest: RequestBodyConvertible {
-    let avatarId: Int
-    let nickname: String
-    let intro: String
+    let avatarId: Int?
+    let nickname: String?
+    let intro: String?
     let genrePreferences: [String]
 }

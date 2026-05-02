@@ -9,7 +9,7 @@
 import Foundation
 
 struct AccountInfoResponse: Decodable {
-    let email: String
+    let email: String?
     let gender: String
     let birth: Int
 }

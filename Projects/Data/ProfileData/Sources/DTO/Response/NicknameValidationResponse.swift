@@ -9,5 +9,5 @@
 import Foundation
 
 struct NicknameValidationResponse: Decodable {
-    let isDuplicated: Bool
+    let isValid: Bool
 }
