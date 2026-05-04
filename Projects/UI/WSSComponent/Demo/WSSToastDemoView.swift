@@ -10,12 +10,19 @@ import SwiftUI
 import WSSComponent
 
 struct WSSToastDemoView: View {
+    @State private var showToast = false
+    
     var body: some View {
         VStack {
-            WSSToastView(type: .changeInfo)
-            WSSToastView(type: .deleteBlockUser(nickname: "구리스"))
-            WSSToastView(type: .feedEdited)
-            WSSToastView(type: .selectionOverLimit(count: 20))
+            WSSToastView(type: .blockUser(nickname: "구리스"))
+            WSSToastView(type: .novelAlreadyConnected)
+            WSSToastView(type: .limitAddImage(limitCount: 5))
+            
+            Button("changeInfo 토스트 버튼") {
+                showToast = true
+            }
         }
+        .showWSSToast(isPresented: $showToast,
+                      type: .changeInfo)
     }
 }
