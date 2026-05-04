@@ -7,6 +7,7 @@
 //
 
 struct FeedDetailResponse: Decodable {
+    let feedId: Int
     let userId: Int
     let nickname: String
     let avatarImage: String
@@ -17,9 +18,9 @@ struct FeedDetailResponse: Decodable {
     let commentCount: Int
     let novelId: Int?
     let title: String?
-    let novelRatingCount: Int
-    let novelRating: Float
-    let relevantCategories: [String]
+    let novelRatingCount: Int?
+    let novelRating: Float?
+    let relevantCategories: [String]?
     let isSpoiler: Bool
     let isModified: Bool
     let isMyFeed: Bool

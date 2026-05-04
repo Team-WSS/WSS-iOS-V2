@@ -7,7 +7,7 @@
 //
 
 struct FeedListResponse: Decodable {
-    let category: String
+    let category: String?
     let isLoadable: Bool
     let feeds: [TotalFeedResponse]
 }
