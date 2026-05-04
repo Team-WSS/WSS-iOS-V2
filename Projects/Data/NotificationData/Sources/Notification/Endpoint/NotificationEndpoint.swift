@@ -29,7 +29,7 @@ enum NotificationEndpoint: Endpoint {
     
     var baseURL: URL {
         // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL)!
     }
     
     var path: String {

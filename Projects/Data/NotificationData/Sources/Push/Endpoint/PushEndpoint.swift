@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum PushEndpoint: Endpoint {
     
@@ -26,7 +27,7 @@ enum PushEndpoint: Endpoint {
     
     var baseURL: URL {
         // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL)!
     }
     
     var path: String {
@@ -41,8 +42,9 @@ enum PushEndpoint: Endpoint {
     var queryItems: [URLQueryItem]? { nil }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "dummyAccessToken"]
+        [ "Content-Type": "application/json",
+          "Authorization": "Bearer " + NetworkingConfig.testApiKey
+        ]
     }
     
     var body: Data? {
