@@ -34,7 +34,7 @@ enum AuthEndpoint: Endpoint {
     
     var baseURL: URL {
         // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL)!
     }
     
     var path: String {
@@ -50,10 +50,7 @@ enum AuthEndpoint: Endpoint {
     
     var queryItems: [URLQueryItem]? { nil }
     
-    // TODO: Header 방식 개정 예정
-    var headers: [String : String]? {  [ "Content-Type": "application/json",
-                                         "Authorization": "Bearer " + NetworkingConfig.testApiKey
-                                       ]  }
+    var headers: [String : String]? { [ "Content-Type": "application/json" ] }
     
     var body: Data? {
         switch self {
