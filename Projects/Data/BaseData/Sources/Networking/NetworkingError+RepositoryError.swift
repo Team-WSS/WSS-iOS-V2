@@ -28,8 +28,6 @@ public extension NetworkingError {
             return .authenticationRequired
         case .unknown:
             return .networkUnavailable
-        case .requiresReauthentication:
-            return .authenticationRequired
         }
     }
 }

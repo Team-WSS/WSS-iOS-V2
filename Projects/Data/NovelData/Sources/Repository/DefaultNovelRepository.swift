@@ -135,9 +135,10 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchMyLibrary
         
         do {
-            let myID = UserInfoStore.userID
+            let myID = UserDefaultsStorage().get(.userID)
             let query = NovelMapper.myLibraryQuery(from: filter)
-            let response = try await service.getUserLibraryNovels(userID: myID, query: query)
+            let response = try await service.getUserLibraryNovels(userID: myID ?? 0,
+                                                                  query: query)
             let libraryNovels = try NovelMapper.libraryNovels(from: response)
             logger?.logSuccess(action: action.text)
             return (libraryNovels.novels, libraryNovels.totalCount)
@@ -179,8 +180,8 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchRegisteredStats
         
         do {
-            let myID = UserInfoStore.userID
-            let response = try await service.getUserRegisteredNovelStats(userID: myID)
+            let myID = UserDefaultsStorage().get(.userID)
+            let response = try await service.getUserRegisteredNovelStats(userID: myID ?? 0)
             let result = NovelMapper.userRegisteredNovelStats(from: response)
             logger?.logSuccess(action: action.text)
             return result

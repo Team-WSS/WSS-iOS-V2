@@ -21,7 +21,7 @@ struct NovelLoggerDemoView: View {
     private let repository: NovelRepository
 
     init() {
-        UserInfoStore.userID = 10035
+        UserDefaultsStorage().set(.userID, 10035)
         let client = NetworkingClient()
         let logger = DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
         self.repository = NovelDataFactory.makeNovelRepository(client: client, logger: logger)

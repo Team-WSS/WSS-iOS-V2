@@ -13,7 +13,6 @@ import NovelDomain
 import BaseData
 
 public enum NovelDataFactory {
-    
     public static func makeNovelRepository(
         client: NetworkingRequestable,
         logger: DataLogger? = nil
