@@ -15,14 +15,17 @@ import Networking
 public struct DefaultFeedRepository: FeedRepository {
     private let service: FeedService
     private let logger: DataLogger?
+    private let storage: AppStorage
     private let pageSize = 20
 
     init(
         service: FeedService,
-        logger: DataLogger? = nil
+        logger: DataLogger? = nil,
+        storage: AppStorage = UserDefaultsStorage()
     ) {
         self.service = service
         self.logger = logger
+        self.storage = storage
     }
 
     public func submitFeed(_ draft: FeedDraft) async throws(RepositoryError) {
@@ -111,15 +114,12 @@ public struct DefaultFeedRepository: FeedRepository {
         )
         do {
             let response = try await service.getSosoFeeds(query: query)
-            let result = try FeedMapper.totalFeeds(from: response)
+            let result = FeedMapper.totalFeeds(from: response)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
-        } catch let error as MappingError {
-            logger?.logMappingError(action: action.name, error: error)
-            throw .invalidData
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
@@ -155,17 +155,19 @@ public struct DefaultFeedRepository: FeedRepository {
 
     public func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchMyFeeds
+        let userID = storage.get(.userID) ?? 0
         let genres = option.genres.map { FeedMapper.genreString(from: $0) }
         let visibilityType = FeedMapper.visibilityString(from: option.visibilityType)
         let sortType = option.sortType.rawValue
         do {
             let response = try await service.getMyFeeds(
+                userID: userID,
                 genres: genres,
                 visibilityType: visibilityType,
                 sortType: sortType,
                 lastFeedID: lastFeedID.value
             )
-            let result = try FeedMapper.totalFeeds(from: response)
+            let result = try FeedMapper.userFeeds(userID: UserID(userID), from: response)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {

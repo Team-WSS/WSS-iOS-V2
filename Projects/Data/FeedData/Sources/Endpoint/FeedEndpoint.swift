@@ -56,8 +56,8 @@ enum FeedEndpoint: Endpoint {
             return "/feeds"
         case .getUserFeeds(let userID, _):
             return "/users/\(userID)/feeds"
-        case .getMyFeeds:
-            return "/users/me/feeds"
+        case .getMyFeeds(let userID, _):
+            return "/users/\(userID)/feeds"
         case .getNovelFeeds(let novelID, _, _):
             return "/novels/\(novelID)/feeds"
         case .postLike(let feedID):
@@ -77,7 +77,6 @@ enum FeedEndpoint: Endpoint {
             ]
             if let category = query.category { items.append(URLQueryItem(name: "category", value: category)) }
             return items
-            
         case .getUserFeeds(_, let query):
             var items: [URLQueryItem] = [
                 URLQueryItem(name: "lastFeedId", value: "\(query.lastFeedID)"),
@@ -90,7 +89,6 @@ enum FeedEndpoint: Endpoint {
             }
             if let sortCriteria = query.sortCriteria { items.append(URLQueryItem(name: "sortCriteria", value: sortCriteria)) }
             return items
-            
         case .getMyFeeds(_, let query):
             var items: [URLQueryItem] = [
                 URLQueryItem(name: "lastFeedId", value: "\(query.lastFeedID)"),
@@ -103,7 +101,6 @@ enum FeedEndpoint: Endpoint {
             }
             if let sortCriteria = query.sortCriteria { items.append(URLQueryItem(name: "sortCriteria", value: sortCriteria)) }
             return items
-            
         case .getNovelFeeds(_, let lastFeedID, let size):
             return [
                 URLQueryItem(name: "lastFeedId", value: "\(lastFeedID)"),
@@ -117,7 +114,7 @@ enum FeedEndpoint: Endpoint {
     var headers: [String: String]? {
         // TODO: postFeed, patchFeed는 multipart/form-data로 변경 필요
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc3MTU0NjcsImV4cCI6MTc3NzcxNzI2NywidXNlcklkIjoxMDAzM30.lqDVRk_QO418B_r8P2DVWVy0c6iTbQ9MfuMUvmjbZqM"]
+         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc5Mzc2ODAsImV4cCI6MTc3NzkzOTQ4MCwidXNlcklkIjoxMDAzM30.8k_K6kmeo1bazYtD8xWaJTek5ZpRy8Qc-hJMXO_rGUA"]
     }
 
     var body: Data? {
