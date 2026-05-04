@@ -27,7 +27,8 @@ public extension QueryItemConvertible {
             }
 
             // 2) Bool은 항상 "true"/"false"로
-            if let bool = value as? Bool {
+            //    NSNumber(1) as? Bool 이 성공하므로 CFBoolean 타입으로 구분
+            if isBoolNSNumber(value), let bool = value as? Bool {
                 return URLQueryItem(name: key, value: bool ? "true" : "false")
             }
 
@@ -37,8 +38,8 @@ public extension QueryItemConvertible {
                     // 배열 안의 null도 제거
                     if element is NSNull { return nil }
 
-                    if let boolElement = element as? Bool {
-                        return boolElement ? "true" : "false"
+                    if isBoolNSNumber(element), let b = element as? Bool {
+                        return b ? "true" : "false"
                     }
 
                     return String(describing: element)
@@ -50,4 +51,10 @@ public extension QueryItemConvertible {
             return URLQueryItem(name: key, value: String(describing: value))
         }
     }
+}
+
+// NSNumber(value: 1) as? Bool 이 성공하기 때문에 CFBoolean 타입 ID로 실제 Bool 여부를 확인
+private func isBoolNSNumber(_ value: Any) -> Bool {
+    guard let n = value as? NSNumber else { return false }
+    return CFGetTypeID(n) == CFBooleanGetTypeID()
 }
