@@ -16,7 +16,7 @@ struct WSSComponentDemoApp: App {
     }
     var body: some Scene {
         WindowGroup {
-            WSSToastDemoView()
+            WSSAlertDemoView()
         }
     }
 }
