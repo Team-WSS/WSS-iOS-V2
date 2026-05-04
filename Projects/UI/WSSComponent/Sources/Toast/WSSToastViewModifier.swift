@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-public struct ToastModifier: ViewModifier {
+public struct WSSToastViewModifier: ViewModifier {
     @Binding var isPresented: Bool
     let type: WSSToastType
     let duration: Double
