@@ -15,14 +15,23 @@ struct KeywordCache {
         let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         self.fileURL = cacheDir.appendingPathComponent("keywords.json")
     }
-    
-    func load() -> KeywordGroupsResponse? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? JSONDecoder().decode(KeywordGroupsResponse.self, from: data)
+
+    func load() throws(CacheError) -> KeywordGroupsResponse {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            throw .fileNotFound
+        }
+        guard let decoded = try? JSONDecoder().decode(KeywordGroupsResponse.self, from: data) else {
+            throw .decodingFailed
+        }
+        return decoded
     }
 
-    func save(_ response: KeywordGroupsResponse) {
-        guard let data = try? JSONEncoder().encode(response) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+    func save(_ response: KeywordGroupsResponse) throws(CacheError) {
+        guard let data = try? JSONEncoder().encode(response) else {
+            throw .encodingFailed
+        }
+        guard let _ = try? data.write(to: fileURL, options: .atomic) else {
+            throw .writeFailed
+        }
     }
 }

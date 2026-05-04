@@ -29,13 +29,15 @@ public struct DefaultKeywordRepository: KeywordRepository {
     public func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] {
         let action = KeywordAction.fetchAll
 
-        guard let cached = cache.load() else {
+        do {
+            let cached = try cache.load()
+            let result = KeywordMapper.keywordGroups(from: cached)
+            logger?.logSuccess(action: action.text)
+            return result
+        } catch {
+            logger?.logCacheError(action: action.text, error: error)
             throw .unknown
         }
-
-        let result = KeywordMapper.keywordGroups(from: cached)
-        logger?.logSuccess(action: action.text)
-        return result
     }
 
     public func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] {
@@ -62,8 +64,12 @@ public struct DefaultKeywordRepository: KeywordRepository {
         do {
             let request = SearchKeywordRequest(query: "")
             let response = try await keywordService.searchKeyword(request)
-            cache.save(response)
+            try cache.save(response)
             logger?.logSuccess(action: action.text)
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.text, error: error)
+        } catch let error as CacheError {
+            logger?.logCacheError(action: action.text, error: error)
         } catch {
             logger?.logUnknownError(action: action.text, error: error)
         }

@@ -29,6 +29,11 @@ public struct DataLogger {
         underlying?.error("❌ [\(moduleName)] \(action) mapping error: \(error)")
     }
 
+    /// CacheError catch 블록에서 사용
+    public func logCacheError(action: String, error: CacheError) {
+        underlying?.error("❌ [\(moduleName)] \(action) cache error: \(error)")
+    }
+
     /// 나머지 catch 블록에서 사용
     public func logUnknownError(action: String, error: Error) {
         underlying?.error("❌ [\(moduleName)] \(action) unknown error: \(error)")
