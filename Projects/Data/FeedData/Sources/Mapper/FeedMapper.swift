@@ -72,12 +72,13 @@ enum FeedMapper {
         title: String?,
         genreName: String?,
         novelRating: Float?
-    ) throws -> ConnectedNovel? {
-        guard let novelId, let title, let genreName else { return nil }
+    ) -> ConnectedNovel? {
+        guard let novelId, let title, let genreName,
+              let mappedGenre = try? genre(from: genreName) else { return nil }
         return ConnectedNovel(
             id: NovelID(novelId),
             title: title,
-            genre: try genre(from: genreName),
+            genre: mappedGenre,
             rating: novelRating
         )
     }
@@ -89,12 +90,13 @@ enum FeedMapper {
         if let novelId = response.novelId,
            let title = response.title,
            let novelGenre = response.novelGenre,
+           let mappedGenre = try? genre(from: novelGenre),
            let thumbnailImage = response.novelThumbnailImage,
            let description = response.novelDescription {
             let basicInfo = ConnectedNovel(
                 id: NovelID(novelId),
                 title: title,
-                genre: try genre(from: novelGenre),
+                genre: mappedGenre,
                 rating: response.novelRating
             )
             connectedNovelDetail = ConnectedNovelDetail(
@@ -122,8 +124,8 @@ enum FeedMapper {
 
     // MARK: - TotalFeed
 
-    static func totalFeed(from response: TotalFeedResponse) throws -> TotalFeed {
-        let novel = try connectedNovel(
+    static func totalFeed(from response: TotalFeedResponse) -> TotalFeed {
+        let novel = connectedNovel(
             novelId: response.novelId,
             title: response.title,
             genreName: response.genreName,
@@ -148,8 +150,8 @@ enum FeedMapper {
 
     // MARK: - TotalFeeds (getSosoFeeds, getMyFeeds)
 
-    static func totalFeeds(from response: FeedListResponse) throws -> Paginated<TotalFeed> {
-        let feeds = try response.feeds.map { try totalFeed(from: $0) }
+    static func totalFeeds(from response: FeedListResponse) -> Paginated<TotalFeed> {
+        let feeds = response.feeds.map { totalFeed(from: $0) }
         return Paginated(items: feeds, hasNext: response.isLoadable)
     }
 
@@ -157,7 +159,7 @@ enum FeedMapper {
 
     // TODO: UserFeedResponse에 author 정보(nickname, avatarImage)가 없어 Author를 완전히 채울 수 없음
     static func userFeed(userID: UserID, from response: UserFeedResponse) throws -> TotalFeed {
-        let novel = try connectedNovel(
+        let novel = connectedNovel(
             novelId: response.novelId,
             title: response.title,
             genreName: response.genre,
@@ -188,7 +190,7 @@ enum FeedMapper {
     // MARK: - NovelFeed
 
     static func novelFeed(from response: NovelFeedResponse) throws -> TotalFeed {
-        let novel = try connectedNovel(
+        let novel = connectedNovel(
             novelId: response.novelId,
             title: response.title,
             genreName: response.genreName,
