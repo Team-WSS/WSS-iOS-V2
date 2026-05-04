@@ -8,52 +8,64 @@
 
 import Foundation
 import BaseDomain
+import Networking
 
 public struct DefaultKeywordRepository: KeywordRepository {
 
-    private let localStore: KeywordLocalStore
-    private let syncManager: KeywordSyncManager
+    private let keywordService: KeywordService
+    private let cache: KeywordCache
     private let logger: DataLogger?
 
     init(
-        localStore: KeywordLocalStore,
-        syncManager: KeywordSyncManager,
+        keywordService: KeywordService,
+        cache: KeywordCache,
         logger: DataLogger?
     ) {
-        self.localStore = localStore
-        self.syncManager = syncManager
+        self.keywordService = keywordService
+        self.cache = cache
         self.logger = logger
     }
 
-    @MainActor
     public func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] {
-        let action = KeywordAction.searchByText
+        let action = KeywordAction.fetchAll
 
-        do {
-            let result = try localStore.fetchAll()
-            logger?.logSuccess(action: action.text)
-            return result
-        } catch {
-            logger?.logUnknownError(action: action.text, error: error)
+        guard let cached = cache.load() else {
             throw .unknown
         }
+
+        let result = KeywordMapper.keywordGroups(from: cached)
+        logger?.logSuccess(action: action.text)
+        return result
     }
 
-    @MainActor
     public func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] {
         let action = KeywordAction.searchByFilter(query: query)
 
-        do {
-            let result = try localStore.search(query)
-            logger?.logSuccess(action: action.text)
-            return result
-        } catch {
-            logger?.logUnknownError(action: action.text, error: error)
-            throw .unknown
+        let allGroups = try await fetchKeywords()
+
+        if query.isEmpty { return allGroups }
+
+        let filtered = allGroups.compactMap { group -> KeywordGroup? in
+            let matched = group.keywords.filter {
+                $0.name.localizedCaseInsensitiveContains(query)
+            }
+            guard !matched.isEmpty else { return nil }
+            return KeywordGroup(name: group.name, image: group.image, keywords: matched)
         }
+        logger?.logSuccess(action: action.text)
+        return filtered
     }
 
     public func syncKeywords() async {
-        await syncManager.syncIfNeeded()
+        let action = KeywordAction.sync
+
+        do {
+            let request = SearchKeywordRequest(query: "")
+            let response = try await keywordService.searchKeyword(request)
+            cache.save(response)
+            logger?.logSuccess(action: action.text)
+        } catch {
+            logger?.logUnknownError(action: action.text, error: error)
+        }
     }
 }

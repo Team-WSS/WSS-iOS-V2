@@ -8,17 +8,17 @@
 
 import Foundation
 
-public struct KeywordGroupsResponse: Decodable {
+public struct KeywordGroupsResponse: Codable {
     let categories: [KeywordGroupResponse]
 }
 
-public struct KeywordGroupResponse: Decodable {
+public struct KeywordGroupResponse: Codable {
     let categoryName: String
     let categoryImage: String
     let keywords: [KeywordResponse]
 }
 
-public struct KeywordResponse: Decodable {
+public struct KeywordResponse: Codable {
     let keywordId: Int
     let keywordName: String
 }

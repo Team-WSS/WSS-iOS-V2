@@ -15,19 +15,10 @@ public enum KeywordDataFactory {
         logger: DataLogger? = nil
     ) -> KeywordRepository {
         let service = DefaultKeywordService(client: client)
-
-        guard let localStore = try? KeywordLocalStore() else {
-            fatalError("KeywordLocalStore 초기화 실패 — SwiftData 스키마를 확인하세요")
-        }
-
-        let syncManager = KeywordSyncManager(
-            keywordService: service,
-            localStore: localStore,
-            logger: logger
-        )
+        let cache = KeywordCache()
         return DefaultKeywordRepository(
-            localStore: localStore,
-            syncManager: syncManager,
+            keywordService: service,
+            cache: cache,
             logger: logger
         )
     }
