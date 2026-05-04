@@ -11,7 +11,7 @@ import DependencyPlugin
 
 let project = Project.createDataModule(
     name: ModuleType.data(.base).name,
-    targets: [.sources],
+    targets: [.sources, .demo],
     internalDependencies: [
         .module(.core(.networking)),
         .module(.core(.logger)),
