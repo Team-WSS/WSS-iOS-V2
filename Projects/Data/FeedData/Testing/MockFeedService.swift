@@ -27,14 +27,14 @@ final class MockFeedService: FeedService {
     private(set) var fetchedDetailFeedIDs: [Int] = []
 
     private(set) var getSosoFeedsCallCount = 0
-    private(set) var fetchedSosoOptions: [String] = []
-    private(set) var fetchedSosoLastFeedIDs: [Int] = []
+    private(set) var fetchedSosoQueries: [GetSosoFeedsQuery] = []
 
     private(set) var getUserFeedsCallCount = 0
     private(set) var fetchedUserIDs: [Int] = []
-    private(set) var fetchedUserLastFeedIDs: [Int] = []
+    private(set) var fetchedUserQueries: [GetUserFeedsQuery] = []
 
     private(set) var getMyFeedsCallCount = 0
+    private(set) var fetchedMyUserIDs: [Int] = []
     private(set) var fetchedMyGenres: [[String]] = []
     private(set) var fetchedMyVisibilityTypes: [String] = []
     private(set) var fetchedMySortTypes: [String] = []
@@ -42,6 +42,7 @@ final class MockFeedService: FeedService {
     private(set) var getNovelFeedsCallCount = 0
     private(set) var fetchedNovelIDs: [Int] = []
     private(set) var fetchedNovelLastFeedIDs: [Int] = []
+    private(set) var fetchedNovelSizes: [Int] = []
 
     private(set) var postLikeCallCount = 0
     private(set) var likedFeedIDs: [Int] = []
@@ -51,30 +52,30 @@ final class MockFeedService: FeedService {
 
     // MARK: - Results
 
-    var postFeedResult: Result<Void, Error> = .success(())
-    var patchFeedResult: Result<Void, Error> = .success(())
+    var postFeedResult: Result<SubmitFeedResponse, Error>!
+    var patchFeedResult: Result<SubmitFeedResponse, Error>!
     var deleteFeedResult: Result<Void, Error> = .success(())
     var getFeedDetailResult: Result<FeedDetailResponse, Error>!
     var getSosoFeedsResult: Result<FeedListResponse, Error>!
-    var getUserFeedsResult: Result<FeedListResponse, Error>!
-    var getMyFeedsResult: Result<FeedListResponse, Error>!
-    var getNovelFeedsResult: Result<FeedListResponse, Error>!
+    var getUserFeedsResult: Result<UserFeedListResponse, Error>!
+    var getMyFeedsResult: Result<UserFeedListResponse, Error>!
+    var getNovelFeedsResult: Result<NovelFeedListResponse, Error>!
     var postLikeResult: Result<Void, Error> = .success(())
     var deleteLikeResult: Result<Void, Error> = .success(())
 
     // MARK: - FeedService
 
-    func postFeed(request: SubmitFeedRequest) async throws {
+    func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
         postFeedCallCount += 1
         postedRequests.append(request)
-        try postFeedResult.get()
+        return try postFeedResult.get()
     }
 
-    func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws {
+    func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
         patchFeedCallCount += 1
         patchedFeedIDs.append(feedID)
         patchedRequests.append(request)
-        try patchFeedResult.get()
+        return try patchFeedResult.get()
     }
 
     func deleteFeed(feedID: Int) async throws {
@@ -89,32 +90,33 @@ final class MockFeedService: FeedService {
         return try getFeedDetailResult.get()
     }
 
-    func getSosoFeeds(option: String, lastFeedID: Int) async throws -> FeedListResponse {
+    func getSosoFeeds(query: GetSosoFeedsQuery) async throws -> FeedListResponse {
         getSosoFeedsCallCount += 1
-        fetchedSosoOptions.append(option)
-        fetchedSosoLastFeedIDs.append(lastFeedID)
+        fetchedSosoQueries.append(query)
         return try getSosoFeedsResult.get()
     }
 
-    func getUserFeeds(userID: Int, lastFeedID: Int) async throws -> FeedListResponse {
+    func getUserFeeds(userID: Int, query: GetUserFeedsQuery) async throws -> UserFeedListResponse {
         getUserFeedsCallCount += 1
         fetchedUserIDs.append(userID)
-        fetchedUserLastFeedIDs.append(lastFeedID)
+        fetchedUserQueries.append(query)
         return try getUserFeedsResult.get()
     }
 
-    func getMyFeeds(genres: [String], visibilityType: String, sortType: String, lastFeedID: Int) async throws -> FeedListResponse {
+    func getMyFeeds(userID: Int, genres: [String], visibilityType: String, sortType: String, lastFeedID: Int) async throws -> UserFeedListResponse {
         getMyFeedsCallCount += 1
+        fetchedMyUserIDs.append(userID)
         fetchedMyGenres.append(genres)
         fetchedMyVisibilityTypes.append(visibilityType)
         fetchedMySortTypes.append(sortType)
         return try getMyFeedsResult.get()
     }
 
-    func getNovelFeeds(novelID: Int, lastFeedID: Int) async throws -> FeedListResponse {
+    func getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int) async throws -> NovelFeedListResponse {
         getNovelFeedsCallCount += 1
         fetchedNovelIDs.append(novelID)
         fetchedNovelLastFeedIDs.append(lastFeedID)
+        fetchedNovelSizes.append(size)
         return try getNovelFeedsResult.get()
     }
 
