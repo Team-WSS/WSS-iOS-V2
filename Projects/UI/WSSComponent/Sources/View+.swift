@@ -13,9 +13,17 @@ public extension View {
                       type: WSSToastType,
                       duration: Double = 3.0) -> some View {
         self.modifier(
-            ToastModifier(isPresented: isPresented,
+            WSSToastViewModifier(isPresented: isPresented,
                           type: type,
                           duration: duration)
+        )
+    }
+    
+    func showWSSAlert(isPresented: Binding<Bool>,
+                      type: WSSAlertType) -> some View {
+        self.modifier(
+            WSSAlertViewModifier(isPresented: isPresented,
+                                 alertType: type)
         )
     }
 }
