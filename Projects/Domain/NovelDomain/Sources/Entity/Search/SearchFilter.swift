@@ -15,6 +15,18 @@ public struct SearchFilter {
     public private(set) var publicationStatus: NovelPublicationStatus?
     public private(set) var ratingThreshold: NovelRatingThreshold?
     public private(set) var keywords: [Keyword]
+
+    public init(
+        genres: [NovelGenre] = [],
+        publicationStatus: NovelPublicationStatus? = nil,
+        ratingThreshold: NovelRatingThreshold? = nil,
+        keywords: [Keyword] = []
+    ) {
+        self.genres = genres
+        self.publicationStatus = publicationStatus
+        self.ratingThreshold = ratingThreshold
+        self.keywords = keywords
+    }
     
     // MARK: - Policy
     
