@@ -26,7 +26,7 @@ public struct DefaultAppUpdateRepository: AppUpdateRepository {
         let action = SettingAction.loadAppUpdatePolicy
         
         do {
-            let response = try await service.getAppMinimumVersion()
+            let response = try await service.getAppMinimumVersion(os: "ios")
             let policy = try SettingMapper.appUpdatePolicy(from: response)
             logger?.logSuccess(action: action.name)
             return policy

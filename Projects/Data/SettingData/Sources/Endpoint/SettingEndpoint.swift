@@ -9,6 +9,7 @@
 
 import Foundation
 import Networking
+import BaseData
 
 enum SettingEndpoint: Endpoint {
     
@@ -19,7 +20,7 @@ enum SettingEndpoint: Endpoint {
     
     // MARK: - ForceUpdate
     
-    case getAppMinimumVersion
+    case getAppMinimumVersion(AppMinimumVersionQuery)
     
     var method: HTTPMethod {
         switch self {
@@ -31,7 +32,7 @@ enum SettingEndpoint: Endpoint {
     
     var baseURL: URL {
         // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: "https://jsonplaceholder.typicode.com")!
+        URL(string: NetworkingConfig.baseURL)!
     }
     
     var path: String {
@@ -42,10 +43,17 @@ enum SettingEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? { nil }
+    var queryItems: [URLQueryItem]? {
+        switch self {
+        case .getAppMinimumVersion(let query): return query.asQueryItems()
+        default: return nil
+        }
+    }
     
     var headers: [String : String]? {
-        ["Content-Type": "application/json"]
+        [ "Content-Type": "application/json",
+          "Authorization": "Bearer " + NetworkingConfig.testApiKey
+        ]
     }
     
     var body: Data? {
