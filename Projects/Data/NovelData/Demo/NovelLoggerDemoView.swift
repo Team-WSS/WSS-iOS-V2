@@ -21,10 +21,13 @@ struct NovelLoggerDemoView: View {
     private let repository: NovelRepository
 
     init() {
-        UserDefaultsStorage().set(.userID, 10035)
         let client = NetworkingClient()
+        let userDefaults = UserDefaultsStorage()
+        userDefaults.set(.userID, 10035)
         let logger = DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
-        self.repository = NovelDataFactory.makeNovelRepository(client: client, logger: logger)
+        self.repository = NovelDataFactory.makeNovelRepository(client: client,
+                                                               appStorage: userDefaults,
+                                                               logger: logger)
     }
 
     var body: some View {
@@ -128,6 +131,12 @@ struct NovelLoggerDemoView: View {
                     }
                 }
 
+                HStack(spacing: 12) {
+                    asyncButton("필터 검색 (로맨스)", color: .purple) {
+                        await searchNovelByFilter()
+                    }
+                }
+
                 Divider()
 
                 // MARK: 서재 / 통계
@@ -140,7 +149,7 @@ struct NovelLoggerDemoView: View {
                     }
 
                     asyncButton("유저 서재 (ID=1)", color: .mint) {
-                        await fetchUserLibraryNovels(userID: 1)
+                        await fetchUserLibraryNovels(userID: 10032)
                     }
                 }
 
@@ -234,6 +243,22 @@ struct NovelLoggerDemoView: View {
                       message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
         } catch {
             appendError(action: .fetchUserLibrary, error: error)
+        }
+    }
+
+    private func searchNovelByFilter() async {
+        appendLog(level: .debug, message: "필터 검색 (로맨스) 요청...")
+        do {
+            let filter = SearchFilter(genres: [.romance],
+                                      publicationStatus: nil,
+                                      ratingThreshold: nil,
+                                      keywords: [])
+            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter)
+            let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
+            appendLog(level: .info,
+                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
+        } catch {
+            appendError(action: .searchByFilter, error: error)
         }
     }
 

@@ -14,7 +14,7 @@ public struct UserLibraryQuery: QueryItemConvertible {
     public let size: Int
     public let sortCriteria: String
     public let isInterest: Bool
-    public let readstatues: [String]
+    public let readStatuses: [String]
     public let attractivePoints: [String]
     public let novelRating: Float
     public let query: String
@@ -25,7 +25,7 @@ public struct UserLibraryQuery: QueryItemConvertible {
         size: Int,
         sortCriteria: String,
         isInterest: Bool,
-        readstatues: [String],
+        readStatuses: [String],
         attractivePoints: [String],
         novelRating: Float,
         query: String,
@@ -35,7 +35,7 @@ public struct UserLibraryQuery: QueryItemConvertible {
         self.size = size
         self.sortCriteria = sortCriteria
         self.isInterest = isInterest
-        self.readstatues = readstatues
+        self.readStatuses = readStatuses
         self.attractivePoints = attractivePoints
         self.novelRating = novelRating
         self.query = query

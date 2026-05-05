@@ -177,7 +177,7 @@ extension NovelMapper {
             size: 20,
             sortCriteria: filter.sortType.rawValue,
             isInterest: filter.isInterest,
-            readstatues: filter.readingStatus.map { mapReadingStatusString(from: $0) },
+            readStatuses: filter.readingStatus.map { mapReadingStatusString(from: $0) },
             attractivePoints: filter.attractivePoint.map { mapAttractivePointString(from: $0) },
             novelRating: filter.ratingThreshold?.rawValue ?? 0,
             query: "",
@@ -191,7 +191,7 @@ extension NovelMapper {
             size: 20,
             sortCriteria: filter.sortType.rawValue,
             isInterest: false,
-            readstatues: [],
+            readStatuses: [],
             attractivePoints: [],
             novelRating: 0,
             query: "",
@@ -226,7 +226,7 @@ extension NovelMapper {
     }()
     
     private static func mapReadingStatus(from value: String) throws -> ReadingStatus {
-        guard let status = ReadingStatus(rawValue: value) else {
+        guard let status = ReadingStatus(rawValue: value.lowercased()) else {
             throw MappingError.invalidReadingStatus(value)
         }
         return status

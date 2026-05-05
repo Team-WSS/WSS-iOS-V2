@@ -15,11 +15,14 @@ import BaseData
 public enum NovelDataFactory {
     public static func makeNovelRepository(
         client: NetworkingRequestable,
+        appStorage: AppStorage,
         logger: DataLogger? = nil
     ) -> NovelRepository {
         let service = DefaultNovelService(client: client)
+        let userDefaultsStorage = UserDefaultsStorage()
         return DefaultNovelRepository(
             service: service,
+            appStorage: userDefaultsStorage,
             logger: logger
         )
     }

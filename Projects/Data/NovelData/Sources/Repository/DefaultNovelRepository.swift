@@ -16,13 +16,16 @@ import BaseData
 public struct DefaultNovelRepository: NovelRepository {
 
     private let service: NovelService
+    private let appStorage: AppStorage
     private let logger: DataLogger?
 
     init(
         service: NovelService,
+        appStorage: AppStorage,
         logger: DataLogger?
     ) {
         self.service = service
+        self.appStorage = appStorage
         self.logger = logger
     }
 
@@ -135,7 +138,7 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchMyLibrary
         
         do {
-            let myID = UserDefaultsStorage().get(.userID)
+            let myID = appStorage.get(.userID)
             let query = NovelMapper.myLibraryQuery(from: filter)
             let response = try await service.getUserLibraryNovels(userID: myID ?? 0,
                                                                   query: query)
@@ -180,7 +183,7 @@ public struct DefaultNovelRepository: NovelRepository {
         let action = NovelAction.fetchRegisteredStats
         
         do {
-            let myID = UserDefaultsStorage().get(.userID)
+            let myID = appStorage.get(.userID)
             let response = try await service.getUserRegisteredNovelStats(userID: myID ?? 0)
             let result = NovelMapper.userRegisteredNovelStats(from: response)
             logger?.logSuccess(action: action.text)
