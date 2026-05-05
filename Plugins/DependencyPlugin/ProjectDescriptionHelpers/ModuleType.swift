@@ -31,7 +31,6 @@ public enum DomainModule: String, ModuleSpec {
     case auth
     case recommendation
     case feed
-    case keyword
     case comment
     case novel
     case novelReview
@@ -49,7 +48,6 @@ public enum DataModule: String, ModuleSpec {
     case novelReview
     case notification
     case setting
-    case keyword
     case comment
     case auth
     case social
