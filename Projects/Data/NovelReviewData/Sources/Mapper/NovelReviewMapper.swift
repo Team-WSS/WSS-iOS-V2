@@ -89,7 +89,7 @@ enum NovelReviewMapper {
     }
     
     static func isAlreadyReviewed(code: String?) -> Bool {
-        return code == "USER_NOVEL-001"
+        return code == "USER_NOVEL-002"
     }
 }
 
