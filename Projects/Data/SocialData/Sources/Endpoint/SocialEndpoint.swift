@@ -66,7 +66,7 @@ enum SocialEndpoint: Endpoint {
 
     var headers: [String: String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc2MzE5ODUsImV4cCI6MTc3NzYzMzc4NSwidXNlcklkIjoxMDAzM30.shLM9DXSzNvP6YO5WDDQ3WLqnfiCi-M6htmJ2Zi_u6g"]
+         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
     }
 
     var body: Data? { nil }

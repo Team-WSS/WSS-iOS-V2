@@ -77,7 +77,7 @@ enum ProfileEndpoint: Endpoint {
 
     var headers: [String: String]? {
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc3MTU0NjcsImV4cCI6MTc3NzcxNzI2NywidXNlcklkIjoxMDAzM30.lqDVRk_QO418B_r8P2DVWVy0c6iTbQ9MfuMUvmjbZqM"]
+         "Authorization": "Bearer " +  NetworkingConfig.testApiKey]
     }
 
     var body: Data? {

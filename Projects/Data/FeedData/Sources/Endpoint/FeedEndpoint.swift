@@ -114,7 +114,7 @@ enum FeedEndpoint: Endpoint {
     var headers: [String: String]? {
         // TODO: postFeed, patchFeed는 multipart/form-data로 변경 필요
         ["Content-Type": "application/json",
-         "Authorization": "Bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2Nlc3MiLCJpYXQiOjE3Nzc5Mzc2ODAsImV4cCI6MTc3NzkzOTQ4MCwidXNlcklkIjoxMDAzM30.8k_K6kmeo1bazYtD8xWaJTek5ZpRy8Qc-hJMXO_rGUA"]
+         "Authorization": "Bearer " +  NetworkingConfig.testApiKey]
     }
 
     var body: Data? {
