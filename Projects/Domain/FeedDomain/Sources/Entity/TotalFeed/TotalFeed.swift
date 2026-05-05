@@ -51,4 +51,34 @@ public struct TotalFeed: Equatable {
         }
         isLiked.toggle()
     }
+    
+    public init(
+        feedId: FeedID,
+        createdDate: String,
+        content: String,
+        author: Author,
+        likeCount: Int,
+        isLiked: Bool,
+        commentCount: Int,
+        connectedNovel: ConnectedNovel? = nil,
+        isSpoiler: Bool,
+        isModified: Bool,
+        isPublic: Bool,
+        thumbnailImageURL: ImageWrapper? = nil,
+        imageCount: Int
+    ) {
+        self.feedId = feedId
+        self.createdDate = createdDate
+        self.content = content
+        self.author = author
+        self.likeCount = likeCount
+        self.isLiked = isLiked
+        self.commentCount = commentCount
+        self.connectedNovel = connectedNovel
+        self.isSpoiler = isSpoiler
+        self.isModified = isModified
+        self.isPublic = isPublic
+        self.thumbnailImageURL = thumbnailImageURL
+        self.imageCount = imageCount
+    }
 }
