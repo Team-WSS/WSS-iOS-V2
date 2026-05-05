@@ -226,7 +226,7 @@ extension NovelMapper {
     }()
     
     private static func mapReadingStatus(from value: String) throws -> ReadingStatus {
-        guard let status = ReadingStatus(rawValue: value) else {
+        guard let status = ReadingStatus(rawValue: value.lowercased()) else {
             throw MappingError.invalidReadingStatus(value)
         }
         return status
