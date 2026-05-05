@@ -73,7 +73,7 @@ struct AuthDataDemoView: View {
         let ts = InMemoryTokenStore()
         let ds = InMemoryDeviceIdentifierStore()
         try? ts.saveAccessToken(NetworkingConfig.testApiKey)
-        let networkLogger = DefaultNetworkLogger(base: logCapture, showBody: true, showHost: true)
+        let networkLogger = DefaultNetworkLogger(base: logCapture, showBody: true, showHost: false)
         let client = NetworkingClient(logger: networkLogger, tokenStore: ts)
         let dataLogger = DataLogger(moduleName: "Auth", underlying: logCapture)
         self.logCapture = logCapture

@@ -58,13 +58,13 @@ private final class LoggingNetworkingClient: NetworkingRequestable {
         var lines: [String] = []
 
         lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-        lines.append("📡 \(req.httpMethod ?? "?") \(req.url?.absoluteString ?? "?")")
+       
 
         if let headers = req.allHTTPHeaderFields, !headers.isEmpty {
             lines.append("Headers:")
             for key in headers.keys.sorted() {
                 let value = headers[key] ?? ""
-                let display = key.lowercased() == "authorization" ? maskToken(value) : value
+                let display = key.lowercased() == "authorization" ? "" : value
                 lines.append("  \(key): \(display)")
             }
         }
