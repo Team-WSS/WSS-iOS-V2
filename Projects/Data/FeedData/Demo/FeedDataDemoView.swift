@@ -33,7 +33,6 @@ struct FeedDataDemoView: View {
     @State private var visibilityType: VisibilityType = .all
 
     private let repository: FeedRepository
-    private var baseURL: String { NetworkingConfig.baseURL }
 
     init() {
         let client = NetworkingClient()
@@ -280,7 +279,7 @@ struct FeedDataDemoView: View {
             isPrivate: isPrivate,
             attachedImages: []
         )
-        let url = "\(baseURL)/feeds"
+        let url = "/feeds"
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.submitFeed(draft)
@@ -299,7 +298,7 @@ struct FeedDataDemoView: View {
             isPrivate: isPrivate,
             attachedImages: []
         )
-        let url = "\(baseURL)/feeds/\(feedID.value)"
+        let url = "/feeds/\(feedID.value)"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -312,7 +311,7 @@ struct FeedDataDemoView: View {
 
     private func deleteFeed() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/feeds/\(feedID.value)"
+        let url = "/feeds/\(feedID.value)"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -327,7 +326,7 @@ struct FeedDataDemoView: View {
 
     private func fetchFeedDetail() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/feeds/\(feedID.value)"
+        let url = "/feeds/\(feedID.value)"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -340,7 +339,7 @@ struct FeedDataDemoView: View {
 
     private func addLike() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/feeds/\(feedID.value)/likes"
+        let url = "/feeds/\(feedID.value)/likes"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -353,7 +352,7 @@ struct FeedDataDemoView: View {
 
     private func deleteLike() async {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/feeds/\(feedID.value)/likes"
+        let url = "/feeds/\(feedID.value)/likes"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -367,7 +366,7 @@ struct FeedDataDemoView: View {
     // MARK: - Actions: Lists
 
     private func fetchSosoFeeds() async {
-        let url = "\(baseURL)/feeds"
+        let url = "/feeds"
         isLoading = true; defer { isLoading = false }
         do {
             let result = try await repository.fetchSosoFeeds(option: sosoOption, lastFeedID: lastFeedID)
@@ -379,7 +378,7 @@ struct FeedDataDemoView: View {
 
     private func fetchUserFeeds() async {
         guard let userIDValue = Int(userIDText) else { log = "유저 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/users/\(userIDValue)/feeds"
+        let url = "/users/\(userIDValue)/feeds"
         userIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
@@ -393,7 +392,7 @@ struct FeedDataDemoView: View {
     private func fetchMyFeeds() async {
         let myUserID = UserDefaultsStorage().get(.userID) ?? 0
         let option = MyFeedOption(genres: [], visibilityType: visibilityType, sortType: .recent)
-        let url = "\(baseURL)/users/\(myUserID)/feeds"
+        let url = "/users/\(myUserID)/feeds"
         isLoading = true; defer { isLoading = false }
         do {
             let result = try await repository.fetchMyFeeds(option: option, lastFeedID: lastFeedID)
@@ -405,7 +404,7 @@ struct FeedDataDemoView: View {
 
     private func fetchNovelFeeds() async {
         guard let novelIDValue = Int(novelIDText) else { log = "소설 ID를 입력해주세요."; return }
-        let url = "\(baseURL)/novels/\(novelIDValue)/feeds"
+        let url = "/novels/\(novelIDValue)/feeds"
         novelIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
