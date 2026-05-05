@@ -37,7 +37,6 @@ struct ProfileDataDemoView: View {
     private let repository: ProfileRepository
     private let localStorage: UserDefaultsStorage
 
-    private var baseURL: String { NetworkingConfig.baseURL }
     private var myUserID: Int { localStorage.get(.userID) ?? 0 }
 
     init() {
@@ -268,7 +267,7 @@ struct ProfileDataDemoView: View {
 
     private func syncUserBasicInfo() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/me"
+        let url = "/users/me"
         do {
             try await repository.syncUserBasicInfo()
             log = "endpoint: .getUserInfo\n[GET] \(url)\n\n기본 정보 동기화 완료\nuserID: \(myUserID)"
@@ -279,7 +278,7 @@ struct ProfileDataDemoView: View {
 
     private func fetchMyProfile() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile"
+        let url = "/users/profile"
         do {
             let draft = try await repository.loadInitialProfile()
             log = "endpoint: .getProfileInfo\n[GET] \(url)\n\n닉네임: \(draft.nickname.text)\n소개: \(draft.introduction)\n장르: \(draft.genrePreferences.map { $0.name }.joined(separator: ", "))"
@@ -290,7 +289,7 @@ struct ProfileDataDemoView: View {
 
     private func fetchMyGenrePreferences() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/\(myUserID)/preferences/genres"
+        let url = "/users/\(myUserID)/preferences/genres"
         do {
             let genres = try await repository.fetchGenrePreferences(.me)
             let list = genres.map { "\($0.name): \($0.count)" }.joined(separator: "\n")
@@ -302,7 +301,7 @@ struct ProfileDataDemoView: View {
 
     private func fetchMyNovelPreferences() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/\(myUserID)/preferences/attractive-points"
+        let url = "/users/\(myUserID)/preferences/attractive-points"
         do {
             let prefs = try await repository.fetchNovelPreferences(.me)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
@@ -315,7 +314,7 @@ struct ProfileDataDemoView: View {
 
     private func fetchProfileCharacters() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/avatar-profiles"
+        let url = "/avatar-profiles"
         do {
             let characters = try await repository.fetchProfileCharacters()
             let list = characters.enumerated().map { i, c in "[\(i+1)] ID: \(c.id)" }.joined(separator: "\n")
@@ -327,7 +326,7 @@ struct ProfileDataDemoView: View {
 
     private func loadAccountInfoDraft() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/info"
+        let url = "/users/info"
         do {
             let draft = try await repository.loadAccountInfoDraft()
             log = "endpoint: .getAccountInfo\n[GET] \(url)\n\n성별: \(draft.gender)\n출생연도: \(draft.birth.value)"
@@ -338,7 +337,7 @@ struct ProfileDataDemoView: View {
 
     private func loadProfileVisibility() async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile-status"
+        let url = "/users/profile-status"
         do {
             let visibility = try await repository.loadProfileVisibility()
             log = "endpoint: .getProfileVisibility\n[GET] \(url)\n\n공개 여부: \(visibility.isPublic ? "공개" : "비공개")"
@@ -352,7 +351,7 @@ struct ProfileDataDemoView: View {
         guard !nickname.isEmpty else { log = "닉네임을 입력해주세요."; return }
         nicknameText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/nickname/check?nickname=\(nickname)"
+        let url = "/users/nickname/check?nickname=\(nickname)"
         do {
             let isValid = try await repository.validateNickname(nickname)
             log = "endpoint: .validateNickname(\"\(nickname)\")\n[GET] \(url)\n\nisValid: \(isValid)\n'\(nickname)': \(isValid ? "사용 가능" : "불가")"
@@ -365,7 +364,7 @@ struct ProfileDataDemoView: View {
         guard let userID = Int(otherUserIDText) else { log = "유저 ID를 입력해주세요."; return }
         otherUserIDText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile/\(userID)"
+        let url = "/users/profile/\(userID)"
         do {
             let profile = try await repository.fetchUserProfile(target: .user(UserID(userID)))
             log = "endpoint: .getUserProfile(userID: \(userID))\n[GET] \(url)\n\n닉네임: \(profile.nickname)\n소개: \(profile.introduction)\n공개: \(profile.isPublic)"
@@ -378,7 +377,7 @@ struct ProfileDataDemoView: View {
         guard let userID = Int(otherUserIDText) else { log = "유저 ID를 입력해주세요."; return }
         otherUserIDText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/\(userID)/preferences/genres"
+        let url = "/users/\(userID)/preferences/genres"
         do {
             let genres = try await repository.fetchGenrePreferences(.user(UserID(userID)))
             let list = genres.map { "\($0.name): \($0.count)" }.joined(separator: "\n")
@@ -392,7 +391,7 @@ struct ProfileDataDemoView: View {
         guard let userID = Int(otherUserIDText) else { log = "유저 ID를 입력해주세요."; return }
         otherUserIDText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/\(userID)/preferences/attractive-points"
+        let url = "/users/\(userID)/preferences/attractive-points"
         do {
             let prefs = try await repository.fetchNovelPreferences(.user(UserID(userID)))
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
@@ -405,7 +404,7 @@ struct ProfileDataDemoView: View {
 
     private func updateVisibility(isPublic: Bool) async {
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile-status"
+        let url = "/users/profile-status"
         do {
             try await repository.updateProfileVisibility(ProfileVisibility(isPublic: isPublic))
             log = "endpoint: .patchProfileVisibility\n[PATCH] \(url)\n파라미터: isProfilePublic=\(isPublic)\n\n공개 여부 변경 완료"
@@ -417,7 +416,7 @@ struct ProfileDataDemoView: View {
     private func saveAccountInfo() async {
         guard let birth = Int(accountBirthText) else { log = "출생연도를 올바르게 입력해주세요."; return }
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/info"
+        let url = "/users/info"
         do {
             let gender: Gender = accountGender == "M" ? .male : .female
             let draft = AccountInfoDraft(
@@ -438,7 +437,7 @@ struct ProfileDataDemoView: View {
         let nickname = regNicknameText
         regNicknameText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile"
+        let url = "/users/profile"
         do {
             let gender: Gender = regGender == "M" ? .male : .female
             let registration = ProfileRegistration(
@@ -461,7 +460,7 @@ struct ProfileDataDemoView: View {
         updateAvatarIdText = ""
         updateIntroText = ""
         isLoading = true; defer { isLoading = false }
-        let url = "\(baseURL)/users/profile"
+        let url = "/users/profile"
         do {
             var draft = ProfileDraft(
                 characterID: avatarId,
