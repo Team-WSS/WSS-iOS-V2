@@ -9,16 +9,31 @@
 import Foundation
 
 public struct KeywordGroupsResponse: Codable {
-    let categories: [KeywordGroupResponse]
+    public let categories: [KeywordGroupResponse]
+    
+    public init(categories: [KeywordGroupResponse]) {
+        self.categories = categories
+    }
 }
 
 public struct KeywordGroupResponse: Codable {
-    let categoryName: String
-    let categoryImage: String
-    let keywords: [KeywordResponse]
+    public let categoryName: String
+    public let categoryImage: String
+    public let keywords: [KeywordResponse]
+    
+    public init(categoryName: String, categoryImage: String, keywords: [KeywordResponse]) {
+        self.categoryName = categoryName
+        self.categoryImage = categoryImage
+        self.keywords = keywords
+    }
 }
 
 public struct KeywordResponse: Codable {
-    let keywordId: Int
-    let keywordName: String
+    public let keywordId: Int
+    public let keywordName: String
+    
+    public init(keywordId: Int, keywordName: String) {
+        self.keywordId = keywordId
+        self.keywordName = keywordName
+    }
 }
