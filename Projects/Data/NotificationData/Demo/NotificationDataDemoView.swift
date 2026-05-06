@@ -12,6 +12,24 @@ import Networking
 import NotificationData
 import NotificationDomain
 
+@Observable
+private final class LogCapture: Logger {
+    var text: String = ""
+
+    func debug(_ message: String) {
+        DispatchQueue.main.async { self.text += "\n🟦 \(message)" }
+    }
+    func info(_ message: String) {
+        DispatchQueue.main.async { self.text += "\n🟩 \(message)" }
+    }
+    func error(_ message: String) {
+        DispatchQueue.main.async { self.text += "\n🟥 \(message)" }
+    }
+    func clear() {
+        DispatchQueue.main.async { self.text = "" }
+    }
+}
+
 private func describeError(_ error: RepositoryError) -> String {
     switch error {
     case .networkUnavailable:      return "❌ networkUnavailable\n→ 네트워크 연결 없음 또는 요청 자체가 전송되지 않음"
@@ -23,78 +41,6 @@ private func describeError(_ error: RepositoryError) -> String {
     }
 }
 
-@Observable
-final class DemoLogger: Logger {
-    var output: String = ""
-
-    func debug(_ message: String) { append(message) }
-    func info(_ message: String)  { append(message) }
-    func error(_ message: String) { append(message) }
-
-    func log(_ message: String)   { append(message) }
-    func clear() { output = "" }
-
-    private func append(_ message: String) {
-        output = output.isEmpty ? message : output + "\n" + message
-    }
-}
-
-private final class LoggingNetworkingClient: NetworkingRequestable {
-    private let underlying: NetworkingRequestable
-    private let logger: DemoLogger
-
-    init(underlying: NetworkingRequestable, logger: DemoLogger) {
-        self.underlying = underlying
-        self.logger = logger
-    }
-
-    func request(_ endpoint: Endpoint) async throws -> Data {
-        logger.log(formatRequest(endpoint))
-        return try await underlying.request(endpoint)
-    }
-
-    private func formatRequest(_ endpoint: Endpoint) -> String {
-        let req = endpoint.urlRequest
-        var lines: [String] = []
-
-        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-       
-
-        if let headers = req.allHTTPHeaderFields, !headers.isEmpty {
-            lines.append("Headers:")
-            for key in headers.keys.sorted() {
-                let value = headers[key] ?? ""
-                let display = key.lowercased() == "authorization" ? "" : value
-                lines.append("  \(key): \(display)")
-            }
-        }
-
-        if let body = req.httpBody, !body.isEmpty {
-            if let pretty = prettyJSON(body) {
-                lines.append("Body:")
-                lines.append(pretty)
-            } else if let raw = String(data: body, encoding: .utf8) {
-                lines.append("Body: \(raw)")
-            }
-        }
-
-        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-        return lines.joined(separator: "\n")
-    }
-
-    private func maskToken(_ value: String) -> String {
-        let parts = value.split(separator: " ", maxSplits: 1)
-        guard parts.count == 2 else { return String(repeating: "*", count: 6) }
-        return "\(parts[0]) \(parts[1].prefix(8))..."
-    }
-
-    private func prettyJSON(_ data: Data) -> String? {
-        guard let obj = try? JSONSerialization.jsonObject(with: data),
-              let pretty = try? JSONSerialization.data(withJSONObject: obj, options: .prettyPrinted),
-              let str = String(data: pretty, encoding: .utf8) else { return nil }
-        return str
-    }
-}
 
 struct NotificationDataDemoView: View {
     @State private var log: String = "버튼을 눌러 API를 호출하세요."
@@ -108,18 +54,16 @@ struct NotificationDataDemoView: View {
 
     private let notifRepo: NotificationRepository
     private let pushRepo: PushSettingRepository
-    private let demoLogger: DemoLogger
+    private let logCapture: LogCapture
 
     init() {
-        let logger = DemoLogger()
-        let loggingClient = LoggingNetworkingClient(
-            underlying: NetworkingClient(),
-            logger: logger
-        )
-        let dataLogger = DataLogger(moduleName: "NotificationData", underlying: logger)
-        self.demoLogger = logger
-        self.notifRepo = NotificationDataFactory.makeNotificationRepository(client: loggingClient, logger: dataLogger)
-        self.pushRepo  = NotificationDataFactory.makePushSettingRepository(client: loggingClient, logger: dataLogger)
+        let logCapture = LogCapture()
+        let networkLogger = DefaultNetworkLogger(base: logCapture, showBody: true, showHost: false)
+        let client = NetworkingClient(logger: networkLogger)
+        let dataLogger = DataLogger(moduleName: "NotificationData", underlying: logCapture)
+        self.logCapture = logCapture
+        self.notifRepo = NotificationDataFactory.makeNotificationRepository(client: client, logger: dataLogger)
+        self.pushRepo  = NotificationDataFactory.makePushSettingRepository(client: client, logger: dataLogger)
     }
 
     var body: some View {
@@ -239,13 +183,13 @@ struct NotificationDataDemoView: View {
 
     private var logSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if !demoLogger.output.isEmpty {
+            if !logCapture.text.isEmpty {
                 Text("Repository Log")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
                 ScrollView {
-                    Text(demoLogger.output)
+                    Text(logCapture.text)
                         .font(.system(size: 12, design: .monospaced))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(8)
@@ -292,7 +236,7 @@ struct NotificationDataDemoView: View {
     // MARK: - Actions
 
     private func loadUnreadStatus() async {
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 loadUnreadNotificationStatus\n  (no params)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -304,7 +248,7 @@ struct NotificationDataDemoView: View {
     }
 
     private func loadNotifications() async {
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 loadNotifications\n  lastID: \(lastIDText.isEmpty ? "nil" : lastIDText)\n  size: \(pageSize)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -320,7 +264,7 @@ struct NotificationDataDemoView: View {
 
     private func loadDetail() async {
         guard let notificationID else { log = "알림 ID를 입력해주세요."; return }
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 loadNotificationDetail\n  notificationID: \(notificationID.value)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -334,7 +278,7 @@ struct NotificationDataDemoView: View {
     private func markAsRead() async {
         guard let notificationID else { log = "알림 ID를 입력해주세요."; return }
         notificationIDText = ""
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 markAsRead\n  notificationID: \(notificationID.value)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -346,7 +290,7 @@ struct NotificationDataDemoView: View {
     }
 
     private func loadPushPreference() async {
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 loadPushPreference\n  (no params)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -359,7 +303,7 @@ struct NotificationDataDemoView: View {
     }
 
     private func updatePushPreference() async {
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 updatePushPreference\n  isEnabled: \(isPushEnabled)"
         isLoading = true; defer { isLoading = false }
         do {
@@ -373,7 +317,7 @@ struct NotificationDataDemoView: View {
     private func registerDeviceToken() async {
         guard !deviceTokenText.isEmpty else { log = "FCM Token을 입력해주세요."; return }
         guard !deviceIDText.isEmpty    else { log = "Device ID를 입력해주세요."; return }
-        demoLogger.clear()
+        logCapture.clear()
         log = "📤 registerDeviceToken\n  token: \(deviceTokenText)\n  deviceID: \(deviceIDText)"
         isLoading = true; defer { isLoading = false }
         let token = DevicePushToken(token: deviceTokenText, deviceID: deviceIDText)
