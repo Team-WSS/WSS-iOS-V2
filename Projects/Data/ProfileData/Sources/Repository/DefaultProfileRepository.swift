@@ -49,7 +49,8 @@ public struct DefaultProfileRepository: ProfileRepository {
         let action = ProfileAction.validateNickname
 
         do {
-            let response = try await service.validateNickname(nickname)
+            let query = ValidateNicknameQuery(nickname: nickname)
+            let response = try await service.validateNickname(query)
             logger?.logSuccess(action: action.name)
             return response.isValid
         } catch let error as NetworkingError {

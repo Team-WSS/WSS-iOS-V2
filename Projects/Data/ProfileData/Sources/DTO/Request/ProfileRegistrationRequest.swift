@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-struct ProfileRegistrationRequest: RequestBodyConvertible {
+struct ProfileRegistrationRequest: Encodable {
     let nickname: String
     let gender: String
     let birth: Int

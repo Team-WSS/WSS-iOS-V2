@@ -48,7 +48,7 @@ struct DefaultProfileRepositoryTests {
     @Test("validateNickname 사용 가능한 닉네임")
     func validateNickname_available() async throws {
         let (sut, service, _) = makeRepository()
-        service.validateNicknameResult = .success(NicknameValidationResponse(isDuplicated: false))
+        service.validateNicknameResult = .success(NicknameValidationResponse(isValid: true))
 
         let result = try await sut.validateNickname("새닉네임")
 
@@ -59,7 +59,7 @@ struct DefaultProfileRepositoryTests {
     @Test("validateNickname 중복된 닉네임")
     func validateNickname_duplicated() async throws {
         let (sut, service, _) = makeRepository()
-        service.validateNicknameResult = .success(NicknameValidationResponse(isDuplicated: true))
+        service.validateNicknameResult = .success(NicknameValidationResponse(isValid: false))
 
         let result = try await sut.validateNickname("기존닉네임")
 
@@ -85,7 +85,7 @@ struct DefaultProfileRepositoryTests {
         service.getUserProfileResult = .success(
             UserProfileResponse(
                 nickname: "testUser", intro: "소개",
-                avatarImage: "", isProfilePblic: true, genrePreferences: ["ROMANCE"]
+                avatarImage: "", isProfilePublic: true, genrePreferences: ["romance"]
             )
         )
 
@@ -109,7 +109,7 @@ struct DefaultProfileRepositoryTests {
         service.getUserProfileResult = .success(
             UserProfileResponse(
                 nickname: "otherUser", intro: "",
-                avatarImage: "", isProfilePblic: false, genrePreferences: []
+                avatarImage: "", isProfilePublic: false, genrePreferences: []
             )
         )
 
@@ -129,7 +129,7 @@ struct DefaultProfileRepositoryTests {
                 nickname: "저장된닉네임",
                 intro: "소개글",
                 avatarImage: "",
-                isProfilePblic: nil,
+                isProfilePublic: nil,
                 genrePreferences: ["ROMANCE"]
             )
         )

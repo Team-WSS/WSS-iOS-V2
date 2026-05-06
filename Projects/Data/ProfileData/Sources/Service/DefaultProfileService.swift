@@ -21,8 +21,8 @@ struct DefaultProfileService: ProfileService {
         return try await client.request(endpoint, decodeTo: UserInfoResponse.self)
     }
 
-    func validateNickname(_ nickname: String) async throws -> NicknameValidationResponse {
-        let endpoint = ProfileEndpoint.validateNickname(nickname)
+    func validateNickname(_ query: ValidateNicknameQuery) async throws -> NicknameValidationResponse {
+        let endpoint = ProfileEndpoint.validateNickname(query)
         return try await client.request(endpoint, decodeTo: NicknameValidationResponse.self)
     }
 
