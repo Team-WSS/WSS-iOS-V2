@@ -11,8 +11,7 @@ import Networking
 import BaseData
 
 enum SocialEndpoint: Endpoint {
-
-    case blockUser(userID: Int)
+    case blockUser(BlockUserQuery)
     case unblockUser(blockId: Int)
     case getBlockedUsers
     case reportSpoilerFeed(feedID: Int)
@@ -55,21 +54,16 @@ enum SocialEndpoint: Endpoint {
         }
     }
 
-    var queryItems: [URLQueryItem]? {
+    var query: QueryParameters {
         switch self {
-        case .blockUser(let userID):
-            return [URLQueryItem(name: "userId", value: String(userID))]
-        default:
-            return nil
+        case .blockUser(let query): return .convertible(query)
+        default: return .none
         }
     }
 
-    var headers: [String: String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
-    }
+    var body: RequestBody { .none }
 
-    var body: Data? { nil }
-
-    var requireTokenRefresh: Bool { true }
+    var authorization: AuthorizationPolicy { .requiresToken }
+    
+    var additionalHeaders: [String : String]? { nil }
 }
