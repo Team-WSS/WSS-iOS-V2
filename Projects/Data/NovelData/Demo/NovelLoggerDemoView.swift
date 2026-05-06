@@ -22,7 +22,7 @@ struct NovelLoggerDemoView: View {
     private let keywordRepository: KeywordRepository
     
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let userDefaults = UserDefaultsStorage()
         userDefaults.set(.userID, 10035)
         let logger = DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)

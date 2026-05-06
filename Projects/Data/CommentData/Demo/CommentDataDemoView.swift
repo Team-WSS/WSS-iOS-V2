@@ -25,7 +25,7 @@ struct CommentDataDemoView: View {
     private let repository: CommentRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let logger = DataLogger(moduleName: "CommentData", underlying: OSLogger.comment)
         self.repository = CommentDataFactory.makeRepository(client: client, logger: logger)
     }

@@ -17,7 +17,7 @@ struct KeywordDemoView: View {
     @State private var searchText: String = ""
 
     private let repository: KeywordRepository = KeywordDataFactory.makeRepository(
-        client: NetworkingClient(),
+        client: NetworkingClient(tokenStore: DemoSessionTokenStore()),
         logger: DataLogger(moduleName: "BaseData",
                            underlying: OSLogger.keyword)
     )
