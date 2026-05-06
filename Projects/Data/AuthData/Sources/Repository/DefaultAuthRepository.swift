@@ -77,7 +77,7 @@ public struct DefaultAuthRepository: AuthRepository {
                                         deviceIdentifier: deviceIdentifier)
             try await service.postLogout(request)
             try tokenStore.clearTokens()
-            logger?.logSuccess(action: action)
+            logger?.logSuccess(action: action.name)
             
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -97,7 +97,7 @@ public struct DefaultAuthRepository: AuthRepository {
             let request = AuthMapper.withdrawalReason(from: draft)
             try await service.postWithdraw(request)
             try tokenStore.clearTokens()
-            logger?.logSuccess(action: action)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
