@@ -53,21 +53,24 @@ enum NovelEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? {
+    var query: QueryParameters {
         switch self {
-        case .getUserLibraryNovels(_, let query):   return query.asQueryItems()
-        case .getNormalSearchResult(let query):     return query.asQueryItems()
-        case .getDetailSearchResult(let query):     return query.asQueryItems()
-        default: return nil
+        case .getUserLibraryNovels(_, let query):   return .convertible(query)
+        case .getNormalSearchResult(let query):     return .convertible(query)
+        case .getDetailSearchResult(let query):     return .convertible(query)
+        default: return .none
         }
     }
     
-    var headers: [String : String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
+    var body: RequestBody { return .none }
+    
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .getNovelBasicInfo, .getNovelDetailInfo, .getNormalSearchResult:
+            return .withoutToken
+        default: return .requiresToken
+        }
     }
     
-    var body: Data? { return nil }
-    
-    var requireTokenRefresh: Bool { true }
+    var additionalHeaders: [String : String]? { nil }
 }
