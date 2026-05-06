@@ -44,8 +44,10 @@ enum RecommendationEndpoint: Endpoint {
         switch self {
         case .getInterestFeeds, .getPreferenceGenreNovels:
             return .requiresToken
-        case .getTodayDiscovery, .getTrendingFeeds, .sosopickNovels:
+        case .getTodayDiscovery, .getTrendingFeeds:
             return .usesTokenIfAvailable
+        case .sosopickNovels:
+            return .withoutToken
         }
     }
 
