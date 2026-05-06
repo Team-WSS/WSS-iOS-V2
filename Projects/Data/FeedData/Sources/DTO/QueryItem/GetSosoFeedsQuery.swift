@@ -5,8 +5,9 @@
 //  Created by Lee Wonsun on 4/23/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
+import Networking
 
-struct GetSosoFeedsQuery {
+struct GetSosoFeedsQuery: QueryItemConvertible {
     let category: String?
     let lastFeedID: Int
     let size: Int

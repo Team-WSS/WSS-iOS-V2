@@ -6,7 +6,9 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-struct GetUserFeedsQuery {
+import Networking
+
+struct GetUserFeedsQuery: QueryItemConvertible {
     let lastFeedID: Int
     let size: Int
     let isVisible: Bool?
