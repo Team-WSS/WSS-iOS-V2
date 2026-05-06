@@ -12,6 +12,7 @@ import SocialData
 import SocialDomain
 import BaseDomain
 import Networking
+import BaseData
 
 struct SocialDataDemoView: View {
     @State private var log: String = "버튼을 눌러 API를 호출하세요."
@@ -25,7 +26,7 @@ struct SocialDataDemoView: View {
     private let repository: SocialRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         self.repository = SocialDataFactory.makeSocialRepository(client: client)
     }
 

@@ -35,7 +35,7 @@ struct FeedDataDemoView: View {
     private let repository: FeedRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let logger = DataLogger(moduleName: "FeedData", underlying: OSLogger.feed)
         self.repository = FeedDataFactory.makeFeedRepository(client: client, logger: logger)
     }
