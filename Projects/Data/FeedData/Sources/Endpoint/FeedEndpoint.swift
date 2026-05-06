@@ -88,7 +88,7 @@ enum FeedEndpoint: Endpoint {
         switch self {
         case .getNovelFeeds, .getSosoFeeds: return .withoutToken
         case .getUserFeeds, .getMyFeeds: return .usesTokenIfAvailable
-        default: return .requiresToken
+        default: return .requireToken
         }
     }
     

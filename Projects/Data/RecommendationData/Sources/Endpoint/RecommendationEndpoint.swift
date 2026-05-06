@@ -43,7 +43,7 @@ enum RecommendationEndpoint: Endpoint {
     var authorization: AuthorizationPolicy {
         switch self {
         case .getInterestFeeds, .getPreferenceGenreNovels:
-            return .requiresToken
+            return .requireToken
         case .getTodayDiscovery, .getTrendingFeeds:
             return .usesTokenIfAvailable
         case .sosopickNovels:

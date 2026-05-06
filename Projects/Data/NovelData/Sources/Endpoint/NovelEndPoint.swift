@@ -68,7 +68,7 @@ enum NovelEndpoint: Endpoint {
         switch self {
         case .getNovelBasicInfo, .getNovelDetailInfo, .getNormalSearchResult:
             return .withoutToken
-        default: return .requiresToken
+        default: return .requireToken
         }
     }
     

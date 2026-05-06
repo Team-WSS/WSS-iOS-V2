@@ -8,7 +8,7 @@
 import Foundation
 
 public enum AuthorizationPolicy {
-    case requiresToken          // Bearer 토큰 주입 + 401시 refresh 재시도
+    case requireToken          // Bearer 토큰 주입 + 401시 refresh 재시도
     case withoutToken           // 공개 API (로그인·리이슈 등)
     case usesTokenIfAvailable   // 토큰이 있으면 주입 + 401시 refresh 재시도
 }

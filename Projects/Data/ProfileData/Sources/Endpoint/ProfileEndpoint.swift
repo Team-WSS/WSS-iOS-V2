@@ -89,5 +89,5 @@ enum ProfileEndpoint: Endpoint {
     
     var additionalHeaders: [String : String]? { nil }
     
-    var authorization: AuthorizationPolicy { .requiresToken }
+    var authorization: AuthorizationPolicy { .requireToken }
 }

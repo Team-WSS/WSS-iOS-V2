@@ -52,5 +52,5 @@ enum NovelReviewEndpoint: Endpoint {
         }
     }
 
-    var authorization: AuthorizationPolicy { .requiresToken }
+    var authorization: AuthorizationPolicy { .requireToken }
 }

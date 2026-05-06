@@ -87,7 +87,7 @@ extension NetworkingClient {
     
     private func makeAuthorizationContext(for endpoint: Endpoint) -> AuthorizationContext {
         switch endpoint.authorization {
-        case .requiresToken:
+        case .requireToken:
             return AuthorizationContext(canUseToken: true, canRefreshSession: true)
         case .withoutToken:
             return AuthorizationContext(canUseToken: false, canRefreshSession: false)

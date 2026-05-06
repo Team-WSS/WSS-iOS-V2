@@ -66,7 +66,7 @@ enum AuthEndpoint: Endpoint {
     var authorization: AuthorizationPolicy {
         switch self {
         case .patchAppleAccountSync, .postLogout, .postWithdraw:
-            return .requiresToken
+            return .requireToken
         case .postAppleLogin, .postKakaoLogin, .postReissueToken:
             return .withoutToken
         }

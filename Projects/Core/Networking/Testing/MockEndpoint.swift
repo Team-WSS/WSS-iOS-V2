@@ -11,7 +11,7 @@ struct MockEndpoint: Endpoint {
         query: QueryParameters = .none,
         additionalHeaders: [String: String]? = nil,
         body: RequestBody = .none,
-        authorization: AuthorizationPolicy = .requiresToken
+        authorization: AuthorizationPolicy = .requireToken
     ) {
         self.query = query
         self.additionalHeaders = additionalHeaders

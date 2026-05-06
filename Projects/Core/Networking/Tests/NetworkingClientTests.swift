@@ -270,7 +270,7 @@ struct NetworkingClientTests {
             return try makeResponse(for: request, statusCode: 200)
         }
 
-        _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+        _ = try await client.request(MockEndpoint(authorization: .requireToken))
 
         #expect(refresher.refreshCallCount == 1)
         #expect(requestCount.value == 2)
@@ -377,7 +377,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -403,7 +403,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, let errorBody) = error else {
@@ -428,7 +428,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, _) = error else {
@@ -457,7 +457,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -487,7 +487,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(authorization: .requiresToken))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {

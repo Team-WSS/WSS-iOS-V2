@@ -63,7 +63,7 @@ enum SocialEndpoint: Endpoint {
 
     var body: RequestBody { .none }
 
-    var authorization: AuthorizationPolicy { .requiresToken }
+    var authorization: AuthorizationPolicy { .requireToken }
     
     var additionalHeaders: [String : String]? { nil }
 }
