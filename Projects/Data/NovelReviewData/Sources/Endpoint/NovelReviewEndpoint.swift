@@ -28,7 +28,6 @@ enum NovelReviewEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
         URL(string: NetworkingConfig.baseURL)!
     }
     

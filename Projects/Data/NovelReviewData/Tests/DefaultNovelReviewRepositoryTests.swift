@@ -13,6 +13,7 @@ import Testing
 import NovelReviewDomain
 import BaseDomain
 import Networking
+import BaseData
 @testable import NovelReviewDataTesting
 
 @Suite("DefaultNovelReviewRepository")
@@ -164,7 +165,7 @@ struct DefaultNovelReviewRepositoryTests {
         let service = MockNovelReviewService()
         let draft = makeDraft()
 
-        let body = ErrorResponse(code: "USER_NOVEL-001", message: "이미 리뷰가 존재합니다.")
+        let body = ErrorResponse(code: "USER_NOVEL-002", message: "이미 리뷰가 존재합니다.")
         service.postReviewResult = .failure(
             NetworkingError.responseFailure(code: 400, body: body)
         )
@@ -220,7 +221,7 @@ struct DefaultNovelReviewRepositoryTests {
         let service = MockNovelReviewService()
         let draft = makeDraft()
 
-        let body = ErrorResponse(code: "USER_NOVEL-001", message: "이미 리뷰가 존재합니다.")
+        let body = ErrorResponse(code: "USER_NOVEL-002", message: "이미 리뷰가 존재합니다.")
         service.postReviewResult = .failure(
             NetworkingError.responseFailure(code: 400, body: body)
         )
@@ -243,7 +244,7 @@ struct DefaultNovelReviewRepositoryTests {
         let service = MockNovelReviewService()
         let draft = makeDraft()
 
-        let body = ErrorResponse(code: "USER_NOVEL-001", message: "이미 리뷰가 존재합니다.")
+        let body = ErrorResponse(code: "USER_NOVEL-002", message: "이미 리뷰가 존재합니다.")
         service.postReviewResult = .failure(
             NetworkingError.responseFailure(code: 400, body: body)
         )

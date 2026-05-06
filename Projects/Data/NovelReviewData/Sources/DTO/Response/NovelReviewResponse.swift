@@ -8,6 +8,7 @@
 
 
 import Foundation
+import BaseData
 
 struct NovelReviewResponse: Codable {
     let novelTitle: String

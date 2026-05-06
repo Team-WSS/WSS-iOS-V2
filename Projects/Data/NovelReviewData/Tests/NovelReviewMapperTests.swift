@@ -460,7 +460,7 @@ struct NovelReviewMapperTests {
     
     @Test("이미 리뷰가 존재하는 에러 코드는 true를 반환한다")
     func returnsTrueWhenCodeMeansAlreadyReviewed() {
-        #expect(NovelReviewMapper.isAlreadyReviewed(code: "USER_NOVEL-001") == true)
+        #expect(NovelReviewMapper.isAlreadyReviewed(code: "USER_NOVEL-002") == true)
     }
     
     @Test("이미 리뷰가 존재하는 에러 코드가 아니면 false를 반환한다")
