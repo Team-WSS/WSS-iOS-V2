@@ -10,7 +10,7 @@ import Foundation
 import Networking
 
 enum KeywordEndpoint: Endpoint {
-    case searchKeywords(SearchKeywordRequest)
+    case searchKeywords(SearchKeywordQuery)
 
     var method: HTTPMethod {
         switch self {
@@ -30,7 +30,7 @@ enum KeywordEndpoint: Endpoint {
     
     var query: QueryParameters {
         switch self {
-        case .searchKeywords(let request): return .convertible(request)
+        case .searchKeywords(let query): return .convertible(query)
         }
     }
 
@@ -38,5 +38,5 @@ enum KeywordEndpoint: Endpoint {
 
     var body: RequestBody { .none }
 
-    var authorization: AuthorizationPolicy { .withoutToken }
+    var authorization: AuthorizationPolicy { .requiresToken }
 }
