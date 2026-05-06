@@ -43,20 +43,18 @@ enum SettingEndpoint: Endpoint {
         }
     }
 
-    var query: QueryParameters { .none }
+    var query: QueryParameters {
+        switch self {
+        case .getAppMinimumVersion(let query): return .convertible(query)
+        default: return .none
+        }
+    }
 
     var additionalHeaders: [String: String]? { nil }
     
-    var queryItems: [URLQueryItem]? {
-        switch self {
-        case .getAppMinimumVersion(let query): return query.asQueryItems()
-        default: return nil
-        }
-    }
-    
     var body: RequestBody {
         switch self {
-        case .patchTermSetting(let request):        return .json(request)
+        case .patchTermSetting(let request): return .json(request)
         default:
             return .none
         }
