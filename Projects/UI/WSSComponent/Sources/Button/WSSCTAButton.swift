@@ -21,9 +21,9 @@ public struct WSSCTAButton: View {
             Text(title)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssWhite)
+                .frame(maxWidth: .infinity)
+                .frame(height: 53)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 53)
         .background(isEnabled ? Color.wssPrimary100 : Color.wssGray70)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .disabled(!isEnabled)
@@ -32,7 +32,7 @@ public struct WSSCTAButton: View {
 
 #Preview {
     VStack(spacing: 16) {
-        WSSCTAButton(title: "해당하는 글 보기") { }
+        WSSCTAButton(title: "해당하는 글 보기") { print("Tap!")}
         WSSCTAButton(title: "비활성 상태", isEnabled: false) { }
     }
     .padding(.horizontal, 16)
