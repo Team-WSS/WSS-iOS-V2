@@ -11,5 +11,6 @@ import DependencyPlugin
 
 let project = Project.createUIModule(
     name: ModuleType.ui(.designSystem).name,
-    targets: [.sources, .demo]
+    targets: [.sources, .demo],
+    externalDependencies: [.lottie]
 )
