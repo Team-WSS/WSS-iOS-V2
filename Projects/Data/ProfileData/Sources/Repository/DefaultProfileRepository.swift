@@ -15,15 +15,18 @@ import Networking
 public struct DefaultProfileRepository: ProfileRepository {
     private let service: ProfileService
     private let localStorage: AppStorage
+    private let keywordRepository: KeywordRepository
     private let logger: DataLogger?
 
     init(
         service: ProfileService,
         localStorage: AppStorage,
+        keywordRepository: KeywordRepository,
         logger: DataLogger? = nil
     ) {
         self.service = service
         self.localStorage = localStorage
+        self.keywordRepository = keywordRepository
         self.logger = logger
     }
 
@@ -203,7 +206,12 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getNovelPreferences(userID: userID)
-            let result = try ProfileMapper.novelPreference(from: response)
+            let groups = try await keywordRepository.fetchKeywords()
+            let lookup = Dictionary(
+                groups.flatMap(\.keywords).map { ($0.name, $0.id) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let result = try ProfileMapper.novelPreference(from: response, keywordLookup: lookup)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
