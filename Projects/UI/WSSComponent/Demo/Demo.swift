@@ -6,10 +6,15 @@
 //
 
 import SwiftUI
+import DesignSystem
 import WSSComponent
 
 @main
 struct WSSComponentDemoApp: App {
+    init() {
+        DesignSystemFontFamily.registerAllCustomFonts()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
