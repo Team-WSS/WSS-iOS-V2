@@ -10,14 +10,34 @@ import Foundation
 import SwiftUI
 import DesignSystem
 
-public struct LinkNovelView: View {
+// MARK: - Link Novel 구조체
+
+public struct WSSLinkNovel {
+    public let genreType: WSSLinkNovelGenreType
+    public let novelTitle: String
+    public let novelRating: Float
+
+    public init(
+        genreType: WSSLinkNovelGenreType,
+        novelTitle: String,
+        novelRating: Float
+    ) {
+        self.genreType = genreType
+        self.novelTitle = novelTitle
+        self.novelRating = novelRating
+    }
+}
+
+// MARK: - Link Novel 뷰
+
+public struct WSSLinkNovelView: View {
     
-    let genreType: LinkNovelGenreType
+    let genreType: WSSLinkNovelGenreType
     let novelTitle: String
     let novelRating: Float
     
     public init(
-        genreType: LinkNovelGenreType,
+        genreType: WSSLinkNovelGenreType,
         novelTitle: String,
         novelRating: Float
     ) {
@@ -67,7 +87,7 @@ public struct LinkNovelView: View {
 
 #Preview {
     VStack {
-        LinkNovelView(
+        WSSLinkNovelView(
             genreType: .lightNovel,
             novelTitle: "스즈미야 하루히의 무료",
             novelRating: 4.3

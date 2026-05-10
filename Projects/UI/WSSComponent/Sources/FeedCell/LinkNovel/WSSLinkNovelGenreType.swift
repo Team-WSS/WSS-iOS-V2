@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum LinkNovelGenreType {
+public enum WSSLinkNovelGenreType {
     case romance
     case romanceFantasy
     case fantasy

@@ -1,5 +1,5 @@
 //
-//  LinkNovelGenreStyle.swift
+//  WSSLinkNovelGenreStyle.swift
 //  WSSComponent
 //
 //  Created by Seoyeon Choi on 5/5/26.
@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 import DesignSystem
 
-extension LinkNovelGenreType {
+extension WSSLinkNovelGenreType {
     var linkColor: Color {
         switch self {
         case .romance:          WSSColor.romanceLink.swiftUIColor
