@@ -33,8 +33,7 @@ public struct NetworkErrorView: View {
 
             Button(action: onRetry) {
                 Text("페이지 다시 불러오기")
-                    .applyWSSFont(.label1)
-                    .foregroundStyle(Color.wssWhite)
+                    .applyWSSFont(.label1, color: .wssWhite)
                     .padding(.horizontal, 37)
                     .padding(.vertical, 14)
                     .background(Color.wssPrimary100)
