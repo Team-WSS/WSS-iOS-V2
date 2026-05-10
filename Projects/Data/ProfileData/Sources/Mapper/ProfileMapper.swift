@@ -34,13 +34,15 @@ enum ProfileMapper {
         }
     }
     
-    // TODO: 그때 우리 키워드 ID 어떻게 하기로 했었죠....? 검색에 사용하는 키워드 검색 API를 가져오기로 했었...나..?
-    static func novelPreference(from response: NovelPreferenceResponse) throws -> NovelPreference {
+    static func novelPreference(
+        from response: NovelPreferenceResponse,
+        keywordLookup: [String: KeywordID]
+    ) throws -> NovelPreference {
         let attractivePoints = try response.attractivePoints.map { try attractivePoint(from: $0) }
         var keywords: [Keyword: Int] = [:]
         for preference in response.keywords {
             let keyword = Keyword(
-                id: KeywordID(1),
+                id: keywordLookup[preference.keywordName] ?? KeywordID(-1),
                 name: preference.keywordName
             )
             keywords[keyword] = preference.keywordCount
