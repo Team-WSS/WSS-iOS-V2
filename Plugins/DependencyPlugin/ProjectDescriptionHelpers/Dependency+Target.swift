@@ -14,4 +14,8 @@ public extension TargetDependency {
             path: .relativeToModule(module)
         )
     }
+
+    static var lottie: TargetDependency {
+        .package(product: "Lottie", type: .runtime)
+    }
 }
