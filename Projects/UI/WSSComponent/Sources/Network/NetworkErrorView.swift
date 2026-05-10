@@ -46,5 +46,7 @@ public struct NetworkErrorView: View {
 }
 
 #Preview {
-    NetworkErrorView(onRetry: {})
+    NetworkErrorView(onRetry: {
+        print("페이지 다시 불러오기 버튼 클릭")
+    })
 }
