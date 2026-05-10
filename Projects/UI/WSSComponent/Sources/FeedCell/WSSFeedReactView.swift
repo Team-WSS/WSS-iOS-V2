@@ -10,18 +10,30 @@ import Foundation
 import SwiftUI
 import DesignSystem
 
-public struct WSSFeedReactView: View {
+//MARK: - Feed React 구조체
+
+public struct WSSFeedReact {
     
     let likeCount: Int
     let commentCount: Int
+    let likeButtonTapped: () -> Void
     
     public init(
         likeCount: Int,
-        commentCount: Int
+        commentCount: Int,
+        likeButtonTapped: @escaping () -> Void
     ) {
         self.likeCount = likeCount
         self.commentCount = commentCount
+        self.likeButtonTapped = likeButtonTapped
     }
+}
+
+//MARK: - Feed React 뷰
+
+public struct WSSFeedReactView: View {
+    
+    let react: WSSFeedReact
     
     public var body: some View {
         HStack(spacing: 0) {
@@ -30,10 +42,13 @@ public struct WSSFeedReactView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 20, height: 20)
+                .onTapGesture {
+                    react.likeButtonTapped()
+                }
             
             Spacer().frame(width: 5)
                 
-            Text(String(likeCount))
+            Text(String(react.likeCount))
                 .applyWSSFont(.title3)
             
             Spacer().frame(width: 18)
@@ -46,7 +61,7 @@ public struct WSSFeedReactView: View {
             
             Spacer().frame(width: 5)
                 
-            Text(String(commentCount))
+            Text(String(react.commentCount))
                 .applyWSSFont(.title3)
             
             Spacer()
@@ -59,7 +74,10 @@ public struct WSSFeedReactView: View {
 
 #Preview {
     WSSFeedReactView(
-        likeCount: 534,
-        commentCount: 12
+        react: WSSFeedReact(
+            likeCount: 534,
+            commentCount: 12,
+            likeButtonTapped: { print("좋아요 클릭") }
+            )
     )
 }
