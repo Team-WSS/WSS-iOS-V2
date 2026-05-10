@@ -14,5 +14,8 @@ let project = Project.createUIModule(
     targets: [.sources, .demo],
     internalDependencies: [
         .module(.ui(.designSystem))
+    ],
+    demoDependencies: [
+        .module(.ui(.designSystem))
     ]
 )
