@@ -11,9 +11,17 @@ import DesignSystem
 
 public struct WSSAlertView: View {
     let type: WSSAlertType
-    
-    public init(type: WSSAlertType) {
+    let leftButtonTapped: (() -> Void)?
+    let rightButtonTapped: () -> Void
+
+    public init(
+        type: WSSAlertType,
+        leftButtonTapped: (() -> Void)? = nil,
+        rightButtonTapped: @escaping () -> Void
+    ) {
         self.type = type
+        self.leftButtonTapped = leftButtonTapped
+        self.rightButtonTapped = rightButtonTapped
     }
     
     public var body: some View {
@@ -50,9 +58,11 @@ public struct WSSAlertView: View {
             HStack(spacing: 18) {
                 if let leftButton = type.content.leftButton {
                     WSSAlertButton(content: leftButton)
+                        .onTapGesture { leftButtonTapped?() }
                 }
-                
+
                 WSSAlertButton(content: type.content.rightButton)
+                    .onTapGesture { rightButtonTapped() }
             }
         }
         .padding(.vertical, 24)
@@ -86,5 +96,8 @@ public struct WSSAlertView: View {
 }
 
 #Preview {
-    WSSAlertView(type: .receivedReportSpoilerContent)
+    WSSAlertView(
+        type: .receivedReportSpoilerContent,
+        rightButtonTapped: { print("확인 클릭") }
+    )
 }

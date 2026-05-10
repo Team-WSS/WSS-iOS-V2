@@ -20,10 +20,14 @@ public extension View {
     }
     
     func showWSSAlert(isPresented: Binding<Bool>,
-                      type: WSSAlertType) -> some View {
+                      type: WSSAlertType,
+                      leftButtonTapped: (() -> Void)? = nil,
+                      rightButtonTapped: @escaping () -> Void) -> some View {
         self.modifier(
             WSSAlertViewModifier(isPresented: isPresented,
-                                 alertType: type)
+                                 alertType: type,
+                                 leftButtonTapped: leftButtonTapped,
+                                 rightButtonTapped: rightButtonTapped)
         )
     }
 }

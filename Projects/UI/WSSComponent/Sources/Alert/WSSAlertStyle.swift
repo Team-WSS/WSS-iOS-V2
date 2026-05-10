@@ -25,7 +25,7 @@ public struct WSSAlertContent {
 public struct WSSAlertButtonContent {
     let title: String
     let backgroundColor: Color
-
+    
     var textColor: Color {
         switch backgroundColor {
         case WSSColor.wssPrimary100.swiftUIColor,

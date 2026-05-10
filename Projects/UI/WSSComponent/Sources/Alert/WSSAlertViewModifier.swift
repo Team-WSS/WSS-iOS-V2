@@ -12,6 +12,8 @@ import DesignSystem
 public struct WSSAlertViewModifier: ViewModifier {
     @Binding var isPresented: Bool
     let alertType: WSSAlertType
+    let leftButtonTapped: (() -> Void)?
+    let rightButtonTapped: () -> Void
 
     public func body(content: Content) -> some View {
         content
@@ -21,9 +23,13 @@ public struct WSSAlertViewModifier: ViewModifier {
                         .ignoresSafeArea()
                         .transition(.opacity)
 
-                    WSSAlertView(type: alertType)
-                        .padding(.horizontal, 42)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    WSSAlertView(
+                        type: alertType,
+                        leftButtonTapped: leftButtonTapped,
+                        rightButtonTapped: rightButtonTapped
+                    )
+                    .padding(.horizontal, 42)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
             .animation(.easeInOut(duration: 0.25),

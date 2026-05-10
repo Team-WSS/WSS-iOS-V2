@@ -21,7 +21,15 @@ struct WSSAlertDemoView: View {
             }
         }
         .showWSSAlert(isPresented: $showAlert,
-                      type: selectedType)
+                      type: selectedType,
+                      leftButtonTapped: {
+                          showAlert = false
+                          print("왼쪽 버튼 클릭")
+                      },
+                      rightButtonTapped: {
+                          showAlert = false
+                          print("오른쪽 버튼 클릭")
+                      })
         .overlay(alignment: .bottom) {
             if showAlert {
                 Button("닫기") {
