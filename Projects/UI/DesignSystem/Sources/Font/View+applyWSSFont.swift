@@ -19,4 +19,15 @@ extension View {
             )
         )
     }
+
+    public func applyWSSFont(
+        _ style: WSSFontStyle,
+        color: Color,
+        alignment: TextAlignment = .center
+    ) -> some View {
+        self
+            .applyWSSFont(style)
+            .foregroundStyle(color)
+            .multilineTextAlignment(alignment)
+    }
 }

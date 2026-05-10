@@ -25,14 +25,10 @@ public struct NetworkErrorView: View {
 
             VStack(spacing: 10) {
                 Text("네트워크 연결에\n실패했어요")
-                    .applyWSSFont(.title1)
-                    .foregroundStyle(Color.wssBlack)
-                    .multilineTextAlignment(.center)
+                    .applyWSSFont(.title1, color: .wssBlack)
 
                 Text("연결 상태를 확인한 후\n다시 시도해 보세요")
-                    .applyWSSFont(.body2)
-                    .foregroundStyle(Color.wssGray300)
-                    .multilineTextAlignment(.center)
+                    .applyWSSFont(.body2, color: .wssGray300)
             }
 
             Button(action: onRetry) {
