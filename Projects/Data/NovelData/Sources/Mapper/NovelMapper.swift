@@ -143,9 +143,11 @@ extension NovelMapper {
     
     //MARK: - 일반 검색 작품
     
-//    public static func searchNovels(from dto: SearchNovelsResponse) -> (Paginated<Novel>, Int) {
-//        return (dto.novels.map { searchNovel(from: $0) }, dto.resultCount)
-//    }
+    public static func searchNovels(from dto: SearchNovelsResponse) -> (Paginated<Novel>, Int) {
+        let novels = dto.novels.map { searchNovel(from: $0) }
+        let paginated = Paginated(items: novels, hasNext: dto.isLoadable)
+        return (paginated, dto.resultCount)
+    }
     
     public static func searchNovel(from dto: SearchNovelResponse) -> Novel {
         let thumbnailImageURL = URL(string: dto.novelImage)

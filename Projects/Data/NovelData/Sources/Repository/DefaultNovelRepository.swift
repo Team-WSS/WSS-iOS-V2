@@ -96,10 +96,9 @@ public struct DefaultNovelRepository: NovelRepository {
         
         do {
             let response = try await service.getNormalSearchNovels(query: query)
-            let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
-            let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            let result = NovelMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.text)
-            return (paginated, response.resultCount)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -111,17 +110,16 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = NovelAction.searchByFilter
         
         do {
             let query = NovelMapper.detailSearchQuery(from: filter)
             let response = try await service.getDetailSearchNovels(query: query)
-            let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
-            let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            let result = NovelMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.text)
-            return (paginated, response.resultCount)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
