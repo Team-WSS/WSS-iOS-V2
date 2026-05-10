@@ -17,7 +17,6 @@ let project = Project.createUIModule(
         .lottie
     ],
     demoDependencies: [
-        .module(.ui(.designSystem)),
-        .lottie
+        .module(.ui(.designSystem))
     ]
 )
