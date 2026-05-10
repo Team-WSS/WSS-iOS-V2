@@ -35,6 +35,7 @@ struct ProfileDataDemoView: View {
     @State private var regBirthText: String = "1996"
 
     private let repository: ProfileRepository
+    private let keywordRepository: KeywordRepository
     private let localStorage: UserDefaultsStorage
 
     private var myUserID: Int { localStorage.get(.userID) ?? 0 }
@@ -47,6 +48,7 @@ struct ProfileDataDemoView: View {
         storage.set(.nickname, "닉넹임")
         storage.set(.gender, "F")
         self.localStorage = storage
+        self.keywordRepository = KeywordDataFactory.makeRepository(client: client, logger: logger)
         self.repository = ProfileDataFactory.makeProfileRepository(
             client: client,
             localStorage: storage,
@@ -88,6 +90,9 @@ struct ProfileDataDemoView: View {
                 }
                 demoButton("장르 선호도 조회", bg: Color(red: 0.92, green: 0.88, blue: 1.0), fg: Color(red: 0.45, green: 0.2, blue: 0.85)) {
                     Task { await fetchMyGenrePreferences() }
+                }
+                demoButton("키워드 동기화", bg: Color(red: 1.0, green: 0.97, blue: 0.88), fg: Color(red: 0.65, green: 0.45, blue: 0.0)) {
+                    Task { await syncKeywords() }
                 }
                 demoButton("소설 선호도 조회", bg: Color(red: 0.88, green: 0.97, blue: 0.94), fg: Color(red: 0.1, green: 0.55, blue: 0.45)) {
                     Task { await fetchMyNovelPreferences() }
@@ -299,14 +304,23 @@ struct ProfileDataDemoView: View {
         }
     }
 
+    private func syncKeywords() async {
+        isLoading = true; defer { isLoading = false }
+        await keywordRepository.syncKeywords()
+        log = "키워드 동기화 완료\n이제 소설 선호도 조회를 눌러보세요."
+    }
+
     private func fetchMyNovelPreferences() async {
         isLoading = true; defer { isLoading = false }
         let url = "/users/\(myUserID)/preferences/attractive-points"
         do {
             let prefs = try await repository.fetchNovelPreferences(.me)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
-            let keywords = prefs.keywords.keys.map { $0.name }.joined(separator: ", ")
-            log = "endpoint: .getNovelPreferences(userID: \(myUserID))\n[GET] \(url)\n\n매력 포인트: \(points)\n키워드: \(keywords)"
+            let keywords = prefs.keywords
+                .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }
+                .sorted()
+                .joined(separator: "\n")
+            log = "endpoint: .getNovelPreferences(userID: \(myUserID))\n[GET] \(url)\n\n매력 포인트: \(points)\n\n키워드:\n\(keywords)"
         } catch {
             log = "endpoint: .getNovelPreferences(userID: \(myUserID))\n[GET] \(url)\n\n소설 선호도 조회 실패\n\(error)"
         }
@@ -395,8 +409,11 @@ struct ProfileDataDemoView: View {
         do {
             let prefs = try await repository.fetchNovelPreferences(.user(UserID(userID)))
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
-            let keywords = prefs.keywords.keys.map { $0.name }.joined(separator: ", ")
-            log = "endpoint: .getNovelPreferences(userID: \(userID))\n[GET] \(url)\n\n매력 포인트: \(points)\n키워드: \(keywords)"
+            let keywords = prefs.keywords
+                .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }
+                .sorted()
+                .joined(separator: "\n")
+            log = "endpoint: .getNovelPreferences(userID: \(userID))\n[GET] \(url)\n\n매력 포인트: \(points)\n\n키워드:\n\(keywords)"
         } catch {
             log = "endpoint: .getNovelPreferences(userID: \(userID))\n[GET] \(url)\n\n소설 선호도 조회 실패\n\(error)"
         }
