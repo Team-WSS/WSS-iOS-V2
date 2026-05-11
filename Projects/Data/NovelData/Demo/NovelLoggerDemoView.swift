@@ -26,11 +26,9 @@ struct NovelLoggerDemoView: View {
         let userDefaults = UserDefaultsStorage()
         userDefaults.set(.userID, 10035)
         let logger = DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
-        let keywordRepository = KeywordDataFactory.makeRepository(client: client)
-        self.keywordRepository = keywordRepository
+        self.keywordRepository = KeywordDataFactory.makeRepository(client: client)
         self.repository = NovelDataFactory.makeNovelRepository(client: client,
                                                                appStorage: userDefaults,
-                                                               keywordRepository: keywordRepository,
                                                                logger: logger)
     }
     
@@ -180,7 +178,8 @@ struct NovelLoggerDemoView: View {
     private func fetchNovel(novelID: Int) async {
         appendLog(level: .debug, message: "작품 정보 조회 (ID=\(novelID)) 요청...")
         do {
-            let info = try await repository.fetchNovel(id: NovelID(novelID))
+            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+            let info = try await repository.fetchNovel(id: NovelID(novelID), cachedKeywords: cachedKeywords)
             let novel = info.novel
             appendLog(level: .info,
                       message: "성공: \(novel.title) | 장르: \(info.genres) | 평점: \(novel.rating) | 피드: \(info.feedCount)개 | 키워드: \(info.keywords)")
@@ -241,7 +240,7 @@ struct NovelLoggerDemoView: View {
     }
     
     private func fetchUserLibraryNovels(userID: Int) async {
-        appendLog(level: .debug, message: "유저 서재 조회 (ID=\(userID)) 요청...")
+        appendLog(level: .debug, message: "유저 서재 조회 (ID=\(10033)) 요청...")
         do {
             let filter = LibraryFilter(sortType: .recent)
             let (paginated, totalCount) = try await repository.fetchUserLibraryNovels(id: UserID(userID), filter)

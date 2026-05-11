@@ -17,28 +17,24 @@ public struct DefaultNovelRepository: NovelRepository {
     
     private let service: NovelService
     private let appStorage: AppStorage
-    private let keywordRepository: KeywordRepository
     private let logger: DataLogger?
-    
+
     init(
         service: NovelService,
         appStorage: AppStorage,
-        keywordRepository: KeywordRepository,
         logger: DataLogger?
     ) {
         self.service = service
         self.appStorage = appStorage
-        self.keywordRepository = keywordRepository
         self.logger = logger
     }
-    
-    public func fetchNovel(id: NovelID) async throws(RepositoryError) -> NovelInformation {
+
+    public func fetchNovel(id: NovelID, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelInformation {
         let action = NovelAction.fetchNovel
         do {
             let basic = try await service.getNovelBasicInfo(novelID: id.value)
             let detail = try await service.getNovelDetailInfo(novelID: id.value)
-            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
-            
+
             let result = try NovelMapper.novelInformation(id: id,
                                                           from: basic,
                                                           from: detail,

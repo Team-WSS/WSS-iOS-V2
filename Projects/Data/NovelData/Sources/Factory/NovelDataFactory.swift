@@ -7,7 +7,6 @@
 //
 
 
-import BaseDomain
 import Logger
 import Networking
 import NovelDomain
@@ -17,7 +16,6 @@ public enum NovelDataFactory {
     public static func makeNovelRepository(
         client: NetworkingRequestable,
         appStorage: AppStorage,
-        keywordRepository: KeywordRepository,
         logger: DataLogger? = nil
     ) -> NovelRepository {
         let service = DefaultNovelService(client: client)
@@ -25,7 +23,6 @@ public enum NovelDataFactory {
         return DefaultNovelRepository(
             service: service,
             appStorage: userDefaultsStorage,
-            keywordRepository: keywordRepository,
             logger: logger
         )
     }
