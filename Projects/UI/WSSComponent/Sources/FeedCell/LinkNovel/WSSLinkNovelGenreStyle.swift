@@ -9,8 +9,9 @@
 import Foundation
 import SwiftUI
 import DesignSystem
+import BaseDomain
 
-extension WSSLinkNovelGenreType {
+extension NovelGenre {
     var linkColor: Color {
         switch self {
         case .romance:          WSSColor.romanceLink.swiftUIColor
@@ -21,7 +22,7 @@ extension WSSLinkNovelGenreType {
         case .mystery:          WSSColor.mysteryLink.swiftUIColor
         case .drama:            WSSColor.dramaLink.swiftUIColor
         case .lightNovel:       WSSColor.lightLink.swiftUIColor
-        case .bl:               WSSColor.blLink.swiftUIColor
+        case .BL:               WSSColor.blLink.swiftUIColor
         }
     }
     
@@ -35,7 +36,7 @@ extension WSSLinkNovelGenreType {
         case .mystery:          WSSColor.mysteryBlock.swiftUIColor
         case .drama:            WSSColor.dramaBlock.swiftUIColor
         case .lightNovel:       WSSColor.lightBlock.swiftUIColor
-        case .bl:               WSSColor.blBlock.swiftUIColor
+        case .BL:               WSSColor.blBlock.swiftUIColor
         }
     }
 }

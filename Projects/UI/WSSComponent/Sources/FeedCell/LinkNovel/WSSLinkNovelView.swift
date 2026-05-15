@@ -9,16 +9,17 @@
 import Foundation
 import SwiftUI
 import DesignSystem
+import BaseDomain
 
 // MARK: - Link Novel 구조체
 
 public struct WSSLinkNovel {
-    public let genreType: WSSLinkNovelGenreType
+    public let genreType: NovelGenre
     public let novelTitle: String
     public let novelRating: Float
 
     public init(
-        genreType: WSSLinkNovelGenreType,
+        genreType: NovelGenre,
         novelTitle: String,
         novelRating: Float
     ) {
@@ -32,12 +33,12 @@ public struct WSSLinkNovel {
 
 public struct WSSLinkNovelView: View {
     
-    let genreType: WSSLinkNovelGenreType
+    let genreType: NovelGenre
     let novelTitle: String
     let novelRating: Float
     
     public init(
-        genreType: WSSLinkNovelGenreType,
+        genreType: NovelGenre,
         novelTitle: String,
         novelRating: Float
     ) {

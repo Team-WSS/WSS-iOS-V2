@@ -38,7 +38,7 @@ struct WSSLinkNovelDemoView: View {
             )
             
             WSSLinkNovelView(
-                genreType: .bl,
+                genreType: .BL,
                 novelTitle: "당신과 함께한 30일",
                 novelRating: 5.0
             )
