@@ -11,17 +11,14 @@ import DesignSystem
 
 public struct WSSAlertView: View {
     let type: WSSAlertType
-    let leftButtonTapped: (() -> Void)?
-    let rightButtonTapped: () -> Void
+    let buttonActions: [() -> Void]
 
     public init(
         type: WSSAlertType,
-        leftButtonTapped: (() -> Void)? = nil,
-        rightButtonTapped: @escaping () -> Void
+        buttonActions: [() -> Void] = []
     ) {
         self.type = type
-        self.leftButtonTapped = leftButtonTapped
-        self.rightButtonTapped = rightButtonTapped
+        self.buttonActions = buttonActions
     }
     
     public var body: some View {
@@ -56,13 +53,15 @@ public struct WSSAlertView: View {
             
             // 버튼
             HStack(spacing: 18) {
-                if let leftButton = type.content.leftButton {
-                    WSSAlertButton(content: leftButton)
-                        .onTapGesture { leftButtonTapped?() }
+                ForEach(Array(type.content.buttons.indices),
+                        id: \.self) { index in
+                    WSSAlertButtonView(content: type.content.buttons[index])
+                        .onTapGesture {
+                            if index < buttonActions.count {
+                                buttonActions[index]()
+                            }
+                        }
                 }
-
-                WSSAlertButton(content: type.content.rightButton)
-                    .onTapGesture { rightButtonTapped() }
             }
         }
         .padding(.vertical, 24)
@@ -75,8 +74,8 @@ public struct WSSAlertView: View {
                 y: 2)
     }
     
-    private struct WSSAlertButton: View {
-        let content: WSSAlertButtonContent
+    private struct WSSAlertButtonView: View {
+        let content: WSSAlertButton
         
         var body: some View {
             VStack(spacing: 0) {
@@ -84,12 +83,12 @@ public struct WSSAlertView: View {
                     Spacer()
                     Text(content.title)
                         .applyWSSFont(.body4)
-                        .foregroundStyle(content.textColor)
+                        .foregroundStyle(content.role.textColor)
                     Spacer()
                 }
             }
             .padding(.vertical, 10.5)
-            .background(content.backgroundColor)
+            .background(content.role.backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -98,6 +97,6 @@ public struct WSSAlertView: View {
 #Preview {
     WSSAlertView(
         type: .receivedReportSpoilerContent,
-        rightButtonTapped: { print("확인 클릭") }
+        buttonActions: [{ print("확인 클릭") }]
     )
 }

@@ -12,7 +12,7 @@ import WSSComponent
 struct WSSAlertDemoView: View {
     @State private var showAlert = false
     @State private var selectedType: WSSAlertType = .needTermsAgreement
-
+    
     var body: some View {
         List(WSSAlertType.allCases, id: \.self) { type in
             Button(String(describing: type)) {
@@ -22,26 +22,16 @@ struct WSSAlertDemoView: View {
         }
         .showWSSAlert(isPresented: $showAlert,
                       type: selectedType,
-                      leftButtonTapped: {
-                          showAlert = false
-                          print("왼쪽 버튼 클릭")
-                      },
-                      rightButtonTapped: {
-                          showAlert = false
-                          print("오른쪽 버튼 클릭")
-                      })
-        .overlay(alignment: .bottom) {
-            if showAlert {
-                Button("닫기") {
-                    showAlert = false
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 24)
-                .background(Color.white)
-                .clipShape(Capsule())
-                .shadow(radius: 4)
-                .padding(.bottom, 60)
-            }
-        }
+                      buttonActions: [
+                        {
+                            showAlert = false
+                            print("첫번째 버튼 클릭")
+                        },
+                        {
+                            showAlert = false
+                            print("두번째 버튼 클릭")
+                        }
+                      ]
+        )
     }
 }

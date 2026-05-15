@@ -12,8 +12,7 @@ import DesignSystem
 public struct WSSAlertViewModifier: ViewModifier {
     @Binding var isPresented: Bool
     let alertType: WSSAlertType
-    let leftButtonTapped: (() -> Void)?
-    let rightButtonTapped: () -> Void
+    let buttonActions: [() -> Void]
 
     public func body(content: Content) -> some View {
         content
@@ -25,8 +24,7 @@ public struct WSSAlertViewModifier: ViewModifier {
 
                     WSSAlertView(
                         type: alertType,
-                        leftButtonTapped: leftButtonTapped,
-                        rightButtonTapped: rightButtonTapped
+                        buttonActions: buttonActions
                     )
                     .padding(.horizontal, 42)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))

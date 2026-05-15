@@ -9,25 +9,28 @@
 import Foundation
 
 public enum WSSAlertType: CaseIterable {
+    // 앱 관리
     case needTermsAgreement
     case needVersionUpdate
     
+    // 작품 평가
     case stopNovelReview
     case deleteNovelReviewDate
     case deleteNovelReview
     
+    // 피드
     case deleteMyFeed
     case deleteMyComment
-    
     case alreadyDeletedFeed
+    case stopWritingFeed
     
+    // 신고
     case reportImproperContent
     case receivedReportImproperContent
     case reportSpoilerContent
     case receivedReportSpoilerContent
     
-    case stopWritingFeed
-    
+    // 설정
     case blockUser
     case setAppNotification
     case logout

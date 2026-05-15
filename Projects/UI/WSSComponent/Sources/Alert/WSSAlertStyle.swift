@@ -10,31 +10,22 @@ import SwiftUI
 import DesignSystem
 
 public struct WSSAlertContent {
+    // 알럿 아이콘
     let iconImage: Image?
+    
+    // 알럿 제목
     let title: String
     let titleFont: WSSFontStyle
     let titleBottomPadding: CGFloat
+    
+    // 알럿 디스크립션
     let subtitle: String?
     let subtitleFont: WSSFontStyle?
     let subtitleColor: Color?
     let subTitlePadding: CGFloat?
-    let leftButton: WSSAlertButtonContent?
-    let rightButton: WSSAlertButtonContent
-}
-
-public struct WSSAlertButtonContent {
-    let title: String
-    let backgroundColor: Color
     
-    var textColor: Color {
-        switch backgroundColor {
-        case WSSColor.wssPrimary100.swiftUIColor,
-             WSSColor.wssSecondary100.swiftUIColor:
-            WSSColor.wssWhite.swiftUIColor
-        default:
-            WSSColor.wssGray300.swiftUIColor
-        }
-    }
+    // 알럿 내 버튼
+    let buttons: [WSSAlertButton]
 }
 
 public extension WSSAlertType {
@@ -50,13 +41,11 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray200.swiftUIColor,
                 subTitlePadding: 18,
-                leftButton: nil,
-                rightButton: WSSAlertButtonContent(
-                    title: "동의하러 가기",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "동의하러 가기", role: .confirm)
+                ]
             )
-
+            
         case .needVersionUpdate:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -67,13 +56,11 @@ public extension WSSAlertType {
                 subtitleFont: .label1,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 18,
-                leftButton: nil,
-                rightButton: WSSAlertButtonContent(
-                    title: "업데이트",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "업데이트", role: .confirm)
+                ]
             )
-
+            
         case .stopNovelReview:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -84,16 +71,12 @@ public extension WSSAlertType {
                 subtitleFont: nil,
                 subtitleColor: nil,
                 subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "그만하기",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "계속 작성",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "그만하기", role: .cancel),
+                    WSSAlertButton(title: "계속 작성", role: .confirm)
+                ]
             )
-
+            
         case .deleteNovelReviewDate:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -104,16 +87,12 @@ public extension WSSAlertType {
                 subtitleFont: nil,
                 subtitleColor: nil,
                 subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "삭제",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
             )
-
+            
         case .deleteNovelReview:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -124,16 +103,12 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 24,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "삭제",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
             )
-
+            
         case .deleteMyFeed:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -144,16 +119,12 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 24,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "삭제",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
             )
-
+            
         case .deleteMyComment:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -164,16 +135,12 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 24,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "삭제",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
             )
-
+            
         case .alreadyDeletedFeed:
             WSSAlertContent(
                 iconImage: nil,
@@ -184,87 +151,11 @@ public extension WSSAlertType {
                 subtitleFont: nil,
                 subtitleColor: nil,
                 subTitlePadding: nil,
-                leftButton: nil,
-                rightButton: WSSAlertButtonContent(
-                    title: "확인",
-                    backgroundColor: WSSColor.wssGray70.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "확인", role: .dismiss)
+                ]
             )
-
-        case .reportImproperContent:
-            WSSAlertContent(
-                iconImage: WSSImage.icModalWarning.swiftUIImage,
-                title: "해당 글에 부적절한 표현이\n사용되었나요?",
-                titleFont: .title2,
-                titleBottomPadding: 18,
-                subtitle: nil,
-                subtitleFont: nil,
-                subtitleColor: nil,
-                subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "신고",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
-            )
-
-        case .receivedReportImproperContent:
-            WSSAlertContent(
-                iconImage: WSSImage.icReportCheck.swiftUIImage,
-                title: "신고가 접수되었어요!",
-                titleFont: .title1,
-                titleBottomPadding: 10,
-                subtitle: "해당 글이 커뮤니티 가이드를\n위반했는지 검토할게요",
-                subtitleFont: .body2,
-                subtitleColor: WSSColor.wssGray300.swiftUIColor,
-                subTitlePadding: 24,
-                leftButton: nil,
-                rightButton: WSSAlertButtonContent(
-                    title: "확인",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
-            )
-
-        case .reportSpoilerContent:
-            WSSAlertContent(
-                iconImage: WSSImage.icModalWarning.swiftUIImage,
-                title: "해당 글이 스포일러를 포함하고 있나요?",
-                titleFont: .title2,
-                titleBottomPadding: 18,
-                subtitle: nil,
-                subtitleFont: nil,
-                subtitleColor: nil,
-                subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "신고",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
-            )
-
-        case .receivedReportSpoilerContent:
-            WSSAlertContent(
-                iconImage: WSSImage.icReportCheck.swiftUIImage,
-                title: "신고가 접수되었어요!",
-                titleFont: .title1,
-                titleBottomPadding: 24,
-                subtitle: nil,
-                subtitleFont: nil,
-                subtitleColor: nil,
-                subTitlePadding: nil,
-                leftButton: nil,
-                rightButton: WSSAlertButtonContent(
-                    title: "확인",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
-            )
-
+            
         case .stopWritingFeed:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -275,16 +166,74 @@ public extension WSSAlertType {
                 subtitleFont: nil,
                 subtitleColor: nil,
                 subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "그만하기",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "계속 작성",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "그만하기", role: .cancel),
+                    WSSAlertButton(title: "계속 작성", role: .confirm)
+                ]
             )
-
+            
+        case .reportImproperContent:
+            WSSAlertContent(
+                iconImage: WSSImage.icModalWarning.swiftUIImage,
+                title: "해당 글에 부적절한 표현이\n사용되었나요?",
+                titleFont: .title2,
+                titleBottomPadding: 18,
+                subtitle: nil,
+                subtitleFont: nil,
+                subtitleColor: nil,
+                subTitlePadding: nil,
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "신고", role: .destructive)
+                ]
+            )
+            
+        case .receivedReportImproperContent:
+            WSSAlertContent(
+                iconImage: WSSImage.icReportCheck.swiftUIImage,
+                title: "신고가 접수되었어요!",
+                titleFont: .title1,
+                titleBottomPadding: 10,
+                subtitle: "해당 글이 커뮤니티 가이드를\n위반했는지 검토할게요",
+                subtitleFont: .body2,
+                subtitleColor: WSSColor.wssGray300.swiftUIColor,
+                subTitlePadding: 24,
+                buttons: [
+                    WSSAlertButton(title: "확인", role: .confirm)
+                ]
+            )
+            
+        case .reportSpoilerContent:
+            WSSAlertContent(
+                iconImage: WSSImage.icModalWarning.swiftUIImage,
+                title: "해당 글이 스포일러를 포함하고 있나요?",
+                titleFont: .title2,
+                titleBottomPadding: 18,
+                subtitle: nil,
+                subtitleFont: nil,
+                subtitleColor: nil,
+                subTitlePadding: nil,
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "신고", role: .destructive)
+                ]
+            )
+            
+        case .receivedReportSpoilerContent:
+            WSSAlertContent(
+                iconImage: WSSImage.icReportCheck.swiftUIImage,
+                title: "신고가 접수되었어요!",
+                titleFont: .title1,
+                titleBottomPadding: 24,
+                subtitle: nil,
+                subtitleFont: nil,
+                subtitleColor: nil,
+                subTitlePadding: nil,
+                buttons: [
+                    WSSAlertButton(title: "확인", role: .confirm)
+                ]
+            )
+            
         case .blockUser:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -295,16 +244,12 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 18,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "차단",
-                    backgroundColor: WSSColor.wssSecondary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "차단", role: .destructive)
+                ]
             )
-
+            
         case .setAppNotification:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -315,16 +260,12 @@ public extension WSSAlertType {
                 subtitleFont: .body2,
                 subtitleColor: WSSColor.wssGray300.swiftUIColor,
                 subTitlePadding: 24,
-                leftButton: WSSAlertButtonContent(
-                    title: "다음에 하기",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "설정하러 가기",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "다음에 하기", role: .cancel),
+                    WSSAlertButton(title: "설정하러 가기", role: .confirm)
+                ]
             )
-
+            
         case .logout:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
@@ -335,14 +276,10 @@ public extension WSSAlertType {
                 subtitleFont: nil,
                 subtitleColor: nil,
                 subTitlePadding: nil,
-                leftButton: WSSAlertButtonContent(
-                    title: "취소",
-                    backgroundColor: WSSColor.wssGray50.swiftUIColor
-                ),
-                rightButton: WSSAlertButtonContent(
-                    title: "로그아웃",
-                    backgroundColor: WSSColor.wssPrimary100.swiftUIColor
-                )
+                buttons: [
+                    WSSAlertButton(title: "다음에 하기", role: .cancel),
+                    WSSAlertButton(title: "로그아웃", role: .confirm)
+                ]
             )
         }
     }
