@@ -39,16 +39,13 @@ public struct WSSAlertView: View {
                 .multilineTextAlignment(.center)
                 .padding(.bottom, type.content.titleBottomPadding)
             
-            // 부제목
-            if let subtitle = type.content.subtitle,
-               let subtitleFont = type.content.subtitleFont,
-               let subtitleColor = type.content.subtitleColor,
-               let padding = type.content.subTitlePadding {
-                Text(subtitle)
-                    .applyWSSFont(subtitleFont)
-                    .foregroundStyle(subtitleColor)
+            // 디스크립션
+            if let description = type.content.description {
+                Text(description.title)
+                    .applyWSSFont(description.font)
+                    .foregroundStyle(description.titleColor)
                     .multilineTextAlignment(.center)
-                    .padding(.bottom, padding)
+                    .padding(.bottom, description.bottomPadding)
             }
             
             // 버튼
