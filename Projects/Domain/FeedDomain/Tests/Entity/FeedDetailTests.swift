@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -73,7 +74,7 @@ extension FeedDetailTests {
             author: Author(
                 userId: UserID(2),
                 nickname: "구리스",
-                profileImage: ImageWrapper(identifier: "2")
+                profileImage: URL(string: "https://example.com/profile.jpg")
             ),
             createdDate: "2026-02-06",
             isModified: false,
