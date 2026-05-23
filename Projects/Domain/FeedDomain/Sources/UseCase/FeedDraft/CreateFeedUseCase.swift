@@ -11,7 +11,7 @@ import Foundation
 import BaseDomain
 
 public protocol CreateFeedUseCase {
-    func execute(_ draft: FeedDraft) async throws(RepositoryError)
+    func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError)
 }
 
 public final class DefaultCreateFeedUseCase: CreateFeedUseCase {
@@ -22,7 +22,7 @@ public final class DefaultCreateFeedUseCase: CreateFeedUseCase {
         self.repository = repository
     }
 
-    public func execute(_ draft: FeedDraft) async throws(RepositoryError) {
-        try await repository.submitFeed(draft)
+    public func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
+        try await repository.submitFeed(draft, imageDatas: imageDatas)
     }
 }

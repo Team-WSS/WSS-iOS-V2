@@ -28,9 +28,9 @@ public struct DefaultFeedRepository: FeedRepository {
         self.storage = storage
     }
 
-    public func submitFeed(_ draft: FeedDraft) async throws(RepositoryError) {
+    public func submitFeed(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.submitFeed
-        
+
         let request = SubmitFeedRequest(
             feedContent: draft.content,
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
@@ -39,7 +39,7 @@ public struct DefaultFeedRepository: FeedRepository {
             isPublic: !draft.isPrivate
         )
         do {
-            _ = try await service.postFeed(request: request)
+            _ = try await service.postFeed(request: request, imageDatas: imageDatas)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -50,7 +50,7 @@ public struct DefaultFeedRepository: FeedRepository {
         }
     }
 
-    public func editFeed(id: FeedID, draft: FeedDraft) async throws(RepositoryError) {
+    public func editFeed(id: FeedID, draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.editFeed
         let request = SubmitFeedRequest(
             feedContent: draft.content,
@@ -60,7 +60,7 @@ public struct DefaultFeedRepository: FeedRepository {
             isPublic: !draft.isPrivate
         )
         do {
-            _ = try await service.patchFeed(feedID: id.value, request: request)
+            _ = try await service.patchFeed(feedID: id.value, request: request, imageDatas: imageDatas)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

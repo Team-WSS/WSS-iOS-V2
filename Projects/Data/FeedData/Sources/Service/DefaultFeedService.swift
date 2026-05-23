@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Networking
 
 struct DefaultFeedService: FeedService {
@@ -15,13 +16,13 @@ struct DefaultFeedService: FeedService {
         self.client = client
     }
 
-    func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
-        let endpoint = FeedEndpoint.postFeed(request: request)
+    func postFeed(request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse {
+        let endpoint = FeedEndpoint.postFeed(request: request, imageDatas: imageDatas)
         return try await client.request(endpoint, decodeTo: SubmitFeedResponse.self)
     }
 
-    func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
-        let endpoint = FeedEndpoint.patchFeed(feedID: feedID, request: request)
+    func patchFeed(feedID: Int, request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse {
+        let endpoint = FeedEndpoint.patchFeed(feedID: feedID, request: request, imageDatas: imageDatas)
         return try await client.request(endpoint, decodeTo: SubmitFeedResponse.self)
     }
 

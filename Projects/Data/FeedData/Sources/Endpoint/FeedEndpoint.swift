@@ -11,8 +11,8 @@ import Networking
 import BaseData
 
 enum FeedEndpoint: Endpoint {
-    case postFeed(request: SubmitFeedRequest)
-    case patchFeed(feedID: Int, request: SubmitFeedRequest)
+    case postFeed(request: SubmitFeedRequest, imageDatas: [Data])
+    case patchFeed(feedID: Int, request: SubmitFeedRequest, imageDatas: [Data])
     case deleteFeed(feedID: Int)
     case getFeedDetail(feedID: Int)
     case getSosoFeeds(query: GetSosoFeedsQuery)
@@ -45,7 +45,7 @@ enum FeedEndpoint: Endpoint {
         switch self {
         case .postFeed:
             return "/feeds"
-        case .patchFeed(let feedID, _):
+        case .patchFeed(let feedID, _, _):
             return "/feeds/\(feedID)"
         case .deleteFeed(let feedID):
             return "/feeds/\(feedID)"
@@ -76,11 +76,18 @@ enum FeedEndpoint: Endpoint {
     }
     
     var body: RequestBody {
-        // TODO: postFeed, patchFeed는 multipart/form-data로 변경 필요
-        // TODO: multipart/form-data로 변경 필요 (feed: JSON part, images: image/* part)
-        // TODO: multipart/form-data로 변경 필요 (feed: JSON part, images: image/* part)
         switch self {
-        default: .none
+        case let .postFeed(request, imageDatas),
+             let .patchFeed(_, request, imageDatas):
+            return .multipart(
+                MultipartFormData(parts: [
+                    .json(keyName: "feed", value: request)
+                ] + imageDatas.map {
+                    .imageData(keyName: "images", data: $0)
+                })
+            )
+        default:
+            return .none
         }
     }
 
