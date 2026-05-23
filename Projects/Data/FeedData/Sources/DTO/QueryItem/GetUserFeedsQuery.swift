@@ -15,4 +15,13 @@ struct GetUserFeedsQuery: QueryItemConvertible {
     let isUnVisible: Bool?
     let genreNames: [String]?
     let sortCriteria: String?
+
+    enum CodingKeys: String, CodingKey {
+        case lastFeedID = "lastFeedId"
+        case size
+        case isVisible
+        case isUnVisible
+        case genreNames
+        case sortCriteria
+    }
 }

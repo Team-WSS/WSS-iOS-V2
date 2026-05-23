@@ -12,4 +12,11 @@ struct GetSosoFeedsQuery: QueryItemConvertible {
     let lastFeedID: Int
     let size: Int
     let option: String
+
+    enum CodingKeys: String, CodingKey {
+        case category
+        case lastFeedID = "lastFeedId"
+        case size
+        case option
+    }
 }

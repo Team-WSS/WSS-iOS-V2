@@ -92,11 +92,7 @@ enum FeedEndpoint: Endpoint {
     }
 
     var authorization: AuthorizationPolicy {
-        switch self {
-        case .getNovelFeeds, .getSosoFeeds: return .withoutToken
-        case .getUserFeeds, .getMyFeeds: return .usesTokenIfAvailable
-        default: return .requireToken
-        }
+        return .usesTokenIfAvailable
     }
     
     var additionalHeaders: [String : String]? {
