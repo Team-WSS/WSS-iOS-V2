@@ -50,7 +50,7 @@ struct DefaultFeedService: FeedService {
         let isVisible: Bool? = visibilityType == "PUBLIC" ? true : nil
         let isUnVisible: Bool? = visibilityType == "PRIVATE" ? true : nil
         let query = GetUserFeedsQuery(
-            lastFeedID: lastFeedID,
+            lastFeedId: lastFeedID,
             size: 20,
             isVisible: isVisible,
             isUnVisible: isUnVisible,

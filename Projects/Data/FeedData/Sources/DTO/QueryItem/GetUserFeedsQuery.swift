@@ -9,19 +9,10 @@
 import Networking
 
 struct GetUserFeedsQuery: QueryItemConvertible {
-    let lastFeedID: Int
+    let lastFeedId: Int
     let size: Int
     let isVisible: Bool?
     let isUnVisible: Bool?
     let genreNames: [String]?
     let sortCriteria: String?
-
-    enum CodingKeys: String, CodingKey {
-        case lastFeedID = "lastFeedId"
-        case size
-        case isVisible
-        case isUnVisible
-        case genreNames
-        case sortCriteria
-    }
 }

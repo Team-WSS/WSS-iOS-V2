@@ -9,14 +9,7 @@ import Networking
 
 struct GetSosoFeedsQuery: QueryItemConvertible {
     let category: String?
-    let lastFeedID: Int
+    let lastFeedId: Int
     let size: Int
     let option: String
-
-    enum CodingKeys: String, CodingKey {
-        case category
-        case lastFeedID = "lastFeedId"
-        case size
-        case option
-    }
 }

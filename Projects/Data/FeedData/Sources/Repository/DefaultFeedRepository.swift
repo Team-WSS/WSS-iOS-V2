@@ -108,7 +108,7 @@ public struct DefaultFeedRepository: FeedRepository {
         let action = FeedAction.fetchSosoFeeds
         let query = GetSosoFeedsQuery(
             category: nil,
-            lastFeedID: lastFeedID.value,
+            lastFeedId: lastFeedID.value,
             size: pageSize,
             option: option.rawValue
         )
@@ -129,7 +129,7 @@ public struct DefaultFeedRepository: FeedRepository {
     public func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchUserFeeds
         let query = GetUserFeedsQuery(
-            lastFeedID: lastFeedID.value,
+            lastFeedId: lastFeedID.value,
             size: pageSize,
             isVisible: nil,
             isUnVisible: nil,
