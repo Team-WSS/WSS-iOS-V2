@@ -41,6 +41,7 @@ public final class MockProfileRepository: ProfileRepository {
 
     public private(set) var fetchNovelPreferencesCallCount = 0
     public private(set) var fetchedNovelPreferenceTargets: [ProfileTarget] = []
+    public private(set) var fetchedNovelPreferenceCachedKeywords: [[Keyword]] = []
 
     public private(set) var fetchProfileCharactersCallCount = 0
 
@@ -171,9 +172,10 @@ public final class MockProfileRepository: ProfileRepository {
         }
     }
 
-    public func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
+    public func fetchNovelPreferences(_ target: ProfileTarget, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelPreference {
         fetchNovelPreferencesCallCount += 1
         fetchedNovelPreferenceTargets.append(target)
+        fetchedNovelPreferenceCachedKeywords.append(cachedKeywords)
         switch fetchNovelPreferencesResult! {
         case .success(let value): return value
         case .failure(let e): throw e
