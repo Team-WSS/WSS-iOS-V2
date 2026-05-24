@@ -72,14 +72,14 @@ extension NovelMapper {
     // MARK: - 작품 상세 정보
     
     public static func novelInformation(id: NovelID,
-                                              from basicDTO: NovelBasicResponse,
-                                              from detailDTO: NovelInfoResponse) throws -> NovelInformation {
+                                        from basicDTO: NovelBasicResponse,
+                                        from detailDTO: NovelInfoResponse,
+                                        cachedKeywords: [Keyword]) throws -> NovelInformation {
         let authors = basicDTO.author
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
         
         let novel = Novel(
-            //TODO: - id값을 어떻게 처리하면 좋을지 고민
             id: id,
             thumbnailImage: URL(string: basicDTO.novelGenreImage),
             title: basicDTO.novelTitle,
@@ -119,9 +119,7 @@ extension NovelMapper {
             description: detailDTO.novelDescription,
             platforms: platforms,
             attractivePoints: try detailDTO.attractivePoints.map { try mapAttractivePoint(from: $0) },
-            // TODO: - Keyword 매핑 추가 필요 (KeywordID 문제 해결 후)
-            // 앱 시작할 떄 변수에 키워드를 저장하고, Data모듈에서 매핑하는 방식으로 합니다.
-            keywords: [:],
+            keywords: mapKeywords(from: detailDTO.keywords, cachedKeywords: cachedKeywords),
             readingStatusCount: [
                 .watching: detailDTO.watchingCount,
                 .watched: detailDTO.watchedCount,
@@ -143,9 +141,11 @@ extension NovelMapper {
     
     //MARK: - 일반 검색 작품
     
-//    public static func searchNovels(from dto: SearchNovelsResponse) -> (Paginated<Novel>, Int) {
-//        return (dto.novels.map { searchNovel(from: $0) }, dto.resultCount)
-//    }
+    public static func searchNovels(from dto: SearchNovelsResponse) -> (Paginated<Novel>, Int) {
+        let novels = dto.novels.map { searchNovel(from: $0) }
+        let paginated = Paginated(items: novels, hasNext: dto.isLoadable)
+        return (paginated, dto.resultCount)
+    }
     
     public static func searchNovel(from dto: SearchNovelResponse) -> Novel {
         let thumbnailImageURL = URL(string: dto.novelImage)
@@ -168,9 +168,9 @@ extension NovelMapper {
 //MARK: - Entity -> DTO
 
 extension NovelMapper {
-
+    
     // MARK: - 서재 조회 Query
-
+    
     static func myLibraryQuery(from filter: MyLibraryFilter) -> UserLibraryQuery {
         UserLibraryQuery(
             lastUserNovelId: 0,
@@ -184,7 +184,7 @@ extension NovelMapper {
             updatedSince: ""
         )
     }
-
+    
     static func userLibraryQuery(from filter: LibraryFilter) -> UserLibraryQuery {
         UserLibraryQuery(
             lastUserNovelId: 0,
@@ -198,9 +198,9 @@ extension NovelMapper {
             updatedSince: ""
         )
     }
-
+    
     // MARK: - 상세 탐색 Query
-
+    
     static func detailSearchQuery(from filter: SearchFilter) -> DetailSearchQuery {
         DetailSearchQuery(
             genres: filter.genres.map { mapNovelGenreString(from: $0) },
@@ -233,33 +233,29 @@ extension NovelMapper {
     }
     
     private static func mapReadingStatusString(from value: ReadingStatus) -> String {
-        switch value {
-        case .watching: return "WATCHING"
-        case .watched: return "WATCHED"
-        case .quit: return "QUIT"
-        }
+        return value.rawValue.uppercased()
     }
     
     private static func mapAttractivePoint(from value: String) throws -> AttractivePoint {
         switch value {
-        case "worldview": return .worldview
-        case "material": return .material
-        case "character": return .character
-        case "relationship": return .relationship
-        case "vibe": return .vibe
-        case "writingskill": return .writingSkill
-        default: throw MappingError.invalidAttractivePoint(value)
+        case "worldview":       return .worldview
+        case "material":        return .material
+        case "character":       return .character
+        case "relationship":    return .relationship
+        case "vibe":            return .vibe
+        case "writingskill":    return .writingSkill
+        default:                throw MappingError.invalidAttractivePoint(value)
         }
     }
     
     private static func mapAttractivePointString(from value: AttractivePoint) -> String {
         switch value {
-        case .worldview: return "worldview"
-        case .material: return "material"
-        case .character: return "character"
-        case .relationship: return "relationship"
-        case .vibe: return "vibe"
-        case .writingSkill: return "writingskill"
+        case .worldview:        return "worldview"
+        case .material:         return "material"
+        case .character:        return "character"
+        case .relationship:     return "relationship"
+        case .vibe:             return "vibe"
+        case .writingSkill:     return "writingskill"
         }
     }
     
@@ -300,24 +296,31 @@ extension NovelMapper {
         case .mystery:         return "mystery"
         }
     }
-
+    
     private static func mapNovelGenre(from value: String) throws -> NovelGenre {
         switch value {
-        case "lightNovel":      return .lightNovel
-        case "wuxia":           return .wuxia
-        case "fantasy":         return .fantasy
-        case "romance":         return .romance
-        case "BL":              return .BL
-        case "romanceFantasy":  return .romanceFantasy
-        case "modernFantasy":   return .modernFantasy
-        case "drama":           return .drama
-        case "mystery":         return .mystery
-        default:                throw MappingError.invalidNovelGenre(value)
+        case "라노벨":   return .lightNovel
+        case "무협":    return .wuxia
+        case "판타지":   return .fantasy
+        case "로맨스":   return .romance
+        case "BL":     return .BL
+        case "로판":    return .romanceFantasy
+        case "현판":    return .modernFantasy
+        case "드라마":   return .drama
+        case "미스테리":  return .mystery
+        default:        throw MappingError.invalidNovelGenre(value)
         }
     }
     
     private static func mapPublicationStatus(from isCompleted: Bool) -> NovelPublicationStatus {
         isCompleted ? .completed : .onGoing
+    }
+    
+    private static func mapKeywords(from dtos: [NovelKeywordResponse],
+                                    cachedKeywords: [Keyword]) -> [Keyword] {
+        dtos.compactMap { dto in
+            cachedKeywords.first { $0.name == dto.keywordName }
+        }
     }
     
     private static func mapPlatform(from dto: NovelPlatformResponse) throws -> NovelPlatform {

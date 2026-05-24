@@ -17,12 +17,16 @@ public protocol LoadNovelUseCase {
 public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 
     private let novelRepository: NovelRepository
+    private let keywordRepository: KeywordRepository
 
-    public init(novelRepository: NovelRepository) {
+    public init(novelRepository: NovelRepository,
+                keywordRepository: KeywordRepository) {
         self.novelRepository = novelRepository
+        self.keywordRepository = keywordRepository
     }
 
     public func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation {
-        return try await novelRepository.fetchNovel(id: id)
+        let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+        return try await novelRepository.fetchNovel(id: id, cachedKeywords: cachedKeywords)
     }
 }

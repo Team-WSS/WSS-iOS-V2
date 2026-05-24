@@ -17,7 +17,8 @@ public protocol NovelRepository {
     /// - 작품의 상세 정보(NovelInformation)
     ///
     /// 위 두 정보를 한 번의 요청으로 함께 반환한다.
-    func fetchNovel(id: NovelID) async throws(RepositoryError) -> NovelInformation
+    /// 키워드 매핑을 위해 캐시된 키워드 목록을 전달받는다.
+    func fetchNovel(id: NovelID, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelInformation
     
     func addNovelInterest(id: NovelID) async throws(RepositoryError)
     func removeNovelInterest(id: NovelID) async throws(RepositoryError)

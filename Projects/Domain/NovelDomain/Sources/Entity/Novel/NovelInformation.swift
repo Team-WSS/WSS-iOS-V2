@@ -25,7 +25,7 @@ public struct NovelInformation {
     public let description: String
     public let platforms: [NovelPlatform]
     public let attractivePoints: [AttractivePoint]
-    public let keywords: [Keyword : Int]
+    public let keywords: [Keyword]
     public let readingStatusCount: [ReadingStatus : Int]
     
     public init(
@@ -37,7 +37,7 @@ public struct NovelInformation {
         description: String,
         platforms: [NovelPlatform],
         attractivePoints: [AttractivePoint],
-        keywords: [Keyword : Int],
+        keywords: [Keyword],
         readingStatusCount: [ReadingStatus : Int]
     ) {
         self.novel = novel

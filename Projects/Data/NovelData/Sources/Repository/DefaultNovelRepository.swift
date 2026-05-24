@@ -14,7 +14,7 @@ import Networking
 import BaseData
 
 public struct DefaultNovelRepository: NovelRepository {
-
+    
     private let service: NovelService
     private let appStorage: AppStorage
     private let logger: DataLogger?
@@ -29,13 +29,16 @@ public struct DefaultNovelRepository: NovelRepository {
         self.logger = logger
     }
 
-    public func fetchNovel(id: NovelID) async throws(RepositoryError) -> NovelInformation {
+    public func fetchNovel(id: NovelID, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelInformation {
         let action = NovelAction.fetchNovel
         do {
             let basic = try await service.getNovelBasicInfo(novelID: id.value)
             let detail = try await service.getNovelDetailInfo(novelID: id.value)
-            
-            let result = try NovelMapper.novelInformation(id: id, from: basic, from: detail)
+
+            let result = try NovelMapper.novelInformation(id: id,
+                                                          from: basic,
+                                                          from: detail,
+                                                          cachedKeywords: cachedKeywords)
             logger?.logSuccess(action: action.text)
             return result
         } catch let error as NetworkingError {
@@ -49,7 +52,7 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func addNovelInterest(id: NovelID) async throws(RepositoryError) {
         let action = NovelAction.addInterest
         
@@ -67,7 +70,7 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func removeNovelInterest(id: NovelID) async throws(RepositoryError) {
         let action = NovelAction.removeInterest
         
@@ -85,7 +88,7 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = NovelAction.searchByText(query: text)
         let query = NormalSearchQuery(
@@ -96,10 +99,9 @@ public struct DefaultNovelRepository: NovelRepository {
         
         do {
             let response = try await service.getNormalSearchNovels(query: query)
-            let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
-            let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            let result = NovelMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.text)
-            return (paginated, response.resultCount)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -111,17 +113,16 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = NovelAction.searchByFilter
         
         do {
             let query = NovelMapper.detailSearchQuery(from: filter)
             let response = try await service.getDetailSearchNovels(query: query)
-            let novels = response.novels.map { NovelMapper.searchNovel(from: $0) }
-            let paginated = Paginated(items: novels, hasNext: response.isLoadable)
+            let result = NovelMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.text)
-            return (paginated, response.resultCount)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -133,7 +134,7 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchMyLibrary
         
@@ -156,11 +157,11 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func fetchUserLibraryNovels(id: UserID,
                                        _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchUserLibrary
-
+        
         do {
             let query = NovelMapper.userLibraryQuery(from: filter)
             let response = try await service.getUserLibraryNovels(userID: id.value, query: query)
@@ -178,7 +179,7 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
-
+    
     public func fetchRegisteredNovelStats() async throws(RepositoryError) -> RegisteredNovelStats {
         let action = NovelAction.fetchRegisteredStats
         

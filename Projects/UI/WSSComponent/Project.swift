@@ -13,6 +13,7 @@ let project = Project.createUIModule(
     name: ModuleType.ui(.wssComponent).name,
     targets: [.sources, .demo],
     internalDependencies: [
-        .module(.ui(.designSystem))
+        .module(.ui(.designSystem)),
+        .module(.domain(.base))
     ]
 )
