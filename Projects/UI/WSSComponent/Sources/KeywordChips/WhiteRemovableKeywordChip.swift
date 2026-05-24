@@ -1,5 +1,5 @@
 //
-//  CloseKeywordChip.swift
+//  WhiteRemovableKeywordChip.swift
 //  WSSComponent
 //
 //  Created by WonsunLee on 5/10/26.
@@ -9,7 +9,7 @@
 import SwiftUI
 import DesignSystem
 
-public struct CloseKeywordChip: View {
+public struct WhiteRemovableKeywordChip: View {
     private let keyword: String
     private let action: () -> Void
     private let onRemove: () -> Void
@@ -49,12 +49,12 @@ public struct CloseKeywordChip: View {
 
 #Preview {
     VStack(spacing: 12) {
-        CloseKeywordChip(keyword: "환생물", action: {
+        WhiteRemovableKeywordChip(keyword: "환생물", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")
         })
-        CloseKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
+        WhiteRemovableKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")
