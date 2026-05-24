@@ -21,7 +21,10 @@ struct LoadNovelPreferencesUseCaseTests {
         let expected = makeNovelPreference(attractivePoints: [.worldview, .character])
         repo.fetchNovelPreferencesResult = .success(expected)
 
-        let sut = DefaultLoadNovelPreferencesUseCase(profileRepository: repo)
+        let sut = DefaultLoadNovelPreferencesUseCase(
+            profileRepository: repo,
+            keywordRepository: StubKeywordRepository()
+        )
 
         let result = try await sut.execute(.me)
 
@@ -39,7 +42,10 @@ struct LoadNovelPreferencesUseCaseTests {
         let repo = MockProfileRepository()
         repo.fetchNovelPreferencesResult = .failure(.serverUnavailable)
 
-        let sut = DefaultLoadNovelPreferencesUseCase(profileRepository: repo)
+        let sut = DefaultLoadNovelPreferencesUseCase(
+            profileRepository: repo,
+            keywordRepository: StubKeywordRepository()
+        )
 
         await #expect(throws: RepositoryError.serverUnavailable) {
             _ = try await sut.execute(.me)
@@ -47,6 +53,12 @@ struct LoadNovelPreferencesUseCaseTests {
 
         #expect(repo.fetchNovelPreferencesCallCount == 1)
     }
+}
+
+private final class StubKeywordRepository: KeywordRepository {
+    func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] { [] }
+    func searchKeywords(_ query: String) async throws(RepositoryError) -> [Keyword] { [] }
+    func syncKeywords() async {}
 }
 
 extension LoadNovelPreferencesUseCaseTests {

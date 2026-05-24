@@ -314,7 +314,8 @@ struct ProfileDataDemoView: View {
         isLoading = true; defer { isLoading = false }
         let url = "/users/\(myUserID)/preferences/attractive-points"
         do {
-            let prefs = try await repository.fetchNovelPreferences(.me)
+            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+            let prefs = try await repository.fetchNovelPreferences(.me, cachedKeywords: cachedKeywords)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
             let keywords = prefs.keywords
                 .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }
@@ -407,7 +408,8 @@ struct ProfileDataDemoView: View {
         isLoading = true; defer { isLoading = false }
         let url = "/users/\(userID)/preferences/attractive-points"
         do {
-            let prefs = try await repository.fetchNovelPreferences(.user(UserID(userID)))
+            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+            let prefs = try await repository.fetchNovelPreferences(.user(UserID(userID)), cachedKeywords: cachedKeywords)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
             let keywords = prefs.keywords
                 .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }

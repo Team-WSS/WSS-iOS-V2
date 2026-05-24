@@ -9,7 +9,6 @@
 import Logger
 import Networking
 import BaseData
-import BaseDomain
 import ProfileDomain
 
 public enum ProfileDataFactory {
@@ -20,11 +19,9 @@ public enum ProfileDataFactory {
         logger: DataLogger? = nil
     ) -> ProfileRepository {
         let service = DefaultProfileService(client: client)
-        let keywordRepository = KeywordDataFactory.makeRepository(client: client, logger: logger)
         return DefaultProfileRepository(
             service: service,
             localStorage: localStorage,
-            keywordRepository: keywordRepository,
             logger: logger
         )
     }

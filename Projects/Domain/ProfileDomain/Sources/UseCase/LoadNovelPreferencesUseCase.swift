@@ -15,14 +15,18 @@ public protocol LoadNovelPreferencesUseCase {
 }
 
 public final class DefaultLoadNovelPreferencesUseCase: LoadNovelPreferencesUseCase {
-    
+
     private let profileRepository: ProfileRepository
-    
-    public init(profileRepository: ProfileRepository) {
+    private let keywordRepository: KeywordRepository
+
+    public init(profileRepository: ProfileRepository,
+                keywordRepository: KeywordRepository) {
         self.profileRepository = profileRepository
+        self.keywordRepository = keywordRepository
     }
-    
+
     public func execute(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
-        try await profileRepository.fetchNovelPreferences(target)
+        let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+        return try await profileRepository.fetchNovelPreferences(target, cachedKeywords: cachedKeywords)
     }
 }
