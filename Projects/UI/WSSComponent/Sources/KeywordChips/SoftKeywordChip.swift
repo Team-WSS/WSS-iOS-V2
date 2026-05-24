@@ -1,5 +1,5 @@
 //
-//  LibraryKeywordChip.swift
+//  SoftKeywordChip.swift
 //  WSSComponent
 //
 //  Created by WonsunLee on 5/10/26.
@@ -9,7 +9,7 @@
 import SwiftUI
 import DesignSystem
 
-public struct LibraryKeywordChip: View {
+public struct SoftKeywordChip: View {
     private let keyword: String
 
     public init(keyword: String) {
@@ -29,9 +29,9 @@ public struct LibraryKeywordChip: View {
 
 #Preview {
     HStack(spacing: 8) {
-        LibraryKeywordChip(keyword: "빙의")
-        LibraryKeywordChip(keyword: "궁중암투")
-        LibraryKeywordChip(keyword: "긴 키워드 텍스트")
+        SoftKeywordChip(keyword: "빙의")
+        SoftKeywordChip(keyword: "궁중암투")
+        SoftKeywordChip(keyword: "긴 키워드 텍스트")
     }
     .padding()
 }

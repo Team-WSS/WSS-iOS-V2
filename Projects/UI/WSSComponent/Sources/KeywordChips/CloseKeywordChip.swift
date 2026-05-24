@@ -1,5 +1,5 @@
 //
-//  SearchKeywordChip.swift
+//  CloseKeywordChip.swift
 //  WSSComponent
 //
 //  Created by WonsunLee on 5/10/26.
@@ -9,7 +9,7 @@
 import SwiftUI
 import DesignSystem
 
-public struct SearchKeywordChip: View {
+public struct CloseKeywordChip: View {
     private let keyword: String
     private let action: () -> Void
     private let onRemove: () -> Void
@@ -49,12 +49,12 @@ public struct SearchKeywordChip: View {
 
 #Preview {
     VStack(spacing: 12) {
-        SearchKeywordChip(keyword: "환생물", action: {
+        CloseKeywordChip(keyword: "환생물", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")
         })
-        SearchKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
+        CloseKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")

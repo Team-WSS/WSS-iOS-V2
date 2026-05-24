@@ -1,5 +1,5 @@
 //
-//  FilterKeywordChip.swift
+//  SelectableKeywordChip.swift
 //  WSSComponent
 //
 //  Created by WonsunLee on 5/10/26.
@@ -9,7 +9,7 @@
 import SwiftUI
 import DesignSystem
 
-public struct FilterKeywordChip: View {
+public struct SelectableKeywordChip: View {
     private let keyword: String
     private let isSelected: Bool
     private let action: () -> Void
@@ -46,8 +46,8 @@ public struct FilterKeywordChip: View {
     @Previewable @State var selected2 = true
 
     HStack(spacing: 8) {
-        FilterKeywordChip(keyword: "환생물", isSelected: selected1, action: { selected1.toggle() })
-        FilterKeywordChip(keyword: "환생여주", isSelected: selected2, action: { selected2.toggle() })
+        SelectableKeywordChip(keyword: "환생물", isSelected: selected1, action: { selected1.toggle() })
+        SelectableKeywordChip(keyword: "환생여주", isSelected: selected2, action: { selected2.toggle() })
     }
     .padding()
 }

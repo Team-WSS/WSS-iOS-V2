@@ -1,5 +1,5 @@
 //
-//  PreferenceKeywordChip.swift
+//  CountedKeywordChip.swift
 //  WSSComponent
 //
 //  Created by WonsunLee on 5/10/26.
@@ -9,7 +9,7 @@
 import SwiftUI
 import DesignSystem
 
-public struct PreferenceKeywordChip: View {
+public struct CountedKeywordChip: View {
     private let keyword: String
     private let count: Int
 
@@ -31,8 +31,8 @@ public struct PreferenceKeywordChip: View {
 
 #Preview {
     VStack(spacing: 8) {
-        PreferenceKeywordChip(keyword: "궁중암투", count: 3)
-        PreferenceKeywordChip(keyword: "긴 키워드 텍스트", count: 128)
+        CountedKeywordChip(keyword: "궁중암투", count: 3)
+        CountedKeywordChip(keyword: "긴 키워드 텍스트", count: 128)
     }
     .padding()
 }
