@@ -15,12 +15,10 @@ final class MockFeedService: FeedService {
 
     private(set) var postFeedCallCount = 0
     private(set) var postedRequests: [SubmitFeedRequest] = []
-    private(set) var postedImageDatas: [[Data]] = []
 
     private(set) var patchFeedCallCount = 0
     private(set) var patchedFeedIDs: [Int] = []
     private(set) var patchedRequests: [SubmitFeedRequest] = []
-    private(set) var patchedImageDatas: [[Data]] = []
 
     private(set) var deleteFeedCallCount = 0
     private(set) var deletedFeedIDs: [Int] = []
@@ -67,18 +65,16 @@ final class MockFeedService: FeedService {
 
     // MARK: - FeedService
 
-    func postFeed(request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse {
+    func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
         postFeedCallCount += 1
         postedRequests.append(request)
-        postedImageDatas.append(imageDatas)
         return try postFeedResult.get()
     }
 
-    func patchFeed(feedID: Int, request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse {
+    func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse {
         patchFeedCallCount += 1
         patchedFeedIDs.append(feedID)
         patchedRequests.append(request)
-        patchedImageDatas.append(imageDatas)
         return try patchFeedResult.get()
     }
 

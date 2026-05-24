@@ -9,8 +9,8 @@
 import Foundation
 
 protocol FeedService {
-    func postFeed(request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse
-    func patchFeed(feedID: Int, request: SubmitFeedRequest, imageDatas: [Data]) async throws -> SubmitFeedResponse
+    func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse
+    func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse
     func deleteFeed(feedID: Int) async throws
     func getFeedDetail(feedID: Int) async throws -> FeedDetailResponse
     func getSosoFeeds(query: GetSosoFeedsQuery) async throws -> FeedListResponse

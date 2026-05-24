@@ -36,10 +36,11 @@ public struct DefaultFeedRepository: FeedRepository {
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
-            isPublic: !draft.isPrivate
+            isPublic: !draft.isPrivate,
+            imageDatas: imageDatas
         )
         do {
-            _ = try await service.postFeed(request: request, imageDatas: imageDatas)
+            _ = try await service.postFeed(request: request)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -57,10 +58,11 @@ public struct DefaultFeedRepository: FeedRepository {
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
-            isPublic: !draft.isPrivate
+            isPublic: !draft.isPrivate,
+            imageDatas: imageDatas
         )
         do {
-            _ = try await service.patchFeed(feedID: id.value, request: request, imageDatas: imageDatas)
+            _ = try await service.patchFeed(feedID: id.value, request: request)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

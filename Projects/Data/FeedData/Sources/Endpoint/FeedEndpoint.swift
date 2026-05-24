@@ -11,8 +11,8 @@ import Networking
 import BaseData
 
 enum FeedEndpoint: Endpoint {
-    case postFeed(request: SubmitFeedRequest, imageDatas: [Data])
-    case patchFeed(feedID: Int, request: SubmitFeedRequest, imageDatas: [Data])
+    case postFeed(request: SubmitFeedRequest)
+    case patchFeed(feedID: Int, request: SubmitFeedRequest)
     case deleteFeed(feedID: Int)
     case getFeedDetail(feedID: Int)
     case getSosoFeeds(query: GetSosoFeedsQuery)
@@ -45,7 +45,7 @@ enum FeedEndpoint: Endpoint {
         switch self {
         case .postFeed:
             return "/feeds"
-        case .patchFeed(let feedID, _, _):
+        case .patchFeed(let feedID, _):
             return "/feeds/\(feedID)"
         case .deleteFeed(let feedID):
             return "/feeds/\(feedID)"
@@ -77,12 +77,12 @@ enum FeedEndpoint: Endpoint {
     
     var body: RequestBody {
         switch self {
-        case let .postFeed(request, imageDatas),
-             let .patchFeed(_, request, imageDatas):
+        case let .postFeed(request),
+             let .patchFeed(_, request):
             return .multipart(
                 MultipartFormData(parts: [
                     .json(keyName: "feed", value: request)
-                ] + imageDatas.map {
+                ] + request.imageDatas.map {
                     .imageData(keyName: "images", data: $0)
                 })
             )

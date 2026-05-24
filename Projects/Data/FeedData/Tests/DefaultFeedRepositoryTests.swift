@@ -30,7 +30,7 @@ struct DefaultFeedRepositoryTests {
         #expect(service.postedRequests[0].feedContent == "테스트 피드")
         #expect(service.postedRequests[0].relevantCategories.contains("romance"))
         #expect(service.postedRequests[0].relevantCategories.contains("fantasy"))
-        #expect(service.postedImageDatas == [[]])
+        #expect(service.postedRequests[0].imageDatas == [])
     }
 
     @Test("submitFeed 성공 시 imageDatas가 service로 그대로 전달된다")
@@ -40,7 +40,7 @@ struct DefaultFeedRepositoryTests {
 
         try await sut.submitFeed(makeDraft(), imageDatas: imageDatas)
 
-        #expect(service.postedImageDatas == [imageDatas])
+        #expect(service.postedRequests[0].imageDatas == imageDatas)
     }
 
     @Test("submitFeed 네트워크 오류 시 RepositoryError 변환")
@@ -65,7 +65,7 @@ struct DefaultFeedRepositoryTests {
         #expect(service.patchFeedCallCount == 1)
         #expect(service.patchedFeedIDs == [10])
         #expect(service.patchedRequests[0].feedContent == "수정된 피드")
-        #expect(service.patchedImageDatas == [imageDatas])
+        #expect(service.patchedRequests[0].imageDatas == imageDatas)
     }
 
     // MARK: - deleteFeed
