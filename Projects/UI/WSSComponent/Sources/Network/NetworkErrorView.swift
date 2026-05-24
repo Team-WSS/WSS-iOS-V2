@@ -10,10 +10,10 @@ import SwiftUI
 import DesignSystem
 
 public struct NetworkErrorView: View {
-    public let onRetry: () -> Void
+    public let action: () -> Void
 
-    public init(onRetry: @escaping () -> Void) {
-        self.onRetry = onRetry
+    public init(action: @escaping () -> Void) {
+        self.action = action
     }
 
     public var body: some View {
@@ -31,7 +31,7 @@ public struct NetworkErrorView: View {
                     .applyWSSFont(.body2, color: .wssGray300)
             }
 
-            Button(action: onRetry) {
+            Button(action: action) {
                 Text("페이지 다시 불러오기")
                     .applyWSSFont(.label1, color: .wssWhite)
                     .padding(.horizontal, 37)
@@ -46,7 +46,7 @@ public struct NetworkErrorView: View {
 }
 
 #Preview {
-    NetworkErrorView(onRetry: {
+    NetworkErrorView(action: {
         print("페이지 다시 불러오기 버튼 클릭")
     })
 }
