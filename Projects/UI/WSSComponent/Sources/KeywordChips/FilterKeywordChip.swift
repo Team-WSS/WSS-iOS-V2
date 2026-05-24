@@ -12,16 +12,16 @@ import DesignSystem
 public struct FilterKeywordChip: View {
     private let keyword: String
     private let isSelected: Bool
-    private let onTap: () -> Void
+    private let action: () -> Void
 
     public init(
         keyword: String,
         isSelected: Bool,
-        onTap: @escaping () -> Void
+        action: @escaping () -> Void
     ) {
         self.keyword = keyword
         self.isSelected = isSelected
-        self.onTap = onTap
+        self.action = action
     }
 
     public var body: some View {
@@ -37,7 +37,7 @@ public struct FilterKeywordChip: View {
                     .stroke(Color.wssPrimary100, lineWidth: 1)
                     .opacity(isSelected ? 1 : 0)
             )
-            .onTapGesture { onTap() }
+            .onTapGesture { action() }
     }
 }
 
@@ -46,8 +46,8 @@ public struct FilterKeywordChip: View {
     @Previewable @State var selected2 = true
 
     HStack(spacing: 8) {
-        FilterKeywordChip(keyword: "환생물", isSelected: selected1, onTap: { selected1.toggle() })
-        FilterKeywordChip(keyword: "환생여주", isSelected: selected2, onTap: { selected2.toggle() })
+        FilterKeywordChip(keyword: "환생물", isSelected: selected1, action: { selected1.toggle() })
+        FilterKeywordChip(keyword: "환생여주", isSelected: selected2, action: { selected2.toggle() })
     }
     .padding()
 }

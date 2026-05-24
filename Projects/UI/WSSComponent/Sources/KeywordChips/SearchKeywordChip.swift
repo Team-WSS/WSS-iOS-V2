@@ -11,16 +11,16 @@ import DesignSystem
 
 public struct SearchKeywordChip: View {
     private let keyword: String
-    private let onTap: () -> Void
+    private let action: () -> Void
     private let onRemove: () -> Void
 
     public init(
         keyword: String,
-        onTap: @escaping () -> Void,
+        action: @escaping () -> Void,
         onRemove: @escaping () -> Void
     ) {
         self.keyword = keyword
-        self.onTap = onTap
+        self.action = action
         self.onRemove = onRemove
     }
 
@@ -43,18 +43,18 @@ public struct SearchKeywordChip: View {
         .clipShape(Capsule())
         .overlay(Capsule().stroke(Color.wssPrimary100, lineWidth: 1))
         .contentShape(Capsule())
-        .onTapGesture { onTap() }
+        .onTapGesture { action() }
     }
 }
 
 #Preview {
     VStack(spacing: 12) {
-        SearchKeywordChip(keyword: "환생물", onTap: {
+        SearchKeywordChip(keyword: "환생물", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")
         })
-        SearchKeywordChip(keyword: "긴 키워드 텍스트 예시", onTap: {
+        SearchKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
             print("키워드 클릭")
         }, onRemove: {
             print("X 버튼 클릭")
