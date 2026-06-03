@@ -1,65 +1,65 @@
-# Claude Code - WSS-iOS-V2
+# CLAUDE.md — WSS-iOS-V2 작업 허브
 
-## Quick Commands
+> 이 파일은 **문서 진입점(허브)** 입니다. 실제 작업 규칙은 여기 다 담지 않고,
+> 아래 "문서 맵"을 따라 필요한 문서만 골라 읽습니다. (토큰 효율 + 최신성 유지)
 
-- `도메인 테스트` — 변경된 소스 파일을 감지하고, 아래 컨벤션에 맞춰 테스트 코드를 자동 생성합니다.
+웹소소(WSS) 앱의 차세대 iOS 클라이언트. **Tuist 멀티 모듈 + Clean Architecture**.
 
-## Test Code Convention
+---
 
-### Framework
-- Swift Testing (`@Test`, `#expect`, `@Suite`)
-- XCTest 사용 금지
+## 🚨 작업 전 반드시 알 것 (Non-negotiables)
 
-### Naming
-- 테스트 함수명은 `@Test("한글 이름") func englishName()` 패턴으로 작성 (GitHub Actions CI 호환)
-- backtick 한글 함수명 사용 금지 (`@Test func \`한글\`()` ← 사용하지 않음)
-- Helper 함수는 `make~` prefix (e.g., `makeDraft()`, `makeComment()`)
-- Mock 클래스는 `Mock[ProtocolName]` (e.g., `MockCommentRepository`)
+1. **의존성은 단방향**: `App → Feature → (UI / Domain) ← Data → Core`
+   - Domain은 어떤 상위 레이어도, 어떤 구현체(Data)도 import 하지 않는다.
+   - Data는 Domain의 프로토콜을 구현한다. 반대 방향 금지.
+2. **비동기 모델은 레이어마다 다르다**
+   - Domain / Data: **Swift Concurrency** (`async/await`, `throws(RepositoryError)`)
+   - UI / Feature: **Combine** (상태 바인딩·이벤트)
+3. **모듈 레지스트리의 단일 진실 소스**는 코드다 →
+   [`Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`](Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)
+   - 새 모듈은 여기 먼저 등록한다. 문서/디스크보다 이 파일이 우선.
+4. **테스트는 현재 Domain 레이어에만** 작성한다. → [docs/layers/Domain.md](docs/layers/Domain.md)
+5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
 
-### Structure
-- Given-When-Then 패턴
-- Entity 테스트: helper를 struct 내부에 정의
-- Usecase 테스트: helper를 extension으로 분리
+---
 
-### Suite
-- `@Suite` 사용 (Tag 기능 사용하지 않음)
+## 🗺 문서 맵
 
-### Import
-```swift
-@testable import [Module]Domain
-@testable import BaseDomain
+작업 대상이 정해지면, 해당 레이어 문서 → 해당 모듈 문서 순으로 읽는다.
+
+### 전체 개요
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 레이어 구성, 의존성 방향, 데이터 흐름
+
+### 레이어별 코드 작성 규칙
+| 레이어 | 문서 | 한 줄 |
+|---|---|---|
+| App | [docs/layers/App.md](docs/layers/App.md) | DI·전역 흐름 조립 |
+| Feature | [docs/layers/Feature.md](docs/layers/Feature.md) | 화면·기능 구현 (계획 단계) |
+| UI | [docs/layers/UI.md](docs/layers/UI.md) | 디자인 시스템·재사용 컴포넌트 헬퍼 |
+| Domain | [docs/layers/Domain.md](docs/layers/Domain.md) | Entity·UseCase·Repository 프로토콜 |
+| Data | [docs/layers/Data.md](docs/layers/Data.md) | DTO·Service·Mapper·Repository 구현 |
+| Core | [docs/layers/Core.md](docs/layers/Core.md) | Networking·Keychain·Logger 기반 기술 |
+
+### 모듈별 문서
+- 위치: `docs/modules/<레이어>/<모듈명>.md`
+- 새 모듈 문서는 [docs/modules/_TEMPLATE.md](docs/modules/_TEMPLATE.md) 를 복사해 작성한다.
+- 작성된 문서 인덱스: [docs/modules/README.md](docs/modules/README.md)
+
+---
+
+## 🛠 자주 쓰는 명령
+
+```bash
+mise install        # Tuist 설치
+tuist install       # 의존성 설치
+tuist generate      # 프로젝트 생성
 ```
 
-### Coverage
-1. 정상 케이스
-2. 경계값
-3. 정책 위반 케이스
-4. 상태 변화 검증
+---
 
-### Mock 패턴
-- tracking arrays + Result 프로퍼티 패턴
-- 도메인별 `MockError` 또는 `RepositoryError` 사용
+## 📌 문서 유지 규칙
 
-### Test 디렉토리 구조
-```
-Projects/Domain/[Module]/
-├── Testing/
-│   └── Mock[Repository].swift
-└── Tests/
-    ├── Entity/
-    │   └── [Entity]Tests.swift
-    └── Usecase/
-        └── [Usecase]Tests.swift
-```
-
-- **Testing 폴더**: Mock 파일 위치 (e.g., `MockCommentRepository.swift`)
-- **Tests 폴더**: 테스트 함수 구현 파일 위치 (Entity, Usecase 하위 분류)
-
-## Test Scope
-- **Domain 모듈에만 테스트 코드를 작성한다** (Data, Feature, Core 등 다른 레이어는 아직 적용하지 않음)
-- 새로운 Domain 모듈 추가 시 `.github/workflows/test.yml`에 해당 도메인 테스트 step을 함께 추가한다
-
-## Project Structure
-- Tuist 기반 모듈화
-- Clean Architecture (Domain / Data / Feature)
-- Domain 모듈: BaseDomain, Comment, Feed, Keyword, Community
+- 코드와 문서가 다르면 **코드가 진실**. 발견 즉시 문서를 고친다.
+- 레이어 규칙이 바뀌면 → 해당 `docs/layers/*.md` 갱신.
+- 모듈 책임/구성이 바뀌면 → 해당 `docs/modules/.../*.md` 갱신.
+- 작업 중 발견한 함정·주의사항은 해당 문서의 "주의사항" 절에 누적한다.
