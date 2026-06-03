@@ -14,7 +14,7 @@
 ## 테스트 (필수)
 
 - 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
-- 컨벤션·Mock 패턴은 [Projects/Domain/CLAUDE.md](../Projects/Domain/CLAUDE.md)의 "테스트" 절.
+- 철학·컨벤션·Mock 패턴은 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
 - 현재 테스트는 **Domain 레이어 한정** (Data/UI/Core/Feature는 미적용).
 
 ## CI
