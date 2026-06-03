@@ -17,8 +17,10 @@
 3. **모듈 레지스트리의 단일 진실 소스**는 코드다 →
    [`Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`](Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)
    문서/디스크보다 이 파일이 우선. 새 모듈은 여기 먼저 등록한다.
-4. **테스트는 현재 Domain 레이어에만** 작성한다.
+4. **테스트는 필수**(현재 Domain 레이어 한정). 새 UseCase·Entity·정책은 **테스트 없이 머지하지 않는다.**
+   컨벤션은 [Projects/Domain/CLAUDE.md](Projects/Domain/CLAUDE.md)의 "테스트" 절. 새 Domain 모듈은 폴더만 만들면 CI(`/domain-test`)가 자동 인식한다.
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
+6. **작업 방식**: 브랜치 `Type/#이슈` (예: `Docs/#130`), 커밋 `[Type] #이슈 - 한글 설명`, 머지는 PR 경유(브랜치 보호). → [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 ---
 

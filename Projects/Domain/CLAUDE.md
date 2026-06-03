@@ -89,14 +89,49 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 - `Paginated<T>`, ID 래퍼(`WSSIdentifiers`), `Keyword`, `Rating`, `NovelGenre` 등
 - 공통 UseCase도 일부 존재 (예: `LoadTotalKeywordsUseCase`)
 
-## 테스트 (이 레이어에만 작성)
+## 테스트 (필수 — 이 레이어 한정)
 
-- **Swift Testing** (`@Test`, `#expect`, `@Suite`). XCTest 금지.
-- 함수명: `@Test("한글 이름") func englishName()` (CI 호환, backtick 한글 금지).
-- Given-When-Then. Mock은 `Mock[Protocol]`, helper는 `make~` prefix.
-- Mock 위치: `Testing/`, 테스트 구현: `Tests/Entity/`, `Tests/Usecase/`.
-- 커버리지: 정상 / 경계값 / 정책 위반 / 상태 변화.
-- 새 Domain 모듈 추가 시 `.github/workflows/test.yml`에 테스트 step 추가.
+새 UseCase·Entity·정책 메서드는 **테스트 없이 머지 금지**. 프레임워크는 **Swift Testing** (`@Test`/`#expect`/`@Suite`), XCTest 금지.
+
+### 위치·임포트
+```
+Projects/Domain/<Module>Domain/
+├── Testing/Mock/Mock[Protocol].swift   # Mock (별도 타깃 = <Module>DomainTesting)
+└── Tests/{Entity,UseCase}/[X]Tests.swift
+```
+```swift
+import Testing
+@testable import [Module]Domain
+import [Module]DomainTesting   // Mock이 든 Testing 타깃
+import BaseDomain
+```
+
+### 작성 규칙
+- `@Suite struct XxxTests { ... }`.
+- 함수명: **`@Test("한글 설명") func englishName()`** (CI 호환 — backtick 한글 함수명 금지).
+- Given-When-Then. helper는 `make~` prefix, 보통 `extension XxxTests`에 `private`로.
+- 에러 검증: `await #expect(throws: RepositoryError.unknown) { try await ... }`.
+- 커버리지 4종: 정상 / 경계값 / 정책 위반 / 상태 변화.
+
+### Mock 패턴 (tracking array + Result)
+```swift
+public final class MockNovelRepository: NovelRepository {
+    public var fetchNovelResult: Result<NovelInformation, RepositoryError>!   // 반환 있는 것
+    public var addInterestResult: Result<Void, RepositoryError> = .success(()) // void 기본값
+    public private(set) var fetchedNovelIDs: [NovelID] = []                    // 호출 추적
+    public init() {}
+    public func fetchNovel(id: NovelID) async throws(RepositoryError) -> NovelInformation {
+        fetchedNovelIDs.append(id)
+        return try fetchNovelResult.get()
+    }
+}
+```
+- 입력 인자는 배열/`last`/callCount로 기록해 `#expect`로 검증.
+
+### CI
+- 트리거: PR에 **`/domain-test` 댓글** (또는 수동 `workflow_dispatch`). `.github/workflows/test.yml`.
+- 매트릭스는 `Projects/Domain`의 **하위 폴더를 자동 스캔** → 새 Domain 모듈은 폴더만 있으면 자동 포함. step 수동 추가 불필요.
+- ⚠️ 그래서 **빈/잔재 폴더가 CI를 깨뜨린다** (스킴 없는 폴더 = 테스트 실패). `XxxDomain` 형태의 정식 모듈 폴더만 남길 것 (`Comment/`, `Feed/`, `User/`, `KeywordDomain/` 등 잔재 주의).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
