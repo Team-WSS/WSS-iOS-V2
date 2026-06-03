@@ -39,7 +39,16 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 이 허브 + `Projects/Domain/CLAUDE.md` + `Projects/Domain/NovelDomain/CLAUDE.md` 가 함께 로드된다.
 
 **→ 다른 레이어/모듈 문서를 일부러 찾아 읽지 말 것.** 작업 위치가 필요한 문서를 알아서 가져온다.
-전체 구조를 알아야 할 때만 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)를 읽는다.
+
+### 필요할 때 찾아 읽는 공통 문서 (자동 로드 X)
+| 문서 | 언제 |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 전체 구조·의존성·데이터 흐름 |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | 제품 용어 ↔ 코드 타입 (작업 시작 시 권장) |
+| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·비동기·에러 변환 규약 |
+| [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
+| [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
 
 ### 레이어 가이드 위치
 | 레이어 | 가이드 |
@@ -60,6 +69,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 - **무엇을 적나**: 코드/디렉토리만 봐도 아는 것(구성요소 나열)은 적지 않는다.
   **코드만 봐선 모르는 것**(핵심 시나리오, 숨은 의존, 함정, 이유)만 적는다. 함정 없으면 짧아도 된다.
 - 코드와 문서가 다르면 **코드가 진실** — 발견 즉시 가장 가까운 `CLAUDE.md`를 고친다.
+- 작업 중 함정을 발견하면 **`/learn`** — 가장 가까운 문서의 "주의사항"에 누적해준다.
 - 작업 중 발견한 함정은 해당 문서의 "주의사항" 절에 누적한다.
 
 ---
