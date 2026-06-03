@@ -26,6 +26,8 @@
 
 ## 새 모듈 추가 절차
 
+> ⚡ **`/new-module <layer> <ModuleName>`** 커맨드가 아래를 자동화한다 (의존성 추론 포함). 수동 시 아래 순서대로.
+
 1. **레지스트리 먼저**: `Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`의 해당 enum(`DomainModule`/`DataModule`/...)에 case 추가. (단일 진실 소스)
 2. **Project.swift**: `Projects/<Layer>/<Module>/Project.swift`를 템플릿(`Project.create<Layer>Module(...)`)으로 작성, `internalDependencies` 선언.
 3. **`tuist generate`** 로 프로젝트 재생성.
