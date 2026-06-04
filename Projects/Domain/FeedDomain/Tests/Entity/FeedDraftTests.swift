@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -26,21 +27,19 @@ struct FeedDraftTests {
         )
     }
 
-    private func makeImageWrapper(id: String) -> ImageWrapper {
-        ImageWrapper(identifier: id)
+    private func makeImageURL(_ name: String = "1") -> URL {
+        URL(filePath: "/tmp/\(name).jpg")
     }
 
     private func makeDraft(
         content: String = "hello",
-        genre: [NovelGenre] = [.fantasy],
         isSpoiler: Bool = false,
         isPrivate: Bool = false,
         connectedNovel: ConnectedNovel? = nil,
-        attachedImages: [ImageWrapper] = []
+        attachedImages: [URL] = []
     ) -> FeedDraft {
         FeedDraft(
             content: content,
-            genre: genre,
             isSpoiler: isSpoiler,
             isPrivate: isPrivate,
             connectedNovel: connectedNovel,
@@ -87,26 +86,6 @@ struct FeedDraftTests {
         let mock = makeDraft()
 
         #expect(mock.remainsContentCount() == 2000 - 5)
-    }
-
-    // MARK: - Genre
-
-    @Test("장르를 추가할 수 있다.")
-    func addGenre() {
-        var mock = makeDraft(genre: [.fantasy])
-
-        mock.addGenre(.BL)
-
-        #expect(mock.genre == [.fantasy, .BL])
-    }
-
-    @Test("선택한 장르를 삭제할 수 있다.")
-    func removeGenre() {
-        var mock = makeDraft(genre: [.drama])
-
-        mock.removeGenre(.drama)
-
-        #expect(mock.genre.isEmpty)
     }
 
     // MARK: - Private
@@ -184,24 +163,24 @@ struct FeedDraftTests {
     func attachImage() throws {
         var draft = makeDraft()
 
-        try draft.addImage(makeImageWrapper(id: "1"))
+        try draft.addImage(makeImageURL("1"))
 
         #expect(draft.attachedImages.count == 1)
     }
 
     @Test("이미지는 최대 5장까지 첨부할 수 있다.")
     func imageLimitedToFive() throws {
-        let images = Array(repeating: makeImageWrapper(id: "1"), count: 5)
+        let images = Array(repeating: makeImageURL("1"), count: 5)
         var draft = makeDraft(attachedImages: images)
 
         #expect(throws: FeedDraft.ValidationError.imageOverLimit(max: 5)) {
-            try draft.addImage(makeImageWrapper(id: "2"))
+            try draft.addImage(makeImageURL("2"))
         }
     }
 
     @Test("첨부된 이미지를 삭제할 수 있다.")
     func removeAttachedImage() {
-        let image = makeImageWrapper(id: "1")
+        let image = makeImageURL("1")
         var draft = makeDraft(attachedImages: [image])
 
         draft.removeImage(image)

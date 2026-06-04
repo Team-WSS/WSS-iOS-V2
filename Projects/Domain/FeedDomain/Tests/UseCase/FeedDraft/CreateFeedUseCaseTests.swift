@@ -51,7 +51,6 @@ extension CreateFeedUseCaseTests {
     ) -> FeedDraft {
         FeedDraft(
             content: "안녕",
-            genre: [.BL, .drama],
             isSpoiler: true,
             isPrivate: false,
             connectedNovel: nil,
