@@ -33,16 +33,22 @@ enum RecommendationEndpoint: Endpoint {
     }
     
     var method: HTTPMethod { .get }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
+
+    var body: RequestBody { .none }
     
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .getInterestFeeds, .getPreferenceGenreNovels:
+            return .requireToken
+        case .getTodayDiscovery, .getTrendingFeeds:
+            return .usesTokenIfAvailable
+        case .sosopickNovels:
+            return .withoutToken
+        }
     }
-    
-    var requireTokenRefresh: Bool { false }
-    
-    var body: Data? { nil }
-    
-    var queryItems: [URLQueryItem]? { nil }
+
 }

@@ -9,9 +9,8 @@
 
 
 import Foundation
-import Networking
 
-struct TermSettingRequest: RequestBodyConvertible {
+struct TermSettingRequest: Encodable {
     let serviceAgreed: Bool
     let privacyAgreed: Bool
     let marketingAgreed: Bool

@@ -15,7 +15,7 @@ public extension NetworkingError {
         switch self {
         case .invalidURL:
             return .unknown
-        case .decoding:
+        case .decoding, .requestEncodingFailed:
             return .invalidData
         case .responseFailure(let code, _):
             switch code {

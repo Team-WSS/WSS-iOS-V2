@@ -72,9 +72,9 @@ final class MockProfileService: ProfileService {
         return try getUserBasicInfoResult.get()
     }
 
-    func validateNickname(_ nickname: String) async throws -> NicknameValidationResponse {
+    func validateNickname(_ query: ValidateNicknameQuery) async throws -> NicknameValidationResponse {
         validateNicknameCallCount += 1
-        validatedNicknames.append(nickname)
+        validatedNicknames.append(query.nickname)
         return try validateNicknameResult.get()
     }
 

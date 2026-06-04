@@ -6,8 +6,6 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Networking
-
-struct ReissueRequest: RequestBodyConvertible {
+struct ReissueRequest: Encodable {
     let refreshToken: String
 }

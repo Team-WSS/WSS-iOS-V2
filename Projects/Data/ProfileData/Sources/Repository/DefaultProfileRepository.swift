@@ -49,7 +49,8 @@ public struct DefaultProfileRepository: ProfileRepository {
         let action = ProfileAction.validateNickname
 
         do {
-            let response = try await service.validateNickname(nickname)
+            let query = ValidateNicknameQuery(nickname: nickname)
+            let response = try await service.validateNickname(query)
             logger?.logSuccess(action: action.name)
             return response.isValid
         } catch let error as NetworkingError {
@@ -197,13 +198,17 @@ public struct DefaultProfileRepository: ProfileRepository {
         }
     }
 
-    public func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference {
+    public func fetchNovelPreferences(_ target: ProfileTarget, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelPreference {
         let action = ProfileAction.fetchNovelPreferences
-        
+
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getNovelPreferences(userID: userID)
-            let result = try ProfileMapper.novelPreference(from: response)
+            let lookup = Dictionary(
+                cachedKeywords.map { ($0.name, $0.id) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let result = try ProfileMapper.novelPreference(from: response, keywordLookup: lookup)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {

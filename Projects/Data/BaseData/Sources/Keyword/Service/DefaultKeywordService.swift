@@ -17,7 +17,7 @@ public struct DefaultKeywordService: KeywordService {
         self.client = client
     }
 
-    func searchKeyword(_ request: SearchKeywordRequest) async throws -> KeywordGroupsResponse {
+    func searchKeyword(_ request: SearchKeywordQuery) async throws -> KeywordGroupsResponse {
         let endpoint = KeywordEndpoint.searchKeywords(request)
         return try await client.request(endpoint,
                                         decodeTo: KeywordGroupsResponse.self)

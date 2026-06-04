@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-struct AccountInfoRequest: RequestBodyConvertible {
+struct AccountInfoRequest: Encodable {
     let gender: String
     let birth: Int
 }

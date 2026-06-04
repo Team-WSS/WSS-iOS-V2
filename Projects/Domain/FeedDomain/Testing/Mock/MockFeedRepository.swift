@@ -14,7 +14,9 @@ import BaseDomain
 public final class MockFeedRepository: FeedRepository {
 
     public var submittedDrafts: [FeedDraft] = []
+    public var submittedImageDatas: [[Data]] = []
     public var editedFeeds: [(id: FeedID, draft: FeedDraft)] = []
+    public var editedImageDatas: [[Data]] = []
     public var deletedFeedIDs: [FeedID] = []
 
     public var fetchedDetailIDs: FeedID?
@@ -43,8 +45,9 @@ public final class MockFeedRepository: FeedRepository {
 
     public init() {}
 
-    public func submitFeed(_ draft: FeedDraft) async throws(RepositoryError) {
+    public func submitFeed(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         submittedDrafts.append(draft)
+        submittedImageDatas.append(imageDatas)
         switch submitResult {
         case .success:
             return
@@ -53,8 +56,9 @@ public final class MockFeedRepository: FeedRepository {
         }
     }
 
-    public func editFeed(id: FeedID, draft: FeedDraft) async throws(RepositoryError) {
+    public func editFeed(id: FeedID, draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         editedFeeds.append((id, draft))
+        editedImageDatas.append(imageDatas)
         switch editResult {
         case .success:
             return

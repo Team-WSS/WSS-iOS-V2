@@ -12,7 +12,6 @@ import BaseDomain
 import BaseData
 import Logger
 import Networking
-import Keychain
 
 public struct DefaultAuthRepository: AuthRepository {
     
@@ -77,6 +76,7 @@ public struct DefaultAuthRepository: AuthRepository {
             let request = LogoutRequest(refreshToken: refreshToken,
                                         deviceIdentifier: deviceIdentifier)
             try await service.postLogout(request)
+            try tokenStore.clearTokens()
             logger?.logSuccess(action: action.name)
             
         } catch let error as NetworkingError {
@@ -96,6 +96,7 @@ public struct DefaultAuthRepository: AuthRepository {
         do {
             let request = AuthMapper.withdrawalReason(from: draft)
             try await service.postWithdraw(request)
+            try tokenStore.clearTokens()
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

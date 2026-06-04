@@ -8,9 +8,8 @@
 
 
 import Foundation
-import Networking
 
-struct FCMTokenRequest: RequestBodyConvertible, Equatable {
+struct FCMTokenRequest: Encodable, Equatable {
     let fcmToken: String
     let deviceIdentifier: String
 }

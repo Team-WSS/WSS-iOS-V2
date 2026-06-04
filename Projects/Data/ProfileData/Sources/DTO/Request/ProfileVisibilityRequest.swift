@@ -9,6 +9,6 @@
 import Foundation
 import Networking
 
-struct ProfileVisibilityRequest: RequestBodyConvertible {
+struct ProfileVisibilityRequest: Encodable {
     let isProfilePublic: Bool
 }

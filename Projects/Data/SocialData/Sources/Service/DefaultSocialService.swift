@@ -16,8 +16,8 @@ struct DefaultSocialService: SocialService {
         self.client = client
     }
 
-    func postBlockUser(userID: Int) async throws {
-        let endpoint = SocialEndpoint.blockUser(userID: userID)
+    func postBlockUser(_ query: BlockUserQuery) async throws {
+        let endpoint = SocialEndpoint.blockUser(query)
         _ = try await client.request(endpoint)
     }
 

@@ -6,6 +6,7 @@
 import SwiftUI
 
 import Networking
+import BaseData
 import SettingData
 import SettingDomain
 
@@ -20,7 +21,7 @@ struct SettingDataDemoView: View {
     private let updateRepo: AppUpdateRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         self.termsRepo = SettingDataFactory.makeTermsAgreementRepository(client: client)
         self.updateRepo = SettingDataFactory.makeAppUpdateRepository(client: client)
     }

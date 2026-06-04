@@ -7,7 +7,7 @@
 //
 
 protocol SocialService {
-    func postBlockUser(userID: Int) async throws
+    func postBlockUser(_ query: BlockUserQuery) async throws
     func deleteBlock(blockID: Int) async throws
     func getBlockedUsers() async throws -> BlockedUserResponse
     func postReportSpoilerFeed(feedID: Int) async throws

@@ -16,6 +16,8 @@ extension NetworkingError {
             return .unknown
         case .decoding:
             return .invalidData
+        case .requestEncodingFailed:
+            return .invalidData
         case .responseFailure(let code, _):
             switch code {
             case 400...499: return .invalidCredential

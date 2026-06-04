@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -56,7 +57,7 @@ extension LoadSosoFeedsUseCaseTests {
                     content: "안녕",
                     author: Author(userId: UserID(1003),
                                    nickname: "구리스",
-                                   profileImage: ImageWrapper(identifier: "1")
+                                   profileImage: URL(string: "https://example.com/profile.jpg")
                                   ),
                     likeCount: 1,
                     isLiked: true,

@@ -7,6 +7,8 @@
 //
 
 import SwiftUI
+import PhotosUI
+import UIKit
 import FeedData
 import FeedDomain
 import BaseDomain
@@ -24,6 +26,8 @@ struct FeedDataDemoView: View {
     @State private var contentText: String = "테스트 피드 내용입니다."
     @State private var isSpoiler: Bool = false
     @State private var isPrivate: Bool = false
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var selectedImageDatas: [Data] = []
 
     // Feed Lists
     @State private var lastFeedIDText: String = "0"
@@ -35,7 +39,7 @@ struct FeedDataDemoView: View {
     private let repository: FeedRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let logger = DataLogger(moduleName: "FeedData", underlying: OSLogger.feed)
         self.repository = FeedDataFactory.makeFeedRepository(client: client, logger: logger)
     }
@@ -82,6 +86,7 @@ struct FeedDataDemoView: View {
                     Toggle("비공개", isOn: $isPrivate)
                 }
                 .padding(.horizontal)
+                imageAttachmentRow
                 demoButton("작성", bg: Color(red: 0.88, green: 0.97, blue: 0.94), fg: .teal) {
                     Task { await submitFeed() }
                 }
@@ -225,6 +230,64 @@ struct FeedDataDemoView: View {
         .disabled(isLoading)
     }
 
+    // MARK: - Image Attachment
+
+    private var imageAttachmentRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                PhotosPicker(
+                    selection: $selectedItems,
+                    maxSelectionCount: 5,
+                    matching: .images
+                ) {
+                    Label("이미지 첨부 (\(selectedImageDatas.count)/5)", systemImage: "photo")
+                        .font(.subheadline)
+                }
+                Spacer()
+                if !selectedImageDatas.isEmpty {
+                    Button("초기화") {
+                        selectedItems = []
+                        selectedImageDatas = []
+                    }
+                    .font(.caption)
+                    .foregroundColor(.red)
+                }
+            }
+            .padding(.horizontal)
+            .onChange(of: selectedItems) { _, items in
+                Task { await loadSelectedImages(items) }
+            }
+
+            if !selectedImageDatas.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(selectedImageDatas.enumerated()), id: \.offset) { _, data in
+                            if let uiImage = UIImage(data: data) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 60, height: 60)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+
+    private func loadSelectedImages(_ items: [PhotosPickerItem]) async {
+        var datas: [Data] = []
+        for item in items {
+            guard let raw = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: raw),
+                  let jpeg = image.jpegData(compressionQuality: 0.8) else { continue }
+            datas.append(jpeg)
+        }
+        selectedImageDatas = datas
+    }
+
     // MARK: - Shared Log
 
     private var logSection: some View {
@@ -279,11 +342,14 @@ struct FeedDataDemoView: View {
             isPrivate: isPrivate,
             attachedImages: []
         )
+        let imageDatas = selectedImageDatas
         let url = "/feeds"
         isLoading = true; defer { isLoading = false }
         do {
-            try await repository.submitFeed(draft)
-            log = "endpoint: .postFeed\n[POST] \(url)\n\n작성 성공\n내용: \(contentText.prefix(50))\n스포일러: \(isSpoiler) | 비공개: \(isPrivate)"
+            try await repository.submitFeed(draft, imageDatas: imageDatas)
+            log = "endpoint: .postFeed\n[POST] \(url)\n\n작성 성공\n내용: \(contentText.prefix(50))\n스포일러: \(isSpoiler) | 비공개: \(isPrivate)\n이미지: \(imageDatas.count)장"
+            selectedItems = []
+            selectedImageDatas = []
         } catch {
             log = "endpoint: .postFeed\n[POST] \(url)\n\n작성 실패\n\(error)"
         }
@@ -298,12 +364,15 @@ struct FeedDataDemoView: View {
             isPrivate: isPrivate,
             attachedImages: []
         )
+        let imageDatas = selectedImageDatas
         let url = "/feeds/\(feedID.value)"
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
-            try await repository.editFeed(id: feedID, draft: draft)
-            log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 성공\n내용: \(contentText.prefix(50))"
+            try await repository.editFeed(id: feedID, draft: draft, imageDatas: imageDatas)
+            log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 성공\n내용: \(contentText.prefix(50))\n이미지: \(imageDatas.count)장"
+            selectedItems = []
+            selectedImageDatas = []
         } catch {
             log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 실패\n\(error)"
         }

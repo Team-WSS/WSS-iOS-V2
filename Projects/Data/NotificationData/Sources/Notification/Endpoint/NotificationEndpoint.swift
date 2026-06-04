@@ -27,10 +27,7 @@ enum NotificationEndpoint: Endpoint {
         }
     }
     
-    var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
-        URL(string: NetworkingConfig.baseURL)!
-    }
+    var baseURL: URL { URL(string: NetworkingConfig.baseURL)! }
     
     var path: String {
         switch self {
@@ -42,20 +39,16 @@ enum NotificationEndpoint: Endpoint {
         }
     }
     
-    var queryItems: [URLQueryItem]? {
+    var query: QueryParameters {
         switch self {
-        case .getNotifications(let query): return query.asQueryItems()
-        default: return nil
+        case .getNotifications(let query): return .convertible(query)
+        default: return .none
         }
     }
-    
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? { nil }
-    
-    var requireTokenRefresh: Bool { true }
+
+    var additionalHeaders: [String: String]? { nil }
+
+    var body: RequestBody { .none }
+
+    var authorization: AuthorizationPolicy { .requireToken }
 }

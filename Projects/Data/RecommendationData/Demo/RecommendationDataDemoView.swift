@@ -20,7 +20,7 @@ struct RecommendationDataDemoView: View {
     private let repository: RecommendationRepository
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let logger = DataLogger(moduleName: "RecommendationData", underlying: OSLogger.recommendation)
         self.repository = RecommendationDataFactory.makeRepository(network: client,
                                                                    logger: logger)

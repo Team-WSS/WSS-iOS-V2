@@ -6,24 +6,28 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
 import FeedDomainTesting
 import BaseDomain
+import SwiftUI
 
 @Suite
 struct CreateFeedUseCaseTests {
 
-    @Test("피드를 생성하면 레포지토리에 draft가 전달된다.")
+    @Test("피드를 생성하면 레포지토리에 draft와 imageDatas가 전달된다.")
     func createFeedPassesDraft() async throws {
         let mock = MockFeedRepository()
         let usecase = DefaultCreateFeedUseCase(repository: mock)
         let draft = makeFeedDraft()
+        let imageDatas = [Data("image1".utf8), Data("image2".utf8)]
 
-        try await usecase.execute(draft)
+        try await usecase.execute(draft, imageDatas: imageDatas)
 
         #expect(mock.submittedDrafts.count == 1)
+        #expect(mock.submittedImageDatas == [imageDatas])
     }
 
     @Test("피드 생성에 실패하면 에러를 던진다.")
@@ -34,7 +38,7 @@ struct CreateFeedUseCaseTests {
         let usecase = DefaultCreateFeedUseCase(repository: mock)
 
         await #expect(throws: RepositoryError.notFound) {
-            try await usecase.execute(makeFeedDraft())
+            try await usecase.execute(makeFeedDraft(), imageDatas: [])
         }
     }
 }

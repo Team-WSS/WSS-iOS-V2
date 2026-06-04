@@ -38,23 +38,19 @@ enum PushEndpoint: Endpoint {
             
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
-    var queryItems: [URLQueryItem]? { nil }
-    
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .postFCMToken(let request): return request.asRequestBody()
-        case .postPushNotificationSetting(let request): return request.asRequestBody()
+        case .postFCMToken(let request): return .json(request)
+        case .postPushNotificationSetting(let request): return .json(request)
         default:
-            return nil
+            return .none
         }
     }
-    
-    var requireTokenRefresh: Bool { true }
+
+    var authorization: AuthorizationPolicy { .requireToken }
 }

@@ -28,7 +28,8 @@ public protocol ProfileRepository {
     ///  .user: 다른 repository로부터 userID를 받아온다.
     func fetchUserProfile(target: ProfileTarget) async throws(RepositoryError) -> Profile
     func fetchGenrePreferences(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference]
-    func fetchNovelPreferences(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference
+    /// 키워드 매핑을 위해 캐시된 키워드 목록을 전달받는다.
+    func fetchNovelPreferences(_ target: ProfileTarget, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelPreference
     
     func fetchProfileCharacters() async throws(RepositoryError) -> [ProfileCharacter]
     
