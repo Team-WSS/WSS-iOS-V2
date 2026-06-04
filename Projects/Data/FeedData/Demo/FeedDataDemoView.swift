@@ -278,12 +278,11 @@ struct FeedDataDemoView: View {
     }
 
     private func loadSelectedImages(_ items: [PhotosPickerItem]) async {
+        // 원본 Data를 그대로 보관합니다. 압축은 Repository가 업로드 직전에 수행합니다.
         var datas: [Data] = []
         for item in items {
-            guard let raw = try? await item.loadTransferable(type: Data.self),
-                  let image = UIImage(data: raw),
-                  let jpeg = image.jpegData(compressionQuality: 0.8) else { continue }
-            datas.append(jpeg)
+            guard let raw = try? await item.loadTransferable(type: Data.self) else { continue }
+            datas.append(raw)
         }
         selectedImageDatas = datas
     }
@@ -344,10 +343,11 @@ struct FeedDataDemoView: View {
         )
         let imageDatas = selectedImageDatas
         let url = "/feeds"
+        let compressionLog = await makeCompressionLog(for: imageDatas)
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.submitFeed(draft, imageDatas: imageDatas)
-            log = "endpoint: .postFeed\n[POST] \(url)\n\n작성 성공\n내용: \(contentText.prefix(50))\n스포일러: \(isSpoiler) | 비공개: \(isPrivate)\n이미지: \(imageDatas.count)장"
+            log = "endpoint: .postFeed\n[POST] \(url)\n\n작성 성공\n내용: \(contentText.prefix(50))\n스포일러: \(isSpoiler) | 비공개: \(isPrivate)\n이미지: \(imageDatas.count)장\(compressionLog)"
             selectedItems = []
             selectedImageDatas = []
         } catch {
@@ -366,16 +366,49 @@ struct FeedDataDemoView: View {
         )
         let imageDatas = selectedImageDatas
         let url = "/feeds/\(feedID.value)"
+        let compressionLog = await makeCompressionLog(for: imageDatas)
         feedIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
             try await repository.editFeed(id: feedID, draft: draft, imageDatas: imageDatas)
-            log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 성공\n내용: \(contentText.prefix(50))\n이미지: \(imageDatas.count)장"
+            log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 성공\n내용: \(contentText.prefix(50))\n이미지: \(imageDatas.count)장\(compressionLog)"
             selectedItems = []
             selectedImageDatas = []
         } catch {
             log = "endpoint: .patchFeed(feedID: \(feedID.value))\n[PUT] \(url)\n\n수정 실패\n\(error)"
         }
+    }
+
+    // MARK: - Compression Log (Demo 전용 관찰)
+
+    /// 업로드 직전 압축 전/후 크기를 측정해 로그 문자열로 만듭니다.
+    ///
+    /// 실제 업로드는 Repository가 자체 압축하므로, 여기서는 동일한 기본 정책으로
+    /// 다시 압축해 크기만 관찰합니다. (Demo 검증 목적)
+    private func makeCompressionLog(for imageDatas: [Data]) async -> String {
+        guard !imageDatas.isEmpty else { return "" }
+
+        let compressor = ImageCompressor()
+        let compressed = await compressor.compress(imageDatas)
+
+        let originalTotal = imageDatas.reduce(0) { $0 + $1.count }
+        let compressedTotal = compressed.reduce(0) { $0 + $1.count }
+
+        var lines = ["", "── 압축 결과 ──"]
+        for (index, original) in imageDatas.enumerated() {
+            let after = index < compressed.count ? compressed[index].count : original.count
+            lines.append("이미지 \(index + 1): \(formatBytes(original.count)) → \(formatBytes(after))")
+        }
+        lines.append("합계: \(formatBytes(originalTotal)) → \(formatBytes(compressedTotal))")
+        return lines.joined(separator: "\n")
+    }
+
+    private func formatBytes(_ bytes: Int) -> String {
+        let kb = Double(bytes) / 1024.0
+        if kb < 1024 {
+            return String(format: "%.1fKB", kb)
+        }
+        return String(format: "%.2fMB", kb / 1024.0)
     }
 
     private func deleteFeed() async {
