@@ -15,6 +15,7 @@ protocol NovelReviewViewModelInput {
     func load()
     func selectStatus(_ status: ReadingStatus)
     func updatePeriod(start: Date?, end: Date?)
+    func updateRating(_ value: Double)
     func toggleAttractivePoint(_ point: AttractivePoint)
     func save()
     func dismissError()
@@ -23,6 +24,7 @@ protocol NovelReviewViewModelInput {
 protocol NovelReviewViewModelOutput: ObservableObject {
     var selectedStatus: ReadingStatus { get }
     var selectedPeriod: ReadingPeriod? { get }
+    var selectedRating: Rating? { get }
     var selectedAttractivePoints: [AttractivePoint] { get }
     var isLoading: Bool { get }
     var isSaving: Bool { get }
@@ -47,6 +49,7 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
 
     var selectedStatus: ReadingStatus { draft.status }
     var selectedPeriod: ReadingPeriod? { draft.period }
+    var selectedRating: Rating? { draft.rating }
     var selectedAttractivePoints: [AttractivePoint] { draft.attractivePoints }
 
     // MARK: - Dependency
@@ -96,6 +99,20 @@ extension DefaultNovelReviewViewModel {
         do {
             let period = try ReadingPeriod(start: start, end: end)
             draft.setPeriod(period)
+        } catch {
+            handle(error: error)
+        }
+    }
+
+    /// 평점 설정. 도메인 `Rating`은 0.5~5.0(0.5 단위)만 유효하고 0.0은 표현 불가 →
+    /// 슬라이더의 0.0(= 평점 없음)은 `nil`로 매핑한다.
+    func updateRating(_ value: Double) {
+        guard value >= 0.5 else {
+            draft.setRating(nil)
+            return
+        }
+        do {
+            draft.setRating(try Rating(value))
         } catch {
             handle(error: error)
         }
@@ -173,6 +190,8 @@ private extension DefaultNovelReviewViewModel {
             errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
         case ReadingPeriod.ValidationError.startAfterEnd:
             errorMessage = "시작일은 종료일보다 늦을 수 없어요"
+        case Rating.ValidationError.outOfRange, Rating.ValidationError.invalidStep:
+            errorMessage = "평점은 0.5~5.0 사이에서 0.5 단위로 줄 수 있어요"
         default:
             errorMessage = "잠시 후 다시 시도해 주세요"
         }

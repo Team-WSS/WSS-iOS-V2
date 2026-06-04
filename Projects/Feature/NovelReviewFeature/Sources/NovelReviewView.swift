@@ -30,6 +30,7 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
             } else {
                 statusSection
                 periodSection
+                ratingSection
                 attractivePointSection
                 completeButton
             }
@@ -108,6 +109,32 @@ private extension NovelReviewView {
             let end = period.end.map(periodDateFormatter.string(from:)) ?? "-"
             return "\(start) ~ \(end)"
         }
+    }
+
+    /// 평점 — 0.0~5.0, 0.5 단위 슬라이더. 0.0은 "평점 없음"(nil)으로 처리(도메인 Rating은 0.5부터).
+    var ratingSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("평점")
+                Spacer()
+                Text(ratingDisplayText)
+                    .foregroundStyle(viewModel.selectedRating == nil ? .secondary : .primary)
+            }
+
+            Slider(
+                value: Binding(
+                    get: { viewModel.selectedRating?.value ?? 0 },
+                    set: { viewModel.updateRating($0) }
+                ),
+                in: 0...5,
+                step: 0.5
+            )
+        }
+    }
+
+    var ratingDisplayText: String {
+        guard let rating = viewModel.selectedRating else { return "평점 없음" }
+        return String(format: "%.1f", rating.value)
     }
 
     /// 매력 포인트 — 6개 중 최대 3개 토글(초과는 ViewModel이 막고 알림).
