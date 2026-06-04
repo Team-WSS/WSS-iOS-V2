@@ -58,7 +58,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | Domain | [Projects/Domain/CLAUDE.md](Projects/Domain/CLAUDE.md) |
 | Data | [Projects/Data/CLAUDE.md](Projects/Data/CLAUDE.md) |
 | Core | [Projects/Core/CLAUDE.md](Projects/Core/CLAUDE.md) |
-| Feature | [docs/layers/Feature.md](docs/layers/Feature.md) (폴더 미생성 → 생성 시 `Projects/Feature/CLAUDE.md`로 이동) |
+| Feature | [Projects/Feature/CLAUDE.md](Projects/Feature/CLAUDE.md) |
 
 ---
 
