@@ -77,7 +77,7 @@ struct FeedDataDemoView: View {
     private var feedCRUDSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("피드 작성 (장르: romance 고정)").font(.headline).padding(.horizontal)
+                Text("피드 작성").font(.headline).padding(.horizontal)
                 TextField("내용", text: $contentText)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
@@ -336,7 +336,6 @@ struct FeedDataDemoView: View {
     private func submitFeed() async {
         let draft = FeedDraft(
             content: contentText,
-            genre: [.romance],
             isSpoiler: isSpoiler,
             isPrivate: isPrivate,
             attachedImages: []
@@ -359,7 +358,6 @@ struct FeedDataDemoView: View {
         guard let feedID else { log = "피드 ID를 입력해주세요."; return }
         let draft = FeedDraft(
             content: contentText,
-            genre: [.romance],
             isSpoiler: isSpoiler,
             isPrivate: isPrivate,
             attachedImages: []

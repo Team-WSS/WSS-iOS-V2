@@ -12,31 +12,25 @@ import BaseDomain
 public struct FeedDraft {
     
     public private(set) var content: String
-    public private(set) var genre: [NovelGenre]
     public private(set) var isSpoiler: Bool
     public private(set) var isPrivate: Bool
     public private(set) var connectedNovel: ConnectedNovel?
-    public private(set) var attachedImages: [ImageWrapper]
+    public private(set) var attachedImages: [URL]
     
     // MARK: - init
     
     public init(
         content: String,
-        genre: [NovelGenre],
         isSpoiler: Bool,
         isPrivate: Bool,
         connectedNovel: ConnectedNovel? = nil,
-        attachedImages: [ImageWrapper]
+        attachedImages: [URL]
     ) {
-        let uniqueGenre = Array(Set(genre))
         let limitedImages = Array(attachedImages.prefix(Self.maxImageCount))
         
 #if DEBUG
         if content.count > Self.maxContentCount {
             assertionFailure("Content overflow: \(content.count) (max: \(Self.maxContentCount))")
-        }
-        if uniqueGenre.count != genre.count {
-            assertionFailure("Genre contains duplicates")
         }
         if attachedImages.count > Self.maxImageCount {
             assertionFailure("Image overflow: \(attachedImages.count) (max: \(Self.maxImageCount))")
@@ -44,7 +38,6 @@ public struct FeedDraft {
 #endif
         
         self.content = content
-        self.genre = uniqueGenre
         self.isSpoiler = isSpoiler
         self.isPrivate = isPrivate
         self.connectedNovel = connectedNovel
@@ -61,7 +54,6 @@ public struct FeedDraft {
         case imageOverLimit(max: Int)
         case connectedNovelOverLimit
         case emptyContent
-        case emptyGenre
     }
     
     public mutating func updateContent(_ newValue: String) throws {
@@ -74,16 +66,6 @@ public struct FeedDraft {
     
     public func remainsContentCount() -> Int {
         Self.maxContentCount - content.count
-    }
-    
-    public mutating func addGenre(_ newGenre: NovelGenre) {
-        guard !genre.contains(newGenre) else { return }
-        
-        genre.append(newGenre)
-    }
-    
-    public mutating func removeGenre(_ targetGenre: NovelGenre) {
-        genre.removeAll { $0 == targetGenre }
     }
     
     public mutating func togglePrivate() {
@@ -106,7 +88,7 @@ public struct FeedDraft {
         connectedNovel = nil
     }
     
-    public mutating func addImage(_ image: ImageWrapper) throws {
+    public mutating func addImage(_ image: URL) throws {
         guard attachedImages.count < Self.maxImageCount else {
             throw ValidationError.imageOverLimit(max: Self.maxImageCount)
         }
@@ -114,7 +96,7 @@ public struct FeedDraft {
         attachedImages.append(image)
     }
     
-    public mutating func removeImage(_ image: ImageWrapper) {
+    public mutating func removeImage(_ image: URL) {
         attachedImages.removeAll { $0 == image }
     }
 }

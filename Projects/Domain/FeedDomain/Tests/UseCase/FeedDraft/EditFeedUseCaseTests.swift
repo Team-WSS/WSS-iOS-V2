@@ -32,7 +32,6 @@ struct EditFeedUseCaseTests {
                 element.id == feedID
                 && element.draft.attachedImages == draft.attachedImages
                 && element.draft.content == draft.content
-                && element.draft.genre == draft.genre
             }
         )
         #expect(mock.editedImageDatas == [imageDatas])
@@ -59,7 +58,6 @@ extension EditFeedUseCaseTests {
     ) -> FeedDraft {
         FeedDraft(
             content: "안녕",
-            genre: [.BL, .drama],
             isSpoiler: true,
             isPrivate: false,
             connectedNovel: nil,
