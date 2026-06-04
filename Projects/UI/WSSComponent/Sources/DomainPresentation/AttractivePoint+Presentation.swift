@@ -10,7 +10,7 @@ import BaseDomain
 import SwiftUI
 import DesignSystem
 
-extension AttractivePoint {
+public extension AttractivePoint {
     var displayName: String {
         switch self {
         case .worldview:    "세계관"

@@ -10,7 +10,7 @@ import BaseDomain
 import SwiftUI
 import DesignSystem
 
-extension ReadingStatus {
+public extension ReadingStatus {
     var statusName: String {
         switch self {
         case .watching: "보는 중"

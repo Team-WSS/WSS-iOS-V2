@@ -10,13 +10,20 @@
 import SwiftUI
 import DesignSystem
 
-struct WSSFilterButton: View {
+public struct WSSFilterButton: View {
     let text: String
     var isImageHidden: Bool = false
     var isSelected: Bool = false
     var action: () -> Void
     
-    var body: some View {
+    public init(text: String, isImageHidden: Bool, isSelected: Bool, action: @escaping () -> Void) {
+        self.text = text
+        self.isImageHidden = isImageHidden
+        self.isSelected = isSelected
+        self.action = action
+    }
+    
+    public var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Text(text)

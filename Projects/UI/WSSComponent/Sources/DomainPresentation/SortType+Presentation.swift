@@ -10,7 +10,7 @@ import BaseDomain
 import SwiftUI
 import DesignSystem
 
-extension SortType {
+public extension SortType {
     var displayName: String {
         switch self {
         case .recent:
