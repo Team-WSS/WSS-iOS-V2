@@ -15,5 +15,9 @@ let project = Project.createUIModule(
     internalDependencies: [
         .module(.ui(.designSystem)),
         .module(.domain(.base))
+        .lottie
+    ],
+    demoDependencies: [
+        .module(.ui(.designSystem))
     ]
 )

@@ -14,4 +14,8 @@ public extension TargetDependency {
             path: .relativeToModule(module)
         )
     }
+
+    static var lottie: TargetDependency {
+        .xcframework(path: .relativeToRoot("Tuist/.build/artifacts/lottie-spm/Lottie/Lottie.xcframework"))
+    }
 }
