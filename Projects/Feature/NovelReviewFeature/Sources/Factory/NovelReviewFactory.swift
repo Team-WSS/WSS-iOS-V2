@@ -9,15 +9,24 @@
 import SwiftUI
 
 import BaseDomain
+import NovelReviewDomain
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
-/// App(DI)·Demo는 이 Factory만 사용한다.
+/// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
 public enum NovelReviewFactory {
 
     @MainActor
-    public static func makeView(novelID: NovelID) -> some View {
-        let viewModel = DefaultNovelReviewViewModel(novelID: novelID)
+    public static func makeView(
+        novelID: NovelID,
+        loadUseCase: LoadNovelReviewDraftUseCase,
+        saveUseCase: SaveNovelReviewUseCase
+    ) -> some View {
+        let viewModel = DefaultNovelReviewViewModel(
+            novelID: novelID,
+            loadUseCase: loadUseCase,
+            saveUseCase: saveUseCase
+        )
         return NovelReviewView(viewModel: viewModel)
     }
 }

@@ -24,11 +24,19 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            statusSection
-            attractivePointSection
+            if viewModel.isLoading {
+                ProgressView()
+            } else {
+                statusSection
+                attractivePointSection
+                completeButton
+            }
         }
         .padding()
         .navigationTitle("작품 평가")
+        .onAppear {
+            viewModel.load()
+        }
         .alert(
             "오류",
             isPresented: errorBinding,
@@ -85,6 +93,20 @@ private extension NovelReviewView {
         }
     }
 
+    /// 완료 — 현재 draft를 저장한다. 저장 중에는 스피너 표시 + 중복 탭 방지.
+    var completeButton: some View {
+        Button {
+            viewModel.save()
+        } label: {
+            if viewModel.isSaving {
+                ProgressView()
+            } else {
+                Text("평가 완료")
+            }
+        }
+        .disabled(viewModel.isSaving)
+    }
+
     var errorBinding: Binding<Bool> {
         Binding(
             get: { viewModel.errorMessage != nil },
@@ -97,6 +119,20 @@ private extension NovelReviewView {
 
 #Preview {
     NavigationStack {
-        NovelReviewView(viewModel: DefaultNovelReviewViewModel(novelID: NovelID(1)))
+        NovelReviewView(
+            viewModel: DefaultNovelReviewViewModel(
+                novelID: NovelID(1),
+                loadUseCase: PreviewLoadNovelReviewDraftUseCase(),
+                saveUseCase: PreviewSaveNovelReviewUseCase()
+            )
+        )
     }
+}
+
+private struct PreviewLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
+    func execute(novelID: NovelID) async throws(RepositoryError) -> NovelReviewDraft? { nil }
+}
+
+private struct PreviewSaveNovelReviewUseCase: SaveNovelReviewUseCase {
+    func execute(draft: NovelReviewDraft) async throws(RepositoryError) {}
 }

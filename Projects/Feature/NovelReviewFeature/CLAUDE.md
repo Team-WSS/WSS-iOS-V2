@@ -4,8 +4,9 @@
 작품 평가(리뷰 초안) 화면. **프로젝트의 첫 Feature 모듈** — 이후 Feature는 여기 패턴을 따른다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`
-- **진입점: `NovelReviewFactory.makeView(novelID:)`** — 유일한 public API. opaque `some View`로 반환해
-  View/ViewModel을 `internal`로 감춘다. App(DI)·`Demo/`는 이 Factory만 쓴다.
+- **진입점: `NovelReviewFactory.makeView(novelID:loadUseCase:saveUseCase:)`** — 유일한 public API.
+  opaque `some View`로 반환해 View/ViewModel을 `internal`로 감춘다. **UseCase(프로토콜)는 외부가 주입**한다
+  (Feature는 Repository/Data 구현을 모름 → App이 조립, `Demo/`는 인메모리 Mock 주입).
 
 ## 핵심 시나리오 (MVVM 패턴)
 
@@ -20,10 +21,11 @@
 
 - 화면 라벨은 **WSSComponent의 Presentation 확장**(`ReadingStatus.statusName`, `AttractivePoint.displayName`)을 쓴다.
   ViewModel은 표현 의존이 없어 `WSSComponent`를 import하지 않는다(View에서만 사용).
-- 현재 범위는 **읽기 상태 + 매력 포인트 토글**만. 평점/기간/키워드/저장·삭제(`Save/Load/DeleteNovelReviewUseCase`)는
-  도메인에 준비돼 있으나 아직 ViewModel에 미연결.
+- 현재 범위: **읽기 상태 + 매력 포인트 토글 + 진입 시 초안 로드(`load`) + 완료 시 저장(`save`)**.
+  로드는 `onAppear`에서 호출하며 초안이 없으면(nil) 기본 draft 유지. 저장 성공 시 `shouldDismiss = true`로 닫힘을 신호한다.
+  아직 미연결: 평점/기간/키워드, 삭제(`DeleteNovelReviewUseCase`).
 - 비동기 모델: 허브 문서는 Feature를 Combine으로 안내하나, 여기선 상태가 단순해 `@Published`/`ObservableObject`만 사용.
-  저장/로드(async UseCase) 연결 시 `@MainActor` + `Task` 경계를 명확히 할 것.
+  async UseCase는 `@MainActor` ViewModel 안에서 `Task { await ... }`로 호출하고, `isLoading`/`isSaving`은 `defer`로 해제한다.
 - **Demo/Preview 빌드**: `.demo` 타깃이 있어 `NovelReviewFeature` 스킴이 Demo 앱까지 함께 빌드한다.
   → `generic/platform=iOS`(실기기) 빌드는 Demo 앱 **코드 서명**을 요구하니, 검증은
   **시뮬레이터 대상으로 워크스페이스 스킴**을 빌드할 것. 단일 `-target ...Demo` 빌드는 교차 모듈 의존을 못 풀어 실패한다.

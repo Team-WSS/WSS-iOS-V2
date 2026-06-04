@@ -12,14 +12,19 @@ import BaseDomain
 import NovelReviewDomain
 
 protocol NovelReviewViewModelInput {
+    func load()
     func selectStatus(_ status: ReadingStatus)
     func toggleAttractivePoint(_ point: AttractivePoint)
+    func save()
     func dismissError()
 }
 
 protocol NovelReviewViewModelOutput: ObservableObject {
     var selectedStatus: ReadingStatus { get }
     var selectedAttractivePoints: [AttractivePoint] { get }
+    var isLoading: Bool { get }
+    var isSaving: Bool { get }
+    var shouldDismiss: Bool { get }
     var errorMessage: String? { get }
 }
 
@@ -31,6 +36,9 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
     // MARK: - State
 
     @Published private var draft: NovelReviewDraft
+    @Published private(set) var isLoading = false
+    @Published private(set) var isSaving = false
+    @Published private(set) var shouldDismiss = false
     @Published private(set) var errorMessage: String?
 
     // MARK: - Output
@@ -38,16 +46,35 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
     var selectedStatus: ReadingStatus { draft.status }
     var selectedAttractivePoints: [AttractivePoint] { draft.attractivePoints }
 
+    // MARK: - Dependency
+
+    private let novelID: NovelID
+    private let loadUseCase: LoadNovelReviewDraftUseCase
+    private let saveUseCase: SaveNovelReviewUseCase
+
     // MARK: - Init
 
-    init(novelID: NovelID) {
+    init(
+        novelID: NovelID,
+        loadUseCase: LoadNovelReviewDraftUseCase,
+        saveUseCase: SaveNovelReviewUseCase
+    ) {
+        self.novelID = novelID
         self.draft = NovelReviewDraft(novelID: novelID, status: .watching)
+        self.loadUseCase = loadUseCase
+        self.saveUseCase = saveUseCase
     }
 }
 
 // MARK: - Input
 
 extension DefaultNovelReviewViewModel {
+
+    /// 화면 진입 시 기존 초안을 불러온다. 초안이 없으면(nil) 기본 draft를 유지한다.
+    func load() {
+        guard !isLoading else { return }
+        Task { await loadDraft() }
+    }
 
     /// 읽기 상태 선택. ReadingStatus는 단일 값이라 새 값으로 바꾸면 기존 선택은 자동 해제된다.
     func selectStatus(_ status: ReadingStatus) {
@@ -68,8 +95,44 @@ extension DefaultNovelReviewViewModel {
         }
     }
 
+    /// 완료 버튼. 현재 draft를 저장하고, 성공하면 화면을 닫도록 신호한다.
+    func save() {
+        guard !isSaving else { return }
+        Task { await saveDraft() }
+    }
+
     func dismissError() {
         errorMessage = nil
+    }
+}
+
+// MARK: - Async Work
+
+private extension DefaultNovelReviewViewModel {
+
+    func loadDraft() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            if let loaded = try await loadUseCase.execute(novelID: novelID) {
+                draft = loaded
+            }
+        } catch {
+            handle(error: error)
+        }
+    }
+
+    func saveDraft() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            try await saveUseCase.execute(draft: draft)
+            shouldDismiss = true
+        } catch {
+            handle(error: error)
+        }
     }
 }
 
@@ -78,6 +141,14 @@ extension DefaultNovelReviewViewModel {
 private extension DefaultNovelReviewViewModel {
     func handle(error: Error) {
         switch error {
+        case RepositoryError.networkUnavailable:
+            errorMessage = "네트워크 연결을 확인해 주세요"
+        case RepositoryError.authenticationRequired:
+            errorMessage = "로그인이 필요해요"
+        case RepositoryError.serverUnavailable:
+            errorMessage = "서버에 잠시 문제가 있어요"
+        case RepositoryError.notFound:
+            errorMessage = "평가 정보를 찾을 수 없어요"
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
             errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
         default:
