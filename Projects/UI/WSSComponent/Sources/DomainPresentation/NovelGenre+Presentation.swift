@@ -10,7 +10,7 @@ import BaseDomain
 import SwiftUI
 import DesignSystem
 
-extension NovelGenre {
+public extension NovelGenre {
     var displayName: String {
         switch self {
         case .fantasy:          "판타지"
@@ -50,6 +50,34 @@ extension NovelGenre {
         case .romance:          WSSImage.icGenremarkR.swiftUIImage
         case .romanceFantasy:   WSSImage.icGenremarkRF.swiftUIImage
         case .BL:               WSSImage.icGenremarkBL.swiftUIImage
+        }
+    }
+    
+    var linkColor: Color {
+        switch self {
+        case .romance:          WSSColor.romanceLink.swiftUIColor
+        case .romanceFantasy:   WSSColor.rofanLink.swiftUIColor
+        case .fantasy:          WSSColor.fantasyLink.swiftUIColor
+        case .modernFantasy:    WSSColor.modernLink.swiftUIColor
+        case .wuxia:            WSSColor.wuxiaLink.swiftUIColor
+        case .mystery:          WSSColor.mysteryLink.swiftUIColor
+        case .drama:            WSSColor.dramaLink.swiftUIColor
+        case .lightNovel:       WSSColor.lightLink.swiftUIColor
+        case .BL:               WSSColor.blLink.swiftUIColor
+        }
+    }
+    
+    var blockColor: Color {
+        switch self {
+        case .romance:          WSSColor.romanceBlock.swiftUIColor
+        case .romanceFantasy:   WSSColor.rofanBlock.swiftUIColor
+        case .fantasy:          WSSColor.fantasyBlock.swiftUIColor
+        case .modernFantasy:    WSSColor.modernBlock.swiftUIColor
+        case .wuxia:            WSSColor.wuxiaBlock.swiftUIColor
+        case .mystery:          WSSColor.mysteryBlock.swiftUIColor
+        case .drama:            WSSColor.dramaBlock.swiftUIColor
+        case .lightNovel:       WSSColor.lightBlock.swiftUIColor
+        case .BL:               WSSColor.blBlock.swiftUIColor
         }
     }
 }
