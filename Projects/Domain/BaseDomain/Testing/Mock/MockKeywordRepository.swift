@@ -11,9 +11,8 @@ import Foundation
 import BaseDomain
 
 public final class MockKeywordRepository: KeywordRepository {
-
     public var fetchKeywordsResult: Result<[KeywordGroup], RepositoryError> = .success([])
-    public var searchKeywordsResult: Result<[Keyword], RepositoryError> = .success([])
+    public var searchKeywordsResult: Result<[KeywordGroup], RepositoryError> = .success([])
 
     public private(set) var fetchKeywordsCallCount = 0
     public private(set) var searchedQueries: [String] = []
@@ -28,7 +27,7 @@ public final class MockKeywordRepository: KeywordRepository {
         }
     }
 
-    public func searchKeywords(_ query: String) async throws(RepositoryError) -> [Keyword] {
+    public func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] {
         searchedQueries.append(query)
         switch searchKeywordsResult {
         case .success(let value): return value
