@@ -28,6 +28,7 @@ public extension Color {
     static let wssGray20 = WSSColor.wssGray20.swiftUIColor
     static let wssGray50 = WSSColor.wssGray50.swiftUIColor
     static let wssGray70 = WSSColor.wssGray70.swiftUIColor
+    static let wssGray80 = WSSColor.wssGray80.swiftUIColor
     static let wssGray100 = WSSColor.wssGray100.swiftUIColor
     static let wssGray200 = WSSColor.wssGray200.swiftUIColor
     static let wssGray300 = WSSColor.wssGray300.swiftUIColor

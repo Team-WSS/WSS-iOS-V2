@@ -4,9 +4,11 @@
 작품 평가(리뷰 초안) 화면. **프로젝트의 첫 Feature 모듈** — 이후 Feature는 여기 패턴을 따른다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`
-- **진입점: `NovelReviewFactory.makeView(novelID:loadUseCase:saveUseCase:)`** — 유일한 public API.
+- **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:)`** — 유일한 public API.
   opaque `some View`로 반환해 View/ViewModel을 `internal`로 감춘다. **UseCase(프로토콜)는 외부가 주입**한다
   (Feature는 Repository/Data 구현을 모름 → App이 조립, `Demo/`는 인메모리 Mock 주입).
+  - **`title`(네비게이션 타이틀)은 진입 이전 화면이 주입**한다. 이 화면은 네비게이션으로만 진입하므로
+    제목(예: 작품명)은 호출자가 아는 값을 넘긴다 — Feature가 자체 보유하지 않는다.
 
 ## 핵심 시나리오 (MVVM 패턴)
 
