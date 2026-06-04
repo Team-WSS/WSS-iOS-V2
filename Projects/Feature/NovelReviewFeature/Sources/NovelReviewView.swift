@@ -90,24 +90,25 @@ private extension NovelReviewView {
             HStack {
                 Text(viewModel.selectedStatus.dateText)
                 Spacer()
-                Text(periodDisplayText)
-                    .foregroundStyle(viewModel.selectedPeriod == nil ? .secondary : .primary)
+                periodValueLabel
             }
         }
     }
 
-    /// 선택된 기간을 상태에 맞는 문구로 표시. watched면 "시작 ~ 종료", 단일이면 해당 날짜.
-    var periodDisplayText: String {
-        guard let period = viewModel.selectedPeriod else { return "선택" }
-        switch viewModel.selectedStatus {
-        case .watching:
-            return period.start.map(periodDateFormatter.string(from:)) ?? "선택"
-        case .quit:
-            return period.end.map(periodDateFormatter.string(from:)) ?? "선택"
-        case .watched:
-            let start = period.start.map(periodDateFormatter.string(from:)) ?? "-"
-            let end = period.end.map(periodDateFormatter.string(from:)) ?? "-"
-            return "\(start) ~ \(end)"
+    /// 선택된 기간 표시. 도메인 `normalized(for:)`가 상태에 맞는 날짜만 채워두므로
+    /// status로 분기하지 않고 start/end 존재 여부로만 표기한다(둘 다=기간, 하나=단일 날짜).
+    /// Date는 SwiftUI 네이티브 포맷으로 직접 렌더(수동 DateFormatter 불필요).
+    @ViewBuilder
+    var periodValueLabel: some View {
+        switch (viewModel.selectedPeriod?.start, viewModel.selectedPeriod?.end) {
+        case let (start?, end?):
+            Text("\(start, format: periodDateStyle) ~ \(end, format: periodDateStyle)")
+        case let (start?, nil):
+            Text(start, format: periodDateStyle)
+        case let (nil, end?):
+            Text(end, format: periodDateStyle)
+        case (nil, nil):
+            Text("선택").foregroundStyle(.secondary)
         }
     }
 
@@ -184,12 +185,7 @@ private extension NovelReviewView {
 
 // MARK: - ReadingPeriodSheet
 
-private let periodDateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yyyy.MM.dd"
-    return formatter
-}()
+private let periodDateStyle = Date.FormatStyle.dateTime.year().month(.twoDigits).day(.twoDigits)
 
 /// 독서 기간 선택 sheet. 상태에 따라 입력 형태가 다르다.
 /// - watching: 시작 날짜 1개

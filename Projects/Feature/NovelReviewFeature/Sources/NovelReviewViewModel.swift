@@ -45,6 +45,9 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
     @Published private(set) var shouldDismiss = false
     @Published private(set) var errorMessage: String?
 
+    /// 최초 1회만 로드. 화면 재진입(onAppear 재호출) 시 편집 중인 draft를 서버 값으로 덮어쓰지 않기 위함.
+    private var hasLoaded = false
+
     // MARK: - Output
 
     var selectedStatus: ReadingStatus { draft.status }
@@ -77,8 +80,9 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
 extension DefaultNovelReviewViewModel {
 
     /// 화면 진입 시 기존 초안을 불러온다. 초안이 없으면(nil) 기본 draft를 유지한다.
+    /// 최초 1회만 수행한다(재진입 시 편집 중 덮어쓰기 방지). 실패하면 다음 진입에 재시도 가능.
     func load() {
-        guard !isLoading else { return }
+        guard !hasLoaded, !isLoading else { return }
         Task { await loadDraft() }
     }
 
@@ -155,6 +159,7 @@ private extension DefaultNovelReviewViewModel {
             if let loaded = try await loadUseCase.execute(novelID: novelID) {
                 draft = loaded
             }
+            hasLoaded = true
         } catch {
             handle(error: error)
         }
