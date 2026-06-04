@@ -52,8 +52,8 @@ final class MockFeedService: FeedService {
 
     // MARK: - Results
 
-    var postFeedResult: Result<SubmitFeedResponse, Error>!
-    var patchFeedResult: Result<SubmitFeedResponse, Error>!
+    var postFeedResult: Result<SubmitFeedResponse, Error> = .success(SubmitFeedResponse(imagesCount: 0, imageUrls: []))
+    var patchFeedResult: Result<SubmitFeedResponse, Error> = .success(SubmitFeedResponse(imagesCount: 0, imageUrls: []))
     var deleteFeedResult: Result<Void, Error> = .success(())
     var getFeedDetailResult: Result<FeedDetailResponse, Error>!
     var getSosoFeedsResult: Result<FeedListResponse, Error>!

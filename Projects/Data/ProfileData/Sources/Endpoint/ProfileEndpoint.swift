@@ -11,9 +11,8 @@ import Networking
 import BaseData
 
 enum ProfileEndpoint: Endpoint {
-
     case getUserInfo
-    case validateNickname(String)
+    case validateNickname(ValidateNicknameQuery)
     case postRegisterProfile(ProfileRegistrationRequest)
     case getAccountInfo
     case putAccountInfo(AccountInfoRequest)
@@ -65,35 +64,30 @@ enum ProfileEndpoint: Endpoint {
         case .putAccountInfo:                       return "/users/info"
         }
     }
-
-    var queryItems: [URLQueryItem]? {
+    
+    var query: QueryParameters {
         switch self {
-        case .validateNickname(let nickname):
-            return [URLQueryItem(name: "nickname", value: nickname)]
-        default:
-            return nil
+        case .validateNickname(let query): return .convertible(query)
+        default: return .none
         }
     }
-
-    var headers: [String: String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " +  NetworkingConfig.testApiKey]
-    }
-
-    var body: Data? {
+    
+    var body: RequestBody {
         switch self {
         case .postRegisterProfile(let request):
-            return request.asRequestBody()
+            return .json(request)
         case .putAccountInfo(let request):
-            return request.asRequestBody()
+            return .json(request)
         case .patchProfileVisibility(let request):
-            return request.asRequestBody()
+            return .json(request)
         case .patchProfile(let request):
-            return request.asRequestBody()
+            return .json(request)
         default:
-            return nil
+            return .none
         }
     }
-
-    var requireTokenRefresh: Bool { true }
+    
+    var additionalHeaders: [String : String]? { nil }
+    
+    var authorization: AuthorizationPolicy { .requireToken }
 }

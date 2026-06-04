@@ -8,9 +8,8 @@
 
 
 import Foundation
-import Networking
 
-struct PutNovelReviewRequest: RequestBodyConvertible {
+struct PutNovelReviewRequest: Encodable {
     let userNovelRating: Float
     let status: String
     let startDate: String?

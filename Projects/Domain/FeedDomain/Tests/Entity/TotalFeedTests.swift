@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -68,7 +69,7 @@ extension TotalFeedTests {
             content: "테스트 내용",
             author: Author(userId: authorId,
                            nickname: "작성자",
-                           profileImage: ImageWrapper(identifier: "")),
+                           profileImage: URL(string: "https://example.com/profile.jpg")),
             likeCount: likeCount,
             isLiked: isLiked,
             commentCount: 0,

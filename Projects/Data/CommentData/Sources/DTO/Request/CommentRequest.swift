@@ -7,8 +7,7 @@
 //
 
 import Foundation
-import Networking
 
-public struct CommentRequest: RequestBodyConvertible {
+public struct CommentRequest: Encodable {
     let commentContent: String
 }

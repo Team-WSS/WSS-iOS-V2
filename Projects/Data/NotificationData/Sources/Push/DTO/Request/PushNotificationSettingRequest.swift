@@ -8,8 +8,7 @@
 
 
 import Foundation
-import Networking
 
-struct PushNotificationSettingRequest: RequestBodyConvertible, Equatable {
+struct PushNotificationSettingRequest: Encodable, Equatable {
     let isPushEnabled: Bool
 }

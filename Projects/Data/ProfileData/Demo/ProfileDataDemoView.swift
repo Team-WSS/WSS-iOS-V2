@@ -41,7 +41,7 @@ struct ProfileDataDemoView: View {
     private var myUserID: Int { localStorage.get(.userID) ?? 0 }
 
     init() {
-        let client = NetworkingClient()
+        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let storage = UserDefaultsStorage()
         let logger = DataLogger(moduleName: "ProfileData", underlying: OSLogger.profile)
         storage.set(.userID, 10033)

@@ -6,9 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Networking
-
-struct AppleLoginRequest: RequestBodyConvertible {
+struct AppleLoginRequest: Encodable {
     let authorizationCode: String
     let idToken: String
 }

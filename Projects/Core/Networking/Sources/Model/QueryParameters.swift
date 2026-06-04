@@ -1,12 +1,29 @@
 //
-//  QueryItemConvertible.swift
+//  QueryParameters.swift
 //  Networking
 //
-//  Created by YunhakLee on 11/24/25.
-//  Copyright © 2025 kr.websoso.app. All rights reserved.
+//  Created by YunhakLee on 4/29/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
 import Foundation
+
+public enum QueryParameters {
+    case none
+    case convertible(any QueryItemConvertible)
+    case custom([URLQueryItem])
+
+    public var queryItems: [URLQueryItem]? {
+        switch self {
+        case .none:
+            return nil
+        case .convertible(let value):
+            return value.asQueryItems()
+        case .custom(let items):
+            return items
+        }
+    }
+}
 
 public protocol QueryItemConvertible: Encodable {
     func asQueryItems() -> [URLQueryItem]
@@ -27,7 +44,7 @@ public extension QueryItemConvertible {
             }
 
             // 2) Bool은 항상 "true"/"false"로
-            if let bool = value as? Bool {
+            if let bool = asQueryBool(value) {
                 return URLQueryItem(name: key, value: bool ? "true" : "false")
             }
 
@@ -37,7 +54,7 @@ public extension QueryItemConvertible {
                     // 배열 안의 null도 제거
                     if element is NSNull { return nil }
 
-                    if let boolElement = element as? Bool {
+                    if let boolElement = asQueryBool(element) {
                         return boolElement ? "true" : "false"
                     }
 
@@ -50,4 +67,13 @@ public extension QueryItemConvertible {
             return URLQueryItem(name: key, value: String(describing: value))
         }
     }
+}
+
+private func asQueryBool(_ value: Any) -> Bool? {
+    guard let number = value as? NSNumber,
+          CFGetTypeID(number) == CFBooleanGetTypeID() else {
+        return nil
+    }
+
+    return number.boolValue
 }

@@ -9,7 +9,6 @@
 
 import AuthDomain
 import BaseData
-import Keychain
 import Networking
 
 public enum AuthDataFactory {

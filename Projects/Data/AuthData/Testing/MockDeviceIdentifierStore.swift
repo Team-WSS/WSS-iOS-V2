@@ -1,7 +1,6 @@
-import Keychain
+import BaseData
 
 final class MockDeviceIdentifierStore: DeviceIdentifierStore {
-
     private var storedDeviceIdentifier: String?
 
     init(deviceIdentifier: String? = nil) {

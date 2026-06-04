@@ -9,8 +9,6 @@ import Foundation
 import Networking
 
 enum MockEndpoint: Endpoint {
-    var requireTokenRefresh: Bool { false }
-    
     case getPost(id: Int)
     case createPost(title: String, body: String)
     
@@ -29,20 +27,25 @@ enum MockEndpoint: Endpoint {
         case .createPost: return .post
         }
     }
+
+    var query: QueryParameters { .none }
+
+    var additionalHeaders: [String: String]? { nil }
     
-    var headers: [String : String]? {
-        ["Content-Type": "application/json"]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
         case .createPost(let title, let body):
-            let json = ["title": title, "body": body, "userId": 1] as [String: Any]
-            return try? JSONSerialization.data(withJSONObject: json)
+            return .json(CreatePostRequest(title: title, body: body, userId: 1))
         default:
-            return nil
+            return .none
         }
     }
-    
-    var queryItems: [URLQueryItem]? { nil }
+
+    var authorization: AuthorizationPolicy { .withoutToken }
+}
+
+private struct CreatePostRequest: Encodable {
+    let title: String
+    let body: String
+    let userId: Int
 }

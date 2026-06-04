@@ -9,5 +9,5 @@
 import Foundation
 
 protocol KeywordService {
-    func searchKeyword(_ request: SearchKeywordRequest) async throws -> KeywordGroupsResponse
+    func searchKeyword(_ request: SearchKeywordQuery) async throws -> KeywordGroupsResponse
 }

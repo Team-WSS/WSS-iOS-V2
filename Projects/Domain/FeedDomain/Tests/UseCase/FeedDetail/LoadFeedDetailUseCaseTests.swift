@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -55,7 +56,7 @@ extension LoadFeedDetailUseCaseTests {
             author: Author(
                 userId: UserID(1),
                 nickname: "구리스",
-                profileImage: ImageWrapper(identifier: "1")
+                profileImage: URL(string: "https://example.com/profile.jpg")
             ),
             createdDate: "2026-01-01",
             isModified: false,

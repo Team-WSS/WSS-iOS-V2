@@ -1,15 +1,13 @@
-import Keychain
+@testable import Networking
 
-final class MockTokenStore: TokenStore {
+final class MockTokenStore: SessionTokenStore {
     private let storedAccessToken: String?
+    private(set) var clearTokensCallCount = 0
 
     init(accessToken: String?) {
         self.storedAccessToken = accessToken
     }
 
-    func saveAccessToken(_ token: String) throws { }
-    func saveRefreshToken(_ token: String) throws { }
     func accessToken() throws -> String? { storedAccessToken }
-    func refreshToken() throws -> String? { nil }
-    func clearTokens() throws { }
+    func clearTokens() throws { clearTokensCallCount += 1 }
 }

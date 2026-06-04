@@ -10,7 +10,7 @@ import Foundation
 import Networking
 
 enum KeywordEndpoint: Endpoint {
-    case searchKeywords(SearchKeywordRequest)
+    case searchKeywords(SearchKeywordQuery)
 
     var method: HTTPMethod {
         switch self {
@@ -27,19 +27,16 @@ enum KeywordEndpoint: Endpoint {
         case .searchKeywords: "/keywords"
         }
     }
-
-    var queryItems: [URLQueryItem]? {
+    
+    var query: QueryParameters {
         switch self {
-        case .searchKeywords(let request): return request.asQueryItems()
+        case .searchKeywords(let query): return .convertible(query)
         }
     }
 
-    var headers: [String: String]? {
-        ["Content-Type": "application/json",
-         "Authorization": "Bearer " + NetworkingConfig.testApiKey]
-    }
+    var additionalHeaders: [String: String]? { nil }
 
-    var body: Data? { nil }
+    var body: RequestBody { .none }
 
-    var requireTokenRefresh: Bool { false }
+    var authorization: AuthorizationPolicy { .requireToken }
 }

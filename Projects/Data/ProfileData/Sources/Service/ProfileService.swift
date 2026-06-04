@@ -10,7 +10,7 @@ import Foundation
 
 protocol ProfileService {
     func getUserBasicInfo() async throws -> UserInfoResponse
-    func validateNickname(_ nickname: String) async throws -> NicknameValidationResponse
+    func validateNickname(_ query: ValidateNicknameQuery) async throws -> NicknameValidationResponse
     func postRegisterProfile(_ request: ProfileRegistrationRequest) async throws
     func getAccountInfo() async throws -> AccountInfoResponse
     func putAccountInfo(_ request: AccountInfoRequest) async throws

@@ -62,7 +62,7 @@ public struct DefaultKeywordRepository: KeywordRepository {
         let action = KeywordAction.sync
 
         do {
-            let request = SearchKeywordRequest(query: "")
+            let request = SearchKeywordQuery(query: "")
             let response = try await keywordService.searchKeyword(request)
             try cache.save(response)
             logger?.logSuccess(action: action.text)

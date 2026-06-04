@@ -6,6 +6,8 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
+
 protocol FeedService {
     func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse
     func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse

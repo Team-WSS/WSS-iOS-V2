@@ -15,9 +15,19 @@ struct NetworkingClientTests {
         accessToken: String?,
         authSessionRefresher: AuthSessionRefreshing? = nil
     ) -> NetworkingClient {
+        makeClient(
+            tokenStore: MockTokenStore(accessToken: accessToken),
+            authSessionRefresher: authSessionRefresher
+        )
+    }
+
+    private func makeClient(
+        tokenStore: SessionTokenStore?,
+        authSessionRefresher: AuthSessionRefreshing? = nil
+    ) -> NetworkingClient {
         NetworkingClient(
             urlSession: makeSession(),
-            tokenStore: MockTokenStore(accessToken: accessToken),
+            tokenStore: tokenStore,
             authSessionRefresher: authSessionRefresher
         )
     }
@@ -75,17 +85,169 @@ struct NetworkingClientTests {
         _ = try await client.request(MockEndpoint())
     }
 
-    @Test("요청에 Authorization 헤더가 이미 있으면 기존 값을 유지한다")
-    func keepsExistingAuthorizationHeader() async throws {
+    @Test("authorization이 withoutToken이면 access token이 있어도 Bearer 헤더를 추가하지 않는다")
+    func doesNotAddBearerHeaderWhenAuthorizationWithoutToken() async throws {
         MockURLProtocol.requestHandler = nil
         let client = makeClient(accessToken: "access-token")
 
         MockURLProtocol.requestHandler = { request in
-            #expect(request.value(forHTTPHeaderField: "Authorization") == "Custom token")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
             return try makeResponse(for: request, statusCode: 200)
         }
 
-        _ = try await client.request(MockEndpoint(headers: ["Authorization": "Custom token"]))
+        _ = try await client.request(MockEndpoint(authorization: .withoutToken))
+    }
+
+    @Test("authorization이 usesTokenIfAvailable이면 access token이 있을 때 Bearer 헤더를 추가한다")
+    func addsBearerHeaderWhenAuthorizationUsesTokenIfAvailableAndAccessTokenExists() async throws {
+        MockURLProtocol.requestHandler = nil
+        let client = makeClient(accessToken: "access-token")
+
+        MockURLProtocol.requestHandler = { request in
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer access-token")
+            return try makeResponse(for: request, statusCode: 200)
+        }
+
+        _ = try await client.request(MockEndpoint(authorization: .usesTokenIfAvailable))
+    }
+
+    @Test("authorization이 usesTokenIfAvailable이면 access token이 없을 때 Bearer 헤더를 추가하지 않는다")
+    func doesNotAddBearerHeaderWhenAuthorizationUsesTokenIfAvailableAndAccessTokenDoesNotExist() async throws {
+        MockURLProtocol.requestHandler = nil
+        let client = makeClient(accessToken: nil)
+
+        MockURLProtocol.requestHandler = { request in
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+            return try makeResponse(for: request, statusCode: 200)
+        }
+
+        _ = try await client.request(MockEndpoint(authorization: .usesTokenIfAvailable))
+    }
+
+    @Test("body가 없으면 Content-Type과 httpBody를 넣지 않는다")
+    func doesNotSetBodyHeadersWhenRequestBodyIsNone() throws {
+        let request = try MockEndpoint(
+            additionalHeaders: ["Content-Type": "text/plain"],
+            body: .none
+        ).makeURLRequest()
+
+        #expect(request.httpBody == nil)
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == nil)
+    }
+
+    @Test("json body는 application/json Content-Type과 함께 인코딩된다")
+    func encodesJSONBodyWithContentType() throws {
+        let sample = SampleRequest(message: "hello")
+
+        let request = try MockEndpoint(body: .json(sample)).makeURLRequest()
+        let body = try #require(request.httpBody)
+        let decoded = try JSONDecoder().decode(SampleRequest.self, from: body)
+
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        #expect(decoded == sample)
+    }
+
+    @Test("additionalHeaders는 유지하고 Content-Type은 RequestBody가 결정한다")
+    func keepsAdditionalHeadersAndUsesBodyContentType() throws {
+        let request = try MockEndpoint(
+            additionalHeaders: [
+                "X-Test": "header",
+                "Content-Type": "text/plain"
+            ],
+            body: .json(SampleRequest(message: "hello"))
+        ).makeURLRequest()
+
+        #expect(request.value(forHTTPHeaderField: "X-Test") == "header")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    }
+
+    @Test("convertible query는 URLQueryItem으로 변환되어 URL에 반영된다")
+    func appliesConvertibleQueryToURL() throws {
+        let request = try MockEndpoint(
+            query: .convertible(SampleQuery(keyword: "fantasy", page: 1, isAdult: false))
+        ).makeURLRequest()
+        let url = try #require(request.url)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+
+        #expect(queryItems.contains(URLQueryItem(name: "keyword", value: "fantasy")))
+        #expect(queryItems.contains(URLQueryItem(name: "page", value: "1")))
+        #expect(queryItems.contains(URLQueryItem(name: "isAdult", value: "false")))
+    }
+
+    @Test("custom query는 전달한 URLQueryItem을 그대로 URL에 반영한다")
+    func appliesCustomQueryToURL() throws {
+        let request = try MockEndpoint(
+            query: .custom([
+                URLQueryItem(name: "ids", value: "1"),
+                URLQueryItem(name: "ids", value: "2")
+            ])
+        ).makeURLRequest()
+        let url = try #require(request.url)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+
+        #expect(queryItems == [
+            URLQueryItem(name: "ids", value: "1"),
+            URLQueryItem(name: "ids", value: "2")
+        ])
+    }
+
+    @Test("multipart body는 각 part와 boundary를 포함해 인코딩된다")
+    func encodesMultipartBodyWithPartsAndBoundary() throws {
+        let formData = MultipartFormData(
+            boundary: "test-boundary",
+            parts: [
+                .json(keyName: "request", value: SampleRequest(message: "hello")),
+                .text(keyName: "description", value: "sample"),
+                .imageData(keyName: "images", data: Data("image".utf8)),
+                .imageData(
+                    keyName: "profileImage",
+                    data: Data("png".utf8),
+                    contentType: .png,
+                    fileName: "profile.png"
+                ),
+                .data(
+                    keyName: "document",
+                    data: Data("pdf".utf8),
+                    contentType: .custom(headerValue: "application/pdf", fileExtension: "pdf")
+                )
+            ]
+        )
+
+        let request = try MockEndpoint(body: .multipart(formData)).makeURLRequest()
+        let body = try #require(request.httpBody)
+        let bodyString = try #require(String(data: body, encoding: .utf8))
+
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "multipart/form-data; boundary=test-boundary")
+        #expect(bodyString.contains("--test-boundary\r\n"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"request\""))
+        #expect(bodyString.contains("Content-Type: application/json"))
+        #expect(bodyString.contains("\"message\":\"hello\""))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"description\""))
+        #expect(bodyString.contains("Content-Type: text/plain"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"images\"; filename=\"image.jpeg\""))
+        #expect(bodyString.contains("Content-Type: image/jpeg"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"profileImage\"; filename=\"profile.png\""))
+        #expect(bodyString.contains("Content-Type: image/png"))
+        #expect(bodyString.contains("Content-Disposition: form-data; name=\"document\"; filename=\"file.pdf\""))
+        #expect(bodyString.contains("Content-Type: application/pdf"))
+        #expect(bodyString.hasSuffix("--test-boundary--\r\n"))
+    }
+
+    @Test("body 인코딩 실패 시 requestEncodingFailed를 던진다")
+    func throwsRequestEncodingFailedWhenBodyEncodingFails() {
+        do {
+            _ = try MockEndpoint(body: .json(FailingRequest())).makeURLRequest()
+            Issue.record("requestEncodingFailed expected")
+        } catch let error as NetworkingError {
+            guard case .requestEncodingFailed = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
     }
 
     @Test("401 응답이고 토큰 갱신이 가능하면 refresh 후 한 번 재시도한다")
@@ -108,14 +270,70 @@ struct NetworkingClientTests {
             return try makeResponse(for: request, statusCode: 200)
         }
 
-        _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+        _ = try await client.request(MockEndpoint(authorization: .requireToken))
 
         #expect(refresher.refreshCallCount == 1)
         #expect(requestCount.value == 2)
     }
 
-    @Test("401 응답이어도 토큰 갱신이 불가능한 요청이면 재인증 에러를 던진다")
-    func throwsReauthenticationErrorWhenUnauthorizedEndpointCannotRefreshToken() async {
+    @Test("usesTokenIfAvailable 요청에서 access token이 있으면 401 응답 시 refresh 후 한 번 재시도한다")
+    func retriesOnceAfterRefreshingSessionForUsesTokenIfAvailableWithAccessToken() async throws {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(behavior: .success(true))
+        let client = makeClient(
+            accessToken: "access-token",
+            authSessionRefresher: refresher
+        )
+        let requestCount = LockedCounter()
+
+        MockURLProtocol.requestHandler = { request in
+            let count = requestCount.increment()
+
+            if count == 1 {
+                return try makeResponse(for: request, statusCode: 401)
+            }
+
+            return try makeResponse(for: request, statusCode: 200)
+        }
+
+        _ = try await client.request(MockEndpoint(authorization: .usesTokenIfAvailable))
+
+        #expect(refresher.refreshCallCount == 1)
+        #expect(requestCount.value == 2)
+    }
+
+    @Test("usesTokenIfAvailable 요청에서 access token이 없으면 401 응답 시 원래 에러를 유지한다")
+    func keepsUnauthorizedErrorForUsesTokenIfAvailableWithoutAccessToken() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(behavior: .success(true))
+        let client = makeClient(
+            accessToken: nil,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+            return try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .usesTokenIfAvailable))
+            Issue.record("responseFailure expected")
+        } catch let error as NetworkingError {
+            guard case .responseFailure(let code, _) = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+            #expect(code == 401)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(refresher.refreshCallCount == 0)
+    }
+
+    @Test("401 응답이어도 토큰 갱신이 불가능한 요청이면 원래 에러를 유지한다")
+    func keepsUnauthorizedErrorWhenEndpointCannotRefreshToken() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(true))
         let client = makeClient(
@@ -128,13 +346,14 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: false))
-            Issue.record("requiresReauthentication expected")
+            _ = try await client.request(MockEndpoint(authorization: .withoutToken))
+            Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
-            guard case .requiresReauthentication = error else {
+            guard case .responseFailure(let code, _) = error else {
                 Issue.record("unexpected error: \(error)")
                 return
             }
+            #expect(code == 401)
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -146,8 +365,9 @@ struct NetworkingClientTests {
     func throwsReauthenticationErrorWhenUserIsWithdrawn() async throws {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(true))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
         let client = makeClient(
-            accessToken: "access-token",
+            tokenStore: tokenStore,
             authSessionRefresher: refresher
         )
         let body = try makeErrorBody(code: "USER-006")
@@ -157,7 +377,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -169,6 +389,7 @@ struct NetworkingClientTests {
         }
 
         #expect(refresher.refreshCallCount == 0)
+        #expect(tokenStore.clearTokensCallCount == 1)
     }
 
     @Test("404여도 USER-006이 아니면 원래 responseFailure를 유지한다")
@@ -182,7 +403,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, let errorBody) = error else {
@@ -207,7 +428,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("responseFailure expected")
         } catch let error as NetworkingError {
             guard case .responseFailure(let code, _) = error else {
@@ -225,8 +446,9 @@ struct NetworkingClientTests {
     func throwsReauthenticationErrorWhenRefreshFails() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(behavior: .success(false))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
         let client = makeClient(
-            accessToken: "access-token",
+            tokenStore: tokenStore,
             authSessionRefresher: refresher
         )
 
@@ -235,7 +457,7 @@ struct NetworkingClientTests {
         }
 
         do {
-            _ = try await client.request(MockEndpoint(requireTokenRefresh: true))
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
             Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
             guard case .requiresReauthentication = error else {
@@ -247,6 +469,37 @@ struct NetworkingClientTests {
         }
 
         #expect(refresher.refreshCallCount == 1)
+        #expect(tokenStore.clearTokensCallCount == 1)
+    }
+
+    @Test("refresh 중 에러 발생 시 토큰을 삭제하고 재인증 에러를 던진다")
+    func clearsTokensWhenRefreshThrows() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(behavior: .failure(URLError(.cannotConnectToHost)))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
+        let client = makeClient(
+            tokenStore: tokenStore,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
+            Issue.record("requiresReauthentication expected")
+        } catch let error as NetworkingError {
+            guard case .requiresReauthentication = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(refresher.refreshCallCount == 1)
+        #expect(tokenStore.clearTokensCallCount == 1)
     }
 }
 
@@ -271,5 +524,27 @@ private extension NSLock {
         lock()
         defer { unlock() }
         return body()
+    }
+}
+
+private struct SampleRequest: Codable, Equatable {
+    let message: String
+}
+
+private struct SampleQuery: QueryItemConvertible {
+    let keyword: String
+    let page: Int
+    let isAdult: Bool
+}
+
+private struct FailingRequest: Encodable {
+    func encode(to encoder: Encoder) throws {
+        throw EncodingError.invalidValue(
+            "failure",
+            EncodingError.Context(
+                codingPath: encoder.codingPath,
+                debugDescription: "Forced encoding failure"
+            )
+        )
     }
 }

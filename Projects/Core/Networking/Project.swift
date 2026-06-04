@@ -13,7 +13,6 @@ let project = Project.createCoreModule(
     name: ModuleType.core(.networking).name,
     targets: [.sources, .demo, .testing, .tests],
     internalDependencies: [
-        .module(.core(.logger)),
-        .module(.core(.keychain))
+        .module(.core(.logger))
     ]
 )

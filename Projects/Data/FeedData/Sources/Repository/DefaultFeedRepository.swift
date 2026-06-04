@@ -28,15 +28,16 @@ public struct DefaultFeedRepository: FeedRepository {
         self.storage = storage
     }
 
-    public func submitFeed(_ draft: FeedDraft) async throws(RepositoryError) {
+    public func submitFeed(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.submitFeed
-        
+
         let request = SubmitFeedRequest(
             feedContent: draft.content,
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
-            isPublic: !draft.isPrivate
+            isPublic: !draft.isPrivate,
+            imageDatas: imageDatas
         )
         do {
             _ = try await service.postFeed(request: request)
@@ -50,14 +51,15 @@ public struct DefaultFeedRepository: FeedRepository {
         }
     }
 
-    public func editFeed(id: FeedID, draft: FeedDraft) async throws(RepositoryError) {
+    public func editFeed(id: FeedID, draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.editFeed
         let request = SubmitFeedRequest(
             feedContent: draft.content,
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
-            isPublic: !draft.isPrivate
+            isPublic: !draft.isPrivate,
+            imageDatas: imageDatas
         )
         do {
             _ = try await service.patchFeed(feedID: id.value, request: request)
@@ -108,7 +110,7 @@ public struct DefaultFeedRepository: FeedRepository {
         let action = FeedAction.fetchSosoFeeds
         let query = GetSosoFeedsQuery(
             category: nil,
-            lastFeedID: lastFeedID.value,
+            lastFeedId: lastFeedID.value,
             size: pageSize,
             option: option.rawValue
         )
@@ -129,7 +131,7 @@ public struct DefaultFeedRepository: FeedRepository {
     public func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchUserFeeds
         let query = GetUserFeedsQuery(
-            lastFeedID: lastFeedID.value,
+            lastFeedId: lastFeedID.value,
             size: pageSize,
             isVisible: nil,
             isUnVisible: nil,

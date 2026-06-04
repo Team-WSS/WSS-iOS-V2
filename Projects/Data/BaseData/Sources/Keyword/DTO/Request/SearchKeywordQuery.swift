@@ -1,5 +1,5 @@
 //
-//  SearchKeywordRequest.swift
+//  SearchKeywordQuery.swift
 //  BaseData
 //
 //  Created by Seoyeon Choi on 4/9/26.
@@ -9,6 +9,6 @@
 import Foundation
 import Networking
 
-struct SearchKeywordRequest: QueryItemConvertible {
+struct SearchKeywordQuery: QueryItemConvertible {
     let query: String
 }

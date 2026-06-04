@@ -8,14 +8,19 @@
 import Foundation
 
 public enum KeychainKey {
-    static var bundleIdentifier: String = Bundle.main.bundleIdentifier ?? ""
-
-    public enum Auth {
-        public static let accessToken = "\(KeychainKey.bundleIdentifier).accessToken"
-        public static let refreshToken = "\(KeychainKey.bundleIdentifier).refreshToken"
+    public static var bundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? ""
     }
 
-    public enum Notification {
-        public static let deviceIdentifier  = "\(KeychainKey.bundleIdentifier).deviceIdentifier"
+    public static func make(_ rawKey: String) -> String {
+        "\(bundleIdentifier).\(rawKey)"
+    }
+}
+
+public protocol KeychainKeyRepresentable: RawRepresentable where RawValue == String { }
+
+public extension KeychainKeyRepresentable {
+    var key: String {
+        KeychainKey.make(rawValue)
     }
 }

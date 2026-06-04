@@ -42,27 +42,28 @@ enum SettingEndpoint: Endpoint {
         case .getAppMinimumVersion:         return "/minimum-version"
         }
     }
-    
-    var queryItems: [URLQueryItem]? {
+
+    var query: QueryParameters {
         switch self {
-        case .getAppMinimumVersion(let query): return query.asQueryItems()
-        default: return nil
+        case .getAppMinimumVersion(let query): return .convertible(query)
+        default: return .none
         }
     }
+
+    var additionalHeaders: [String: String]? { nil }
     
-    var headers: [String : String]? {
-        [ "Content-Type": "application/json",
-          "Authorization": "Bearer " + NetworkingConfig.testApiKey
-        ]
-    }
-    
-    var body: Data? {
+    var body: RequestBody {
         switch self {
-        case .patchTermSetting(let request):        return request.asRequestBody()
+        case .patchTermSetting(let request): return .json(request)
         default:
-            return nil
+            return .none
         }
     }
     
-    var requireTokenRefresh: Bool { true }
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .getAppMinimumVersion: return .withoutToken
+        default: return .requireToken
+        }
+    }
 }
