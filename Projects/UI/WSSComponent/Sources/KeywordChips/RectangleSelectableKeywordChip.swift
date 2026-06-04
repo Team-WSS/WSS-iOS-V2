@@ -26,7 +26,7 @@ public struct RectangleSelectableKeywordChip: View {
 
     public var body: some View {
         Text(keyword)
-            .applyWSSFont(.body2, color: .wssGray300)
+            .applyWSSFont(.body2, color: isSelected ? .wssPrimary100 : .wssGray300)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
             .background(isSelected ? Color.wssPrimary50 : Color.wssGray50)
