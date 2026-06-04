@@ -33,7 +33,6 @@ public struct DefaultFeedRepository: FeedRepository {
 
         let request = SubmitFeedRequest(
             feedContent: draft.content,
-            relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
             isPublic: !draft.isPrivate,
@@ -55,7 +54,6 @@ public struct DefaultFeedRepository: FeedRepository {
         let action = FeedAction.editFeed
         let request = SubmitFeedRequest(
             feedContent: draft.content,
-            relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
             isPublic: !draft.isPrivate,

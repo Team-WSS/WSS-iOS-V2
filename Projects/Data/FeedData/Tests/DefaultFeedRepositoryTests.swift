@@ -19,17 +19,15 @@ struct DefaultFeedRepositoryTests {
 
     // MARK: - submitFeed
 
-    @Test("submitFeed 성공 시 올바른 feedContent와 relevantCategories로 service 호출")
+    @Test("submitFeed 성공 시 올바른 feedContent로 service 호출")
     func submitFeed_success_callsServiceWithCorrectParams() async throws {
         let (sut, service) = makeRepository()
-        let draft = makeDraft(content: "테스트 피드", genre: [.romance, .fantasy])
+        let draft = makeDraft(content: "테스트 피드")
 
         try await sut.submitFeed(draft, imageDatas: [])
 
         #expect(service.postFeedCallCount == 1)
         #expect(service.postedRequests[0].feedContent == "테스트 피드")
-        #expect(service.postedRequests[0].relevantCategories.contains("romance"))
-        #expect(service.postedRequests[0].relevantCategories.contains("fantasy"))
         #expect(service.postedRequests[0].imageDatas == [])
     }
 
@@ -215,12 +213,10 @@ private extension DefaultFeedRepositoryTests {
     }
 
     func makeDraft(
-        content: String = "피드 내용",
-        genre: [NovelGenre] = [.romance]
+        content: String = "피드 내용"
     ) -> FeedDraft {
         FeedDraft(
             content: content,
-            genre: genre,
             isSpoiler: false,
             isPrivate: false,
             connectedNovel: nil,
