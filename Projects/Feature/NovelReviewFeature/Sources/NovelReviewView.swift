@@ -32,6 +32,7 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
                 periodSection
                 ratingSection
                 attractivePointSection
+                keywordSection
                 completeButton
             }
         }
@@ -158,6 +159,16 @@ private extension NovelReviewView {
                     }
                 }
             }
+        }
+    }
+
+    /// 키워드 — 검색바처럼 생긴 탭 버튼. 탭하면 키워드 탐색뷰로 이동(추후 연결). 지금은 액션 훅만 둔다.
+    var keywordSection: some View {
+        WSSSearchBarButton(
+            placeholder: "키워드를 선택하세요",
+            placeholderAlignment: .center
+        ) {
+            // TODO: 키워드 탐색뷰로 이동 (실제 액션은 추후 연결)
         }
     }
 

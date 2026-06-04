@@ -25,9 +25,10 @@
 
 - 화면 라벨은 **WSSComponent의 Presentation 확장**(`ReadingStatus.statusName`, `AttractivePoint.displayName`)을 쓴다.
   ViewModel은 표현 의존이 없어 `WSSComponent`를 import하지 않는다(View에서만 사용).
-- 현재 범위: **읽기 상태 + 독서 기간(sheet) + 평점(슬라이더) + 매력 포인트 토글 + 진입 시 로드(`load`) + 완료 시 저장(`save`)**.
+- 현재 범위: **읽기 상태 + 독서 기간(sheet) + 평점(슬라이더) + 매력 포인트 토글 + 키워드(진입 버튼) + 진입 시 로드(`load`) + 완료 시 저장(`save`)**.
   로드는 `onAppear`에서 호출하며 초안이 없으면(nil) 기본 draft 유지. 저장 성공 시 `shouldDismiss = true`로 닫힘을 신호한다.
-  아직 미연결: 키워드, 삭제(`DeleteNovelReviewUseCase`).
+  - 키워드는 `WSSSearchBarButton`(검색바 룩 탭 버튼)만 배치 — **탭 액션은 TODO(키워드 탐색뷰 이동 추후)**, draft.keywords 연결도 아직.
+  아직 미연결: 키워드 선택/탐색뷰, 삭제(`DeleteNovelReviewUseCase`).
 - **평점은 도메인 `Rating`이 0.5~5.0(0.5 단위)만 허용하고 0.0을 표현 못 한다** → 슬라이더는 `0...5`지만
   `updateRating`이 **0.0을 `nil`(평점 없음)로 매핑**한다. "평점 없음 ↔ 0.0"은 이 매핑 규칙이라 임의로 바꾸지 말 것.
 - **독서 기간 상태↔날짜 매핑(watching=시작만, watched=시작+종료, quit=종료만)은 도메인 `ReadingPeriod.normalized(for:)`가 강제한다.**
