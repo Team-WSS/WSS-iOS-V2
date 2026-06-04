@@ -16,28 +16,32 @@ public struct DefaultFeedRepository: FeedRepository {
     private let service: FeedService
     private let logger: DataLogger?
     private let storage: AppStorage
+    private let imageCompressor: ImageCompressor
     private let pageSize = 20
 
     init(
         service: FeedService,
         logger: DataLogger? = nil,
-        storage: AppStorage = UserDefaultsStorage()
+        storage: AppStorage = UserDefaultsStorage(),
+        imageCompressor: ImageCompressor = ImageCompressor()
     ) {
         self.service = service
         self.logger = logger
         self.storage = storage
+        self.imageCompressor = imageCompressor
     }
 
     public func submitFeed(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.submitFeed
 
+        let compressedImageDatas = await imageCompressor.compress(imageDatas)
         let request = SubmitFeedRequest(
             feedContent: draft.content,
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
             isPublic: !draft.isPrivate,
-            imageDatas: imageDatas
+            imageDatas: compressedImageDatas
         )
         do {
             _ = try await service.postFeed(request: request)
@@ -53,13 +57,15 @@ public struct DefaultFeedRepository: FeedRepository {
 
     public func editFeed(id: FeedID, draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         let action = FeedAction.editFeed
+
+        let compressedImageDatas = await imageCompressor.compress(imageDatas)
         let request = SubmitFeedRequest(
             feedContent: draft.content,
             relevantCategories: draft.genre.map { FeedMapper.genreString(from: $0) },
             novelId: draft.connectedNovel?.id.value,
             isSpoiler: draft.isSpoiler,
             isPublic: !draft.isPrivate,
-            imageDatas: imageDatas
+            imageDatas: compressedImageDatas
         )
         do {
             _ = try await service.patchFeed(feedID: id.value, request: request)
