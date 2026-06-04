@@ -12,16 +12,13 @@ import DesignSystem
 public struct WhiteRemovableKeywordChip: View {
     private let keyword: String
     private let action: () -> Void
-    private let onRemove: () -> Void
 
     public init(
         keyword: String,
-        action: @escaping () -> Void,
-        onRemove: @escaping () -> Void
+        action: @escaping () -> Void
     ) {
         self.keyword = keyword
         self.action = action
-        self.onRemove = onRemove
     }
 
     public var body: some View {
@@ -30,12 +27,10 @@ public struct WhiteRemovableKeywordChip: View {
                 .applyWSSFont(.body3, color: .wssPrimary100)
                 .fixedSize()
 
-            Button(action: onRemove) {
-                WSSImage.icKeywordCancel.swiftUIImage
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
-            }
+            WSSImage.icKeywordCancel.swiftUIImage
+                .resizable()
+                .scaledToFit()
+                .frame(width: 16, height: 16)
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 5)
@@ -50,14 +45,10 @@ public struct WhiteRemovableKeywordChip: View {
 #Preview {
     VStack(spacing: 12) {
         WhiteRemovableKeywordChip(keyword: "환생물", action: {
-            print("키워드 클릭")
-        }, onRemove: {
-            print("X 버튼 클릭")
+            print("칩 클릭")
         })
         WhiteRemovableKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
-            print("키워드 클릭")
-        }, onRemove: {
-            print("X 버튼 클릭")
+            print("칩 클릭")
         })
     }
     .padding()
