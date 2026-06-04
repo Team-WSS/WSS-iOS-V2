@@ -21,9 +21,13 @@
 
 - 화면 라벨은 **WSSComponent의 Presentation 확장**(`ReadingStatus.statusName`, `AttractivePoint.displayName`)을 쓴다.
   ViewModel은 표현 의존이 없어 `WSSComponent`를 import하지 않는다(View에서만 사용).
-- 현재 범위: **읽기 상태 + 매력 포인트 토글 + 진입 시 초안 로드(`load`) + 완료 시 저장(`save`)**.
+- 현재 범위: **읽기 상태 + 독서 기간(sheet) + 매력 포인트 토글 + 진입 시 로드(`load`) + 완료 시 저장(`save`)**.
   로드는 `onAppear`에서 호출하며 초안이 없으면(nil) 기본 draft 유지. 저장 성공 시 `shouldDismiss = true`로 닫힘을 신호한다.
-  아직 미연결: 평점/기간/키워드, 삭제(`DeleteNovelReviewUseCase`).
+  아직 미연결: 평점/키워드, 삭제(`DeleteNovelReviewUseCase`).
+- **독서 기간은 상태에 따라 입력 날짜가 다르며, 이 매핑은 도메인 `ReadingPeriod.normalized(for:)`가 강제한다**
+  (watching=시작만, watched=시작+종료, quit=종료만). `ReadingPeriodSheet`는 watched일 때만 segment(시작/종료)를 띄운다.
+  ⚠️ ViewModel이 어떤 날짜를 넣든 `draft.setPeriod`가 상태에 맞게 normalize하므로, UI 라벨을 도메인과 다르게 두면
+  (예: watching에 "종료") 저장·재조회에서 어긋난다 — 라벨/입력은 반드시 위 매핑을 따를 것.
 - 비동기 모델: 허브 문서는 Feature를 Combine으로 안내하나, 여기선 상태가 단순해 `@Published`/`ObservableObject`만 사용.
   async UseCase는 `@MainActor` ViewModel 안에서 `Task { await ... }`로 호출하고, `isLoading`/`isSaving`은 `defer`로 해제한다.
 - **Demo/Preview 빌드**: `.demo` 타깃이 있어 `NovelReviewFeature` 스킴이 Demo 앱까지 함께 빌드한다.

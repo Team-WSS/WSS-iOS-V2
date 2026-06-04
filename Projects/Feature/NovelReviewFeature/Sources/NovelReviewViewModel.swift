@@ -14,6 +14,7 @@ import NovelReviewDomain
 protocol NovelReviewViewModelInput {
     func load()
     func selectStatus(_ status: ReadingStatus)
+    func updatePeriod(start: Date?, end: Date?)
     func toggleAttractivePoint(_ point: AttractivePoint)
     func save()
     func dismissError()
@@ -21,6 +22,7 @@ protocol NovelReviewViewModelInput {
 
 protocol NovelReviewViewModelOutput: ObservableObject {
     var selectedStatus: ReadingStatus { get }
+    var selectedPeriod: ReadingPeriod? { get }
     var selectedAttractivePoints: [AttractivePoint] { get }
     var isLoading: Bool { get }
     var isSaving: Bool { get }
@@ -44,6 +46,7 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
     // MARK: - Output
 
     var selectedStatus: ReadingStatus { draft.status }
+    var selectedPeriod: ReadingPeriod? { draft.period }
     var selectedAttractivePoints: [AttractivePoint] { draft.attractivePoints }
 
     // MARK: - Dependency
@@ -77,8 +80,25 @@ extension DefaultNovelReviewViewModel {
     }
 
     /// 읽기 상태 선택. ReadingStatus는 단일 값이라 새 값으로 바꾸면 기존 선택은 자동 해제된다.
+    /// 상태를 바꾸면 도메인이 기존 기간을 새 상태에 맞게 normalize한다(예: watched→watching 시 종료일 제거).
     func selectStatus(_ status: ReadingStatus) {
         draft.changeStatus(status)
+    }
+
+    /// 독서 기간 설정. 상태별 유효 날짜(watching=시작, watched=시작+종료, quit=종료)는
+    /// 도메인 `ReadingPeriod.normalized(for:)`가 강제한다. ViewModel은 입력 날짜로 `ReadingPeriod`를 만들어 위임만 한다.
+    /// 둘 다 nil이거나 시작>종료면 도메인이 throw → 사용자 메시지로 변환.
+    func updatePeriod(start: Date?, end: Date?) {
+        guard start != nil || end != nil else {
+            draft.setPeriod(nil)
+            return
+        }
+        do {
+            let period = try ReadingPeriod(start: start, end: end)
+            draft.setPeriod(period)
+        } catch {
+            handle(error: error)
+        }
     }
 
     /// 매력 포인트 토글. 이미 선택돼 있으면 해제, 아니면 추가한다.
@@ -151,6 +171,8 @@ private extension DefaultNovelReviewViewModel {
             errorMessage = "평가 정보를 찾을 수 없어요"
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
             errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
+        case ReadingPeriod.ValidationError.startAfterEnd:
+            errorMessage = "시작일은 종료일보다 늦을 수 없어요"
         default:
             errorMessage = "잠시 후 다시 시도해 주세요"
         }
