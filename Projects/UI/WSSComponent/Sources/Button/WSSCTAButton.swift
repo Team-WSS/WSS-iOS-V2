@@ -19,7 +19,7 @@ public struct WSSCTAButton: View {
     public var body: some View {
         Button(action: action) {
             Text(title)
-                .applyWSSFont(.title2)
+                .applyWSSFont(.title1)
                 .foregroundStyle(Color.wssWhite)
                 .frame(maxWidth: .infinity)
                 .frame(height: 53)

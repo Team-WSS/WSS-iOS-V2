@@ -38,6 +38,12 @@
     (둘 다=기간, 하나=단일). status 분기는 normalize와 중복이라 제거함.
   - **입력**: `ReadingPeriodSheet.apply()`는 자기가 띄운 폼대로 의미 있는 날짜만 넘긴다(watched만 시작/종료 segment).
     단일 상태에 양쪽 날짜를 다 넘기면 `ReadingPeriod(start:end:)`가 `startAfterEnd`로 **오검증**할 수 있으니 입력측은 폼대로 보낼 것.
+- **`ReadingPeriodSheet` UI**: 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭(시트 dismiss) — 별도 취소 버튼 없음.
+  높이는 `presentationDetents`로 고정: 단일(watching/quit) **362**, 시작+종료(watched) **436**.
+  - **날짜 삭제**는 `onApply(nil, nil)` → ViewModel `updatePeriod(nil, nil)`로 기간 제거(전용 콜백 없이 재사용).
+  - watched는 field 전환 시 편집 날짜가 바뀌므로 `WSSDateWheel`에 **`.id(field)`**를 줘 휠을 새로 띄워 초기값을 갱신한다(외부 동기화 루프 회피).
+  - `WSSDateWheel`/`WheelColumn`은 연·월·일 3열 커스텀 휠 — **iOS 17 ScrollView 스냅 API**
+    (`scrollTargetLayout`/`scrollTargetBehavior(.viewAligned)`/`scrollPosition(id:)` + `contentMargins`로 위아래 여백)로 가운데 정렬값을 선택값으로 삼는다. 네이티브 `DatePicker(.wheel)`은 체크/회색 처리 룩이 안 나와 직접 구현.
 - **로드는 최초 1회만**(`hasLoaded` 가드). `onAppear`는 재진입마다 불리므로, 가드 없으면 편집 중 draft를 서버 값으로 덮어쓴다.
 - 비동기 모델: 허브 문서는 Feature를 Combine으로 안내하나, 여기선 상태가 단순해 `@Published`/`ObservableObject`만 사용.
   async UseCase는 `@MainActor` ViewModel 안에서 `Task { await ... }`로 호출하고, `isLoading`/`isSaving`은 `defer`로 해제한다.
