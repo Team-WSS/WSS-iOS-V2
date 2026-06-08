@@ -1,4 +1,4 @@
-# CLAUDE.md — WSS-iOS-V2 작업 허브
+# AGENTS.md — WSS-iOS-V2 작업 허브
 
 웹소소(WSS) 앱의 차세대 iOS 클라이언트. **Tuist 멀티 모듈 + Clean Architecture**.
 
@@ -27,16 +27,16 @@
 ## 📂 문서 자동 로딩 (컨텍스트 관리의 핵심)
 
 문서는 **작업하는 디렉토리에 co-locate** 되어 있다. 어떤 파일을 열면 그 경로의
-상위 `CLAUDE.md`들이 자동으로 함께 로드된다 → **필요한 문서만 정확히** 읽힌다.
+상위 `AGENTS.md`들이 자동으로 함께 로드된다 → **필요한 문서만 정확히** 읽힌다.
 
 ```
-CLAUDE.md                              ← 항상 (이 파일)
-Projects/<Layer>/CLAUDE.md             ← 그 레이어 작업 시 자동 (레이어 코드 규칙)
-Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 시나리오·함정)
+AGENTS.md                              ← 항상 (이 파일)
+Projects/<Layer>/AGENTS.md             ← 그 레이어 작업 시 자동 (레이어 코드 규칙)
+Projects/<Layer>/<Module>/AGENTS.md    ← 그 모듈 작업 시 자동 (모듈 시나리오·함정)
 ```
 
 예: `Projects/Domain/NovelDomain/Sources/...`를 만지면 →
-이 허브 + `Projects/Domain/CLAUDE.md` + `Projects/Domain/NovelDomain/CLAUDE.md` 가 함께 로드된다.
+이 허브 + `Projects/Domain/AGENTS.md` + `Projects/Domain/NovelDomain/AGENTS.md` 가 함께 로드된다.
 
 **→ 다른 레이어/모듈 문서를 일부러 찾아 읽지 말 것.** 작업 위치가 필요한 문서를 알아서 가져온다.
 
@@ -53,22 +53,22 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 ### 레이어 가이드 위치
 | 레이어 | 가이드 |
 |---|---|
-| App | [Projects/App/CLAUDE.md](Projects/App/CLAUDE.md) |
-| UI | [Projects/UI/CLAUDE.md](Projects/UI/CLAUDE.md) |
-| Domain | [Projects/Domain/CLAUDE.md](Projects/Domain/CLAUDE.md) |
-| Data | [Projects/Data/CLAUDE.md](Projects/Data/CLAUDE.md) |
-| Core | [Projects/Core/CLAUDE.md](Projects/Core/CLAUDE.md) |
-| Feature | [docs/layers/Feature.md](docs/layers/Feature.md) (폴더 미생성 → 생성 시 `Projects/Feature/CLAUDE.md`로 이동) |
+| App | [Projects/App/AGENTS.md](Projects/App/AGENTS.md) |
+| UI | [Projects/UI/AGENTS.md](Projects/UI/AGENTS.md) |
+| Domain | [Projects/Domain/AGENTS.md](Projects/Domain/AGENTS.md) |
+| Data | [Projects/Data/AGENTS.md](Projects/Data/AGENTS.md) |
+| Core | [Projects/Core/AGENTS.md](Projects/Core/AGENTS.md) |
+| Feature | [docs/layers/Feature.md](docs/layers/Feature.md) (폴더 미생성 → 생성 시 `Projects/Feature/AGENTS.md`로 이동) |
 
 ---
 
 ## ✍️ 문서 작성·유지 규칙
 
 - **새 모듈 가이드**: [docs/MODULE_GUIDE_TEMPLATE.md](docs/MODULE_GUIDE_TEMPLATE.md)를 복사해
-  `Projects/<레이어>/<모듈>/CLAUDE.md`로 만든다.
+  `Projects/<레이어>/<모듈>/AGENTS.md`로 만든다.
 - **무엇을 적나**: 코드/디렉토리만 봐도 아는 것(구성요소 나열)은 적지 않는다.
   **코드만 봐선 모르는 것**(핵심 시나리오, 숨은 의존, 함정, 이유)만 적는다. 함정 없으면 짧아도 된다.
-- 코드와 문서가 다르면 **코드가 진실** — 발견 즉시 가장 가까운 `CLAUDE.md`를 고친다.
+- 코드와 문서가 다르면 **코드가 진실** — 발견 즉시 가장 가까운 `AGENTS.md`를 고친다.
 - 작업 중 함정을 발견하면 **`/learn`** — 가장 가까운 문서의 "주의사항"에 누적해준다.
 - 작업 중 발견한 함정은 해당 문서의 "주의사항" 절에 누적한다.
 
