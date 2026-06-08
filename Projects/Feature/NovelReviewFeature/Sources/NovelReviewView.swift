@@ -15,23 +15,23 @@ import WSSComponent
 
 // 작품 평가(리뷰 초안) 화면. WSSComponent의 Presentation 확장(아이콘/라벨)과 DesignSystem 토큰으로 구성.
 // "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View에서 결정한다.
-struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
+struct NovelReviewView: View {
     
-    @StateObject private var viewModel: ViewModel
+    @StateObject private var viewModel: NovelReviewViewModel
     @State private var isPeriodSheetPresented = false
     @Environment(\.dismiss) private var dismiss
     
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
     private let title: String
     
-    init(viewModel: ViewModel, title: String) {
+    init(viewModel: NovelReviewViewModel, title: String) {
         self._viewModel = StateObject(wrappedValue: viewModel)
         self.title = title
     }
     
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.state.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -57,9 +57,9 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
             
             ToolbarItem(placement: .confirmationAction) {
                 Button {
-                    viewModel.save()
+                    viewModel.handle(.save)
                 } label: {
-                    if viewModel.isSaving {
+                    if viewModel.state.isSaving {
                         ProgressView()
                     } else {
                         Text("완료")
@@ -67,18 +67,18 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
                             .foregroundStyle(Color.wssPrimary100)
                     }
                 }
-                .disabled(viewModel.isSaving)
+                .disabled(viewModel.state.isSaving)
             }
         }
         .onAppear {
-            viewModel.load()
+            viewModel.handle(.load)
         }
         .sheet(isPresented: $isPeriodSheetPresented) {
             ReadingPeriodSheet(
-                status: viewModel.selectedStatus,
-                period: viewModel.selectedPeriod
+                status: viewModel.state.draft.status,
+                period: viewModel.state.draft.period
             ) { start, end in
-                viewModel.updatePeriod(start: start, end: end)
+                viewModel.handle(.updatePeriod(start: start, end: end))
                 isPeriodSheetPresented = false
             }
         }
@@ -86,10 +86,10 @@ struct NovelReviewView<ViewModel: NovelReviewViewModel>: View {
             "오류",
             isPresented: errorBinding,
             actions: {
-                Button("확인") { viewModel.dismissError() }
+                Button("확인") { viewModel.handle(.dismissError) }
             },
             message: {
-                Text(viewModel.errorMessage ?? "")
+                Text(viewModel.state.errorMessage ?? "")
             }
         )
     }
@@ -139,12 +139,12 @@ private extension NovelReviewView {
     var statusSection: some View {
         HStack(spacing: 0) {
             ForEach(ReadingStatus.allCases, id: \.self) { status in
-                let isSelected = viewModel.selectedStatus == status
+                let isSelected = viewModel.state.draft.status == status
                 let imageColor = isSelected ? Color.wssPrimary100 : Color.wssGray80
                 let textColor = isSelected ? Color.wssPrimary100 : Color.wssGray200
                 
                 Button {
-                    viewModel.selectStatus(status)
+                    viewModel.handle(.selectStatus(status))
                 } label: {
                     VStack(spacing: 5) {
                         status.fillImage
@@ -186,7 +186,7 @@ private extension NovelReviewView {
     /// status로 분기하지 않고 start/end 존재 여부로만 표기한다(둘 다=기간, 하나=단일 날짜).
     @ViewBuilder
     var periodValueLabel: some View {
-        switch (viewModel.selectedPeriod?.start, viewModel.selectedPeriod?.end) {
+        switch (viewModel.state.draft.period?.start, viewModel.state.draft.period?.end) {
         case let (start?, end?):
             Text("\(periodDateFormatter.string(from: start)) ~ \(periodDateFormatter.string(from: end))")
         case let (start?, nil):
@@ -205,9 +205,9 @@ private extension NovelReviewView {
                 .applyWSSFont(.title3)
                 .foregroundStyle(Color.wssBlack)
             
-            StarRatingView(rating: viewModel.selectedRating?.value ?? 0) { value in
+            StarRatingView(rating: viewModel.state.draft.rating?.value ?? 0) { value in
                 print(value)
-                viewModel.updateRating(value)
+                viewModel.handle(.updateRating(value))
             }
         }
         .frame(maxWidth: .infinity)
@@ -223,12 +223,12 @@ private extension NovelReviewView {
             
             HStack(spacing: 0) {
                 ForEach(AttractivePoint.allCases, id: \.self) { point in
-                    let isSelected = viewModel.selectedAttractivePoints.contains(point)
+                    let isSelected = viewModel.state.draft.attractivePoints.contains(point)
                     let imageColor = isSelected ? Color.wssPrimary100 : Color.wssGray80
                     let textColor = isSelected ? Color.wssPrimary100 : Color.wssGray200
                     
                     Button {
-                        viewModel.toggleAttractivePoint(point)
+                        viewModel.handle(.toggleAttractivePoint(point))
                     } label: {
                         VStack(spacing: 6) {
                             point.iconImage
@@ -272,8 +272,8 @@ private extension NovelReviewView {
     
     var errorBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { _ in viewModel.dismissError() }
+            get: { viewModel.state.errorMessage != nil },
+            set: { _ in viewModel.handle(.dismissError) }
         )
     }
 }
@@ -664,7 +664,7 @@ private struct WheelColumn: View {
 #Preview {
     NavigationStack {
         NovelReviewView(
-            viewModel: DefaultNovelReviewViewModel(
+            viewModel: NovelReviewViewModel(
                 novelID: NovelID(1),
                 loadUseCase: PreviewLoadNovelReviewDraftUseCase(),
                 saveUseCase: PreviewSaveNovelReviewUseCase()

@@ -25,7 +25,7 @@ public enum NovelReviewFactory {
         loadUseCase: LoadNovelReviewDraftUseCase,
         saveUseCase: SaveNovelReviewUseCase
     ) -> some View {
-        let viewModel = DefaultNovelReviewViewModel(
+        let viewModel = NovelReviewViewModel(
             novelID: novelID,
             loadUseCase: loadUseCase,
             saveUseCase: saveUseCase

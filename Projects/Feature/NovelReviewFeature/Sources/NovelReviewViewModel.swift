@@ -11,49 +11,38 @@ import Foundation
 import BaseDomain
 import NovelReviewDomain
 
-protocol NovelReviewViewModelInput {
-    func load()
-    func selectStatus(_ status: ReadingStatus)
-    func updatePeriod(start: Date?, end: Date?)
-    func updateRating(_ value: Double)
-    func toggleAttractivePoint(_ point: AttractivePoint)
-    func save()
-    func dismissError()
-}
-
-protocol NovelReviewViewModelOutput: ObservableObject {
-    var selectedStatus: ReadingStatus { get }
-    var selectedPeriod: ReadingPeriod? { get }
-    var selectedRating: Rating? { get }
-    var selectedAttractivePoints: [AttractivePoint] { get }
-    var isLoading: Bool { get }
-    var isSaving: Bool { get }
-    var shouldDismiss: Bool { get }
-    var errorMessage: String? { get }
-}
-
-typealias NovelReviewViewModel = NovelReviewViewModelInput & NovelReviewViewModelOutput
-
 @MainActor
-final class DefaultNovelReviewViewModel: NovelReviewViewModel {
+final class NovelReviewViewModel: ObservableObject {
 
     // MARK: - State
 
-    @Published private var draft: NovelReviewDraft
-    @Published private(set) var isLoading = false
-    @Published private(set) var isSaving = false
-    @Published private(set) var shouldDismiss = false
-    @Published private(set) var errorMessage: String?
+    struct State {
+        /// 도메인 엔티티를 그대로 보유(표현값 소스). View가 `state.draft.…`로 직접 읽는다.
+        var draft: NovelReviewDraft
+        var isLoading = false
+        var isSaving = false
+        var shouldDismiss = false
+        var errorMessage: String?
+    }
 
-    /// 최초 1회만 로드. 화면 재진입(onAppear 재호출) 시 편집 중인 draft를 서버 값으로 덮어쓰지 않기 위함.
-    private var hasLoaded = false
+    // MARK: - Action
+
+    enum Action {
+        case load
+        case selectStatus(ReadingStatus)
+        case updatePeriod(start: Date?, end: Date?)
+        case updateRating(Double)
+        case toggleAttractivePoint(AttractivePoint)
+        case save
+        case dismissError
+    }
 
     // MARK: - Output
 
-    var selectedStatus: ReadingStatus { draft.status }
-    var selectedPeriod: ReadingPeriod? { draft.period }
-    var selectedRating: Rating? { draft.rating }
-    var selectedAttractivePoints: [AttractivePoint] { draft.attractivePoints }
+    @Published private(set) var state: State
+
+    /// 최초 1회만 로드. 화면 재진입(onAppear 재호출) 시 편집 중인 draft를 서버 값으로 덮어쓰지 않기 위함.
+    private var hasLoaded = false
 
     // MARK: - Dependency
 
@@ -69,27 +58,44 @@ final class DefaultNovelReviewViewModel: NovelReviewViewModel {
         saveUseCase: SaveNovelReviewUseCase
     ) {
         self.novelID = novelID
-        self.draft = NovelReviewDraft(novelID: novelID, status: .watching)
+        self.state = State(draft: NovelReviewDraft(novelID: novelID, status: .watching))
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
     }
+
+    // MARK: - handle
+
+    func handle(_ action: Action) {
+        switch action {
+        case .load:
+            load()
+        case .selectStatus(let status):
+            // ReadingStatus는 단일 값이라 새 값으로 바꾸면 기존 선택은 자동 해제된다.
+            // 상태를 바꾸면 도메인이 기존 기간을 새 상태에 맞게 normalize한다(예: watched→watching 시 종료일 제거).
+            state.draft.changeStatus(status)
+        case .updatePeriod(let start, let end):
+            updatePeriod(start: start, end: end)
+        case .updateRating(let value):
+            updateRating(value)
+        case .toggleAttractivePoint(let point):
+            toggleAttractivePoint(point)
+        case .save:
+            save()
+        case .dismissError:
+            state.errorMessage = nil
+        }
+    }
 }
 
-// MARK: - Input
+// MARK: - Action Handling
 
-extension DefaultNovelReviewViewModel {
+private extension NovelReviewViewModel {
 
     /// 화면 진입 시 기존 초안을 불러온다. 초안이 없으면(nil) 기본 draft를 유지한다.
     /// 최초 1회만 수행한다(재진입 시 편집 중 덮어쓰기 방지). 실패하면 다음 진입에 재시도 가능.
     func load() {
-        guard !hasLoaded, !isLoading else { return }
+        guard !hasLoaded, !state.isLoading else { return }
         Task { await loadDraft() }
-    }
-
-    /// 읽기 상태 선택. ReadingStatus는 단일 값이라 새 값으로 바꾸면 기존 선택은 자동 해제된다.
-    /// 상태를 바꾸면 도메인이 기존 기간을 새 상태에 맞게 normalize한다(예: watched→watching 시 종료일 제거).
-    func selectStatus(_ status: ReadingStatus) {
-        draft.changeStatus(status)
     }
 
     /// 독서 기간 설정. 상태별 유효 날짜(watching=시작, watched=시작+종료, quit=종료)는
@@ -97,14 +103,14 @@ extension DefaultNovelReviewViewModel {
     /// 둘 다 nil이거나 시작>종료면 도메인이 throw → 사용자 메시지로 변환.
     func updatePeriod(start: Date?, end: Date?) {
         guard start != nil || end != nil else {
-            draft.setPeriod(nil)
+            state.draft.setPeriod(nil)
             return
         }
         do {
             let period = try ReadingPeriod(start: start, end: end)
-            draft.setPeriod(period)
+            state.draft.setPeriod(period)
         } catch {
-            handle(error: error)
+            presentError(error)
         }
     }
 
@@ -112,13 +118,13 @@ extension DefaultNovelReviewViewModel {
     /// 슬라이더의 0.0(= 평점 없음)은 `nil`로 매핑한다.
     func updateRating(_ value: Double) {
         guard value >= 0.5 else {
-            draft.setRating(nil)
+            state.draft.setRating(nil)
             return
         }
         do {
-            draft.setRating(try Rating(value))
+            state.draft.setRating(try Rating(value))
         } catch {
-            handle(error: error)
+            presentError(error)
         }
     }
 
@@ -126,79 +132,77 @@ extension DefaultNovelReviewViewModel {
     /// 추가 시 최대 개수(3) 정책은 도메인(`NovelReviewDraft`)이 검증하며, 초과 시 throw → 사용자 메시지로 변환.
     func toggleAttractivePoint(_ point: AttractivePoint) {
         do {
-            if draft.attractivePoints.contains(point) {
-                draft.removeAttractivePoint(point)
+            if state.draft.attractivePoints.contains(point) {
+                state.draft.removeAttractivePoint(point)
             } else {
-                try draft.addAttractivePoint(point)
+                try state.draft.addAttractivePoint(point)
             }
         } catch {
-            handle(error: error)
+            presentError(error)
         }
     }
 
     /// 완료 버튼. 현재 draft를 저장하고, 성공하면 화면을 닫도록 신호한다.
     func save() {
-        guard !isSaving else { return }
+        guard !state.isSaving else { return }
         Task { await saveDraft() }
-    }
-
-    func dismissError() {
-        errorMessage = nil
     }
 }
 
 // MARK: - Async Work
 
-private extension DefaultNovelReviewViewModel {
+private extension NovelReviewViewModel {
 
     func loadDraft() async {
-        isLoading = true
-        defer { isLoading = false }
+        state.isLoading = true
+        defer { state.isLoading = false }
 
         do {
             if let loaded = try await loadUseCase.execute(novelID: novelID) {
-                draft = loaded
+                state.draft = loaded
             }
             hasLoaded = true
         } catch {
-            handle(error: error)
+            presentError(error)
         }
     }
 
     func saveDraft() async {
-        isSaving = true
-        defer { isSaving = false }
+        state.isSaving = true
+        defer { state.isSaving = false }
 
         do {
-            try await saveUseCase.execute(draft: draft)
-            shouldDismiss = true
+            try await saveUseCase.execute(draft: state.draft)
+            state.shouldDismiss = true
         } catch {
-            handle(error: error)
+            presentError(error)
         }
     }
 }
 
 // MARK: - Error Mapping
 
-private extension DefaultNovelReviewViewModel {
-    func handle(error: Error) {
+private extension NovelReviewViewModel {
+
+    /// 도메인/Repository 에러를 사용자 메시지로 변환한다. (`handle(_:)`과 이름이 겹치지 않게 분리)
+    func presentError(_ error: Error) {
         switch error {
         case RepositoryError.networkUnavailable:
-            errorMessage = "네트워크 연결을 확인해 주세요"
+            state.errorMessage = "네트워크 연결을 확인해 주세요"
         case RepositoryError.authenticationRequired:
-            errorMessage = "로그인이 필요해요"
+            state.errorMessage = "로그인이 필요해요"
         case RepositoryError.serverUnavailable:
-            errorMessage = "서버에 잠시 문제가 있어요"
+            state.errorMessage = "서버에 잠시 문제가 있어요"
         case RepositoryError.notFound:
-            errorMessage = "평가 정보를 찾을 수 없어요"
+            state.errorMessage = "평가 정보를 찾을 수 없어요"
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
-            errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
+            state.errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
         case ReadingPeriod.ValidationError.startAfterEnd:
-            errorMessage = "시작일은 종료일보다 늦을 수 없어요"
+            state.errorMessage = "시작일은 종료일보다 늦을 수 없어요"
         case Rating.ValidationError.outOfRange, Rating.ValidationError.invalidStep:
-            errorMessage = "평점은 0.5~5.0 사이에서 0.5 단위로 줄 수 있어요"
+            state.errorMessage = "평점은 0.5~5.0 사이에서 0.5 단위로 줄 수 있어요"
         default:
-            errorMessage = "잠시 후 다시 시도해 주세요"
+            state.errorMessage = "잠시 후 다시 시도해 주세요"
         }
     }
 }
