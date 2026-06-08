@@ -1,6 +1,6 @@
 # 네이밍 · 에러 규약
 
-레이어 공통 규약. 레이어별 세부는 각 `Projects/<Layer>/CLAUDE.md` 참고.
+레이어 공통 규약. 레이어별 세부는 각 `Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md` 참고.
 
 ## 네이밍
 

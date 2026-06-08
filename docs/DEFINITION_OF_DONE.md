@@ -6,7 +6,8 @@
 
 - [ ] 의존성 방향 위반 없음 (`App→Feature→(UI/Domain)←Data→Core`). 역방향 import 금지.
 - [ ] 레이어 비동기 규칙 준수 (Domain/Data = async/await, UI/Feature = Combine).
-- [ ] 변경 영향 받는 **가장 가까운 `CLAUDE.md` 갱신** (책임/시나리오/주의사항). 함정 발견 시 `/learn`.
+- [ ] 변경 영향 받는 **가장 가까운 에이전트 가이드(`CLAUDE.md` / `AGENTS.md`) 갱신** (책임/시나리오/주의사항). 함정 발견 시 `/learn`.
+- [ ] 에이전트 가이드 수정 시 `CLAUDE.md`와 `AGENTS.md`를 함께 갱신하고, 차이는 파일명/에이전트별 로딩 설명에만 한정.
 - [ ] 코드와 문서가 일치 (불일치면 코드 기준으로 문서 수정).
 
 ## 새 모듈 추가 시
@@ -14,7 +15,7 @@
 - [ ] `ModuleType.swift`에 case 등록 (단일 진실 소스).
 - [ ] `Project.swift` 템플릿으로 작성 + `internalDependencies` 선언.
 - [ ] `tuist generate` 실행해 프로젝트 반영.
-- [ ] `docs/MODULE_GUIDE_TEMPLATE.md` 복사해 모듈 `CLAUDE.md` 작성.
+- [ ] `docs/MODULE_GUIDE_TEMPLATE.md` 복사해 모듈 `CLAUDE.md`와 `AGENTS.md` 작성.
 
 ## Domain 작업 시 (테스트 필수)
 
