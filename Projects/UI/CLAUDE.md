@@ -17,15 +17,15 @@
 
 ## 의존 규칙
 
-- ✅ 다른 UI 모듈, `Core`(필요 시), SwiftUI.
-- ❌ Domain / Data import 금지. **비즈니스 로직·도메인 Entity를 알지 않는다.**
+- ✅ 다른 UI 모듈, `Core`(필요 시), SwiftUI. `BaseDomain` 공통 값 타입은 **표현 매핑 목적에 한해** 허용(예: `WSSComponent`의 `DomainPresentation` 확장).
+- ❌ Data import 금지. Domain도 `BaseDomain` 외(Entity/Repository)는 금지 — **비즈니스 로직·상위 도메인 모델을 알지 않는다.**
   화면에 무엇을 그릴지는 Feature가 Entity → 표시용 모델로 가공해 전달한다.
 - ❌ Feature / App import 금지 (하위가 상위를 모른다).
 
 ## 코드 규칙
 
 - 순수 표현(presentation) 컴포넌트. 네트워크·저장·도메인 정책 금지.
-- 입력은 값/콜백으로 받는다. 컴포넌트가 도메인 타입에 직접 의존하지 않게 한다.
+- 입력은 값/콜백으로 받는 것이 기본. `BaseDomain` 공통 값 타입만 `DomainPresentation` 매핑 목적에 한해 직접 사용하고, 그 외 도메인 타입에는 의존하지 않는다.
 - `Resources/`, `Demo/` 타깃으로 단독 미리보기·검증.
 
 ## 주의사항 (작업 중 발견 시 누적)
