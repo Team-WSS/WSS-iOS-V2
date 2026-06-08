@@ -3,7 +3,7 @@
 
 `SettingDomain`의 두 Repository를 구현 — `DefaultAppUpdateRepository` + `DefaultTermsAgreementRepository`.
 
-- 식별자: `ModuleType.data(.setting)` / 의존: `SettingDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.setting)` / 의존: `SettingDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점 2개 (둘 다 `DefaultSettingService` 공유):
   - `SettingDataFactory.makeAppUpdateRepository(client:logger:)`
   - `SettingDataFactory.makeTermsAgreementRepository(client:logger:)`

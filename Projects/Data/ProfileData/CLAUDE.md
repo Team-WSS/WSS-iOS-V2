@@ -3,7 +3,7 @@
 
 `ProfileDomain.ProfileRepository` 구현 — 프로필 등록/조회/수정, 닉네임·선호·계정·공개범위. (DTO가 가장 많음)
 
-- 식별자: `ModuleType.data(.profile)` / 의존: `ProfileDomain`, `BaseData`, `Networking`, `Logger`
+- 식별자: `ModuleType.data(.profile)` / 의존: `ProfileDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `ProfileDataFactory.makeProfileRepository(client:localStorage:logger:)`
 
 ## 핵심 시나리오

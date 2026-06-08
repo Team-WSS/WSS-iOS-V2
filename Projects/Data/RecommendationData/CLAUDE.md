@@ -3,7 +3,7 @@
 
 `RecommendationDomain.RecommendationRepository` 구현 — 홈 추천 5종 fetch.
 
-- 식별자: `ModuleType.data(.recommendation)` / 의존: `RecommendationDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.recommendation)` / 의존: `RecommendationDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `RecommendationDataFactory.makeRepository(network:logger:)`
 
 ## 주의사항 (작업 중 발견 시 누적)

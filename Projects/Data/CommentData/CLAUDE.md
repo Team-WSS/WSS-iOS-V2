@@ -3,7 +3,7 @@
 
 `CommentDomain.CommentRepository`의 네트워크 구현. 표준 패턴(Service→Repository→Mapper) 그대로.
 
-- 식별자: `ModuleType.data(.comment)` / 의존: `CommentDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.comment)` / 의존: `CommentDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `CommentDataFactory.makeRepository(client:logger:)`
 
 ## 주의사항 (작업 중 발견 시 누적)

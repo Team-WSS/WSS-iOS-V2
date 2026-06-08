@@ -3,7 +3,7 @@
 
 Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한다. (= 여기 바꾸면 광범위 영향)
 
-- 식별자: `ModuleType.data(.base)` / 의존: `BaseDomain`, `Networking`
+- 식별자: `ModuleType.data(.base)` / 의존: `BaseDomain`, `Networking`, `Keychain`, `Logger`
 
 ## 여기 들어있는 핵심 인프라
 

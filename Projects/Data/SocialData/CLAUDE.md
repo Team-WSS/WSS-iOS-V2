@@ -3,7 +3,7 @@
 
 `SocialDomain.SocialRepository` 구현 — 차단 + 신고.
 
-- 식별자: `ModuleType.data(.social)` / 의존: `SocialDomain`, `BaseData`, `Networking`, `Logger`
+- 식별자: `ModuleType.data(.social)` / 의존: `SocialDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `SocialDataFactory.makeSocialRepository(client:underlying:)`
 
 ## 주의사항 (작업 중 발견 시 누적)

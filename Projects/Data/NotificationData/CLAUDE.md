@@ -3,7 +3,7 @@
 
 `NotificationDomain`의 두 Repository를 구현 — `Notification/`(인앱 알림) + `Push/`(푸시 설정/토큰).
 
-- 식별자: `ModuleType.data(.notification)` / 의존: `NotificationDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.notification)` / 의존: `NotificationDomain`, `BaseDomain`, `BaseData`, `Networking`
 - 진입점 2개:
   - `NotificationDataFactory.makeNotificationRepository(client:logger:)` → `NotificationRepository`
   - `NotificationDataFactory.makePushSettingRepository(client:logger:)` → `PushSettingRepository`

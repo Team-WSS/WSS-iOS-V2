@@ -3,7 +3,7 @@
 
 `AuthDomain` 구현 + **세션(토큰) 갱신**까지 담당. 인증은 다른 Data 모듈과 결이 다르다.
 
-- 식별자: `ModuleType.data(.auth)` / 의존: `AuthDomain`, `BaseData`, `Networking`, `Keychain`
+- 식별자: `ModuleType.data(.auth)` / 의존: `AuthDomain`, `BaseDomain`, `BaseData`, `Networking`, `Keychain`, `Logger`
 - 진입점 2개:
   - `AuthDataFactory.makeRepository(client:tokenStore:deviceIdentifierStore:logger:)` → `AuthRepository`
   - `AuthDataFactory.makeSessionRefresher(client:tokenStore:logger:)` → `AuthSessionRefreshing`

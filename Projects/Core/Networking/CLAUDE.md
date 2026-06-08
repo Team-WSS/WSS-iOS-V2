@@ -3,7 +3,7 @@
 
 HTTP 클라이언트 + 요청/응답 추상화. Data 레이어가 이걸로 통신한다.
 
-- 식별자: `ModuleType.core(.networking)` / 의존: 없음(순수 기술)
+- 식별자: `ModuleType.core(.networking)` / 의존: `Logger` (순수 기술 — 도메인은 모름)
 
 ## 핵심 구조
 

@@ -4,7 +4,7 @@
 `NovelDomain.NovelRepository`의 네트워크 구현. 구성요소는 `Sources/`를 직접 보면 된다.
 여기엔 **코드만 봐선 모르는 것**만 적는다.
 
-- 식별자: `ModuleType.data(.novel)` / 의존: `NovelDomain`, `BaseData`, `Networking`, `Logger`
+- 식별자: `ModuleType.data(.novel)` / 의존: `NovelDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `NovelDataFactory.makeNovelRepository(client:appStorage:logger:)` (상위는 이 Factory만 안다)
 
 ## 핵심 시나리오

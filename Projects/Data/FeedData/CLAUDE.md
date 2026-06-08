@@ -3,7 +3,7 @@
 
 `FeedDomain.FeedRepository` 구현 — 피드 작성/수정/삭제, 상세, 소스별 목록, 좋아요.
 
-- 식별자: `ModuleType.data(.feed)` / 의존: `FeedDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.feed)` / 의존: `FeedDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `FeedDataFactory.makeFeedRepository(client:logger:)`
 
 ## 핵심 시나리오

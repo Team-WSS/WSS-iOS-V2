@@ -3,7 +3,7 @@
 
 `NovelReviewDomain.NovelReviewRepository` 구현 — 리뷰 초안 조회/저장/삭제.
 
-- 식별자: `ModuleType.data(.novelReview)` / 의존: `NovelReviewDomain`, `BaseData`, `Networking`
+- 식별자: `ModuleType.data(.novelReview)` / 의존: `NovelReviewDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
 - 진입점: `NovelReviewDataFactory.makeRepository(client:logger:)`
 
 ## 주의사항 (작업 중 발견 시 누적)
