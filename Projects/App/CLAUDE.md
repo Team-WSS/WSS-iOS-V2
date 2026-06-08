@@ -10,8 +10,7 @@
 ## 책임
 
 - 앱 진입점(`@main`), 전역 환경 구성.
-- 각 레이어 조립: **Data의 Factory로 Repository를 만들어, Domain UseCase에 주입하고, Feature에 전달**한다.
-  - 여기가 Data 구현체와 Domain 프로토콜이 만나는 **유일한 지점**이다.
+- 각 레이어 조립 — Data 구현체와 Domain 프로토콜이 만나는 **유일한 지점**.
 - 화면 전환·딥링크 등 전역 흐름 조정.
 
 ## 의존 규칙
@@ -21,9 +20,13 @@
 
 ## 코드 규칙 (초안 — 조립 구현 시 확정)
 
-- Repository 생성은 반드시 Data의 `XxxDataFactory.makeXxxRepository(...)` 사용.
-- UseCase 생성 시 Repository 프로토콜 타입으로 주입.
-- DI 컨테이너/조립 방식이 정해지면 이 문서에 표준 패턴을 기록한다.
+조립 골격(예시 — DI 컨테이너 방식 정해지면 표준 패턴으로 갱신):
+
+```swift
+let repository = XxxDataFactory.makeXxxRepository(...)        // Data 구현체
+let useCase    = DefaultXxxUseCase(repository: repository)    // Domain 프로토콜에 주입
+let view       = XxxFactory.makeView(useCase: useCase)        // Feature에 전달
+```
 
 ## 주의사항 (작업 중 발견 시 누적)
 
