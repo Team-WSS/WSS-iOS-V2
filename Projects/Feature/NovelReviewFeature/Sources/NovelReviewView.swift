@@ -160,6 +160,8 @@ private extension NovelReviewView {
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
+                    // 틴트 색의 기본 크로스페이드를 짧게 고정(미설정 시 느리게 번진다).
+                    .animation(.easeInOut(duration: 0.1), value: isSelected)
                 }
                 .buttonStyle(.plain)
             }
@@ -246,6 +248,8 @@ private extension NovelReviewView {
                         }
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
+                        // 틴트 색의 기본 크로스페이드를 짧게 고정(미설정 시 느리게 번진다).
+                        .animation(.easeInOut(duration: 0.05), value: isSelected)
                     }
                     .buttonStyle(.plain)
                 }
