@@ -14,12 +14,10 @@ import NovelReviewDomain
 import WSSComponent
 
 /// 독서 기간 선택 sheet. 상태에 따라 입력 형태가 다르다.
-/// - watching: 시작 날짜 1개 (높이 320)
-/// - quit: 종료 날짜 1개 (높이 320)
-/// - watched: segment로 시작/종료를 전환하며 한 시트에서 둘 다 선택 (높이 394)
+/// - watching: 시작 날짜 1개 / quit: 종료 날짜 1개
+/// - watched: segment로 시작/종료를 전환하며 한 시트에서 둘 다 선택
 ///
 /// 입력 상태·순서 보정 정책은 `ReadingPeriodSheetViewModel`에 있고, 이 View는 레이아웃과 표기만 담당한다.
-/// 배경은 흰색, 완료는 `WSSCTAButton`, 그 아래 "날짜 삭제"(기간 제거). 취소는 우상단 X 또는 배경 탭(시트 dismiss).
 struct ReadingPeriodSheet: View {
 
     @StateObject private var viewModel: ReadingPeriodSheetViewModel

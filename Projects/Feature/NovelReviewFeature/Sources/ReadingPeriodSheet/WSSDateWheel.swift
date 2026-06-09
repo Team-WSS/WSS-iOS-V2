@@ -154,8 +154,6 @@ private struct WheelColumn: View {
     let bounceToken: Int
 
     var body: some View {
-        // 체크를 ScrollView 옆에 둔다. ScrollView 폭을 숫자 폭으로 고정하면
-        // 가운데 정렬된 숫자의 왼쪽 10pt(HStack spacing)에 체크가 자연히 고정된다.
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 VStack(spacing: 0) {

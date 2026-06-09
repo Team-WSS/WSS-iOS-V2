@@ -1,8 +1,8 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙·State/Action 골격)와 함께 자동 로드됨. -->
 # NovelReviewFeature
 
-작품 평가(리뷰 초안) 화면. **프로젝트의 첫 Feature 모듈** — 레이어 가이드의 State/Action 골격을 처음 적용한 곳.
-(일반 패턴·구조는 레이어 가이드를 따른다. 여기엔 이 모듈 고유의 함정·결정만 적는다.)
+작품 평가(리뷰 초안) 화면. **프로젝트의 첫 Feature 모듈**로 레이어 가이드의 State/Action 골격을 처음 적용했다.
+일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
@@ -39,15 +39,17 @@
   - 입력: `ReadingPeriodSheet.apply()`는 폼대로 의미 있는 날짜만 넘긴다. 단일 상태에 양쪽 날짜를 넘기면 `ReadingPeriod(start:end:)`가 `startAfterEnd`로 **오검증**한다.
 
 #### ReadingPeriodSheet UI
-- 시트는 자체 **`ReadingPeriodSheetViewModel`(State/Action/handle)** 를 가진다(부모 VM과 별개). 비동기·UseCase·외부 콜백 없는 **순수 입력 VM** — 상태와 파생값(`editingDate`, `result`)만 노출한다. 시작/종료 **순서 보정**(watched에서 시작>종료면 종료를, 종료<시작이면 시작을 끌어다 맞춤)은 *포커스 상태에 달린 입력 UX 정책(도메인 규칙 아님)* 이라 이 VM에 산다.
-  - **결과 발화는 View가 한다**(VM이 콜백을 들지 않음 — `shouldDismiss` 식 상태/View 관습과 일관). "완료"는 `viewModel.result`(status별 raw 날짜)를 부모 `onApply`로, "날짜 삭제"는 `onApply(nil, nil)`로 직접 호출. 부모가 `updatePeriod` + 시트 dismiss 담당.
-  - **시트는 `ReadingPeriod`를 만들지/normalize하지 않는다** — raw `(Date?, Date?)`만 올린다. 도메인 생성·정규화·검증은 status를 가진 draft가 `setPeriod`에서 단독 수행(미래는 휠이, `start>end`는 순서 보정이 이미 예방).
-- 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭. 높이는 `presentationDetents`로 고정: 단일(watching/quit) **320**, 시작+종료(watched) **394**.
-- watched의 field 전환 시 편집 날짜가 바뀌면 `WSSDateWheel`이 **`editingDateBinding`(=`date`) 변화를 `onChange`로 감지해 스스로 컬럼을 재정렬**한다(`syncColumns`). 내부 스크롤이 일으킨 `date` 변경은 이미 컬럼값과 같아 early-return으로 되먹임 루프를 막는다.
-  - ⚠️ **`.id(field)`로 휠을 재생성하지 말 것.** 재생성하면 새 `ScrollView`가 `scrollPosition` 미적용 상태(맨 위, 연도 1900 등)로 한 프레임 그려진 뒤 `onAppear`의 async `scrollTo`로 점프해 **번쩍인다**. 직접 겪고 폐기한 방식 — 되살리지 말 것.
-- `WSSDateWheel`/`WheelColumn`은 연·월·일 3열 커스텀 휠 — **iOS 17 ScrollView 스냅 API**(`scrollTargetLayout`/`scrollTargetBehavior(.viewAligned)`/`scrollPosition(id:)` + `contentMargins`)로 가운데 정렬값을 선택값으로 삼는다. 네이티브 `DatePicker(.wheel)`은 체크/회색 처리 룩이 안 나와 직접 구현.
+- 시트는 부모와 별개인 자체 **`ReadingPeriodSheetViewModel`(순수 입력 VM)** 을 가진다 — 비동기·UseCase·콜백 없이 상태와 파생값(`editingDate`, `result`)만 노출한다. watched의 시작/종료 **순서 보정**(`applyEditedDate`)은 *도메인 규칙이 아니라 포커스에 달린 입력 UX 정책*이라 이 VM에 산다.
+  - **결과 발화는 View가 한다**(VM은 콜백을 들지 않음 — `shouldDismiss` 식 관습과 일관). "완료"=`viewModel.result`를, "날짜 삭제"=`(nil, nil)`을 부모 `onApply`로 넘기면 부모가 `updatePeriod` + dismiss.
+  - **시트는 `ReadingPeriod`를 만들거나 normalize하지 않는다** — raw `(Date?, Date?)`만 올린다. 도메인 생성·검증은 status를 가진 draft가 `setPeriod`에서 단독 수행(미래는 휠이, `start>end`는 순서 보정이 이미 예방).
+- 높이는 `presentationDetents`로 고정: 단일(watching/quit) **320**, 시작+종료(watched) **394**.
+- watched의 field 전환 시 `WSSDateWheel`이 `editingDateBinding`(=`date`) 변화를 `onChange`로 감지해 스스로 컬럼을 재정렬한다(`syncColumns`). 내부 스크롤발 `date` 변경은 컬럼값과 같아 early-return으로 되먹임 루프를 막는다.
+  - ⚠️ **`.id(field)`로 휠을 재생성하지 말 것.** 새 `ScrollView`가 `scrollPosition` 미적용 상태(맨 위)로 한 프레임 그려진 뒤 `onAppear`의 async `scrollTo`로 점프해 **번쩍인다**. 직접 겪고 폐기 — 되살리지 말 것.
 
-#### WSSDateWheel 미래 날짜 차단 (오버슈트→정착→되돌림) — 코드만 보면 의도 파악 어려움
+#### WSSDateWheel — 연·월·일 3열 커스텀 휠
+네이티브 `DatePicker(.wheel)`은 체크/회색 룩이 안 나와, **iOS 17 ScrollView 스냅 API**(`scrollTargetBehavior(.viewAligned)` + `scrollPosition(id:)` + `contentMargins`)로 가운데 정렬값을 선택값으로 삼는 휠을 직접 구현했다.
+
+##### 미래 날짜 차단 (오버슈트→정착→되돌림)
 - **미래(오늘 이후)는 못 고른다.** `maxDate`(= sheet가 넘기는 오늘) 기준.
 - ⚠️ **스크롤 "도중에" 클램프 금지.** 플링 중 상태를 오늘로 되돌리면 iOS 관성과 싸워 멈칫거리다 결국 미래값에 멈춘다(상태/물리 위치 어긋남). 직접 겪고 폐기한 방식 — 되살리지 말 것.
 - **채택한 방식**: 미래로 굴러가는 건 허용하되 ① 그동안 `date`(세그먼트 표시 소스)를 **갱신하지 않고**, ② `settleTask`(약 0.13s 디바운스)로 스크롤 **정착을 감지한 뒤에야** 오늘로 되돌린다(플링 중엔 계속 재예약돼 발동 안 함 = 관성과 안 싸움).
