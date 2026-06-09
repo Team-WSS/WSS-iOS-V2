@@ -197,6 +197,7 @@ private extension NovelReviewViewModel {
     /// 그 외(네트워크/인증/서버/기간/평점)는 UI·도메인 가드가 이미 막고 있어 **원래 도달하면 안 되는** 경로이므로,
     /// 사용자에겐 일반 문구만 보여주고 원인은 로그로 남겨 추적한다.
     func presentError(_ error: Error) {
+        if state.presentedError != nil { return } 
         switch error {
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
             state.presentedError = .attractivePointLimit(max: max)
