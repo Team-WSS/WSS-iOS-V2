@@ -22,7 +22,16 @@ final class NovelReviewViewModel: ObservableObject {
         var isLoading = false
         var isSaving = false
         var shouldDismiss = false
-        var errorMessage: String?
+        /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
+        var presentedError: ReviewError?
+    }
+
+    /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
+    enum ReviewError: Equatable {
+        /// 매력 포인트 최대 개수 초과(사용자가 정상적으로 마주칠 수 있는 검증 에러).
+        case attractivePointLimit(max: Int)
+        /// 그 외 — 원래 도달하면 안 되는 경로. 원인은 로그로 남긴다.
+        case unknown
     }
 
     // MARK: - Action
@@ -83,7 +92,7 @@ final class NovelReviewViewModel: ObservableObject {
         case .save:
             save()
         case .dismissError:
-            state.errorMessage = nil
+            state.presentedError = nil
         }
     }
 }
@@ -190,10 +199,10 @@ private extension NovelReviewViewModel {
     func presentError(_ error: Error) {
         switch error {
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
-            state.errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
+            state.presentedError = .attractivePointLimit(max: max)
         default:
             logger?.error("NovelReview 예기치 못한 에러: \(String(describing: error))")
-            state.errorMessage = "알 수 없는 에러가 발생했어요"
+            state.presentedError = .unknown
         }
     }
 }

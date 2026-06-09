@@ -82,16 +82,7 @@ struct NovelReviewView: View {
                 isPeriodSheetPresented = false
             }
         }
-        .alert(
-            "오류",
-            isPresented: errorBinding,
-            actions: {
-                Button("확인") { viewModel.handle(.dismissError) }
-            },
-            message: {
-                Text(viewModel.state.errorMessage ?? "")
-            }
-        )
+        .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
     private var content: some View {
@@ -275,11 +266,20 @@ private extension NovelReviewView {
         }
     }
 
-    var errorBinding: Binding<Bool> {
+    /// 에러 유무 → 토스트 표시 여부. 자동 닫힘(모디파이어가 false로 set)·재탭 시 에러를 비운다.
+    private var toastBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.state.errorMessage != nil },
-            set: { _ in viewModel.handle(.dismissError) }
+            get: { viewModel.state.presentedError != nil },
+            set: { if !$0 { viewModel.handle(.dismissError) } }
         )
+    }
+
+    /// 의미 에러(VM) → 토스트 타입(표현)은 View가 매핑한다. nil일 땐 모디파이어가 숨기므로 표시되지 않는다.
+    private var toastType: WSSToastType {
+        switch viewModel.state.presentedError {
+        case .attractivePointLimit(let max):    .selectionOverLimit(count: max)
+        case .unknown, .none:                   .unknownError
+        }
     }
 }
 

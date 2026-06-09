@@ -28,4 +28,5 @@ public enum WSSToastType {
     case editProfile
     
     case networkDelay
+    case unknownError
 }

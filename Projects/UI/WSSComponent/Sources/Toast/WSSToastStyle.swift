@@ -18,6 +18,8 @@ public extension WSSToastType {
         case .novelReviewed, .novelReviewDeleted, .feedEdited, .blockUser,
                 .changePublic, .changePrivate, .changeInfo, .editProfile, .limitAddImage:
             return WSSImage.icAlertCheck.swiftUIImage
+        case .unknownError:
+            return WSSImage.icAlertWarning.swiftUIImage
         }
     }
     
@@ -37,6 +39,7 @@ public extension WSSToastType {
         case .changeInfo:                       "성별/나이 정보가 수정되었어요"
         case .editProfile:                      "프로필 정보가 수정되었어요"
         case .networkDelay:                     "오류가 발생했어요. 다시 시도해주세요."
+        case .unknownError:                     "알 수 없는 에러가 발생했어요"
         }
     }
 }
