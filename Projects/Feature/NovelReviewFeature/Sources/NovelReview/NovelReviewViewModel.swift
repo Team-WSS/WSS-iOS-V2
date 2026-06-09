@@ -9,6 +9,7 @@
 import Foundation
 
 import BaseDomain
+import Logger
 import NovelReviewDomain
 
 @MainActor
@@ -48,18 +49,21 @@ final class NovelReviewViewModel: ObservableObject {
     private let novelID: NovelID
     private let loadUseCase: LoadNovelReviewDraftUseCase
     private let saveUseCase: SaveNovelReviewUseCase
+    private let logger: Logger?
 
     // MARK: - Init
 
     init(
         novelID: NovelID,
         loadUseCase: LoadNovelReviewDraftUseCase,
-        saveUseCase: SaveNovelReviewUseCase
+        saveUseCase: SaveNovelReviewUseCase,
+        logger: Logger? = nil
     ) {
         self.novelID = novelID
         self.state = State(draft: NovelReviewDraft(novelID: novelID, status: .watching))
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
+        self.logger = logger
     }
 
     // MARK: - handle
@@ -179,26 +183,17 @@ private extension NovelReviewViewModel {
 private extension NovelReviewViewModel {
 
     /// 도메인/Repository 에러를 사용자 메시지로 변환한다. (`handle(_:)`과 이름이 겹치지 않게 분리)
+    ///
+    /// 매력 포인트 초과(`tooManyAttractivePoints`)만 사용자가 정상적으로 마주칠 수 있는 검증 에러다.
+    /// 그 외(네트워크/인증/서버/기간/평점)는 UI·도메인 가드가 이미 막고 있어 **원래 도달하면 안 되는** 경로이므로,
+    /// 사용자에겐 일반 문구만 보여주고 원인은 로그로 남겨 추적한다.
     func presentError(_ error: Error) {
         switch error {
-        case RepositoryError.networkUnavailable:
-            state.errorMessage = "네트워크 연결을 확인해 주세요"
-        case RepositoryError.authenticationRequired:
-            state.errorMessage = "로그인이 필요해요"
-        case RepositoryError.serverUnavailable:
-            state.errorMessage = "서버에 잠시 문제가 있어요"
-        case RepositoryError.notFound:
-            state.errorMessage = "평가 정보를 찾을 수 없어요"
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
             state.errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
-        case ReadingPeriod.ValidationError.startAfterEnd:
-            state.errorMessage = "시작일은 종료일보다 늦을 수 없어요"
-        case ReadingPeriod.ValidationError.futureDate:
-            state.errorMessage = "오늘 이후 날짜는 선택할 수 없어요"
-        case Rating.ValidationError.outOfRange, Rating.ValidationError.invalidStep:
-            state.errorMessage = "평점은 0.5~5.0 사이에서 0.5 단위로 줄 수 있어요"
         default:
-            state.errorMessage = "잠시 후 다시 시도해 주세요"
+            logger?.error("NovelReview 예기치 못한 에러: \(String(describing: error))")
+            state.errorMessage = "알 수 없는 에러가 발생했어요"
         }
     }
 }

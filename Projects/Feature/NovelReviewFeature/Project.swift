@@ -17,6 +17,7 @@ let project = Project.createFeatureModule(
         .module(.domain(.base)),
         .module(.domain(.novelReview)),
         .module(.ui(.designSystem)),
-        .module(.ui(.wssComponent))
+        .module(.ui(.wssComponent)),
+        .module(.core(.logger))
     ]
 )

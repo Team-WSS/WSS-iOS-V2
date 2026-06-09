@@ -4,8 +4,8 @@
 작품 평가(리뷰 초안) 화면. **프로젝트의 첫 Feature 모듈** — 레이어 가이드의 State/Action 골격을 처음 적용한 곳.
 (일반 패턴·구조는 레이어 가이드를 따른다. 여기엔 이 모듈 고유의 함정·결정만 적는다.)
 
-- 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`
-- **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:)`**
+- 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
+- **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)은 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 제목(작품명)은 호출자가 아는 값을 넘긴다(Feature가 자체 보유 ❌).
 
 ### 파일 구조 — 화면(영역)별 그룹
@@ -27,6 +27,10 @@
 - 미연결: 키워드 선택/탐색뷰, 삭제(`DeleteNovelReviewUseCase`).
 
 ## 주의사항 (작업 중 발견 시 누적)
+
+#### 에러 처리 정책 (`presentError`)
+- **사용자에게 정상적으로 보여줄 검증 에러는 매력 포인트 초과(`tooManyAttractivePoints`) 하나뿐.** 이것만 전용 문구로 노출한다.
+- 나머지(네트워크/인증/서버/notFound/기간/평점)는 UI·도메인 가드(휠 미래 차단, 순서 보정, 슬라이더 범위, 단일 선택 등)가 **이미 입력단에서 막고 있어 도달하면 안 되는 경로**다. 그래서 사용자에겐 `"알 수 없는 에러가 발생했어요"`만 띄우고, 원인은 `logger?.error(...)`로 남겨 추적한다. → 케이스별 친절 문구를 다시 늘리지 말 것(가드가 뚫린 거라 문구보다 로그가 중요).
 
 #### 도메인 값 매핑
 - **평점**: 도메인 `Rating`은 0.5~5.0(0.5 단위)만 허용하고 0.0을 표현 못 한다 → 슬라이더의 0.0을 **`nil`(평점 없음)로 매핑**한다. "평점 없음 ↔ 0.0"은 이 규칙이라 임의 변경 ❌.

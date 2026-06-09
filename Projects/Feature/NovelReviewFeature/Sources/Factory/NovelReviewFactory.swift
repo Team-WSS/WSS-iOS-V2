@@ -9,6 +9,7 @@
 import SwiftUI
 
 import BaseDomain
+import Logger
 import NovelReviewDomain
 
 /// 모듈의 유일한 public 진입점.
@@ -23,12 +24,14 @@ public enum NovelReviewFactory {
         novelID: NovelID,
         title: String,
         loadUseCase: LoadNovelReviewDraftUseCase,
-        saveUseCase: SaveNovelReviewUseCase
+        saveUseCase: SaveNovelReviewUseCase,
+        logger: Logger? = nil
     ) -> some View {
         let viewModel = NovelReviewViewModel(
             novelID: novelID,
             loadUseCase: loadUseCase,
-            saveUseCase: saveUseCase
+            saveUseCase: saveUseCase,
+            logger: logger
         )
         return NovelReviewView(viewModel: viewModel, title: title)
     }
