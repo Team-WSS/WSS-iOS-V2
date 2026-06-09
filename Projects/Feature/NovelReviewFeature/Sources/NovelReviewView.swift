@@ -175,8 +175,10 @@ private extension NovelReviewView {
             periodValueLabel
                 .applyWSSFont(.body4_2)
                 .foregroundStyle(Color.wssGray200)
+                .lineLimit(1)
                 .underline()
-                .frame(width: 83, height: 44, alignment: .center)
+                .frame(minWidth: 83)
+                .frame(height: 44, alignment: .center)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

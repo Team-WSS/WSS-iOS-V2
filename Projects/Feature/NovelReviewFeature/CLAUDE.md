@@ -28,10 +28,18 @@
   - 입력: `ReadingPeriodSheet.apply()`는 폼대로 의미 있는 날짜만 넘긴다. 단일 상태에 양쪽 날짜를 넘기면 `ReadingPeriod(start:end:)`가 `startAfterEnd`로 **오검증**한다.
 
 #### ReadingPeriodSheet UI
-- 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭. 높이는 `presentationDetents`로 고정: 단일(watching/quit) **362**, 시작+종료(watched) **436**.
+- 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭. 높이는 `presentationDetents`로 고정: 단일(watching/quit) **320**, 시작+종료(watched) **394**.
 - **날짜 삭제**는 `onApply(nil, nil)` → `updatePeriod(nil, nil)`로 기간 제거(전용 콜백 없이 재사용).
 - watched는 field 전환 시 편집 날짜가 바뀌므로 `WSSDateWheel`에 **`.id(field)`**를 줘 휠을 새로 띄워 초기값을 갱신한다(외부 동기화 루프 회피).
 - `WSSDateWheel`/`WheelColumn`은 연·월·일 3열 커스텀 휠 — **iOS 17 ScrollView 스냅 API**(`scrollTargetLayout`/`scrollTargetBehavior(.viewAligned)`/`scrollPosition(id:)` + `contentMargins`)로 가운데 정렬값을 선택값으로 삼는다. 네이티브 `DatePicker(.wheel)`은 체크/회색 처리 룩이 안 나와 직접 구현.
+
+#### WSSDateWheel 미래 날짜 차단 (오버슈트→정착→되돌림) — 코드만 보면 의도 파악 어려움
+- **미래(오늘 이후)는 못 고른다.** `maxDate`(= sheet가 넘기는 오늘) 기준.
+- ⚠️ **스크롤 "도중에" 클램프 금지.** 플링 중 상태를 오늘로 되돌리면 iOS 관성과 싸워 멈칫거리다 결국 미래값에 멈춘다(상태/물리 위치 어긋남). 직접 겪고 폐기한 방식 — 되살리지 말 것.
+- **채택한 방식**: 미래로 굴러가는 건 허용하되 ① 그동안 `date`(세그먼트 표시 소스)를 **갱신하지 않고**, ② `settleTask`(약 0.13s 디바운스)로 스크롤 **정착을 감지한 뒤에야** 오늘로 되돌린다(플링 중엔 계속 재예약돼 발동 안 함 = 관성과 안 싸움).
+- **물리 스크롤 되돌림은 `.scrollPosition(id:)`만으론 안 먹는다.** `bounceToken`을 증가시켜 `WheelColumn`의 `onChange(bounceToken)`에서 **`proxy.scrollTo(selection)`로 강제 정렬**해야 화면이 따라온다.
+- 연도 컬럼은 `years = 1900...maxDate연도`로 막아 **미래 연도 자체를 못 굴린다**. 월/일만 오버슈트→바운스 대상.
+- 도메인 `ReadingPeriod` 생성자가 미래 날짜를 **거부(불변식)** → Data 매퍼(`NovelMapper`)는 서버 미래 데이터에 **로드 실패(fail-loud)**. 휠 `maxDate` + sheet는 *사용자 입력단*의 예방선(서로 다른 경계).
 
 #### 로드 생명주기
 - `onAppear`에서 `handle(.load)`로 호출. 초안이 없으면(nil) 기본 draft를 유지한다(덮어쓰지 않음).
