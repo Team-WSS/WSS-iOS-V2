@@ -194,9 +194,9 @@ private extension NovelReviewView {
         case let (start?, end?):
             Text("\(periodDateFormatter.string(from: start)) ~ \(periodDateFormatter.string(from: end))")
         case let (start?, nil):
-            Text(periodDateFormatter.string(from: start))
+            Text("\(periodDateFormatter.string(from: start)) ~")
         case let (nil, end?):
-            Text(periodDateFormatter.string(from: end))
+            Text("~ \(periodDateFormatter.string(from: end))")
         case (nil, nil):
             Text("본 날짜 추가")
         }
