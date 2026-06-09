@@ -499,14 +499,35 @@ private struct ReadingPeriodSheet: View {
     }
     
     /// 상태별로 segment가 가리키는(또는 단일) 날짜를 편집하는 바인딩.
+    /// set은 휠이 이미 오늘로 클램프한 값을 받아, watched에서 두 날짜의 순서를 보정한다.
     private var editingDateBinding: Binding<Date> {
+        Binding(get: { editingDate }, set: { applyEditedDate($0) })
+    }
+
+    private var editingDate: Date {
+        switch status {
+        case .watching: return start
+        case .quit:     return end
+        case .watched:  return field == .start ? start : end
+        }
+    }
+
+    /// 편집 중인 쪽이 기준. watched에서 시작이 종료를 넘으면 종료를, 종료가 시작보다 빠르면 시작을 끌어다 맞춘다.
+    /// (어느 쪽이 양보하느냐는 포커스 상태에 달린 입력 UX 정책 — 도메인 규칙 아님)
+    private func applyEditedDate(_ newDate: Date) {
         switch status {
         case .watching:
-            return $start
+            start = newDate
         case .quit:
-            return $end
+            end = newDate
         case .watched:
-            return field == .start ? $start : $end
+            if field == .start {
+                start = newDate
+                if start > end { end = start }
+            } else {
+                end = newDate
+                if end < start { start = end }
+            }
         }
     }
     
@@ -553,7 +574,7 @@ private struct WSSDateWheel: View {
         _year = State(initialValue: comps.year ?? 2024)
         _month = State(initialValue: comps.month ?? 1)
         _day = State(initialValue: comps.day ?? 1)
-        let maxYear = Calendar.current.component(.year, from: maxDate)
+        let maxYear = 3000
         self.years = Array(1900...maxYear)
     }
     
