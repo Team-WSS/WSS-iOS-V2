@@ -375,6 +375,8 @@ private struct ReadingPeriodSheet: View {
     @State private var field: Field = .start
     @State private var start: Date
     @State private var end: Date
+    /// 선택 가능한 최대 날짜(오늘). 휠의 미래 클램프 기준.
+    private let today = Calendar.current.startOfDay(for: Date())
     
     init(
         status: ReadingStatus,
@@ -402,7 +404,7 @@ private struct ReadingPeriodSheet: View {
             }
             
             // watched는 field 전환 시 편집 날짜가 바뀌므로 id로 휠을 새로 띄워 초기값을 갱신한다.
-            WSSDateWheel(date: editingDateBinding)
+            WSSDateWheel(date: editingDateBinding, maxDate: today)
                 .id(field)
                 .padding(.top, 10)
                 .padding(.bottom, 30)
@@ -528,28 +530,35 @@ private struct ReadingPeriodSheet: View {
 private struct WSSDateWheel: View {
     
     @Binding var date: Date
-    
+    /// 선택 가능한 최대 날짜(보통 오늘). 이보다 미래로 굴리면 이 날짜로 되돌린다.
+    private let maxDate: Date
+
     private let rowHeight: CGFloat = 37
     private let visibleCount = 3
     private let calendar = Calendar.current
     private let years: [Int]
-    
+
     @State private var year: Int
     @State private var month: Int
     @State private var day: Int
-    
-    init(date: Binding<Date>) {
+    /// 미래로 오버슈트한 스크롤이 멈췄는지 판단하는 디바운스 Task(마지막 변경 후 일정 시간 무변화 = 정착).
+    @State private var settleTask: Task<Void, Never>?
+    /// 되돌림 시 각 컬럼이 선택값으로 물리 스크롤을 재정렬하도록 알리는 신호.
+    @State private var bounceToken = 0
+
+    init(date: Binding<Date>, maxDate: Date) {
         self._date = date
+        self.maxDate = maxDate
         let comps = Calendar.current.dateComponents([.year, .month, .day], from: date.wrappedValue)
         _year = State(initialValue: comps.year ?? 2024)
         _month = State(initialValue: comps.month ?? 1)
         _day = State(initialValue: comps.day ?? 1)
-        let currentYear = Calendar.current.component(.year, from: Date())
-        self.years = Array(1900...3000)
+        let maxYear = Calendar.current.component(.year, from: maxDate)
+        self.years = Array(1900...maxYear)
     }
     
     private var months: [Int] { Array(1...12) }
-    
+
     /// 선택된 연/월에 맞는 실제 일수(28~31).
     private var days: [Int] {
         let comps = DateComponents(year: year, month: month)
@@ -568,11 +577,11 @@ private struct WSSDateWheel: View {
                 .frame(height: rowHeight)
             
             HStack(spacing: 0) {
-                WheelColumn(values: years, selection: $year, format: { "\($0)" }, numberWidth: 40, rowHeight: rowHeight, visibleCount: visibleCount)
+                WheelColumn(values: years, selection: $year, format: { "\($0)" }, numberWidth: 40, rowHeight: rowHeight, visibleCount: visibleCount, bounceToken: bounceToken)
                 Spacer()
-                WheelColumn(values: months, selection: $month, format: { String(format: "%02d", $0) }, numberWidth: 20, rowHeight: rowHeight, visibleCount: visibleCount)
+                WheelColumn(values: months, selection: $month, format: { String(format: "%02d", $0) }, numberWidth: 20, rowHeight: rowHeight, visibleCount: visibleCount, bounceToken: bounceToken)
                 Spacer()
-                WheelColumn(values: days, selection: $day, format: { String(format: "%02d", $0) }, numberWidth: 20, rowHeight: rowHeight, visibleCount: visibleCount)
+                WheelColumn(values: days, selection: $day, format: { String(format: "%02d", $0) }, numberWidth: 20, rowHeight: rowHeight, visibleCount: visibleCount, bounceToken: bounceToken)
             }
             .padding(.horizontal, 7.5)
         }
@@ -582,20 +591,49 @@ private struct WSSDateWheel: View {
         .onChange(of: day) { _, _ in commit() }
     }
     
-    /// 일이 월 범위를 넘으면 먼저 클램프(재호출 유발)하고, 유효하면 날짜를 갱신한다.
+    /// 스크롤 변경마다 호출. 미래로 오버슈트하면 `date`를 갱신하지 않고 정착 디바운스만 무장하고,
+    /// 스크롤이 멈춘 뒤(`scheduleBounceBack`)에야 오늘로 되돌린다. 유효 범위면 즉시 반영한다.
     private func commit() {
-        let maxDay = days.count
-        if day > maxDay {
-            day = maxDay
+        // 월 길이 변동(예: 31일→28일)으로 일이 넘치면 클램프.
+        if day > days.count {
+            day = days.count
             return
         }
         var comps = DateComponents()
         comps.year = year
         comps.month = month
         comps.day = day
-        if let newDate = calendar.date(from: comps) {
-            date = newDate
+        guard let assembled = calendar.date(from: comps) else { return }
+
+        if calendar.compare(assembled, to: maxDate, toGranularity: .day) == .orderedDescending {
+            // 미래로 굴러가는 중 — 일단 두고 정착되면 되돌린다. date(세그먼트 표시)는 갱신하지 않는다.
+            scheduleBounceBack()
+        } else {
+            settleTask?.cancel()   // 유효한 값에 정착했으면 예약된 되돌림 취소
+            date = assembled
         }
+    }
+
+    /// 마지막 변경 후 일정 시간 추가 변경이 없으면(= 스크롤 정착) 오늘로 되돌린다.
+    /// 플링 도중에는 계속 재예약되어 발동하지 않으므로 관성과 싸우지 않는다.
+    private func scheduleBounceBack() {
+        settleTask?.cancel()
+        settleTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            bounceBackToMaxDate()
+        }
+    }
+
+    private func bounceBackToMaxDate() {
+        let c = calendar.dateComponents([.year, .month, .day], from: maxDate)
+        withAnimation(.easeOut(duration: 0.35)) {
+            year = c.year ?? year
+            month = c.month ?? month
+            day = c.day ?? day
+        }
+        date = maxDate
+        bounceToken &+= 1   // 컬럼들이 선택값으로 물리 스크롤을 촤라락 재정렬
     }
 }
 
@@ -611,7 +649,9 @@ private struct WheelColumn: View {
     let numberWidth: CGFloat
     let rowHeight: CGFloat
     let visibleCount: Int
-    
+    /// 부모가 오버슈트를 되돌릴 때 증가. 변경되면 선택값으로 물리 스크롤을 재정렬한다.
+    let bounceToken: Int
+
     var body: some View {
         // 체크를 ScrollView 옆에 둔다. ScrollView 폭을 숫자 폭으로 고정하면
         // 가운데 정렬된 숫자의 왼쪽 10pt(HStack spacing)에 체크가 자연히 고정된다.
@@ -639,6 +679,18 @@ private struct WheelColumn: View {
             // scrollPosition만으로는 HStack 중첩 시 초기 스크롤이 적용되지 않아, 진입 시 선택값으로 명시 스크롤.
             .onAppear {
                 DispatchQueue.main.async {
+                    proxy.scrollTo(selection, anchor: .center)
+                }
+            }
+            // 오버슈트 되돌림: 부모가 선택값을 오늘로 바꾸고 토큰을 올리면, 물리 스크롤을 그 값으로 촤라락 정렬.
+            .onChange(of: bounceToken) { _, _ in
+                withAnimation(.easeOut(duration: 0.28)) {
+                    proxy.scrollTo(selection, anchor: .center)
+                }
+            }
+            // 월 변경으로 일수가 바뀌면(예: 31일달→28일달) 일 컬럼을 선택값으로 재정렬.
+            .onChange(of: values.count) { _, _ in
+                withAnimation {
                     proxy.scrollTo(selection, anchor: .center)
                 }
             }

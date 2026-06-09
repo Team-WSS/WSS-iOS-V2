@@ -193,6 +193,8 @@ private extension NovelReviewViewModel {
             state.errorMessage = "매력 포인트는 최대 \(max)개까지 선택할 수 있어요"
         case ReadingPeriod.ValidationError.startAfterEnd:
             state.errorMessage = "시작일은 종료일보다 늦을 수 없어요"
+        case ReadingPeriod.ValidationError.futureDate:
+            state.errorMessage = "오늘 이후 날짜는 선택할 수 없어요"
         case Rating.ValidationError.outOfRange, Rating.ValidationError.invalidStep:
             state.errorMessage = "평점은 0.5~5.0 사이에서 0.5 단위로 줄 수 있어요"
         default:
