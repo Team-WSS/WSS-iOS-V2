@@ -17,7 +17,6 @@ final class NovelReviewViewModel: ObservableObject {
     // MARK: - State
 
     struct State {
-        /// 도메인 엔티티를 그대로 보유(표현값 소스). View가 `state.draft.…`로 직접 읽는다.
         var draft: NovelReviewDraft
         var isLoading = false
         var isSaving = false
@@ -70,8 +69,6 @@ final class NovelReviewViewModel: ObservableObject {
         case .load:
             load()
         case .selectStatus(let status):
-            // ReadingStatus는 단일 값이라 새 값으로 바꾸면 기존 선택은 자동 해제된다.
-            // 상태를 바꾸면 도메인이 기존 기간을 새 상태에 맞게 normalize한다(예: watched→watching 시 종료일 제거).
             state.draft.changeStatus(status)
         case .updatePeriod(let start, let end):
             updatePeriod(start: start, end: end)
@@ -90,9 +87,6 @@ final class NovelReviewViewModel: ObservableObject {
 // MARK: - Action Handling
 
 private extension NovelReviewViewModel {
-
-    /// 화면 진입 시 기존 초안을 불러온다. 초안이 없으면(nil) 기본 draft를 유지한다.
-    /// 최초 1회만 수행한다(재진입 시 편집 중 덮어쓰기 방지). 실패하면 다음 진입에 재시도 가능.
     func load() {
         guard !hasLoaded, !state.isLoading else { return }
         Task { await loadDraft() }
