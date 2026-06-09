@@ -149,6 +149,7 @@ private extension NovelReviewView {
                             .applyWSSFont(.body5)
                             .foregroundStyle(textColor)
                     }
+                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     // 틴트 색의 기본 크로스페이드를 짧게 고정(미설정 시 느리게 번진다).
