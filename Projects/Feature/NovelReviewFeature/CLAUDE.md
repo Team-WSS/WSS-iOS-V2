@@ -8,6 +8,13 @@
 - **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:)`**
   - **`title`(네비게이션 타이틀)은 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 제목(작품명)은 호출자가 아는 값을 넘긴다(Feature가 자체 보유 ❌).
 
+### 파일 구조 — 화면(영역)별 그룹
+`Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
+- `Factory/NovelReviewFactory.swift` — 유일한 public 진입점.
+- `NovelReview/` — 메인 화면: `NovelReviewView` + `NovelReviewViewModel` + `StarRatingView`(별점 입력).
+- `ReadingPeriodSheet/` — 기간 시트: `ReadingPeriodSheet`(View) + `ReadingPeriodSheetViewModel` + `WSSDateWheel`(휠).
+- `Support/` — 모듈 공용 유틸: `ReviewDateFormatter`(기간/segment 날짜 포맷터).
+
 ## 도메인 위임 (얇은 ViewModel)
 
 - `state.draft`(`NovelReviewDraft`)에 상태·정책을 위임한다. 비즈니스 규칙은 엔티티에 있다 — **읽기 상태 단일 선택, 매력 포인트 최대 3개**(초과 시 `throws` → `handle`이 `state.errorMessage`로 변환).
@@ -28,9 +35,11 @@
   - 입력: `ReadingPeriodSheet.apply()`는 폼대로 의미 있는 날짜만 넘긴다. 단일 상태에 양쪽 날짜를 넘기면 `ReadingPeriod(start:end:)`가 `startAfterEnd`로 **오검증**한다.
 
 #### ReadingPeriodSheet UI
+- 시트는 자체 **`ReadingPeriodSheetViewModel`(State/Action/handle)** 를 가진다(부모 VM과 별개). 비동기·UseCase·외부 콜백 없는 **순수 입력 VM** — 상태와 파생값(`editingDate`, `result`)만 노출한다. 시작/종료 **순서 보정**(watched에서 시작>종료면 종료를, 종료<시작이면 시작을 끌어다 맞춤)은 *포커스 상태에 달린 입력 UX 정책(도메인 규칙 아님)* 이라 이 VM에 산다.
+  - **결과 발화는 View가 한다**(VM이 콜백을 들지 않음 — `shouldDismiss` 식 상태/View 관습과 일관). "완료"는 `viewModel.result`(status별 raw 날짜)를 부모 `onApply`로, "날짜 삭제"는 `onApply(nil, nil)`로 직접 호출. 부모가 `updatePeriod` + 시트 dismiss 담당.
+  - **시트는 `ReadingPeriod`를 만들지/normalize하지 않는다** — raw `(Date?, Date?)`만 올린다. 도메인 생성·정규화·검증은 status를 가진 draft가 `setPeriod`에서 단독 수행(미래는 휠이, `start>end`는 순서 보정이 이미 예방).
 - 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭. 높이는 `presentationDetents`로 고정: 단일(watching/quit) **320**, 시작+종료(watched) **394**.
-- **날짜 삭제**는 `onApply(nil, nil)` → `updatePeriod(nil, nil)`로 기간 제거(전용 콜백 없이 재사용).
-- watched는 field 전환 시 편집 날짜가 바뀌므로 `WSSDateWheel`에 **`.id(field)`**를 줘 휠을 새로 띄워 초기값을 갱신한다(외부 동기화 루프 회피).
+- watched는 field 전환 시 편집 날짜가 바뀌므로 `WSSDateWheel`에 **`.id(viewModel.state.field)`**를 줘 휠을 새로 띄워 초기값을 갱신한다(외부 동기화 루프 회피).
 - `WSSDateWheel`/`WheelColumn`은 연·월·일 3열 커스텀 휠 — **iOS 17 ScrollView 스냅 API**(`scrollTargetLayout`/`scrollTargetBehavior(.viewAligned)`/`scrollPosition(id:)` + `contentMargins`)로 가운데 정렬값을 선택값으로 삼는다. 네이티브 `DatePicker(.wheel)`은 체크/회색 처리 룩이 안 나와 직접 구현.
 
 #### WSSDateWheel 미래 날짜 차단 (오버슈트→정착→되돌림) — 코드만 보면 의도 파악 어려움
