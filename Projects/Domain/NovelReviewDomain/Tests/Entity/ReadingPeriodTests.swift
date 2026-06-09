@@ -74,6 +74,51 @@ struct ReadingPeriodTests {
         }
     }
 
+    @Test("종료일이 기준일(오늘) 이후면 기간 생성에 실패한다")
+    func rejectsFutureEnd() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+
+        #expect(throws: ReadingPeriod.ValidationError.futureDate) {
+            _ = try ReadingPeriod(start: nil, end: tomorrow, notAfter: today)
+        }
+    }
+
+    @Test("시작일이 기준일(오늘) 이후면 기간 생성에 실패한다")
+    func rejectsFutureStart() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+
+        #expect(throws: ReadingPeriod.ValidationError.futureDate) {
+            _ = try ReadingPeriod(start: tomorrow, end: tomorrow, notAfter: today)
+        }
+    }
+
+    @Test("기준일과 같은 날이면(시각이 달라도) 기간 생성이 가능하다")
+    func acceptsSameDayAsLimit() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let laterSameDay = today.addingTimeInterval(60 * 60)  // 같은 날, 1시간 뒤
+
+        let period = try ReadingPeriod(start: nil, end: laterSameDay, notAfter: today)
+
+        #expect(period.end == laterSameDay)
+    }
+
+    @Test("기준일 이전 날짜는 기간 생성이 가능하다")
+    func acceptsPastDate() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+
+        let period = try ReadingPeriod(start: yesterday, end: yesterday, notAfter: today)
+
+        #expect(period.start == yesterday)
+        #expect(period.end == yesterday)
+    }
+
     @Test("같은 시작일과 종료일을 가지면 동일한 기간으로 비교된다")
     func equatableByDates() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
