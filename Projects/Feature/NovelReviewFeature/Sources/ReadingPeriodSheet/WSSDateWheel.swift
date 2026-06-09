@@ -75,6 +75,21 @@ struct WSSDateWheel: View {
         .onChange(of: year) { _, _ in commit() }
         .onChange(of: month) { _, _ in commit() }
         .onChange(of: day) { _, _ in commit() }
+        // 부모가 편집 대상(시작↔종료)을 바꾸면 date가 외부에서 갱신된다 → 휠을 그 날짜로 재정렬.
+        .onChange(of: date) { _, newDate in syncColumns(to: newDate) }
+    }
+
+    /// 외부에서 `date`가 바뀌면(시작↔종료 전환) 내부 컬럼을 그 날짜로 맞추고 물리 스크롤을 재정렬한다.
+    /// 내부 스크롤이 일으킨 `date` 변경은 이미 year/month/day와 일치하므로 early-return으로 되먹임 루프를 막는다.
+    /// (`.id(field)` 재생성 대신 이 방식을 쓰면 휠이 유지돼 전환 시 맨 위로 튀는 번쩍임이 없다.)
+    private func syncColumns(to newDate: Date) {
+        let c = calendar.dateComponents([.year, .month, .day], from: newDate)
+        guard let y = c.year, let m = c.month, let d = c.day else { return }
+        if y == year && m == month && d == day { return }
+        year = y
+        month = m
+        day = d
+        bounceToken &+= 1   // 컬럼들이 새 선택값으로 물리 스크롤을 재정렬
     }
 
     /// 스크롤 변경마다 호출. 미래로 오버슈트하면 `date`를 갱신하지 않고 정착 디바운스만 무장하고,

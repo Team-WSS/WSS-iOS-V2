@@ -60,9 +60,9 @@ struct ReadingPeriodSheet: View {
                     .padding(.bottom, 7)
             }
 
-            // watched는 field 전환 시 편집 날짜가 바뀌므로 id로 휠을 새로 띄워 초기값을 갱신한다.
+            // watched의 field 전환 시 편집 날짜가 바뀌면 휠이 editingDateBinding 변화를 감지해 스스로 재정렬한다.
+            // (id 재생성 ❌ — 재생성하면 새 ScrollView가 맨 위로 정렬됐다가 점프해 번쩍인다.)
             WSSDateWheel(date: editingDateBinding, maxDate: viewModel.maxDate)
-                .id(viewModel.state.field)
                 .padding(.top, 10)
                 .padding(.bottom, 30)
 

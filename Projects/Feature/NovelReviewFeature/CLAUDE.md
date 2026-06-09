@@ -43,7 +43,8 @@
   - **결과 발화는 View가 한다**(VM이 콜백을 들지 않음 — `shouldDismiss` 식 상태/View 관습과 일관). "완료"는 `viewModel.result`(status별 raw 날짜)를 부모 `onApply`로, "날짜 삭제"는 `onApply(nil, nil)`로 직접 호출. 부모가 `updatePeriod` + 시트 dismiss 담당.
   - **시트는 `ReadingPeriod`를 만들지/normalize하지 않는다** — raw `(Date?, Date?)`만 올린다. 도메인 생성·정규화·검증은 status를 가진 draft가 `setPeriod`에서 단독 수행(미래는 휠이, `start>end`는 순서 보정이 이미 예방).
 - 흰 배경, 완료=`WSSCTAButton`, 그 아래 "날짜 삭제". 취소는 우상단 X 또는 배경 탭. 높이는 `presentationDetents`로 고정: 단일(watching/quit) **320**, 시작+종료(watched) **394**.
-- watched는 field 전환 시 편집 날짜가 바뀌므로 `WSSDateWheel`에 **`.id(viewModel.state.field)`**를 줘 휠을 새로 띄워 초기값을 갱신한다(외부 동기화 루프 회피).
+- watched의 field 전환 시 편집 날짜가 바뀌면 `WSSDateWheel`이 **`editingDateBinding`(=`date`) 변화를 `onChange`로 감지해 스스로 컬럼을 재정렬**한다(`syncColumns`). 내부 스크롤이 일으킨 `date` 변경은 이미 컬럼값과 같아 early-return으로 되먹임 루프를 막는다.
+  - ⚠️ **`.id(field)`로 휠을 재생성하지 말 것.** 재생성하면 새 `ScrollView`가 `scrollPosition` 미적용 상태(맨 위, 연도 1900 등)로 한 프레임 그려진 뒤 `onAppear`의 async `scrollTo`로 점프해 **번쩍인다**. 직접 겪고 폐기한 방식 — 되살리지 말 것.
 - `WSSDateWheel`/`WheelColumn`은 연·월·일 3열 커스텀 휠 — **iOS 17 ScrollView 스냅 API**(`scrollTargetLayout`/`scrollTargetBehavior(.viewAligned)`/`scrollPosition(id:)` + `contentMargins`)로 가운데 정렬값을 선택값으로 삼는다. 네이티브 `DatePicker(.wheel)`은 체크/회색 처리 룩이 안 나와 직접 구현.
 
 #### WSSDateWheel 미래 날짜 차단 (오버슈트→정착→되돌림) — 코드만 보면 의도 파악 어려움
