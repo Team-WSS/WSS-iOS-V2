@@ -10,6 +10,8 @@ import Foundation
 import BaseDomain
 import FeedDomain
 
+import WSSComponent
+
 @Observable
 @MainActor
 public final class CreateFeedViewModel {
@@ -17,44 +19,51 @@ public final class CreateFeedViewModel {
     // MARK: - State
 
     public struct State {
-        public var draft: FeedDraft
-        public var submitState: SubmitState = .idle
-        public var validationError: FeedDraft.ValidationError?
+        var draft: FeedDraft
+        var submitState: SubmitState = .idle
+        var validationError: FeedDraft.ValidationError?
+        
+        var showImagePicker: Bool = false
+        var showLinkNovelSheet: Bool = false
+        var showToast: Bool = false
+        var toastType: WSSToastType = .networkDelay
+        var showAlert: Bool = false
     }
 
-    public enum SubmitState: Equatable {
-        case idle
-        case submitting
-        case submitted
-        case failed(RepositoryError)
+    public var canSubmit: Bool {
+        !state.draft.content.isEmpty
+        && !(state.submitState == .submitting)
+    }
+    
+    public var canLinkNovel: Bool {
+        state.draft.connectedNovel == nil
     }
 
     // MARK: - Action
 
-    public enum Action {
-        case contentChanged(String)
-        case spoilerToggled
-        case privateToggled
+    enum Action {
+        case updateContent(String)
+
+        case toggleSpoiler
+        case togglePrivate
+
+        case selectConnectedNovel
         case setConnectedNovel(ConnectedNovel)
-        case removeConnectecNovel
+        case removeConnectedNovel
+
+        case selectImagePhotoPicker
         case addImage(URL)
         case removeImage(URL)
-        case submitted(imageDatas: [Data])
+
+        case submitFeed
+        case attemptDismiss
     }
 
     // MARK: - Properties
 
     public private(set) var state: State
+
     private let createFeedUseCase: CreateFeedUseCase
-
-    // MARK: - Derived
-
-    public var contentCount: Int { state.draft.content.count }
-    public var isSubmitting: Bool { state.submitState == .submitting }
-    public var canSubmit: Bool {
-        !state.draft.content.isEmpty
-        && !isSubmitting
-    }
 
     // MARK: - Init
 
@@ -66,63 +75,86 @@ public final class CreateFeedViewModel {
         self.state = State(draft: initialDraft)
     }
 
-    // MARK: - Send
+    // MARK: - Action
 
-    public func send(_ action: Action) async {
-        state.validationError = nil
+     func handleAction(_ action: Action) {
+        var newState = state
+        defer { state = newState }
 
         switch action {
-        case .contentChanged(let value):
-            mutate { try $0.updateContent(value) }
+       
+        case .updateContent(let content):
+            mutate(&newState) { try $0.updateContent(content) }
 
-        case .spoilerToggled:
-            state.draft.toggleSpoiler()
+        case .toggleSpoiler:
+            newState.draft.toggleSpoiler()
 
-        case .privateToggled:
-            state.draft.togglePrivate()
+        case .togglePrivate:
+            newState.draft.togglePrivate()
 
+        case .selectConnectedNovel:
+            if (newState.draft.connectedNovel == nil) {
+                newState.showLinkNovelSheet = true
+            } else {
+                newState.toastType = .novelAlreadyConnected
+                newState.showToast = true
+            }
+            
         case .setConnectedNovel(let novel):
-            mutate { try $0.setConnectedNovel(novel) }
+            mutate(&newState) { try $0.setConnectedNovel(novel) }
 
-        case .removeConnectecNovel:
-            state.draft.removeConnectedNovel()
+        case .removeConnectedNovel:
+            newState.draft.removeConnectedNovel()
+            
+        case .selectImagePhotoPicker:
+            guard newState.draft.attachedImages.count < FeedDraft.maxImageCount else { return }
+            newState.showImagePicker = true
 
         case .addImage(let image):
-            mutate { try $0.addImage(image) }
+            mutate(&newState) { try $0.addImage(image) }
 
         case .removeImage(let image):
-            state.draft.removeImage(image)
+            newState.draft.removeImage(image)
 
-        case .submitted(let imageDatas):
-            await submit(imageDatas: imageDatas)
+        case .submitFeed:
+            Task { await submit() }
+            
+        case .attemptDismiss:
+            newState.showAlert = true
         }
     }
 
-    // MARK: - Private
+    //MARK: - Custom Method
 
-    /// `FeedDraft`의 throwing mutating 메서드를 안전하게 실행하고 ValidationError를 state에 기록한다.
-    private func mutate(_ change: (inout FeedDraft) throws -> Void) {
+    private func mutate(
+        _ state: inout State,
+        _ change: (inout FeedDraft) throws -> Void
+    ) {
         do {
             try change(&state.draft)
         } catch let error as FeedDraft.ValidationError {
             state.validationError = error
         } catch {
-            assertionFailure("FeedDraft API는 ValidationError만 던져야 함: \(error)")
+            assertionFailure(
+                "FeedDraft API는 ValidationError만 던져야 함: \(error)"
+            )
         }
     }
+    
+    private func submit() async {
+        let draft = state.draft
 
-    private func submit(imageDatas: [Data]) async {
-        guard !state.draft.content.isEmpty else {
+        guard !draft.content.isEmpty else {
             state.validationError = .emptyContent
             return
         }
-        
+
         state.submitState = .submitting
-        
+
         do {
-            try await createFeedUseCase.execute(state.draft, imageDatas: imageDatas)
+            try await createFeedUseCase.execute(draft, imageDatas: [])
             state.submitState = .submitted
-        } catch {
+        } catch let error {
             state.submitState = .failed(error)
         }
     }
