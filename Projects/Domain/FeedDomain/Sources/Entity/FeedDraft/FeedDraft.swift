@@ -46,8 +46,8 @@ public struct FeedDraft {
     
     // MARK: - Policy
     
-    private static let maxContentCount: Int = 2000
-    private static let maxImageCount: Int = 5
+    public static let maxContentCount: Int = 2000
+    public static let maxImageCount: Int = 5
     
     public enum ValidationError: Error, Equatable {
         case contentOverLimit(max: Int)
