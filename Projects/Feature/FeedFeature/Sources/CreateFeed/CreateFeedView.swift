@@ -10,14 +10,18 @@ import PhotosUI
 
 import BaseDomain
 import FeedDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 
 public struct CreateFeedView: View {
     
     @State private var viewModel: CreateFeedViewModel
+    
     @State private var pickerItems: [PhotosPickerItem] = []
-   
+    @State private var showPhotosPicker: Bool = false
+    @State private var showLinkNovelSheet: Bool = false
+    
     @FocusState private var isKeyboardFocused: Bool
     
     public init(viewModel: CreateFeedViewModel) {
@@ -64,10 +68,7 @@ public struct CreateFeedView: View {
                 )
                 .toolbarBackground(.visible, for: .navigationBar)
                 .photosPicker(
-                    isPresented: Binding(
-                        get: { viewModel.state.showImagePicker },
-                        set: { _ in viewModel.handleAction(.selectImagePhotoPicker) }
-                    ),
+                    isPresented: $showPhotosPicker,
                     selection: $pickerItems,
                     maxSelectionCount: max(1, FeedDraft.maxImageCount - viewModel.state.draft.attachedImages.count),
                     matching: .images
@@ -76,19 +77,43 @@ public struct CreateFeedView: View {
                     guard !items.isEmpty else { return }
                     Task { await handleSelectedImages(items) }
                 }
-                .sheet(isPresented: Binding(
-                    get: { viewModel.state.showLinkNovelSheet },
-                    set: { _ in viewModel.handleAction(.selectConnectedNovel) }
-                )) {
-                    //TODO: - 작품 연결 뷰 추가
-                    Text("작품 연결")
+                .sheet(isPresented: $showLinkNovelSheet) {
+                    CreateFeedConnectNovelSheet(
+                        searchText: Binding(
+                            get: { viewModel.state.connectedNovelSearchText },
+                            set: { value in viewModel.handleAction(.updateConnectedNovelSearchText(value)) }
+                        ),
+                        novels: viewModel.state.searchedNovels,
+                        selectedNovelID: viewModel.state.selectedSearchedNovelID,
+                        isLoading: viewModel.state.isSearchingNovel,
+                        onSearch: {
+                            viewModel.handleAction(.searchNovel(viewModel.state.connectedNovelSearchText))
+                        },
+                        onSelect: { novel in
+                            viewModel.handleAction(.selectSearchedNovel(novel.id))
+                        },
+                        onConfirm: {
+                            viewModel.handleAction(.confirmSelectedNovel)
+                            showLinkNovelSheet = false
+                        },
+                        dismissSheet: {
+                            viewModel.handleAction(.clearNovelSearch)
+                            showLinkNovelSheet = false
+                        }
+                    )
+                    .interactiveDismissDisabled()
                 }
-                .showWSSToast(isPresented: Binding(
-                    get: { viewModel.state.showToast },
-                    set: { _ in viewModel.handleAction(.selectConnectedNovel) }
-                ),
-                              type: viewModel.state.toastType)
-                
+                .showWSSToast(
+                    isPresented: Binding(
+                        get: { viewModel.state.showToast },
+                        set: { newValue in
+                            if !newValue {
+                                viewModel.handleAction(.dismissToast)
+                            }
+                        }
+                    ),
+                    type: viewModel.state.toastType
+                )
             }
         }
         .showWSSAlert(isPresented: Binding(
@@ -103,7 +128,8 @@ public struct CreateFeedView: View {
         )
     }
     
-    // 툴바
+    // MARK: - 툴바
+    
     @ToolbarContentBuilder
     private func createFeedViewToolBarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
@@ -153,9 +179,14 @@ public struct CreateFeedView: View {
     
     private var spoilerSection: some View {
         HStack(spacing: 0) {
-            Text("잠깐, 스포일러가 있나요?")
-                .applyWSSFont(.body3)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+            Group {
+                Text("잠깐, ")
+                Text("스포일러")
+                    .fontWeight(.semibold)
+                Text("가 있나요?")
+            }
+            .applyWSSFont(.body3)
+            .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
             
             Spacer()
             
@@ -175,32 +206,35 @@ public struct CreateFeedView: View {
     
     private var contentSection: some View {
         VStack(spacing: 0) {
+            VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
-                if viewModel.state.draft.content.isEmpty {
-                    Text("웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등")
-                        .applyWSSFont(.body2)
-                        .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
-                        .multilineTextAlignment(.leading)
-                        .allowsHitTesting(false)
+                    if viewModel.state.draft.content.isEmpty {
+                        Text("웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등")
+                            .applyWSSFont(.body2)
+                            .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+                            .multilineTextAlignment(.leading)
+                            .allowsHitTesting(false)
+                    }
+                    
+                    TextField("",
+                              text: Binding(
+                                get: { viewModel.state.draft.content },
+                                set: { value in viewModel.handleAction(.updateContent(value)) }
+                              ),
+                              axis: .vertical)
+                    .applyWSSFont(.body2)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .multilineTextAlignment(.leading)
+                    .focused($isKeyboardFocused)
                 }
-                
-                TextField("",
-                          text: Binding(
-                            get: { viewModel.state.draft.content },
-                            set: { value in viewModel.handleAction(.updateContent(value)) }
-                          ),
-                          axis: .vertical)
-                .applyWSSFont(.body2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .multilineTextAlignment(.leading)
-                .focused($isKeyboardFocused)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+               
+                Spacer()
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .contentShape(Rectangle()) // 키보드 터치 영역을 위한 영역 설정
             .onTapGesture {
-                isKeyboardFocused.toggle()
+                isKeyboardFocused = true
             }
-            
-            Spacer()
             
             HStack(spacing: 0) {
                 WSSImage.icImage.swiftUIImage
@@ -209,7 +243,7 @@ public struct CreateFeedView: View {
                     .padding(.vertical, 12)
                     .padding(.horizontal, 10)
                     .onTapGesture {
-                        viewModel.handleAction(.selectImagePhotoPicker)
+                        showPhotosPicker.toggle()
                     }
                 
                 Spacer()
@@ -306,7 +340,11 @@ public struct CreateFeedView: View {
             .background(WSSColor.wssGray50.swiftUIColor)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture {
-                viewModel.handleAction(.selectConnectedNovel)
+                if viewModel.state.draft.connectedNovel == nil {
+                    showLinkNovelSheet.toggle()
+                } else {
+                    viewModel.handleAction(.alreadyLinkedNovel)
+                }
             }
             
             if (viewModel.state.draft.connectedNovel != nil) {
@@ -362,20 +400,18 @@ public struct CreateFeedView: View {
     }
 }
 
+
+//MARK: - Preview
+
 #Preview {
     CreateFeedView(
         viewModel: CreateFeedViewModel(
             createFeedUseCase: PreviewCreateFeedUseCase(),
+            searchNovelUseCase: PreviewSearchNovelUseCase(),
             initialDraft: FeedDraft(
                 content: "",
                 isSpoiler: false,
                 isPrivate: false,
-                connectedNovel: ConnectedNovel(
-                    id: NovelID(1),
-                    title: "괴담에 떨어져도 출근을 해야 하는구나",
-                    genre: .modernFantasy,
-                    rating: 4.32
-                ),
                 attachedImages: []
             )
         )
@@ -384,4 +420,88 @@ public struct CreateFeedView: View {
 
 private struct PreviewCreateFeedUseCase: CreateFeedUseCase {
     func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) { }
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        return (Paginated(items: [
+            Novel(
+                    id: NovelID(1),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/736x/58/0a/13/580a13692bdefec82fc37cdc8e87e331.jpg"),
+                    title: "회귀한 천재 마법사",
+                    authors: ["김작가"],
+                    interestCount: 12543,
+                    rating: 4.8,
+                    ratingCount: 3214
+                ),
+                Novel(
+                    id: NovelID(2),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/736x/12/49/04/124904e3933472601d83f8ff771def50.jpg"),
+                    title: "멸망한 세계의 검신",
+                    authors: ["이판타지"],
+                    interestCount: 8932,
+                    rating: 4.6,
+                    ratingCount: 1875
+                ),
+                Novel(
+                    id: NovelID(3),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/736x/fc/11/ed/fc11ed1b94cc32feefc9e40f1b2d8f65.jpg"),
+                    title: "재벌집 막내아들",
+                    authors: ["산경"],
+                    interestCount: 25431,
+                    rating: 4.9,
+                    ratingCount: 10234
+                ),
+                Novel(
+                    id: NovelID(4),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/1200x/b9/94/6e/b9946e9db54c175c490b54dfd40adc41.jpg"),
+                    title: "나 혼자만 레벨업",
+                    authors: ["추공"],
+                    interestCount: 51234,
+                    rating: 4.9,
+                    ratingCount: 25431
+                ),
+                Novel(
+                    id: NovelID(5),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/1200x/d6/49/7a/d6497aefa2800044f63cbf66889fb4df.jpg"),
+                    title: "전지적 독자 시점",
+                    authors: ["싱숑"],
+                    interestCount: 43892,
+                    rating: 4.8,
+                    ratingCount: 19876
+                ),
+                Novel(
+                    id: NovelID(6),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/1200x/20/55/03/20550396102b05d92c4a04f9136352d5.jpg"),
+                    title: "아카데미의 천재 검술가",
+                    authors: ["홍길동", "김철수"],
+                    interestCount: 7234,
+                    rating: 4.3,
+                    ratingCount: 912
+                ),
+                Novel(
+                    id: NovelID(7),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/736x/01/7b/8d/017b8dd944076cb85da607fe2d94237a.jpg"),
+                    title: "21세기 대군 부인",
+                    authors: ["박작가"],
+                    interestCount: 16782,
+                    rating: 4.7,
+                    ratingCount: 3842
+                ),
+                Novel(
+                    id: NovelID(8),
+                    thumbnailImage: URL(string: "https://i.pinimg.com/736x/69/80/22/69802233c6656902b1eedb94f6b338b2.jpg"),
+                    title: "망겜의 성기사",
+                    authors: ["최작가"],
+                    interestCount: 5321,
+                    rating: 4.1,
+                    ratingCount: 623
+                )
+            
+        ], hasNext: false), 0)
+    }
+    
+    func searchByFilter(_ filter: NovelDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        return (Paginated(items: [], hasNext: false), 0)
+    }
 }

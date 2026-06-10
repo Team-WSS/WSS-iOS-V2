@@ -9,6 +9,7 @@ import Foundation
 
 import BaseDomain
 import FeedDomain
+import NovelDomain
 
 import WSSComponent
 
@@ -22,21 +23,19 @@ public final class CreateFeedViewModel {
         var draft: FeedDraft
         var submitState: SubmitState = .idle
         var validationError: FeedDraft.ValidationError?
-        
-        var showImagePicker: Bool = false
-        var showLinkNovelSheet: Bool = false
         var showToast: Bool = false
         var toastType: WSSToastType = .networkDelay
         var showAlert: Bool = false
+
+        var connectedNovelSearchText: String = ""
+        var searchedNovels: [Novel] = []
+        var selectedSearchedNovelID: NovelID?
+        var isSearchingNovel: Bool = false
     }
 
     public var canSubmit: Bool {
         !state.draft.content.isEmpty
         && !(state.submitState == .submitting)
-    }
-    
-    public var canLinkNovel: Bool {
-        state.draft.connectedNovel == nil
     }
 
     // MARK: - Action
@@ -46,17 +45,24 @@ public final class CreateFeedViewModel {
 
         case toggleSpoiler
         case togglePrivate
-
-        case selectConnectedNovel
+        
         case setConnectedNovel(ConnectedNovel)
         case removeConnectedNovel
-
-        case selectImagePhotoPicker
+        case alreadyLinkedNovel
+        
         case addImage(URL)
         case removeImage(URL)
 
         case submitFeed
         case attemptDismiss
+
+        case updateConnectedNovelSearchText(String)
+        case searchNovel(String)
+        case selectSearchedNovel(NovelID)
+        case confirmSelectedNovel
+        case clearNovelSearch
+
+        case dismissToast
     }
 
     // MARK: - Properties
@@ -64,14 +70,17 @@ public final class CreateFeedViewModel {
     public private(set) var state: State
 
     private let createFeedUseCase: CreateFeedUseCase
+    private let searchNovelUseCase: SearchNovelUseCase
 
     // MARK: - Init
 
     public init(
         createFeedUseCase: CreateFeedUseCase,
+        searchNovelUseCase: SearchNovelUseCase,
         initialDraft: FeedDraft
     ) {
         self.createFeedUseCase = createFeedUseCase
+        self.searchNovelUseCase = searchNovelUseCase
         self.state = State(draft: initialDraft)
     }
 
@@ -91,14 +100,6 @@ public final class CreateFeedViewModel {
 
         case .togglePrivate:
             newState.draft.togglePrivate()
-
-        case .selectConnectedNovel:
-            if (newState.draft.connectedNovel == nil) {
-                newState.showLinkNovelSheet = true
-            } else {
-                newState.toastType = .novelAlreadyConnected
-                newState.showToast = true
-            }
             
         case .setConnectedNovel(let novel):
             mutate(&newState) { try $0.setConnectedNovel(novel) }
@@ -106,12 +107,16 @@ public final class CreateFeedViewModel {
         case .removeConnectedNovel:
             newState.draft.removeConnectedNovel()
             
-        case .selectImagePhotoPicker:
-            guard newState.draft.attachedImages.count < FeedDraft.maxImageCount else { return }
-            newState.showImagePicker = true
-
+        case .alreadyLinkedNovel:
+            newState.toastType = .novelAlreadyConnected
+            newState.showToast = true
+            
         case .addImage(let image):
             mutate(&newState) { try $0.addImage(image) }
+            if case .imageOverLimit(let max) = newState.validationError {
+                newState.toastType = .limitAddImage(limitCount: max)
+                newState.showToast = true
+            }
 
         case .removeImage(let image):
             newState.draft.removeImage(image)
@@ -121,6 +126,38 @@ public final class CreateFeedViewModel {
             
         case .attemptDismiss:
             newState.showAlert = true
+            
+        case .updateConnectedNovelSearchText(let text):
+            newState.connectedNovelSearchText = text
+
+        case .searchNovel(let query):
+            Task { await searchNovel(query) }
+
+        case .selectSearchedNovel(let id):
+            newState.selectedSearchedNovelID = id
+
+        case .confirmSelectedNovel:
+            guard let id = newState.selectedSearchedNovelID,
+                  let picked = newState.searchedNovels.first(where: { $0.id == id }) else { break }
+            // TODO: 검색 API에 장르 포함되면 picked 기준으로 교체
+            let connected = ConnectedNovel(
+                id: picked.id,
+                title: picked.title,
+                genre: .fantasy,
+                rating: picked.rating
+            )
+            mutate(&newState) { try $0.setConnectedNovel(connected) }
+            newState.selectedSearchedNovelID = nil
+            newState.searchedNovels = []
+            newState.connectedNovelSearchText = ""
+
+        case .clearNovelSearch:
+            newState.selectedSearchedNovelID = nil
+            newState.searchedNovels = []
+            newState.connectedNovelSearchText = ""
+
+        case .dismissToast:
+            newState.showToast = false
         }
     }
 
@@ -157,5 +194,22 @@ public final class CreateFeedViewModel {
         } catch let error {
             state.submitState = .failed(error)
         }
+    }
+    
+    private func searchNovel(_ query: String) async {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            state.searchedNovels = []
+            return
+        }
+
+        state.isSearchingNovel = true
+        do {
+            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed)
+            state.searchedNovels = paginated.items
+        } catch {
+            state.searchedNovels = []
+        }
+        state.isSearchingNovel = false
     }
 }
