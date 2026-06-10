@@ -7,15 +7,17 @@
 
 import SwiftUI
 
+import DesignSystem
 import FeedFeature
 
 @main
 struct FeedFeatureDemoApp: App {
+    init() {
+        DesignSystemFontFamily.registerAllCustomFonts()
+    }
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                FeedFeatureFactory.makeCreateFeedPreviewView()
-            }
+            FeedFeatureFactory.makeCreateFeedPreviewView()
         }
     }
 }
