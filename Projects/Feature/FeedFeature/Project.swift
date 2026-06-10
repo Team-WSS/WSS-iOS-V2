@@ -17,6 +17,7 @@ let project = Project.createFeatureModule(
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.feed)),
+        .module(.domain(.novel)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent))
     ]
