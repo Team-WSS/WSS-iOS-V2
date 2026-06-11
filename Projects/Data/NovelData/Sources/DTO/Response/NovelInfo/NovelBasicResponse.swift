@@ -12,7 +12,7 @@ public struct NovelBasicResponse: Decodable {
     public let userNovelId: Int?
     public let novelTitle: String
     public let novelImage: String
-    public let novelGenres: String
+    public let novelGenres: [String]
     public let novelGenreImage: String
     public let isNovelCompleted: Bool
     public let author: String
