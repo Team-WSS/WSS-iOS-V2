@@ -79,11 +79,14 @@ extension NovelMapper {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
         
+        let genres = try basicDTO.novelGenres.map { try mapNovelGenre(from: $0) }
+        
         let novel = Novel(
             id: id,
             thumbnailImage: URL(string: basicDTO.novelGenreImage),
             title: basicDTO.novelTitle,
             authors: authors,
+            genres: genres,
             interestCount: basicDTO.interestCount,
             rating: basicDTO.novelRating,
             ratingCount: basicDTO.novelRatingCount
@@ -112,7 +115,6 @@ extension NovelMapper {
             novel: novel,
             feedCount: basicDTO.feedCount,
             genres: try basicDTO.novelGenres
-                .components(separatedBy: ",")
                 .map { try mapNovelGenre(from: $0.trimmingCharacters(in: .whitespaces)) },
             publicationStatus: mapPublicationStatus(from: basicDTO.isNovelCompleted),
             userReview: userReview,
@@ -158,6 +160,7 @@ extension NovelMapper {
             thumbnailImage: thumbnailImageURL,
             title: dto.title,
             authors: authors,
+            genres: [], // dto값에 장르 값이 포함되지 않음
             interestCount: dto.interestCount,
             rating: dto.novelRating,
             ratingCount: dto.novelRatingCount
@@ -307,7 +310,7 @@ extension NovelMapper {
         case "로판":    return .romanceFantasy
         case "현판":    return .modernFantasy
         case "드라마":   return .drama
-        case "미스테리":  return .mystery
+        case "미스터리":  return .mystery
         default:        throw MappingError.invalidNovelGenre(value)
         }
     }
