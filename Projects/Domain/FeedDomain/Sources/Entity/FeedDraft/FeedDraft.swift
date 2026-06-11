@@ -15,16 +15,16 @@ public struct FeedDraft {
     public private(set) var isSpoiler: Bool
     public private(set) var isPrivate: Bool
     public private(set) var connectedNovel: ConnectedNovel?
-    public private(set) var attachedImages: [URL]
-    
+    public private(set) var attachedImages: [AttachedImageID]
+
     // MARK: - init
-    
+
     public init(
         content: String,
         isSpoiler: Bool,
         isPrivate: Bool,
         connectedNovel: ConnectedNovel? = nil,
-        attachedImages: [URL]
+        attachedImages: [AttachedImageID]
     ) {
         let limitedImages = Array(attachedImages.prefix(Self.maxImageCount))
         
@@ -88,15 +88,15 @@ public struct FeedDraft {
         connectedNovel = nil
     }
     
-    public mutating func addImage(_ image: URL) throws {
+    public mutating func addImage(_ image: AttachedImageID) throws {
         guard attachedImages.count < Self.maxImageCount else {
             throw ValidationError.imageOverLimit(max: Self.maxImageCount)
         }
-        
+
         attachedImages.append(image)
     }
-    
-    public mutating func removeImage(_ image: URL) {
+
+    public mutating func removeImage(_ image: AttachedImageID) {
         attachedImages.removeAll { $0 == image }
     }
 }

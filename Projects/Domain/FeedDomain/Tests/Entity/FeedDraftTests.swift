@@ -27,8 +27,8 @@ struct FeedDraftTests {
         )
     }
 
-    private func makeImageURL(_ name: String = "1") -> URL {
-        URL(filePath: "/tmp/\(name).jpg")
+    private func makeImageID() -> AttachedImageID {
+        AttachedImageID()
     }
 
     private func makeDraft(
@@ -36,7 +36,7 @@ struct FeedDraftTests {
         isSpoiler: Bool = false,
         isPrivate: Bool = false,
         connectedNovel: ConnectedNovel? = nil,
-        attachedImages: [URL] = []
+        attachedImages: [AttachedImageID] = []
     ) -> FeedDraft {
         FeedDraft(
             content: content,
@@ -163,24 +163,24 @@ struct FeedDraftTests {
     func attachImage() throws {
         var draft = makeDraft()
 
-        try draft.addImage(makeImageURL("1"))
+        try draft.addImage(makeImageID())
 
         #expect(draft.attachedImages.count == 1)
     }
 
     @Test("이미지는 최대 5장까지 첨부할 수 있다.")
     func imageLimitedToFive() throws {
-        let images = Array(repeating: makeImageURL("1"), count: 5)
+        let images = (0..<5).map { _ in makeImageID() }
         var draft = makeDraft(attachedImages: images)
 
         #expect(throws: FeedDraft.ValidationError.imageOverLimit(max: 5)) {
-            try draft.addImage(makeImageURL("2"))
+            try draft.addImage(makeImageID())
         }
     }
 
     @Test("첨부된 이미지를 삭제할 수 있다.")
     func removeAttachedImage() {
-        let image = makeImageURL("1")
+        let image = makeImageID()
         var draft = makeDraft(attachedImages: [image])
 
         draft.removeImage(image)
