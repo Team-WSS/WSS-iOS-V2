@@ -25,12 +25,15 @@ public final class CreateFeedViewModel {
         var validationError: FeedDraft.ValidationError?
         var showToast: Bool = false
         var toastType: WSSToastType = .networkDelay
-        var showAlert: Bool = false
 
+        // 작품 연결 시트
         var connectedNovelSearchText: String = ""
         var searchedNovels: [Novel] = []
         var selectedSearchedNovelID: NovelID?
         var isSearchingNovel: Bool = false
+
+        // 이미지 첨부
+        var attachedImageDatas: [AttachedImageID: Data] = [:]
     }
 
     public var canSubmit: Bool {
@@ -50,19 +53,19 @@ public final class CreateFeedViewModel {
         case removeConnectedNovel
         case alreadyLinkedNovel
         
-        case addImage(URL)
-        case removeImage(URL)
+        case addImage(id: AttachedImageID, data: Data)
+        case removeImage(AttachedImageID)
 
         case submitFeed
-        case attemptDismiss
-
+        
+        case dismissToast
+        
+        // 작품 연결 시트
         case updateConnectedNovelSearchText(String)
         case searchNovel(String)
         case selectSearchedNovel(NovelID)
         case confirmSelectedNovel
         case clearNovelSearch
-
-        case dismissToast
     }
 
     // MARK: - Properties
@@ -86,24 +89,24 @@ public final class CreateFeedViewModel {
 
     // MARK: - Action
 
-     func handleAction(_ action: Action) {
+    func handleAction(_ action: Action) {
         var newState = state
         defer { state = newState }
-
+        
         switch action {
-       
+            
         case .updateContent(let content):
             mutate(&newState) { try $0.updateContent(content) }
-
+            
         case .toggleSpoiler:
             newState.draft.toggleSpoiler()
-
+            
         case .togglePrivate:
             newState.draft.togglePrivate()
             
         case .setConnectedNovel(let novel):
             mutate(&newState) { try $0.setConnectedNovel(novel) }
-
+            
         case .removeConnectedNovel:
             newState.draft.removeConnectedNovel()
             
@@ -111,53 +114,54 @@ public final class CreateFeedViewModel {
             newState.toastType = .novelAlreadyConnected
             newState.showToast = true
             
-        case .addImage(let image):
-            mutate(&newState) { try $0.addImage(image) }
+        case .addImage(let id, let data):
+            mutate(&newState) { try $0.addImage(id) }
+            if newState.draft.attachedImages.last == id {
+                newState.attachedImageDatas[id] = data
+            }
             if case .imageOverLimit(let max) = newState.validationError {
                 newState.toastType = .limitAddImage(limitCount: max)
                 newState.showToast = true
             }
 
-        case .removeImage(let image):
-            newState.draft.removeImage(image)
+        case .removeImage(let id):
+            newState.draft.removeImage(id)
+            newState.attachedImageDatas[id] = nil
 
         case .submitFeed:
             Task { await submit() }
             
-        case .attemptDismiss:
-            newState.showAlert = true
+        case .dismissToast:
+            newState.showToast = false
             
         case .updateConnectedNovelSearchText(let text):
             newState.connectedNovelSearchText = text
-
+            
         case .searchNovel(let query):
             Task { await searchNovel(query) }
-
+            
         case .selectSearchedNovel(let id):
             newState.selectedSearchedNovelID = id
-
+            
         case .confirmSelectedNovel:
             guard let id = newState.selectedSearchedNovelID,
-                  let picked = newState.searchedNovels.first(where: { $0.id == id }) else { break }
-            // TODO: 검색 API에 장르 포함되면 picked 기준으로 교체
+                  let selected = newState.searchedNovels.first(where: { $0.id == id }) else { break }
+
             let connected = ConnectedNovel(
-                id: picked.id,
-                title: picked.title,
+                id: selected.id,
+                title: selected.title,
                 genre: .fantasy,
-                rating: picked.rating
+                rating: selected.rating
             )
             mutate(&newState) { try $0.setConnectedNovel(connected) }
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
-
+            
         case .clearNovelSearch:
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
-
-        case .dismissToast:
-            newState.showToast = false
         }
     }
 
@@ -188,8 +192,10 @@ public final class CreateFeedViewModel {
 
         state.submitState = .submitting
 
+        let imageDatas = draft.attachedImages.compactMap { state.attachedImageDatas[$0] }
+
         do {
-            try await createFeedUseCase.execute(draft, imageDatas: [])
+            try await createFeedUseCase.execute(draft, imageDatas: imageDatas)
             state.submitState = .submitted
         } catch let error {
             state.submitState = .failed(error)

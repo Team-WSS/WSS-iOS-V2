@@ -14,44 +14,48 @@ struct CreateFeedConnectNovelRow: View {
     let imageURL: URL?
     let title: String
     let author: String
+    
     var isSelected: Bool
     let onTap: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            AsyncImage(url: imageURL) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                case .failure:
-                    WSSImage.imgLoadingThumbnail.swiftUIImage
-                default:
-                    ProgressView()
+        
+        Button {
+            onTap()
+        } label: {
+            HStack(spacing: 0) {
+                AsyncImage(url: imageURL) {
+                    phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                    case .failure:
+                        WSSImage.imgLoadingThumbnail.swiftUIImage
+                    default:
+                        ProgressView()
+                    }
                 }
-            }
-            .scaledToFill()
-            .frame(width: 78, height: 105)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+                .scaledToFill()
+                .frame(width: 78, height: 105)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            Spacer().frame(width: 18)
+                Spacer().frame(width: 18)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .applyWSSFont(.title3)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .applyWSSFont(.title3)
+                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                        .lineLimit(1)
 
-                Text(author)
-                    .applyWSSFont(.body5)
-                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                    .lineLimit(1)
-            }
+                    Text(author)
+                        .applyWSSFont(.body5)
+                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                        .lineLimit(1)
+                }
 
-            Spacer()
+                Spacer()
 
-            Button(action: onTap) {
                 if isSelected {
                     WSSImage.icSelectNovelSelected.swiftUIImage
                         .frame(width: 44, height: 44)
@@ -60,10 +64,7 @@ struct CreateFeedConnectNovelRow: View {
                         .frame(width: 44, height: 44)
                 }
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
+            .contentShape(Rectangle())
         }
     }
 }
