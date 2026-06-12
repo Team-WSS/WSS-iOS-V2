@@ -291,6 +291,7 @@ private extension NovelReviewView {
         NovelReviewView(
             viewModel: NovelReviewViewModel(
                 novelID: NovelID(1),
+                status: .watching,
                 loadUseCase: PreviewLoadNovelReviewDraftUseCase(),
                 saveUseCase: PreviewSaveNovelReviewUseCase()
             ),

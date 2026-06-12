@@ -70,6 +70,7 @@ private struct DemoRootView: View {
             NovelReviewFactory.makeView(
                 novelID: novelID,
                 title: title,
+                status: .watching,
                 loadUseCase: DemoLoadNovelReviewDraftUseCase(),
                 saveUseCase: DemoSaveNovelReviewUseCase()
             )
@@ -89,6 +90,7 @@ private struct DemoRootView: View {
         return NovelReviewFactory.makeView(
             novelID: novelID,
             title: title,
+            status: .watched,
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: repository),
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository)
         )

@@ -64,12 +64,13 @@ final class NovelReviewViewModel: ObservableObject {
 
     init(
         novelID: NovelID,
+        status: ReadingStatus,
         loadUseCase: LoadNovelReviewDraftUseCase,
         saveUseCase: SaveNovelReviewUseCase,
         logger: Logger? = nil
     ) {
         self.novelID = novelID
-        self.state = State(draft: NovelReviewDraft(novelID: novelID, status: .watching))
+        self.state = State(draft: NovelReviewDraft(novelID: novelID, status: status))
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
         self.logger = logger
