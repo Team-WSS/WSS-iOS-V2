@@ -83,23 +83,23 @@ public struct CreateFeedView: View {
                     CreateFeedConnectNovelSheet(
                         searchText: Binding(
                             get: { viewModel.state.connectedNovelSearchText },
-                            set: { value in viewModel.handleAction(.updateConnectedNovelSearchText(value)) }
+                            set: { value in viewModel.handle(.updateConnectedNovelSearchText(value)) }
                         ),
                         novels: viewModel.state.searchedNovels,
                         selectedNovelID: viewModel.state.selectedSearchedNovelID,
                         isLoading: viewModel.state.isSearchingNovel,
                         onSearch: {
-                            viewModel.handleAction(.searchNovel(viewModel.state.connectedNovelSearchText))
+                            viewModel.handle(.searchNovel(viewModel.state.connectedNovelSearchText))
                         },
                         onSelect: { novel in
-                            viewModel.handleAction(.selectSearchedNovel(novel.id))
+                            viewModel.handle(.selectSearchedNovel(novel.id))
                         },
                         onConfirm: {
-                            viewModel.handleAction(.confirmSelectedNovel)
+                            viewModel.handle(.confirmSelectedNovel)
                             showLinkNovelSheet = false
                         },
                         dismissSheet: {
-                            viewModel.handleAction(.clearNovelSearch)
+                            viewModel.handle(.dismissLinkNovelSheet)
                             showLinkNovelSheet = false
                         }
                     )
@@ -110,7 +110,7 @@ public struct CreateFeedView: View {
                         get: { viewModel.state.showToast },
                         set: { newValue in
                             if !newValue {
-                                viewModel.handleAction(.dismissToast)
+                                viewModel.handle(.dismissToast)
                             }
                         }
                     ),
@@ -147,8 +147,7 @@ public struct CreateFeedView: View {
                 .foregroundStyle(viewModel.canSubmit ?
                                  WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
                 .onTapGesture {
-                    guard viewModel.canSubmit else { return }
-                    viewModel.handleAction(.submitFeed)
+                    viewModel.handle(.submitFeed)
                 }
         }
     }
@@ -169,7 +168,7 @@ public struct CreateFeedView: View {
             
             WSSToggleButton(isOn: Binding(
                 get: { viewModel.state.draft.isPrivate },
-                set: { _ in viewModel.handleAction(.togglePrivate) }
+                set: { _ in viewModel.handle(.togglePrivate) }
             ))
         }
         .padding(.horizontal, 20)
@@ -192,7 +191,7 @@ public struct CreateFeedView: View {
             
             WSSToggleButton(isOn: Binding(
                 get: { viewModel.state.draft.isSpoiler },
-                set: { _ in viewModel.handleAction(.toggleSpoiler) }
+                set: { _ in viewModel.handle(.toggleSpoiler) }
             ))
         }
         .padding(.horizontal, 20)
@@ -219,7 +218,7 @@ public struct CreateFeedView: View {
                     TextField("",
                               text: Binding(
                                 get: { viewModel.state.draft.content },
-                                set: { value in viewModel.handleAction(.updateContent(value)) }
+                                set: { value in viewModel.handle(.updateContent(value)) }
                               ),
                               axis: .vertical)
                     .applyWSSFont(.body2)
@@ -231,7 +230,7 @@ public struct CreateFeedView: View {
                
                 Spacer()
             }
-            .contentShape(Rectangle()) // 키보드 터치 영역을 위한 영역 설정
+            .contentShape(Rectangle())
             .onTapGesture {
                 isKeyboardFocused = true
             }
@@ -303,7 +302,7 @@ public struct CreateFeedView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .topTrailing) {
             Button {
-                viewModel.handleAction(.removeImage(id))
+                viewModel.handle(.removeImage(id))
             } label: {
                 WSSImage.icCancel.swiftUIImage
                     .frame(width: 38, height: 38)
@@ -318,7 +317,7 @@ public struct CreateFeedView: View {
     private func dispatchPickedItems(_ items: [PhotosPickerItem]) async {
         for item in items {
             guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
-            viewModel.handleAction(.addImage(id: AttachedImageID(), data: data))
+            viewModel.handle(.addImage(id: AttachedImageID(), data: data))
         }
         pickerItems = []
     }
@@ -356,7 +355,7 @@ public struct CreateFeedView: View {
                 if viewModel.state.draft.connectedNovel == nil {
                     showLinkNovelSheet.toggle()
                 } else {
-                    viewModel.handleAction(.alreadyLinkedNovel)
+                    viewModel.handle(.alreadyLinkedNovel)
                 }
             }
             
@@ -379,7 +378,7 @@ public struct CreateFeedView: View {
                     
                     WSSImage.icCancel.swiftUIImage
                         .onTapGesture {
-                            viewModel.handleAction(.removeConnectedNovel)
+                            viewModel.handle(.removeConnectedNovel)
                         }
                 }
                 .padding(.vertical, 13)
@@ -400,7 +399,7 @@ public struct CreateFeedView: View {
             createFeedUseCase: PreviewCreateFeedUseCase(),
             searchNovelUseCase: PreviewSearchNovelUseCase(),
             initialDraft: FeedDraft(
-                content: "",
+                content: "웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등",
                 isSpoiler: false,
                 isPrivate: false,
                 attachedImages: []
