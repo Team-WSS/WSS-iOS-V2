@@ -25,10 +25,9 @@ public struct WSSToggleButton: View {
                 .padding(padding)
         }
         .frame(width: width, height: height)
+        .animation(.spring(response: 0.25, dampingFraction: 1.0), value: isOn)
         .onTapGesture {
-            withAnimation(.spring(response: 0.25, dampingFraction: 1.0)) {
-                isOn.toggle()
-            }
+            isOn.toggle()
         }
     }
 }
