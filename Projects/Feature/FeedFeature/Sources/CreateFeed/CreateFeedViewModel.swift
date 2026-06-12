@@ -21,8 +21,12 @@ public final class CreateFeedViewModel {
 
     public struct State {
         var draft: FeedDraft
+        
+        var attachedImageDatas: [AttachedImageID: Data] = [:]
         var submitState: SubmitState = .idle
         var validationError: FeedDraft.ValidationError?
+        
+        // 토스트
         var showToast: Bool = false
         var toastType: WSSToastType = .networkDelay
 
@@ -31,9 +35,6 @@ public final class CreateFeedViewModel {
         var searchedNovels: [Novel] = []
         var selectedSearchedNovelID: NovelID?
         var isSearchingNovel: Bool = false
-
-        // 이미지 첨부
-        var attachedImageDatas: [AttachedImageID: Data] = [:]
     }
 
     public var canSubmit: Bool {
@@ -65,7 +66,7 @@ public final class CreateFeedViewModel {
         case searchNovel(String)
         case selectSearchedNovel(NovelID)
         case confirmSelectedNovel
-        case clearNovelSearch
+        case dismissLinkNovelSheet
     }
 
     // MARK: - Properties
@@ -89,39 +90,38 @@ public final class CreateFeedViewModel {
 
     // MARK: - Action
 
-    func handleAction(_ action: Action) {
+    func handle(_ action: Action) {
         var newState = state
-        defer { state = newState }
-        
+        newState.validationError = nil
+        defer {
+            presentValidationError(&newState)
+            state = newState
+        }
+
         switch action {
-            
+
         case .updateContent(let content):
             mutate(&newState) { try $0.updateContent(content) }
-            
+
         case .toggleSpoiler:
             newState.draft.toggleSpoiler()
-            
+
         case .togglePrivate:
             newState.draft.togglePrivate()
-            
+
         case .setConnectedNovel(let novel):
             mutate(&newState) { try $0.setConnectedNovel(novel) }
-            
+
         case .removeConnectedNovel:
             newState.draft.removeConnectedNovel()
-            
+
         case .alreadyLinkedNovel:
-            newState.toastType = .novelAlreadyConnected
-            newState.showToast = true
-            
+            newState.validationError = .connectedNovelOverLimit
+
         case .addImage(let id, let data):
             mutate(&newState) { try $0.addImage(id) }
             if newState.draft.attachedImages.last == id {
                 newState.attachedImageDatas[id] = data
-            }
-            if case .imageOverLimit(let max) = newState.validationError {
-                newState.toastType = .limitAddImage(limitCount: max)
-                newState.showToast = true
             }
 
         case .removeImage(let id):
@@ -158,7 +158,7 @@ public final class CreateFeedViewModel {
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
             
-        case .clearNovelSearch:
+        case .dismissLinkNovelSheet:
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
@@ -181,12 +181,33 @@ public final class CreateFeedViewModel {
             )
         }
     }
+
+    /// `state.validationError`를 화면 피드백으로 매핑하는 단일 진입점.
+    /// 매 액션 종료 시 호출된다.
+    private func presentValidationError(_ state: inout State) {
+        guard let error = state.validationError else { return }
+        switch error {
+        case .contentOverLimit:
+            break
+        case .imageOverLimit(let max):
+            state.toastType = .limitAddImage(limitCount: max)
+            state.showToast = true
+        case .connectedNovelOverLimit:
+            state.toastType = .novelAlreadyConnected
+            state.showToast = true
+        case .emptyContent:
+            break
+        }
+    }
     
     private func submit() async {
         let draft = state.draft
+        
+        guard canSubmit else { return }
 
         guard !draft.content.isEmpty else {
             state.validationError = .emptyContent
+            presentValidationError(&state)
             return
         }
 
