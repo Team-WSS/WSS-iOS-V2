@@ -16,7 +16,7 @@ import WSSComponent
 struct WSSDateWheel: View {
 
     @Binding var date: Date
-    /// 선택 가능한 최대 날짜(보통 오늘). 이보다 미래로 굴리면 이 날짜로 되돌린다.
+    /// 선택 가능한 최대 날짜(보통 오늘). 이보다 미래로 굴리면 직전 선택값으로 되돌린다.
     private let maxDate: Date
 
     private let rowHeight: CGFloat = 37
@@ -93,7 +93,7 @@ struct WSSDateWheel: View {
     }
 
     /// 스크롤 변경마다 호출. 미래로 오버슈트하면 `date`를 갱신하지 않고 정착 디바운스만 무장하고,
-    /// 스크롤이 멈춘 뒤(`scheduleBounceBack`)에야 오늘로 되돌린다. 유효 범위면 즉시 반영한다.
+    /// 스크롤이 멈춘 뒤(`scheduleBounceBack`)에야 직전 유효값으로 되돌린다. 유효 범위면 즉시 반영한다.
     private func commit() {
         // 월 길이 변동(예: 31일→28일)으로 일이 넘치면 클램프.
         if day > days.count {
@@ -115,26 +115,26 @@ struct WSSDateWheel: View {
         }
     }
 
-    /// 마지막 변경 후 일정 시간 추가 변경이 없으면(= 스크롤 정착) 오늘로 되돌린다.
+    /// 마지막 변경 후 일정 시간 추가 변경이 없으면(= 스크롤 정착) 직전 유효값으로 되돌린다.
     /// 플링 도중에는 계속 재예약되어 발동하지 않으므로 관성과 싸우지 않는다.
     private func scheduleBounceBack() {
         settleTask?.cancel()
         settleTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 200_000_000)
             guard !Task.isCancelled else { return }
-            bounceBackToMaxDate()
+            bounceBackToLastValid()
         }
     }
 
-    private func bounceBackToMaxDate() {
-        let c = calendar.dateComponents([.year, .month, .day], from: maxDate)
+    /// 오버슈트 중 `date`는 갱신되지 않아 직전 유효 선택값을 그대로 들고 있다 → 컬럼만 그 값으로 재정렬한다.
+    private func bounceBackToLastValid() {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
         withAnimation(.easeOut(duration: 0.35)) {
             year = c.year ?? year
             month = c.month ?? month
             day = c.day ?? day
         }
-        date = maxDate
-        bounceToken &+= 1   // 컬럼들이 선택값으로 물리 스크롤을 촤라락 재정렬
+        bounceToken &+= 1   // 컬럼들이 직전 선택값으로 물리 스크롤을 촤라락 재정렬
     }
 }
 

@@ -32,7 +32,7 @@ final class ReadingPeriodSheetViewModel: ObservableObject {
 
     enum Action {
         case selectField(Field)
-        /// 휠이 이미 오늘로 클램프한 값을 받아 watched에서 두 날짜의 순서를 보정한다.
+        /// 휠이 이미 직전 유효값으로 되돌린 값을 받아 watched에서 두 날짜의 순서를 보정한다.
         case updateEditingDate(Date)
     }
 

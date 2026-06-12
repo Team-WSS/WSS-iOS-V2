@@ -156,7 +156,7 @@ struct ReadingPeriodSheet: View {
         }
     }
 
-    /// 휠이 편집하는 날짜 바인딩. set은 휠이 이미 오늘로 클램프한 값을 VM에 넘겨 순서를 보정한다.
+    /// 휠이 편집하는 날짜 바인딩. set은 휠이 이미 직전 유효값으로 되돌린 값을 VM에 넘겨 순서를 보정한다.
     private var editingDateBinding: Binding<Date> {
         Binding(
             get: { viewModel.editingDate },
