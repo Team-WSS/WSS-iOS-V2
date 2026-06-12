@@ -26,18 +26,10 @@ public struct FeedDraft {
         connectedNovel: ConnectedNovel? = nil,
         attachedImages: [AttachedImageID]
     ) {
+        let limitedContent = String(content.prefix(Self.maxContentCount))
         let limitedImages = Array(attachedImages.prefix(Self.maxImageCount))
         
-#if DEBUG
-        if content.count > Self.maxContentCount {
-            assertionFailure("Content overflow: \(content.count) (max: \(Self.maxContentCount))")
-        }
-        if attachedImages.count > Self.maxImageCount {
-            assertionFailure("Image overflow: \(attachedImages.count) (max: \(Self.maxImageCount))")
-        }
-#endif
-        
-        self.content = content
+        self.content = limitedContent
         self.isSpoiler = isSpoiler
         self.isPrivate = isPrivate
         self.connectedNovel = connectedNovel
