@@ -61,8 +61,7 @@ struct CreateFeedConnectNovelSheet: View {
 
             ZStack {
                 if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    LoadingView()
                 } else if novels.isEmpty {
                     emptyView
                 } else {
@@ -112,7 +111,26 @@ struct CreateFeedConnectNovelSheet: View {
 #Preview {
     CreateFeedConnectNovelSheet(
         searchText: .constant("안녕"),
-        novels: [],
+        novels: [Novel(
+            id: NovelID(2),
+            thumbnailImage: URL(string: "https://i.pinimg.com/736x/12/49/04/124904e3933472601d83f8ff771def50.jpg"),
+            title: "멸망한 세계의 검신",
+            authors: ["이판타지"],
+            genres: [],
+            interestCount: 8932,
+            rating: 4.6,
+            ratingCount: 1875
+        ),
+        Novel(
+            id: NovelID(3),
+            thumbnailImage: URL(string: "https://i.pinimg.com/736x/fc/11/ed/fc11ed1b94cc32feefc9e40f1b2d8f65.jpg"),
+            title: "재벌집 막내아들",
+            authors: ["산경"],
+            genres: [],
+            interestCount: 25431,
+            rating: 4.9,
+            ratingCount: 10234
+        ),],
         selectedNovelID: nil,
         isLoading: false,
         onSearch: { },
