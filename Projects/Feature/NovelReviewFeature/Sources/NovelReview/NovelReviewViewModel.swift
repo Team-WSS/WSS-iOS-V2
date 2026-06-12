@@ -22,6 +22,7 @@ final class NovelReviewViewModel: ObservableObject {
         var isLoading = false
         var isSaving = false
         var shouldDismiss = false
+        var isStopAlertPresented = false
         /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
         var presentedError: ReviewError?
     }
@@ -43,6 +44,9 @@ final class NovelReviewViewModel: ObservableObject {
         case updateRating(Double)
         case toggleAttractivePoint(AttractivePoint)
         case save
+        case requestClose
+        case confirmStop
+        case keepWriting
         case dismissError
     }
 
@@ -54,6 +58,8 @@ final class NovelReviewViewModel: ObservableObject {
     
     private var hasLoaded = false
     private var baselineDraft: NovelReviewDraft
+    private var loadTask: Task<Void, Never>?
+    private var isClosing = false
 
     // MARK: - Dependency
 
@@ -103,6 +109,12 @@ final class NovelReviewViewModel: ObservableObject {
             toggleAttractivePoint(point)
         case .save:
             save()
+        case .requestClose:
+            requestClose()
+        case .confirmStop:
+            confirmStop()
+        case .keepWriting:
+            state.isStopAlertPresented = false
         case .dismissError:
             state.presentedError = nil
         }
@@ -113,8 +125,9 @@ final class NovelReviewViewModel: ObservableObject {
 
 private extension NovelReviewViewModel {
     func load() {
-        guard !hasLoaded, !state.isLoading else { return }
-        Task { await loadDraft() }
+        guard !hasLoaded, loadTask == nil, !isClosing else { return }
+        state.isLoading = true
+        loadTask = Task { await loadDraft() }
     }
 
     /// 독서 기간 설정. 상태별 유효 날짜(watching=시작, watched=시작+종료, quit=종료)는
@@ -166,6 +179,35 @@ private extension NovelReviewViewModel {
         guard !state.isSaving else { return }
         Task { await saveDraft() }
     }
+
+    /// 뒤로가기 요청. 로드 중이면 로드 완료를 기다리지 않고 닫기 흐름을 시작한다.
+    func requestClose() {
+        guard !isClosing else { return }
+
+        if state.isLoading || loadTask != nil {
+            close()
+            return
+        }
+
+        if hasUnsavedChanges {
+            state.isStopAlertPresented = true
+        } else {
+            close()
+        }
+    }
+
+    /// "그만하기" 확인. 알럿을 내리고 닫기 신호만 View로 발화한다.
+    func confirmStop() {
+        state.isStopAlertPresented = false
+        close()
+    }
+
+    func close() {
+        isClosing = true
+        state.isStopAlertPresented = false
+        loadTask?.cancel()
+        state.shouldDismiss = true
+    }
 }
 
 // MARK: - Async Work
@@ -173,19 +215,26 @@ private extension NovelReviewViewModel {
 private extension NovelReviewViewModel {
 
     func loadDraft() async {
-        state.isLoading = true
-        defer { state.isLoading = false }
+        defer {
+            loadTask = nil
+            if !isClosing {
+                state.isLoading = false
+            }
+        }
 
         do {
             if var loaded = try await loadUseCase.execute(novelID: novelID) {
+                guard !isClosing, !Task.isCancelled else { return }
                 baselineDraft = loaded               // 기준선은 서버에서 로드한 원본
                 loaded.changeStatus(initialStatus)   // 주입된 읽기 상태를 우선 적용(원본과 다르면 '변경됨'으로 잡힘)
                 state.draft = loaded
             } else {
+                guard !isClosing, !Task.isCancelled else { return }
                 baselineDraft = state.draft          // 초안 없음 → 초기값(주입 상태)을 기준선으로
             }
             hasLoaded = true
         } catch {
+            guard !isClosing, !Task.isCancelled else { return }
             presentError(error)
         }
     }

@@ -19,7 +19,6 @@ struct NovelReviewView: View {
 
     @StateObject private var viewModel: NovelReviewViewModel
     @State private var isPeriodSheetPresented = false
-    @State private var isStopAlertPresented = false
     @Environment(\.dismiss) private var dismiss
 
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
@@ -47,12 +46,7 @@ struct NovelReviewView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button {
-                    // 작성 중 변경이 있으면 곧장 닫지 않고 확인 알럿을 띄운다.
-                    if viewModel.hasUnsavedChanges {
-                        isStopAlertPresented = true
-                    } else {
-                        dismiss()
-                    }
+                    viewModel.handle(.requestClose)
                 } label: {
                     WSSImage.icNavigateLeft.swiftUIImage
                         .renderingMode(.template)
@@ -93,11 +87,11 @@ struct NovelReviewView: View {
         .showWSSToast(isPresented: toastBinding, type: toastType)
         // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
         .showWSSAlert(
-            isPresented: $isStopAlertPresented,
+            isPresented: stopAlertBinding,
             type: .stopNovelReview,
             buttonActions: [
-                { isStopAlertPresented = false; dismiss() },  // "그만하기" → 화면 닫기
-                { isStopAlertPresented = false }              // "계속 작성" → 머무름
+                { viewModel.handle(.confirmStop) },  // "그만하기" → 화면 닫기
+                { viewModel.handle(.keepWriting) }   // "계속 작성" → 머무름
             ]
         )
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
@@ -293,6 +287,14 @@ private extension NovelReviewView {
         Binding(
             get: { viewModel.state.presentedError != nil },
             set: { if !$0 { viewModel.handle(.dismissError) } }
+        )
+    }
+
+    /// 작성 중단 알럿 표시 여부. 실제 닫기 판단은 ViewModel이 하고, View는 표시 상태만 바인딩한다.
+    private var stopAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isStopAlertPresented },
+            set: { if !$0 { viewModel.handle(.keepWriting) } }
         )
     }
 
