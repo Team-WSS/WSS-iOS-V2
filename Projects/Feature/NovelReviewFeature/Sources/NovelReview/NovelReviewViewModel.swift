@@ -49,13 +49,16 @@ final class NovelReviewViewModel: ObservableObject {
     // MARK: - Output
 
     @Published private(set) var state: State
-
-    /// 최초 1회만 로드. 화면 재진입(onAppear 재호출) 시 편집 중인 draft를 서버 값으로 덮어쓰지 않기 위함.
+    
+    // MARK: - Property
+    
     private var hasLoaded = false
+    private var baselineDraft: NovelReviewDraft
 
     // MARK: - Dependency
 
     private let novelID: NovelID
+    private let initialStatus: ReadingStatus
     private let loadUseCase: LoadNovelReviewDraftUseCase
     private let saveUseCase: SaveNovelReviewUseCase
     private let logger: Logger?
@@ -69,12 +72,20 @@ final class NovelReviewViewModel: ObservableObject {
         saveUseCase: SaveNovelReviewUseCase,
         logger: Logger? = nil
     ) {
+        let initialDraft = NovelReviewDraft(novelID: novelID, status: status)
         self.novelID = novelID
-        self.state = State(draft: NovelReviewDraft(novelID: novelID, status: status))
+        self.initialStatus = status
+        self.state = State(draft: initialDraft)
+        self.baselineDraft = initialDraft
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
         self.logger = logger
     }
+
+    // MARK: - Derived
+
+    /// 로드 기준선 대비 draft가 바뀌었는지. 뒤로가기 시 "그만 작성" 확인 알럿 노출 여부 판단에 쓴다.
+    var hasUnsavedChanges: Bool { state.draft != baselineDraft }
 
     // MARK: - handle
 
@@ -166,8 +177,12 @@ private extension NovelReviewViewModel {
         defer { state.isLoading = false }
 
         do {
-            if let loaded = try await loadUseCase.execute(novelID: novelID) {
+            if var loaded = try await loadUseCase.execute(novelID: novelID) {
+                baselineDraft = loaded               // 기준선은 서버에서 로드한 원본
+                loaded.changeStatus(initialStatus)   // 주입된 읽기 상태를 우선 적용(원본과 다르면 '변경됨'으로 잡힘)
                 state.draft = loaded
+            } else {
+                baselineDraft = state.draft          // 초안 없음 → 초기값(주입 상태)을 기준선으로
             }
             hasLoaded = true
         } catch {

@@ -11,6 +11,7 @@ import SwiftUI
 import BaseData
 import BaseDomain
 import DesignSystem
+import Logger
 import Networking
 import NovelReviewData
 import NovelReviewDomain
@@ -46,19 +47,39 @@ private struct DemoRootView: View {
     private let title = "당신의 이해를 돕기 위하여"
 
     @State private var dataSource: DataSource = .mock
+    @State private var isReviewPresented = false
+    /// 열 때마다 증가. reviewView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
+    @State private var reviewOpenCount = 0
+
+    /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
+    private let consoleLogger = ConsoleLogger()
 
     var body: some View {
+        // 리뷰 화면을 push로 띄우는 랜딩. 뒤로가기(그만하기)가 이 화면으로 정상 팝되는지 검증하기 위함.
+        // ⚠️ NavigationLink {} / navigationDestination(isPresented:) 모두 destination 뷰(와 @StateObject)를
+        //    pop 후 바로 파괴하지 않고 재사용한다 → 재진입 시 이전 편집 상태가 남는다(서버 저장 아님).
+        //    reviewOpenCount를 .id로 물려 열 때마다 새 정체성 = 새 ViewModel(깨끗한 로드)로 강제한다.
         NavigationStack {
-            VStack(spacing: 0) {
+            VStack(spacing: 24) {
                 Picker("데이터 소스", selection: $dataSource) {
                     ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .padding()
 
+                Button("작품 평가 화면 열기") {
+                    reviewOpenCount += 1
+                    isReviewPresented = true
+                }
+                .buttonStyle(.borderedProminent)
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("WSS Demo")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $isReviewPresented) {
                 reviewView
-                    // 소스 전환 시 화면(ViewModel)을 새로 만들어 깨끗한 상태로 로드한다.
-                    .id(dataSource)
+                    .id(reviewOpenCount)
             }
         }
     }
@@ -72,7 +93,8 @@ private struct DemoRootView: View {
                 title: title,
                 status: .watching,
                 loadUseCase: DemoLoadNovelReviewDraftUseCase(),
-                saveUseCase: DemoSaveNovelReviewUseCase()
+                saveUseCase: DemoSaveNovelReviewUseCase(),
+                logger: consoleLogger
             )
         case .live:
             makeLiveView()
@@ -85,14 +107,21 @@ private struct DemoRootView: View {
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     @MainActor
     private func makeLiveView() -> some View {
-        let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
-        let repository = NovelReviewDataFactory.makeRepository(client: client)
+        let client = NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DemoSessionTokenStore()
+        )
+        let repository = NovelReviewDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "NovelReviewData", underlying: consoleLogger)
+        )
         return NovelReviewFactory.makeView(
             novelID: novelID,
             title: title,
             status: .watched,
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: repository),
-            saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository)
+            saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository),
+            logger: consoleLogger
         )
     }
 }

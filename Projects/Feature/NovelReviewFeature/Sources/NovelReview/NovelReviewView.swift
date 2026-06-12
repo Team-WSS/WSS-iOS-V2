@@ -19,6 +19,7 @@ struct NovelReviewView: View {
 
     @StateObject private var viewModel: NovelReviewViewModel
     @State private var isPeriodSheetPresented = false
+    @State private var isStopAlertPresented = false
     @Environment(\.dismiss) private var dismiss
 
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
@@ -30,12 +31,14 @@ struct NovelReviewView: View {
     }
 
     var body: some View {
-        Group {
+        // 로딩을 if/else 트리 교체가 아니라 overlay로 둔다. isLoading 토글 시 루트(content) 정체성이
+        // 유지돼야, 로드 완료 순간과 뒤로가기(dismiss)가 겹쳐도 진행 중인 pop이 취소되지 않는다.
+        content
+        .overlay {
             if viewModel.state.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                content
+                    .background(Color.wssWhite)
             }
         }
         .navigationTitle(title)
@@ -44,7 +47,12 @@ struct NovelReviewView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button {
-                    dismiss()
+                    // 작성 중 변경이 있으면 곧장 닫지 않고 확인 알럿을 띄운다.
+                    if viewModel.hasUnsavedChanges {
+                        isStopAlertPresented = true
+                    } else {
+                        dismiss()
+                    }
                 } label: {
                     WSSImage.icNavigateLeft.swiftUIImage
                         .renderingMode(.template)
@@ -83,6 +91,19 @@ struct NovelReviewView: View {
             }
         }
         .showWSSToast(isPresented: toastBinding, type: toastType)
+        // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
+        .showWSSAlert(
+            isPresented: $isStopAlertPresented,
+            type: .stopNovelReview,
+            buttonActions: [
+                { isStopAlertPresented = false; dismiss() },  // "그만하기" → 화면 닫기
+                { isStopAlertPresented = false }              // "계속 작성" → 머무름
+            ]
+        )
+        .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
+            guard shouldDismiss else { return }
+            dismiss()
+        }
     }
 
     private var content: some View {
