@@ -26,24 +26,6 @@ public struct FeedDetail {
     public private(set) var isLiked: Bool
     public private(set) var commentCount: Int
     
-    // MARK: - Policy
-    
-    public enum PolicyError: Error, Equatable {
-        case negativeLikeCount
-    }
-    
-    public mutating func toggleLike() throws {
-        if isLiked {
-            guard likeCount > 0 else {
-                throw PolicyError.negativeLikeCount
-            }
-            likeCount -= 1
-        } else {
-            likeCount += 1
-        }
-        isLiked.toggle()
-    }
-    
     public init(
         id: FeedID,
         author: Author,
@@ -66,5 +48,23 @@ public struct FeedDetail {
         self.likeCount = likeCount
         self.isLiked = isLiked
         self.commentCount = commentCount
+    }
+    
+    // MARK: - Policy
+    
+    public enum PolicyError: Error, Equatable {
+        case negativeLikeCount
+    }
+    
+    public mutating func toggleLike() throws {
+        if isLiked {
+            guard likeCount > 0 else {
+                throw PolicyError.negativeLikeCount
+            }
+            likeCount -= 1
+        } else {
+            likeCount += 1
+        }
+        isLiked.toggle()
     }
 }
