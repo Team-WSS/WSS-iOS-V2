@@ -11,10 +11,8 @@ import CommentDomain
 import BaseDomain
 
 enum CommentMapper {
-    static func comments(from dto: CommentsResponse) -> (Int, [FeedComment]) {
-        return (dto.commentsCount,
-                dto.comments.map { comment(from: $0) }
-        )
+    static func comments(from dto: CommentsResponse) -> [FeedComment] {
+        return dto.comments.map { comment(from: $0) }
     }
     
     static func comment(from dto: CommentResponse) -> FeedComment {

@@ -24,7 +24,7 @@ public struct DefaultCommentRepository: CommentRepository {
         self.logger = logger
     }
     
-    public func fetchComments(feedID: FeedID) async throws(RepositoryError) -> (Int, [FeedComment]) {
+    public func fetchComments(feedID: FeedID) async throws(RepositoryError) -> [FeedComment] {
         let action = CommentAction.fetchComments
         
         do {
