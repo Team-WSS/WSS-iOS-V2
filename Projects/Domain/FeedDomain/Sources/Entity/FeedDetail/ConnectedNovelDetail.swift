@@ -27,5 +27,4 @@ public struct ConnectedNovelDetail {
         self.descirption = descirption
         self.feedWriterRating = feedWriterRating
     }
-    
 }
