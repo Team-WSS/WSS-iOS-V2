@@ -16,16 +16,13 @@ public struct WSSFeedReact {
     
     let likeCount: Int
     let commentCount: Int
-    let likeButtonTapped: () -> Void
     
     public init(
         likeCount: Int,
         commentCount: Int,
-        likeButtonTapped: @escaping () -> Void
     ) {
         self.likeCount = likeCount
         self.commentCount = commentCount
-        self.likeButtonTapped = likeButtonTapped
     }
 }
 
@@ -35,16 +32,34 @@ public struct WSSFeedReactView: View {
     
     let react: WSSFeedReact
     
+    let isLiked: Bool
+    let likeButtonTapped: () -> Void
+    
+    public init(
+        react: WSSFeedReact,
+        isLiked: Bool,
+        likeButtonTapped: @escaping () -> Void
+    ) {
+        self.react = react
+        self.isLiked = isLiked
+        self.likeButtonTapped = likeButtonTapped
+    }
+    
     public var body: some View {
         HStack(spacing: 0) {
-            WSSImage.icLike.swiftUIImage
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 20, height: 20)
-                .onTapGesture {
-                    react.likeButtonTapped()
+            Button {
+                likeButtonTapped()
+            } label: {
+                if isLiked {
+                    WSSImage.icLikeSelected.swiftUIImage
+                        .frame(width: 20, height: 20)
+                } else {
+                    WSSImage.icLike.swiftUIImage
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                        .frame(width: 20, height: 20)
                 }
+            }
             
             Spacer().frame(width: 5)
                 
@@ -55,8 +70,7 @@ public struct WSSFeedReactView: View {
             
             WSSImage.icComment.swiftUIImage
                 .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
+                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
                 .frame(width: 20, height: 20)
             
             Spacer().frame(width: 5)
@@ -76,8 +90,9 @@ public struct WSSFeedReactView: View {
     WSSFeedReactView(
         react: WSSFeedReact(
             likeCount: 534,
-            commentCount: 12,
-            likeButtonTapped: { print("좋아요 클릭") }
-            )
+            commentCount: 12
+            ),
+        isLiked: true,
+        likeButtonTapped: { print("좋아요 클릭") }
     )
 }

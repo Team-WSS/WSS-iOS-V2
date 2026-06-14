@@ -17,23 +17,17 @@ public struct FeedHeader {
     public let nickname: String
     public let createdDate: String
     public let isEdited: Bool
-    public let profileImageTapped: () -> Void
-    public let threeDotsButtonTapped: () -> Void
 
     public init(
         profileImageURL: URL?,
         nickname: String,
         createdDate: String,
-        isEdited: Bool,
-        profileImageTapped: @escaping () -> Void,
-        threeDotsButtonTapped: @escaping () -> Void
+        isEdited: Bool
     ) {
         self.profileImageURL = profileImageURL
         self.nickname = nickname
         self.createdDate = createdDate
         self.isEdited = isEdited
-        self.profileImageTapped = profileImageTapped
-        self.threeDotsButtonTapped = threeDotsButtonTapped
     }
 }
 
@@ -42,30 +36,43 @@ public struct FeedHeader {
 public struct WSSFeadHeaderView: View {
 
     let header: FeedHeader
-
-    public init(header: FeedHeader) {
+    
+    public let profileImageTapped: () -> Void
+    public let showThreeDotsButton: Bool
+    public let threeDotsButtonTapped: () -> Void
+    
+    public init(
+        header: FeedHeader,
+        profileImageTapped: @escaping () -> Void,
+        showThreeDotsButton: Bool = true,
+        threeDotsButtonTapped: @escaping () -> Void = { }
+    ) {
         self.header = header
+        self.profileImageTapped = profileImageTapped
+        self.showThreeDotsButton = showThreeDotsButton
+        self.threeDotsButtonTapped = threeDotsButtonTapped
     }
 
     public var body: some View {
         HStack(spacing: 0) {
-            AsyncImage(url: header.profileImageURL) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                case .failure:
-                    WSSImage.imgLoadingThumbnail.swiftUIImage
-                default:
-                    ProgressView()
+            Button {
+                profileImageTapped()
+            } label: {
+                AsyncImage(url: header.profileImageURL) {
+                    phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                    case .failure:
+                        WSSImage.imgLoadingThumbnail.swiftUIImage
+                    default:
+                        ProgressView()
+                    }
                 }
-            }
-            .scaledToFit()
-            .frame(width: 32, height: 32)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .onTapGesture {
-                header.profileImageTapped()
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
             Spacer().frame(width: 10)
@@ -97,11 +104,16 @@ public struct WSSFeadHeaderView: View {
             
             Spacer()
             
-            WSSImage.icThreedots.swiftUIImage
-                .frame(width: 32, height: 32, alignment: .trailing)
-                .onTapGesture {
-                    header.threeDotsButtonTapped()
+            if showThreeDotsButton {
+                Button {
+                    threeDotsButtonTapped()
+                } label: {
+                    WSSImage.icThreedots.swiftUIImage
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+                        .frame(width: 32, height: 32, alignment: .trailing)
                 }
+            }
         }
         .background(Color.wssWhite)
     }
@@ -113,9 +125,8 @@ public struct WSSFeadHeaderView: View {
             profileImageURL: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
             nickname: "구리스",
             createdDate: "2024년 6월 19일",
-            isEdited: true,
-            profileImageTapped: {},
-            threeDotsButtonTapped: {}
-        )
+            isEdited: true
+        ),
+        profileImageTapped: { }
     )
 }
