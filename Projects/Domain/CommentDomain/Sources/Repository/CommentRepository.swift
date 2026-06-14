@@ -11,7 +11,7 @@ import Foundation
 import BaseDomain
 
 public protocol CommentRepository {
-    func fetchComments(feedID: FeedID) async throws(RepositoryError) -> (Int, [FeedComment])
+    func fetchComments(feedID: FeedID) async throws(RepositoryError) -> [FeedComment]
     func submitComment(feedID: FeedID, draft: CommentDraft) async throws(RepositoryError)
     func editComment(id: CommentID, feedID: FeedID, draft: CommentDraft) async throws(RepositoryError)
     func deleteComment(id: CommentID, feedID: FeedID) async throws(RepositoryError)
