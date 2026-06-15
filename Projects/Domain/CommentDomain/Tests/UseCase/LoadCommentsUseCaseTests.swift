@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import CommentDomain
@@ -62,7 +63,7 @@ extension LoadCommentsUseCaseTests {
             user: Author(
                 userId: UserID(1),
                 nickname: "테스트유저",
-                profileImage: ImageWrapper(identifier: "1")
+                profileImage: URL(string: "https://test.com/profile.jpg")
             ),
             createdDate: "2026-02-09",
             content: "댓글 내용",

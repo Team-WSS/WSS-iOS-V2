@@ -59,7 +59,7 @@ extension FeedDetailTests {
     private func makeMockConnectedNovelDetail() -> ConnectedNovelDetail {
         ConnectedNovelDetail(
             basicInfo: makeMockConnectedNovel(),
-            thumbnailImage: ImageWrapper(identifier: "https://test.com"),
+            thumbnailImageURL: URL(string: "https://test.com"),
             descirption: "안녕하세요",
             feedWriterRating: 2.33333)
     }

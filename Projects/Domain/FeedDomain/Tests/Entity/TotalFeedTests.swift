@@ -61,7 +61,7 @@ extension TotalFeedTests {
         likeCount: Int = 0,
         isLiked: Bool = false,
         imageCount: Int = 0,
-        thumbnail: ImageWrapper? = nil
+        thumbnail: URL? = nil
     ) -> TotalFeed {
         TotalFeed(
             feedId: feedId,
