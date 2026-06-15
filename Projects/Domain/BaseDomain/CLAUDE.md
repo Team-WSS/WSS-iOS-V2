@@ -10,7 +10,7 @@
 - `RepositoryError` — 전 레이어 공통 에러 (Data가 여기로 변환해 throw).
 - `Paginated<T>` (`PaginatedWrapper`) — 페이지네이션 공통 래퍼.
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
-- 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`, `ImageWrapper`.
+- 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
 - **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordGroup` Entity + `KeywordRepository` + `SearchKeywordsUseCase` + 루트의 `LoadTotalKeywordsUseCase`.
 
 ## 주의사항 (작업 중 발견 시 누적)

@@ -31,7 +31,7 @@ public struct TotalFeed: Equatable {
     public private(set) var isModified: Bool
     public private(set) var isPublic: Bool
     
-    public private(set) var thumbnailImageURL: ImageWrapper?
+    public private(set) var thumbnailImageURL: URL?
     public private(set) var imageCount: Int
     
     // MARK: - Policy
@@ -64,7 +64,7 @@ public struct TotalFeed: Equatable {
         isSpoiler: Bool,
         isModified: Bool,
         isPublic: Bool,
-        thumbnailImageURL: ImageWrapper? = nil,
+        thumbnailImageURL: URL? = nil,
         imageCount: Int
     ) {
         self.feedId = feedId
