@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import FeedDomain
 import CommentDomain
+import SocialDomain
 import WSSComponent
 import DesignSystem
 
@@ -188,7 +189,11 @@ struct FeedDetailView: View {
             loadCommentsUseCase: PreviewLoadCommentsUseCase(),
             createCommentUseCase: PreviewCreateCommentUseCase(),
             deleteCommentUseCase: PreviewDeleteCommentUseCase(),
-            editCommentUseCase: PreviewEditCommentUseCase()
+            editCommentUseCase: PreviewEditCommentUseCase(),
+            reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
+            reportImproperFeedUseCase: PreviewReportImproperFeedUseCase(),
+            reportSpoilerCommentUseCase: PreviewReportSpoilerCommentUseCase(),
+            reportImproperCommentUseCase: PreviewReportImproperCommentUseCase()
         ))
     }
 }
@@ -291,5 +296,21 @@ private struct PreviewDeleteCommentUseCase: DeleteCommentUseCase {
 
 private struct PreviewEditCommentUseCase: EditCommentUseCase {
     func execute(commentID: CommentID, feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportImproperFeedUseCase: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportSpoilerCommentUseCase: ReportSpoilerCommentUseCase {
+    func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportImproperCommentUseCase: ReportImproperCommentUseCase {
+    func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) { }
 }
 
