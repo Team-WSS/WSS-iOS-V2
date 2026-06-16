@@ -6,14 +6,16 @@
 //
 
 import Foundation
+import SwiftUI
 
 import BaseDomain
 import FeedDomain
 import NovelDomain
+import CommentDomain
 
 /// FeedFeature 모듈의 외부 진입점.
 public enum FeedFeatureFactory {
-    
+
     /// 실제 UseCase를 주입해 CreateFeedView를 생성한다.
     @MainActor
     public static func makeCreateFeedView(
@@ -28,7 +30,7 @@ public enum FeedFeatureFactory {
             )
         )
     }
-    
+
     /// 네트워크 없이 ViewModel/View 동작만 확인하기 위한 임시 진입점.
     /// 제출 시 1초 후 성공으로 처리한다.
     @MainActor
@@ -36,7 +38,32 @@ public enum FeedFeatureFactory {
         makeCreateFeedView(createFeedUseCase: StubCreateFeedUseCase(),
                            searchNovelUseCase: StubSearchNovelUseCase())
     }
-    
+
+    /// 실제 UseCase를 주입해 FeedDetailView를 생성한다.
+    /// 진입 시 `feedID`만 받고, 상세/댓글은 화면에서 직접 load한다.
+    @MainActor
+    public static func makeFeedDetailView(
+        feedID: FeedID,
+        loadFeedDetailUseCase: LoadFeedDetailUseCase,
+        feedLikeUseCase: FeedLikeUseCase,
+        loadCommentsUseCase: LoadCommentsUseCase,
+        createCommentUseCase: CreateCommentUseCase,
+        deleteCommentUseCase: DeleteCommentUseCase,
+        editCommentUseCase: EditCommentUseCase
+    ) -> some View {
+        FeedDetailView(
+            viewModel: FeedDetailViewModel(
+                feedID: feedID,
+                loadFeedDetailUseCase: loadFeedDetailUseCase,
+                feedLikeUsecase: feedLikeUseCase,
+                loadCommentsUseCase: loadCommentsUseCase,
+                createCommentUseCase: createCommentUseCase,
+                deleteCommentUseCase: deleteCommentUseCase,
+                editCommentUseCase: editCommentUseCase
+            )
+        )
+    }
+
     private static func emptyDraft() -> FeedDraft {
         FeedDraft(
             content: "",

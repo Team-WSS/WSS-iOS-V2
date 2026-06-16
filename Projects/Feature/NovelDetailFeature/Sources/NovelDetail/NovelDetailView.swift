@@ -591,14 +591,22 @@ private extension NovelDetailView {
             ]
         } else {
             [
-                WSSDropdownItem(title: "스포일러 신고", titleColor: Color.wssSecondary100) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
-                },
-                WSSDropdownItem(title: "부적절한 표현 신고", titleColor: Color.wssSecondary100) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportImproperFeedTapped(feed.feedId))
-                }
+                WSSDropdownItem(
+                    title: "스포일러 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                ),
+                WSSDropdownItem(
+                    title: "부적절한 표현 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportImproperFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                )
             ]
         }
     }
