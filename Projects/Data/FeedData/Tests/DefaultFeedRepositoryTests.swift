@@ -33,9 +33,10 @@ struct DefaultFeedRepositoryTests {
         #expect(service.postedRequests[0].imageDatas == [])
     }
 
-    @Test("submitFeed 성공 시 imageDatas가 service로 그대로 전달된다")
-    func submitFeed_success_passesImageDatasToService() async throws {
+    @Test("submitFeed 시 디코딩 불가한 데이터는 압축기를 거쳐도 원본 그대로 전달된다")
+    func submitFeed_nonImageData_passesThroughUncompressed() async throws {
         let (sut, service) = makeRepository()
+        // 이미지로 디코딩되지 않는 데이터는 압축기가 원본을 그대로 반환한다.
         let imageDatas = [Data("image1".utf8), Data("image2".utf8)]
 
         try await sut.submitFeed(makeDraft(), imageDatas: imageDatas)
@@ -58,6 +59,7 @@ struct DefaultFeedRepositoryTests {
     @Test("editFeed 성공 시 올바른 feedID와 request로 service 호출")
     func editFeed_success_callsServiceWithCorrectParams() async throws {
         let (sut, service) = makeRepository()
+        // 이미지로 디코딩되지 않는 데이터는 압축기가 원본을 그대로 반환한다.
         let imageDatas = [Data("edited".utf8)]
 
         try await sut.editFeed(id: FeedID(10), draft: makeDraft(content: "수정된 피드"), imageDatas: imageDatas)
