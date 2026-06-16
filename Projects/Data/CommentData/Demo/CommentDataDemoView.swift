@@ -100,8 +100,8 @@ struct CommentDataDemoView: View {
         defer { isLoading = false }
 
         do {
-            let (count, comments) = try await repository.fetchComments(feedID: feedID)
-            log = formatComments(comments, count: count)
+            let comments = try await repository.fetchComments(feedID: feedID)
+            log = formatComments(comments)
         } catch {
             log = "댓글 조회 실패\n\(error)"
         }
@@ -176,12 +176,12 @@ struct CommentDataDemoView: View {
         }
     }
 
-    private func formatComments(_ comments: [FeedComment], count: Int) -> String {
+    private func formatComments(_ comments: [FeedComment]) -> String {
         if comments.isEmpty {
-            return "댓글 없음 (총 \(count)개)"
+            return "댓글 없음 (총 \(comments.count)개)"
         }
 
-        var text = "댓글 \(count)개\n\n"
+        var text = "댓글 \(comments.count)개\n\n"
         for comment in comments {
             text += "[\(comment.id)] \(comment.user.nickname)\n"
             text += "  \(comment.content)\n"
