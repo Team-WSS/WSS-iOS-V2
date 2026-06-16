@@ -4,10 +4,14 @@ import DesignSystem
 public struct WSSDropdownItem {
     public let title: String
     public let action: () -> Void
+    public let textColor: Color
 
-    public init(title: String, action: @escaping () -> Void) {
+    public init(title: String,
+                action: @escaping () -> Void,
+                textColor: Color = WSSColor.wssBlack.swiftUIColor) {
         self.title = title
         self.action = action
+        self.textColor = textColor
     }
 }
 
@@ -39,7 +43,7 @@ public struct WSSDropdownMenu: View {
             VStack(spacing: 0) {
                 Text(item.title)
                     .applyWSSFont(.body2)
-                    .foregroundStyle(Color.wssBlack)
+                    .foregroundStyle(item.textColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 53)
 
@@ -61,7 +65,9 @@ public struct WSSDropdownMenu: View {
         .frame(width: 160)
 
         WSSDropdownMenu(items: [
-            WSSDropdownItem(title: "차단하기") { print("차단") }
+            WSSDropdownItem(title: "차단하기",
+                            action: { print("차단") },
+                            textColor: WSSColor.wssSecondary100.swiftUIColor)
         ])
         .frame(width: 200)
     }
