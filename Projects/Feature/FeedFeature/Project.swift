@@ -29,6 +29,7 @@ let project = Project.createFeatureModule(
         .module(.data(.base)),
         .module(.data(.feed)),
         .module(.data(.comment)),
+        .module(.data(.social)),
         .module(.core(.networking)),
         .module(.core(.logger))
     ]

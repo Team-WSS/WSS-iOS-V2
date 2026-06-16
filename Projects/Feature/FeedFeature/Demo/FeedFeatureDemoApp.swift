@@ -10,10 +10,12 @@ import SwiftUI
 import BaseDomain
 import FeedDomain
 import CommentDomain
+import SocialDomain
 
 import BaseData
 import FeedData
 import CommentData
+import SocialData
 
 import Logger
 import Networking
@@ -46,6 +48,10 @@ private struct FeedFeatureDemoRootView: View {
     private let createCommentUseCase: CreateCommentUseCase
     private let deleteCommentUseCase: DeleteCommentUseCase
     private let editCommentUseCase: EditCommentUseCase
+    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
+    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
+    private let reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase
+    private let reportImproperCommentUseCase: ReportImproperCommentUseCase
 
     init() {
         let consoleLogger = ConsoleLogger()
@@ -61,6 +67,10 @@ private struct FeedFeatureDemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "Comment", underlying: consoleLogger)
         )
+        let socialRepository = SocialDataFactory.makeSocialRepository(
+            client: client,
+            underlying: consoleLogger
+        )
 
         self.loadFeedDetailUseCase = DefaultLoadFeedUseCase(feedRepository: feedRepository)
         self.feedLikeUseCase = DefaultLikeUseCase(feedRepository: feedRepository)
@@ -68,6 +78,10 @@ private struct FeedFeatureDemoRootView: View {
         self.createCommentUseCase = DefaultCreateCommentUseCase(repository: commentRepository)
         self.deleteCommentUseCase = DefaultDeleteCommentUseCase(repository: commentRepository)
         self.editCommentUseCase = DefaultEditCommentUseCase(repository: commentRepository)
+        self.reportSpoilerFeedUseCase = DefaultReportSpoilerFeedUseCase(repository: socialRepository)
+        self.reportImproperFeedUseCase = DefaultReportImproperFeedUseCase(repository: socialRepository)
+        self.reportSpoilerCommentUseCase = DefaultReportSpoilerCommentUseCase(repository: socialRepository)
+        self.reportImproperCommentUseCase = DefaultReportImproperCommentUseCase(repository: socialRepository)
     }
 
     var body: some View {
@@ -99,7 +113,11 @@ private struct FeedFeatureDemoRootView: View {
                     loadCommentsUseCase: loadCommentsUseCase,
                     createCommentUseCase: createCommentUseCase,
                     deleteCommentUseCase: deleteCommentUseCase,
-                    editCommentUseCase: editCommentUseCase
+                    editCommentUseCase: editCommentUseCase,
+                    reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
+                    reportImproperFeedUseCase: reportImproperFeedUseCase,
+                    reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
+                    reportImproperCommentUseCase: reportImproperCommentUseCase
                 )
             }
         }
