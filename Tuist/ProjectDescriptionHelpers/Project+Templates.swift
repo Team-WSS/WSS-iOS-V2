@@ -116,9 +116,10 @@ extension Project {
         name: String,
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
-        externalDependencies: [TargetDependency] = []
+        externalDependencies: [TargetDependency] = [],
+        demoDependencies: [TargetDependency] = []
     ) -> Project {
-        
+
         let allTargets = makeBaseTargets(
             name: name,
             product: .framework,
@@ -127,7 +128,7 @@ extension Project {
             resources: nil,
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
-            demoDependencies: [],
+            demoDependencies: demoDependencies,
             testDependencies: [],
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.feature.infoPlist
@@ -138,12 +139,13 @@ extension Project {
             organizationName: env.organizationName,
             settings: .settings(
                 base: env.baseSetting,
+                configurations: configurations,
                 defaultSettings: .recommended
             ),
             targets: allTargets
         )
     }
-    
+
     // MARK: - Domain Module
     
     public static func createDomainModule(

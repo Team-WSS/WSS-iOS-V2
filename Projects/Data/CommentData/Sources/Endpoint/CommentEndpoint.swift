@@ -26,7 +26,7 @@ enum CommentEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "https://dev.websoso.kr")!
     }
     
     var path: String {

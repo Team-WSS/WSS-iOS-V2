@@ -38,7 +38,7 @@ enum FeedEndpoint: Endpoint {
     }
 
     var baseURL: URL {
-        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "https://dev.websoso.kr")!
     }
 
     var path: String {
@@ -91,11 +91,7 @@ enum FeedEndpoint: Endpoint {
         }
     }
 
-    var authorization: AuthorizationPolicy {
-        return .usesTokenIfAvailable
-    }
+    var authorization: AuthorizationPolicy { return .requireToken }
     
-    var additionalHeaders: [String : String]? {
-        nil
-    }
+    var additionalHeaders: [String : String]? { nil }
 }
