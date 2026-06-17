@@ -20,5 +20,12 @@ let project = Project.createFeatureModule(
         .module(.domain(.novel)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent))
+    ],
+    demoDependencies: [
+        .module(.core(.networking)),
+        .module(.core(.logger)),
+        .module(.data(.base)),
+        .module(.data(.feed)),
+        .module(.data(.novel))
     ]
 )
