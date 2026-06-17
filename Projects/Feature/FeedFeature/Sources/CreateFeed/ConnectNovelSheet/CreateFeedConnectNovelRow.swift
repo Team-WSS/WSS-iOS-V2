@@ -16,55 +16,55 @@ struct CreateFeedConnectNovelRow: View {
     let author: String
     
     var isSelected: Bool
-    let onTap: () -> Void
-
+    let action: () -> Void
+    
     var body: some View {
-        
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 0) {
-                AsyncImage(url: imageURL) {
-                    phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .scaledToFill()
-                .frame(width: 78, height: 105)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                Spacer().frame(width: 18)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .applyWSSFont(.title3)
-                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                        .lineLimit(1)
-
-                    Text(author)
-                        .applyWSSFont(.body5)
-                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                if isSelected {
-                    WSSImage.icSelectNovelSelected.swiftUIImage
-                        .frame(width: 44, height: 44)
-                } else {
-                    WSSImage.icSelectNovelDefault.swiftUIImage
-                        .frame(width: 44, height: 44)
+        HStack(spacing: 0) {
+            AsyncImage(url: imageURL) {
+                phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                case .failure:
+                    WSSImage.imgLoadingThumbnail.swiftUIImage
+                default:
+                    ProgressView()
                 }
             }
-            .contentShape(Rectangle())
+            .scaledToFill()
+            .frame(width: 78, height: 105)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            Spacer().frame(width: 18)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .applyWSSFont(.title3)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .lineLimit(1)
+                
+                Text(author)
+                    .applyWSSFont(.body5)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            (isSelected
+             ? WSSImage.icSelectNovelSelected.swiftUIImage
+             : WSSImage.icSelectNovelDefault.swiftUIImage)
+            .frame(width: 44, height: 44)
+            .scaleEffect(isSelected ? 1.15 : 1.0)
+            .animation(
+                .spring(response: 0.2, dampingFraction: 0.5),
+                value: isSelected
+            )
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            action()
         }
     }
 }
@@ -75,6 +75,6 @@ struct CreateFeedConnectNovelRow: View {
         title: "여주인공의 이해를 돕기 위하여",
         author: "이보라",
         isSelected: true,
-        onTap: { }
+        action: { print("전체 클릭") }
     )
 }
