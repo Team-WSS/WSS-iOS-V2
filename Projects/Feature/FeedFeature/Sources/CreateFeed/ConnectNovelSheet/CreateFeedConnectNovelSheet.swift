@@ -21,17 +21,22 @@ struct CreateFeedConnectNovelSheet: View {
     let onSearch: () -> Void
     let onSelect: (Novel) -> Void
     let onConfirm: () -> Void
+    let inquiryNovelAction: () -> Void
     let dismissSheet: () -> Void
+    
+    @State private var hasSearched: Bool = false
 
     var body: some View {
-        HStack {
+        HStack(spacing: 0) {
             Spacer()
-            WSSImage.icCancelModal.swiftUIImage
-                .frame(width: 65, height: 65)
-                .onTapGesture {
-                    dismissSheet()
-                }
+            Button {
+                dismissSheet()
+            } label: {
+                WSSImage.icCancelModal.swiftUIImage
+                    .frame(width: 65, height: 65)
+            }
         }
+        
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -54,7 +59,8 @@ struct CreateFeedConnectNovelSheet: View {
             WSSSearchBar(
                 text: $searchText,
                 placeholder: "",
-                onSearch: onSearch
+                onSearch: { onSearch()
+                    hasSearched = true }
             )
 
             Spacer().frame(height: 20)
@@ -62,8 +68,9 @@ struct CreateFeedConnectNovelSheet: View {
             ZStack {
                 if isLoading {
                     LoadingView()
-                } else if novels.isEmpty {
-                    emptyView
+                } else if novels.isEmpty && hasSearched {
+                    WSSEmptyView(type: .novel,
+                                 action: { inquiryNovelAction() })
                 } else {
                     novelList
                 }
@@ -79,15 +86,6 @@ struct CreateFeedConnectNovelSheet: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-    }
-
-    private var emptyView: some View {
-        VStack {
-            Text("")
-                .applyWSSFont(.body2)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var novelList: some View {
@@ -111,32 +109,14 @@ struct CreateFeedConnectNovelSheet: View {
 
 #Preview {
     CreateFeedConnectNovelSheet(
-        searchText: .constant("안녕"),
-        novels: [Novel(
-            id: NovelID(2),
-            thumbnailImage: URL(string: "https://i.pinimg.com/736x/12/49/04/124904e3933472601d83f8ff771def50.jpg"),
-            title: "멸망한 세계의 검신",
-            authors: ["이판타지"],
-            genres: [],
-            interestCount: 8932,
-            rating: 4.6,
-            ratingCount: 1875
-        ),
-        Novel(
-            id: NovelID(3),
-            thumbnailImage: URL(string: "https://i.pinimg.com/736x/fc/11/ed/fc11ed1b94cc32feefc9e40f1b2d8f65.jpg"),
-            title: "재벌집 막내아들",
-            authors: ["산경"],
-            genres: [],
-            interestCount: 25431,
-            rating: 4.9,
-            ratingCount: 10234
-        ),],
+        searchText: .constant(""),
+        novels: [],
         selectedNovelID: nil,
         isLoading: false,
         onSearch: { },
         onSelect: { _ in },
         onConfirm: { },
+        inquiryNovelAction: { },
         dismissSheet: { }
     )
 }
