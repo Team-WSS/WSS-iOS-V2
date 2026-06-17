@@ -101,7 +101,7 @@ enum FeedMapper {
             )
             connectedNovelDetail = ConnectedNovelDetail(
                 basicInfo: basicInfo,
-                thumbnailImage: ImageWrapper(identifier: thumbnailImage),
+                thumbnailImageURL: URL(string: thumbnailImage),
                 descirption: description,
                 feedWriterRating: response.feedWriterNovelRating
             )
@@ -114,7 +114,7 @@ enum FeedMapper {
             createdDate: response.createdDate,
             isModified: response.isModified,
             feedContent: response.feedContent,
-            feedImageURLs: response.images.map { Optional(ImageWrapper(identifier: $0)) },
+            feedImageURLs: response.images.map { URL(string: $0) },
             connectedNovel: connectedNovelDetail,
             likeCount: response.likeCount,
             isLiked: response.isLiked,
@@ -143,7 +143,7 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.map { ImageWrapper(identifier: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
             imageCount: response.imageCount
         )
     }
@@ -177,7 +177,7 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.map { ImageWrapper(identifier: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
             imageCount: response.imageCount
         )
     }
@@ -208,7 +208,7 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.map { ImageWrapper(identifier: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
             imageCount: response.imageCount
         )
     }

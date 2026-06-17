@@ -29,7 +29,10 @@ public enum ModuleInfoPlist {
     public var dictionary: [String: Plist.Value] {
         switch self {
         case .feature:
-            return commonEntries
+            var entries = commonEntries
+            entries["BASE_URL"] = "$(BASE_URL)"
+            entries["TEST_API_KEY"] = "$(TEST_API_KEY)"
+            return entries
         case .domain:
             return commonEntries
         case .data:

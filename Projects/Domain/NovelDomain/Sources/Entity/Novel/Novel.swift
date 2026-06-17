@@ -16,6 +16,7 @@ public struct Novel {
     public let thumbnailImage: URL?
     public let title: String
     public let authors: [String]
+    public let genres: [NovelGenre]
     
     public private(set) var interestCount: Int
     public let rating: Float
@@ -28,6 +29,7 @@ public struct Novel {
         thumbnailImage: URL?,
         title: String,
         authors: [String],
+        genres: [NovelGenre],
         interestCount: Int,
         rating: Float,
         ratingCount: Int,
@@ -37,6 +39,7 @@ public struct Novel {
         self.thumbnailImage = thumbnailImage
         self.title = title
         self.authors = authors
+        self.genres = genres
         self.interestCount = interestCount
         self.rating = rating
         self.ratingCount = ratingCount
