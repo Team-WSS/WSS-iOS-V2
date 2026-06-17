@@ -99,12 +99,13 @@ struct CreateFeedConnectNovelSheet: View {
                         title: novel.title,
                         author: novel.authors.joined(separator: ", "),
                         isSelected: selectedNovelID == novel.id,
-                        onTap: { onSelect(novel) }
+                        action: { onSelect(novel) }
                     )
                 }
             }
         }
         .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
     }
 }
 
