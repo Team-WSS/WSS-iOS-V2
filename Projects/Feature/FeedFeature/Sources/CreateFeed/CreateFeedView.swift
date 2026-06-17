@@ -100,6 +100,7 @@ public struct CreateFeedView: View {
                             viewModel.handle(.confirmSelectedNovel)
                             showLinkNovelSheet = false
                         },
+                        inquiryNovelAction: { },
                         dismissSheet: {
                             viewModel.handle(.dismissLinkNovelSheet)
                             showLinkNovelSheet = false
