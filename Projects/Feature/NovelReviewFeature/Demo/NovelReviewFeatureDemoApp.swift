@@ -56,7 +56,7 @@ private struct DemoRootView: View {
 
     var body: some View {
         // 리뷰 화면을 push로 띄우는 랜딩. 뒤로가기(그만하기)가 이 화면으로 정상 팝되는지 검증하기 위함.
-        // ⚠️ NavigationLink {} / navigationDestination(isPresented:) 모두 destination 뷰(와 @StateObject)를
+        // ⚠️ NavigationLink {} / navigationDestination(isPresented:) 모두 destination 뷰(와 @State VM)를
         //    pop 후 바로 파괴하지 않고 재사용한다 → 재진입 시 이전 편집 상태가 남는다(서버 저장 아님).
         //    reviewOpenCount를 .id로 물려 열 때마다 새 정체성 = 새 ViewModel(깨끗한 로드)로 강제한다.
         NavigationStack {

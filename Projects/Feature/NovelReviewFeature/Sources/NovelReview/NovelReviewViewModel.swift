@@ -7,13 +7,15 @@
 //
 
 import Foundation
+import Observation
 
 import BaseDomain
 import Logger
 import NovelReviewDomain
 
 @MainActor
-final class NovelReviewViewModel: ObservableObject {
+@Observable
+final class NovelReviewViewModel {
 
     // MARK: - State
 
@@ -52,22 +54,28 @@ final class NovelReviewViewModel: ObservableObject {
 
     // MARK: - Output
 
-    @Published private(set) var state: State
-    
+    private(set) var state: State
+
     // MARK: - Property
-    
-    private var hasLoaded = false
-    private var baselineDraft: NovelReviewDraft
-    private var loadTask: Task<Void, Never>?
-    private var isClosing = false
+
+    @ObservationIgnored private var hasLoaded = false
+    @ObservationIgnored private var baselineDraft: NovelReviewDraft
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var isClosing = false
+
+    /// 로드 기준선 대비 draft가 바뀌었는지. 뒤로가기 시 "그만 작성" 확인 알럿 노출 여부 판단에 쓴다.
+    /// View가 직접 읽지 않는 내부 판단값이라 Derived가 아니라 Property에 둔다.
+    private var hasUnsavedChanges: Bool { state.draft != baselineDraft }
 
     // MARK: - Dependency
 
     private let novelID: NovelID
     private let initialStatus: ReadingStatus
+    private let logger: Logger?
+
+    // NovelReviewDomain
     private let loadUseCase: LoadNovelReviewDraftUseCase
     private let saveUseCase: SaveNovelReviewUseCase
-    private let logger: Logger?
 
     // MARK: - Init
 
@@ -87,11 +95,6 @@ final class NovelReviewViewModel: ObservableObject {
         self.saveUseCase = saveUseCase
         self.logger = logger
     }
-
-    // MARK: - Derived
-
-    /// 로드 기준선 대비 draft가 바뀌었는지. 뒤로가기 시 "그만 작성" 확인 알럿 노출 여부 판단에 쓴다.
-    var hasUnsavedChanges: Bool { state.draft != baselineDraft }
 
     // MARK: - handle
 
@@ -210,7 +213,7 @@ private extension NovelReviewViewModel {
     }
 }
 
-// MARK: - Async Work
+// MARK: - UseCase Handling
 
 private extension NovelReviewViewModel {
 

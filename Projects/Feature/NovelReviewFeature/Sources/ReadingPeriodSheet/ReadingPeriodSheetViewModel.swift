@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Observation
 
 import BaseDomain
 import NovelReviewDomain
@@ -16,7 +17,8 @@ import NovelReviewDomain
 /// 시작/종료 순서 보정은 **포커스 상태에 달린 입력 UX 정책(도메인 규칙 아님)** 이라 여기 산다.
 /// raw 날짜만 다루며 `ReadingPeriod` 생성·정규화는 하지 않는다 — 그건 status를 소유한 draft(부모)가 `setPeriod`에서 담당.
 @MainActor
-final class ReadingPeriodSheetViewModel: ObservableObject {
+@Observable
+final class ReadingPeriodSheetViewModel {
 
     // MARK: - State
 
@@ -26,39 +28,6 @@ final class ReadingPeriodSheetViewModel: ObservableObject {
         var field: Field = .start
         var start: Date
         var end: Date
-    }
-
-    // MARK: - Action
-
-    enum Action {
-        case selectField(Field)
-        /// 휠이 이미 직전 유효값으로 되돌린 값을 받아 watched에서 두 날짜의 순서를 보정한다.
-        case updateEditingDate(Date)
-    }
-
-    // MARK: - Output
-
-    @Published private(set) var state: State
-
-    // MARK: - Dependency
-
-    let status: ReadingStatus
-    /// 선택 가능한 최대 날짜(보통 오늘). 휠의 미래 클램프 기준.
-    let maxDate: Date
-
-    // MARK: - Init
-
-    init(
-        status: ReadingStatus,
-        period: ReadingPeriod?,
-        maxDate: Date
-    ) {
-        self.status = status
-        self.maxDate = maxDate
-        self.state = State(
-            start: period?.start ?? Date(),
-            end: period?.end ?? Date()
-        )
     }
 
     // MARK: - Derived
@@ -80,6 +49,39 @@ final class ReadingPeriodSheetViewModel: ObservableObject {
         case .quit:     return (nil, state.end)
         case .watched:  return (state.start, state.end)
         }
+    }
+
+    // MARK: - Action
+
+    enum Action {
+        case selectField(Field)
+        /// 휠이 이미 직전 유효값으로 되돌린 값을 받아 watched에서 두 날짜의 순서를 보정한다.
+        case updateEditingDate(Date)
+    }
+
+    // MARK: - Output
+
+    private(set) var state: State
+
+    // MARK: - Dependency
+
+    let status: ReadingStatus
+    /// 선택 가능한 최대 날짜(보통 오늘). 휠의 미래 클램프 기준.
+    let maxDate: Date
+
+    // MARK: - Init
+
+    init(
+        status: ReadingStatus,
+        period: ReadingPeriod?,
+        maxDate: Date
+    ) {
+        self.status = status
+        self.maxDate = maxDate
+        self.state = State(
+            start: period?.start ?? Date(),
+            end: period?.end ?? Date()
+        )
     }
 
     // MARK: - handle

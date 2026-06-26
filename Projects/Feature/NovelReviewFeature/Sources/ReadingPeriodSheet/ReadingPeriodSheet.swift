@@ -20,7 +20,7 @@ import WSSComponent
 /// 입력 상태·순서 보정 정책은 `ReadingPeriodSheetViewModel`에 있고, 이 View는 레이아웃과 표기만 담당한다.
 struct ReadingPeriodSheet: View {
 
-    @StateObject private var viewModel: ReadingPeriodSheetViewModel
+    @State private var viewModel: ReadingPeriodSheetViewModel
 
     @Environment(\.dismiss) private var dismiss
     @Namespace private var segmentNamespace
@@ -34,8 +34,8 @@ struct ReadingPeriodSheet: View {
         period: ReadingPeriod?,
         onApply: @escaping (_ start: Date?, _ end: Date?) -> Void
     ) {
-        self._viewModel = StateObject(
-            wrappedValue: ReadingPeriodSheetViewModel(
+        self._viewModel = State(
+            initialValue: ReadingPeriodSheetViewModel(
                 status: status,
                 period: period,
                 maxDate: Calendar.current.startOfDay(for: Date())

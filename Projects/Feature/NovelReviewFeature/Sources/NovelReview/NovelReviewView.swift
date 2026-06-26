@@ -17,7 +17,7 @@ import WSSComponent
 // "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View에서 결정한다.
 struct NovelReviewView: View {
 
-    @StateObject private var viewModel: NovelReviewViewModel
+    @State private var viewModel: NovelReviewViewModel
     @State private var isPeriodSheetPresented = false
     @Environment(\.dismiss) private var dismiss
 
@@ -25,7 +25,7 @@ struct NovelReviewView: View {
     private let title: String
 
     init(viewModel: NovelReviewViewModel, title: String) {
-        self._viewModel = StateObject(wrappedValue: viewModel)
+        self._viewModel = State(initialValue: viewModel)
         self.title = title
     }
 
