@@ -2,15 +2,16 @@
 
 새 Feature View를 만들 때 여는 골격. **아래 `// MARK:` 순서·역할을 그대로 따른다.**
 규칙("코드만 봐선 모르는 것" — 간격·표시상태 소유·contentShape 트랩 등)은 [../CLAUDE.md](../CLAUDE.md)의 "View 표준 구조" 절에 있다.
+import 순서 규칙(레이어순·Base 우선)은 [docs/CONVENTIONS.md](../../../docs/CONVENTIONS.md)가 정본.
 정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형).
 
 ```swift
 import SwiftUI
 
-import BaseDomain
-import DesignSystem
-import SomeDomain
-import WSSComponent
+import BaseDomain      // Domain (Base 우선)
+import SomeDomain      // Domain
+import DesignSystem    // UI
+import WSSComponent    // UI
 
 // 화면 책임 한 줄. "얇은 VM": 카피·포맷·색은 전부 View가 결정한다.
 struct XxxView: View {

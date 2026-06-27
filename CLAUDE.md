@@ -45,7 +45,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 전체 구조·의존성·데이터 흐름 |
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | 제품 용어 ↔ 코드 타입 (작업 시작 시 권장) |
-| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·비동기·에러 변환 규약 |
+| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·import 순서·주석·접근제어·비동기·에러 규약 |
 | [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
