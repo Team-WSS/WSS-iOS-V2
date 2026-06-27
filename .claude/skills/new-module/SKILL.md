@@ -1,8 +1,13 @@
 ---
-description: 새 Tuist 모듈을 생성한다 (레이어+모듈명 인자, 의존성 자동 추론)
+name: new-module
+description: WSS-iOS-V2 프로젝트에서, 새 Tuist 모듈을 생성할 때 사용한다. 레이어(domain|data|core|ui|feature)와 모듈명을 받아 ModuleType.swift 등록 → 의존성 자동 추론 → Project.swift 생성 → tuist generate → 모듈 가이드까지 수행한다. "새 모듈 만들어줘", "도메인/데이터/Feature 모듈 추가", 또는 "/new-module <layer> <ModuleName>" 같은 요청에 트리거.
+metadata:
+  short-description: 새 Tuist 모듈 생성 (레이어+모듈명, 의존성 자동 추론)
 ---
 
-새 모듈을 만든다. 인자: `$ARGUMENTS` (형식: `<layer> <ModuleName>`, 예: `data Foo`, `domain Foo`, `ui FooView`).
+# New Module — 새 Tuist 모듈 생성 (WSS-iOS-V2)
+
+새 모듈을 만든다. 인자: `<layer> <ModuleName>` (예: `data Foo`, `domain Foo`, `ui FooView`). 비면 사용자에게 묻는다.
 `layer` ∈ `domain | data | core | ui | feature`.
 
 > ⚠️ **drift 방지**: 값을 추측하지 말고 항상 (1) `Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`

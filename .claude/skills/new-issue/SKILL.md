@@ -1,18 +1,26 @@
 ---
-description: GitHub 이슈를 만들고 base(기본 develop) 기준 Type/#이슈 브랜치로 분기·이동 후 tuist generate까지 수행한다
+name: new-issue
+description: WSS-iOS-V2 프로젝트에서, 새 작업을 시작할 때 GitHub 이슈를 만들고 base(기본 develop) 기준 Type/#이슈 브랜치로 분기·이동·push 후 tuist generate까지 한 번에 처리할 때 사용한다. "이슈 따고 시작하자", "새 작업/이슈 시작", 또는 "/new-issue <작업 설명>" 같은 요청에 트리거. ⚠️ 이슈 생성·push는 외부로 나가는 비가역 작업 → 실행 전 반드시 사용자 승인을 받는다.
+metadata:
+  short-description: GitHub 이슈 생성 + Type/#이슈 브랜치 분기·push + tuist generate
 ---
 
-작업 하나를 시작한다. 인자: `$ARGUMENTS` (작업 설명. 비면 사용자에게 묻는다).
-GitHub 이슈 생성 → `Type/#이슈` 브랜치 분기·이동·push → `tuist generate`를 한 번에 처리한다.
-판단(설명·Type·본문·승인·dirty 선택·보고)은 이 커맨드가, **기계적·비가역 구간은 `.claude/scripts/new-issue.sh`** 가 맡는다.
+# New Issue — 이슈 생성 + 브랜치 분기 (WSS-iOS-V2)
 
-> 이 명령은 repo에 커밋되어 **팀원이 각자 쓴다.** 특정 gh 계정/소유자/레포를 박지 말 것 —
+작업 하나를 시작한다. 인자: 작업 설명(비면 사용자에게 묻는다).
+GitHub 이슈 생성 → `Type/#이슈` 브랜치 분기·이동·push → `tuist generate`를 한 번에 처리한다.
+판단(설명·Type·본문·승인·dirty 선택·보고)은 이 스킬이, **기계적·비가역 구간은 `.claude/scripts/new-issue.sh`** 가 맡는다.
+
+> ⚠️ 이 스킬은 자연어로 **자동 발동될 수 있다.** 그러나 이슈 생성·push 같은 외부로 나가는
+> 비가역 작업은 **언제나 사용자 승인 후에만** 실행한다(아래 3단계 게이트). 승인 없이 `run`을 호출하지 않는다.
+
+> 이 스킬은 repo에 커밋되어 **팀원이 각자 쓴다.** 특정 gh 계정/소유자/레포를 박지 말 것 —
 > 담당자는 `@me`(실행한 본인), 레포는 현재 디렉토리로 자동 감지된다.
 > 외부로 나가는 작업(이슈 생성·push)은 **사용자 승인 후** 실행한다.
 
 ## Type 집합
 
-Type 어휘는 **[`../skills/commit-types.md`](../skills/commit-types.md)** 가 단일 진실 소스다 — 여기 복제하지 않으니 그 파일을 읽어 고른다.
+Type 어휘는 **[`../commit-types.md`](../commit-types.md)** 가 단일 진실 소스다 — 여기 복제하지 않으니 그 파일을 읽어 고른다.
 이슈 제목/브랜치명에서는 대괄호 없이 쓴다(`Feat`, `Docs` …). 그 목록에 없는 Type은 만들지 않는다.
 
 > ⚙️ 실제 강제는 스크립트(`.claude/scripts/new-issue.sh`)가 하지만, 그 화이트리스트(`ALLOWED_TYPES`)는 **`commit-types.md`를 런타임에 파싱**해 만든다 → Type을 바꿀 땐 **`commit-types.md`만** 고치면 스크립트도 자동 반영된다.
@@ -20,10 +28,10 @@ Type 어휘는 **[`../skills/commit-types.md`](../skills/commit-types.md)** 가 
 ## 절차
 
 ### 1. 작업 내용 파악
-- `$ARGUMENTS`로 설명 확보. 비거나 이슈로 만들기에 모호하면 **무엇을 / 왜 / 완료 기준**을 한 번에 모아 묻는다.
+- 인자로 설명 확보. 비거나 이슈로 만들기에 모호하면 **무엇을 / 왜 / 완료 기준**을 한 번에 모아 묻는다.
 
 ### 2. Type 결정
-- 설명에서 위 Type 집합(`../skills/commit-types.md`)의 Type 하나를 추론한다. 애매하면 사용자에게 확인한다.
+- 설명에서 위 Type 집합(`../commit-types.md`)의 Type 하나를 추론한다. 애매하면 사용자에게 확인한다.
 - ⚠️ **브랜치명 정규형 = `<Type>/#<번호>`** — 슬래시(`/`)와 `#`이 **둘 다** 반드시 있어야 한다. 예: `Feat/#149`, `Docs/#130`.
 - ⚠️ 레포에 `Feat#92`(슬래시·`#` 누락), 소문자 `chore`/`refactor` 같은 위반 사례가 섞여 있다. **절대 따라가지 말 것** — 항상 대문자 Type + `/` + `#` + 번호.
 

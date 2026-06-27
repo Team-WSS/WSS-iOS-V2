@@ -23,5 +23,5 @@
 
 - 어느 Type이 맞을지 애매하면 `git log --oneline -8`에서 유사 변경에 쓰인 Type을 참고한다.
 - 전역 `commit` 스킬 표에는 `[AD]`(광고)가 있으나 이 프로젝트에서는 제외한다.
-- `new-issue` 커맨드(`.claude/commands/new-issue.md`)와 그 스크립트(`.claude/scripts/new-issue.sh`)도 이 파일을 쓴다. **스크립트는 실행 시 이 표를 직접 파싱**해 `ALLOWED_TYPES`를 만든다 → Type 추가·변경은 **이 파일만** 고치면 모든 곳에 자동 반영된다(수동 동기화 불필요).
+- `new-issue` 스킬(`.claude/skills/new-issue/SKILL.md`)과 그 스크립트(`.claude/scripts/new-issue.sh`)도 이 파일을 쓴다. **스크립트는 실행 시 이 표를 직접 파싱**해 `ALLOWED_TYPES`를 만든다 → Type 추가·변경은 **이 파일만** 고치면 모든 곳에 자동 반영된다(수동 동기화 불필요).
 - ⚠️ 단, 표 행 형식 `` | `Type` | 설명 | `` 를 유지할 것 — 스크립트 파싱이 "백틱으로 감싼 첫 칼럼"에 의존한다. 형식이 깨지면 스크립트가 즉시 중단(fail-loud)한다.
