@@ -9,8 +9,8 @@
 import SwiftUI
 
 import BaseDomain
-import DesignSystem
 import NovelReviewDomain
+import DesignSystem
 import WSSComponent
 
 // 작품 평가(리뷰 초안) 화면. WSSComponent의 Presentation 확장(아이콘/라벨)과 DesignSystem 토큰으로 구성.

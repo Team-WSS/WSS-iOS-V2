@@ -9,8 +9,8 @@
 import SwiftUI
 
 import BaseDomain
-import Logger
 import NovelReviewDomain
+import Logger
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.

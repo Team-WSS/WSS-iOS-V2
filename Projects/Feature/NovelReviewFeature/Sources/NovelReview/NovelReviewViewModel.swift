@@ -10,8 +10,8 @@ import Foundation
 import Observation
 
 import BaseDomain
-import Logger
 import NovelReviewDomain
+import Logger
 
 @MainActor
 @Observable

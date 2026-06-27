@@ -8,14 +8,14 @@
 
 import SwiftUI
 
-import BaseData
+import NovelReviewFeature
 import BaseDomain
-import DesignSystem
+import NovelReviewDomain
+import BaseData
+import NovelReviewData
 import Logger
 import Networking
-import NovelReviewData
-import NovelReviewDomain
-import NovelReviewFeature
+import DesignSystem
 
 @main
 struct NovelReviewFeatureDemoApp: App {
