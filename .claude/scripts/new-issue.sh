@@ -12,10 +12,16 @@ set -euo pipefail
 # repo 루트 고정 (커맨드가 어디서 호출하든 동일하게 동작)
 cd "$(git rev-parse --show-toplevel)"
 
-# 브랜치 정규형 Type 허용 집합 (commit 표에서 AD 제외). 소문자/`Feat#92` 류 위반 차단용.
-ALLOWED_TYPES="Design Feat Network Add Del Fix Refactor Chore Docs Setting Test Merge"
-
 die() { echo "❌ $*" >&2; exit 1; }
+
+# 브랜치 정규형 Type 허용 집합 — 소문자/`Feat#92` 류 위반 차단용.
+# ── 단일 진실 소스(.claude/skills/commit-types.md)에서 런타임에 읽는다 → 수동 동기화 불필요 ──
+#   그 표의 첫 칼럼(백틱으로 감싼 `Type`)을 그대로 추출한다. 표 형식 `| \`Type\` | 설명 |`에 의존.
+#   파일이 없거나 표 형식이 깨지면, 조용히 틀린 집합을 쓰지 않고 즉시 중단한다.
+TYPES_FILE=".claude/skills/commit-types.md"
+[[ -f "$TYPES_FILE" ]] || die "Type 표 파일이 없습니다: $TYPES_FILE (단일 진실 소스)"
+ALLOWED_TYPES="$(grep -oE '^\| `[A-Za-z]+`' "$TYPES_FILE" | grep -oE '[A-Za-z]+' | tr '\n' ' ' | sed 's/ *$//' || true)"
+[[ -n "$ALLOWED_TYPES" ]] || die "Type 표 파싱 실패(빈 집합): $TYPES_FILE — 표 형식(| \`Type\` | … |)을 확인하세요."
 
 # ── preflight: 안전·되돌릴 수 있음. 승인/드래프트 전 언제든 호출 가능 ──────────────
 cmd_preflight() {

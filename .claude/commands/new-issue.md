@@ -10,24 +10,12 @@ GitHub 이슈 생성 → `Type/#이슈` 브랜치 분기·이동·push → `tuis
 > 담당자는 `@me`(실행한 본인), 레포는 현재 디렉토리로 자동 감지된다.
 > 외부로 나가는 작업(이슈 생성·push)은 **사용자 승인 후** 실행한다.
 
-## Type 집합 (전역 `commit` 스킬 표에서 `[AD]`만 제외)
+## Type 집합
 
-`AD`를 빼고 그대로 가져온다. 이 목록에 없는 Type은 만들지 않는다.
+Type 어휘는 **[`../skills/commit-types.md`](../skills/commit-types.md)** 가 단일 진실 소스다 — 여기 복제하지 않으니 그 파일을 읽어 고른다.
+이슈 제목/브랜치명에서는 대괄호 없이 쓴다(`Feat`, `Docs` …). 그 목록에 없는 Type은 만들지 않는다.
 
-| Type | 언제 |
-|---|---|
-| `Design` | 뷰 레이아웃·UI 구조 작업 |
-| `Feat` | 새로운 기능 구현 |
-| `Network` | 네트워크 연결·API 통신 |
-| `Add` | Feat 이외의 부수적인 코드 추가, 라이브러리 추가, 새 View 생성 |
-| `Del` | 쓸모없는 코드·주석 삭제 |
-| `Fix` | 버그·오류 해결, 코드 수정 |
-| `Refactor` | 전면 수정 |
-| `Chore` | 그 이외 자잘한 작업 |
-| `Docs` | README 등 문서 개정 |
-| `Setting` | 프로젝트·환경 세팅 |
-| `Test` | 테스트 코드 |
-| `Merge` | 브랜치 병합 |
+> ⚙️ 실제 강제는 스크립트(`.claude/scripts/new-issue.sh`)가 하지만, 그 화이트리스트(`ALLOWED_TYPES`)는 **`commit-types.md`를 런타임에 파싱**해 만든다 → Type을 바꿀 땐 **`commit-types.md`만** 고치면 스크립트도 자동 반영된다.
 
 ## 절차
 
@@ -35,7 +23,7 @@ GitHub 이슈 생성 → `Type/#이슈` 브랜치 분기·이동·push → `tuis
 - `$ARGUMENTS`로 설명 확보. 비거나 이슈로 만들기에 모호하면 **무엇을 / 왜 / 완료 기준**을 한 번에 모아 묻는다.
 
 ### 2. Type 결정
-- 설명에서 위 표의 Type 하나를 추론한다. 애매하면 사용자에게 확인한다.
+- 설명에서 위 Type 집합(`../skills/commit-types.md`)의 Type 하나를 추론한다. 애매하면 사용자에게 확인한다.
 - ⚠️ **브랜치명 정규형 = `<Type>/#<번호>`** — 슬래시(`/`)와 `#`이 **둘 다** 반드시 있어야 한다. 예: `Feat/#149`, `Docs/#130`.
 - ⚠️ 레포에 `Feat#92`(슬래시·`#` 누락), 소문자 `chore`/`refactor` 같은 위반 사례가 섞여 있다. **절대 따라가지 말 것** — 항상 대문자 Type + `/` + `#` + 번호.
 
@@ -68,7 +56,7 @@ bash .claude/scripts/new-issue.sh run \
 ```
 
 - 스크립트가 순서대로 강제한다: (선택)`git stash` → `gh issue create --assignee @me`(현재 레포 자동) + URL에서 번호 파싱 → **`git checkout -b "<Type>/#<번호>" --no-track origin/<base>`**(`--no-track`·`#` 따옴표를 영구 보장 — IDE Push가 base로 새는 사고 방지) → (선택)`git stash pop` → `git push -u`(upstream을 자기 브랜치로) → `tuist generate`.
-- `--type`은 위 Type 표에 **정확히 대문자 매칭**해야 통과한다 (`chore`/`Feat#92` 류는 거부됨).
+- `--type`은 위 Type 집합에 **정확히 대문자 매칭**해야 통과한다 (`chore`/`Feat#92` 류는 거부됨).
 - 이미 만들어둔 이슈로 시작할 땐 `--title/--body-file` 대신 `--num <번호>`.
 - 끝에 `ISSUE_NUMBER` / `ISSUE_URL` / `BRANCH` 요약 블록이 출력된다. `tuist generate` 실패 등은 출력 그대로 보고(에셋/Derived 문제면 안내).
 
