@@ -293,7 +293,13 @@ mise install
 # 의존성 설치 + 프로젝트 생성
 tuist install
 tuist generate
+
+# 브랜치 전환 시 프로젝트 자동 재생성 — git 훅 활성화 (클론 후 1회)
+git config core.hooksPath .githooks
 ```
+
+> 위 `git config`를 한 번 실행해두면, 브랜치를 전환할 때 프로젝트 구조(매니페스트·파일 추가/삭제)가
+> 바뀐 경우에만 `tuist generate`가 자동 실행되어 Xcode 프로젝트가 항상 최신으로 유지된다. (`.githooks/post-checkout`)
 
 <br/>
 
