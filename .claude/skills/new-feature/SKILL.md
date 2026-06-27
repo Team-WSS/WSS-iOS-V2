@@ -1,14 +1,14 @@
 ---
 name: new-feature
-description: WSS-iOS-V2 프로젝트에서, 새 Feature 화면을 처음부터 구현할 때 사용한다. 모듈명을 받아 ① new-module 스킬로 Feature 모듈 생성 → ② View/ViewModel·Factory 골격 작성 → ③ Figma URL을 받아 WSS 디자인 시스템으로 UI 구현, 까지 단계별 게이트로 진행한다. "새 화면 만들자", "Feature 구현 시작", 또는 "/new-feature <ModuleName> [FigmaURL]" 같은 요청에 트리거.
+description: WSS-iOS-V2 프로젝트에서, 새 Feature 화면을 처음부터 구현할 때 사용한다. 모듈명을 받아 ① new-module 스킬로 Feature 모듈 생성 → ② View/ViewModel·Factory 골격 작성 → ③ Figma URL을 받아 WSS 디자인 시스템으로 UI 구현 → ④ wss-feature-reviewer로 리뷰→수정을 Blocker·Warning이 0이 될 때까지 수렴, 까지 단계별 게이트로 진행한다. "새 화면 만들자", "Feature 구현 시작", 또는 "/new-feature <ModuleName> [FigmaURL]" 같은 요청에 트리거.
 metadata:
-  short-description: 새 Feature 화면 구현 (모듈 생성 → 골격 → Figma UI), 단계별 게이트
+  short-description: 새 Feature 화면 구현 (모듈 생성 → 골격 → Figma UI → 리뷰·수정 수렴), 단계별 게이트
 ---
 
 # New Feature — 새 Feature 화면 구현 (WSS-iOS-V2)
 
 새 Feature 화면을 처음부터 구현한다. 인자: `<ModuleName> [FigmaURL]` (예: `Home`, `Home https://figma.com/...`).
-세 단계 — **① 모듈 생성 → ② View/ViewModel·Factory 골격 → ③ Figma → WSS UI 구현** — 을 **단계별 게이트**로 진행한다.
+네 단계 — **① 모듈 생성 → ② View/ViewModel·Factory 골격 → ③ Figma → WSS UI 구현 → ④ 리뷰·수정 수렴** — 을 **단계별 게이트**로 진행한다.
 
 > ⚠️ **추측 금지 — 정본을 먼저 읽는다.** 값·패턴을 지어내지 말고 항상:
 > `Projects/Feature/CLAUDE.md`(레이어 규칙·함정), `Projects/Feature/Docs/VIEWMODEL_TEMPLATE.md`·
@@ -19,8 +19,9 @@ metadata:
 > 갈리면 **반드시 사용자에게 물어 하나로 확정한 뒤** 진행한다. 반대로 정본·컨벤션·디자인으로 이미
 > 정해지는 것은 하나하나 되묻지 않는다(과잉 질문 금지).
 >
-> ⚠️ **메인이 직접 수행한다.** 단계가 순차 의존이고 게이트가 사용자 상호작용이라 subagent 위임은
-> cold start 재독·핸드오프 손실로 손해다. (무거운 단계의 위임은 그때그때 판단.)
+> ⚠️ **구현은 메인이 직접, 리뷰만 위임.** ①②③은 순차 의존·게이트가 사용자 상호작용이라 subagent
+> 위임이 cold start 재독·핸드오프 손실로 손해다 → 메인이 직접 한다. **예외: ④ 리뷰는 격리 컨텍스트가
+> 유리해 `wss-feature-reviewer` subagent에 위임**하고, 받은 리포트로 **수정은 다시 메인이** 한다.
 
 ## 절차
 
@@ -71,11 +72,27 @@ metadata:
   - 도메인 라벨·아이콘·색은 `WSSComponent`의 `DomainPresentation/` 확장 재사용(Feature 중복 매핑 ❌).
   - **없거나 수정이 필요한 컴포넌트는 먼저 허락**을 받는다(임의 추가·수정 ❌).
 - 간격은 stack `spacing: 0` + `Spacer().frame(height:/width:)`. 커스텀 탭 영역엔 `.contentShape(Rectangle())`.
-- View→VM 입력은 오직 `viewModel.handle(.xxx)`(생명주기도 액션). 시뮬레이터로 빌드/렌더 확인 → **종합 보고**.
+- View→VM 입력은 오직 `viewModel.handle(.xxx)`(생명주기도 액션). 시뮬레이터로 빌드/렌더 확인 → **④로 진입**.
+
+### 4. 자동 리뷰·수정 수렴 루프
+
+③까지 끝나면 자동으로 진입한다. **리뷰는 `wss-feature-reviewer`에 위임, 수정은 메인이** 한다.
+
+- **대상**: 방금 만든 `Projects/Feature/<ModuleName>Feature/` 전체. 브랜치·세션 상태에 기대지 말고 **모듈 경로를 prompt에 명시**해 호출한다.
+- **루프 (최대 3라운드)**:
+  1. **리뷰** — `Agent` 도구로 `subagent_type: wss-feature-reviewer`를 호출하고, 대상 모듈 경로를 prompt에 적는다. (검사는 격리 컨텍스트가 유리 → ①②③과 달리 위임. 모듈 생성을 `new-module`에 위임하는 것과 같은 "단일 진실 소스" 철학.)
+  2. **판정** — 리포트의 🔴 Blocker·🟡 Warning이 **둘 다 0이면 수렴 → 루프 종료**.
+  3. **수정** — 🔴는 전부 고친다. 🟡도 고치되, **정답을 임의로 못 정하는 항목**(코드 vs 디자인/문서 의도 불일치, WSSComponent 신규·수정 필요 등)**은 사용자에게 확인한 뒤** 반영한다(추측으로 결정 ❌ — "모호하면 묻는다" 원칙). 라운드별 수정 요약을 한 줄로 보고.
+  4. 수정이 새 위반을 부를 수 있으므로 **매 라운드 모듈 전체를 다시 리뷰**(1로 돌아간다).
+- **상한**: 3라운드 안에 🔴+🟡=0이 안 되면 **잔여 항목을 사용자에게 보고하고 멈춘다**(무한 루프·토큰 폭주 방지).
+- **🔵 Nit**: 수렴 후 빠르게 고칠 수 있는 것만 한 번 정리하고, 남은 건 목록으로 보고한다(Nit은 수렴 기준 아님).
+- **최종 빌드**: 수정으로 코드가 바뀌었으니 **수렴 후 1회** 시뮬레이터 대상 워크스페이스 스킴으로 빌드 확인(매 라운드 빌드는 불필요 — 리뷰는 정적 분석). 실기기·단일 `-target ...Demo`는 서명/교차 모듈 의존으로 실패.
+- **종합 보고**: 라운드 수 / 수정한 항목 / 잔여 Nit / 빌드 결과.
 
 ## 원칙
 
 - **정본 우선(추측 ❌)**: 의존성 = `NovelReviewFeature/Project.swift`, 골격 = `Docs/*_TEMPLATE.md`, 규칙 = `Feature/CLAUDE.md`.
 - 모듈 생성은 `new-module`에 위임(중복 ❌). Figma는 **디자인 시스템 매핑이 핵심**(raw 출력 ❌).
 - 모호하면 묻고(이해될 때까지 / 여러 해석은 하나로 확정), 정본·컨벤션·디자인으로 확실하면 되묻지 않는다.
+- **완성 = 코드 작성이 아니라 리뷰 수렴**: ④에서 `wss-feature-reviewer`의 🔴+🟡가 0이 될 때까지가 한 화면의 끝. 검사는 리뷰어, 수정은 메인.
 - 각 단계 후 보고하고 사용자 확인 뒤 다음으로. 커밋은 사용자가 지시할 때만(규약은 docs/WORKFLOW.md).
