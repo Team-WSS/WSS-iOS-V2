@@ -43,35 +43,7 @@ struct NovelReviewView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button {
-                    viewModel.handle(.requestClose)
-                } label: {
-                    WSSImage.icNavigateLeft.swiftUIImage
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.wssGray200)
-                }
-            }
-
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    viewModel.handle(.save)
-                } label: {
-                    if viewModel.state.isSaving {
-                        ProgressView()
-                    } else {
-                        Text("완료")
-                            .applyWSSFont(.title2)
-                            .foregroundStyle(Color.wssPrimary100)
-                    }
-                }
-                .disabled(viewModel.state.isSaving)
-            }
-        }
+        .toolbar { toolbarContent }
         .onAppear {
             viewModel.handle(.load)
         }
@@ -106,21 +78,21 @@ struct NovelReviewView: View {
                 statusSection
                 periodSection
 
+                Spacer().frame(height: 14)
                 sectionDivider
-                    .padding(.top, 14)
-                    .padding(.bottom, 24)
+                Spacer().frame(height: 24)
 
                 ratingSection
 
+                Spacer().frame(height: 38)
                 sectionDivider
-                    .padding(.top, 38)
-                    .padding(.bottom, 24)
+                Spacer().frame(height: 24)
 
                 attractivePointSection
 
+                Spacer().frame(height: 24)
                 sectionDivider
-                    .padding(.top, 24)
-                    .padding(.bottom, 24)
+                Spacer().frame(height: 24)
 
                 keywordSection
             }
@@ -133,6 +105,43 @@ struct NovelReviewView: View {
         Rectangle()
             .fill(Color.wssGray50)
             .frame(height: 1)
+    }
+}
+
+// MARK: - Toolbar
+
+private extension NovelReviewView {
+
+    /// 좌측 뒤로가기(닫기 요청) + 우측 완료(저장). 저장 중엔 완료 자리에 스피너를 띄우고 비활성화한다.
+    @ToolbarContentBuilder
+    var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button {
+                viewModel.handle(.requestClose)
+            } label: {
+                WSSImage.icNavigateLeft.swiftUIImage
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(Color.wssGray200)
+            }
+        }
+
+        ToolbarItem(placement: .confirmationAction) {
+            Button {
+                viewModel.handle(.save)
+            } label: {
+                if viewModel.state.isSaving {
+                    ProgressView()
+                } else {
+                    Text("완료")
+                        .applyWSSFont(.title2)
+                        .foregroundStyle(Color.wssPrimary100)
+                }
+            }
+            .disabled(viewModel.state.isSaving)
+        }
     }
 }
 
@@ -152,13 +161,15 @@ private extension NovelReviewView {
                 Button {
                     viewModel.handle(.selectStatus(status))
                 } label: {
-                    VStack(spacing: 5) {
+                    VStack(spacing: 0) {
                         status.fillImage
                             .renderingMode(.template)
                             .resizable()
                             .scaledToFit()
                             .frame(width: 36, height: 36)
                             .foregroundStyle(imageColor)
+
+                        Spacer().frame(height: 5)
 
                         Text(status.statusName)
                             .applyWSSFont(.body5)
@@ -211,10 +222,12 @@ private extension NovelReviewView {
 
     /// 별점 — 별 탭/슬라이드로 0.5 단위 부여. 0.0은 "평점 없음"(nil)으로 매핑(도메인 Rating은 0.5부터).
     var ratingSection: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 0) {
             Text("별점")
                 .applyWSSFont(.title3)
                 .foregroundStyle(Color.wssBlack)
+
+            Spacer().frame(height: 14)
 
             StarRatingView(rating: viewModel.state.draft.rating?.value ?? 0) { value in
                 viewModel.handle(.updateRating(value))
@@ -226,10 +239,12 @@ private extension NovelReviewView {
     /// 매력 포인트 — 6개 중 최대 3개 토글(초과는 ViewModel이 막고 알림).
     /// 아이콘은 단색 에셋이라 `.template`로 틴팅: 선택=primary, 미선택=회색.
     var attractivePointSection: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 0) {
             Text("매력포인트")
                 .applyWSSFont(.title3)
                 .foregroundStyle(Color.wssBlack)
+
+            Spacer().frame(height: 14)
 
             HStack(spacing: 0) {
                 ForEach(AttractivePoint.allCases, id: \.self) { point in
@@ -240,13 +255,15 @@ private extension NovelReviewView {
                     Button {
                         viewModel.handle(.toggleAttractivePoint(point))
                     } label: {
-                        VStack(spacing: 6) {
+                        VStack(spacing: 0) {
                             point.iconImage
                                 .renderingMode(.template)
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 36, height: 36)
                                 .foregroundStyle(imageColor)
+
+                            Spacer().frame(height: 6)
 
                             Text(point.displayName)
                                 .applyWSSFont(.body4)
@@ -267,10 +284,12 @@ private extension NovelReviewView {
     /// 키워드 — 제목 + 검색바 룩 탭 버튼. 탭하면 키워드 탐색뷰로 이동(추후 연결).
     /// 선택된 키워드 칩 표시는 추후 구현.
     var keywordSection: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 0) {
             Text("키워드")
                 .applyWSSFont(.title3)
                 .foregroundStyle(Color.wssBlack)
+
+            Spacer().frame(height: 14)
 
             WSSSearchBarButton(
                 placeholder: "작품을 나타내는 키워드는?",
@@ -281,9 +300,14 @@ private extension NovelReviewView {
             }
         }
     }
+}
+
+// MARK: - Presentation
+
+private extension NovelReviewView {
 
     /// 에러 유무 → 토스트 표시 여부. 자동 닫힘(모디파이어가 false로 set)·재탭 시 에러를 비운다.
-    private var toastBinding: Binding<Bool> {
+    var toastBinding: Binding<Bool> {
         Binding(
             get: { viewModel.state.presentedError != nil },
             set: { if !$0 { viewModel.handle(.dismissError) } }
@@ -291,7 +315,7 @@ private extension NovelReviewView {
     }
 
     /// 작성 중단 알럿 표시 여부. 실제 닫기 판단은 ViewModel이 하고, View는 표시 상태만 바인딩한다.
-    private var stopAlertBinding: Binding<Bool> {
+    var stopAlertBinding: Binding<Bool> {
         Binding(
             get: { viewModel.state.isStopAlertPresented },
             set: { if !$0 { viewModel.handle(.keepWriting) } }
@@ -299,7 +323,7 @@ private extension NovelReviewView {
     }
 
     /// 의미 에러(VM) → 토스트 타입(표현)은 View가 매핑한다. nil일 땐 모디파이어가 숨기므로 표시되지 않는다.
-    private var toastType: WSSToastType {
+    var toastType: WSSToastType {
         switch viewModel.state.presentedError {
         case .attractivePointLimit(let max):    .selectionOverLimit(count: max)
         case .unknown, .none:                   .unknownError

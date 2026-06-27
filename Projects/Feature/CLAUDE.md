@@ -113,17 +113,95 @@ private extension XxxViewModel { /* func presentError(_ error: Error) { ... } */
 - **View가 알아서 포맷/계산할 표기값**(날짜 문자열, "평점 없음" 등)은 VM에 두지 않는다(얇은 VM, "View를 모른다").
 - UseCase가 없는 **순수 입력 VM**은 `Action Handling`만 두고 `UseCase Handling`/`Error Mapping`을 생략한다(예: `ReadingPeriodSheetViewModel`).
 
-### View / Factory 골격
+### View 표준 구조 (마크주석 순서를 그대로 따른다)
+
+**새 Feature View는 아래 `// MARK:` 순서·역할·규칙을 그대로 따른다.**
+정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형).
 
 ```swift
-struct XxxView: View {                  // 제네릭 없음. state 읽기 / handle 쓰기
-    @State private var viewModel: XxxViewModel        // @Observable VM은 @State로 보유(@StateObject ❌)
-    init(viewModel: XxxViewModel) { self._viewModel = State(initialValue: viewModel) }   // Factory가 만든 VM 주입
-    // 예: Button("저장"){ viewModel.handle(.save) }.disabled(viewModel.state.isLoading)
-    //     .onAppear { viewModel.handle(.load) }      // 생명주기도 액션으로
-    // state는 private(set) → 양방향 바인딩 필요 시 Binding(get:set:)으로 handle 경유(@Bindable 불필요)
+import SwiftUI
+
+import BaseDomain
+import DesignSystem
+import SomeDomain
+import WSSComponent
+
+// 화면 책임 한 줄. "얇은 VM": 카피·포맷·색은 전부 View가 결정한다.
+struct XxxView: View {
+
+    // 선언 순서: VM → View 전용 상태 → @Environment → 주입 let
+    @State private var viewModel: XxxViewModel           // @Observable VM은 @State로(@StateObject ❌)
+    @State private var isSomeSheetPresented = false       // VM이 처리할 필요 없는 순수 View 표시 상태만 @State
+    @Environment(\.dismiss) private var dismiss
+    private let title: String                             // 진입 이전 화면이 주입
+
+    init(viewModel: XxxViewModel, title: String) {
+        self._viewModel = State(initialValue: viewModel)
+        self.title = title
+    }
+
+    // body = 조립 + 화면 modifier만(navigation/toolbar/sheet/alert/toast/onAppear/onChange).
+    // 실제 레이아웃은 content로 분리.
+    var body: some View {
+        content
+            .toolbar { toolbarContent }
+            .onAppear { viewModel.handle(.load) }           // 생명주기도 액션
+            .sheet(isPresented: $isSomeSheetPresented) { /* ... */ }
+            .showWSSToast(isPresented: toastBinding, type: toastType)
+            .onChange(of: viewModel.state.shouldDismiss) { _, v in if v { dismiss() } }
+    }
+
+    // 레이아웃 + 공용 leaf
+    private var content: some View {
+        ScrollView {
+            VStack(spacing: 0) {                            // stack spacing은 항상 0
+                someSection
+                Spacer().frame(height: 24)                 // 고정 간격은 Spacer().frame으로
+                otherSection
+            }
+        }
+    }
 }
 
+// MARK: - Toolbar
+// 툴바 내용물은 @ToolbarContentBuilder 분리 프로퍼티로. body엔 `.toolbar { toolbarContent }`만.
+private extension XxxView {
+    @ToolbarContentBuilder
+    var toolbarContent: some ToolbarContent { /* ToolbarItem들 */ }
+}
+
+// MARK: - Sections
+// 섹션은 var xxxSection: some View. 각 섹션에 의도/함정 doc comment.
+private extension XxxView { /* var someSection: some View { ... } */ }
+
+// MARK: - Presentation
+// 의미값(VM enum) → 컴포넌트 타입/카피/색 매퍼 + VM이 소유한 표시상태 Binding(get:set:)(set은 handle 경유).
+private extension XxxView {
+    var toastBinding: Binding<Bool> {
+        Binding(get: { viewModel.state.presentedError != nil },
+                set: { if !$0 { viewModel.handle(.dismissError) } })
+    }
+    var toastType: WSSToastType { /* state.presentedError → 토스트 타입 */ }
+}
+
+// MARK: - Preview
+// #Preview는 Sources 내부(internal). mock UseCase는 private.
+```
+
+**규칙 (코드만 봐선 모르는 것):**
+- **View→VM 입력은 오직 `viewModel.handle(.xxx)`** (생명주기도 액션: `onAppear → .load`). `state`는 `private(set)` → 직접 변경 ❌.
+- **표시 상태 소유 구분**: VM 처리가 필요 없는 순수 표시 상태(시트 bool 등)는 View가 `@State`로. **VM이 판단을 소유한 표시 상태(alert/toast)는 `Binding(get:set:)`** 으로 만들고 set을 `handle` 경유.
+- **표현은 View가**: 의미값(VM enum) → 컴포넌트 타입/카피/색 매핑은 View. 날짜 포맷·"평점 없음" 등 표기도 View(얇은 VM).
+- **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
+- **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
+- **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
+- **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
+- **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨). 보통 `.buttonStyle(.plain)`과 함께.
+- 화면 전용 서브뷰는 화면 폴더 동거. 여러 화면 재사용 시 WSSComponent로 승격(허락 후).
+
+### Factory 골격
+
+```swift
 public enum XxxFactory {                // 유일한 public 진입점. opaque 반환 → View/VM은 internal 유지
     @MainActor
     public static func makeView(someUseCase: SomeUseCase) -> some View {

@@ -55,20 +55,21 @@ struct ReadingPeriodSheet: View {
 
             if viewModel.status == .watched {
                 segmentedField
-                    .padding(.bottom, 7)
+                Spacer().frame(height: 7)
             }
 
+            Spacer().frame(height: 10)
             // watched의 field 전환 시 편집 날짜가 바뀌면 휠이 editingDateBinding 변화를 감지해 스스로 재정렬한다.
             // (id 재생성 ❌ — 재생성하면 새 ScrollView가 맨 위로 정렬됐다가 점프해 번쩍인다.)
             WSSDateWheel(date: editingDateBinding, maxDate: viewModel.maxDate)
-                .padding(.top, 10)
-                .padding(.bottom, 30)
+            Spacer().frame(height: 30)
 
             WSSCTAButton(title: "완료") {
                 let result = viewModel.result
                 onApply(result.start, result.end)
             }
 
+            Spacer().frame(height: 5)
             Button {
                 onApply(nil, nil)
             } label: {
@@ -79,7 +80,6 @@ struct ReadingPeriodSheet: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.top, 5)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -133,9 +133,10 @@ struct ReadingPeriodSheet: View {
         let isSelected = viewModel.state.field == target
         let color = isSelected ? Color.wssBlack : Color.wssGray200
 
-        return VStack(spacing: 2) {
+        return VStack(spacing: 0) {
             Text(label)
                 .applyWSSFont(.title2)
+            Spacer().frame(height: 2)
             Text(ReviewDateFormatter.segment.string(from: date))
                 .applyWSSFont(.body4)
         }
