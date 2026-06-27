@@ -50,9 +50,9 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 
 | 레이어 | 책임 | 비동기 | 주요 구성요소 |
 |---|---|---|---|
-| App | DI·조립, 진입점 | Combine | App, 전역 흐름 |
-| Feature | 화면·기능 (계획) | Combine | View, ViewModel |
-| UI | 재사용 컴포넌트·디자인 토큰 | Combine | DesignSystem, WSSComponent |
+| App | DI·조립, 진입점 | SwiftUI | App, 전역 흐름 |
+| Feature | 화면·기능 | SwiftUI Observation | View, ViewModel |
+| UI | 재사용 컴포넌트·디자인 토큰 | SwiftUI | DesignSystem, WSSComponent |
 | Domain | 비즈니스 로직·계약 | async/await | Entity, UseCase, Repository(protocol) |
 | Data | 외부 데이터 연결 | async/await | DTO, Service, Mapper, Repository(impl), Factory |
 | Core | 기반 기술 | async/await | Networking, Keychain, Logger |

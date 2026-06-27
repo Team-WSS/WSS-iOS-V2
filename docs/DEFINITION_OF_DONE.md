@@ -5,7 +5,7 @@
 ## 모든 작업 공통
 
 - [ ] 의존성 방향 위반 없음 (`App→Feature→(UI/Domain)←Data→Core`). 역방향 import 금지.
-- [ ] 레이어 비동기 규칙 준수 (Domain/Data = async/await, UI/Feature = Combine).
+- [ ] 레이어 비동기/상태 규칙 준수 (Domain/Data = async/await, Feature = SwiftUI Observation/`@Observable`, UI/App = 순수 SwiftUI).
 - [ ] 변경 영향 받는 **가장 가까운 가이드(`CLAUDE.md`) 갱신** (책임/시나리오/주의사항). 함정 발견 시 `/learn`.
 - [ ] 코드와 문서가 일치 (불일치면 코드 기준으로 문서 수정).
 

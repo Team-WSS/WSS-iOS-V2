@@ -28,7 +28,8 @@
 ## 비동기
 
 - Domain / Data / Core: **Swift Concurrency** (`async/await`).
-- UI / Feature: **Combine**.
+- Feature: **SwiftUI Observation** (`@Observable` VM · `@State` View).
+- UI / App: 순수 SwiftUI.
 - Domain/Data의 throwing은 **typed throws** (`throws(RepositoryError)`, 로그인만 `throws(AuthError)`).
 
 ## 에러 처리 계약

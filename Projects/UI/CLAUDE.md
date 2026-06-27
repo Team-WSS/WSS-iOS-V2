@@ -4,7 +4,7 @@
 
 - 모듈 식별자: `ModuleType.ui(.xxx)` → 모듈명 suffix 없음
 - 디렉토리: `Projects/UI/<Module>/`
-- 비동기/상태: SwiftUI + Combine 계열
+- 비동기/상태: 순수 SwiftUI 표현 컴포넌트 (값/콜백 입력)
 
 ## 모듈
 
