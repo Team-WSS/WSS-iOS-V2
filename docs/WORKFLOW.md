@@ -1,6 +1,6 @@
 # 작업 방식 (Workflow)
 
-전체 구조는 [ARCHITECTURE.md](ARCHITECTURE.md), 코드 규칙은 각 레이어 에이전트 가이드(`Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md`) 참고.
+전체 구조는 [ARCHITECTURE.md](ARCHITECTURE.md), 코드 규칙은 각 레이어 가이드(`Projects/<Layer>/CLAUDE.md`) 참고.
 이 문서는 **프로세스**(브랜치·커밋·PR·모듈 추가·테스트·CI)만 다룬다.
 
 ## 브랜치 · 커밋 · PR
@@ -31,8 +31,8 @@
 1. **레지스트리 먼저**: `Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`의 해당 enum(`DomainModule`/`DataModule`/...)에 case 추가. (단일 진실 소스)
 2. **Project.swift**: `Projects/<Layer>/<Module>/Project.swift`를 템플릿(`Project.create<Layer>Module(...)`)으로 작성, `internalDependencies` 선언.
 3. **`tuist generate`** 로 프로젝트 재생성.
-4. 코드 작성은 해당 레이어 에이전트 가이드(`Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md`) 준수.
-5. **모듈 가이드 작성**: `docs/MODULE_GUIDE_TEMPLATE.md`를 복사해 `Projects/<Layer>/<Module>/CLAUDE.md`와 `Projects/<Layer>/<Module>/AGENTS.md` 생성 (함정·시나리오 중심).
+4. 코드 작성은 해당 레이어 가이드(`Projects/<Layer>/CLAUDE.md`) 준수.
+5. **모듈 가이드 작성**: `docs/MODULE_GUIDE_TEMPLATE.md`를 복사해 `Projects/<Layer>/<Module>/CLAUDE.md` 생성 (함정·시나리오 중심).
 6. Domain이면 테스트 작성 (CI는 폴더만 있으면 자동 인식).
 
 ## 자주 쓰는 명령
@@ -45,6 +45,5 @@ tuist generate      # 프로젝트 생성
 
 ## 문서 유지
 
-- 코드와 문서가 다르면 **코드가 진실** — 가장 가까운 에이전트 가이드(`CLAUDE.md` / `AGENTS.md`)를 즉시 고친다.
-- `CLAUDE.md`와 `AGENTS.md`는 파일명/에이전트별 로딩 설명만 다르게 유지하고, 책임·시나리오·주의사항은 함께 갱신한다.
+- 코드와 문서가 다르면 **코드가 진실** — 가장 가까운 가이드(`CLAUDE.md`)를 즉시 고친다.
 - 작업 중 발견한 함정은 해당 문서의 "주의사항" 절에 누적.
