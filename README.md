@@ -315,6 +315,12 @@ git config core.hooksPath .githooks
 > 위 `git config`를 한 번 실행해두면, 브랜치를 전환할 때 프로젝트 구조(매니페스트·파일 추가/삭제)가
 > 바뀐 경우에만 `tuist generate`가 자동 실행되어 Xcode 프로젝트가 항상 최신으로 유지된다. (`.githooks/post-checkout`)
 
+추가로 — **Config 비밀값**(`Config/*.xcconfig`)은 `.gitignore`되어 있어 팀 내부 배포로 받아 `Config/`에 둔다.
+빌드·테스트·UI 자동화(**XcodeBuildMCP**)를 쓰려면 **Node/npx**가 필요하고, 첫 Claude Code 세션에서 `.mcp.json`
+**신뢰 승인**을 1회 해야 한다. (셋업 도구 상세·함정 → [`docs/BUILD_AND_TEST.md`](docs/BUILD_AND_TEST.md))
+
+> **Claude Code 사용자**는 위 셋업 과정을 `/setup` 으로 한 번에 점검·안내받을 수 있다.
+
 <br/>
 
 ## 🔗 관련 링크
