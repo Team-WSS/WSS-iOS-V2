@@ -109,3 +109,6 @@ mise install        # Tuist 설치
 tuist install       # 의존성 설치
 tuist generate      # 프로젝트 생성
 ```
+
+빌드·테스트·UI 검증은 **XcodeBuildMCP 주력**(시뮬레이터 빌드/실행·`test_sim`·`tap`/`type`).
+도구 셋업(팀 공유 `.mcp.json`)·표준 명령·함정은 → [docs/BUILD_AND_TEST.md](docs/BUILD_AND_TEST.md).
