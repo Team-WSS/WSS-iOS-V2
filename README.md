@@ -39,7 +39,7 @@
 - `WSS-iOS`(V1)는 현재 운영 중인 클라이언트입니다.
 - `WSS-iOS-V2`는 구조 개선과 점진적 기능 이전을 위한 차세대 코드베이스입니다.
 - 현재는 **Core / Domain / Data 레이어 정비와 테스트 가능한 기반 구축**을 우선하고 있습니다.
-- 현재까지 `Core 3개`, `Data 3개`, `Domain 12개` 모듈을 분리했고, Swift Testing과 `/domain-test` 기반 검증 흐름을 갖췄습니다.
+- 현재까지 `Core 3개`, `Domain 11개`, `Data 11개` 모듈을 분리했고, Swift Testing과 `/domain-test` 기반 검증 흐름을 갖췄습니다.
 
 <br/>
 
@@ -99,22 +99,29 @@ Core
 │
 Domain
 ├── AuthDomain            # 사용자 인증, 로그아웃, 탈퇴
-├── BaseDomain            # 공통 식별자, 평점, 장르, 에러 등 기본 타입
-├── Comment               # 댓글 작성, 수정, 삭제, 조회
-├── Feed                  # 피드 작성/수정/삭제, 상세 조회, 좋아요
-├── Keyword               # 키워드 조회와 검색
+├── BaseDomain            # 공통 식별자·평점·장르·에러 등 기본 타입 + 키워드 서브도메인
+├── CommentDomain         # 댓글 작성, 수정, 삭제, 조회
+├── FeedDomain            # 피드 작성/수정/삭제, 상세 조회, 좋아요
 ├── NotificationDomain    # 알림 조회와 푸시 설정
-├── Novel                 # 작품 조회, 검색, 서재, 관심 등록
+├── NovelDomain           # 작품 조회, 검색, 서재, 관심 등록
 ├── NovelReviewDomain     # 리뷰 초안 조회, 저장, 삭제
-├── Profile               # 프로필, 닉네임, 선호 장르/작품 설정
-├── Recommendation        # 홈 추천, 소소픽, 트렌딩 피드
-├── Setting               # 앱 업데이트 정책과 약관 동의
+├── ProfileDomain         # 프로필, 닉네임, 선호 장르/작품 설정
+├── RecommendationDomain  # 홈 추천, 소소픽, 트렌딩 피드
+├── SettingDomain         # 앱 업데이트 정책과 약관 동의
 └── SocialDomain          # 차단 사용자 관리와 신고 기능
 │
 Data
-├── NotificationData      # 알림/푸시 API 연동과 Repository 구현
-├── NovelReviewData       # 리뷰 API 연동, DTO 매핑, Repository 구현
-└── RecommendationData    # 추천 데이터 연동 모듈
+├── AuthData              # 인증/세션(토큰) 갱신, Repository 구현
+├── BaseData              # Data 공통 인프라(에러 변환·로컬 저장·키워드 스택)
+├── CommentData           # 댓글 API 연동
+├── FeedData              # 피드 API 연동
+├── NotificationData      # 알림/푸시 API 연동
+├── NovelData             # 작품 API 연동(basic+detail 합성)
+├── NovelReviewData       # 리뷰 API 연동, DTO 매핑
+├── ProfileData           # 프로필 API 연동(로컬+서버 혼합)
+├── RecommendationData    # 추천 데이터 연동
+├── SettingData           # 앱 업데이트/약관 API 연동
+└── SocialData            # 차단/신고 API 연동
 ```
 
 <br/>

@@ -5,8 +5,8 @@
 일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- **진입점: `NovelReviewFactory.makeView(novelID:title:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
-  - **`title`(네비게이션 타이틀)은 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 제목(작품명)은 호출자가 아는 값을 넘긴다(Feature가 자체 보유 ❌).
+- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
+  - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
 
 ### 파일 구조 — 화면(영역)별 그룹
 `Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
@@ -52,7 +52,7 @@
 ##### 미래 날짜 차단 (오버슈트→정착→되돌림)
 - **미래(오늘 이후)는 못 고른다.** `maxDate`(= sheet가 넘기는 오늘) 기준.
 - ⚠️ **스크롤 "도중에" 클램프 금지.** 플링 중 상태를 오늘로 되돌리면 iOS 관성과 싸워 멈칫거리다 결국 미래값에 멈춘다(상태/물리 위치 어긋남). 직접 겪고 폐기한 방식 — 되살리지 말 것.
-- **채택한 방식**: 미래로 굴러가는 건 허용하되 ① 그동안 `date`(세그먼트 표시 소스)를 **갱신하지 않고**, ② `settleTask`(약 0.13s 디바운스)로 스크롤 **정착을 감지한 뒤에야** 직전 선택값으로 되돌린다(플링 중엔 계속 재예약돼 발동 안 함 = 관성과 안 싸움).
+- **채택한 방식**: 미래로 굴러가는 건 허용하되 ① 그동안 `date`(세그먼트 표시 소스)를 **갱신하지 않고**, ② `settleTask`(약 0.2s 디바운스)로 스크롤 **정착을 감지한 뒤에야** 직전 선택값으로 되돌린다(플링 중엔 계속 재예약돼 발동 안 함 = 관성과 안 싸움).
 - **되돌림 목적지는 오늘이 아니라 "직전 유효 선택값"**이다. 오버슈트 중 `date`를 갱신하지 않으므로 `date`가 곧 직전값 → `bounceBackToLastValid`가 컬럼을 `date`로 재정렬. (신규 입력이라 직전값이 없으면 init 기본값 `Date()`=오늘로 복귀.)
 - **물리 스크롤 되돌림은 `.scrollPosition(id:)`만으론 안 먹는다.** `bounceToken`을 증가시켜 `WheelColumn`의 `onChange(bounceToken)`에서 **`proxy.scrollTo(selection)`로 강제 정렬**해야 화면이 따라온다.
 - 연도 컬럼은 `years = 1900...maxDate연도`로 막아 **미래 연도 자체를 못 굴린다**. 월/일만 오버슈트→바운스 대상.
