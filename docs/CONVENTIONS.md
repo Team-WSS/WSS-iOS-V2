@@ -69,9 +69,9 @@ import WSSComponent       // UI
 
 ## 비동기
 
-- Domain / Data / Core: **Swift Concurrency** (`async/await`).
-- Feature: **SwiftUI Observation** (`@Observable` VM · `@State` View).
-- UI / App: 순수 SwiftUI.
+레이어별 비동기/상태 모델(Domain/Data/Core = `async/await`, Feature = `@Observable`/`@State`, UI/App = 순수 SwiftUI)은
+root `CLAUDE.md` Non-negotiable #2가 **정본**. 여기선 **throwing 규약만** 다룬다:
+
 - Domain/Data의 throwing은 **typed throws** (`throws(RepositoryError)`, 로그인만 `throws(AuthError)`).
 
 ## 에러 처리 계약

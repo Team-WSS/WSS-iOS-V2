@@ -17,6 +17,7 @@
 3. **모듈 레지스트리의 단일 진실 소스**는 코드다 →
    [`Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`](Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)
    문서/디스크보다 이 파일이 우선. 새 모듈은 여기 먼저 등록한다.
+   - **유령 폴더 주의**: 디스크엔 레지스트리에 없는 폴더(rename·브랜치 전환이 남긴 gitignore된 `.xcodeproj`/`Derived` 잔재)가 남을 수 있다. **레포에 없고 삭제해도 재발**하니 청소 대상이 아니다. **모듈 목록을 `ls`로 추론하지 말고 ModuleType.swift로만 판단**한다(정식은 `XxxDomain`/`XxxData` 형태만).
 4. **테스트는 필수**(현재 Domain 레이어 한정). 새 UseCase·Entity·정책은 **테스트 없이 머지하지 않는다.**
    테스트는 "읽히는 기능 명세"로 작성 → 작성 전 [docs/TESTING.md](docs/TESTING.md) 필독. 새 Domain 모듈은 폴더만 만들면 CI(`/domain-test`)가 자동 인식한다.
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.

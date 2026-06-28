@@ -10,7 +10,7 @@
         App            DI·전역 흐름 조립 (앱 진입점)
          │
          ▼
-      Feature          실제 기능·화면 구현 (UI 포함) — 계획 단계
+      Feature          실제 기능·화면 구현 (UI 포함) — 점진 연결 중(NovelReviewFeature 구현됨)
        ╱     ╲
       ▼       ▼
      UI      Domain    UI: 재사용 컴포넌트 헬퍼 / Domain: 비즈니스 로직·계약
@@ -66,14 +66,15 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 - 타깃 종류: `sources` / `demo` / `testing` / `tests` (`TargetType`)
 - 의존성은 `internalDependencies: [.module(.domain(.base))]` 형태로 선언한다.
 
-## 현재 구현 현황 (참고용 — 정확한 목록은 ModuleType.swift 확인)
+## 현재 구현 현황 (비자명한 것만 — 모듈 목록의 진실은 ModuleType.swift)
 
-- **Core(3)**: Keychain, Networking, Logger
-- **Domain(11)**: Base, Auth, Recommendation, Feed, Comment, Novel, NovelReview, Setting, Notification, Profile, Social
-- **Data(11)**: Domain과 대응 (Base, Novel, Auth, ... )
-- **UI(2)**: DesignSystem, WSSComponent
-- **Feature**: `home`, `feed` 가 레지스트리에 선언됨 (디스크 폴더는 아직 없음 = 계획 단계)
-- **App**: 진입점 스켈레톤(`WSSIOSV2App`, `ContentView`)만 존재
+모듈 개수·이름은 [`ModuleType.swift`](../Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)가
+단일 진실 소스다. 여기엔 **코드만 봐선 모르는 구현 단계**만 남긴다:
 
-> ⚠️ `Projects/Domain/` 에 suffix 없는 폴더(`Comment/`, `Feed/`, `Novel/` 등)는
-> 레지스트리에 없는 **잔재**일 수 있다. 정식 모듈은 `XxxDomain` 형태만 인정한다.
+- **Feature**: 레지스트리엔 `home`/`feed`/`novelReview`가 있으나 **디스크 구현은 `NovelReviewFeature`뿐**.
+  `home`/`feed`는 **계획 단계**(레지스트리에만 존재).
+- **App**: 진입점 스켈레톤(`WSSIOSV2App`, `ContentView`)만 존재.
+
+> ⚠️ **유령 폴더 주의**: `Projects/Domain|Data/`에 suffix 없는 폴더(`Comment/`, `Feed/`, `KeywordData/` 등)나
+> 미등록 폴더가 디스크에 보일 수 있다. 모듈 rename·브랜치 전환이 남긴 **gitignore된 잔재**(`.xcodeproj`/`Derived`)로
+> **레포에 없고 삭제해도 재발**한다. 모듈 목록은 `ls`가 아니라 **ModuleType.swift로만 판단**(정식은 `XxxDomain`/`XxxData` 형태만).

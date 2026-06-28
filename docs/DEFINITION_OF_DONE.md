@@ -11,17 +11,13 @@
 
 ## 새 모듈 추가 시
 
-- [ ] `ModuleType.swift`에 case 등록 (단일 진실 소스).
-- [ ] `Project.swift` 템플릿으로 작성 + `internalDependencies` 선언.
-- [ ] `tuist generate` 실행해 프로젝트 반영.
-- [ ] `docs/MODULE_GUIDE_TEMPLATE.md` 복사해 모듈 `CLAUDE.md` 작성.
+- [ ] [WORKFLOW.md](WORKFLOW.md)의 "새 모듈 추가 절차" 6단계 완료 (레지스트리 등록 ~ 모듈 가이드 작성).
 
 ## Domain 작업 시 (테스트 필수)
 
 - [ ] 새 UseCase·Entity·정책에 **테스트 작성** ([docs/TESTING.md](TESTING.md) 규약).
 - [ ] 커버리지 4종 고려: 정상 / 경계값 / 정책 위반 / 상태 변화.
 - [ ] 프로토콜/시그니처를 바꿨다면 **같은 PR에서 Mock·테스트 동기화** (drift 방지).
-- [ ] CI(`/domain-test`) 매트릭스를 깨는 빈/잔재 폴더를 남기지 않음.
 
 ## Data 작업 시
 
