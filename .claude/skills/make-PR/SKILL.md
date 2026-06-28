@@ -41,14 +41,20 @@ metadata:
 - 리뷰 수정으로 코드가 바뀌었으면, 그 수정분은 **이 단계에서 `commit` 스킬로 커밋**해 둔다(성격에 맞는 Type — 보통 `[Fix]`/`[Refactor]`). 수정이 없었으면 생략.
 
 ### 2. 관련 문서 갱신 확인 (살아있는 문서, 핵심)
-에이전트 문서(co-located `CLAUDE.md`)와 공통 `docs/*`를 **이번 변경에 맞춰 살아있게** 유지한다. 떠넘기지 말고 **메인이 먼저 판정**한다.
+에이전트 문서를 **이번 변경에 맞춰 살아있게** 유지한다. 떠넘기지 말고 **메인이 먼저 판정**한다.
+- **대상 범위(에이전트 문서)** = co-located `CLAUDE.md` + 공통 `docs/*` + `Projects/Feature/Docs/*`(View/VM 골격 템플릿) + `.claude/agents/*`(리뷰어 정의) + `README.md`(모듈 현황). **CLAUDE.md만 보지 말 것.**
 
-- **후보 매핑**: 변경 파일마다 **가장 가까운 상위 `CLAUDE.md`** + 관련 공통 문서를 찾는다. 매핑 힌트:
+- **후보 매핑**: 변경 파일마다 **가장 가까운 상위 `CLAUDE.md`** + 위 공통/전역 문서를 찾는다. 매핑 힌트:
   - 새 UseCase/Entity/정책 → `Projects/Domain/<Module>/CLAUDE.md` "핵심 시나리오"
   - 새/변경 화면 → `Projects/Feature/<Module>/CLAUDE.md`
   - Repository 구현 로직 변경 → `Projects/Data/<Module>/CLAUDE.md`
   - 에러 변환/네이밍/비동기 규약 변경 → `docs/CONVENTIONS.md`
-  - 새 모듈 → `ModuleType.swift` + 새 모듈 `CLAUDE.md`
+  - View/ViewModel 골격·규칙 변경(정본 `NovelReviewView`/`NovelReviewViewModel` 리팩터) → `Projects/Feature/Docs/VIEW_TEMPLATE.md`·`VIEWMODEL_TEMPLATE.md`
+  - 리뷰가 검사하는 계약·규칙 변경(View↔VM 입력 규약·레이어 경계 등) → `.claude/agents/wss-feature-reviewer.md`·`wss-pr-reviewer.md`
+  - 모듈 추가/삭제·이름 변경 → `ModuleType.swift`(진실) + 새 모듈 `CLAUDE.md` + `docs/ARCHITECTURE.md`(구현 현황) + `README.md`(모듈 현황/개수)
+  - 아키텍처·데이터 흐름·레이어 규약 변경 → `docs/ARCHITECTURE.md`
+  - 새 제품 용어 → `docs/GLOSSARY.md` / 테스트·CI·워크플로우 규약 변경 → `docs/TESTING.md`·`docs/WORKFLOW.md`
+  - 커밋 Type·브랜치·스킬 절차 변경 → 해당 `.claude/skills/*`·`commit-types.md`
 - **메인이 스스로 판정한다 (핵심)**: 각 후보 문서의 **현재 내용을 읽고 이번 diff와 직접 대조**해, 갱신이 *실제로* 필요한지 판단한다. 기준은 루트 `CLAUDE.md` 규칙 — "코드/디렉토리만 봐도 아는 것은 적지 않는다 → **코드만 봐선 모르는 것(새 시나리오·숨은 의존·함정·왜)**만". 문서가 이미 충분하거나 변경이 자명한 구성요소 나열뿐이면 **후보에서 제외**한다(노이즈 금지).
 - **수정이 필요하다고 판정한 것만** 사용자에게 제시한다. 항목마다 함께 적는다:
   - *무엇을 / 왜* 갱신해야 하는지(어떤 diff 때문에 문서가 뒤처졌는지)
