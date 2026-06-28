@@ -11,6 +11,17 @@
 - **머지는 반드시 PR 경유** — 브랜치 보호 규칙이 직접 push를 막는다.
 - 작업 시작: `develop` 최신화 → `Type/#이슈`로 분기.
 
+## 스킬 체인 (작업 한 사이클)
+
+한 작업은 아래 스킬 순서를 탄다. 메인이 **전환점마다 다음 스킬을 능동 제안**한다(행동 규칙은 루트 `CLAUDE.md` "작업 흐름" 절). 절차·함정은 각 `SKILL.md`가 정본.
+
+1. **`new-issue`** — GitHub 이슈 생성 + `Type/#이슈` 브랜치 분기·push (외부 비가역 → 승인 게이트).
+2. **`new-feature`** *(Feature 작업 한정)* — 모듈 생성 → View/VM·Factory 골격 → Figma→WSS UI → 리뷰 수렴.
+3. **`make-PR`** — 통합 리뷰 수렴 → 관련 문서 동기화 → PR 본문 검토 → GitHub PR 생성 (**PR 생성까지만**).
+4. **`ready-merge`** — 작업 브랜치를 `develop` 위로 rebase + `--force-with-lease` push로 머지 가능 상태로 (**머지 버튼은 사람이**).
+
+비-Feature 작업은 2번을 건너뛴다(`new-issue` → 작업 → `make-PR` → `ready-merge`).
+
 ## 테스트 (필수)
 
 - 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
