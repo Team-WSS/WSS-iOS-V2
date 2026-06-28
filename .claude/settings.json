@@ -29,5 +29,14 @@
   },
   "enabledPlugins": {
     "claude-md-management@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "mcp__XcodeBuildMCP__*",
+      "Bash(tuist *)",
+      "Bash(mise *)",
+      "Bash(xcodebuild *)",
+      "Bash(xcrun *)"
+    ]
   }
 }

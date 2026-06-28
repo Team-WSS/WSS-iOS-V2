@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "simulator,ui-automation,project-discovery",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+      }
+    }
+  }
+}
