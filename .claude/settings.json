@@ -13,6 +13,21 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/scripts/caution-check.sh\"",
+            "timeout": 10,
+            "statusMessage": "모듈 주의사항 점검 중"
+          }
+        ]
+      }
     ]
+  },
+  "enabledPlugins": {
+    "claude-md-management@claude-plugins-official": true
   }
 }
