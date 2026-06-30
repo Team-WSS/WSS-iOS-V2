@@ -11,7 +11,7 @@ import SwiftUI
 public extension View {
     func showWSSToast(isPresented: Binding<Bool>,
                       type: WSSToastType,
-                      duration: Double = 3.0) -> some View {
+                      duration: Double = 1.5) -> some View {
         self.modifier(
             WSSToastViewModifier(isPresented: isPresented,
                           type: type,

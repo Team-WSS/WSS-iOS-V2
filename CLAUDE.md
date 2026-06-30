@@ -5,22 +5,45 @@
 이 파일은 항상 로드되는 **진입점**이다. 세부 규칙은 여기 담지 않고, 아래 "문서 자동 로딩" 방식으로
 **작업 중인 위치에 해당하는 문서만** 컨텍스트에 들어오게 설계했다.
 
+> **언어**: 사용자와의 모든 소통(설명·답변·커밋 메시지·문서)은 **한국어**로 한다. 코드 식별자·기술 용어는 원문 그대로 둔다.
+
 ---
 
 ## 🚨 작업 전 반드시 알 것 (Non-negotiables)
 
 1. **의존성은 단방향**: `App → Feature → (UI / Domain) ← Data → Core`
    - Domain은 상위 레이어도, 구현체(Data)도 import 하지 않는다. Data가 Domain 프로토콜을 구현한다.
-2. **비동기 모델은 레이어마다 다르다**
+2. **비동기·상태 모델은 레이어마다 다르다**
    - Domain / Data: **Swift Concurrency** (`async/await`, `throws(RepositoryError)`)
-   - UI / Feature: **Combine** (상태 바인딩·이벤트)
+   - UI / Feature: **SwiftUI Observation** — ViewModel은 `@Observable`, 상태는 단일 `private(set) var state`로 노출(View는 `@State`로 보유). `ObservableObject`/`@Published`/`@StateObject` ❌.
 3. **모듈 레지스트리의 단일 진실 소스**는 코드다 →
    [`Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`](Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)
    문서/디스크보다 이 파일이 우선. 새 모듈은 여기 먼저 등록한다.
+   - **유령 폴더 주의**: 디스크엔 레지스트리에 없는 폴더(rename·브랜치 전환이 남긴 gitignore된 `.xcodeproj`/`Derived` 잔재)가 남을 수 있다. **레포에 없고 삭제해도 재발**하니 청소 대상이 아니다. **모듈 목록을 `ls`로 추론하지 말고 ModuleType.swift로만 판단**한다(정식은 `XxxDomain`/`XxxData` 형태만).
 4. **테스트는 필수**(현재 Domain 레이어 한정). 새 UseCase·Entity·정책은 **테스트 없이 머지하지 않는다.**
    테스트는 "읽히는 기능 명세"로 작성 → 작성 전 [docs/TESTING.md](docs/TESTING.md) 필독. 새 Domain 모듈은 폴더만 만들면 CI(`/domain-test`)가 자동 인식한다.
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
 6. **작업 방식**: 브랜치 `Type/#이슈` (예: `Docs/#130`), 커밋 `[Type] #이슈 - 한글 설명`, 머지는 PR 경유(브랜치 보호). → [docs/WORKFLOW.md](docs/WORKFLOW.md)
+
+---
+
+## 🔁 작업 흐름 — 스킬 체인 (전환점마다 능동 제안)
+
+한 작업 사이클은 아래 스킬 체인을 탄다. **각 전환점에서 다음 스킬을 먼저 능동적으로 제안**한다 —
+사용자가 매번 스킬을 떠올리게 두지 말 것. **제안만 한다(자동 실행 ❌)**: 외부 비가역 작업(이슈
+생성·push·PR·force-push)은 각 스킬의 승인 게이트가 이미 막으므로, 메인은 "다음 단계로 넘어갈까요?"를
+띄울 뿐이다. 사용자가 거절하거나 다른 흐름을 원하면 강요하지 않는다.
+
+| 전환점 | 제안할 스킬 | 제안 문구(톤) |
+|---|---|---|
+| 새 작업을 시작할 때 | `new-issue` | "이슈·브랜치부터 딸까요?" |
+| *(Feature 작업이면)* 이슈·브랜치를 딴 직후 | `new-feature` | "화면 구현 시작할까요?" |
+| 구현/작업이 끝나갈 때 | `make-PR` | "마무리 단계 같은데 PR 올릴까요?" |
+| PR 생성 후 머지 준비가 되면 | `ready-merge` | "develop에 rebase하고 PR 갱신할까요?" |
+
+- `new-feature`는 **Feature 작업에만** 끼운다. 비-Feature 작업은 `new-issue` → (작업) → `make-PR` → `ready-merge`.
+- 이미 그 단계가 끝났거나 사용자가 명시적으로 다른 길을 택했으면 다시 제안하지 않는다.
+- 각 스킬의 절차·책임 경계는 해당 `.claude/skills/<name>/SKILL.md`가 단일 진실 소스다(여기 복제 ❌).
 
 ---
 
@@ -45,7 +68,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 전체 구조·의존성·데이터 흐름 |
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | 제품 용어 ↔ 코드 타입 (작업 시작 시 권장) |
-| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·비동기·에러 변환 규약 |
+| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·import 순서·주석·접근제어·비동기·에러 규약 |
 | [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
@@ -58,7 +81,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | Domain | [Projects/Domain/CLAUDE.md](Projects/Domain/CLAUDE.md) |
 | Data | [Projects/Data/CLAUDE.md](Projects/Data/CLAUDE.md) |
 | Core | [Projects/Core/CLAUDE.md](Projects/Core/CLAUDE.md) |
-| Feature | [docs/layers/Feature.md](docs/layers/Feature.md) (폴더 미생성 → 생성 시 `Projects/Feature/CLAUDE.md`로 이동) |
+| Feature | [Projects/Feature/CLAUDE.md](Projects/Feature/CLAUDE.md) |
 
 ---
 
@@ -69,8 +92,13 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 - **무엇을 적나**: 코드/디렉토리만 봐도 아는 것(구성요소 나열)은 적지 않는다.
   **코드만 봐선 모르는 것**(핵심 시나리오, 숨은 의존, 함정, 이유)만 적는다. 함정 없으면 짧아도 된다.
 - 코드와 문서가 다르면 **코드가 진실** — 발견 즉시 가장 가까운 `CLAUDE.md`를 고친다.
-- 작업 중 함정을 발견하면 **`/learn`** — 가장 가까운 문서의 "주의사항"에 누적해준다.
-- 작업 중 발견한 함정은 해당 문서의 "주의사항" 절에 누적한다.
+- **작업 중(특히 코드를 바꾸다) 함정·숨은 의존·예외를 발견하면, `/learn` 호출을 기다리지 말고 그 자리에서 스스로** 가장 가까운 `CLAUDE.md`의 "주의사항 (작업 중 발견 시 누적)" 절에 한 줄 누적한다 — "코드만 봐선 모르는 것"만(자명한 나열은 노이즈). `/learn`은 같은 일을 명시적으로 부르는 수동 트리거일 뿐이다.
+  - 이 선제 기록은 **Stop 훅(`.claude/scripts/caution-check.sh`)으로도 강제**된다 — 모듈 코드(`Sources/**.swift`)를 바꿨는데 그 모듈 `CLAUDE.md`를 안 건드린 채 턴을 끝내려 하면 점검하라고 한 번 되돌린다(같은 변경엔 1회). 적을 게 없으면 그 결론만 밝히면 통과한다.
+- **문서 정합성 유지는 2-track**(자동 아님 — 프로세스로 강제):
+  - **per-PR(좁게)**: PR마다 `make-PR` 2단계가 *이번 diff*로 stale해진 에이전트 문서만 메인이 판정·갱신한다.
+    대상은 `CLAUDE.md` + `docs/*` + `Projects/Feature/Docs/*` + `.claude/agents/*` + `README.md`(모듈 현황).
+  - **주기/온디맨드(넓게)**: `/claude-md-management:claude-md-improver`로 전 문서를 전수 감사해 **안 건드린 파일의 느린 drift**를 잡는다.
+    매 PR이 아니라 릴리즈 전·정기적으로 **사람이 호출**한다. 짧은 문서는 이 레포 철학상 결함이 아니므로 플러그인 점수는 참고용.
 
 ---
 
@@ -81,3 +109,6 @@ mise install        # Tuist 설치
 tuist install       # 의존성 설치
 tuist generate      # 프로젝트 생성
 ```
+
+빌드·테스트·UI 검증은 **XcodeBuildMCP 주력**(시뮬레이터 빌드/실행·`test_sim`·`tap`/`type`).
+도구 셋업(팀 공유 `.mcp.json`)·표준 명령·함정은 → [docs/BUILD_AND_TEST.md](docs/BUILD_AND_TEST.md).

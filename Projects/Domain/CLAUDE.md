@@ -103,4 +103,4 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- `Projects/Domain/` 에 `XxxDomain` 외 폴더(`Comment/`, `Feed/` 등)는 잔재일 수 있음. 정식 모듈만 수정.
+- **유령 폴더**: `Projects/Domain/`의 `XxxDomain` 아닌 폴더(`Comment/`, `Feed/` 등)는 gitignore된 rename 잔재 → root `CLAUDE.md` #3 참조. `ls` 아닌 ModuleType.swift로 모듈 판단, 정식 모듈만 수정.

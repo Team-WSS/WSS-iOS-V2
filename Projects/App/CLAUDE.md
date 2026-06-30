@@ -5,7 +5,7 @@
 > 🚧 **현재 스켈레톤 단계.** `Projects/App/Sources/`에 `WSSIOSV2App.swift`, `ContentView.swift`만 존재.
 
 - 디렉토리: `Projects/App/`
-- 비동기/상태: SwiftUI App lifecycle + Combine
+- 비동기/상태: SwiftUI App lifecycle
 
 ## 책임
 

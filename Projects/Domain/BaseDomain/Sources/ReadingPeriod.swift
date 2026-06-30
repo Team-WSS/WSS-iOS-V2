@@ -14,7 +14,23 @@ public struct ReadingPeriod: Equatable {
     
     // MARK: - Policy
     
-    public init(start: Date?, end: Date?) throws {
+    /// 독서 기간 불변식을 강제한다.
+    /// - 미래 날짜 불가: 시작/종료 어느 쪽도 `notAfter`(기본 오늘) 이후일 수 없다. ("읽지 않은 미래"는 표현 불가능)
+    /// - `start <= end`.
+    /// - 적어도 한쪽은 존재.
+    ///
+    /// `notAfter` 비교는 **일(day) 단위**다. 순간 단위로 비교하면 자정 근처에서 같은 날 날짜가 미래로 오판된다.
+    public init(start: Date?, end: Date?, notAfter limit: Date = Date()) throws {
+        let calendar = Calendar.current
+        func isAfterLimit(_ date: Date) -> Bool {
+            calendar.compare(date, to: limit, toGranularity: .day) == .orderedDescending
+        }
+        if let start, isAfterLimit(start) {
+            throw ValidationError.futureDate
+        }
+        if let end, isAfterLimit(end) {
+            throw ValidationError.futureDate
+        }
         if let start, let end {
             guard start <= end else {
                 throw ValidationError.startAfterEnd
@@ -26,10 +42,11 @@ public struct ReadingPeriod: Equatable {
         self.start = start
         self.end = end
     }
-    
+
     public enum ValidationError: Error, Equatable {
         case invalidPeriod
         case startAfterEnd
+        case futureDate
     }
     
     // MARK: - Normalize

@@ -1,6 +1,6 @@
-# 네이밍 · 에러 규약
+# 네이밍 · 코드 스타일 · 에러 규약
 
-레이어 공통 규약. 레이어별 세부는 각 `Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md` 참고.
+레이어 공통 규약. 레이어별 세부는 각 `Projects/<Layer>/CLAUDE.md` 참고.
 
 ## 네이밍
 
@@ -25,10 +25,53 @@
 - 식별자는 raw 타입 금지 → `BaseDomain`의 ID 래퍼 (`NovelID`, `UserID`, `FeedID`, `CommentID`...).
 - 모듈명은 `ModuleType.swift`가 단일 진실 소스 (`XxxDomain`/`XxxData`, Core/UI는 suffix 없음).
 
+## Import 순서
+
+세 그룹, 그룹 사이 **빈 줄 1개**. 각 그룹 내부 규칙:
+
+1. **Apple 프레임워크** — 알파벳순 (`Foundation`, `Observation`, `SwiftUI`…).
+2. **외부 라이브러리** — 알파벳순. (현재 "외부 의존성 없음 원칙"이라 보통 비어 있음.)
+3. **자체 모듈** — 레이어 순서 **Feature → Domain → Data → Core → UI**.
+   각 레이어 안에서는 **Base 모듈 우선**(`BaseDomain`, `BaseData`), 그 뒤 알파벳순.
+
+```swift
+// Data Repository
+import Foundation
+
+import BaseDomain         // Domain (Base 우선)
+import NovelDomain        // Domain
+import BaseData           // Data (Base 우선)
+import Networking         // Core
+```
+```swift
+// Feature Factory/View
+import SwiftUI
+
+import BaseDomain         // Domain (Base 우선)
+import NovelReviewDomain  // Domain
+import Logger             // Core
+import DesignSystem       // UI
+import WSSComponent       // UI
+```
+
+## 접근제어
+
+- 모듈의 **공개 표면은 최소화**한다. 조립 진입점 **Factory**(`enum` + static)와 그것이 노출하는 **계약(Protocol)·Entity·입력 모델(Draft)**만 `public`.
+- **구현체는 internal**: `DefaultXxxRepository`·`DefaultXxxService`·`XxxView`/`XxxViewModel`·Mapper 등은 public일 필요 없다 — Factory가 프로토콜/`some View`로 감싸 반환한다.
+  모범: `NovelReviewFactory`("모듈의 유일한 public 진입점", View/VM internal + opaque 반환).
+- **예외(현실)**: App(DI)이 **직접 생성·주입**하는 타입은 public이 필요하다. 현재 UseCase 구현체(`DefaultLoadNovelUseCase` 등)는 App이 조립하므로 public 유지 — Domain에 조립 Factory가 생기기 전까지의 한시적 예외.
+
+## 주석
+
+- **코드를 읽어 알 수 있는 것(what)은 적지 않는다.** 코드만 봐선 모르는 **"왜"·정책·불변식·함정**만 남긴다. (root CLAUDE.md 문서 철학의 코드판.)
+- 공개 API·계약·정책은 `///` doc comment, **한글**. 예: `ReadingPeriod` 불변식, `NovelReviewFactory` 진입점/주입 설명.
+- 함정·주의는 인라인 `//`. 함정 없으면 주석이 없어도 된다.
+
 ## 비동기
 
-- Domain / Data / Core: **Swift Concurrency** (`async/await`).
-- UI / Feature: **Combine**.
+레이어별 비동기/상태 모델(Domain/Data/Core = `async/await`, Feature = `@Observable`/`@State`, UI/App = 순수 SwiftUI)은
+root `CLAUDE.md` Non-negotiable #2가 **정본**. 여기선 **throwing 규약만** 다룬다:
+
 - Domain/Data의 throwing은 **typed throws** (`throws(RepositoryError)`, 로그인만 `throws(AuthError)`).
 
 ## 에러 처리 계약

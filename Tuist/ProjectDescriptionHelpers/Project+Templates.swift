@@ -26,7 +26,8 @@ extension Project {
         demoDependencies: [TargetDependency],
         testDependencies: [TargetDependency],
         deploymentTarget: DeploymentTargets?,
-        infoPlist: InfoPlist
+        infoPlist: InfoPlist,
+        demoInfoPlist: InfoPlist? = nil
     ) -> [Target] {
         
         var allTargets: [Target] = []
@@ -59,7 +60,7 @@ extension Project {
                     product: .app,
                     bundleId: "\(env.organizationName).\(name)Demo",
                     deploymentTargets: deploymentTarget,
-                    infoPlist: infoPlist,
+                    infoPlist: demoInfoPlist ?? infoPlist,
                     sources: ["Demo/**"],
                     resources: [],
                     dependencies: demoDeps
@@ -116,9 +117,10 @@ extension Project {
         name: String,
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
-        externalDependencies: [TargetDependency] = []
+        externalDependencies: [TargetDependency] = [],
+        demoDependencies: [TargetDependency] = []
     ) -> Project {
-        
+
         let allTargets = makeBaseTargets(
             name: name,
             product: .framework,
@@ -127,10 +129,11 @@ extension Project {
             resources: nil,
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
-            demoDependencies: [],
+            demoDependencies: demoDependencies,
             testDependencies: [],
             deploymentTarget: env.deploymentTarget,
-            infoPlist: ModuleInfoPlist.feature.infoPlist
+            infoPlist: ModuleInfoPlist.feature.infoPlist,
+            demoInfoPlist: ModuleInfoPlist.featureDemo.infoPlist
         )
         
         return Project(
@@ -138,6 +141,7 @@ extension Project {
             organizationName: env.organizationName,
             settings: .settings(
                 base: env.baseSetting,
+                configurations: configurations,
                 defaultSettings: .recommended
             ),
             targets: allTargets

@@ -1,0 +1,41 @@
+#!/bin/sh
+# post-checkout — 브랜치 전환 시 프로젝트 구조가 바뀌었으면 tuist generate
+#
+# Tuist의 .xcworkspace/.xcodeproj는 gitignore된 생성물이라, 브랜치를 전환하면
+# 매니페스트나 파일 구성이 바뀌어도 Xcode 프로젝트는 stale 상태로 남는다.
+# Tuist는 glob을 generate 시점에 구체 파일 참조로 고정하므로, 파일 추가/삭제/이름변경
+# 또는 매니페스트 변경이 있으면 재생성이 필요하다(단순 내용 수정은 불필요).
+#
+# 활성화: git config core.hooksPath .githooks  (클론 후 1회)
+set -e
+
+prev="$1"; new="$2"; branch_flag="$3"
+
+# 브랜치 전환만 처리 (파일 체크아웃 $3=0 은 무시)
+[ "$branch_flag" = "1" ] || exit 0
+# HEAD 변화 없음은 스킵
+[ "$prev" = "$new" ] && exit 0
+# 최초 클론 등 prev가 all-zero면 비교 불가 → 스킵
+case "$prev" in *[!0]*) : ;; *) exit 0 ;; esac
+
+# (A) 매니페스트/플러그인/Tuist 설정 내용 변경?
+manifest_changed=$(git diff --name-only "$prev" "$new" \
+  | grep -Eq '(^|/)(Project\.swift|Workspace\.swift)$|^Tuist/|^Plugins/' && echo yes || true)
+
+# (B) Projects/ 하위 파일 추가(A)·삭제(D)·이름변경(R)? → glob 재고정 필요
+#     co-located 문서(*.md)는 Tuist가 글롭하지 않으므로 제외(불필요한 generate 방지)
+struct_changed=$(git diff --name-only --diff-filter=ADR "$prev" "$new" -- Projects ':(exclude)*.md' \
+  | grep -q . && echo yes || true)
+
+[ -z "$manifest_changed$struct_changed" ] && exit 0
+
+echo "🔧 [post-checkout] 프로젝트 구조 변경 감지 → tuist generate 실행..."
+if command -v mise >/dev/null 2>&1; then
+  mise exec -- tuist generate
+elif command -v tuist >/dev/null 2>&1; then
+  tuist generate
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  "$HOME/.local/bin/mise" exec -- tuist generate
+else
+  echo "⚠️  tuist 미발견 — 'mise install' 후 'tuist generate' 수동 실행 필요" >&2
+fi

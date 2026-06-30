@@ -1,6 +1,6 @@
 # 작업 방식 (Workflow)
 
-전체 구조는 [ARCHITECTURE.md](ARCHITECTURE.md), 코드 규칙은 각 레이어 에이전트 가이드(`Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md`) 참고.
+전체 구조는 [ARCHITECTURE.md](ARCHITECTURE.md), 코드 규칙은 각 레이어 가이드(`Projects/<Layer>/CLAUDE.md`) 참고.
 이 문서는 **프로세스**(브랜치·커밋·PR·모듈 추가·테스트·CI)만 다룬다.
 
 ## 브랜치 · 커밋 · PR
@@ -10,6 +10,17 @@
 - **base 브랜치**: `develop` (운영 릴리스는 `main`).
 - **머지는 반드시 PR 경유** — 브랜치 보호 규칙이 직접 push를 막는다.
 - 작업 시작: `develop` 최신화 → `Type/#이슈`로 분기.
+
+## 스킬 체인 (작업 한 사이클)
+
+한 작업은 아래 스킬 순서를 탄다. 메인이 **전환점마다 다음 스킬을 능동 제안**한다(행동 규칙은 루트 `CLAUDE.md` "작업 흐름" 절). 절차·함정은 각 `SKILL.md`가 정본.
+
+1. **`new-issue`** — GitHub 이슈 생성 + `Type/#이슈` 브랜치 분기·push (외부 비가역 → 승인 게이트).
+2. **`new-feature`** *(Feature 작업 한정)* — 모듈 생성 → View/VM·Factory 골격 → Figma→WSS UI → 리뷰 수렴.
+3. **`make-PR`** — 통합 리뷰 수렴 → 관련 문서 동기화 → PR 본문 검토 → GitHub PR 생성 (**PR 생성까지만**).
+4. **`ready-merge`** — 작업 브랜치를 `develop` 위로 rebase + `--force-with-lease` push로 머지 가능 상태로 (**머지 버튼은 사람이**).
+
+비-Feature 작업은 2번을 건너뛴다(`new-issue` → 작업 → `make-PR` → `ready-merge`).
 
 ## 테스트 (필수)
 
@@ -26,13 +37,13 @@
 
 ## 새 모듈 추가 절차
 
-> ⚡ **`/new-module <layer> <ModuleName>`** 커맨드가 아래를 자동화한다 (의존성 추론 포함). 수동 시 아래 순서대로.
+> ⚡ **`/new-module <layer> <ModuleName>`** 스킬이 아래를 자동화한다 (의존성 추론 포함). 수동 시 아래 순서대로.
 
 1. **레지스트리 먼저**: `Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`의 해당 enum(`DomainModule`/`DataModule`/...)에 case 추가. (단일 진실 소스)
 2. **Project.swift**: `Projects/<Layer>/<Module>/Project.swift`를 템플릿(`Project.create<Layer>Module(...)`)으로 작성, `internalDependencies` 선언.
 3. **`tuist generate`** 로 프로젝트 재생성.
-4. 코드 작성은 해당 레이어 에이전트 가이드(`Projects/<Layer>/CLAUDE.md` / `Projects/<Layer>/AGENTS.md`) 준수.
-5. **모듈 가이드 작성**: `docs/MODULE_GUIDE_TEMPLATE.md`를 복사해 `Projects/<Layer>/<Module>/CLAUDE.md`와 `Projects/<Layer>/<Module>/AGENTS.md` 생성 (함정·시나리오 중심).
+4. 코드 작성은 해당 레이어 가이드(`Projects/<Layer>/CLAUDE.md`) 준수.
+5. **모듈 가이드 작성**: `docs/MODULE_GUIDE_TEMPLATE.md`를 복사해 `Projects/<Layer>/<Module>/CLAUDE.md` 생성 (함정·시나리오 중심).
 6. Domain이면 테스트 작성 (CI는 폴더만 있으면 자동 인식).
 
 ## 자주 쓰는 명령
@@ -45,6 +56,5 @@ tuist generate      # 프로젝트 생성
 
 ## 문서 유지
 
-- 코드와 문서가 다르면 **코드가 진실** — 가장 가까운 에이전트 가이드(`CLAUDE.md` / `AGENTS.md`)를 즉시 고친다.
-- `CLAUDE.md`와 `AGENTS.md`는 파일명/에이전트별 로딩 설명만 다르게 유지하고, 책임·시나리오·주의사항은 함께 갱신한다.
-- 작업 중 발견한 함정은 해당 문서의 "주의사항" 절에 누적.
+- 코드와 문서가 다르면 **코드가 진실** — 가장 가까운 가이드(`CLAUDE.md`)를 즉시 고친다.
+- 작업 중(코드 변경 포함) 함정을 발견하면 `/learn`을 기다리지 말고 **스스로** 해당 문서의 "주의사항" 절에 누적한다(`/learn`은 수동 트리거).

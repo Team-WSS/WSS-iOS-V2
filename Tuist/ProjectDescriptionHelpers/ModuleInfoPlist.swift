@@ -10,6 +10,7 @@ import ProjectDescription
 public enum ModuleInfoPlist {
     
     case feature
+    case featureDemo
     case domain
     case data
     case core
@@ -30,6 +31,11 @@ public enum ModuleInfoPlist {
         switch self {
         case .feature:
             return commonEntries
+        case .featureDemo:
+            var entries = commonEntries
+            entries["BASE_URL"] = "$(BASE_URL)"
+            entries["TEST_API_KEY"] = "$(TEST_API_KEY)"
+            return entries
         case .domain:
             return commonEntries
         case .data:

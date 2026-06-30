@@ -19,6 +19,7 @@ public enum NovelMapper {
         case invalidReadingStatus(String)
         case invalidAttractivePoint(String)
         case invalidDateFormat(String)
+        case invalidReadingPeriod(start: String, end: String)
         case invalidNovelGenre(String)
         case invalidPlatformUrl(String)
     }
@@ -280,9 +281,14 @@ extension NovelMapper {
             end = date
         }
         
-        return try ReadingPeriod(start: start, end: end)
+        do {
+            return try ReadingPeriod(start: start, end: end)
+        } catch {
+            // 미래 날짜·역전 등 도메인 불변식 위반은 손상 데이터로 보고 매핑 실패로 변환(→ .invalidData).
+            throw MappingError.invalidReadingPeriod(start: startDate, end: endDate)
+        }
     }
-    
+
     static func mapNovelGenreString(from genre: NovelGenre) -> String {
         switch genre {
         case .lightNovel:      return "lightNovel"

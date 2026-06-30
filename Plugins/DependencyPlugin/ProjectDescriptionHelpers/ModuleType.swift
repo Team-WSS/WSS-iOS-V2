@@ -22,6 +22,7 @@ public enum FeatureModule: String, ModuleSpec {
     
     case home
     case feed
+    case novelReview
 }
 
 public enum DomainModule: String, ModuleSpec {
