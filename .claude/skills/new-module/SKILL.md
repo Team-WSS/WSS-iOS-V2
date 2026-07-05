@@ -33,7 +33,7 @@ metadata:
 - **feature**: `[.module(.domain(.base)), .module(.domain(.<같은이름>)), .module(.ui(.designSystem)), .module(.ui(.wssComponent)), .module(.core(.logger))]`
   - `demoDependencies`: `[.module(.data(.<같은이름>)), .module(.data(.base)), .module(.core(.networking))]` — Demo 앱만 실서버 조립용(App DI 대행). `Sources`는 여전히 Data를 모른다.
   - 정본: `Projects/Feature/NovelReviewFeature/Project.swift` (첫 Feature 모듈에서 검증된 패턴).
-  - ⚠️ 대응 `<같은이름>Domain`이 없으면(순수 입력 화면) `domain(.<같은이름>)`·`demoDependencies`의 data 의존을 뺀다 — `new-feature` 스킬 0단계 참조.
+  - ⚠️ 대응 `<같은이름>Domain`이 없으면(순수 입력 화면) `domain(.<같은이름>)`을 빼고 **`demoDependencies`는 통째로 `[]`** 로 둔다(도메인이 없으면 Demo가 실서버 조립할 Repository 자체가 없다) — 판정 기준은 `new-feature` 스킬 0단계 참조.
 - 추론한 의존성은 **왜 넣었는지 한 줄로 보고**하고, 애매하면 확인받는다.
 
 ### 4. Project.swift 생성

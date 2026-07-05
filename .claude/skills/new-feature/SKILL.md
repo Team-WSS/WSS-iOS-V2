@@ -47,7 +47,7 @@ metadata:
   - `internalDependencies = [.module(.domain(.base)), .module(.domain(.<name>)), .module(.ui(.designSystem)), .module(.ui(.wssComponent)), .module(.core(.logger))]`
   - `demoDependencies = [.module(.data(.<name>)), .module(.data(.base)), .module(.core(.networking))]`
   - `targets: [.sources, .demo, .tests]`
-  - 0단계에서 "순수 입력 화면"으로 정했으면 `domain(.<name>)`·`data(.<name>)` 의존을 빼고, 그 이유를 한 줄 보고.
+  - 0단계에서 "순수 입력 화면"으로 정했으면 `domain(.<name>)`을 빼고 `demoDependencies`는 통째로 `[]`(정확한 규칙은 `new-module` 3단계가 정본). 그 이유를 한 줄 보고.
 - 완료 후: 등록된 `ModuleType.feature` case·생성 파일·**선택한 의존성과 근거**를 보고 → **확인 게이트**.
   승인 시 모듈 생성분을 `[Setting]`으로 커밋(push ❌)하고 2단계로.
 

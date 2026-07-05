@@ -18,8 +18,8 @@
 msg_file="$1"
 [ -f "$msg_file" ] || exit 0
 
-# 제목 = 주석/빈 줄을 제외한 첫 줄
-subject=$(grep -v '^#' "$msg_file" | sed '/^[ 	]*$/d' | head -n1)
+# 제목 = 주석/빈 줄을 제외한 첫 줄 (scissors 줄 이후의 verbose diff 본문은 스캔하지 않는다)
+subject=$(sed -n '/^# .*>8/q;p' "$msg_file" | grep -v '^#' | sed '/^[ 	]*$/d' | head -n1)
 [ -n "$subject" ] || exit 0   # 빈 메시지는 git 이 스스로 거부한다
 
 # git 관례 메시지는 검사하지 않는다 (자동 생성 머지·리버트·rebase 산출물)
@@ -40,8 +40,8 @@ if [ -z "$allowed" ]; then
   exit 0
 fi
 
-# 양식 검증: [Type] #이슈번호 - 내용
-if printf '%s' "$subject" | grep -qE "^\[($allowed)\] #[0-9]+ - .+"; then
+# 양식 검증: [Type] #이슈번호 - 내용 (내용은 공백만으로는 불가)
+if printf '%s' "$subject" | grep -qE "^\[($allowed)\] #[0-9]+ - .*[^[:space:]]"; then
   exit 0
 fi
 
