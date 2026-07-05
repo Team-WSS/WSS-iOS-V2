@@ -30,17 +30,21 @@ metadata:
   - ⚠️ 대응 `<같은이름>Domain`이 없으면 사용자에게 알리고, 먼저 domain부터 만들지 물어본다.
 - **ui**: `[.module(.ui(.designSystem)), .module(.domain(.base))]`
 - **core**: 기본 `[]`, 필요한 다른 core만.
-- **feature** (미검증 레이어): `[.module(.domain(.base)), .module(.domain(.<같은이름>)), .module(.ui(.designSystem)), .module(.ui(.wssComponent))]` — 첫 생성이면 사용자와 확인.
+- **feature**: `[.module(.domain(.base)), .module(.domain(.<같은이름>)), .module(.ui(.designSystem)), .module(.ui(.wssComponent)), .module(.core(.logger))]`
+  - `demoDependencies`: `[.module(.data(.<같은이름>)), .module(.data(.base)), .module(.core(.networking))]` — Demo 앱만 실서버 조립용(App DI 대행). `Sources`는 여전히 Data를 모른다.
+  - 정본: `Projects/Feature/NovelReviewFeature/Project.swift` (첫 Feature 모듈에서 검증된 패턴).
+  - ⚠️ 대응 `<같은이름>Domain`이 없으면(순수 입력 화면) `domain(.<같은이름>)`·`demoDependencies`의 data 의존을 뺀다 — `new-feature` 스킬 0단계 참조.
 - 추론한 의존성은 **왜 넣었는지 한 줄로 보고**하고, 애매하면 확인받는다.
 
 ### 4. Project.swift 생성
 `Projects/<directoryName>/<ModuleName>/Project.swift` 생성. **같은 레이어 기존 모듈을 복제**해 `create<Layer>Module(...)` 형태/`targets`/`internalDependencies`를 맞춘다.
-- targets 기본: domain `[.sources, .testing, .tests]`, data/core `[.sources, .demo, .testing, .tests]`, ui `[.sources, .demo]`.
+- targets 기본: domain `[.sources, .testing, .tests]`, data/core `[.sources, .demo, .testing, .tests]`, ui `[.sources, .demo]`, feature `[.sources, .demo, .tests]`.
 
 ### 5. 소스 디렉토리
 - `Sources/` 생성. 레이어 표준 하위 폴더를 만든다(빈 폴더 대신 최소 placeholder 또는 첫 타입):
   - domain: `Entity/`, `UseCase/`, `Repository/`
   - data: `DTO/`, `Service/`, `Mapper/`, `Repository/`, `Factory/`, `Endpoint/`, `Logger/`
+  - feature: `Factory/` + 화면별 폴더(`<Screen>/` — 타입별 분리 ❌), 별도로 `Demo/`(Demo 앱). 골격은 `new-feature` 스킬이 담당.
 - domain이면 `Testing/`, `Tests/{Entity,UseCase}/`도.
 
 ### 6. 프로젝트 생성

@@ -308,12 +308,14 @@ mise install
 tuist install
 tuist generate
 
-# 브랜치 전환 시 프로젝트 자동 재생성 — git 훅 활성화 (클론 후 1회)
+# git 훅 활성화 (클론 후 1회)
 git config core.hooksPath .githooks
 ```
 
-> 위 `git config`를 한 번 실행해두면, 브랜치를 전환할 때 프로젝트 구조(매니페스트·파일 추가/삭제)가
-> 바뀐 경우에만 `tuist generate`가 자동 실행되어 Xcode 프로젝트가 항상 최신으로 유지된다. (`.githooks/post-checkout`)
+> 위 `git config`를 한 번 실행해두면 두 가지가 자동화된다:
+> ① 브랜치 전환 시 프로젝트 구조(매니페스트·파일 추가/삭제)가 바뀐 경우에만 `tuist generate`가
+> 자동 실행되어 Xcode 프로젝트가 항상 최신으로 유지된다. (`.githooks/post-checkout`)
+> ② 커밋할 때 커밋 메시지 양식 `[Type] #이슈 - 내용`이 자동 검증된다 — Xcode/터미널 직접 커밋 포함. (`.githooks/commit-msg`)
 
 추가로 — **Config 비밀값**(`Config/*.xcconfig`)은 `.gitignore`되어 있어 팀 내부 배포로 받아 `Config/`에 둔다.
 빌드·테스트·UI 자동화(**XcodeBuildMCP**)를 쓰려면 **Node/npx**가 필요하고, 첫 Claude Code 세션에서 `.mcp.json`

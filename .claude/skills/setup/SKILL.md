@@ -16,8 +16,8 @@ metadata:
 
 ### 1. 사전 점검 (읽기 — 되돌릴 것 없음)
 - repo 루트 확인: `git rev-parse --show-toplevel`.
-- 도구 존재 확인: `mise`, `node`/`npx`(XcodeBuildMCP가 npx로 구동), `xcodebuild -version`(Xcode + iOS 시뮬레이터 런타임).
-- **없는 것만** 설치 안내(mise → https://mise.jdx.dev, Node → nodejs.org/brew/nvm, Xcode → App Store). 다 있으면 다음 단계로.
+- 도구 존재 확인: `mise`, `node`/`npx`(XcodeBuildMCP가 npx로 구동), `xcodebuild -version`(Xcode + iOS 시뮬레이터 런타임), `jq`(Claude Code 훅 2종이 사용 — 없으면 훅이 **조용히 무력화**된다. macOS 15+는 기본 포함).
+- **없는 것만** 설치 안내(mise → https://mise.jdx.dev, Node → nodejs.org/brew/nvm, Xcode → App Store, jq → `brew install jq`). 다 있으면 다음 단계로.
 
 ### 2. 도구·의존성·프로젝트 (멱등)
 - `mise install` — `.mise.toml`의 tuist(4.29.1) 설치.
@@ -27,7 +27,7 @@ metadata:
 
 ### 3. git 훅 활성화 (멱등 — 클론 후 1회)
 - `git config --get core.hooksPath` 확인 → `.githooks`가 아니면 `git config core.hooksPath .githooks`.
-- 효과: 브랜치 전환 시 프로젝트 구조(매니페스트·파일 추가/삭제/이름변경)가 바뀌면 `.githooks/post-checkout`가 자동으로 `tuist generate`(mise 경유). 단순 내용 수정은 건드리지 않는다.
+- 효과: ① 브랜치 전환 시 프로젝트 구조(매니페스트·파일 추가/삭제/이름변경)가 바뀌면 `.githooks/post-checkout`가 자동으로 `tuist generate`(mise 경유, 단순 내용 수정은 건드리지 않음) ② 커밋 시 `.githooks/commit-msg`가 커밋 양식 `[Type] #이슈 - 내용`을 검증(Xcode/터미널 직접 커밋 포함 — Type 표는 `commit-types.md`).
 
 ### 4. Config 비밀값 (안내 중심 — 스킬은 실제 키를 모른다)
 - `Config/Config_Shared.xcconfig`·`Config_Debug.xcconfig`·`Config_Release.xcconfig` 존재 확인(`*.xcconfig`는 `.gitignore`되어 커밋 안 됨).
