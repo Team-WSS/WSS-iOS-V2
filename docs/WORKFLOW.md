@@ -7,6 +7,7 @@
 
 - **브랜치**: `Type/#이슈번호` — 예: `Feat/#108`, `Fix/#88`, `Docs/#130`, `Chore/#98`, `Refactor/#96`, `Design/#123`.
 - **커밋 메시지**: `[Type] #이슈번호 - 한글 설명` — 예: `[Feat] #108 - 홈 화면 추천 섹션 구현`.
+  - 양식은 `.githooks/commit-msg` 훅이 로컬 커밋 시 검증한다(Xcode/터미널 직접 커밋 포함). Type 어휘의 단일 진실 소스는 `.claude/skills/commit-types.md`. 훅 활성화는 클론 후 1회 `git config core.hooksPath .githooks`(`/setup`이 안내).
 - **base 브랜치**: `develop` (운영 릴리스는 `main`).
 - **머지는 반드시 PR 경유** — 브랜치 보호 규칙이 직접 push를 막는다.
 - 작업 시작: `develop` 최신화 → `Type/#이슈`로 분기.

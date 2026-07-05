@@ -42,7 +42,7 @@ metadata:
 
 ### 2. 관련 문서 갱신 확인 (살아있는 문서, 핵심)
 에이전트 문서를 **이번 변경에 맞춰 살아있게** 유지한다. 떠넘기지 말고 **메인이 먼저 판정**한다.
-- **대상 범위(에이전트 문서)** = co-located `CLAUDE.md` + 공통 `docs/*` + `Projects/Feature/Docs/*`(View/VM 골격 템플릿) + `.claude/agents/*`(리뷰어 정의) + `README.md`(모듈 현황). **CLAUDE.md만 보지 말 것.**
+- **대상 범위(에이전트 문서)** = co-located `CLAUDE.md` + 공통 `docs/*` + `Projects/Feature/Docs/*`(View/VM 골격 템플릿) + `.claude/agents/*`(리뷰어 정의) + `.claude/skills/*`(스킬 절차·`commit-types.md`) + `.claude/scripts/*`·`.githooks/*`(헤더의 설계 메모·정책 주석) + `README.md`(모듈 현황). **CLAUDE.md만 보지 말 것** — 하네스 전반이 대상이다(스킬·스크립트에 복제된 규칙·전제는 코드 변경 없이도 stale해진다).
 
 - **후보 매핑**: 변경 파일마다 **가장 가까운 상위 `CLAUDE.md`** + 위 공통/전역 문서를 찾는다. 매핑 힌트:
   - 새 UseCase/Entity/정책 → `Projects/Domain/<Module>/CLAUDE.md` "핵심 시나리오"
@@ -50,7 +50,7 @@ metadata:
   - Repository 구현 로직 변경 → `Projects/Data/<Module>/CLAUDE.md`
   - 에러 변환/네이밍/비동기 규약 변경 → `docs/CONVENTIONS.md`
   - View/ViewModel 골격·규칙 변경(정본 `NovelReviewView`/`NovelReviewViewModel` 리팩터) → `Projects/Feature/Docs/VIEW_TEMPLATE.md`·`VIEWMODEL_TEMPLATE.md`
-  - 리뷰가 검사하는 계약·규칙 변경(View↔VM 입력 규약·레이어 경계 등) → `.claude/agents/wss-feature-reviewer.md`·`wss-pr-reviewer.md`
+  - 리뷰가 검사하는 계약·규칙 변경(View↔VM 입력 규약·레이어 경계 등) → `.claude/agents/wss-feature-reviewer.md`·`wss-pr-reviewer.md` + 그 규칙을 복제·요약한 `.claude/skills/*`(예: `new-feature`의 Feature 규칙, `new-module`의 의존성 기본값)
   - 모듈 추가/삭제·이름 변경 → `ModuleType.swift`(진실) + 새 모듈 `CLAUDE.md` + `docs/ARCHITECTURE.md`(구현 현황) + `README.md`(모듈 현황/개수)
   - 아키텍처·데이터 흐름·레이어 규약 변경 → `docs/ARCHITECTURE.md`
   - 새 제품 용어 → `docs/GLOSSARY.md` / 테스트·CI·워크플로우 규약 변경 → `docs/TESTING.md`·`docs/WORKFLOW.md`
@@ -87,9 +87,10 @@ metadata:
   2. 4단계에서 승인된 **본문을 스크래치패드 임시 파일에 기록**(멀티라인 인자 회피)한 뒤:
      ```bash
      gh pr create --base develop --head <branch> \
-       --title "[Type] #<번호> - 한글 설명" --body-file <스크래치패드_본문_경로>
+       --title "[Type] #<번호> - 한글 설명" --body-file <스크래치패드_본문_경로> \
+       --assignee @me
      ```
-  - 계정/소유자/레포는 하드코딩하지 않는다 — 현재 레포로 자동 감지된다.
+  - 계정/소유자/레포는 하드코딩하지 않는다 — 현재 레포로 자동 감지되고, **담당자는 `@me`(실행한 본인)로 자동 지정**한다(`new-issue`의 이슈 담당자 규칙과 동일).
 - 생성된 **PR URL을 보고**한다. `gh` 실패(인증 누락·remote 없음 등)는 출력 그대로 보고하고 안내(`gh auth login` 등).
 
 ## 원칙

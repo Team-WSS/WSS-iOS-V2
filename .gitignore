@@ -71,3 +71,6 @@ Tuist/.build
 
 ### xcconfig
 *.xcconfig
+
+### Claude Code (개인 설정 — 팀 공유 금지)
+.claude/settings.local.json
