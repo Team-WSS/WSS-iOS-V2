@@ -15,10 +15,9 @@ public enum SocialDataFactory {
 
     public static func makeSocialRepository(
         client: NetworkingRequestable,
-        underlying: Logger? = nil
+        logger: DataLogger? = nil
     ) -> SocialRepository {
         let service = DefaultSocialService(client: client)
-        let logger = DataLogger(moduleName: "SocialData", underlying: underlying)
         return DefaultSocialRepository(service: service, logger: logger)
     }
 }

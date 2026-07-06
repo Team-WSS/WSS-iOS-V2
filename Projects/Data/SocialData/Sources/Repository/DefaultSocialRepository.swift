@@ -14,11 +14,11 @@ import Networking
 
 public struct DefaultSocialRepository: SocialRepository {
     private let service: SocialService
-    private let logger: DataLogger
+    private let logger: DataLogger?
 
     init(
         service: SocialService,
-        logger: DataLogger
+        logger: DataLogger?
     ) {
         self.service = service
         self.logger = logger
@@ -30,12 +30,12 @@ public struct DefaultSocialRepository: SocialRepository {
         do {
             let query = BlockUserQuery(userID: id.value)
             try await service.postBlockUser(query)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -45,12 +45,12 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.deleteBlock(blockID: id.value)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -60,13 +60,13 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             let responses = try await service.getBlockedUsers()
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
             return SocialMapper.blockedUsers(from: responses)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -76,12 +76,12 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportSpoilerFeed(feedID: id.value)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -91,12 +91,12 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportImproperFeed(feedID: id.value)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -106,12 +106,12 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportSpoilerComment(feedID: feedID.value, commentID: commentID.value)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
@@ -121,12 +121,12 @@ public struct DefaultSocialRepository: SocialRepository {
         
         do {
             try await service.postReportImproperComment(feedID: feedID.value, commentID: commentID.value)
-            logger.logSuccess(action: action.name)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
-            logger.logNetworkError(action: action.name, error: error)
+            logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch {
-            logger.logUnknownError(action: action.name, error: error)
+            logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
     }
