@@ -62,10 +62,9 @@ public struct WSSFeadHeaderView: View {
                     phase in
                     switch phase {
                     case .success(let image):
-                        image
-                            .resizable()
+                        image.resizable()
                     case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
+                        WSSColor.wssGray200.swiftUIColor
                     default:
                         ProgressView()
                     }

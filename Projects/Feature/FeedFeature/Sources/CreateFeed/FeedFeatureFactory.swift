@@ -45,8 +45,10 @@ public enum FeedFeatureFactory {
     @MainActor
     public static func makeFeedDetailView(
         feedID: FeedID,
+        currentUserID: Int?,
         loadFeedDetailUseCase: LoadFeedDetailUseCase,
         feedLikeUseCase: FeedLikeUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
         loadCommentsUseCase: LoadCommentsUseCase,
         createCommentUseCase: CreateCommentUseCase,
         deleteCommentUseCase: DeleteCommentUseCase,
@@ -54,13 +56,16 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
-        reportImproperCommentUseCase: ReportImproperCommentUseCase
+        reportImproperCommentUseCase: ReportImproperCommentUseCase,
+        onEditFeed: @escaping (FeedID, FeedDraft) -> Void = { _, _ in }
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
                 feedID: feedID,
+                currentUserID: currentUserID,
                 loadFeedDetailUseCase: loadFeedDetailUseCase,
                 feedLikeUsecase: feedLikeUseCase,
+                deleteFeedUseCase: deleteFeedUseCase,
                 loadCommentsUseCase: loadCommentsUseCase,
                 createCommentUseCase: createCommentUseCase,
                 deleteCommentUseCase: deleteCommentUseCase,
@@ -69,7 +74,8 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                 reportImproperCommentUseCase: reportImproperCommentUseCase
-            )
+            ),
+            onEditFeed: onEditFeed
         )
     }
 

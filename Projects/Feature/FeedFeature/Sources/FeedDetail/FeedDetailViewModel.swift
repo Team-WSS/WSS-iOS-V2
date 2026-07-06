@@ -15,9 +15,6 @@ import CommentDomain
 import SocialDomain
 import WSSComponent
 
-/// 피드 상세 화면 ViewModel.
-///
-/// `FeedDetail` 엔티티의 표시값 변환 + nullable 분기를 단일 진입점에서 처리한다.
 @Observable
 @MainActor
 public final class FeedDetailViewModel {
@@ -28,33 +25,42 @@ public final class FeedDetailViewModel {
         var detail: FeedDetail?
         var comments: [FeedComment]
         var isLoading: Bool
+        var commentText: String
+        var editingCommentID: CommentID?
+        var didDeleteFeed: Bool = false
+        var alert: AlertType?
     }
 
-    public struct ConnectedNovelDisplay {
-        public let imageURL: URL?
-        public let title: String
-        public let description: String
-        public let genre: NovelGenre
-        public let totalRating: Float
-        public let feedUserRating: Float
+    public func isMyComment(_ comment: FeedComment) -> Bool {
+        guard let currentUserID, let authorID = comment.user.userId?.value else { return false }
+        return currentUserID == authorID
     }
 
-    public var header: FeedHeader? {
+    public var isMyFeed: Bool {
+        guard let currentUserID, let authorID = state.detail?.author.userId?.value else { return false }
+        return currentUserID == authorID
+    }
+
+    public var editingDraft: FeedDraft? {
         guard let detail = state.detail else { return nil }
-        return FeedHeader(
-            profileImageURL: detail.author.profileImage,
-            nickname: detail.author.nickname,
-            createdDate: detail.createdDate,
-            isEdited: detail.isModified
+        return FeedDraft(
+            content: detail.feedContent,
+            isSpoiler: detail.isSpoiler,
+            isPrivate: !detail.isPublic,
+            connectedNovel: detail.connectedNovel?.basicInfo,
+            attachedImages: []
         )
     }
+    
+    public enum AlertType: Equatable {
+        case reportSpoiler(commentID: CommentID?)
+        case reportImproper(commentID: CommentID?)
 
-    public var hasAttachedImages: Bool {
-        state.detail?.feedImageURLs.isEmpty == false
-    }
+        case reportSpoilerCompleted
+        case reportImproperCompleted
 
-    public var attachedImageURLs: [URL?] {
-        state.detail?.feedImageURLs ?? []
+        case deleteComment(CommentID)
+        case deleteFeed
     }
 
     // MARK: - Properties
@@ -63,8 +69,12 @@ public final class FeedDetailViewModel {
 
     private let feedID: FeedID
 
+    /// 로그인한 사용자 ID. App/Demo(DI)가 로컬 저장소에서 읽어 주입한다. 비로그인 시 nil.
+    private let currentUserID: Int?
+
     private let loadFeedDetailUseCase: LoadFeedDetailUseCase
     private let feedLikeUsecase: FeedLikeUseCase
+    private let deleteFeedUseCase: DeleteFeedUseCase
 
     private let loadCommentsUseCase: LoadCommentsUseCase
     private let createCommentUseCase: CreateCommentUseCase
@@ -80,8 +90,10 @@ public final class FeedDetailViewModel {
 
     public init(
         feedID: FeedID,
+        currentUserID: Int?,
         loadFeedDetailUseCase: LoadFeedDetailUseCase,
         feedLikeUsecase: FeedLikeUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
         loadCommentsUseCase: LoadCommentsUseCase,
         createCommentUseCase: CreateCommentUseCase,
         deleteCommentUseCase: DeleteCommentUseCase,
@@ -92,11 +104,15 @@ public final class FeedDetailViewModel {
         reportImproperCommentUseCase: ReportImproperCommentUseCase
     ) {
         self.feedID = feedID
+        self.currentUserID = currentUserID
         self.state = State(detail: nil,
                            comments: [],
-                           isLoading: false)
+                           isLoading: false,
+                           commentText: "",
+                           editingCommentID: nil)
         self.loadFeedDetailUseCase = loadFeedDetailUseCase
         self.feedLikeUsecase = feedLikeUsecase
+        self.deleteFeedUseCase = deleteFeedUseCase
         self.loadCommentsUseCase = loadCommentsUseCase
         self.createCommentUseCase = createCommentUseCase
         self.deleteCommentUseCase = deleteCommentUseCase
@@ -107,33 +123,71 @@ public final class FeedDetailViewModel {
         self.reportImproperCommentUseCase = reportImproperCommentUseCase
     }
 
-    /// nil이면 연결 작품 블록을 렌더링하지 않는다.
-    public var connectedNovel: ConnectedNovelDisplay? {
-        guard let novel = state.detail?.connectedNovel else { return nil }
-        return ConnectedNovelDisplay(
-            imageURL: novel.thumbnailImageURL,
-            title: novel.basicInfo.title,
-            description: novel.descirption,
-            genre: novel.basicInfo.genre,
-            totalRating: novel.basicInfo.rating ?? 0,
-            feedUserRating: novel.feedWriterRating ?? 0
-        )
-    }
     
     // MARK: - Action
     
     public enum Action {
         case load
         case toggleLike
+        case deleteFeed
+        case updateCommentText(String)
+        case submitComment
+        case deleteComment(CommentID)
+        case beginEditingComment(CommentID)
+        case cancelEditingComment
+        case reportSpoilerFeed
+        case reportImproperFeed
+        case reportSpoilerComment(CommentID)
+        case reportImproperComment(CommentID)
     }
-    
+
     public func handle(_ action: Action) async {
         switch action {
         case .load:
             Task { await loadFeed() }
-            Task {await loadComments() }
+            Task { await loadComments() }
+
+        case .updateCommentText(let text):
+            state.commentText = text
+
+        case .submitComment:
+            guard !state.commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+            if let editingID = state.editingCommentID {
+                await editComment(commentID: editingID)
+            } else {
+                await createComment()
+            }
+            state.editingCommentID = nil
+            state.commentText = ""
+            Task { await loadComments() }
+
+        case .deleteFeed:
+            await deleteFeed()
+
+        case .deleteComment(let commentID):
+            await deleteComment(commentID: commentID)
+
+        case .beginEditingComment(let commentID):
+            beginEditingComment(commentID: commentID)
+
+        case .cancelEditingComment:
+            state.editingCommentID = nil
+            state.commentText = ""
+
         case .toggleLike:
             await toggleLike()
+
+        case .reportSpoilerFeed:
+            try? await reportSpoilerFeedUseCase.execute(id: feedID)
+
+        case .reportImproperFeed:
+            try? await reportImproperFeedUseCase.execute(id: feedID)
+
+        case .reportSpoilerComment(let commentID):
+            try? await reportSpoilerCommentUseCase.execute(feedID: feedID, commentID: commentID)
+
+        case .reportImproperComment(let commentID):
+            try? await reportImproperCommentUseCase.execute(feedID: feedID, commentID: commentID)
         }
     }
 
@@ -157,6 +211,58 @@ public final class FeedDetailViewModel {
             state.comments = comments
         } catch {
 
+        }
+    }
+    
+    private func deleteFeed() async {
+        do {
+            try await deleteFeedUseCase.execute(feedID: feedID)
+            state.didDeleteFeed = true
+        } catch {
+
+        }
+    }
+
+    private func createComment() async {
+        let draft = CommentDraft(content: state.commentText)
+
+        do {
+            try await createCommentUseCase.execute(feedID: feedID, draft)
+        } catch {
+
+        }
+    }
+
+    /// 대상 댓글의 본문을 입력바에 채우고 수정 모드로 전환한다.
+    /// 댓글 목록에 없는 ID가 들어오면 무시.
+    private func beginEditingComment(commentID: CommentID) {
+        guard let comment = state.comments.first(where: { $0.id == commentID }) else { return }
+        state.editingCommentID = commentID
+        state.commentText = comment.content
+    }
+
+    /// 삭제 성공 시 목록에서 제거하고 피드의 댓글 카운트도 감소시킨다.
+    private func deleteComment(commentID: CommentID) async {
+        do {
+            try await deleteCommentUseCase.execute(commentID: commentID, feedID: feedID)
+            state.comments.removeAll { $0.id == commentID }
+            if state.detail?.commentCount ?? 0 > 0 {
+                // FeedDetail은 commentCount를 private(set)으로 갖고 있어 직접 갱신은 불가.
+                // 서버 재로딩으로 동기화한다.
+                await loadComments()
+            }
+        } catch {
+
+        }
+    }
+    
+    private func editComment(commentID: CommentID) async {
+        do {
+            let draft = CommentDraft(content: state.commentText)
+            try await editCommentUseCase.execute(commentID: commentID,
+                                             feedID: feedID, draft)
+        } catch {
+            
         }
     }
 

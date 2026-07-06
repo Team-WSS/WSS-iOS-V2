@@ -26,7 +26,7 @@ let project = Project.createFeatureModule(
         .module(.core(.logger)),
         .module(.data(.base)),
         .module(.data(.feed)),
-        .module(.data(.novel))
+        .module(.data(.novel)),
         .module(.data(.comment)),
         .module(.data(.social)),
     ]

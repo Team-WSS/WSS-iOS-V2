@@ -26,6 +26,9 @@ public struct FeedDetail {
     public private(set) var isLiked: Bool
     public private(set) var commentCount: Int
     
+    public let isSpoiler: Bool
+    public let isPublic: Bool
+    
     public init(
         id: FeedID,
         author: Author,
@@ -36,7 +39,9 @@ public struct FeedDetail {
         connectedNovel: ConnectedNovelDetail? = nil,
         likeCount: Int,
         isLiked: Bool,
-        commentCount: Int
+        commentCount: Int,
+        isSpoiler: Bool,
+        isPublic: Bool
     ) {
         self.id = id
         self.author = author
@@ -48,6 +53,8 @@ public struct FeedDetail {
         self.likeCount = likeCount
         self.isLiked = isLiked
         self.commentCount = commentCount
+        self.isSpoiler = isSpoiler
+        self.isPublic = isPublic
     }
     
     // MARK: - Policy
