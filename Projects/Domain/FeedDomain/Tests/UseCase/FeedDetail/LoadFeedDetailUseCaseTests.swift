@@ -65,7 +65,9 @@ extension LoadFeedDetailUseCaseTests {
             connectedNovel: nil,
             likeCount: likeCount,
             isLiked: isLiked,
-            commentCount: 0
+            commentCount: 0,
+            isSpoiler: false,
+            isPublic: true
         )
     }
 }
