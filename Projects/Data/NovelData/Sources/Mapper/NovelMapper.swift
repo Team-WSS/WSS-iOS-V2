@@ -80,7 +80,8 @@ extension NovelMapper {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
         
-        let genres = try basicDTO.novelGenres.map { try mapNovelGenre(from: $0) }
+        let genres = try basicDTO.novelGenres
+            .map { try mapNovelGenre(from: $0.trimmingCharacters(in: .whitespaces)) }
         
         let novel = Novel(
             id: id,
@@ -115,8 +116,7 @@ extension NovelMapper {
         return NovelInformation(
             novel: novel,
             feedCount: basicDTO.feedCount,
-            genres: try basicDTO.novelGenres
-                .map { try mapNovelGenre(from: $0.trimmingCharacters(in: .whitespaces)) },
+            genres: genres,
             publicationStatus: mapPublicationStatus(from: basicDTO.isNovelCompleted),
             userReview: userReview,
             description: detailDTO.novelDescription,
