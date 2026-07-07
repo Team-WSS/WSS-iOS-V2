@@ -47,6 +47,26 @@ struct FeedDraftTests {
         )
     }
 
+    // MARK: - Init
+
+    @Test("생성 시 2000자를 초과하는 내용은 잘려서 생성된다.")
+    func initTruncatesOverLimitContent() {
+        let longText = String(repeating: "a", count: FeedDraft.maxContentCount + 500)
+
+        let draft = makeDraft(content: longText)
+
+        #expect(draft.content.count == FeedDraft.maxContentCount)
+    }
+
+    @Test("생성 시 5장을 초과하는 이미지는 잘려서 생성된다.")
+    func initTruncatesOverLimitImages() {
+        let images = (0..<(FeedDraft.maxImageCount + 2)).map { _ in makeImageID() }
+
+        let draft = makeDraft(attachedImages: images)
+
+        #expect(draft.attachedImages.count == FeedDraft.maxImageCount)
+    }
+
     // MARK: - Content
 
     @Test("글을 작성할 수 있다.")
