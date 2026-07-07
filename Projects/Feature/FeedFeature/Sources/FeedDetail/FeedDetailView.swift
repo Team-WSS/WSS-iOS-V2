@@ -27,6 +27,8 @@ struct FeedDetailView: View {
 
     @State private var selectedCommentID: CommentID? = nil
     @State private var selectedCommentIsMine: Bool = false
+
+    @FocusState private var isCommentFocused: Bool
     
     // 드롭다운 변수
     @State private var showFeedDropdown: Bool = false
@@ -77,6 +79,7 @@ struct FeedDetailView: View {
         .onTapGesture {
             if showFeedDropdown { showFeedDropdown = false }
             if showCommentDropdown { showCommentDropdown = false }
+            isCommentFocused = false
         }
         .onAppear {
             Task { await viewModel.handle(.load) }
@@ -86,122 +89,143 @@ struct FeedDetailView: View {
     @ViewBuilder
     private func loadedFeedDetailView(detail: FeedDetail, header: FeedHeader) -> some View {
         ZStack(alignment: .bottom) {
-            ScrollView {
-                
-                // MARK: - 피드 본문
-                
-                VStack(spacing: 0) {
-                    // 피드 헤더 - 프로필
-                    WSSFeadHeaderView(
-                        header: header,
-                        profileImageTapped: { print("유저 \(String(describing: detail.author.userId?.value)) 페이지로 이동") },
-                        showThreeDotsButton: false
-                    )
-                    
-                    Spacer().frame(height: 14)
-                    
-                    // 피드 내용
-                    HStack(spacing: 0) {
-                        Text(detail.feedContent)
-                            .applyWSSFont(.body2)
-                            .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                            .multilineTextAlignment(.leading)
-                        
-                        Spacer()
+            ScrollViewReader { proxy in
+                ScrollView {
+
+                    // MARK: - 피드 본문
+
+                    VStack(spacing: 0) {
+                        // 피드 헤더 - 프로필
+                        WSSFeadHeaderView(
+                            header: header,
+                            profileImageTapped: { print("유저 \(String(describing: detail.author.userId?.value)) 페이지로 이동") },
+                            showThreeDotsButton: false
+                        )
+
+                        Spacer().frame(height: 14)
+
+                        // 피드 내용
+                        HStack(spacing: 0) {
+                            Text(detail.feedContent)
+                                .applyWSSFont(.body2)
+                                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer()
+                        }
                     }
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer().frame(height: 30)
-                
-                // 피드 첨부 이미지
-                if !detail.feedImageURLs.isEmpty {
-                    FeedDetailAttachImageBlock(imageURLs: detail.feedImageURLs)
-                    
-                    Spacer().frame(height: 16)
-                }
-                
-                // 피드 연결 작품
-                if let novel = viewModel.state.detail?.connectedNovel,
-                   let genre = novel.basicInfo.genre {
-                    FeedDetailLinkNovelBlock(
-                        imageURL: novel.thumbnailImageURL,
-                        title: novel.basicInfo.title,
-                        novelDescription: novel.descirption,
-                        genre: genre,
-                        feedWriteUsername: header.nickname,
-                        feedWriteUserRating: novel.feedWriterRating ?? 0,
-                        totalRating: novel.basicInfo.rating ?? 0
+                    .padding(.horizontal, 20)
+
+                    Spacer().frame(height: 30)
+
+                    // 피드 첨부 이미지
+                    if !detail.feedImageURLs.isEmpty {
+                        FeedDetailAttachImageBlock(imageURLs: detail.feedImageURLs)
+
+                        Spacer().frame(height: 16)
+                    }
+
+                    // 피드 연결 작품
+                    if let novel = viewModel.state.detail?.connectedNovel,
+                       let genre = novel.basicInfo.genre {
+                        FeedDetailLinkNovelBlock(
+                            imageURL: novel.thumbnailImageURL,
+                            title: novel.basicInfo.title,
+                            novelDescription: novel.descirption,
+                            genre: genre,
+                            feedWriteUsername: header.nickname,
+                            feedWriteUserRating: novel.feedWriterRating ?? 0,
+                            totalRating: novel.basicInfo.rating ?? 0
+                        )
+                        .padding(.horizontal, 16)
+                        .onTapGesture {
+                            print("\(String(describing: detail.connectedNovel?.basicInfo.id.value)) 으로 이동")
+                        }
+
+                        Spacer().frame(height: 30)
+                    }
+
+                    // 피드 리액션
+                    WSSFeedReactView(
+                        react: WSSFeedReact(
+                            likeCount: detail.likeCount,
+                            commentCount: detail.commentCount
+                        ),
+                        isLiked: detail.isLiked,
+                        likeButtonTapped: { Task { await viewModel.handle(.toggleLike) } }
                     )
                     .padding(.horizontal, 16)
-                    .onTapGesture {
-                        print("\(String(describing: detail.connectedNovel?.basicInfo.id.value)) 으로 이동")
+
+                    // MARK: - 구분선
+
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .frame(height: 0.7)
+                            .foregroundStyle(WSSColor.wssGray70.swiftUIColor)
+                        Rectangle()
+                            .frame(height: 7)
+                            .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
                     }
-                    
-                    Spacer().frame(height: 30)
-                }
-                
-                // 피드 리액션
-                WSSFeedReactView(
-                    react: WSSFeedReact(
-                        likeCount: detail.likeCount,
-                        commentCount: detail.commentCount
-                    ),
-                    isLiked: detail.isLiked,
-                    likeButtonTapped: { Task { await viewModel.handle(.toggleLike) } }
-                )
-                .padding(.horizontal, 16)
-                
-                // MARK: - 구분선
-                
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .frame(height: 0.7)
-                        .foregroundStyle(WSSColor.wssGray70.swiftUIColor)
-                    Rectangle()
-                        .frame(height: 7)
-                        .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
-                }
-                
-                Spacer().frame(height: 16)
-                
-                //MARK: - 댓글
-                
-                ForEach(viewModel.state.comments, id: \.id) { comment in
-                    let isMine = viewModel.isMyComment(comment)
-                    CommentRow(
-                        userID: comment.user.userId?.value ?? 1,
-                        profileImageURL: comment.user.profileImage,
-                        username:   comment.user.nickname,
-                        content: comment.content,
-                        createdAt: comment.createdDate,
-                        isEdited: comment.isModified,
-                        myComment: isMine,
-                        threeDotsAction: {
-                            selectedCommentID = comment.id
-                            selectedCommentIsMine = isMine
-                            showCommentDropdown.toggle()
+
+                    Spacer().frame(height: 16)
+
+                    //MARK: - 댓글
+
+                    ForEach(viewModel.state.comments, id: \.id) { comment in
+                        let isMine = viewModel.isMyComment(comment)
+                        CommentRow(
+                            userID: comment.user.userId?.value ?? 1,
+                            profileImageURL: comment.user.profileImage,
+                            username:   comment.user.nickname,
+                            content: comment.content,
+                            createdAt: comment.createdDate,
+                            isEdited: comment.isModified,
+                            myComment: isMine,
+                            threeDotsAction: {
+                                if showCommentDropdown, selectedCommentID == comment.id {
+                                    showCommentDropdown = false
+                                } else {
+                                    selectedCommentID = comment.id
+                                    selectedCommentIsMine = isMine
+                                    showCommentDropdown = true
+                                }
+                            }
+                        )
+                        .overlay(alignment: .bottomTrailing) {
+                            if showCommentDropdown, selectedCommentID == comment.id {
+                                WSSDropdownMenu(items: commentDropdownItems())
+                                    .frame(width: 190)
+                                    .padding(.trailing, 2)
+                                    .padding(.bottom, 40)
+                            }
                         }
-                    )
-                    .overlay(alignment: .bottomTrailing) {
-                        if showCommentDropdown, selectedCommentID == comment.id {
-                            WSSDropdownMenu(items: commentDropdownItems())
-                                .frame(width: 190)
-                                .padding(.trailing, 2)
-                                .padding(.bottom, 40)
-                        }
+
+                        Spacer().frame(height: 22)
                     }
-                    
-                    Spacer().frame(height: 22)
+                    .padding(.horizontal, 20)
+
+                    Spacer().frame(height: 16)
+
+                    Color.clear
+                        .frame(height: 1)
+                        .id("bottomAnchor")
                 }
-                .padding(.horizontal, 20)
-                
-                Spacer().frame(height: 16)
+                .scrollBounceBehavior(.basedOnSize)
+                //.navigationBarBackButtonHidden()
+                .padding(.bottom, 50)
+                .onChange(of: isCommentFocused) { _, isFocused in
+                    guard isFocused else { return }
+                    // 키보드가 다 올라온 뒤 스크롤해야 밀린 만큼 반영된다.
+                    // 포커스 변경 직후 바로 scrollTo하면 키보드 애니메이션이 끝나기 전 크기 기준으로
+                    // 스크롤돼 최신 댓글까지 못 내려간다.
+                    scrollToBottom(proxy, afterMilliseconds: 300)
+                }
+                .onChange(of: viewModel.state.comments.count) { oldCount, newCount in
+                    guard newCount > oldCount else { return }
+                    scrollToBottom(proxy, afterMilliseconds: 0)
+                }
             }
-            .scrollBounceBehavior(.basedOnSize)
-            //.navigationBarBackButtonHidden()
-            .padding(.bottom, 50)
-            
+
             // MARK: - 댓글 입력
             
             FeedDetailCommentInputBar(
@@ -210,7 +234,16 @@ struct FeedDetailView: View {
                         get: { viewModel.state.commentText },
                         set: { value in Task { await viewModel.handle(.updateCommentText(value)) }}
                     ),
-                sendAction: { Task { await viewModel.handle(.submitComment) } }
+                sendAction: {
+                    Task {
+                        let wasEditing = viewModel.state.editingCommentID != nil
+                        await viewModel.handle(.submitComment)
+                        if wasEditing {
+                            isCommentFocused = false
+                        }
+                    }
+                },
+                externalFocus: $isCommentFocused
             )
         }
         
@@ -383,7 +416,10 @@ struct FeedDetailView: View {
                     action: {
                         showCommentDropdown = false
                         if let commentID = selectedCommentID {
-                            Task { await viewModel.handle(.beginEditingComment(commentID)) }
+                            Task {
+                                await viewModel.handle(.beginEditingComment(commentID))
+                                isCommentFocused = true
+                            }
                         }
                     }
                 ),
@@ -417,6 +453,19 @@ struct FeedDetailView: View {
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 )
             ]
+        }
+    }
+
+    //MARK: - 스크롤
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy, afterMilliseconds delay: Int) {
+        Task {
+            if delay > 0 {
+                try? await Task.sleep(for: .milliseconds(delay))
+            }
+            withAnimation {
+                proxy.scrollTo("bottomAnchor", anchor: .bottom)
+            }
         }
     }
 }

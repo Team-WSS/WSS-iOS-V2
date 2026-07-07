@@ -11,11 +11,13 @@ import SwiftUI
 import DesignSystem
 
 struct FeedDetailCommentInputBar: View {
-    
+
     @Binding var text: String
     let sendAction: () -> Void
-    @FocusState private var isKeyboardFocused: Bool
-    
+    var externalFocus: FocusState<Bool>.Binding? = nil
+
+    @FocusState private var internalFocus: Bool
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             RoundedRectangle(cornerRadius: 14)
@@ -39,7 +41,7 @@ struct FeedDetailCommentInputBar: View {
                         .applyWSSFont(.body3)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         .lineLimit(1)
-                        .focused($isKeyboardFocused)
+                        .focused(externalFocus ?? $internalFocus)
                     }
                 }
             }
@@ -49,7 +51,11 @@ struct FeedDetailCommentInputBar: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .contentShape(Rectangle())
             .onTapGesture {
-                isKeyboardFocused = true
+                if let externalFocus {
+                    externalFocus.wrappedValue = true
+                } else {
+                    internalFocus = true
+                }
             }
             
             Spacer().frame(width: 1)
