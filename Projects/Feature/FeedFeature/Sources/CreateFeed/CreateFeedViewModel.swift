@@ -150,7 +150,7 @@ public final class CreateFeedViewModel {
             let connected = ConnectedNovel(
                 id: selected.id,
                 title: selected.title,
-                genre: .fantasy,
+                genre: selected.genres.first,
                 rating: selected.rating
             )
             mutate(&newState) { try $0.setConnectedNovel(connected) }
