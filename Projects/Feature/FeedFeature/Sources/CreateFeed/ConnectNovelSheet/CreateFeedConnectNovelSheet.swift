@@ -25,6 +25,7 @@ struct CreateFeedConnectNovelSheet: View {
     let dismissSheet: () -> Void
     
     @State private var hasSearched: Bool = false
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         HStack(spacing: 0) {
@@ -36,7 +37,7 @@ struct CreateFeedConnectNovelSheet: View {
                     .frame(width: 65, height: 65)
             }
         }
-        
+
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -59,6 +60,7 @@ struct CreateFeedConnectNovelSheet: View {
             WSSSearchBar(
                 text: $searchText,
                 placeholder: "",
+                isFocused: $isSearchFocused,
                 onSearch: { onSearch()
                     hasSearched = true }
             )
@@ -77,6 +79,13 @@ struct CreateFeedConnectNovelSheet: View {
             }
         }
         .padding(.horizontal, 20)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchFocused = false
+        }
+        .onAppear {
+            isSearchFocused = true
+        }
 
         if selectedNovelID != nil {
             WSSCTAButton(
