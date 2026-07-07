@@ -9,13 +9,11 @@ import SwiftUI
 
 import FeedFeature
 import FeedDomain
-import NovelDomain
 import BaseDomain
 import CommentDomain
 import SocialDomain
 
 import FeedData
-import NovelData
 import BaseData
 import CommentData
 import SocialData
@@ -24,29 +22,17 @@ import Networking
 import Logger
 
 /// 피드 상세 화면 단독 데모. 진입 시 텍스트필드로 feedID를 입력받아 push.
+/// 수정 진입(onEditFeed)은 #150에서 구현하는 EditFeedView 완성 전까지는 연결하지 않는다.
 struct FeedDetailDemoScene: View {
-
-    /// 수정 화면 push 대상. feedID + prefill Draft.
-    /// `navigationDestination(item:)`이 Hashable을 요구하므로 feedID 기준으로만 동등성을 정의한다.
-    private struct EditTarget: Identifiable, Hashable {
-        let id: Int
-        let draft: FeedDraft
-
-        static func == (lhs: EditTarget, rhs: EditTarget) -> Bool { lhs.id == rhs.id }
-        func hash(into hasher: inout Hasher) { hasher.combine(id) }
-    }
 
     @State private var feedIDText: String = "4641"
     @State private var openedFeedID: Int?
-    @State private var editTarget: EditTarget?
 
     private let currentUserID: Int?
 
     private let loadFeedDetailUseCase: LoadFeedDetailUseCase
     private let feedLikeUseCase: FeedLikeUseCase
     private let deleteFeedUseCase: DeleteFeedUseCase
-    private let editFeedUseCase: EditFeedUseCase
-    private let searchNovelUseCase: SearchNovelUseCase
 
     private let loadCommentsUseCase: LoadCommentsUseCase
     private let createCommentUseCase: CreateCommentUseCase
@@ -79,17 +65,9 @@ struct FeedDetailDemoScene: View {
             logger: DataLogger(moduleName: "SocialData", underlying: OSLogger.social)
         )
 
-        let novelRepository = NovelDataFactory.makeNovelRepository(
-            client: client,
-            appStorage: storage,
-            logger: DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
-        )
-
         self.loadFeedDetailUseCase = DefaultLoadFeedUseCase(feedRepository: feedRepository)
         self.feedLikeUseCase = DefaultLikeUseCase(feedRepository: feedRepository)
         self.deleteFeedUseCase = DefaultDeleteFeedUseCase(repository: feedRepository)
-        self.editFeedUseCase = DefaultEditFeedUseCase(repository: feedRepository)
-        self.searchNovelUseCase = DefaultSearchNovelUseCase(novelRepository: novelRepository)
 
         self.loadCommentsUseCase = DefaultLoadCommentsUseCase(repository: commentRepository)
         self.createCommentUseCase = DefaultCreateCommentUseCase(repository: commentRepository)
@@ -146,19 +124,8 @@ struct FeedDetailDemoScene: View {
                     reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                     reportImproperFeedUseCase: reportImproperFeedUseCase,
                     reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
-                    reportImproperCommentUseCase: reportImproperCommentUseCase,
-                    onEditFeed: { feedID, draft in
-                        editTarget = EditTarget(id: feedID.value, draft: draft)
-                    }
+                    reportImproperCommentUseCase: reportImproperCommentUseCase
                 )
-                .navigationDestination(item: $editTarget) { target in
-                    FeedFeatureFactory.makeEditFeedView(
-                        feedID: FeedID(target.id),
-                        initialDraft: target.draft,
-                        editFeedUseCase: editFeedUseCase,
-                        searchNovelUseCase: searchNovelUseCase
-                    )
-                }
             }
         }
     }

@@ -18,6 +18,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.base)),
         .module(.domain(.feed)),
         .module(.domain(.novel)),
+        .module(.domain(.comment)),
+        .module(.domain(.social)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent))
     ],
