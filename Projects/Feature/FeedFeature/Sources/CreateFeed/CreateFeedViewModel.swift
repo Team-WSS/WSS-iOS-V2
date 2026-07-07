@@ -6,29 +6,27 @@
 //
 
 import Foundation
+import Observation
 
 import BaseDomain
 import FeedDomain
 import NovelDomain
 
-import WSSComponent
-
-@Observable
 @MainActor
+@Observable
 public final class CreateFeedViewModel {
 
     // MARK: - State
 
     public struct State {
         var draft: FeedDraft
-        
+
         var attachedImageDatas: [AttachedImageID: Data] = [:]
         var submitState: SubmitState = .idle
         var validationError: FeedDraft.ValidationError?
-        
+
         // 토스트
         var showToast: Bool = false
-        var toastType: WSSToastType = .networkDelay
 
         // 작품 연결 시트
         var connectedNovelSearchText: String = ""
@@ -36,6 +34,8 @@ public final class CreateFeedViewModel {
         var selectedSearchedNovelID: NovelID?
         var isSearchingNovel: Bool = false
     }
+
+    // MARK: - Derived
 
     public var canSubmit: Bool {
         !state.draft.content.isEmpty
@@ -49,18 +49,18 @@ public final class CreateFeedViewModel {
 
         case toggleSpoiler
         case togglePrivate
-        
+
         case setConnectedNovel(ConnectedNovel)
         case removeConnectedNovel
         case alreadyLinkedNovel
-        
+
         case addImage(id: AttachedImageID, data: Data)
         case removeImage(AttachedImageID)
 
         case submitFeed
-        
+
         case dismissToast
-        
+
         // 작품 연결 시트
         case updateConnectedNovelSearchText(String)
         case searchNovel(String)
@@ -69,9 +69,11 @@ public final class CreateFeedViewModel {
         case dismissLinkNovelSheet
     }
 
-    // MARK: - Properties
+    // MARK: - Output
 
     public private(set) var state: State
+
+    // MARK: - Dependency
 
     private let createFeedUseCase: CreateFeedUseCase
     private let searchNovelUseCase: SearchNovelUseCase
@@ -88,7 +90,7 @@ public final class CreateFeedViewModel {
         self.state = State(draft: initialDraft)
     }
 
-    // MARK: - Action
+    // MARK: - handle
 
     func handle(_ action: Action) {
         var newState = state
@@ -130,19 +132,19 @@ public final class CreateFeedViewModel {
 
         case .submitFeed:
             Task { await submit() }
-            
+
         case .dismissToast:
             newState.showToast = false
-            
+
         case .updateConnectedNovelSearchText(let text):
             newState.connectedNovelSearchText = text
-            
+
         case .searchNovel(let query):
             Task { await searchNovel(query) }
-            
+
         case .selectSearchedNovel(let id):
             newState.selectedSearchedNovelID = id
-            
+
         case .confirmSelectedNovel:
             guard let id = newState.selectedSearchedNovelID,
                   let selected = newState.searchedNovels.first(where: { $0.id == id }) else { break }
@@ -157,52 +159,22 @@ public final class CreateFeedViewModel {
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
-            
+
         case .dismissLinkNovelSheet:
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
         }
     }
+}
 
-    //MARK: - Custom Method
+// MARK: - UseCase Handling
 
-    private func mutate(
-        _ state: inout State,
-        _ change: (inout FeedDraft) throws -> Void
-    ) {
-        do {
-            try change(&state.draft)
-        } catch let error as FeedDraft.ValidationError {
-            state.validationError = error
-        } catch {
-            assertionFailure(
-                "FeedDraft API는 ValidationError만 던져야 함: \(error)"
-            )
-        }
-    }
+private extension CreateFeedViewModel {
 
-    /// `state.validationError`를 화면 피드백으로 매핑하는 단일 진입점.
-    /// 매 액션 종료 시 호출된다.
-    private func presentValidationError(_ state: inout State) {
-        guard let error = state.validationError else { return }
-        switch error {
-        case .contentOverLimit:
-            break
-        case .imageOverLimit(let max):
-            state.toastType = .limitAddImage(limitCount: max)
-            state.showToast = true
-        case .connectedNovelOverLimit:
-            state.toastType = .novelAlreadyConnected
-            state.showToast = true
-        case .emptyContent:
-            break
-        }
-    }
-    
-    private func submit() async {
+    func submit() async {
         let draft = state.draft
-        
+
         guard canSubmit else { return }
 
         guard !draft.content.isEmpty else {
@@ -222,8 +194,8 @@ public final class CreateFeedViewModel {
             state.submitState = .failed(error)
         }
     }
-    
-    private func searchNovel(_ query: String) async {
+
+    func searchNovel(_ query: String) async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             state.searchedNovels = []
@@ -238,5 +210,38 @@ public final class CreateFeedViewModel {
             state.searchedNovels = []
         }
         state.isSearchingNovel = false
+    }
+}
+
+// MARK: - Error Mapping
+
+private extension CreateFeedViewModel {
+
+    func mutate(
+        _ state: inout State,
+        _ change: (inout FeedDraft) throws -> Void
+    ) {
+        do {
+            try change(&state.draft)
+        } catch let error as FeedDraft.ValidationError {
+            state.validationError = error
+        } catch {
+            assertionFailure(
+                "FeedDraft API는 ValidationError만 던져야 함: \(error)"
+            )
+        }
+    }
+
+    /// `state.validationError` 중 토스트로 노출해야 하는 종류를 판단하는 단일 진입점.
+    /// 어떤 `WSSToastType`으로 표현할지는 View가 결정한다.
+    /// 매 액션 종료 시 호출된다.
+    func presentValidationError(_ state: inout State) {
+        guard let error = state.validationError else { return }
+        switch error {
+        case .contentOverLimit, .emptyContent:
+            break
+        case .imageOverLimit, .connectedNovelOverLimit:
+            state.showToast = true
+        }
     }
 }

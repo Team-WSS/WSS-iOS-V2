@@ -117,7 +117,7 @@ public struct CreateFeedView: View {
                             }
                         }
                     ),
-                    type: viewModel.state.toastType
+                    type: toastType
                 )
             }
         }
@@ -131,6 +131,21 @@ public struct CreateFeedView: View {
         )
     }
     
+    // MARK: - Presentation
+
+    /// `state.validationError`를 화면에 노출할 `WSSToastType`으로 매핑한다.
+    /// 어떤 종류를 토스트로 띄울지(`showToast`)는 ViewModel이, 어떤 문구/스타일로 보여줄지는 View가 결정한다.
+    private var toastType: WSSToastType {
+        switch viewModel.state.validationError {
+        case .imageOverLimit(let max):
+            return .limitAddImage(limitCount: max)
+        case .connectedNovelOverLimit:
+            return .novelAlreadyConnected
+        case .contentOverLimit, .emptyContent, nil:
+            return .networkDelay
+        }
+    }
+
     // MARK: - 툴바
     
     @ToolbarContentBuilder
