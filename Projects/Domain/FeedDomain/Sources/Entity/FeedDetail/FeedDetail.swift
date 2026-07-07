@@ -74,4 +74,13 @@ public struct FeedDetail {
         }
         isLiked.toggle()
     }
+
+    public mutating func addCommentCount() {
+        commentCount += 1
+    }
+
+    public mutating func removeCommentCount() {
+        guard commentCount > 0 else { return }
+        commentCount -= 1
+    }
 }

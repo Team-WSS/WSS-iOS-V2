@@ -228,6 +228,7 @@ public final class FeedDetailViewModel {
 
         do {
             try await createCommentUseCase.execute(feedID: feedID, draft)
+            state.detail?.addCommentCount()
         } catch {
 
         }
@@ -246,11 +247,7 @@ public final class FeedDetailViewModel {
         do {
             try await deleteCommentUseCase.execute(commentID: commentID, feedID: feedID)
             state.comments.removeAll { $0.id == commentID }
-            if state.detail?.commentCount ?? 0 > 0 {
-                // FeedDetail은 commentCount를 private(set)으로 갖고 있어 직접 갱신은 불가.
-                // 서버 재로딩으로 동기화한다.
-                await loadComments()
-            }
+            state.detail?.removeCommentCount()
         } catch {
 
         }
