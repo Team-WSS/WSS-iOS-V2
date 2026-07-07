@@ -64,6 +64,10 @@ public struct CreateFeedView: View {
                     .scrollIndicators(.hidden)
                     .scrollDismissesKeyboard(.immediately)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isKeyboardFocused = false
+                }
                 // 업로드 중엔 draft를 더 이상 바꿀 수 없어야 해서 hit-testing 자체를 막는다.
                 // 대부분의 행이 Button이 아니라 onTapGesture라 .disabled()만으론 막히지 않는다.
                 .allowsHitTesting(!viewModel.isSubmitting)
