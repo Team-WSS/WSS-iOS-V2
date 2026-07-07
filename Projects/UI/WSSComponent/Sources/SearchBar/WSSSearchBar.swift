@@ -5,20 +5,23 @@ public struct WSSSearchBar: View {
     @Binding var text: String
     let placeholder: String
     let onSearch: () -> Void
+    let externalFocus: FocusState<Bool>.Binding?
 
-    @FocusState private var isFocused: Bool
+    @FocusState private var internalFocus: Bool
 
     public init(
         text: Binding<String>,
         placeholder: String,
+        isFocused: FocusState<Bool>.Binding? = nil,
         onSearch: @escaping () -> Void
     ) {
         self._text = text
         self.placeholder = placeholder
+        self.externalFocus = isFocused
         self.onSearch = onSearch
     }
 
-    private var isActive: Bool { isFocused || !text.isEmpty }
+    private var isActive: Bool { (externalFocus?.wrappedValue ?? internalFocus) || !text.isEmpty }
 
     public var body: some View {
         ZStack {
@@ -39,7 +42,9 @@ public struct WSSSearchBar: View {
                     TextField("", text: $text)
                         .applyWSSFont(.label1)
                         .foregroundStyle(Color.wssBlack)
-                        .focused($isFocused)
+                        .focused(externalFocus ?? $internalFocus)
+                        .submitLabel(.search)
+                        .onSubmit(onSearch)
                 }
                 .padding(.leading, 16)
 
@@ -52,7 +57,10 @@ public struct WSSSearchBar: View {
                     }
                 }
 
-                Button(action: onSearch) {
+                Button(action: {
+                    dismissKeyboard()
+                    onSearch()
+                }) {
                     WSSImage.icSearch.swiftUIImage
                         .frame(width: 36, height: 36)
                 }
@@ -60,6 +68,14 @@ public struct WSSSearchBar: View {
             }
         }
         .frame(height: 42)
+    }
+
+    private func dismissKeyboard() {
+        if let externalFocus {
+            externalFocus.wrappedValue = false
+        } else {
+            internalFocus = false
+        }
     }
 }
 

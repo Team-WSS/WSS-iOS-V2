@@ -147,7 +147,7 @@ extension Project {
             targets: allTargets
         )
     }
-    
+
     // MARK: - Domain Module
     
     public static func createDomainModule(

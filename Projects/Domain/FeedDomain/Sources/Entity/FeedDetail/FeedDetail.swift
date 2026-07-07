@@ -18,7 +18,7 @@ public struct FeedDetail {
     public private(set) var isModified: Bool
     
     public private(set) var feedContent: String
-    public private(set) var feedImageURLs: [ImageWrapper?]
+    public private(set) var feedImageURLs: [URL?]
     
     public private(set) var connectedNovel: ConnectedNovelDetail?
     
@@ -50,7 +50,7 @@ public struct FeedDetail {
         createdDate: String,
         isModified: Bool,
         feedContent: String,
-        feedImageURLs: [ImageWrapper?],
+        feedImageURLs: [URL?],
         connectedNovel: ConnectedNovelDetail? = nil,
         likeCount: Int,
         isLiked: Bool,

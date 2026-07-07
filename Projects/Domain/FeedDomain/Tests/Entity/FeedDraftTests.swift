@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import FeedDomain
@@ -26,26 +27,44 @@ struct FeedDraftTests {
         )
     }
 
-    private func makeImageWrapper(id: String) -> ImageWrapper {
-        ImageWrapper(identifier: id)
+    private func makeImageID() -> AttachedImageID {
+        AttachedImageID()
     }
 
     private func makeDraft(
         content: String = "hello",
-        genre: [NovelGenre] = [.fantasy],
         isSpoiler: Bool = false,
         isPrivate: Bool = false,
         connectedNovel: ConnectedNovel? = nil,
-        attachedImages: [ImageWrapper] = []
+        attachedImages: [AttachedImageID] = []
     ) -> FeedDraft {
         FeedDraft(
             content: content,
-            genre: genre,
             isSpoiler: isSpoiler,
             isPrivate: isPrivate,
             connectedNovel: connectedNovel,
             attachedImages: attachedImages
         )
+    }
+
+    // MARK: - Init
+
+    @Test("생성 시 2000자를 초과하는 내용은 잘려서 생성된다.")
+    func initTruncatesOverLimitContent() {
+        let longText = String(repeating: "a", count: FeedDraft.maxContentCount + 500)
+
+        let draft = makeDraft(content: longText)
+
+        #expect(draft.content.count == FeedDraft.maxContentCount)
+    }
+
+    @Test("생성 시 5장을 초과하는 이미지는 잘려서 생성된다.")
+    func initTruncatesOverLimitImages() {
+        let images = (0..<(FeedDraft.maxImageCount + 2)).map { _ in makeImageID() }
+
+        let draft = makeDraft(attachedImages: images)
+
+        #expect(draft.attachedImages.count == FeedDraft.maxImageCount)
     }
 
     // MARK: - Content
@@ -87,26 +106,6 @@ struct FeedDraftTests {
         let mock = makeDraft()
 
         #expect(mock.remainsContentCount() == 2000 - 5)
-    }
-
-    // MARK: - Genre
-
-    @Test("장르를 추가할 수 있다.")
-    func addGenre() {
-        var mock = makeDraft(genre: [.fantasy])
-
-        mock.addGenre(.BL)
-
-        #expect(mock.genre == [.fantasy, .BL])
-    }
-
-    @Test("선택한 장르를 삭제할 수 있다.")
-    func removeGenre() {
-        var mock = makeDraft(genre: [.drama])
-
-        mock.removeGenre(.drama)
-
-        #expect(mock.genre.isEmpty)
     }
 
     // MARK: - Private
@@ -184,24 +183,24 @@ struct FeedDraftTests {
     func attachImage() throws {
         var draft = makeDraft()
 
-        try draft.addImage(makeImageWrapper(id: "1"))
+        try draft.addImage(makeImageID())
 
         #expect(draft.attachedImages.count == 1)
     }
 
     @Test("이미지는 최대 5장까지 첨부할 수 있다.")
     func imageLimitedToFive() throws {
-        let images = Array(repeating: makeImageWrapper(id: "1"), count: 5)
+        let images = (0..<5).map { _ in makeImageID() }
         var draft = makeDraft(attachedImages: images)
 
         #expect(throws: FeedDraft.ValidationError.imageOverLimit(max: 5)) {
-            try draft.addImage(makeImageWrapper(id: "2"))
+            try draft.addImage(makeImageID())
         }
     }
 
     @Test("첨부된 이미지를 삭제할 수 있다.")
     func removeAttachedImage() {
-        let image = makeImageWrapper(id: "1")
+        let image = makeImageID()
         var draft = makeDraft(attachedImages: [image])
 
         draft.removeImage(image)
