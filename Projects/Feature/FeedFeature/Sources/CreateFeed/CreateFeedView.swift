@@ -62,7 +62,12 @@ public struct CreateFeedView: View {
                     }
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicators(.hidden)
+                    .scrollDismissesKeyboard(.immediately)
                 }
+                // 업로드 중엔 draft를 더 이상 바꿀 수 없어야 해서 hit-testing 자체를 막는다.
+                // 대부분의 행이 Button이 아니라 onTapGesture라 .disabled()만으론 막히지 않는다.
+                .allowsHitTesting(!viewModel.isSubmitting)
+                .opacity(viewModel.isSubmitting ? 0.5 : 1)
                 .toolbar {
                     createFeedViewToolBarContent()
                 }
@@ -160,13 +165,19 @@ public struct CreateFeedView: View {
         }
         
         ToolbarItem(placement: .topBarTrailing) {
-            Text("완료")
-                .applyWSSFont(.title2)
-                .foregroundStyle(viewModel.canSubmit ?
-                                 WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
-                .onTapGesture {
-                    viewModel.handle(.submitFeed)
+            Button {
+                viewModel.handle(.submitFeed)
+            } label: {
+                if viewModel.isSubmitting {
+                    ProgressView()
+                } else {
+                    Text("완료")
+                        .applyWSSFont(.title2)
+                        .foregroundStyle(viewModel.canSubmit ?
+                                         WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
                 }
+            }
+            .disabled(!viewModel.canSubmit)
         }
     }
 

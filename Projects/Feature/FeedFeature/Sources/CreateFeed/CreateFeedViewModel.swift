@@ -42,6 +42,10 @@ public final class CreateFeedViewModel {
         && !(state.submitState == .submitting)
     }
 
+    public var isSubmitting: Bool {
+        state.submitState == .submitting
+    }
+
     // MARK: - Action
 
     enum Action {
