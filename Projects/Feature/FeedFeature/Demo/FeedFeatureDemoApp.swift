@@ -23,7 +23,7 @@ struct FeedFeatureDemoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            FeedDetailDemoScene()
+            FeedFeatureDemoHome()
         }
     }
 }
