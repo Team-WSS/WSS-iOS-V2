@@ -122,12 +122,13 @@ struct FeedDetailView: View {
                 }
                 
                 // 피드 연결 작품
-                if let novel = viewModel.state.detail?.connectedNovel {
+                if let novel = viewModel.state.detail?.connectedNovel,
+                   let genre = novel.basicInfo.genre {
                     FeedDetailLinkNovelBlock(
                         imageURL: novel.thumbnailImageURL,
                         title: novel.basicInfo.title,
                         novelDescription: novel.descirption,
-                        genre: novel.basicInfo.genre,
+                        genre: genre,
                         feedWriteUsername: header.nickname,
                         feedWriteUserRating: novel.feedWriterRating ?? 0,
                         totalRating: novel.basicInfo.rating ?? 0
