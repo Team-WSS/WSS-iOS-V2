@@ -161,8 +161,10 @@ public struct CreateFeedView: View {
     private func createFeedViewToolBarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             WSSImage.icNavigateLeft.swiftUIImage
+                .resizable()
                 .renderingMode(.template)
                 .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                .frame(width: 24, height: 24)
                 .onTapGesture {
                     showDismissAlert = true
                 }

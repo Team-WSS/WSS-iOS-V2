@@ -24,7 +24,7 @@ import Logger
 /// 피드 상세 화면 단독 데모. 진입 시 텍스트필드로 feedID를 입력받아 push.
 struct FeedDetailDemoScene: View {
 
-    @State private var feedIDText: String = "4641"
+    @State private var feedIDText: String = "4897"
     @State private var openedFeedID: Int?
 
     private let currentUserID: Int?

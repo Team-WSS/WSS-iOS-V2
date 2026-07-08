@@ -213,13 +213,10 @@ struct FeedDetailView: View {
                         .id("bottomAnchor")
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                //.navigationBarBackButtonHidden()
+                .navigationBarBackButtonHidden()
                 .padding(.bottom, 50)
                 .onChange(of: isCommentFocused) { _, isFocused in
                     guard isFocused else { return }
-                    // 키보드가 다 올라온 뒤 스크롤해야 밀린 만큼 반영된다.
-                    // 포커스 변경 직후 바로 scrollTo하면 키보드 애니메이션이 끝나기 전 크기 기준으로
-                    // 스크롤돼 최신 댓글까지 못 내려간다.
                     scrollToBottom(proxy, afterMilliseconds: 300)
                 }
                 .onChange(of: viewModel.state.comments.count) { oldCount, newCount in
@@ -349,8 +346,10 @@ struct FeedDetailView: View {
     private func createFeedDetailToolBarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             WSSImage.icNavigateLeft.swiftUIImage
+                .resizable()
                 .renderingMode(.template)
                 .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                .frame(width: 24, height: 24)
                 .onTapGesture {
                     dismiss()
                 }
