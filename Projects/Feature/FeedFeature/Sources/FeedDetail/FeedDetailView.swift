@@ -29,7 +29,11 @@ struct FeedDetailView: View {
     @State private var selectedCommentIsMine: Bool = false
 
     @FocusState private var isCommentFocused: Bool
-    
+
+    // 이미지 확대 뷰
+    @State private var showImageViewer: Bool = false
+    @State private var selectedImageIndex: Int = 0
+
     // 드롭다운 변수
     @State private var showFeedDropdown: Bool = false
     @State private var showCommentDropdown: Bool = false
@@ -120,7 +124,13 @@ struct FeedDetailView: View {
 
                     // 피드 첨부 이미지
                     if !detail.feedImageURLs.isEmpty {
-                        FeedDetailAttachImageBlock(imageURLs: detail.feedImageURLs)
+                        FeedDetailAttachImageBlock(
+                            imageURLs: detail.feedImageURLs,
+                            onImageTapped: { index in
+                                selectedImageIndex = index
+                                showImageViewer = true
+                            }
+                        )
 
                         Spacer().frame(height: 16)
                     }
@@ -332,8 +342,14 @@ struct FeedDetailView: View {
                 }
             ]
         )
+        .fullScreenCover(isPresented: $showImageViewer) {
+            FeedDetailImageViewer(
+                imageURLs: detail.feedImageURLs,
+                initialIndex: selectedImageIndex
+            )
+        }
     }
-    
+
     //MARK: - 툴바 아이템
     
     @ToolbarContentBuilder

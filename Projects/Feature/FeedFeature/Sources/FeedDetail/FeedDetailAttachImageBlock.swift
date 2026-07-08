@@ -11,13 +11,14 @@ import SwiftUI
 import DesignSystem
 
 struct FeedDetailAttachImageBlock: View {
-    
+
     let imageURLs: [URL?]
-    
+    var onImageTapped: (Int) -> Void = { _ in }
+
     var body: some View {
         GeometryReader { geometry in
             let count = imageURLs.count
-            
+
             switch count {
             case 1:
                 WSSColor.wssGray100.swiftUIColor
@@ -27,31 +28,34 @@ struct FeedDetailAttachImageBlock: View {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .padding(.horizontal, 16)
-                
+                    .onTapGesture { onImageTapped(0) }
+
             case 2, 3:
                 HStack(spacing: 7) {
-                    ForEach(imageURLs, id: \.self) { url in
+                    ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
                         WSSColor.wssGray100.swiftUIColor
                             .aspectRatio(1, contentMode: .fit)
                             .overlay {
                                 imageView(url: url)
                             }
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .onTapGesture { onImageTapped(index) }
                     }
                 }
                 .padding(.horizontal, 16)
-                
+
             default:
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        ForEach(imageURLs, id: \.self) { url in
-                            
+                        ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
+
                             WSSColor.wssGray100.swiftUIColor
                                 .aspectRatio(1, contentMode: .fit)
                                 .overlay {
                                     imageView(url: url)
                                 }
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .onTapGesture { onImageTapped(index) }
                         }
                     }
                 }
