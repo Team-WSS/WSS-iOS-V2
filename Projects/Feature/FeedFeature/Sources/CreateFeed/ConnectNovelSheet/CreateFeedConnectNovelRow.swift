@@ -51,16 +51,18 @@ struct CreateFeedConnectNovelRow: View {
             }
             
             Spacer()
-            
-            (isSelected
-             ? WSSImage.icSelectNovelSelected.swiftUIImage
-             : WSSImage.icSelectNovelDefault.swiftUIImage)
+
+            ZStack {
+                WSSImage.icSelectNovelDefault.swiftUIImage
+                    .opacity(isSelected ? 0 : 1)
+                    .scaleEffect(isSelected ? 0.85 : 1)
+
+                WSSImage.icSelectNovelSelected.swiftUIImage
+                    .opacity(isSelected ? 1 : 0)
+                    .scaleEffect(isSelected ? 1 : 0.6)
+            }
             .frame(width: 44, height: 44)
-            .scaleEffect(isSelected ? 1.15 : 1.0)
-            .animation(
-                .spring(response: 0.2, dampingFraction: 0.5),
-                value: isSelected
-            )
+            .animation(.spring(response: 0.32, dampingFraction: 0.6), value: isSelected)
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -70,11 +72,13 @@ struct CreateFeedConnectNovelRow: View {
 }
 
 #Preview {
+    @Previewable @State var isSelected: Bool = false
+    
     CreateFeedConnectNovelRow(
         imageURL: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
         title: "여주인공의 이해를 돕기 위하여",
         author: "이보라",
-        isSelected: true,
-        action: { print("전체 클릭") }
+        isSelected: isSelected,
+        action: { isSelected.toggle() }
     )
 }

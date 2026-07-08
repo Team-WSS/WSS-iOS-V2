@@ -15,7 +15,7 @@ struct FeedDataDemoApp: App {
 
     init() {
         let storage = UserDefaultsStorage()
-        storage.set(.userID, 10033)
+        storage.set(.userID, 10035)
     }
 
     var body: some Scene {

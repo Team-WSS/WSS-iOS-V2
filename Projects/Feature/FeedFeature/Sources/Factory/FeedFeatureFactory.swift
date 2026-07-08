@@ -34,6 +34,25 @@ public enum FeedFeatureFactory {
         )
     }
 
+    /// 기존 피드를 수정하는 CreateFeedView를 생성한다.
+    /// `initialDraft`에 기존 피드 내용을 채워 prefill한다.
+    @MainActor
+    public static func makeEditFeedView(
+        feedID: FeedID,
+        initialDraft: FeedDraft,
+        editFeedUseCase: EditFeedUseCase,
+        searchNovelUseCase: SearchNovelUseCase
+    ) -> CreateFeedView {
+        CreateFeedView(
+            viewModel: CreateFeedViewModel(
+                mode: .edit(feedID),
+                editFeedUseCase: editFeedUseCase,
+                searchNovelUseCase: searchNovelUseCase,
+                initialDraft: initialDraft
+            )
+        )
+    }
+
     /// 네트워크 없이 ViewModel/View 동작만 확인하기 위한 임시 진입점.
     /// 제출 시 1초 후 성공으로 처리한다.
     @MainActor
@@ -85,6 +104,24 @@ public enum FeedFeatureFactory {
         )
     }
 
+    /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
+    @MainActor
+    public static func makeSosoFeedView(
+        loadMyFeedsUseCase: LoadMyFeedsUseCase,
+        loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
+        feedLikeUseCase: FeedLikeUseCase,
+        loadProfileUseCase: LoadProfileUseCase
+    ) -> some View {
+        SosoFeedView(
+            viewModel: SosoFeedViewModel(
+                loadMyFeedsUseCase: loadMyFeedsUseCase,
+                loadsosoFeedsUseCase: loadSosoFeedsUseCase,
+                feedLikeUseCase: feedLikeUseCase,
+                loadProfileUseCase: loadProfileUseCase
+            )
+        )
+    }
+
     private static func emptyDraft() -> FeedDraft {
         FeedDraft(
             content: "",
@@ -106,7 +143,7 @@ private struct StubSearchNovelUseCase: SearchNovelUseCase {
     func searchByText(_ query: String) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
-    
+
     func searchByFilter(_ filter: NovelDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: [], hasNext: false), 0)
     }

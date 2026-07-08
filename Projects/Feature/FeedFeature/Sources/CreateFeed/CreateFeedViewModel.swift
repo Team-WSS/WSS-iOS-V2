@@ -16,6 +16,12 @@ import NovelDomain
 @Observable
 public final class CreateFeedViewModel {
 
+    /// 작성/수정 모드. 수정이면 대상 피드의 `FeedID`를 들고 있다.
+    public enum Mode {
+        case create
+        case edit(FeedID)
+    }
+
     // MARK: - State
 
     public struct State {
@@ -44,6 +50,12 @@ public final class CreateFeedViewModel {
 
     public var isSubmitting: Bool {
         state.submitState == .submitting
+    }
+
+    /// 수정 모드 여부. View에서 타이틀/버튼 라벨 분기에 사용.
+    public var isEditing: Bool {
+        if case .edit = mode { return true }
+        return false
     }
 
     // MARK: - Action
@@ -79,17 +91,23 @@ public final class CreateFeedViewModel {
 
     // MARK: - Dependency
 
-    private let createFeedUseCase: CreateFeedUseCase
+    private let mode: Mode
+    private let createFeedUseCase: CreateFeedUseCase?
+    private let editFeedUseCase: EditFeedUseCase?
     private let searchNovelUseCase: SearchNovelUseCase
 
     // MARK: - Init
 
     public init(
-        createFeedUseCase: CreateFeedUseCase,
+        mode: Mode = .create,
+        createFeedUseCase: CreateFeedUseCase? = nil,
+        editFeedUseCase: EditFeedUseCase? = nil,
         searchNovelUseCase: SearchNovelUseCase,
         initialDraft: FeedDraft
     ) {
+        self.mode = mode
         self.createFeedUseCase = createFeedUseCase
+        self.editFeedUseCase = editFeedUseCase
         self.searchNovelUseCase = searchNovelUseCase
         self.state = State(draft: initialDraft)
     }
@@ -192,7 +210,14 @@ private extension CreateFeedViewModel {
         let imageDatas = draft.attachedImages.compactMap { state.attachedImageDatas[$0] }
 
         do {
-            try await createFeedUseCase.execute(draft, imageDatas: imageDatas)
+            switch mode {
+            case .create:
+                guard let createFeedUseCase else { return }
+                try await createFeedUseCase.execute(draft, imageDatas: imageDatas)
+            case .edit(let feedID):
+                guard let editFeedUseCase else { return }
+                try await editFeedUseCase.execute(feedID: feedID, editedFeed: draft, imageDatas: imageDatas)
+            }
             state.submitState = .submitted
         } catch let error {
             state.submitState = .failed(error)

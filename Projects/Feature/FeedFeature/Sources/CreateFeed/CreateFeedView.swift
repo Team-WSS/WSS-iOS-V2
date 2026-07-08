@@ -388,6 +388,7 @@ public struct CreateFeedView: View {
             .background(WSSColor.wssGray50.swiftUIColor)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture {
+                //TODO: - ViewModel로 로직빼기 + 알럿 띄우는 bool변수도 viewModel에 포함될 수 있도록 한다.
                 if viewModel.state.draft.connectedNovel == nil {
                     showLinkNovelSheet.toggle()
                 } else {

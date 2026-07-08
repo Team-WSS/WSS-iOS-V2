@@ -2,7 +2,7 @@
 //  CreateFeedDemoScene.swift
 //  FeedFeatureDemo
 //
-//  Created by Seoyeon Choi on 6/4/26.
+//  Created by Seoyeon Choi on 6/21/26.
 //
 
 import SwiftUI
@@ -10,10 +10,11 @@ import SwiftUI
 import FeedFeature
 import FeedDomain
 import NovelDomain
-import BaseData
+import BaseDomain
 
 import FeedData
 import NovelData
+import BaseData
 
 import Networking
 import Logger
@@ -45,9 +46,11 @@ struct CreateFeedDemoScene: View {
     }
 
     var body: some View {
-        FeedFeatureFactory.makeCreateFeedView(
-            createFeedUseCase: createFeedUseCase,
-            searchNovelUseCase: searchNovelUseCase
-        )
+        NavigationStack {
+            FeedFeatureFactory.makeCreateFeedView(
+                createFeedUseCase: createFeedUseCase,
+                searchNovelUseCase: searchNovelUseCase
+            )
+        }
     }
 }
