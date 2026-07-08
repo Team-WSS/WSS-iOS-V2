@@ -304,7 +304,6 @@ private extension DefaultFeedRepositoryTests {
             createdDate: "2026-04-23",
             isSpoiler: false,
             isModified: false,
-            likerUsers: [],
             isLiked: false,
             likeCount: 0,
             commentCount: 0,
