@@ -22,3 +22,5 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 - `KeywordCache`는 **파일 기반**(캐시 디렉토리의 `keywords.json` JSON). "로컬 DB"라 부르지만 실제론 파일 캐시. 실패는 `CacheError`.
 - 키워드는 `syncKeywords()`로 서버→파일 동기화 후, 다른 도메인이 캐시에서 읽어 주입받는 구조.
 - `StorageKey` 추가 시 타입(`V`)을 정확히 — `UserDefaultsStorage`는 `as? V` 캐스팅이라 타입 불일치는 조용히 nil.
+- `BucketImageURL.make(path:)`(서버 이미지 path → 버킷 풀 URL, 디스플레이 스케일 포함)는 앱 시작 시 `@MainActor`에서 `BucketImageURL.configure()`를 한 번 호출해야 정확한 스케일을 쓴다. 호출 안 해도 크래시는 안 나고 조용히 3(@3x) 폴백이라, 다른 스케일 기기에서 미묘하게 낮은/높은 해상도 이미지가 나가도 눈치채기 어렵다.
+- **`avatarImage`/`characterImage`류 필드가 완성된 URL인지 버킷 상대 path인지는 API마다 다르다** — 그냥 `URL(string:)`을 쓰면 순수 path일 때 스킴/호스트가 없어 "unsupported URL"로 로드가 조용히 실패하고, 반대로 이미 완성된 URL에 `BucketImageURL.make(path:)`를 쓰면 호스트가 중복 붙어 깨진다. 어느 쪽이든 실제 서버 응답을 보고 판단할 것(ProfileData의 아바타/캐릭터 이미지는 path, 기존 FeedData의 avatarImage는 완성된 URL로 확인됨).
