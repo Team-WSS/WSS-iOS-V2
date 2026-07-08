@@ -253,6 +253,7 @@ struct FeedDetailView: View {
                         }
                     }
                 },
+                isSubmitting: viewModel.state.isSubmittingComment,
                 externalFocus: $isCommentFocused
             )
         }

@@ -27,6 +27,7 @@ public final class FeedDetailViewModel {
         var isLoading: Bool
         var commentText: String
         var editingCommentID: CommentID?
+        var isSubmittingComment: Bool = false
         var didDeleteFeed: Bool = false
         var alert: AlertType?
     }
@@ -152,11 +153,13 @@ public final class FeedDetailViewModel {
 
         case .submitComment:
             guard !state.commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+            state.isSubmittingComment = true
             if let editingID = state.editingCommentID {
                 await editComment(commentID: editingID)
             } else {
                 await createComment()
             }
+            state.isSubmittingComment = false
             state.editingCommentID = nil
             state.commentText = ""
             Task { await loadComments() }

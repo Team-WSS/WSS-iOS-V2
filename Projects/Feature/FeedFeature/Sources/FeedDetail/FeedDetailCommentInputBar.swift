@@ -14,6 +14,7 @@ struct FeedDetailCommentInputBar: View {
 
     @Binding var text: String
     let sendAction: () -> Void
+    var isSubmitting: Bool = false
     var externalFocus: FocusState<Bool>.Binding? = nil
 
     @FocusState private var internalFocus: Bool
@@ -63,13 +64,18 @@ struct FeedDetailCommentInputBar: View {
             Button {
                 sendAction()
             } label: {
-                WSSImage.icCommentRegister.swiftUIImage
-                    .renderingMode(.template)
-                    .foregroundStyle(text.isEmpty ? WSSColor.wssGray100.swiftUIColor : WSSColor.wssPrimary100.swiftUIColor)
-                    .frame(width: 42, height: 42)
+                if isSubmitting {
+                    ProgressView()
+                        .frame(width: 42, height: 42)
+                } else {
+                    WSSImage.icCommentRegister.swiftUIImage
+                        .renderingMode(.template)
+                        .foregroundStyle(text.isEmpty ? WSSColor.wssGray100.swiftUIColor : WSSColor.wssPrimary100.swiftUIColor)
+                        .frame(width: 42, height: 42)
+                }
             }
             .buttonStyle(.plain)
-            .disabled(text.isEmpty)
+            .disabled(text.isEmpty || isSubmitting)
         }
         .padding(.leading, 20)
         .padding(.trailing, 7)
