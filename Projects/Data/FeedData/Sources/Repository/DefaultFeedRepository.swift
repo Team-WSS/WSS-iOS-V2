@@ -113,10 +113,9 @@ public struct DefaultFeedRepository: FeedRepository {
     public func fetchSosoFeeds(option: SosoFeedOption, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchSosoFeeds
         let query = GetSosoFeedsQuery(
-            category: nil,
             lastFeedId: lastFeedID.value,
             size: pageSize,
-            option: option.rawValue
+            feedsOption: option.rawValue
         )
         do {
             let response = try await service.getSosoFeeds(query: query)

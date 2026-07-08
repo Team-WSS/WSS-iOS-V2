@@ -68,10 +68,10 @@ enum FeedEndpoint: Endpoint {
 
     var query: QueryParameters {
         switch self {
-        case .getSosoFeeds(let query): return .convertible(query)
-        case .getUserFeeds(_, let query): return .convertible(query)
-        case .getMyFeeds(_, let query): return .convertible(query)
-        case .getNovelFeeds(_, let query): return .convertible(query)
+        case .getSosoFeeds(let query):      return .convertible(query)
+        case .getUserFeeds(_, let query):   return .convertible(query)
+        case .getMyFeeds(_, let query):     return .convertible(query)
+        case .getNovelFeeds(_, let query):  return .convertible(query)
         default: return .none
         }
     }
