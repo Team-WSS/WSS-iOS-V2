@@ -56,8 +56,7 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
-        reportImproperCommentUseCase: ReportImproperCommentUseCase,
-        onEditFeed: @escaping (FeedID, FeedDraft) -> Void = { _, _ in }
+        reportImproperCommentUseCase: ReportImproperCommentUseCase
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
@@ -74,8 +73,7 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                 reportImproperCommentUseCase: reportImproperCommentUseCase
-            ),
-            onEditFeed: onEditFeed
+            )
         )
     }
 

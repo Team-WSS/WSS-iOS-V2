@@ -42,17 +42,6 @@ public final class FeedDetailViewModel {
         return currentUserID == authorID
     }
 
-    public var editingDraft: FeedDraft? {
-        guard let detail = state.detail else { return nil }
-        return FeedDraft(
-            content: detail.feedContent,
-            isSpoiler: detail.isSpoiler,
-            isPrivate: !detail.isPublic,
-            connectedNovel: detail.connectedNovel?.basicInfo,
-            attachedImages: []
-        )
-    }
-    
     public enum AlertType: Equatable {
         case reportSpoiler(commentID: CommentID?)
         case reportImproper(commentID: CommentID?)

@@ -21,10 +21,6 @@ struct FeedDetailView: View {
 
     @State private var viewModel: FeedDetailViewModel
 
-    /// 피드 수정 진입 콜백. 대상 피드 ID와 prefill용 Draft를 전달한다.
-    /// 목적지(CreateFeed 수정 화면 등)는 상위 조정 계층이 결정한다.
-    private let onEditFeed: (FeedID, FeedDraft) -> Void
-
     @State private var selectedCommentID: CommentID? = nil
     @State private var selectedCommentIsMine: Bool = false
 
@@ -46,12 +42,8 @@ struct FeedDetailView: View {
     @State private var showDeleteCommentAlert: Bool = false
     @State private var showDeleteFeedAlert: Bool = false
     
-    init(
-        viewModel: FeedDetailViewModel,
-        onEditFeed: @escaping (FeedID, FeedDraft) -> Void = { _, _ in }
-    ) {
+    init(viewModel: FeedDetailViewModel) {
         self._viewModel = State(initialValue: viewModel)
-        self.onEditFeed = onEditFeed
     }
     
     var body: some View {
@@ -384,11 +376,9 @@ struct FeedDetailView: View {
                     title: "수정",
                     action: {
                         showFeedDropdown = false
-                        if let feedID = viewModel.state.detail?.id,
-                           let draft = viewModel.editingDraft {
-                            onEditFeed(feedID, draft)
-                        }
-                    }
+                        // TODO: - CreateFeedView 연결
+                    },
+                    textColor: WSSColor.wssBlack.swiftUIColor
                 ),
                 WSSDropdownItem(
                     title: "삭제",

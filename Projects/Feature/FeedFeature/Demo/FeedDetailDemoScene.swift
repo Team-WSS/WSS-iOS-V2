@@ -22,7 +22,6 @@ import Networking
 import Logger
 
 /// 피드 상세 화면 단독 데모. 진입 시 텍스트필드로 feedID를 입력받아 push.
-/// 수정 진입(onEditFeed)은 #150에서 구현하는 EditFeedView 완성 전까지는 연결하지 않는다.
 struct FeedDetailDemoScene: View {
 
     @State private var feedIDText: String = "4641"
