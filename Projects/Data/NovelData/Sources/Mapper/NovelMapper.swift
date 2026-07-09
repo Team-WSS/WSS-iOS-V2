@@ -326,9 +326,11 @@ extension NovelMapper {
     }
     
     private static func mapKeywords(from dtos: [NovelKeywordResponse],
-                                    cachedKeywords: [Keyword]) -> [Keyword] {
+                                    cachedKeywords: [Keyword]) -> [NovelKeyword] {
         dtos.compactMap { dto in
-            cachedKeywords.first { $0.name == dto.keywordName }
+            cachedKeywords
+                .first { $0.name == dto.keywordName }
+                .map { NovelKeyword(keyword: $0, count: dto.keywordCount) }
         }
     }
     

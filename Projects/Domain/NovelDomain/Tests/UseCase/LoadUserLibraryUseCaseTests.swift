@@ -25,7 +25,7 @@ struct LoadUserLibraryUseCaseTests {
         let usecase = DefaultLoadUserLibraryUseCase(novelRepository: mock)
         let userID = UserID(1003)
 
-        let result = try await usecase.execute(id: userID)
+        let result = try await usecase.execute(id: userID, makeFilter())
 
         #expect(result.0.items.count == expected.items.count)
         #expect(result.0.hasNext == expected.hasNext)
@@ -39,7 +39,7 @@ struct LoadUserLibraryUseCaseTests {
         mock.fetchUserLibraryResult = .success((makeLibraryPage(), 15))
 
         let usecase = DefaultLoadUserLibraryUseCase(novelRepository: mock)
-        let result = try await usecase.execute(id: UserID(1003))
+        let result = try await usecase.execute(id: UserID(1003), makeFilter())
 
         #expect(result.1 == 15)
     }
@@ -52,13 +52,17 @@ struct LoadUserLibraryUseCaseTests {
         let usecase = DefaultLoadUserLibraryUseCase(novelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute(id: UserID(1))
+            try await usecase.execute(id: UserID(1), makeFilter())
         }
     }
 }
 
 extension LoadUserLibraryUseCaseTests {
-    
+
+    private func makeFilter() -> LibraryFilter {
+        LibraryFilter(sortType: .recent)
+    }
+
     private func makeLibraryPage() -> Paginated<LibraryNovel> {
         Paginated(
             items: [

@@ -23,20 +23,23 @@ public final class MockNovelRepository: NovelRepository {
     public var fetchRegisteredNovelStatsResult: Result<RegisteredNovelStats, RepositoryError>!
 
     public private(set) var fetchedNovelIDs: [NovelID] = []
+    public private(set) var lastCachedKeywords: [Keyword]?
     public private(set) var addedInterestIDs: [NovelID] = []
     public private(set) var removedInterestIDs: [NovelID] = []
     public private(set) var searchByTextCallCount = 0
     public private(set) var lastSearchQuery: String?
     public private(set) var searchByFilterCallCount = 0
     public private(set) var lastSearchFilter: SearchFilter?
-    public private(set) var fetchedMyLibraryFilters: [LibraryFilter] = []
+    public private(set) var fetchedMyLibraryFilters: [MyLibraryFilter] = []
     public private(set) var fetchedUserLibraryIDs: [UserID] = []
+    public private(set) var fetchedUserLibraryFilters: [LibraryFilter] = []
     public private(set) var fetchRegisteredNovelStatsCallCount = 0
 
     public init() {}
 
-    public func fetchNovel(id: NovelID) async throws(RepositoryError) -> NovelInformation {
+    public func fetchNovel(id: NovelID, cachedKeywords: [Keyword]) async throws(RepositoryError) -> NovelInformation {
         fetchedNovelIDs.append(id)
+        lastCachedKeywords = cachedKeywords
         return try fetchNovelResult.get()
     }
 
@@ -62,13 +65,14 @@ public final class MockNovelRepository: NovelRepository {
         return try searchByFilterResult.get()
     }
 
-    public func fetchMyLibraryNovels(_ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
+    public func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         fetchedMyLibraryFilters.append(filter)
         return try fetchMyLibraryResult.get()
     }
 
-    public func fetchUserLibraryNovels(id: UserID) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
+    public func fetchUserLibraryNovels(id: UserID, _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         fetchedUserLibraryIDs.append(id)
+        fetchedUserLibraryFilters.append(filter)
         return try fetchUserLibraryResult.get()
     }
 

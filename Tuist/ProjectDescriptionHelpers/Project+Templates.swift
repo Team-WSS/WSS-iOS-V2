@@ -154,7 +154,8 @@ extension Project {
         name: String,
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
-        externalDependencies: [TargetDependency] = []
+        externalDependencies: [TargetDependency] = [],
+        testDependencies: [TargetDependency] = []
     ) -> Project {
 
         let allTargets = makeBaseTargets(
@@ -166,7 +167,7 @@ extension Project {
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
             demoDependencies: [],
-            testDependencies: [],
+            testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.domain.infoPlist
         )

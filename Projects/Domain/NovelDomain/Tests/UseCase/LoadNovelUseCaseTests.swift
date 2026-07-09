@@ -11,6 +11,7 @@ import Testing
 @testable import NovelDomain
 import NovelDomainTesting
 import BaseDomain
+import BaseDomainTesting
 
 @Suite
 struct LoadNovelUseCaseTests {
@@ -21,7 +22,10 @@ struct LoadNovelUseCaseTests {
         let expected = makeNovelInformation()
         mock.fetchNovelResult = .success(expected)
 
-        let usecase = DefaultLoadNovelUseCase(novelRepository: mock)
+        let usecase = DefaultLoadNovelUseCase(
+            novelRepository: mock,
+            keywordRepository: MockKeywordRepository()
+        )
         let novelID = NovelID(1)
 
         let result = try await usecase.execute(id: novelID)
@@ -37,7 +41,10 @@ struct LoadNovelUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchNovelResult = .failure(RepositoryError.unknown)
 
-        let usecase = DefaultLoadNovelUseCase(novelRepository: mock)
+        let usecase = DefaultLoadNovelUseCase(
+            novelRepository: mock,
+            keywordRepository: MockKeywordRepository()
+        )
 
         await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute(id: NovelID(1))
@@ -52,7 +59,8 @@ extension LoadNovelUseCaseTests {
             id: NovelID(1),
             thumbnailImage: nil,
             title: "전지적 독자 시점",
-            author: ["싱숑"],
+            authors: ["싱숑"],
+            genres: [.BL],
             interestCount: 100,
             rating: 4.5,
             ratingCount: 50,
@@ -64,13 +72,13 @@ extension LoadNovelUseCaseTests {
         NovelInformation(
             novel: makeNovel(),
             feedCount: 4,
-            genre: .BL,
+            genres: [.BL],
             publicationStatus: .completed,
             userReview: nil,
             description: "재밌는 소설입니다.",
             platforms: [],
             attractivePoints: [.worldview, .character],
-            keywords: [Keyword(id: KeywordID(1), name: "이세계")],
+            keywords: [NovelKeyword(keyword: Keyword(id: KeywordID(1), name: "이세계"), count: 3)],
             readingStatusCount: [.watching: 10, .watched: 30]
         )
     }
