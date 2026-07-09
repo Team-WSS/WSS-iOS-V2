@@ -16,4 +16,6 @@
 
 - ⚠️ 색상/이미지 접근자는 **Tuist 리소스 합성으로 생성**된다(`DesignSystemAsset`). 에셋 추가 후 `tuist generate` 안 하면 접근자가 없어 빌드 실패.
 - 새 색은 `.xcassets`에 추가 + `WSSColor.swift`의 `Color` extension에 토큰 추가, 두 곳 모두 갱신.
+- **아이콘 SVG는 원색 고정**(예: `icNavigateLeft`/`icThreedots`는 연회색 #C7C7D0) — 다른 색이 필요하면 호출부에서 `renderingMode(.template)` + `foregroundStyle`로 입힌다. 밝은 배경 위에 원색 그대로 쓰면 안 보일 수 있다.
+- Figma에서 노드 SVG를 export하면 **부모 프레임 배경 rect가 딸려 온다** — xcassets에 넣기 전에 아이콘 path만 남기고 제거할 것(#154 에셋 추가에서 겪음).
 - 폰트는 raw `.font()` 대신 반드시 `applyWSSFont` 사용 (lineHeight/자간까지 일관 적용).

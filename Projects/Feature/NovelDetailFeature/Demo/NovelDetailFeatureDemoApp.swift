@@ -91,7 +91,8 @@ private struct DemoRootView: View {
                 novelInterestUseCase: DemoNovelInterestUseCase(),
                 loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(),
                 logger: consoleLogger,
-                onReviewTapped: handleReviewTapped
+                onReviewTapped: handleReviewTapped,
+                onCreateFeedTapped: handleCreateFeedTapped
             )
         case .live:
             makeLiveView()
@@ -130,13 +131,19 @@ private struct DemoRootView: View {
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),
             logger: consoleLogger,
-            onReviewTapped: handleReviewTapped
+            onReviewTapped: handleReviewTapped,
+            onCreateFeedTapped: handleCreateFeedTapped
         )
     }
 
     /// 작품 평가 진입 콜백. 실제 앱은 App 조정 계층이 NovelReviewFactory로 전환한다 — Demo는 로그만.
-    private func handleReviewTapped(_ information: NovelInformation) {
-        consoleLogger.info("작품 평가 진입 요청: \(information.novel.title)")
+    private func handleReviewTapped(_ information: NovelInformation, _ status: ReadingStatus) {
+        consoleLogger.info("작품 평가 진입 요청: \(information.novel.title) / seed 상태: \(status)")
+    }
+
+    /// 피드 작성 진입 콜백. 실제 앱은 App 조정 계층이 CreateFeed로 전환한다 — Demo는 로그만.
+    private func handleCreateFeedTapped() {
+        consoleLogger.info("피드 작성 진입 요청")
     }
 }
 
@@ -149,24 +156,43 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
         return NovelInformation(
             novel: Novel(
                 id: id,
-                thumbnailImage: nil,
+                thumbnailImage: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
                 title: "당신의 이해를 돕기 위하여",
                 authors: ["이보라"],
-                genres: [.romanceFantasy],
+                genres: [.romanceFantasy, .romance],
                 interestCount: 128,
                 rating: 4.4,
                 ratingCount: 52,
                 isInterested: false
             ),
             feedCount: 3,
-            genres: [.romanceFantasy],
-            publicationStatus: .onGoing,
-            userReview: nil,
-            description: "이해할 수 없는 세계에서, 이해받고 싶은 마음들이 만난다. 소소한 독자들이 사랑한 로맨스 판타지.",
-            platforms: [],
-            attractivePoints: [.character, .vibe],
-            keywords: [],
-            readingStatusCount: [.watching: 12, .watched: 40, .quit: 3]
+            genres: [.romanceFantasy, .romance],
+            publicationStatus: .completed,
+            userReview: UserNovelReview(
+                readingStatus: .watching,
+                rating: try? Rating(4.0),
+                attractivePoint: [.character, .vibe],
+                period: try? ReadingPeriod(start: Date(timeIntervalSinceNow: -86_400 * 300), end: nil),
+                keywords: []
+            ),
+            description: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기.",
+            platforms: [
+                URL(string: "https://novel.naver.com").map {
+                    NovelPlatform(name: "네이버시리즈", image: nil, url: $0)
+                },
+                URL(string: "https://page.kakao.com").map {
+                    NovelPlatform(name: "카카오페이지", image: nil, url: $0)
+                }
+            ].compactMap { $0 },
+            attractivePoints: [.character, .relationship, .writingSkill],
+            keywords: [
+                NovelKeyword(keyword: Keyword(id: KeywordID(1), name: "피폐"), count: 7),
+                NovelKeyword(keyword: Keyword(id: KeywordID(2), name: "정치물"), count: 5),
+                NovelKeyword(keyword: Keyword(id: KeywordID(3), name: "궁중암투"), count: 3),
+                NovelKeyword(keyword: Keyword(id: KeywordID(4), name: "빙의"), count: 2),
+                NovelKeyword(keyword: Keyword(id: KeywordID(5), name: "후회"), count: 2)
+            ],
+            readingStatusCount: [.watching: 130, .watched: 10, .quit: 100]
         )
     }
 }
