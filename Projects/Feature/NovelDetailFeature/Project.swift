@@ -14,9 +14,11 @@ let project = Project.createFeatureModule(
     name: ModuleType.feature(.novelDetail).name,
     targets: [.sources, .demo, .tests],
     // 전용 NovelDetailDomain은 없다 — 소설 상세는 NovelDomain의 UseCase를 쓴다(#154).
+    // 피드 탭이 이슈 범위에 포함되어 FeedDomain(LoadNovelFeedsUseCase)도 의존한다.
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.novel)),
+        .module(.domain(.feed)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -25,6 +27,7 @@ let project = Project.createFeatureModule(
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
         .module(.data(.novel)),
+        .module(.data(.feed)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]
