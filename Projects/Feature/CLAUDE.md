@@ -77,4 +77,4 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum에 선언만 있고 디스크 폴더가 없는 case(`home`, `feed`)는 아직 미구현. 실제 모듈은 `NovelReviewFeature`뿐.
+- `ModuleType.feature` enum에 선언만 있고 디스크 폴더가 없는 case(`home`)는 아직 미구현. 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`.
