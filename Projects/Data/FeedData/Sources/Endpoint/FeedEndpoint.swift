@@ -18,7 +18,7 @@ enum FeedEndpoint: Endpoint {
     case getSosoFeeds(query: GetSosoFeedsQuery)
     case getUserFeeds(userID: Int, query: GetUserFeedsQuery)
     case getMyFeeds(userID: Int, query: GetUserFeedsQuery)
-    case getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int)
+    case getNovelFeeds(novelID: Int, query: GetNovelFeedsQuery)
     case postLike(feedID: Int)
     case deleteLike(feedID: Int)
 
@@ -57,7 +57,7 @@ enum FeedEndpoint: Endpoint {
             return "/users/\(userID)/feeds"
         case .getMyFeeds(let userID, _):
             return "/users/\(userID)/feeds"
-        case .getNovelFeeds(let novelID, _, _):
+        case .getNovelFeeds(let novelID, _):
             return "/novels/\(novelID)/feeds"
         case .postLike(let feedID):
             return "/feeds/\(feedID)/likes"
@@ -71,6 +71,7 @@ enum FeedEndpoint: Endpoint {
         case .getSosoFeeds(let query): return .convertible(query)
         case .getUserFeeds(_, let query): return .convertible(query)
         case .getMyFeeds(_, let query): return .convertible(query)
+        case .getNovelFeeds(_, let query): return .convertible(query)
         default: return .none
         }
     }

@@ -13,4 +13,5 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- 목록 커서가 `lastFeedID` — 쿼리 DTO(`GetSosoFeedsQuery`/`GetUserFeedsQuery`)에서 매핑 규약 확인.
+- 목록 커서가 `lastFeedID` — 쿼리 DTO(`GetSosoFeedsQuery`/`GetUserFeedsQuery`)에서 매핑 규약 확인. 첫 페이지는 커서 0.
+- `FeedEndpoint.query`가 `switch ... default: .none` 구조라, **목록 케이스를 새로 추가할 때 query 분기를 빼먹으면 파라미터가 조용히 유실**된다(에러 없이 빈 쿼리로 요청됨). 실제로 `getNovelFeeds`가 커서/size를 안 보내던 버그가 있었다(#154에서 수정) — raw 값 대신 query DTO를 case에 싣는 패턴을 유지할 것.

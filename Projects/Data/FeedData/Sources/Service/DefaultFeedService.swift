@@ -62,7 +62,8 @@ struct DefaultFeedService: FeedService {
     }
 
     func getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int) async throws -> NovelFeedListResponse {
-        let endpoint = FeedEndpoint.getNovelFeeds(novelID: novelID, lastFeedID: lastFeedID, size: size)
+        let query = GetNovelFeedsQuery(lastFeedId: lastFeedID, size: size)
+        let endpoint = FeedEndpoint.getNovelFeeds(novelID: novelID, query: query)
         return try await client.request(endpoint, decodeTo: NovelFeedListResponse.self)
     }
 
