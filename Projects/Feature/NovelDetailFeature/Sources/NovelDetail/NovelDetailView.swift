@@ -9,8 +9,8 @@
 import SwiftUI
 
 import BaseDomain
-import NovelDomain
 import FeedDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 
@@ -45,8 +45,13 @@ struct NovelDetailView: View {
             .toolbar(.hidden, for: .navigationBar)
             .onAppear { viewModel.handle(.load) }
             .showWSSToast(isPresented: toastBinding, type: toastType)
+            .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
+                if shouldDismiss { dismiss() }
+            }
     }
 
+    // 루트는 ZStack으로 고정 — 로딩/성공/실패가 분기돼도 루트 정체성이 유지돼
+    // pop 애니메이션과 로드 완료가 겹칠 때의 전환 경합을 피한다(NovelReview 교훈).
     private var content: some View {
         ZStack(alignment: .top) {
             Color.wssWhite.ignoresSafeArea()
@@ -57,9 +62,8 @@ struct NovelDetailView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // 로드 실패 빈 상태(전용 디자인 미확정 — 문구만 배치).
-                NovelDetailEmptyView(message: "작품 정보를 불러오지 못했어요")
-                    .frame(maxHeight: .infinity)
+                // 로드 실패 — 공용 실패 뷰 재사용. 재시도 버튼이 load를 다시 발화한다(실패는 가드를 소진하지 않음).
+                NetworkErrorView { viewModel.handle(.load) }
             }
 
             navigationBar
@@ -96,6 +100,7 @@ struct NovelDetailView: View {
                         NovelDetailFeedTab(
                             feeds: viewModel.state.feeds,
                             isLoading: viewModel.state.isLoadingFeeds,
+                            hasLoadFailed: viewModel.state.feedsLoadFailed,
                             onReachEnd: { viewModel.handle(.loadMoreFeeds) }
                         )
                     }
@@ -108,15 +113,19 @@ struct NovelDetailView: View {
             }
         }
     }
+}
 
-    // MARK: - Navigation (커스텀 고정 영역)
+// MARK: - Sections
+
+private extension NovelDetailView {
 
     /// 뒤로가기 + 더보기(threedots). 몰입형 헤더 위에 떠 있는 고정 영역이라 시스템 툴바 대신 직접 그린다.
-    private var navigationBar: some View {
+    var navigationBar: some View {
         HStack(spacing: 0) {
             // 에셋 원색(wssGray100)은 밝은 헤더 배경에서 안 보여 template으로 진한 색을 입힌다.
+            // contentShape는 라벨 내부에 둬야 투명 여백까지 탭이 먹는다(레퍼런스 배치).
             Button {
-                dismiss()
+                viewModel.handle(.requestClose)
             } label: {
                 WSSImage.icNavigateLeft.swiftUIImage
                     .renderingMode(.template)
@@ -124,9 +133,9 @@ struct NovelDetailView: View {
                     .frame(width: 24, height: 24)
                     .foregroundStyle(Color.wssBlack)
                     .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
 
             Spacer()
 
@@ -139,16 +148,16 @@ struct NovelDetailView: View {
                     .frame(width: 18, height: 18)
                     .foregroundStyle(Color.wssBlack)
                     .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
         }
         .padding(.leading, 6)
         .padding(.trailing, 12)
     }
 
     /// threedots 드롭다운(오류 제보 / 평가 삭제). 실제 동작은 이번 범위 밖(TODO — #154 이후 이슈).
-    private var menuOverlay: some View {
+    var menuOverlay: some View {
         ZStack(alignment: .topTrailing) {
             // 바깥 탭으로 닫기 위한 투명 레이어.
             Color.wssBlack.opacity(0.001)
@@ -165,9 +174,7 @@ struct NovelDetailView: View {
         }
     }
 
-    // MARK: - Tab
-
-    private var tabBar: some View {
+    var tabBar: some View {
         HStack(spacing: 0) {
             ForEach(NovelDetailViewModel.Tab.allCases, id: \.self) { tab in
                 tabItem(tab)
@@ -176,7 +183,7 @@ struct NovelDetailView: View {
         .background(Color.wssWhite)
     }
 
-    private func tabItem(_ tab: NovelDetailViewModel.Tab) -> some View {
+    func tabItem(_ tab: NovelDetailViewModel.Tab) -> some View {
         let isSelected = viewModel.state.selectedTab == tab
         return Button {
             viewModel.handle(.selectTab(tab))
@@ -187,26 +194,20 @@ struct NovelDetailView: View {
                     .applyWSSFont(.title2)
                     .foregroundStyle(isSelected ? Color.wssBlack : Color.wssGray200)
                 Spacer().frame(height: 15)
+                // 밑줄 두께(선택 2/비선택 1)가 달라도 항목 높이가 같도록 2pt 슬롯에 bottom 정렬.
                 Rectangle()
                     .fill(isSelected ? Color.wssBlack : Color.wssGray70)
                     .frame(height: isSelected ? 2 : 1)
+                    .frame(height: 2, alignment: .bottom)
             }
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
-    private func tabTitle(_ tab: NovelDetailViewModel.Tab) -> String {
-        switch tab {
-        case .info: "정보"
-        case .feed: "피드"
-        }
-    }
-
-    // MARK: - Floating Write Button (피드 탭 전용)
-
-    private var floatingWriteButton: some View {
+    /// 피드 탭 전용 플로팅 작성 버튼.
+    var floatingWriteButton: some View {
         Button {
             onCreateFeedTapped()
         } label: {
@@ -234,6 +235,13 @@ struct NovelDetailView: View {
 // MARK: - Presentation
 
 private extension NovelDetailView {
+
+    func tabTitle(_ tab: NovelDetailViewModel.Tab) -> String {
+        switch tab {
+        case .info: "정보"
+        case .feed: "피드"
+        }
+    }
 
     var toastBinding: Binding<Bool> {
         Binding(

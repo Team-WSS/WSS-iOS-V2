@@ -18,6 +18,8 @@ struct NovelDetailFeedTab: View {
 
     let feeds: [TotalFeed]
     let isLoading: Bool
+    /// 첫 페이지 로드 실패 — "진짜 빈 목록"과 구분해 거짓 빈 상태를 보여주지 않기 위한 값.
+    let hasLoadFailed: Bool
     let onReachEnd: () -> Void
 
     var body: some View {
@@ -29,7 +31,12 @@ struct NovelDetailFeedTab: View {
             } else {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 70)
-                    NovelDetailEmptyView(message: "아직 글이 없어요\n최초로 남겨보세요!")
+                    // 재시도는 피드 탭 재탭 시 VM이 다시 첫 페이지를 요청한다.
+                    NovelDetailEmptyView(
+                        message: hasLoadFailed
+                            ? "피드를 불러오지 못했어요"
+                            : "아직 글이 없어요\n최초로 남겨보세요!"
+                    )
                     Spacer().frame(height: 70)
                 }
             }
@@ -56,7 +63,8 @@ struct NovelDetailFeedTab: View {
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑.
-    /// 프로필·셀 상세 이동과 좋아요·threedots 액션은 이번 범위 밖(TODO — #154 이후 이슈).
+    /// 프로필·셀 상세 이동, 좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
+    /// 이번 범위 밖(TODO — #154 이후 이슈, 스포일러는 WSSFeadView 확장 필요).
     private func feedCell(_ feed: TotalFeed) -> some View {
         WSSFeadView(
             header: FeedHeader(

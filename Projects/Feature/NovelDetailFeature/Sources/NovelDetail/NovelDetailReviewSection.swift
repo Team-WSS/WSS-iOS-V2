@@ -59,9 +59,9 @@ struct NovelDetailReviewSection: View {
                     RoundedRectangle(cornerRadius: 15)
                         .stroke(Color.wssGray80, lineWidth: 1)
                 )
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
         } else {
             // 평가 없음: 상태별 셀렉터. 각 상태가 개별 진입점.
             HStack(spacing: 0) {
@@ -71,9 +71,9 @@ struct NovelDetailReviewSection: View {
                     } label: {
                         statusItem(status, isSelected: false)
                             .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Rectangle())
 
                     if status != Self.statusOrder.last {
                         verticalDivider
@@ -91,7 +91,7 @@ struct NovelDetailReviewSection: View {
         }
     }
 
-    private static let statusOrder: [ReadingStatus] = [.watching, .watched, .quit]
+    private static let statusOrder = ReadingStatus.novelDetailDisplayOrder
 
     /// 별점 칩 + 독서 기간 칩. 값이 없는 칩은 표시하지 않는다.
     private func reviewChips(_ userReview: UserNovelReview) -> some View {
@@ -148,6 +148,7 @@ struct NovelDetailReviewSection: View {
 
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
         formatter.dateFormat = "yy. MM. dd"
         return formatter
     }()
@@ -216,9 +217,9 @@ struct NovelDetailReviewSection: View {
                 RoundedRectangle(cornerRadius: 15)
                     .stroke(Color.wssPrimary100, lineWidth: 1)
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     private var isInterested: Bool {
@@ -242,8 +243,8 @@ struct NovelDetailReviewSection: View {
             .frame(height: 40)
             .background(Color.wssPrimary100)
             .clipShape(RoundedRectangle(cornerRadius: 15))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 }

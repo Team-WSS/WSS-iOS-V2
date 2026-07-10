@@ -66,9 +66,9 @@ struct NovelDetailInfoTab: View {
                 .rotationEffect(.degrees(isDescriptionExpanded ? 180 : 0))
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     // MARK: - 작품 보러가기
@@ -184,7 +184,7 @@ struct NovelDetailInfoTab: View {
 
     // MARK: - 읽기 상태 그래프
 
-    private static let graphStatusOrder: [ReadingStatus] = [.watching, .watched, .quit]
+    private static let graphStatusOrder = ReadingStatus.novelDetailDisplayOrder
 
     private func readingStatusGraph(dominant: (status: ReadingStatus, count: Int)) -> some View {
         VStack(spacing: 0) {

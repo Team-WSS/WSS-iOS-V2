@@ -20,5 +20,5 @@
 - **`state.novel`을 `state.information.novel`과 분리 보유** — `NovelInformation.novel`이 `let`이라 관심 토글(mutating)을 반영할 수 없어서다. 헤더/관심 버튼은 `state.novel`을 읽는다.
 - **몰입형 헤더 = 시스템 네비바 숨김**(`.toolbar(.hidden)`) + 커스텀 고정 오버레이. `icNavigateLeft`/`icThreedots` 에셋은 **원색이 연회색(wssGray100)이라 밝은 배경에서 안 보임** → `renderingMode(.template)`로 색을 입혀야 한다.
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
-- 피드 셀의 좋아요/threedots/프로필 탭, 드롭다운(오류 제보/평가 삭제) 액션은 **TODO(#154 범위 밖)** — UI만 배치됨.
+- 피드 셀의 좋아요/threedots/프로필 탭, 드롭다운(오류 제보/평가 삭제) 액션, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃이지만 **없음=상태별 개별 진입, 있음=박스 전체가 단일 진입점**.

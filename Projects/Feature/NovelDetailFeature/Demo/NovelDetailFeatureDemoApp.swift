@@ -10,11 +10,11 @@ import SwiftUI
 
 import NovelDetailFeature
 import BaseDomain
-import NovelDomain
 import FeedDomain
+import NovelDomain
 import BaseData
-import NovelData
 import FeedData
+import NovelData
 import Logger
 import Networking
 import DesignSystem
