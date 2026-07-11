@@ -50,17 +50,21 @@ struct NovelDetailView: View {
     private let onCreateFeedTapped: () -> Void
     /// 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
     private let onFeedTapped: (FeedID) -> Void
+    /// 유저 프로필 진입 콜백 — 피드 셀 프로필 이미지 탭(내 글 제외).
+    private let onUserProfileTapped: (UserID) -> Void
 
     init(
         viewModel: NovelDetailViewModel,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping () -> Void,
-        onFeedTapped: @escaping (FeedID) -> Void
+        onFeedTapped: @escaping (FeedID) -> Void,
+        onUserProfileTapped: @escaping (UserID) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onReviewTapped = onReviewTapped
         self.onCreateFeedTapped = onCreateFeedTapped
         self.onFeedTapped = onFeedTapped
+        self.onUserProfileTapped = onUserProfileTapped
     }
 
     // body = 조립 + 화면 modifier만. 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 오버레이를 쓴다.
@@ -175,7 +179,8 @@ struct NovelDetailView: View {
                                 isLoading: viewModel.state.isLoadingFeeds,
                                 hasLoadFailed: viewModel.state.feedsLoadFailed,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
-                                onFeedTapped: onFeedTapped
+                                onFeedTapped: onFeedTapped,
+                                onUserProfileTapped: onUserProfileTapped
                             )
                         }
                     }
@@ -635,7 +640,8 @@ private extension UIView {
             ),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
             onCreateFeedTapped: { print("피드 작성 진입") },
-            onFeedTapped: { print("피드 상세 진입: \($0)") }
+            onFeedTapped: { print("피드 상세 진입: \($0)") },
+            onUserProfileTapped: { print("유저 프로필 진입: \($0)") }
         )
     }
 }

@@ -337,7 +337,8 @@ private struct DemoRootView: View {
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
-                onFeedTapped: handleFeedTapped
+                onFeedTapped: handleFeedTapped,
+                onUserProfileTapped: handleUserProfileTapped
             )
         case .live:
             makeLiveView()
@@ -393,7 +394,8 @@ private struct DemoRootView: View {
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
-            onFeedTapped: handleFeedTapped
+            onFeedTapped: handleFeedTapped,
+            onUserProfileTapped: handleUserProfileTapped
         )
     }
 
@@ -410,6 +412,11 @@ private struct DemoRootView: View {
     /// 피드 상세 진입 콜백. 실제 앱은 App 조정 계층이 피드 상세로 전환한다 — Demo는 로그만.
     private func handleFeedTapped(_ feedID: FeedID) {
         consoleLogger.info("피드 상세 진입 요청: \(feedID)")
+    }
+
+    /// 유저 프로필 진입 콜백(내 글이면 호출 안 됨). 실제 앱은 App 조정 계층이 프로필로 전환한다 — Demo는 로그만.
+    private func handleUserProfileTapped(_ userID: UserID) {
+        consoleLogger.info("유저 프로필 진입 요청: \(userID)")
     }
 }
 

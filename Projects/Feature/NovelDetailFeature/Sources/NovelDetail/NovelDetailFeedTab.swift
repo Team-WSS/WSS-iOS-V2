@@ -23,6 +23,8 @@ struct NovelDetailFeedTab: View {
     let onReachEnd: () -> Void
     /// 셀 탭 → 피드 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
     let onFeedTapped: (FeedID) -> Void
+    /// 프로필 이미지 탭 → 유저 프로필 진입. 내 글이면 호출하지 않는다(셀 매핑에서 차단).
+    let onUserProfileTapped: (UserID) -> Void
 
     var body: some View {
         if feeds.isEmpty {
@@ -69,7 +71,7 @@ struct NovelDetailFeedTab: View {
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑.
-    /// 프로필 탭·좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
+    /// 좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
     /// 이번 범위 밖(TODO — #154 이후 이슈, 스포일러는 WSSFeadView 확장 필요).
     private func feedCell(_ feed: TotalFeed) -> some View {
         WSSFeadView(
@@ -78,7 +80,11 @@ struct NovelDetailFeedTab: View {
                 nickname: feed.author.nickname,
                 createdDate: feed.createdDate,
                 isEdited: feed.isModified,
-                profileImageTapped: {},
+                profileImageTapped: {
+                    // 내 글이면 이동하지 않는다. userId가 없으면(응답 미제공) 이동할 곳이 없다.
+                    guard !feed.isMyFeed, let userId = feed.author.userId else { return }
+                    onUserProfileTapped(userId)
+                },
                 threeDotsButtonTapped: {}
             ),
             content: feed.content,
