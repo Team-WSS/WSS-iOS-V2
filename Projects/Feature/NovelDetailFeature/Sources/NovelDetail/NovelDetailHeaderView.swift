@@ -48,16 +48,16 @@ struct NovelDetailHeaderView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 330)
+                .frame(height: 330, alignment: .top)
                 .clipped()
-                .blur(radius: 6, opaque: true)
-                .opacity(0.45)
+                .blur(radius: 12, opaque: true)
 
-                LinearGradient(
-                    colors: [Color.wssGray50.opacity(0.0), Color.wssGray50],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                WSSImage.imgDetailBackgroundGradation.swiftUIImage
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 330)
+                    .clipped()
             }
             .frame(height: 330)
             .clipped()
@@ -86,11 +86,24 @@ struct NovelDetailHeaderView: View {
         // 장르 마크는 표지 우하단 모서리에 정렬(디자인 좌표: 표지 bottom/trailing 일치)
         .overlay(alignment: .bottomTrailing) {
             if let genre = information.genres.first {
-                genre.iconImage
-                    .resizable()
-                    .frame(width: 71, height: 71)
+                genreMark(genre)
             }
         }
+    }
+
+    /// 우하단 코너 라벨: 흰 코너 삼각형 배경(icGenreBackground, 71pt)의 우하단에
+    /// 장르 아이콘(iconImage, 32pt)을 trailing 4 / bottom 5 인셋으로 얹는다. (V1 레이아웃 그대로)
+    private func genreMark(_ genre: NovelGenre) -> some View {
+        WSSImage.icGenreBackground.swiftUIImage
+            .resizable()
+            .frame(width: 71, height: 71)
+            .overlay(alignment: .bottomTrailing) {
+                genre.iconImage
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                    .padding(.trailing, 4)
+                    .padding(.bottom, 5)
+            }
     }
 
     // MARK: - Title / Meta / Counts

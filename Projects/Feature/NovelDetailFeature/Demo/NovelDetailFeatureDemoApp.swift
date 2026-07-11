@@ -175,7 +175,7 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                 period: try? ReadingPeriod(start: Date(timeIntervalSinceNow: -86_400 * 300), end: nil),
                 keywords: []
             ),
-            description: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기.",
+            description: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기. 라고 할 뻔 \n\n\n 과연 어디까지 늘어나는지 봅시다 한 번",
             platforms: [
                 URL(string: "https://novel.naver.com").map {
                     NovelPlatform(name: "네이버시리즈", image: nil, url: $0)

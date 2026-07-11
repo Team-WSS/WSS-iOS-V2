@@ -15,7 +15,7 @@ import WSSComponent
 
 /// 유저 평가 영역 + CTA(관심 / 나도 한마디). 헤더의 회색(wssGray50) 배경을 이어받는다.
 /// - 평가 없음: 읽기 상태 3종 셀렉터 — 탭한 상태를 seed로 평가 화면 진입.
-/// - 평가 있음: 별점·기간 칩 + 현재 상태 표시 — 어디를 탭해도 현재 상태로 평가 화면 진입.
+/// - 평가 있음: 별점·기간 칩 + 상태바 — 상태바는 탭한 상태를, 그 외 영역(칩·여백)은 현재 상태를 seed로 진입.
 struct NovelDetailReviewSection: View {
 
     let information: NovelInformation
@@ -41,27 +41,27 @@ struct NovelDetailReviewSection: View {
     @ViewBuilder
     private var reviewBox: some View {
         if let userReview = information.userReview {
-            // 평가 있음: 박스 전체가 "내 평가 수정" 진입점.
-            Button {
-                onSelectStatus(userReview.readingStatus)
-            } label: {
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 12)
-                    reviewChips(userReview)
-                    Spacer().frame(height: 10)
-                    statusRow(selected: userReview.readingStatus)
-                    Spacer().frame(height: 15)
-                }
-                .frame(maxWidth: .infinity)
-                .background(Color.wssWhite)
-                .clipShape(RoundedRectangle(cornerRadius: 15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(Color.wssGray80, lineWidth: 1)
-                )
-                .contentShape(Rectangle())
+            // 평가 있음: 상태바는 상태별 개별 진입점(탭한 상태를 seed), 그 외 영역(칩·여백)은
+            // 현재 상태로 진입. 상태 Button이 hit-test 우선이라 바깥 onTapGesture와 공존한다
+            // (중첩 Button은 hit-test가 불안정해 피한다).
+            VStack(spacing: 0) {
+                Spacer().frame(height: 12)
+                reviewChips(userReview)
+                Spacer().frame(height: 10)
+                statusRow(selected: userReview.readingStatus)
+                Spacer().frame(height: 15)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .background(Color.wssWhite)
+            .clipShape(RoundedRectangle(cornerRadius: 15))
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(Color.wssGray80, lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelectStatus(userReview.readingStatus)
+            }
         } else {
             // 평가 없음: 상태별 셀렉터. 각 상태가 개별 진입점.
             HStack(spacing: 0) {
@@ -97,7 +97,7 @@ struct NovelDetailReviewSection: View {
     private func reviewChips(_ userReview: UserNovelReview) -> some View {
         HStack(spacing: 0) {
             if let rating = userReview.rating {
-                chip(icon: WSSImage.icSmallStarFilled.swiftUIImage,
+                chip(icon: WSSImage.icStarFilled.swiftUIImage,
                      text: String(format: "%.1f", rating.value))
                 Spacer().frame(width: 8)
             }
@@ -108,23 +108,20 @@ struct NovelDetailReviewSection: View {
     }
 
     private func chip(icon: Image, text: String) -> some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 5) {
             icon
                 .resizable()
                 .frame(width: 14, height: 14)
-            Spacer().frame(width: 5)
             Text(text)
                 .applyWSSFont(.body5)
                 .foregroundStyle(Color.wssGray300)
-            Spacer().frame(width: 5)
-            WSSImage.icChevronDown.swiftUIImage
+            WSSImage.icChevronRightMini.swiftUIImage
                 .resizable()
                 .frame(width: 14, height: 14)
-                .rotationEffect(.degrees(180))
         }
         .padding(.leading, 12)
         .padding(.trailing, 10)
-        .padding(.vertical, 3)
+        .frame(height: 23)
         .background(Color.wssWhite)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
@@ -140,8 +137,8 @@ struct NovelDetailReviewSection: View {
         let end = period.end.map(Self.dateFormatter.string(from:))
         switch (start, end) {
         case let (start?, end?): return "\(start) ~ \(end)"
-        case let (start?, nil):  return start
-        case let (nil, end?):    return end
+        case let (start?, nil):  return "\(start) ~"
+        case let (nil, end?):    return "~ \(end)"
         case (nil, nil):         return nil
         }
     }
@@ -156,8 +153,14 @@ struct NovelDetailReviewSection: View {
     private func statusRow(selected: ReadingStatus) -> some View {
         HStack(spacing: 0) {
             ForEach(Self.statusOrder, id: \.self) { status in
-                statusItem(status, isSelected: status == selected)
-                    .frame(maxWidth: .infinity)
+                Button {
+                    onSelectStatus(status)
+                } label: {
+                    statusItem(status, isSelected: status == selected)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
 
                 if status != Self.statusOrder.last {
                     verticalDivider

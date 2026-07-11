@@ -51,6 +51,7 @@ struct NovelDetailInfoTab: View {
                 .lineLimit(isDescriptionExpanded ? nil : 3)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
+                .animation(.easeOut(duration: 0.2), value: isDescriptionExpanded)
             expandButton
         }
     }
@@ -67,6 +68,8 @@ struct NovelDetailInfoTab: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .contentShape(Rectangle())
+                .animation(.easeOut(duration: 0.2), value: isDescriptionExpanded)
+                //.animation(nil, value: isDescriptionExpanded)
         }
         .buttonStyle(.plain)
     }
