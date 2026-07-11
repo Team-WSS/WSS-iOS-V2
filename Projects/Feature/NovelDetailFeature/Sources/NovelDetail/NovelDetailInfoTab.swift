@@ -69,7 +69,6 @@ struct NovelDetailInfoTab: View {
                 .frame(height: 44)
                 .contentShape(Rectangle())
                 .animation(.easeOut(duration: 0.2), value: isDescriptionExpanded)
-                //.animation(nil, value: isDescriptionExpanded)
         }
         .buttonStyle(.plain)
     }
