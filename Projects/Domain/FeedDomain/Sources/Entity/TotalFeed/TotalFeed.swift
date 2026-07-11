@@ -30,7 +30,9 @@ public struct TotalFeed: Equatable {
     public private(set) var isSpoiler: Bool
     public private(set) var isModified: Bool
     public private(set) var isPublic: Bool
-    
+    /// 로그인 사용자의 글인지 — 셀 액션 분기(수정/삭제 vs 신고, 프로필 이동 차단)에 쓴다.
+    public let isMyFeed: Bool
+
     public private(set) var thumbnailImageURL: URL?
     public private(set) var imageCount: Int
     
@@ -64,6 +66,7 @@ public struct TotalFeed: Equatable {
         isSpoiler: Bool,
         isModified: Bool,
         isPublic: Bool,
+        isMyFeed: Bool,
         thumbnailImageURL: URL? = nil,
         imageCount: Int
     ) {
@@ -78,6 +81,7 @@ public struct TotalFeed: Equatable {
         self.isSpoiler = isSpoiler
         self.isModified = isModified
         self.isPublic = isPublic
+        self.isMyFeed = isMyFeed
         self.thumbnailImageURL = thumbnailImageURL
         self.imageCount = imageCount
     }

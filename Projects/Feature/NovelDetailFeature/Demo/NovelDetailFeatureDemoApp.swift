@@ -550,13 +550,15 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
             feedId: FeedID(number),
             createdDate: "\(number)시간 전",
             content: "데모 피드 \(number) — 이 작품 정말 소소하게 재밌네요.",
-            author: Author(nickname: "소소한 독자 \(number)", profileImage: nil),
+            author: Author(userId: UserID(number), nickname: "소소한 독자 \(number)", profileImage: nil),
             likeCount: number,
             isLiked: false,
             commentCount: 0,
             isSpoiler: false,
             isModified: false,
             isPublic: true,
+            // 3의 배수 피드는 내 글 — threedots 드롭다운(수정/삭제 vs 신고)·프로필 이동 차단 분기 시연용.
+            isMyFeed: number.isMultiple(of: 3),
             imageCount: 0
         )
     }

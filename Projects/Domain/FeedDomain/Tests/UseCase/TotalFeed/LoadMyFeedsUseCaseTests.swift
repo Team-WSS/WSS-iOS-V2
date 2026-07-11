@@ -74,6 +74,7 @@ extension LoadMyFeedsUseCaseTests {
                     isSpoiler: false,
                     isModified: false,
                     isPublic: false,
+                    isMyFeed: true,
                     imageCount: 1)
             ],
             hasNext: true)

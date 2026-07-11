@@ -144,7 +144,12 @@ public struct DefaultFeedRepository: FeedRepository {
         )
         do {
             let response = try await service.getUserFeeds(userID: id.value, query: query)
-            let result = try FeedMapper.userFeeds(userID: id, from: response)
+            // 응답에 isMyFeed가 없어 여기서 판단한다 — 조회 대상이 로그인 사용자 자신이면 내 피드.
+            let result = try FeedMapper.userFeeds(
+                userID: id,
+                isMyFeed: storage.get(.userID) == id.value,
+                from: response
+            )
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
@@ -173,7 +178,7 @@ public struct DefaultFeedRepository: FeedRepository {
                 sortType: sortType,
                 lastFeedID: lastFeedID.value
             )
-            let result = try FeedMapper.userFeeds(userID: UserID(userID), from: response)
+            let result = try FeedMapper.userFeeds(userID: UserID(userID), isMyFeed: true, from: response)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {

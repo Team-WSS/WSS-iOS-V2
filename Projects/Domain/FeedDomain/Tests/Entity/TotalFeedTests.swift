@@ -77,6 +77,7 @@ extension TotalFeedTests {
             isSpoiler: false,
             isModified: false,
             isPublic: true,
+            isMyFeed: false,
             thumbnailImageURL: thumbnail,
             imageCount: imageCount
         )

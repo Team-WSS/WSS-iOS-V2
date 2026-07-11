@@ -65,6 +65,7 @@ extension LoadSosoFeedsUseCaseTests {
                     isSpoiler: false,
                     isModified: false,
                     isPublic: false,
+                    isMyFeed: false,
                     imageCount: 1)
             ],
             hasNext: true)
