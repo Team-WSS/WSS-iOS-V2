@@ -67,6 +67,9 @@ public struct WSSFeadHeaderView: View {
             .onTapGesture {
                 header.profileImageTapped()
             }
+            // 순수 이미지 + 제스처라 접근성 트리에 안 잡힌다 — VoiceOver·UI 자동화가 버튼으로 인식하게 한다.
+            .accessibilityLabel("\(header.nickname) 프로필")
+            .accessibilityAddTraits(.isButton)
 
             Spacer().frame(width: 10)
 
@@ -102,6 +105,9 @@ public struct WSSFeadHeaderView: View {
                 .onTapGesture {
                     header.threeDotsButtonTapped()
                 }
+                // 위 프로필 이미지와 같은 이유의 접근성 보완.
+                .accessibilityLabel("더보기")
+                .accessibilityAddTraits(.isButton)
         }
         .background(Color.wssWhite)
     }
