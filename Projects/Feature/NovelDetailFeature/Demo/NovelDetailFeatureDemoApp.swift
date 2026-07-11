@@ -81,6 +81,12 @@ private enum DemoScenario: CaseIterable, Identifiable {
     case noReaderReview
     /// 피드 없음 → 피드 탭 빈 상태("아직 글이 없어요").
     case noFeed
+    /// 피드 5개 → 첫 페이지 하나로 끝(hasNext 없음) — 목록이 화면보다 짧은 케이스.
+    case feeds5
+    /// 피드 15개 → 두 페이지(10+5) 페이지네이션.
+    case feeds15
+    /// 피드 45개 → 다섯 페이지 — 긴 목록 스크롤·연속 페이지네이션.
+    case feeds45
     /// 거의 모든 값이 빈 신규 작품 — 썸네일·평점·플랫폼·평가·피드 없음.
     case minimal
     /// 작품 로드 실패 → NetworkErrorView(재시도).
@@ -106,6 +112,9 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .onlyReadingStatus: "읽기 상태만 있음"
         case .noReaderReview: "독자 평가 전부 없음"
         case .noFeed: "피드 없음"
+        case .feeds5: "피드 5개 (1페이지)"
+        case .feeds15: "피드 15개 (2페이지)"
+        case .feeds45: "피드 45개 (5페이지)"
         case .minimal: "최소 데이터(신규 작품)"
         case .loadFailure: "작품 로드 실패"
         case .feedLoadFailure: "피드 로드 실패"
@@ -122,7 +131,7 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .noAttractivePoints, .noKeywords, .noReadingStatus: "독자 평가 — 하나만 없음"
         case .onlyAttractivePoints, .onlyKeywords, .onlyReadingStatus: "독자 평가 — 하나만 있음"
         case .noReaderReview: "독자 평가 — 전부 없음"
-        case .noFeed: "피드"
+        case .noFeed, .feeds5, .feeds15, .feeds45: "피드"
         case .minimal: "극단"
         case .loadFailure, .feedLoadFailure: "실패"
         }
@@ -165,11 +174,13 @@ private enum DemoScenario: CaseIterable, Identifiable {
         }
     }
 
-    /// 피드 목록 유무 — 피드 탭 빈 상태 분기.
-    var hasFeeds: Bool {
+    /// 피드 총 개수 — 0이면 피드 탭 빈 상태, 페이지 크기(10) 기준으로 페이지 수가 갈린다.
+    var feedCount: Int {
         switch self {
-        case .noFeed, .minimal, .feedLoadFailure: false
-        default: true
+        case .noFeed, .minimal, .feedLoadFailure: 0
+        case .feeds5: 5
+        case .feeds45: 45
+        default: 15  // feeds15 포함 — 기본(전체 데이터)도 두 페이지 페이지네이션을 유지한다.
         }
     }
 }
@@ -397,7 +408,7 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                 ratingCount: isMinimal ? 0 : 52,
                 isInterested: false
             ),
-            feedCount: scenario.hasFeeds ? 3 : 0,
+            feedCount: scenario.feedCount,
             genres: [.romanceFantasy, .romance],
             publicationStatus: isMinimal ? .onGoing : .completed,
             // nil이면 평가 자체가 없다 → 상태바 대신 셀렉터. 빈 집합이면 읽기 상태만 있는 평가다.
@@ -470,21 +481,20 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
         if scenario == .feedLoadFailure {
             throw .networkUnavailable
         }
-        guard scenario.hasFeeds else {
+        // 커서 0 = 첫 페이지, 이후 커서 = 마지막 피드 ID(피드 번호와 동일).
+        // 페이지 크기 10으로 시나리오의 feedCount까지 잘라 낸다 — 5개(1페이지)·15개(2페이지)·45개(5페이지).
+        let start = lastFeedID.value == 0 ? 1 : lastFeedID.value + 1
+        guard start <= scenario.feedCount else {
             return Paginated(items: [], hasNext: false)
         }
-        // 커서 0 = 첫 페이지, 이후 커서 = 마지막 피드 ID → 두 페이지로 페이지네이션을 시연한다.
-        if lastFeedID.value == 0 {
-            return Paginated(items: (1...10).map(makeFeed), hasNext: true)
-        } else {
-            return Paginated(items: (11...15).map(makeFeed), hasNext: false)
-        }
+        let end = min(start + 9, scenario.feedCount)
+        return Paginated(items: (start...end).map(makeFeed), hasNext: end < scenario.feedCount)
     }
 
     private func makeFeed(_ number: Int) -> TotalFeed {
         TotalFeed(
             feedId: FeedID(number),
-            createdDate: "3월 \(number)일",
+            createdDate: "\(number)시간 전",
             content: "데모 피드 \(number) — 이 작품 정말 소소하게 재밌네요.",
             author: Author(nickname: "소소한 독자 \(number)", profileImage: nil),
             likeCount: number,
