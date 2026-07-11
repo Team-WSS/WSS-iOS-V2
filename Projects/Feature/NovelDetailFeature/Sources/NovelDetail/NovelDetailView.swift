@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import FeedDomain
 import NovelDomain
+import NovelReviewDomain
 import DesignSystem
 import WSSComponent
 
@@ -40,6 +41,8 @@ struct NovelDetailView: View {
     @State private var tabBarHeight: CGFloat = 0
     @State private var scrollViewHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
+    /// 오류 제보 링크(외부 브라우저) 열기용.
+    @Environment(\.openURL) private var openURL
     /// 작품 평가(NovelReviewFeature) 진입 콜백. Feature 간 직접 의존 금지 —
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다. status는 평가 초안에 seed할 읽기 상태.
     private let onReviewTapped: (NovelInformation, ReadingStatus) -> Void
@@ -66,6 +69,15 @@ struct NovelDetailView: View {
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
             .showWSSToast(isPresented: toastBinding, type: toastType)
+            // 평가 삭제 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
+            .showWSSAlert(
+                isPresented: deleteReviewAlertBinding,
+                type: .deleteNovelReview,
+                buttonActions: [
+                    { viewModel.handle(.dismissDeleteReviewAlert) },  // "취소"
+                    { viewModel.handle(.confirmDeleteReview) }        // "삭제"
+                ]
+            )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
             }
@@ -274,7 +286,7 @@ private extension NovelDetailView {
         )
     }
 
-    /// threedots 드롭다운(오류 제보 / 평가 삭제). 실제 동작은 이번 범위 밖(TODO — #154 이후 이슈).
+    /// threedots 드롭다운(오류 제보 / 평가 삭제).
     var menuOverlay: some View {
         ZStack(alignment: .topTrailing) {
             // 바깥 탭으로 닫기 위한 투명 레이어.
@@ -283,8 +295,15 @@ private extension NovelDetailView {
                 .onTapGesture { isMenuPresented = false }
 
             WSSDropdownMenu(items: [
-                WSSDropdownItem(title: "오류 제보") { isMenuPresented = false },
-                WSSDropdownItem(title: "평가 삭제") { isMenuPresented = false }
+                WSSDropdownItem(title: "오류 제보") {
+                    isMenuPresented = false
+                    if let errorReportURL { openURL(errorReportURL) }
+                },
+                WSSDropdownItem(title: "평가 삭제") {
+                    isMenuPresented = false
+                    // 삭제할 평가가 없으면 VM이 무시한다(알럿 표시 여부 판단은 VM 소유).
+                    viewModel.handle(.deleteReviewTapped)
+                }
             ])
             .frame(width: 120)
             .padding(.top, 44)
@@ -456,14 +475,22 @@ private extension NovelDetailView {
 
     var toastBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.state.presentedError != nil },
-            set: { if !$0 { viewModel.handle(.dismissError) } }
+            get: { viewModel.state.presentedToast != nil },
+            set: { if !$0 { viewModel.handle(.dismissToast) } }
         )
     }
 
-    /// 에러 의미값 → 토스트 표현. 케이스별 전용 문구가 필요해지면 WSSToastType에 케이스를 더한다(허락 후).
+    /// 토스트 의미값 → 표현. 실패는 공통 문구를 쓴다 — 케이스별 전용 문구가 필요해지면
+    /// WSSToastType에 케이스를 더한다(허락 후).
     var toastType: WSSToastType {
-        .unknownError
+        viewModel.state.presentedToast == .reviewDeleted ? .novelReviewDeleted : .unknownError
+    }
+
+    var deleteReviewAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isDeleteReviewAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissDeleteReviewAlert) } }
+        )
     }
 }
 
@@ -471,6 +498,9 @@ private extension NovelDetailView {
 
 /// 스크롤 오프셋 측정용 ScrollView 좌표공간 이름.
 private let scrollSpaceName = "novelDetailScroll"
+
+/// threedots 드롭다운 "오류 제보"가 여는 웹소소 노션 문의 페이지.
+private let errorReportURL = URL(string: "https://helpwebsoso.notion.site/241a9688d1a381548c20dd314d0a0b0a")
 
 // MARK: - Scroll bounce control
 
@@ -595,7 +625,8 @@ private extension UIView {
                 novelID: NovelID(1),
                 loadNovelUseCase: PreviewLoadNovelUseCase(),
                 novelInterestUseCase: PreviewNovelInterestUseCase(),
-                loadNovelFeedsUseCase: PreviewLoadNovelFeedsUseCase()
+                loadNovelFeedsUseCase: PreviewLoadNovelFeedsUseCase(),
+                deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase()
             ),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
             onCreateFeedTapped: { print("피드 작성 진입") }
@@ -640,4 +671,8 @@ private struct PreviewLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
                  lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         Paginated(items: [], hasNext: false)
     }
+}
+
+private struct PreviewDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
+    func execute(novelID: NovelID) async throws(RepositoryError) {}
 }

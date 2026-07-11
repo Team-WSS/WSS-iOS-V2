@@ -64,7 +64,8 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - **표지 우하단 장르 코너 뱃지 = `icGenreBackground`(흰 코너 삼각형 71pt) 우하단에 `genre.iconImage`(GenreIcon 방패형)를 `trailing 4 / bottom 5` 인셋으로 얹음.** V1(UIKit) 레이아웃 그대로. 주의: 아이콘은 배경을 꽉 채우지 않고 **32pt**로 코너에 작게 — 71pt로 키우면 틀림. 겹칠 아이콘은 `markImage`(GenreMark)가 **아니다**(헷갈리기 쉬움).
 - **Demo 실서버 모드는 토글 시 `syncKeywords()`를 직접 호출**한다 — 작품 상세의 키워드 매핑이 파일 캐시(keywords.json)만 읽는데, 실제 앱에선 App(DI)이 시작 시 채울 캐시를 Demo는 스스로 채워야 해서다. 안 부르면 캐시 없는 시뮬레이터에서 키워드 섹션이 통째로 빈다(에러 없이 조용히).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
-- 피드 셀의 좋아요/threedots/프로필 탭, 드롭다운(오류 제보/평가 삭제) 액션, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.
+- 피드 셀의 좋아요/threedots/프로필 탭, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.
+- **화면 드롭다운(오류 제보/평가 삭제)**: 오류 제보는 노션 문의 페이지를 외부 브라우저로 연다(`errorReportURL`). 평가 삭제는 알럿 확인 후 `DeleteNovelReviewUseCase`(NovelReviewDomain) → **성공 시 상세 재로드**(키워드·읽기 상태 집계가 함께 바뀌므로 화면 데이터를 서버와 재동기화). 삭제할 평가가 없으면 VM이 무시(관심 토글 no-op과 같은 정책).
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃 — **둘 다 상태별 개별 진입(탭한 상태를 seed)**. 있음은 추가로 박스의 칩·여백을 탭하면 현재 상태로 진입한다(상태 `Button`이 hit-test 우선이라 바깥 `onTapGesture`와 공존 — 중첩 Button은 불안정해 피함).
 - **대형 표지 오버레이(표지 탭)**: dim(`wssBlack60`)의 `onTapGesture`와 확대 표지를 ZStack **형제**로 두면 표지 위 탭은 자연히 무시된다(제스처는 형제 뷰에 안 닿음 — V1의 표지 탭 no-op과 동일 동작, 별도 처리 불필요). 확대 크기는 `scaledToFit` + 패딩(가로 20 / 세로 60 = X 버튼 44 + 여유)이 V1의 "두 여백 중 먼저 걸리는 기준" 비율 분기 계산을 대체한다.
   - ⚠️ **오버레이 안에서 `AsyncImage`를 쓰지 말 것** — URLCache 캐시 히트여도 **새 인스턴스는 `.empty` phase부터 시작**해 placeholder가 한 프레임 이상 번쩍이고, 오버레이는 열 때마다 뷰가 재생성되므로 매번 반복된다. 대신 화면 로드 시 `URLSession.shared`(URLCache 공유 — 헤더가 이미 받은 응답이면 재다운로드 없음)로 `UIImage`를 **prefetch해 동기로 그린다**(영상 프레임 검증: 오버레이 첫 프레임부터 실제 표지).

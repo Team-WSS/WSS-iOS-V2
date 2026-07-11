@@ -12,9 +12,11 @@ import NovelDetailFeature
 import BaseDomain
 import FeedDomain
 import NovelDomain
+import NovelReviewDomain
 import BaseData
 import FeedData
 import NovelData
+import NovelReviewData
 import Logger
 import Networking
 import DesignSystem
@@ -323,11 +325,15 @@ private struct DemoRootView: View {
     private var detailView: some View {
         switch dataSource {
         case .mock:
+            // 삭제 UseCase가 기록하고 로드 UseCase가 읽는 공유 상태 — 삭제 → 재로드에서
+            // 평가 없음(셀렉터) 화면으로 바뀌는 흐름을 서버 없이 시연한다. .id로 진입마다 초기화.
+            let reviewDeletion = DemoReviewDeletion()
             NovelDetailFactory.makeView(
                 novelID: mockNovelID,
-                loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario),
+                loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario, reviewDeletion: reviewDeletion),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
                 loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(scenario: scenario),
+                deleteNovelReviewUseCase: DemoDeleteNovelReviewUseCase(reviewDeletion: reviewDeletion),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped
@@ -370,6 +376,10 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "FeedData", underlying: consoleLogger)
         )
+        let novelReviewRepository = NovelReviewDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "NovelReviewData", underlying: consoleLogger)
+        )
         return NovelDetailFactory.makeView(
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
@@ -378,6 +388,7 @@ private struct DemoRootView: View {
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),
+            deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped
@@ -398,9 +409,16 @@ private struct DemoRootView: View {
 // MARK: - Demo UseCases (Mock)
 // 인메모리 Mock으로 흐름만 시연한다(서버 불필요).
 
+/// Mock 평가 삭제 상태 — 삭제 UseCase가 기록하고 로드 UseCase가 읽는다.
+/// 화면 진입 단위(detailView의 .id)로 새로 만들어져 재진입 시 시나리오 원본으로 돌아간다.
+private final class DemoReviewDeletion {
+    var isDeleted = false
+}
+
 private struct DemoLoadNovelUseCase: LoadNovelUseCase {
 
     let scenario: DemoScenario
+    let reviewDeletion: DemoReviewDeletion
 
     func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation {
         try? await Task.sleep(nanoseconds: 500_000_000)
@@ -429,7 +447,8 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
             genres: [.romanceFantasy, .romance],
             publicationStatus: isMinimal ? .onGoing : .completed,
             // nil이면 평가 자체가 없다 → 상태바 대신 셀렉터. 빈 집합이면 읽기 상태만 있는 평가다.
-            userReview: scenario.userReviewParts.map { parts in
+            // 삭제된 뒤의 재로드면 시나리오와 무관하게 평가 없음 — 삭제 → 셀렉터 전환 흐름 시연.
+            userReview: reviewDeletion.isDeleted ? nil : scenario.userReviewParts.map { parts in
                 let status = scenario.userReadingStatus
                 return UserNovelReview(
                     readingStatus: status,
@@ -485,6 +504,17 @@ private struct DemoNovelInterestUseCase: NovelInterestUseCase {
 
     func remove(id: NovelID) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+/// Mock 평가 삭제 — 항상 성공하고, 삭제 사실만 공유 상태에 남긴다(재로드가 읽는다).
+private struct DemoDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
+
+    let reviewDeletion: DemoReviewDeletion
+
+    func execute(novelID: NovelID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        reviewDeletion.isDeleted = true
     }
 }
 

@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import FeedDomain
 import NovelDomain
+import NovelReviewDomain
 import Logger
 
 @MainActor
@@ -37,9 +38,11 @@ final class NovelDetailViewModel {
         /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
         var feedsLoadFailed = false
         var shouldDismiss = false
-        /// 표시할 에러(의미값). 표현(토스트) 매핑은 View가 한다(얇은 ViewModel).
+        /// 평가 삭제 확인 알럿 표시 여부 — 삭제 가능 판단(평가 존재)이 필요해 VM이 소유한다.
+        var isDeleteReviewAlertPresented = false
+        /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
         /// 작품 본체 로드 실패는 전면 실패 뷰(`information == nil && !isLoading`)가 표현하므로 여기 없다.
-        var presentedError: DetailError?
+        var presentedToast: DetailToast?
     }
 
     enum Tab: CaseIterable, Equatable {
@@ -47,11 +50,14 @@ final class NovelDetailViewModel {
         case feed
     }
 
-    /// 사용자에게 표시할 에러의 **의미값**. 카피·표현은 View가 결정한다.
-    /// 두 경우 모두 네트워크 실패로 정상 도달 가능한 경로다(도달 불가 가정으로 뭉치지 않고 맥락을 남긴다).
-    enum DetailError: Equatable {
+    /// 사용자에게 표시할 토스트의 **의미값**. 카피·표현은 View가 결정한다.
+    /// 실패 셋은 모두 네트워크 실패로 정상 도달 가능한 경로다(도달 불가 가정으로 뭉치지 않고 맥락을 남긴다).
+    enum DetailToast: Equatable {
         case feedsLoadFailed
         case interestFailed
+        case deleteReviewFailed
+        /// 평가 삭제 완료 — 결과가 화면 재로드로만 보이면 알아차리기 어려워 성공도 토스트로 알린다.
+        case reviewDeleted
     }
 
     // MARK: - Action
@@ -61,8 +67,11 @@ final class NovelDetailViewModel {
         case selectTab(Tab)
         case toggleInterest
         case loadMoreFeeds
+        case deleteReviewTapped
+        case confirmDeleteReview
+        case dismissDeleteReviewAlert
         case requestClose
-        case dismissError
+        case dismissToast
     }
 
     // MARK: - Output
@@ -77,6 +86,7 @@ final class NovelDetailViewModel {
     @ObservationIgnored private var isSyncingInterest = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
+    @ObservationIgnored private var deleteReviewTask: Task<Void, Never>?
     @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
@@ -91,6 +101,9 @@ final class NovelDetailViewModel {
     // FeedDomain
     private let loadNovelFeedsUseCase: LoadNovelFeedsUseCase
 
+    // NovelReviewDomain
+    private let deleteNovelReviewUseCase: DeleteNovelReviewUseCase
+
     // MARK: - Init
 
     init(
@@ -98,12 +111,14 @@ final class NovelDetailViewModel {
         loadNovelUseCase: LoadNovelUseCase,
         novelInterestUseCase: NovelInterestUseCase,
         loadNovelFeedsUseCase: LoadNovelFeedsUseCase,
+        deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
         logger: Logger? = nil
     ) {
         self.novelID = novelID
         self.loadNovelUseCase = loadNovelUseCase
         self.novelInterestUseCase = novelInterestUseCase
         self.loadNovelFeedsUseCase = loadNovelFeedsUseCase
+        self.deleteNovelReviewUseCase = deleteNovelReviewUseCase
         self.logger = logger
         self.state = State()
     }
@@ -120,10 +135,16 @@ final class NovelDetailViewModel {
             toggleInterest()
         case .loadMoreFeeds:
             loadMoreFeeds()
+        case .deleteReviewTapped:
+            presentDeleteReviewAlert()
+        case .confirmDeleteReview:
+            confirmDeleteReview()
+        case .dismissDeleteReviewAlert:
+            state.isDeleteReviewAlertPresented = false
         case .requestClose:
             close()
-        case .dismissError:
-            state.presentedError = nil
+        case .dismissToast:
+            state.presentedToast = nil
         }
     }
 }
@@ -173,12 +194,29 @@ private extension NovelDetailViewModel {
         feedsTask = Task { await loadFeeds(after: lastFeedID) }
     }
 
+    /// 평가 삭제 진입(드롭다운). 삭제할 평가가 없으면(미평가·비로그인) 알럿 없이 무시한다 —
+    /// 관심 토글의 no-op과 같은 정책.
+    func presentDeleteReviewAlert() {
+        guard state.information?.userReview != nil,
+              deleteReviewTask == nil,
+              !isClosing else { return }
+        state.isDeleteReviewAlertPresented = true
+    }
+
+    /// 알럿에서 삭제 확정.
+    func confirmDeleteReview() {
+        state.isDeleteReviewAlertPresented = false
+        guard deleteReviewTask == nil, !isClosing else { return }
+        deleteReviewTask = Task { await deleteReview() }
+    }
+
     /// 뒤로가기 요청. 진행 중인 로드를 취소하고 닫기 신호만 View로 발화한다.
     func close() {
         guard !isClosing else { return }
         isClosing = true
         loadTask?.cancel()
         feedsTask?.cancel()
+        deleteReviewTask?.cancel()
         state.shouldDismiss = true
     }
 }
@@ -228,6 +266,24 @@ private extension NovelDetailViewModel {
         }
     }
 
+    /// 평가 삭제 후 상세 재로드 — 평가만 지우면 끝이 아니라 키워드·읽기 상태 집계 등
+    /// 독자 평가 데이터가 함께 바뀌므로 서버 데이터로 다시 동기화한다.
+    /// 기존 화면은 유지한 채 새 데이터가 오면 갈아끼운다(전면 로딩 없음).
+    func deleteReview() async {
+        defer { deleteReviewTask = nil }
+        do {
+            try await deleteNovelReviewUseCase.execute(novelID: novelID)
+            guard !isClosing, !Task.isCancelled else { return }
+            state.presentedToast = .reviewDeleted
+            // 재로드가 실패해도 재진입 시 다시 시도되도록 가드를 미리 되돌린다(성공 시 loadNovel이 재소진).
+            hasLoaded = false
+            await loadNovel()
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            presentError(error, as: .deleteReviewFailed)
+        }
+    }
+
     /// 관심 상태 서버 동기화. 실패하면 낙관 반영을 롤백한다.
     func syncInterest(to isInterested: Bool, rollbackTo before: Novel) async {
         defer { isSyncingInterest = false }
@@ -249,11 +305,11 @@ private extension NovelDetailViewModel {
 
 private extension NovelDetailViewModel {
 
-    /// Repository 에러를 발생 맥락의 의미 에러로 변환한다. 원인은 로그로 남긴다.
+    /// Repository 에러를 발생 맥락의 의미 토스트로 변환한다. 원인은 로그로 남긴다.
     /// (`handle(_:)`과 이름이 겹치지 않게 분리)
-    func presentError(_ error: Error, as presented: DetailError) {
+    func presentError(_ error: Error, as presented: DetailToast) {
         logger?.error("NovelDetail 실패(\(presented)): \(String(describing: error))")
-        if state.presentedError != nil { return }
-        state.presentedError = presented
+        if state.presentedToast != nil { return }
+        state.presentedToast = presented
     }
 }

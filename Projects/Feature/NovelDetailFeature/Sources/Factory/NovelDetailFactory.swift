@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import FeedDomain
 import NovelDomain
+import NovelReviewDomain
 import Logger
 
 /// 소설 상세 화면의 유일한 public 진입점. opaque 반환 → View/VM은 internal 유지.
@@ -27,6 +28,7 @@ public enum NovelDetailFactory {
         loadNovelUseCase: LoadNovelUseCase,
         novelInterestUseCase: NovelInterestUseCase,
         loadNovelFeedsUseCase: LoadNovelFeedsUseCase,
+        deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
         logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping () -> Void
@@ -37,6 +39,7 @@ public enum NovelDetailFactory {
                 loadNovelUseCase: loadNovelUseCase,
                 novelInterestUseCase: novelInterestUseCase,
                 loadNovelFeedsUseCase: loadNovelFeedsUseCase,
+                deleteNovelReviewUseCase: deleteNovelReviewUseCase,
                 logger: logger
             ),
             onReviewTapped: onReviewTapped,
