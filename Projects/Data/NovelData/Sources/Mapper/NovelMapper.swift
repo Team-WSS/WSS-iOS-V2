@@ -80,12 +80,15 @@ extension NovelMapper {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
         
+        // 장르는 `/`로 이어진 한 문자열("로맨스/로판")로 온다 → 쪼개서 각각 매핑.
+        // (UI는 반대로 `displayName`을 `/`로 다시 이어 표기한다.)
         let genres = try basicDTO.novelGenres
+            .components(separatedBy: "/")
             .map { try mapNovelGenre(from: $0.trimmingCharacters(in: .whitespaces)) }
-        
+
         let novel = Novel(
             id: id,
-            thumbnailImage: URL(string: basicDTO.novelGenreImage),
+            thumbnailImage: URL(string: basicDTO.novelImage),
             title: basicDTO.novelTitle,
             authors: authors,
             genres: genres,

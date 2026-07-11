@@ -12,7 +12,8 @@ public struct NovelBasicResponse: Decodable {
     public let userNovelId: Int?
     public let novelTitle: String
     public let novelImage: String
-    public let novelGenres: [String]
+    /// 서버는 장르를 `"로맨스/로판"`처럼 **`/`로 이은 한 문자열**로 준다(배열 아님).
+    public let novelGenres: String
     public let novelGenreImage: String
     public let isNovelCompleted: Bool
     public let author: String
