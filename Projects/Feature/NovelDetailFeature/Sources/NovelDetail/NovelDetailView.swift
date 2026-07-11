@@ -22,6 +22,12 @@ struct NovelDetailView: View {
     /// VM 판단이 필요 없는 순수 표시 상태 — View가 소유한다.
     @State private var isMenuPresented = false
     @State private var isDescriptionExpanded = false
+    /// 표지 탭 → 대형 표지 오버레이(dim + 원본 비율 확대 표지) 표시 여부.
+    @State private var isLargeCoverPresented = false
+    /// 대형 표지 원본 이미지 — 화면 로드 시 미리 받아 둔다(prefetch).
+    /// 오버레이에서 AsyncImage를 쓰면 캐시 히트여도 새 인스턴스가 .empty phase부터 시작해
+    /// placeholder가 한 프레임 이상 번쩍인다 → 열리는 순간 디코딩된 이미지를 동기로 그리기 위함.
+    @State private var largeCoverUIImage: UIImage?
     /// 스크롤 반응형 네비 타이틀 — 스크롤 콘텐츠 최상단의 오프셋(rest≈0, 위로 스크롤 시 음수).
     /// 조금이라도 스크롤되면 네비 타이틀·흰 배경을 페이드인한다. (loadedContent의 GeometryReader+onChange가 갱신)
     @State private var scrollOffsetY: CGFloat = 0
@@ -57,6 +63,8 @@ struct NovelDetailView: View {
             // 네비바를 숨기면 스와이프 뒤로가기까지 함께 꺼진다 → 제스처만 따로 되살린다.
             .background(SwipeBackEnabler())
             .onAppear { viewModel.handle(.load) }
+            // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
+            .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
@@ -91,6 +99,11 @@ struct NovelDetailView: View {
             if isMenuPresented {
                 menuOverlay
             }
+
+            // 네비바·스티키 탭바까지 덮어야 하므로 루트 ZStack의 최상단 자식으로 둔다.
+            if isLargeCoverPresented {
+                largeCoverOverlay
+            }
         }
     }
 
@@ -103,7 +116,8 @@ struct NovelDetailView: View {
                     NovelDetailHeaderView(
                         information: information,
                         novel: viewModel.state.novel ?? information.novel,
-                        topInset: navigationBarBottomY
+                        topInset: navigationBarBottomY,
+                        onCoverTapped: { isLargeCoverPresented = true }
                     )
                     NovelDetailReviewSection(
                         information: information,
@@ -278,6 +292,67 @@ private extension NovelDetailView {
         }
     }
 
+    /// 표지 탭 시 뜨는 대형 표지 오버레이 — dim 배경 위에 표지를 원본 비율 그대로 최대 크기로 띄운다.
+    /// X 버튼 또는 표지 바깥 탭으로 닫는다(표지 자체 탭은 무시 — dim의 제스처가 형제 뷰라 표지 위 탭엔 안 닿는다).
+    var largeCoverOverlay: some View {
+        ZStack {
+            Color.wssBlack60
+                .ignoresSafeArea()
+                .onTapGesture { isLargeCoverPresented = false }
+
+            // 미리 받아 둔 원본 이미지를 동기로 그린다 — AsyncImage는 열 때마다 .empty phase부터
+            // 시작해 캐시 히트여도 placeholder가 번쩍인다(largeCoverUIImage 주석 참고).
+            // scaledToFit이 가로(패딩 20)·세로(패딩 60) 제약 중 먼저 걸리는 쪽에 맞춰 비율을 유지한다
+            // — V1(UIKit)에서 이미지 비율로 분기해 폭/높이를 계산하던 것과 같은 결과.
+            // 세로 패딩 60 = X 버튼 높이 44 + 여유 — 세로로 아주 긴 표지가 버튼 영역을 침범하지 않는 하한.
+            Group {
+                if let uiImage = largeCoverUIImage {
+                    largeCover(Image(uiImage: uiImage))
+                } else {
+                    largeCover(WSSImage.imgLoadingThumbnail.swiftUIImage)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 60)
+        }
+        // prefetch가 실패했던 경우의 재시도 — 열려 있는 동안 도착하면 그대로 교체된다.
+        .task { await loadLargeCoverIfNeeded() }
+        // ZStack은 안전영역 크기라 topTrailing = 안전영역 상단(디자인의 상태바 아래 위치와 동일).
+        .overlay(alignment: .topTrailing) {
+            Button {
+                isLargeCoverPresented = false
+            } label: {
+                // 에셋 원색(wssGray300)은 dim 위에서 안 보여 template으로 흰색을 입힌다(네비바 버튼과 같은 이유).
+                WSSImage.icCancelModal.swiftUIImage
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 25, height: 25)
+                    .foregroundStyle(Color.wssWhite)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 12)
+        }
+    }
+
+    /// 대형 표지 공통 스타일 — 클립·그림자는 핏된 이미지 자신에 건다(컨테이너에 걸면 제안 영역 전체에 적용될 수 있다).
+    func largeCover(_ image: Image) -> some View {
+        image
+            .resizable()
+            .scaledToFit()
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: Color.wssBlack.opacity(0.1), radius: 15, x: 0, y: 2)
+    }
+
+    /// 대형 표지 prefetch. `URLSession.shared`는 URLCache를 공유하므로
+    /// 헤더 AsyncImage가 이미 받은 응답이면 재다운로드 없이 캐시에서 온다.
+    func loadLargeCoverIfNeeded() async {
+        guard largeCoverUIImage == nil, let url = coverImageURL else { return }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+        largeCoverUIImage = UIImage(data: data)
+    }
+
     var tabBar: some View {
         HStack(spacing: 0) {
             ForEach(NovelDetailViewModel.Tab.allCases, id: \.self) { tab in
@@ -350,6 +425,11 @@ private extension NovelDetailView {
     /// 네비 타이틀에 쓸 작품 제목. 관심 토글이 반영되는 state.novel 우선(제목은 불변이라 어느 쪽이든 동일).
     var novelTitle: String {
         viewModel.state.novel?.title ?? viewModel.state.information?.novel.title ?? ""
+    }
+
+    /// 대형 표지 오버레이에 쓸 표지 URL(표지는 불변이라 novel/information 어느 쪽이든 동일).
+    var coverImageURL: URL? {
+        viewModel.state.novel?.thumbnailImage ?? viewModel.state.information?.novel.thumbnailImage
     }
 
     /// 조금이라도 위로 스크롤됐는지 — 스크롤 반응형 네비 타이틀 표시 여부.

@@ -22,6 +22,8 @@ struct NovelDetailHeaderView: View {
     /// 커스텀 네비바 하단 y(= 안전영역 top + 네비바 높이). 표지는 네비바 바로 아래에서 시작한다.
     /// 디자인의 99는 특정 기기(상태바 54 + 네비 44) 값이라 안전영역이 다른 기기에서 어긋난다 → 실측값을 받는다.
     let topInset: CGFloat
+    /// 표지 탭 콜백 — 대형 표지 오버레이 표시 여부는 화면(NovelDetailView)이 소유한다.
+    let onCoverTapped: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,26 +83,32 @@ struct NovelDetailHeaderView: View {
     private var coverHeight: CGFloat { 217 }
 
     private var coverImage: some View {
-        AsyncImage(url: novel.thumbnailImage) { phase in
-            if case .success(let image) = phase {
-                image
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                WSSImage.imgLoadingThumbnail.swiftUIImage
-                    .resizable()
-                    .scaledToFill()
+        Button {
+            onCoverTapped()
+        } label: {
+            AsyncImage(url: novel.thumbnailImage) { phase in
+                if case .success(let image) = phase {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    WSSImage.imgLoadingThumbnail.swiftUIImage
+                        .resizable()
+                        .scaledToFill()
+                }
             }
-        }
-        .frame(width: 148, height: coverHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .shadow(color: Color.wssBlack.opacity(0.1), radius: 15, x: 0, y: 2)
-        // 장르 마크는 표지 우하단 모서리에 정렬(디자인 좌표: 표지 bottom/trailing 일치)
-        .overlay(alignment: .bottomTrailing) {
-            if let genre = information.genres.first {
-                genreMark(genre)
+            .frame(width: 148, height: coverHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .shadow(color: Color.wssBlack.opacity(0.1), radius: 15, x: 0, y: 2)
+            // 장르 마크는 표지 우하단 모서리에 정렬(디자인 좌표: 표지 bottom/trailing 일치)
+            .overlay(alignment: .bottomTrailing) {
+                if let genre = information.genres.first {
+                    genreMark(genre)
+                }
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     /// 우하단 코너 라벨: 흰 코너 삼각형 배경(icGenreBackground, 71pt)의 우하단에
