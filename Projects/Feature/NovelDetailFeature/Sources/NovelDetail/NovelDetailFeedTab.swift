@@ -21,6 +21,8 @@ struct NovelDetailFeedTab: View {
     /// 첫 페이지 로드 실패 — "진짜 빈 목록"과 구분해 거짓 빈 상태를 보여주지 않기 위한 값.
     let hasLoadFailed: Bool
     let onReachEnd: () -> Void
+    /// 셀 탭 → 피드 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    let onFeedTapped: (FeedID) -> Void
 
     var body: some View {
         if feeds.isEmpty {
@@ -44,6 +46,10 @@ struct NovelDetailFeedTab: View {
             LazyVStack(spacing: 0) {
                 ForEach(feeds, id: \.feedId) { feed in
                     feedCell(feed)
+                        // 셀 어디를 탭해도 피드 상세로 — 셀 내부 탭 요소(프로필·threedots·좋아요)는
+                        // 더 깊은 제스처라 hit-test 우선이므로 자연히 공존한다.
+                        .contentShape(Rectangle())
+                        .onTapGesture { onFeedTapped(feed.feedId) }
                         .onAppear {
                             // 마지막 행 노출 시 다음 페이지 요청(중복 방지는 VM 가드가 담당).
                             if feed == feeds.last {
@@ -63,7 +69,7 @@ struct NovelDetailFeedTab: View {
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑.
-    /// 프로필·셀 상세 이동, 좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
+    /// 프로필 탭·좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
     /// 이번 범위 밖(TODO — #154 이후 이슈, 스포일러는 WSSFeadView 확장 필요).
     private func feedCell(_ feed: TotalFeed) -> some View {
         WSSFeadView(

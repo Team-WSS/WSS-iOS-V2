@@ -48,15 +48,19 @@ struct NovelDetailView: View {
     private let onReviewTapped: (NovelInformation, ReadingStatus) -> Void
     /// 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디" 버튼·피드 탭 플로팅 버튼 공용.
     private let onCreateFeedTapped: () -> Void
+    /// 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
+    private let onFeedTapped: (FeedID) -> Void
 
     init(
         viewModel: NovelDetailViewModel,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
-        onCreateFeedTapped: @escaping () -> Void
+        onCreateFeedTapped: @escaping () -> Void,
+        onFeedTapped: @escaping (FeedID) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onReviewTapped = onReviewTapped
         self.onCreateFeedTapped = onCreateFeedTapped
+        self.onFeedTapped = onFeedTapped
     }
 
     // body = 조립 + 화면 modifier만. 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 오버레이를 쓴다.
@@ -170,7 +174,8 @@ struct NovelDetailView: View {
                                 feeds: viewModel.state.feeds,
                                 isLoading: viewModel.state.isLoadingFeeds,
                                 hasLoadFailed: viewModel.state.feedsLoadFailed,
-                                onReachEnd: { viewModel.handle(.loadMoreFeeds) }
+                                onReachEnd: { viewModel.handle(.loadMoreFeeds) },
+                                onFeedTapped: onFeedTapped
                             )
                         }
                     }
@@ -629,7 +634,8 @@ private extension UIView {
                 deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase()
             ),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
-            onCreateFeedTapped: { print("피드 작성 진입") }
+            onCreateFeedTapped: { print("피드 작성 진입") },
+            onFeedTapped: { print("피드 상세 진입: \($0)") }
         )
     }
 }

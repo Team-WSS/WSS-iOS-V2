@@ -336,7 +336,8 @@ private struct DemoRootView: View {
                 deleteNovelReviewUseCase: DemoDeleteNovelReviewUseCase(reviewDeletion: reviewDeletion),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
-                onCreateFeedTapped: handleCreateFeedTapped
+                onCreateFeedTapped: handleCreateFeedTapped,
+                onFeedTapped: handleFeedTapped
             )
         case .live:
             makeLiveView()
@@ -391,7 +392,8 @@ private struct DemoRootView: View {
             deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
-            onCreateFeedTapped: handleCreateFeedTapped
+            onCreateFeedTapped: handleCreateFeedTapped,
+            onFeedTapped: handleFeedTapped
         )
     }
 
@@ -403,6 +405,11 @@ private struct DemoRootView: View {
     /// 피드 작성 진입 콜백. 실제 앱은 App 조정 계층이 CreateFeed로 전환한다 — Demo는 로그만.
     private func handleCreateFeedTapped() {
         consoleLogger.info("피드 작성 진입 요청")
+    }
+
+    /// 피드 상세 진입 콜백. 실제 앱은 App 조정 계층이 피드 상세로 전환한다 — Demo는 로그만.
+    private func handleFeedTapped(_ feedID: FeedID) {
+        consoleLogger.info("피드 상세 진입 요청: \(feedID)")
     }
 }
 

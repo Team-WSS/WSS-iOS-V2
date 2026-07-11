@@ -22,6 +22,7 @@ public enum NovelDetailFactory {
     ///     실제 화면 전환(NovelReviewFactory 조립)은 호출자(App 조정 계층)가 수행한다.
     ///     `ReadingStatus`는 평가 초안에 seed할 읽기 상태(상태바에서 탭한 상태 / 평가 있음의 칩·여백 탭은 현재 상태).
     ///   - onCreateFeedTapped: 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디"·피드 탭 플로팅 버튼 공용.
+    ///   - onFeedTapped: 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
     @MainActor
     public static func makeView(
         novelID: NovelID,
@@ -31,7 +32,8 @@ public enum NovelDetailFactory {
         deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
         logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
-        onCreateFeedTapped: @escaping () -> Void
+        onCreateFeedTapped: @escaping () -> Void,
+        onFeedTapped: @escaping (FeedID) -> Void
     ) -> some View {
         NovelDetailView(
             viewModel: NovelDetailViewModel(
@@ -43,7 +45,8 @@ public enum NovelDetailFactory {
                 logger: logger
             ),
             onReviewTapped: onReviewTapped,
-            onCreateFeedTapped: onCreateFeedTapped
+            onCreateFeedTapped: onCreateFeedTapped,
+            onFeedTapped: onFeedTapped
         )
     }
 }
