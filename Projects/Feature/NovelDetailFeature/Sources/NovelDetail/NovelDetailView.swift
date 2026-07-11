@@ -22,6 +22,9 @@ struct NovelDetailView: View {
     /// VM 판단이 필요 없는 순수 표시 상태 — View가 소유한다.
     @State private var isMenuPresented = false
     @State private var isDescriptionExpanded = false
+    /// 스크롤 반응형 네비 타이틀 — 스크롤 콘텐츠 최상단의 오프셋(rest≈0, 위로 스크롤 시 음수).
+    /// 조금이라도 스크롤되면 네비 타이틀·흰 배경을 페이드인한다. (loadedContent의 GeometryReader+onChange가 갱신)
+    @State private var scrollOffsetY: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
     /// 작품 평가(NovelReviewFeature) 진입 콜백. Feature 간 직접 의존 금지 —
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다. status는 평가 초안에 seed할 읽기 상태.
@@ -105,7 +108,23 @@ struct NovelDetailView: View {
                         )
                     }
                 }
+                // 스크롤 오프셋 측정 → scrollOffsetY. rest≈0, 위로 스크롤 시 음수.
+                // ⚠️ preference/onPreferenceChange를 안 쓴다 — ScrollView가 preference를 바깥으로
+                // 안 올려보내고, 이 SDK에선 onPreferenceChange→@State 갱신도 안 먹는다.
+                // GeometryReader 안에서 onChange로 @State를 직접 쓴다(스크롤마다 재평가).
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.frame(in: .named(scrollSpaceName)).minY,
+                                      initial: true) { _, newY in
+                                scrollOffsetY = newY
+                            }
+                    }
+                )
+                // 상단 over-scroll만 제거(하단 bounce는 유지) — 최상단에서 빈 영역까지 끌려가지 않게 한다.
+                .background(TopBounceDisabler())
             }
+            .coordinateSpace(name: scrollSpaceName)
             .ignoresSafeArea(edges: .top)
 
             if viewModel.state.selectedTab == .feed {
@@ -152,8 +171,31 @@ private extension NovelDetailView {
             }
             .buttonStyle(.plain)
         }
+        // 스크롤 반응형 네비 타이틀 — 좌우 버튼(44pt)과 겹치지 않게 여백 후 말줄임.
+        .overlay {
+            Text(novelTitle)
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.horizontal, 44)
+                .opacity(showNavTitle ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: showNavTitle)
+        }
         .padding(.leading, 6)
         .padding(.trailing, 12)
+        // 타이틀과 함께 페이드인하는 흰 배경 — 없으면 타이틀·버튼이 스크롤되는 본문과 겹쳐 안 읽힌다.
+        // 네비바 자신은 ZStack 자식이라 이미 안전영역 상단에 붙는다(UIKit `safeAreaLayoutGuide`와 동일).
+        // 상태바까지 뚫고 올라가야 하는 건 배경뿐이고, 그건 `ignoresSafeArea`가 알아서 한다 —
+        // 안전영역 높이를 읽거나 네비바 높이를 더할 필요가 없다.
+        // ⚠️ `padding` 뒤에 붙여야 좌우 끝까지 덮는다.
+        .background(
+            Color.wssWhite
+                .opacity(showNavTitle ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: showNavTitle)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
+        )
     }
 
     /// threedots 드롭다운(오류 제보 / 평가 삭제). 실제 동작은 이번 범위 밖(TODO — #154 이후 이슈).
@@ -243,6 +285,17 @@ private extension NovelDetailView {
         }
     }
 
+    /// 네비 타이틀에 쓸 작품 제목. 관심 토글이 반영되는 state.novel 우선(제목은 불변이라 어느 쪽이든 동일).
+    var novelTitle: String {
+        viewModel.state.novel?.title ?? viewModel.state.information?.novel.title ?? ""
+    }
+
+    /// 조금이라도 위로 스크롤됐는지 — 스크롤 반응형 네비 타이틀 표시 여부.
+    /// -1 임계값은 rest 지점(≈0)의 부동소수 지터로 깜빡이지 않게 하는 여유.
+    var showNavTitle: Bool {
+        viewModel.state.information != nil && scrollOffsetY < -1
+    }
+
     var toastBinding: Binding<Bool> {
         Binding(
             get: { viewModel.state.presentedError != nil },
@@ -253,6 +306,66 @@ private extension NovelDetailView {
     /// 에러 의미값 → 토스트 표현. 케이스별 전용 문구가 필요해지면 WSSToastType에 케이스를 더한다(허락 후).
     var toastType: WSSToastType {
         .unknownError
+    }
+}
+
+// MARK: - Scroll-reactive nav title
+
+/// 스크롤 오프셋 측정용 ScrollView 좌표공간 이름.
+private let scrollSpaceName = "novelDetailScroll"
+
+// MARK: - Scroll bounce control
+
+/// 조상 `UIScrollView`의 **상단 over-scroll만** 막는다(하단 bounce는 유지) — 최상단에서
+/// 빈 영역까지 끌려가는 걸 막되, 바닥에서의 고무줄 효과는 남긴다.
+/// UIKit에서 `scrollViewDidScroll`이 `contentOffset.y < 0`을 0으로 클램프하던 것과 같은 동작을,
+/// SwiftUI 위에선 **delegate 교체 대신 KVO**로 건다 — SwiftUI가 소유·재설정하는 delegate를
+/// 건드리면 스크롤 내부 동작이 깨질 수 있어서다(발화 시점은 `scrollViewDidScroll`과 동일).
+/// ⚠️ 반드시 **스크롤 콘텐츠 내부**에 배치해야(여기선 VStack의 background) UIView의
+/// superview 체인이 UIScrollView에 닿는다.
+private struct TopBounceDisabler: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    // 삽입 시점엔 superview가 없어 makeUIView에선 못 찾는다 → 레이아웃 후(updateUIView + async)에 건다.
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async { [weak uiView] in
+            guard let scrollView = uiView?.enclosingScrollView else { return }
+            context.coordinator.clampTop(of: scrollView)
+        }
+    }
+
+    final class Coordinator {
+        private weak var observed: UIScrollView?
+        private var observation: NSKeyValueObservation?
+
+        func clampTop(of scrollView: UIScrollView) {
+            guard observed !== scrollView else { return }  // 같은 스크롤뷰면 재관찰하지 않는다.
+            observed = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { scrollView, _ in
+                // 상단 rest(0) 위로 넘어가면 즉시 되돌린다 — 하단(양수 방향) bounce는 건드리지 않는다.
+                if scrollView.contentOffset.y < 0 {
+                    scrollView.contentOffset.y = 0
+                }
+            }
+        }
+    }
+}
+
+private extension UIView {
+    /// superview 체인을 거슬러 올라 가장 가까운 `UIScrollView`를 찾는다.
+    var enclosingScrollView: UIScrollView? {
+        var current = superview
+        while let view = current {
+            if let scrollView = view as? UIScrollView { return scrollView }
+            current = view.superview
+        }
+        return nil
     }
 }
 
