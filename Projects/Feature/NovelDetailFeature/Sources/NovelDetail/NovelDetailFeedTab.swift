@@ -20,11 +20,22 @@ struct NovelDetailFeedTab: View {
     let isLoading: Bool
     /// 첫 페이지 로드 실패 — "진짜 빈 목록"과 구분해 거짓 빈 상태를 보여주지 않기 위한 값.
     let hasLoadFailed: Bool
+    /// 셀 y 실측에 쓸 ScrollView 좌표공간 이름(threedots 드롭다운 앵커 계산용).
+    let scrollSpaceName: String
     let onReachEnd: () -> Void
     /// 셀 탭 → 피드 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
     let onFeedTapped: (FeedID) -> Void
     /// 프로필 이미지 탭 → 유저 프로필 진입. 내 글이면 호출하지 않는다(셀 매핑에서 차단).
     let onUserProfileTapped: (UserID) -> Void
+    /// threedots 탭 → 셀 드롭다운 표시 요청. 두 번째 값은 드롭다운 앵커(threedots 하단의 화면 y).
+    let onThreeDotsTapped: (TotalFeed, CGFloat) -> Void
+
+    /// 각 셀 상단의 화면 y(스크롤 좌표공간 실측) — threedots 앵커 계산용.
+    /// 네비 타이틀·탭바와 같은 측정 방식(GeometryReader 안 onChange). 사라진 셀의 잔존 값은 무해하다.
+    @State private var cellTopYs: [FeedID: CGFloat] = [:]
+
+    /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
+    private let threeDotsBottomOffset: CGFloat = 52
 
     var body: some View {
         if feeds.isEmpty {
@@ -52,6 +63,15 @@ struct NovelDetailFeedTab: View {
                         // 더 깊은 제스처라 hit-test 우선이므로 자연히 공존한다.
                         .contentShape(Rectangle())
                         .onTapGesture { onFeedTapped(feed.feedId) }
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .onChange(of: proxy.frame(in: .named(scrollSpaceName)).minY,
+                                              initial: true) { _, newY in
+                                        cellTopYs[feed.feedId] = newY
+                                    }
+                            }
+                        )
                         .onAppear {
                             // 마지막 행 노출 시 다음 페이지 요청(중복 방지는 VM 가드가 담당).
                             if feed == feeds.last {
@@ -85,7 +105,9 @@ struct NovelDetailFeedTab: View {
                     guard !feed.isMyFeed, let userId = feed.author.userId else { return }
                     onUserProfileTapped(userId)
                 },
-                threeDotsButtonTapped: {}
+                threeDotsButtonTapped: {
+                    onThreeDotsTapped(feed, (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset)
+                }
             ),
             content: feed.content,
             feedImage: feed.thumbnailImageURL.map {

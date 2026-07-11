@@ -19,10 +19,18 @@ import WSSComponent
 // "얇은 VM": 카피·포맷·색은 전부 View가 결정한다.
 struct NovelDetailView: View {
 
+    /// threedots 드롭다운 표시 컨텍스트 — 대상 피드(항목 분기)와 앵커(threedots 하단의 화면 y).
+    struct FeedMenuContext {
+        let feed: TotalFeed
+        let anchorY: CGFloat
+    }
+
     @State private var viewModel: NovelDetailViewModel
     /// VM 판단이 필요 없는 순수 표시 상태 — View가 소유한다.
     @State private var isMenuPresented = false
     @State private var isDescriptionExpanded = false
+    /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다.
+    @State private var feedMenuContext: FeedMenuContext?
     /// 표지 탭 → 대형 표지 오버레이(dim + 원본 비율 확대 표지) 표시 여부.
     @State private var isLargeCoverPresented = false
     /// 대형 표지 원본 이미지 — 화면 로드 시 미리 받아 둔다(prefetch).
@@ -52,19 +60,23 @@ struct NovelDetailView: View {
     private let onFeedTapped: (FeedID) -> Void
     /// 유저 프로필 진입 콜백 — 피드 셀 프로필 이미지 탭(내 글 제외).
     private let onUserProfileTapped: (UserID) -> Void
+    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
+    private let onEditFeedTapped: (TotalFeed) -> Void
 
     init(
         viewModel: NovelDetailViewModel,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping () -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
-        onUserProfileTapped: @escaping (UserID) -> Void
+        onUserProfileTapped: @escaping (UserID) -> Void,
+        onEditFeedTapped: @escaping (TotalFeed) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onReviewTapped = onReviewTapped
         self.onCreateFeedTapped = onCreateFeedTapped
         self.onFeedTapped = onFeedTapped
         self.onUserProfileTapped = onUserProfileTapped
+        self.onEditFeedTapped = onEditFeedTapped
     }
 
     // body = 조립 + 화면 modifier만. 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 오버레이를 쓴다.
@@ -118,6 +130,10 @@ struct NovelDetailView: View {
 
             if isMenuPresented {
                 menuOverlay
+            }
+
+            if let feedMenuContext {
+                feedMenuOverlay(feedMenuContext)
             }
 
             // 네비바·스티키 탭바까지 덮어야 하므로 루트 ZStack의 최상단 자식으로 둔다.
@@ -178,9 +194,13 @@ struct NovelDetailView: View {
                                 feeds: viewModel.state.feeds,
                                 isLoading: viewModel.state.isLoadingFeeds,
                                 hasLoadFailed: viewModel.state.feedsLoadFailed,
+                                scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onFeedTapped: onFeedTapped,
-                                onUserProfileTapped: onUserProfileTapped
+                                onUserProfileTapped: onUserProfileTapped,
+                                onThreeDotsTapped: { feed, anchorY in
+                                    feedMenuContext = FeedMenuContext(feed: feed, anchorY: anchorY)
+                                }
                             )
                         }
                     }
@@ -319,6 +339,31 @@ private extension NovelDetailView {
             .padding(.top, 44)
             .padding(.trailing, 20)
         }
+    }
+
+    /// 피드 셀 threedots 드롭다운 — 탭한 셀의 threedots 바로 아래에 뜬다(앵커는 셀 실측 y).
+    /// 내 글이면 수정/삭제, 남의 글이면 신고 2종(글자색 빨강) — Figma 6773-26280/26272.
+    func feedMenuOverlay(_ context: FeedMenuContext) -> some View {
+        // 화면 하단 셀에서는 앵커를 그대로 쓰면 메뉴가 화면 밖으로 잘린다 →
+        // 전부 보이는 위치까지만 내려가게 클램프한다(threedots에서 떨어져도 전부 보이는 쪽 우선).
+        // 메뉴 높이 107 = WSSDropdownMenu 항목 고정 높이 53 × 2 + 구분선.
+        let anchorY = scrollViewHeight > 0
+            ? min(context.anchorY, scrollViewHeight - 107 - 20)
+            : context.anchorY
+        return ZStack(alignment: .topTrailing) {
+            // 바깥 탭으로 닫기 위한 투명 레이어 — 떠 있는 동안 스크롤도 막아 앵커가 어긋나지 않는다.
+            Color.wssBlack.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { feedMenuContext = nil }
+
+            WSSDropdownMenu(items: feedMenuItems(context.feed))
+                .frame(width: 190)
+                .padding(.top, anchorY)
+                .padding(.trailing, 20)
+        }
+        // 앵커 y가 화면 최상단(상태바 포함) 기준(스크롤 좌표공간 실측)이라 좌표계를 맞춘다 —
+        // 루트 ZStack은 안전영역 안쪽이므로 이걸 빼면 메뉴가 안전영역 높이만큼 내려간다.
+        .ignoresSafeArea(edges: .top)
     }
 
     /// 표지 탭 시 뜨는 대형 표지 오버레이 — dim 배경 위에 표지를 원본 비율 그대로 최대 크기로 띄운다.
@@ -502,6 +547,33 @@ private extension NovelDetailView {
             set: { if !$0 { viewModel.handle(.dismissDeleteReviewAlert) } }
         )
     }
+
+    /// 피드 소유 여부 → 드롭다운 항목. 내 글 = 수정/삭제, 남의 글 = 신고 2종(빨강).
+    func feedMenuItems(_ feed: TotalFeed) -> [WSSDropdownItem] {
+        if feed.isMyFeed {
+            [
+                WSSDropdownItem(title: "수정하기") {
+                    feedMenuContext = nil
+                    onEditFeedTapped(feed)
+                },
+                WSSDropdownItem(title: "삭제하기") {
+                    feedMenuContext = nil
+                    // TODO(#154 이후): 삭제 확인 알럿(.deleteMyFeed) + DeleteFeedUseCase 연결.
+                }
+            ]
+        } else {
+            [
+                WSSDropdownItem(title: "스포일러 신고", titleColor: Color.wssSecondary100) {
+                    feedMenuContext = nil
+                    // TODO(#154 이후): 신고 확인 알럿(.reportSpoilerContent) + 신고 API 연결.
+                },
+                WSSDropdownItem(title: "부적절한 표현 신고", titleColor: Color.wssSecondary100) {
+                    feedMenuContext = nil
+                    // TODO(#154 이후): 신고 확인 알럿(.reportImproperContent) + 신고 API 연결.
+                }
+            ]
+        }
+    }
 }
 
 // MARK: - Scroll-reactive nav title
@@ -641,7 +713,8 @@ private extension UIView {
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
             onCreateFeedTapped: { print("피드 작성 진입") },
             onFeedTapped: { print("피드 상세 진입: \($0)") },
-            onUserProfileTapped: { print("유저 프로필 진입: \($0)") }
+            onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
+            onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
         )
     }
 }

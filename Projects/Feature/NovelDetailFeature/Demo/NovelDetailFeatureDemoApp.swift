@@ -338,7 +338,8 @@ private struct DemoRootView: View {
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
                 onFeedTapped: handleFeedTapped,
-                onUserProfileTapped: handleUserProfileTapped
+                onUserProfileTapped: handleUserProfileTapped,
+                onEditFeedTapped: handleEditFeedTapped
             )
         case .live:
             makeLiveView()
@@ -395,7 +396,8 @@ private struct DemoRootView: View {
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
             onFeedTapped: handleFeedTapped,
-            onUserProfileTapped: handleUserProfileTapped
+            onUserProfileTapped: handleUserProfileTapped,
+            onEditFeedTapped: handleEditFeedTapped
         )
     }
 
@@ -417,6 +419,11 @@ private struct DemoRootView: View {
     /// 유저 프로필 진입 콜백(내 글이면 호출 안 됨). 실제 앱은 App 조정 계층이 프로필로 전환한다 — Demo는 로그만.
     private func handleUserProfileTapped(_ userID: UserID) {
         consoleLogger.info("유저 프로필 진입 요청: \(userID)")
+    }
+
+    /// 피드 수정 진입 콜백(내 글 드롭다운의 "수정하기"). 실제 앱은 CreateFeed 수정 모드로 전환한다 — Demo는 로그만.
+    private func handleEditFeedTapped(_ feed: TotalFeed) {
+        consoleLogger.info("피드 수정 진입 요청: \(feed.feedId)")
     }
 }
 
