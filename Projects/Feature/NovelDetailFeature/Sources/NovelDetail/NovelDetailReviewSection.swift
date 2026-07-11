@@ -221,6 +221,9 @@ struct NovelDetailReviewSection: View {
                     .stroke(Color.wssPrimary100, lineWidth: 1)
             )
             .contentShape(Rectangle())
+            // 하트 에셋 교체·배경색의 기본 크로스페이드를 짧게 고정
+            // (미설정 시 느리게 번진다 — NovelReview 읽기 상태 선택과 동일한 처방).
+            .animation(.easeInOut(duration: 0.1), value: isInterested)
         }
         .buttonStyle(.plain)
     }
