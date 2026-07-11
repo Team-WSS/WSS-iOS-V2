@@ -25,6 +25,12 @@
     - ⚠️ `.background`는 **`padding` 뒤에** 붙여야 좌우 끝까지 덮는다(앞에 두면 좌우 여백이 뚫린다).
     - ⚠️ 배경 `Color`엔 **`.allowsHitTesting(false)`** — 없으면 네비바 영역에서 시작하는 드래그가 Color에 먹혀 스크롤이 안 된다(투명 Spacer 영역과 달리 Color는 hit-test 대상).
     - ⚠️ (여전히 유효) **ZStack 안에 중첩된 `GeometryReader`의 `safeAreaInsets.top`은 0으로 보고**된다(상위가 이미 소비) — 안전영역을 *읽어야만* 하는 상황이 오면 루트 `GeometryReader`를 써야 한다. `ignoresSafeArea`는 별개 메커니즘이라 중첩돼도 정상 동작한다.
+- **스티키 탭바(정보/피드)**: 스크롤로 탭바가 커스텀 네비바 하단에 닿으면 그 아래에 고정돼 보인다. **`LazyVStack(pinnedViews:)`를 쓰지 말 것** — pin 위치는 ScrollView의 content inset 상단인데 이 화면은 몰입형이라 `.ignoresSafeArea(edges: .top)`이 걸려 있어 **탭바가 상태바 밑(화면 최상단)에 붙어** 네비바와 겹친다. 대신 **오버레이 2벌 방식**: 스크롤 콘텐츠 안 "원본" 탭바는 자리만 유지(스티키 전환 시 콘텐츠 점프 방지)하고, 네비바와 **같은 VStack**에 탭바를 하나 더 그려 조건부로 띄운다(네비바 "바로 아래"가 레이아웃으로 보장 → 스티키 y 계산 불필요).
+  - 임계선(네비바 하단 y)은 **안전영역을 읽거나 44를 더하지 않는다** — 이미 `ignoresSafeArea`로 상태바까지 확장된 **네비바 배경의 실측 높이**가 곧 `안전영역 top + 네비바 높이`다. 그래서 배경 `Color`를 `GeometryReader`로 감싸고(**`ignoresSafeArea`는 GeometryReader 쪽에** 붙여야 확장분이 `proxy.size.height`에 잡힌다) 그 높이를 쓴다.
+  - 원본 탭바 위치(`tabBarMinY`)는 네비 타이틀과 **같은 방식**으로 잰다(named coordinate space + `GeometryReader` 안 `onChange`). 두 좌표 모두 화면 좌상단 기준이라 그대로 비교(`tabBarMinY <= navigationBarBottomY`).
+  - ⚠️ 스티키 탭바는 ScrollView **바깥** 오버레이라 **그 위에서 드래그해도 스크롤되지 않는다**(탭 전환은 정상). 탭바가 얇아 실사용 영향은 작지만, 스크롤이 필요해지면 제스처를 스크롤뷰로 전달하는 별도 처리가 필요하다.
+  - **탭 전환 시 화면 튐 → 탭 콘텐츠에 `.frame(minHeight: tabContentMinHeight, alignment: .top)`으로 해결.** 짧은 탭(피드 몇 개)으로 바뀌면 `contentSize`가 줄어 UIScrollView가 `contentOffset`을 스크롤 가능한 최대치로 되돌린다(클램프) → 화면이 위로 튄다. 최소 높이를 **"스티키 상태에서 탭바 아래 남는 화면 영역"**(`스크롤뷰 높이 - 네비바 하단 y - 탭바 높이`)만큼 주면 어떤 탭이든 스티키 지점까지의 스크롤 여유가 남아 클램프가 없다. 피드는 **지연 로드**라 로딩 중 잠깐 비는 순간에도 클램프가 걸리므로 이 최소 높이가 특히 필요하다.
+    - ⚠️ 뷰포트 높이를 재는 `GeometryReader`에도 **`ignoresSafeArea(edges: .top)`을 걸어야 한다** — ScrollView는 이미 상태바까지 확장돼 있는데 background의 GeometryReader는 그냥 두면 안전영역 **안쪽** 높이를 보고한다. 그러면 최소 높이가 **딱 안전영역 top만큼**(SE 20pt) 모자라 탭 전환 시 그만큼 덜 붙는다(증상이 미묘해 원인 찾기 어렵다).
 - **표지 우하단 장르 코너 뱃지 = `icGenreBackground`(흰 코너 삼각형 71pt) 우하단에 `genre.iconImage`(GenreIcon 방패형)를 `trailing 4 / bottom 5` 인셋으로 얹음.** V1(UIKit) 레이아웃 그대로. 주의: 아이콘은 배경을 꽉 채우지 않고 **32pt**로 코너에 작게 — 71pt로 키우면 틀림. 겹칠 아이콘은 `markImage`(GenreMark)가 **아니다**(헷갈리기 쉬움).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
 - 피드 셀의 좋아요/threedots/프로필 탭, 드롭다운(오류 제보/평가 삭제) 액션, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.

@@ -25,6 +25,14 @@ struct NovelDetailView: View {
     /// 스크롤 반응형 네비 타이틀 — 스크롤 콘텐츠 최상단의 오프셋(rest≈0, 위로 스크롤 시 음수).
     /// 조금이라도 스크롤되면 네비 타이틀·흰 배경을 페이드인한다. (loadedContent의 GeometryReader+onChange가 갱신)
     @State private var scrollOffsetY: CGFloat = 0
+    /// 스티키 탭바 — 스크롤 콘텐츠 안 "원본" 탭바의 상단 y(화면 좌상단 기준).
+    /// 측정 전엔 스티키가 뜨지 않도록 무한대로 시작한다.
+    @State private var tabBarMinY: CGFloat = .greatestFiniteMagnitude
+    /// 스티키 탭바 — 네비바 하단 y(= 안전영역 top + 네비바 높이). 네비바 배경의 실측 높이로 얻는다.
+    @State private var navigationBarBottomY: CGFloat = 0
+    /// 탭 콘텐츠 최소 높이 계산용 — 탭바 높이와 스크롤 뷰포트 높이(둘 다 실측).
+    @State private var tabBarHeight: CGFloat = 0
+    @State private var scrollViewHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
     /// 작품 평가(NovelReviewFeature) 진입 콜백. Feature 간 직접 의존 금지 —
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다. status는 평가 초안에 seed할 읽기 상태.
@@ -69,7 +77,14 @@ struct NovelDetailView: View {
                 NetworkErrorView { viewModel.handle(.load) }
             }
 
-            navigationBar
+            // 네비바와 스티키 탭바는 한 VStack으로 묶는다 — 탭바가 네비바 "바로 아래"에 붙는 게
+            // 레이아웃으로 보장되므로 스티키 탭바의 y를 따로 계산할 필요가 없다.
+            VStack(spacing: 0) {
+                navigationBar
+                if showStickyTabBar {
+                    tabBar
+                }
+            }
 
             if isMenuPresented {
                 menuOverlay
@@ -92,21 +107,43 @@ struct NovelDetailView: View {
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
                         onCreateFeedTapped: onCreateFeedTapped
                     )
+                    // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
+                    // 네비바 하단에 닿는 순간부터는 상단 오버레이의 탭바가 이 자리를 그대로 덮는다.
                     tabBar
-                    switch viewModel.state.selectedTab {
-                    case .info:
-                        NovelDetailInfoTab(
-                            information: information,
-                            isDescriptionExpanded: $isDescriptionExpanded
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .onChange(of: proxy.frame(in: .named(scrollSpaceName)).minY,
+                                              initial: true) { _, newY in
+                                        tabBarMinY = newY
+                                    }
+                                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                                        tabBarHeight = height
+                                    }
+                            }
                         )
-                    case .feed:
-                        NovelDetailFeedTab(
-                            feeds: viewModel.state.feeds,
-                            isLoading: viewModel.state.isLoadingFeeds,
-                            hasLoadFailed: viewModel.state.feedsLoadFailed,
-                            onReachEnd: { viewModel.handle(.loadMoreFeeds) }
-                        )
+                    // 탭 콘텐츠엔 최소 높이를 준다 — 탭 전환 시 스크롤이 튀지 않게 하는 핵심.
+                    // 짧은 탭(피드 몇 개)으로 바뀌면 contentSize가 줄어 UIScrollView가 contentOffset을
+                    // 스크롤 가능한 최대치로 되돌린다(클램프) → 화면이 위로 튄다.
+                    // 최소 높이를 "탭바 아래 남는 화면 영역"만큼 확보하면 스티키 지점까지의 스크롤 여유가
+                    // 항상 남아 클램프가 일어나지 않는다.
+                    Group {
+                        switch viewModel.state.selectedTab {
+                        case .info:
+                            NovelDetailInfoTab(
+                                information: information,
+                                isDescriptionExpanded: $isDescriptionExpanded
+                            )
+                        case .feed:
+                            NovelDetailFeedTab(
+                                feeds: viewModel.state.feeds,
+                                isLoading: viewModel.state.isLoadingFeeds,
+                                hasLoadFailed: viewModel.state.feedsLoadFailed,
+                                onReachEnd: { viewModel.handle(.loadMoreFeeds) }
+                            )
+                        }
                     }
+                    .frame(minHeight: tabContentMinHeight, alignment: .top)
                 }
                 // 스크롤 오프셋 측정 → scrollOffsetY. rest≈0, 위로 스크롤 시 음수.
                 // ⚠️ preference/onPreferenceChange를 안 쓴다 — ScrollView가 preference를 바깥으로
@@ -126,6 +163,18 @@ struct NovelDetailView: View {
             }
             .coordinateSpace(name: scrollSpaceName)
             .ignoresSafeArea(edges: .top)
+            // 뷰포트 높이 — ⚠️ `GeometryReader`에도 `ignoresSafeArea(edges: .top)`을 걸어야 한다.
+            // ScrollView는 이미 상태바까지 확장돼 있는데, background의 GeometryReader는 그대로 두면
+            // 안전영역 **안쪽** 높이를 보고한다 → 최소 높이가 딱 안전영역 top만큼 모자라 스티키가 덜 붙는다.
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onChange(of: proxy.size.height, initial: true) { _, height in
+                            scrollViewHeight = height
+                        }
+                }
+                .ignoresSafeArea(edges: .top)
+            )
 
             if viewModel.state.selectedTab == .feed {
                 floatingWriteButton
@@ -189,12 +238,20 @@ private extension NovelDetailView {
         // 상태바까지 뚫고 올라가야 하는 건 배경뿐이고, 그건 `ignoresSafeArea`가 알아서 한다 —
         // 안전영역 높이를 읽거나 네비바 높이를 더할 필요가 없다.
         // ⚠️ `padding` 뒤에 붙여야 좌우 끝까지 덮는다.
+        // 스티키 탭바의 임계선(네비바 하단 y)도 여기서 얻는다 — 이 배경은 `ignoresSafeArea`로
+        // 이미 상태바까지 확장돼 있어 그 **실측 높이**가 곧 "안전영역 top + 네비바 높이"다.
+        // (안전영역을 직접 읽거나 네비바 높이 44를 더하지 않아도 된다 — 위 주석과 같은 이유.)
         .background(
-            Color.wssWhite
-                .opacity(showNavTitle ? 1 : 0)
-                .animation(.easeInOut(duration: 0.2), value: showNavTitle)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
+            GeometryReader { proxy in
+                Color.wssWhite
+                    .opacity(showNavTitle ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showNavTitle)
+                    .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        navigationBarBottomY = height
+                    }
+            }
+            .ignoresSafeArea(edges: .top)
         )
     }
 
@@ -294,6 +351,22 @@ private extension NovelDetailView {
     /// -1 임계값은 rest 지점(≈0)의 부동소수 지터로 깜빡이지 않게 하는 여유.
     var showNavTitle: Bool {
         viewModel.state.information != nil && scrollOffsetY < -1
+    }
+
+    /// 탭 콘텐츠가 확보해야 할 최소 높이 = 스티키 상태에서 탭바 아래 남는 화면 영역.
+    /// 이만큼 있으면 어떤 탭으로 바꿔도 스티키 지점까지 스크롤할 여유가 남아 offset 클램프(=화면 튐)가 없다.
+    /// 아직 실측 전(0)이면 0 → 최소 높이 제약 없음.
+    var tabContentMinHeight: CGFloat {
+        max(0, scrollViewHeight - navigationBarBottomY - tabBarHeight)
+    }
+
+    /// 스크롤되는 원본 탭바가 네비바 하단까지 올라왔는지 — 상단 오버레이의 스티키 탭바 표시 여부.
+    /// 두 좌표 모두 화면 좌상단(상태바 포함) 기준이라 그대로 비교한다.
+    /// 임계선을 아직 못 쟀으면(0) 표시하지 않는다.
+    var showStickyTabBar: Bool {
+        viewModel.state.information != nil
+            && navigationBarBottomY > 0
+            && tabBarMinY <= navigationBarBottomY
     }
 
     var toastBinding: Binding<Bool> {
