@@ -251,6 +251,13 @@ private struct DemoRootView: View {
                 detailView
                     .id(detailOpenCount)
             }
+            // 실서버 키워드 매핑은 파일 캐시(keywords.json)만 읽는다 — 실제 앱은 App(DI)이
+            // 시작 시 syncKeywords()로 채우지만 Demo엔 그 계층이 없어, 토글 시 여기서 채운다.
+            // 안 채우면 캐시 없는 시뮬레이터에서 fetchKeywords()가 실패해 키워드가 통째로 빈다.
+            .task(id: dataSource) {
+                guard dataSource == .live else { return }
+                await makeLiveKeywordRepository(client: makeLiveClient()).syncKeywords()
+            }
         }
     }
 
@@ -335,20 +342,30 @@ private struct DemoRootView: View {
     // NetworkingConfig.baseURL로 호출하고, DemoSessionTokenStore가 TEST_API_KEY를
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     @MainActor
-    private func makeLiveView() -> some View {
-        let client = NetworkingClient(
+    private func makeLiveClient() -> NetworkingClient {
+        NetworkingClient(
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
         )
+    }
+
+    @MainActor
+    private func makeLiveKeywordRepository(client: NetworkingClient) -> KeywordRepository {
+        KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
+    }
+
+    @MainActor
+    private func makeLiveView() -> some View {
+        let client = makeLiveClient()
         let novelRepository = NovelDataFactory.makeNovelRepository(
             client: client,
             appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
-        let keywordRepository = KeywordDataFactory.makeRepository(
-            client: client,
-            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
-        )
+        let keywordRepository = makeLiveKeywordRepository(client: client)
         let feedRepository = FeedDataFactory.makeFeedRepository(
             client: client,
             logger: DataLogger(moduleName: "FeedData", underlying: consoleLogger)

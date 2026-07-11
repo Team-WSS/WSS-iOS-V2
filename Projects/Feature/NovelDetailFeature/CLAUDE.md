@@ -62,6 +62,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
     - ⚠️ 뷰포트 높이를 재는 `GeometryReader`에도 **`ignoresSafeArea(edges: .top)`을 걸어야 한다** — ScrollView는 이미 상태바까지 확장돼 있는데 background의 GeometryReader는 그냥 두면 안전영역 **안쪽** 높이를 보고한다. 그러면 최소 높이가 **딱 안전영역 top만큼**(SE 20pt) 모자라 탭 전환 시 그만큼 덜 붙는다(증상이 미묘해 원인 찾기 어렵다).
 - **헤더 상단 인셋은 디자인 고정값(99)이 아니라 실측 `navigationBarBottomY`를 넘겨 쓴다** — 99 = 상태바 54 + 네비 44로, 안전영역이 다른 기기(SE 20 / 16 Pro 59)에선 표지가 네비바에서 뜨거나 겹친다. ⚠️ **헤더 배경(backdrop) 높이도 같은 인셋에 묶어야 한다**(`topInset + 표지 217 + 14`) — 디자인의 330은 "표지 아래 14pt에서 회색으로 전환"을 뜻하는 파생값이라, 표지만 인셋을 따라가고 배경을 330으로 고정하면 안전영역이 작은 기기에서 **제목이 회색이 아닌 블러 보라 배경 위로 올라온다**.
 - **표지 우하단 장르 코너 뱃지 = `icGenreBackground`(흰 코너 삼각형 71pt) 우하단에 `genre.iconImage`(GenreIcon 방패형)를 `trailing 4 / bottom 5` 인셋으로 얹음.** V1(UIKit) 레이아웃 그대로. 주의: 아이콘은 배경을 꽉 채우지 않고 **32pt**로 코너에 작게 — 71pt로 키우면 틀림. 겹칠 아이콘은 `markImage`(GenreMark)가 **아니다**(헷갈리기 쉬움).
+- **Demo 실서버 모드는 토글 시 `syncKeywords()`를 직접 호출**한다 — 작품 상세의 키워드 매핑이 파일 캐시(keywords.json)만 읽는데, 실제 앱에선 App(DI)이 시작 시 채울 캐시를 Demo는 스스로 채워야 해서다. 안 부르면 캐시 없는 시뮬레이터에서 키워드 섹션이 통째로 빈다(에러 없이 조용히).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
 - 피드 셀의 좋아요/threedots/프로필 탭, 드롭다운(오류 제보/평가 삭제) 액션, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃 — **둘 다 상태별 개별 진입(탭한 상태를 seed)**. 있음은 추가로 박스의 칩·여백을 탭하면 현재 상태로 진입한다(상태 `Button`이 hit-test 우선이라 바깥 `onTapGesture`와 공존 — 중첩 Button은 불안정해 피함).
