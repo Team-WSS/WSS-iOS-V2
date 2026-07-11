@@ -185,7 +185,8 @@ private struct DemoRootView: View {
         var id: String { rawValue }
     }
 
-    private let novelID = NovelID(1)
+    /// Mock은 어떤 ID를 넣어도 같은 데이터를 돌려주므로 고정값을 쓴다(실서버만 입력받는다).
+    private let mockNovelID = NovelID(1)
 
     @State private var dataSource: DataSource = .mock
     @State private var isDetailPresented = false
@@ -193,6 +194,10 @@ private struct DemoRootView: View {
     @State private var detailOpenCount = 0
     /// 마지막으로 누른 시나리오 버튼 — Mock 진입 시 주입할 데이터 조건.
     @State private var scenario: DemoScenario = .full
+    /// 실서버로 조회할 작품 ID 입력값.
+    @State private var novelIDText = "1"
+    /// 진입 시점에 확정된 작품 ID — 화면이 떠 있는 동안 입력값을 바꿔도 흔들리지 않게 캡처해 둔다.
+    @State private var liveNovelID = NovelID(1)
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -224,8 +229,7 @@ private struct DemoRootView: View {
                         }
                     }
                 case .live:
-                    Button("작품 상세 화면 열기") { open(.full) }
-                        .buttonStyle(.borderedProminent)
+                    liveControls
                     Spacer()
                 }
             }
@@ -237,6 +241,32 @@ private struct DemoRootView: View {
                     .id(detailOpenCount)
             }
         }
+    }
+
+    /// 실서버는 조회할 작품 ID를 직접 입력받는다 — Mock과 달리 ID마다 데이터가 다르기 때문.
+    private var liveControls: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Text("작품 ID")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                TextField("예: 1", text: $novelIDText)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+            }
+            Button("작품 상세 화면 열기") {
+                open(.full)
+            }
+            .buttonStyle(.borderedProminent)
+            // 빈 값·0·문자가 들어오면 열지 않는다(서버에 의미 없는 요청을 보내지 않게).
+            .disabled(enteredNovelID == nil)
+        }
+    }
+
+    /// 입력값 → 작품 ID. 양의 정수가 아니면 nil.
+    private var enteredNovelID: NovelID? {
+        guard let value = Int(novelIDText), value > 0 else { return nil }
+        return NovelID(value)
     }
 
     /// 선언 순서를 유지한 채 group으로 묶는다(Dictionary(grouping:)은 순서가 흐트러진다).
@@ -265,6 +295,8 @@ private struct DemoRootView: View {
 
     private func open(_ scenario: DemoScenario) {
         self.scenario = scenario
+        // 진입 시점의 입력값을 확정한다 — 화면이 떠 있는 동안 텍스트를 바꿔도 조회 대상은 안 바뀐다.
+        if let id = enteredNovelID { liveNovelID = id }
         detailOpenCount += 1
         isDetailPresented = true
     }
@@ -274,7 +306,7 @@ private struct DemoRootView: View {
         switch dataSource {
         case .mock:
             NovelDetailFactory.makeView(
-                novelID: novelID,
+                novelID: mockNovelID,
                 loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
                 loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(scenario: scenario),
@@ -311,7 +343,7 @@ private struct DemoRootView: View {
             logger: DataLogger(moduleName: "FeedData", underlying: consoleLogger)
         )
         return NovelDetailFactory.makeView(
-            novelID: novelID,
+            novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: novelRepository,
                 keywordRepository: keywordRepository
