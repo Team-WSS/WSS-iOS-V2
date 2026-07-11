@@ -34,6 +34,146 @@ struct NovelDetailFeatureDemoApp: App {
     }
 }
 
+// MARK: - Demo 시나리오
+
+/// 정보 탭 "독자들의 감상평"을 이루는 세 요소 — 각각 값이 없으면 그 섹션만 사라진다.
+private enum ReaderReviewPart: CaseIterable {
+    case attractivePoints
+    case keywords
+    case readingStatus
+}
+
+/// 내 평가(UserNovelReview)의 **선택 항목** — 평가 상태바에서 각각 칩으로 나타난다.
+/// 읽기 상태는 평가가 존재하면 반드시 있으므로 축이 아니다(그래서 "읽기 상태만" = 빈 집합).
+private enum UserReviewPart: CaseIterable {
+    case rating
+    case period
+}
+
+/// Mock 진입 조건. 화면이 **데이터에 따라 분기하는 지점**만 골라 시나리오로 만든다
+/// (조건부 섹션·빈 상태·실패 뷰). 필드 하나씩 다른 조합은 시나리오로 만들지 않는다 — 버튼만 늘고 볼 게 없다.
+private enum DemoScenario: CaseIterable, Identifiable {
+    /// 모든 섹션이 값을 가진 기본 상태.
+    case full
+    /// 내 평가 없음 → 평가 상태바 대신 읽기 상태 셀렉터.
+    case noUserReview
+    /// 내 평가에 읽기 상태만 → 별점·기간 칩이 둘 다 없다. (보는 중)
+    case userReviewStatusOnly
+    /// 별점 + 읽기 상태 → 기간 칩만 없다. (봤어요)
+    case userReviewWithRating
+    /// 기간 + 읽기 상태 → 별점 칩만 없다. (하차)
+    case userReviewWithPeriod
+    /// 별점 + 기간 + 읽기 상태 → 칩 둘 다 있음. (봤어요)
+    case userReviewWithRatingAndPeriod
+    /// 매력포인트만 없음 → 정보 탭 감상평에서 그 섹션만 사라진다(키워드·그래프는 남는다).
+    case noAttractivePoints
+    /// 키워드만 없음 → 키워드 칩 줄만 사라진다.
+    case noKeywords
+    /// 읽기 상태 집계만 없음 → 읽기 상태 그래프만 사라진다.
+    case noReadingStatus
+    /// 매력포인트 하나만 있음 → 그 섹션만 남고 키워드·그래프가 사라진다.
+    case onlyAttractivePoints
+    /// 키워드 하나만 있음.
+    case onlyKeywords
+    /// 읽기 상태 그래프 하나만 있음.
+    case onlyReadingStatus
+    /// 독자 평가 셋 다 없음 → 감상평 영역 전체가 빈 상태로 대체된다(제목도 "독자들의 평가"로).
+    case noReaderReview
+    /// 피드 없음 → 피드 탭 빈 상태("아직 글이 없어요").
+    case noFeed
+    /// 거의 모든 값이 빈 신규 작품 — 썸네일·평점·플랫폼·평가·피드 없음.
+    case minimal
+    /// 작품 로드 실패 → NetworkErrorView(재시도).
+    case loadFailure
+    /// 피드 첫 페이지 로드 실패 → 피드 탭이 빈 상태 대신 실패 문구를 보여준다.
+    case feedLoadFailure
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .full: "전체 데이터"
+        case .noUserReview: "내 평가 없음"
+        case .userReviewStatusOnly: "읽기 상태만 (보는 중)"
+        case .userReviewWithRating: "별점 + 읽기 상태 (봤어요)"
+        case .userReviewWithPeriod: "기간 + 읽기 상태 (하차)"
+        case .userReviewWithRatingAndPeriod: "별점 + 기간 + 읽기 상태 (봤어요)"
+        case .noAttractivePoints: "매력포인트 없음"
+        case .noKeywords: "키워드 없음"
+        case .noReadingStatus: "읽기 상태 없음"
+        case .onlyAttractivePoints: "매력포인트만 있음"
+        case .onlyKeywords: "키워드만 있음"
+        case .onlyReadingStatus: "읽기 상태만 있음"
+        case .noReaderReview: "독자 평가 전부 없음"
+        case .noFeed: "피드 없음"
+        case .minimal: "최소 데이터(신규 작품)"
+        case .loadFailure: "작품 로드 실패"
+        case .feedLoadFailure: "피드 로드 실패"
+        }
+    }
+
+    /// 버튼 목록의 묶음 — 무엇을 확인하는 시나리오인지 한눈에 보이게 한다.
+    var group: String {
+        switch self {
+        case .full: "기본"
+        case .noUserReview: "내 평가 — 없음"
+        case .userReviewStatusOnly, .userReviewWithRating,
+             .userReviewWithPeriod, .userReviewWithRatingAndPeriod: "내 평가 — 항목 조합"
+        case .noAttractivePoints, .noKeywords, .noReadingStatus: "독자 평가 — 하나만 없음"
+        case .onlyAttractivePoints, .onlyKeywords, .onlyReadingStatus: "독자 평가 — 하나만 있음"
+        case .noReaderReview: "독자 평가 — 전부 없음"
+        case .noFeed: "피드"
+        case .minimal: "극단"
+        case .loadFailure, .feedLoadFailure: "실패"
+        }
+    }
+
+    /// 내 평가에서 채울 선택 항목. **nil이면 평가 자체가 없다**(→ 상태바 대신 셀렉터).
+    /// 빈 집합은 "평가는 있고 읽기 상태만 있음"으로, nil과 의미가 다르다.
+    var userReviewParts: Set<UserReviewPart>? {
+        switch self {
+        case .noUserReview, .minimal: nil
+        case .userReviewStatusOnly: []
+        case .userReviewWithRating: [.rating]
+        case .userReviewWithPeriod: [.period]
+        default: Set(UserReviewPart.allCases)
+        }
+    }
+
+    /// 내 평가의 읽기 상태. 조합 시나리오마다 다른 값을 줘 **세 상태(보는 중·봤어요·하차)를 모두** 볼 수 있게 한다.
+    var userReadingStatus: ReadingStatus {
+        switch self {
+        case .userReviewWithRating, .userReviewWithRatingAndPeriod: .watched
+        case .userReviewWithPeriod: .quit
+        default: .watching
+        }
+    }
+
+    /// 독자 평가 중 **값을 채울 부분**. 세 축은 각각 독립이라 하나만 비면 그 섹션만 사라지고,
+    /// 셋이 다 비어야 감상평 영역 전체가 빈 상태가 된다(정보 탭의 조건부 표시 규칙).
+    /// 축별 Bool 프로퍼티를 따로 두지 않고 집합 하나로 표현한다 — 조건이 늘어도 여기 한 곳만 고치면 된다.
+    var readerReviewParts: Set<ReaderReviewPart> {
+        switch self {
+        case .noAttractivePoints: [.keywords, .readingStatus]
+        case .noKeywords: [.attractivePoints, .readingStatus]
+        case .noReadingStatus: [.attractivePoints, .keywords]
+        case .onlyAttractivePoints: [.attractivePoints]
+        case .onlyKeywords: [.keywords]
+        case .onlyReadingStatus: [.readingStatus]
+        case .noReaderReview, .minimal: []
+        default: Set(ReaderReviewPart.allCases)
+        }
+    }
+
+    /// 피드 목록 유무 — 피드 탭 빈 상태 분기.
+    var hasFeeds: Bool {
+        switch self {
+        case .noFeed, .minimal, .feedLoadFailure: false
+        default: true
+        }
+    }
+}
+
 // MARK: - Root: Mock ↔ 실서버 토글
 
 // Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
@@ -51,6 +191,8 @@ private struct DemoRootView: View {
     @State private var isDetailPresented = false
     /// 열 때마다 증가. detailView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
     @State private var detailOpenCount = 0
+    /// 마지막으로 누른 시나리오 버튼 — Mock 진입 시 주입할 데이터 조건.
+    @State private var scenario: DemoScenario = .full
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -63,13 +205,29 @@ private struct DemoRootView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Button("작품 상세 화면 열기") {
-                    detailOpenCount += 1
-                    isDetailPresented = true
+                switch dataSource {
+                case .mock:
+                    // 시나리오 버튼이 곧 진입 버튼 — 어떤 데이터 조건으로 여는지가 버튼에 드러난다.
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            ForEach(scenarioGroups, id: \.name) { group in
+                                VStack(spacing: 8) {
+                                    Text(group.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    ForEach(group.scenarios) { scenario in
+                                        scenarioButton(scenario)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                case .live:
+                    Button("작품 상세 화면 열기") { open(.full) }
+                        .buttonStyle(.borderedProminent)
+                    Spacer()
                 }
-                .buttonStyle(.borderedProminent)
-
-                Spacer()
             }
             .padding()
             .navigationTitle("WSS Demo")
@@ -81,15 +239,45 @@ private struct DemoRootView: View {
         }
     }
 
+    /// 선언 순서를 유지한 채 group으로 묶는다(Dictionary(grouping:)은 순서가 흐트러진다).
+    private var scenarioGroups: [(name: String, scenarios: [DemoScenario])] {
+        DemoScenario.allCases.reduce(into: []) { groups, scenario in
+            if groups.last?.name == scenario.group {
+                groups[groups.count - 1].scenarios.append(scenario)
+            } else {
+                groups.append((name: scenario.group, scenarios: [scenario]))
+            }
+        }
+    }
+
+    /// 기본 조건(전체 데이터)만 채운 버튼으로 강조하고, 예외 조건은 테두리 스타일로 둔다.
+    @ViewBuilder
+    private func scenarioButton(_ scenario: DemoScenario) -> some View {
+        let label = Text(scenario.title).frame(maxWidth: .infinity)
+        if scenario == .full {
+            Button { open(scenario) } label: { label }
+                .buttonStyle(.borderedProminent)
+        } else {
+            Button { open(scenario) } label: { label }
+                .buttonStyle(.bordered)
+        }
+    }
+
+    private func open(_ scenario: DemoScenario) {
+        self.scenario = scenario
+        detailOpenCount += 1
+        isDetailPresented = true
+    }
+
     @ViewBuilder
     private var detailView: some View {
         switch dataSource {
         case .mock:
             NovelDetailFactory.makeView(
                 novelID: novelID,
-                loadNovelUseCase: DemoLoadNovelUseCase(),
+                loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
-                loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(),
+                loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(scenario: scenario),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped
@@ -151,32 +339,58 @@ private struct DemoRootView: View {
 // 인메모리 Mock으로 흐름만 시연한다(서버 불필요).
 
 private struct DemoLoadNovelUseCase: LoadNovelUseCase {
+
+    let scenario: DemoScenario
+
     func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation {
         try? await Task.sleep(nanoseconds: 500_000_000)
+        if scenario == .loadFailure {
+            throw .serverUnavailable
+        }
+        let isMinimal = scenario == .minimal
+        let parts = scenario.readerReviewParts
         return NovelInformation(
             novel: Novel(
                 id: id,
-                thumbnailImage: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
-                title: "당신의 이해를 돕기 위하여",
-                authors: ["이보라"],
+                // 최소 데이터는 표지 없음(플레이스홀더 확인용).
+                thumbnailImage: isMinimal
+                    ? nil
+                    : URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
+                title: isMinimal ? "이제 막 등록된 신규 작품" : "당신의 이해를 돕기 위하여",
+                authors: isMinimal ? ["작가 미상"] : ["이보라"],
                 genres: [.romanceFantasy, .romance],
-                interestCount: 128,
-                rating: 4.4,
-                ratingCount: 52,
+                interestCount: isMinimal ? 0 : 128,
+                // 평점 없음 = rating 0 / ratingCount 0 (Novel.rating은 non-optional).
+                rating: isMinimal ? 0 : 4.4,
+                ratingCount: isMinimal ? 0 : 52,
                 isInterested: false
             ),
-            feedCount: 3,
+            feedCount: scenario.hasFeeds ? 3 : 0,
             genres: [.romanceFantasy, .romance],
-            publicationStatus: .completed,
-            userReview: UserNovelReview(
-                readingStatus: .watching,
-                rating: try? Rating(4.0),
-                attractivePoint: [.character, .vibe],
-                period: try? ReadingPeriod(start: Date(timeIntervalSinceNow: -86_400 * 300), end: nil),
-                keywords: []
-            ),
-            description: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기. 라고 할 뻔 \n\n\n 과연 어디까지 늘어나는지 봅시다 한 번",
-            platforms: [
+            publicationStatus: isMinimal ? .onGoing : .completed,
+            // nil이면 평가 자체가 없다 → 상태바 대신 셀렉터. 빈 집합이면 읽기 상태만 있는 평가다.
+            userReview: scenario.userReviewParts.map { parts in
+                let status = scenario.userReadingStatus
+                return UserNovelReview(
+                    readingStatus: status,
+                    rating: parts.contains(.rating) ? (try? Rating(4.0)) : nil,
+                    attractivePoint: [.character, .vibe],
+                    // 시작·종료를 다 넣고 도메인 `normalized(for:)`에 맡긴다 — 상태별 날짜 규칙
+                    // (보는 중=시작만 / 봤어요=시작+종료 / 하차=종료만)을 Demo가 흉내내지 않게 한다.
+                    period: parts.contains(.period)
+                        ? (try? ReadingPeriod(
+                            start: Date(timeIntervalSinceNow: -86_400 * 300),
+                            end: Date(timeIntervalSinceNow: -86_400 * 30)
+                        ))?.normalized(for: status)
+                        : nil,
+                    keywords: []
+                )
+            },
+            description: isMinimal
+                ? "아직 소개가 짧은 작품입니다."
+                : "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기. 라고 할 뻔 \n\n\n 과연 어디까지 늘어나는지 봅시다 한 번",
+            // 플랫폼이 비면 "작품 보러가기" 섹션 자체가 사라진다.
+            platforms: isMinimal ? [] : [
                 URL(string: "https://novel.naver.com").map {
                     NovelPlatform(name: "네이버시리즈", image: nil, url: $0)
                 },
@@ -184,15 +398,22 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                     NovelPlatform(name: "카카오페이지", image: nil, url: $0)
                 }
             ].compactMap { $0 },
-            attractivePoints: [.character, .relationship, .writingSkill],
-            keywords: [
+            // 아래 셋은 각각 독립으로 숨겨지고, 전부 비면 감상평 영역이 빈 상태로 대체된다
+            // (제목도 "독자들의 평가"로 바뀜).
+            attractivePoints: parts.contains(.attractivePoints)
+                ? [.character, .relationship, .writingSkill]
+                : [],
+            keywords: parts.contains(.keywords) ? [
                 NovelKeyword(keyword: Keyword(id: KeywordID(1), name: "피폐"), count: 7),
                 NovelKeyword(keyword: Keyword(id: KeywordID(2), name: "정치물"), count: 5),
                 NovelKeyword(keyword: Keyword(id: KeywordID(3), name: "궁중암투"), count: 3),
                 NovelKeyword(keyword: Keyword(id: KeywordID(4), name: "빙의"), count: 2),
                 NovelKeyword(keyword: Keyword(id: KeywordID(5), name: "후회"), count: 2)
-            ],
-            readingStatusCount: [.watching: 130, .watched: 10, .quit: 100]
+            ] : [],
+            // 그래프는 count가 전부 0이면 사라진다 — 키를 지우는 것과 0으로 두는 것이 같다(dominantReadStatus가 nil).
+            readingStatusCount: parts.contains(.readingStatus)
+                ? [.watching: 130, .watched: 10, .quit: 100]
+                : [:]
         )
     }
 }
@@ -208,9 +429,18 @@ private struct DemoNovelInterestUseCase: NovelInterestUseCase {
 }
 
 private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
+
+    let scenario: DemoScenario
+
     func execute(novelID: NovelID,
                  lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         try? await Task.sleep(nanoseconds: 500_000_000)
+        if scenario == .feedLoadFailure {
+            throw .networkUnavailable
+        }
+        guard scenario.hasFeeds else {
+            return Paginated(items: [], hasNext: false)
+        }
         // 커서 0 = 첫 페이지, 이후 커서 = 마지막 피드 ID → 두 페이지로 페이지네이션을 시연한다.
         if lastFeedID.value == 0 {
             return Paginated(items: (1...10).map(makeFeed), hasNext: true)
