@@ -114,32 +114,41 @@ struct NovelDetailInfoTab: View {
 
     // MARK: - 독자들의 감상평
 
+    /// "독자들의 감상평"의 **내용**은 매력포인트·키워드다 — 읽기 상태 그래프는 제목을 공유하지 않는 별도 섹션.
+    /// 그래서 이 둘이 다 비면 그래프가 있어도 제목까지 통째로 감춘다(제목만 덩그러니 남는 걸 막는다).
+    private var hasReviewContent: Bool {
+        !information.attractivePoints.isEmpty || !information.keywords.isEmpty
+    }
+
     private var hasAnyReviewSummary: Bool {
-        !information.attractivePoints.isEmpty
-            || !information.keywords.isEmpty
-            || information.dominantReadStatus != nil
+        hasReviewContent || information.dominantReadStatus != nil
     }
 
     @ViewBuilder
     private var reviewSummarySection: some View {
         if hasAnyReviewSummary {
             VStack(spacing: 0) {
-                sectionTitle("독자들의 감상평")
+                if hasReviewContent {
+                    sectionTitle("독자들의 감상평")
 
-                if !information.attractivePoints.isEmpty {
-                    Spacer().frame(height: 15)
-                    attractivePointBox
-                }
+                    if !information.attractivePoints.isEmpty {
+                        Spacer().frame(height: 15)
+                        attractivePointBox
+                    }
 
-                if !information.keywords.isEmpty {
-                    Spacer().frame(height: 10)
-                    keywordList
+                    if !information.keywords.isEmpty {
+                        Spacer().frame(height: 10)
+                        keywordList
+                    }
                 }
 
                 if let dominant = information.dominantReadStatus {
-                    Spacer().frame(height: 40)
-                    thinDivider
-                    Spacer().frame(height: 35)
+                    // 구분선은 위에 감상평이 실제로 있을 때만 — 그래프만 있으면 나눌 대상이 없다.
+                    if hasReviewContent {
+                        Spacer().frame(height: 40)
+                        thinDivider
+                        Spacer().frame(height: 35)
+                    }
                     readingStatusGraph(dominant: dominant)
                 }
             }
