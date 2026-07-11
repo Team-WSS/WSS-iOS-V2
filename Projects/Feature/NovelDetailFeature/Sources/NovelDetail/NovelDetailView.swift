@@ -96,9 +96,12 @@ struct NovelDetailView: View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack(spacing: 0) {
+                    // 표지는 커스텀 네비바 바로 아래에서 시작한다 — 안전영역 높이가 기기마다 달라
+                    // 디자인 고정값(99)을 쓸 수 없다. 네비바 배경 실측 높이를 그대로 인셋으로 넘긴다.
                     NovelDetailHeaderView(
                         information: information,
-                        novel: viewModel.state.novel ?? information.novel
+                        novel: viewModel.state.novel ?? information.novel,
+                        topInset: navigationBarBottomY
                     )
                     NovelDetailReviewSection(
                         information: information,
@@ -229,7 +232,7 @@ private extension NovelDetailView {
                 .truncationMode(.tail)
                 .padding(.horizontal, 44)
                 .opacity(showNavTitle ? 1 : 0)
-                .animation(.easeInOut(duration: 0.2), value: showNavTitle)
+                .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
         .padding(.leading, 6)
         .padding(.trailing, 12)
@@ -245,7 +248,7 @@ private extension NovelDetailView {
             GeometryReader { proxy in
                 Color.wssWhite
                     .opacity(showNavTitle ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showNavTitle)
+                    .animation(.easeInOut(duration: 0.1), value: showNavTitle)
                     .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navigationBarBottomY = height

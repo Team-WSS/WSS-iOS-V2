@@ -19,11 +19,13 @@ struct NovelDetailHeaderView: View {
 
     let information: NovelInformation
     let novel: Novel
+    /// 커스텀 네비바 하단 y(= 안전영역 top + 네비바 높이). 표지는 네비바 바로 아래에서 시작한다.
+    /// 디자인의 99는 특정 기기(상태바 54 + 네비 44) 값이라 안전영역이 다른 기기에서 어긋난다 → 실측값을 받는다.
+    let topInset: CGFloat
 
     var body: some View {
         VStack(spacing: 0) {
-            // 커버 top 99 = 디자인 고정 영역(status bar 54 + nav 44) 아래
-            Spacer().frame(height: 99)
+            Spacer().frame(height: topInset)
             coverImage
             Spacer().frame(height: 20)
             titleBlock
@@ -34,12 +36,13 @@ struct NovelDetailHeaderView: View {
 
     // MARK: - Backdrop
 
-    /// 상단 330pt: 커버를 크게 깔고 블러 + 밝은 보라 틴트 → 아래 회색(wssGray50) 영역으로 자연 연결.
-    /// 디자인의 radial gradient(#F4F5F8→#D2D3F7)는 디자인 시스템 토큰(wssPrimary20/wssGray50) 조합으로 근사.
+    /// 커버를 크게 깔아 블러하고 그 위에 디자인의 radial gradient 에셋(#D2D3F8→#F4F5F8)을 덮는다
+    /// → 아래 회색(wssGray50) 영역으로 자연 연결.
+    /// ⚠️ 그라데이션 에셋의 알파는 85%(상단)~100%(하단) — 블러 표지는 상단에서만 은은히 비치고,
+    /// 표지가 없으면 그라데이션만 보인다. 그래서 블러 뒤에 깔 바탕색은 필요 없다.
     private var backdrop: some View {
         VStack(spacing: 0) {
             ZStack {
-                Color.wssPrimary20
                 AsyncImage(url: novel.thumbnailImage) { phase in
                     if case .success(let image) = phase {
                         image
@@ -48,7 +51,7 @@ struct NovelDetailHeaderView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 330, alignment: .top)
+                .frame(height: backdropHeight, alignment: .top)
                 .clipped()
                 .blur(radius: 12, opaque: true)
 
@@ -56,17 +59,26 @@ struct NovelDetailHeaderView: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 330)
+                    .frame(height: backdropHeight)
                     .clipped()
             }
-            .frame(height: 330)
+            .frame(height: backdropHeight)
             .clipped()
 
             Color.wssGray50
         }
     }
 
+    /// 회색 영역으로 넘어가는 지점 = 표지 아래 14pt (디자인 330 = 커버 top 99 + 표지 217 + 14).
+    /// 표지가 `topInset`을 따라 움직이므로 배경도 같이 묶어야 제목이 회색 위에 놓인다(고정 330이면
+    /// 안전영역이 작은 기기에서 제목이 블러 배경 위로 올라온다).
+    private var backdropHeight: CGFloat {
+        topInset + coverHeight + 14
+    }
+
     // MARK: - Cover
+
+    private var coverHeight: CGFloat { 217 }
 
     private var coverImage: some View {
         AsyncImage(url: novel.thumbnailImage) { phase in
@@ -80,7 +92,7 @@ struct NovelDetailHeaderView: View {
                     .scaledToFill()
             }
         }
-        .frame(width: 148, height: 217)
+        .frame(width: 148, height: coverHeight)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: Color.wssBlack.opacity(0.1), radius: 15, x: 0, y: 2)
         // 장르 마크는 표지 우하단 모서리에 정렬(디자인 좌표: 표지 bottom/trailing 일치)
