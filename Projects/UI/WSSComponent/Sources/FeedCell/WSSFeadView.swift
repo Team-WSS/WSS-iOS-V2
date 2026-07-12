@@ -115,6 +115,7 @@ public struct WSSFeadView: View {
         ),
         react: WSSFeedReact(
             likeCount: 13,
+            isLiked: false,
             commentCount: 23,
             likeButtonTapped: { print("좋아요 클릭!") }
         )

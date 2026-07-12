@@ -36,6 +36,7 @@ struct WSSFeedDemoView: View {
                     ),
                     react: WSSFeedReact(
                         likeCount: 13,
+                        isLiked: true,
                         commentCount: 23,
                         likeButtonTapped: { print("좋아요 클릭") }
                     )
@@ -61,6 +62,7 @@ struct WSSFeedDemoView: View {
                     ),
                     react: WSSFeedReact(
                         likeCount: 7,
+                        isLiked: false,
                         commentCount: 2,
                         likeButtonTapped: { print("좋아요 클릭") }
                     )
@@ -87,6 +89,7 @@ struct WSSFeedDemoView: View {
                     ),
                     react: WSSFeedReact(
                         likeCount: 42,
+                        isLiked: false,
                         commentCount: 15,
                         likeButtonTapped: {}
                     )
@@ -108,6 +111,7 @@ struct WSSFeedDemoView: View {
                     content: "요즘 읽을 소설 추천 받습니다! 판타지나 무협 장르 좋아하는데 뭐 괜찮은 거 있을까요?",
                     react: WSSFeedReact(
                         likeCount: 3,
+                        isLiked: false,
                         commentCount: 8,
                         likeButtonTapped: {}
                     )
