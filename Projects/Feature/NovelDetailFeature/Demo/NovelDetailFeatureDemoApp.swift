@@ -610,20 +610,34 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
     }
 
     private func makeFeed(_ number: Int) -> TotalFeed {
-        TotalFeed(
+        // 2번 피드는 실서버(작품 1, feedId 1951)의 데이터 모양을 미러링 — 짧은 본문 + 스포일러 +
+        // 연결 작품 배너 + 세로형(3:4) 이미지. 세로 이미지의 scaledToFill hit-test 넘침이
+        // 헤더 탭(프로필·threedots)을 가로채던 버그의 회귀 확인 케이스.
+        let mirrorsRealData = number == 2
+        return TotalFeed(
             feedId: FeedID(number),
             createdDate: "\(number)시간 전",
-            content: "데모 피드 \(number) — 이 작품 정말 소소하게 재밌네요.",
-            author: Author(userId: UserID(number), nickname: "소소한 독자 \(number)", profileImage: nil),
+            content: mirrorsRealData ? "피드 내용" : "데모 피드 \(number) — 이 작품 정말 소소하게 재밌네요.",
+            author: Author(
+                userId: UserID(number),
+                nickname: mirrorsRealData ? "테스트계정" : "소소한 독자 \(number)",
+                profileImage: nil
+            ),
             likeCount: number,
             isLiked: false,
             commentCount: 0,
-            isSpoiler: false,
+            connectedNovel: mirrorsRealData
+                ? ConnectedNovel(id: NovelID(1), title: "소야의 늪", genre: .BL, rating: 2.5)
+                : nil,
+            isSpoiler: mirrorsRealData,
             isModified: false,
             isPublic: true,
             // 3의 배수 피드는 내 글 — threedots 드롭다운(수정/삭제 vs 신고)·프로필 이동 차단 분기 시연용.
             isMyFeed: number.isMultiple(of: 3),
-            imageCount: 0
+            thumbnailImageURL: mirrorsRealData
+                ? URL(string: "https://websoso-aws-bucket.s3.ap-northeast-2.amazonaws.com/feed/266083d0-bc9b-4744-8e40-af601cf5b5e6.jpg")
+                : nil,
+            imageCount: mirrorsRealData ? 5 : 0
         )
     }
 }
