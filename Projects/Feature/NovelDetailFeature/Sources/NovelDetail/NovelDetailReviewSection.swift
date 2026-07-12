@@ -28,9 +28,9 @@ struct NovelDetailReviewSection: View {
         VStack(spacing: 0) {
             Spacer().frame(height: 22)
             reviewBox
-            Spacer().frame(height: 12)
+            Spacer().frame(height: 20)
             ctaButtons
-            Spacer().frame(height: 24)
+            Spacer().frame(height: 20)
         }
         .padding(.horizontal, 20)
         .background(Color.wssGray50)
