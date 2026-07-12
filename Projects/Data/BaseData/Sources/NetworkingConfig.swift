@@ -31,4 +31,5 @@ enum Config {
 public enum NetworkingConfig {
     public static var baseURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.baseURL) as? String ?? ""
     public static var testApiKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.testToken) as? String ?? ""
+    public static var bucketURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.bucketURL) as? String ?? ""
 }

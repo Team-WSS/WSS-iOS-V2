@@ -217,6 +217,9 @@ private struct DemoRootView: View {
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
 
+    /// 버킷 이미지 URL 조립용 기기 스케일 — 매퍼(백그라운드)에선 정확히 못 읽어 UI 컨텍스트에서 1회 주입한다.
+    @Environment(\.displayScale) private var displayScale
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
@@ -255,6 +258,8 @@ private struct DemoRootView: View {
                 detailView
                     .id(detailOpenCount)
             }
+            // 버킷 이미지 스케일 주입 — 실제 앱에선 루트 뷰가 같은 방식으로 1회 설정한다.
+            .onAppear { BucketImageURL.displayScale = Int(displayScale.rounded()) }
             // 실서버 키워드 매핑은 파일 캐시(keywords.json)만 읽는다 — 실제 앱은 App(DI)이
             // 시작 시 syncKeywords()로 채우지만 Demo엔 그 계층이 없어, 토글 시 여기서 채운다.
             // 안 채우면 캐시 없는 시뮬레이터에서 fetchKeywords()가 실패해 키워드가 통째로 빈다.

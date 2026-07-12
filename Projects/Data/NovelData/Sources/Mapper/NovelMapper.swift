@@ -10,6 +10,7 @@ import Foundation
 
 import NovelDomain
 import BaseDomain
+import BaseData
 
 public enum NovelMapper {
     
@@ -343,7 +344,8 @@ extension NovelMapper {
         }
         return NovelPlatform(
             name: dto.platformName,
-            image: URL(string: dto.platformImage),
+            // 서버가 버킷 상대 경로(예: /platform/naver-series)로 주면 @스케일x.png로 완성한다.
+            image: BucketImageURL.imageURL(from: dto.platformImage),
             url: url
         )
     }
