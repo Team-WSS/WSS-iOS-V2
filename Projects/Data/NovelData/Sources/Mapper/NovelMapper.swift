@@ -95,7 +95,9 @@ extension NovelMapper {
             genres: genres,
             interestCount: basicDTO.interestCount,
             rating: basicDTO.novelRating,
-            ratingCount: basicDTO.novelRatingCount
+            ratingCount: basicDTO.novelRatingCount,
+            // 안 넘기면 기본값 nil = "비로그인" → 관심 토글이 조용히 no-op이 된다.
+            isInterested: basicDTO.isUserNovelInterest
         )
         
         var userReview: UserNovelReview?
