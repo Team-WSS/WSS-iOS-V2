@@ -58,7 +58,7 @@ struct NovelDetailView: View {
     private let onCreateFeedTapped: () -> Void
     /// 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
     private let onFeedTapped: (FeedID) -> Void
-    /// 유저 프로필 진입 콜백 — 피드 셀 프로필 이미지 탭(내 글 제외).
+    /// 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글 제외).
     private let onUserProfileTapped: (UserID) -> Void
     /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
     private let onEditFeedTapped: (TotalFeed) -> Void

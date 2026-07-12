@@ -17,7 +17,8 @@ public struct FeedHeader {
     public let nickname: String
     public let createdDate: String
     public let isEdited: Bool
-    public let profileImageTapped: () -> Void
+    /// 프로필 영역(이미지 + 닉네임) 탭 — 이미지만이 아니라 닉네임까지가 프로필 진입 버튼이다.
+    public let profileTapped: () -> Void
     public let threeDotsButtonTapped: () -> Void
 
     public init(
@@ -25,14 +26,14 @@ public struct FeedHeader {
         nickname: String,
         createdDate: String,
         isEdited: Bool,
-        profileImageTapped: @escaping () -> Void,
+        profileTapped: @escaping () -> Void,
         threeDotsButtonTapped: @escaping () -> Void
     ) {
         self.profileImageURL = profileImageURL
         self.nickname = nickname
         self.createdDate = createdDate
         self.isEdited = isEdited
-        self.profileImageTapped = profileImageTapped
+        self.profileTapped = profileTapped
         self.threeDotsButtonTapped = threeDotsButtonTapped
     }
 }
@@ -49,34 +50,40 @@ public struct WSSFeadHeaderView: View {
 
     public var body: some View {
         HStack(spacing: 0) {
-            AsyncImage(url: header.profileImageURL) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                case .failure:
-                    WSSImage.imgLoadingThumbnail.swiftUIImage
-                default:
-                    ProgressView()
+            // 프로필 진입 영역 = 이미지 + 간격 + 닉네임 전체 — 이미지(32pt)만으론 탭 타겟이 좁다.
+            // 간격의 투명 픽셀까지 탭되도록 contentShape 필수.
+            HStack(spacing: 0) {
+                AsyncImage(url: header.profileImageURL) {
+                    phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                    case .failure:
+                        WSSImage.imgLoadingThumbnail.swiftUIImage
+                    default:
+                        ProgressView()
+                    }
                 }
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Spacer().frame(width: 10)
+
+                Text(header.nickname)
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(Color.wssBlack)
             }
-            .scaledToFit()
-            .frame(width: 32, height: 32)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .contentShape(Rectangle())
             .onTapGesture {
-                header.profileImageTapped()
+                header.profileTapped()
             }
-            // 순수 이미지 + 제스처라 접근성 트리에 안 잡힌다 — VoiceOver·UI 자동화가 버튼으로 인식하게 한다.
+            // 순수 이미지·텍스트 + 제스처라 접근성 트리에 안 잡힌다 — VoiceOver·UI 자동화가 버튼 하나로 인식하게 한다.
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(header.nickname) 프로필")
             .accessibilityAddTraits(.isButton)
 
-            Spacer().frame(width: 10)
-
-            Text(header.nickname)
-                .applyWSSFont(.body4)
-                .foregroundStyle(Color.wssBlack)
-            
             Spacer().frame(width: 4)
             
             Circle()
@@ -120,7 +127,7 @@ public struct WSSFeadHeaderView: View {
             nickname: "구리스",
             createdDate: "2024년 6월 19일",
             isEdited: true,
-            profileImageTapped: {},
+            profileTapped: {},
             threeDotsButtonTapped: {}
         )
     )
