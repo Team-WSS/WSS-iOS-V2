@@ -85,6 +85,8 @@ private enum DemoScenario: CaseIterable, Identifiable {
     case noReaderReview
     /// 피드 없음 → 피드 탭 빈 상태("아직 글이 없어요").
     case noFeed
+    /// 피드 1개 → 목록이 셀 하나뿐인 최소 케이스(탭 전환 시 최소 높이 클램프 확인).
+    case feeds1
     /// 피드 5개 → 첫 페이지 하나로 끝(hasNext 없음) — 목록이 화면보다 짧은 케이스.
     case feeds5
     /// 피드 15개 → 두 페이지(10+5) 페이지네이션.
@@ -116,6 +118,7 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .onlyReadingStatus: "읽기 상태만 있음"
         case .noReaderReview: "독자 평가 전부 없음"
         case .noFeed: "피드 없음"
+        case .feeds1: "피드 1개"
         case .feeds5: "피드 5개 (1페이지)"
         case .feeds15: "피드 15개 (2페이지)"
         case .feeds45: "피드 45개 (5페이지)"
@@ -135,7 +138,7 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .noAttractivePoints, .noKeywords, .noReadingStatus: "독자 평가 — 하나만 없음"
         case .onlyAttractivePoints, .onlyKeywords, .onlyReadingStatus: "독자 평가 — 하나만 있음"
         case .noReaderReview: "독자 평가 — 전부 없음"
-        case .noFeed, .feeds5, .feeds15, .feeds45: "피드"
+        case .noFeed, .feeds1, .feeds5, .feeds15, .feeds45: "피드"
         case .minimal: "극단"
         case .loadFailure, .feedLoadFailure: "실패"
         }
@@ -182,6 +185,7 @@ private enum DemoScenario: CaseIterable, Identifiable {
     var feedCount: Int {
         switch self {
         case .noFeed, .minimal, .feedLoadFailure: 0
+        case .feeds1: 1
         case .feeds5: 5
         case .feeds45: 45
         default: 15  // feeds15 포함 — 기본(전체 데이터)도 두 페이지 페이지네이션을 유지한다.
