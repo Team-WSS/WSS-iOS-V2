@@ -8,8 +8,8 @@
 
 import Foundation
 
-import NovelDomain
 import BaseDomain
+import NovelDomain
 import BaseData
 
 public enum NovelMapper {
