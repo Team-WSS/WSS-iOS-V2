@@ -71,8 +71,8 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 모듈 개수·이름은 [`ModuleType.swift`](../Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)가
 단일 진실 소스다. 여기엔 **코드만 봐선 모르는 구현 단계**만 남긴다:
 
-- **Feature**: 레지스트리엔 `home`/`feed`/`novelReview`가 있으나 **디스크 구현은 `NovelReviewFeature`뿐**.
-  `home`/`feed`는 **계획 단계**(레지스트리에만 존재).
+- **Feature**: 레지스트리엔 `home`/`feed`/`novelReview`/`novelDetail`이 있고, 디스크 구현은
+  `NovelReviewFeature`·`FeedFeature`·`NovelDetailFeature`. `home`은 **계획 단계**(레지스트리에만 존재).
 - **App**: 진입점 스켈레톤(`WSSIOSV2App`, `ContentView`)만 존재.
 
 > ⚠️ **유령 폴더 주의**: `Projects/Domain|Data/`에 suffix 없는 폴더(`Comment/`, `Feed/`, `KeywordData/` 등)나

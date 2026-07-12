@@ -13,7 +13,7 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 - **에러 타입**: `MappingError`, `CacheError`.
 - **Keyword 전체 스택**: `DefaultKeywordRepository`/`Service`/`Mapper`/`Endpoint`/`Factory` + `KeywordCache`. → BaseDomain `KeywordRepository`의 실제 구현이 여기 있다.
 - `NetworkingConfig` (Bundle plist에서 `BASE_URL`/`TEST_API_KEY`/`BUCKET_URL` 로드).
-- **이미지 URL 해석**: `ImageURLResolver.resolve(from:)` — 서버가 full URL과 버킷 상대 경로를 섞어 주는 이미지 문자열을 URL로 통일(경로형은 `@{scale}x.png` 조립). **모든 매퍼의 이미지 필드는 이걸 경유**(직조립 금지).
+- **이미지 URL 해석**: `ImageURLResolver.resolve(from:)` — 서버가 full URL과 버킷 상대 경로를 섞어 주는 이미지 문자열을 URL로 통일(경로형은 `@{scale}x.png` 조립). **모든 매퍼의 이미지 필드는 이걸 경유**(직조립 금지). ⚠️ 단, 도입(#154) 이전에 작성된 매퍼엔 full URL 전제의 `URL(string:)` 직조립이 잔존한다(예: `NovelMapper`의 표지) — **전수 치환은 후속 과제**. 신규 코드는 예외 없이 경유할 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
