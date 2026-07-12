@@ -12,6 +12,7 @@ import BaseDomain
 import FeedDomain
 import NovelDomain
 import NovelReviewDomain
+import SocialDomain
 import DesignSystem
 import WSSComponent
 
@@ -97,6 +98,12 @@ struct NovelDetailView: View {
                     { viewModel.handle(.dismissDeleteReviewAlert) },  // "취소"
                     { viewModel.handle(.confirmDeleteReview) }        // "삭제"
                 ]
+            )
+            // 피드 셀 액션(삭제/신고)의 확인·접수 완료 알럿 — 의미값(FeedAlert) → 타입·버튼 매핑은 아래 Presentation.
+            .showWSSAlert(
+                isPresented: feedAlertBinding,
+                type: feedAlertType,
+                buttonActions: feedAlertActions
             )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
@@ -200,7 +207,8 @@ struct NovelDetailView: View {
                                 onUserProfileTapped: onUserProfileTapped,
                                 onThreeDotsTapped: { feed, anchorY in
                                     feedMenuContext = FeedMenuContext(feed: feed, anchorY: anchorY)
-                                }
+                                },
+                                onToggleLike: { viewModel.handle(.toggleFeedLike($0)) }
                             )
                         }
                     }
@@ -558,19 +566,50 @@ private extension NovelDetailView {
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
-                    // TODO(#154 이후): 삭제 확인 알럿(.deleteMyFeed) + DeleteFeedUseCase 연결.
+                    viewModel.handle(.deleteFeedTapped(feed.feedId))
                 }
             ]
         } else {
             [
                 WSSDropdownItem(title: "스포일러 신고", titleColor: Color.wssSecondary100) {
                     feedMenuContext = nil
-                    // TODO(#154 이후): 신고 확인 알럿(.reportSpoilerContent) + 신고 API 연결.
+                    viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
                 },
                 WSSDropdownItem(title: "부적절한 표현 신고", titleColor: Color.wssSecondary100) {
                     feedMenuContext = nil
-                    // TODO(#154 이후): 신고 확인 알럿(.reportImproperContent) + 신고 API 연결.
+                    viewModel.handle(.reportImproperFeedTapped(feed.feedId))
                 }
+            ]
+        }
+    }
+
+    var feedAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedFeedAlert != nil },
+            set: { if !$0 { viewModel.handle(.dismissFeedAlert) } }
+        )
+    }
+
+    /// 피드 알럿 의미값 → 컴포넌트 알럿 타입. nil일 땐 어떤 타입이든 상관없다(알럿이 숨겨져 있음).
+    var feedAlertType: WSSAlertType {
+        switch viewModel.state.presentedFeedAlert {
+        case .deleteFeed, nil: .deleteMyFeed
+        case .reportSpoiler: .reportSpoilerContent
+        case .reportImproper: .reportImproperContent
+        case .reportSpoilerCompleted: .receivedReportSpoilerContent
+        case .reportImproperCompleted: .receivedReportImproperContent
+        }
+    }
+
+    /// 알럿 버튼 액션 — 인덱스가 버튼 순서와 일치해야 한다(확인 알럿 [취소, 실행] / 완료 알럿 [확인]).
+    var feedAlertActions: [() -> Void] {
+        switch viewModel.state.presentedFeedAlert {
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            [{ viewModel.handle(.dismissFeedAlert) }]
+        default:
+            [
+                { viewModel.handle(.dismissFeedAlert) },
+                { viewModel.handle(.confirmFeedAlert) }
             ]
         }
     }
@@ -708,7 +747,11 @@ private extension UIView {
                 loadNovelUseCase: PreviewLoadNovelUseCase(),
                 novelInterestUseCase: PreviewNovelInterestUseCase(),
                 loadNovelFeedsUseCase: PreviewLoadNovelFeedsUseCase(),
-                deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase()
+                feedLikeUseCase: PreviewFeedLikeUseCase(),
+                deleteFeedUseCase: PreviewDeleteFeedUseCase(),
+                deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase(),
+                reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
+                reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
             ),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
             onCreateFeedTapped: { print("피드 작성 진입") },
@@ -760,4 +803,21 @@ private struct PreviewLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
 
 private struct PreviewDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
     func execute(novelID: NovelID) async throws(RepositoryError) {}
+}
+
+private struct PreviewFeedLikeUseCase: FeedLikeUseCase {
+    func like(feedID: FeedID) async throws(RepositoryError) {}
+    func unlike(feedID: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewReportImproperFeedUseCase: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) {}
 }

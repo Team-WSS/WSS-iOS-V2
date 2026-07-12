@@ -3,8 +3,8 @@
 
 소설 상세(NovelDetail) 화면 — 몰입형 헤더 + 유저 평가 + 탭(정보/피드). 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고 `NovelDomain` + `FeedDomain`(피드 탭)을 쓴다**(#154 명세)
-- 진입점: `NovelDetailFactory.makeView(novelID:loadNovelUseCase:novelInterestUseCase:loadNovelFeedsUseCase:logger:onReviewTapped:onCreateFeedTapped:)`
+- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고)을 쓴다
+- 진입점: `NovelDetailFactory.makeView(...)` — UseCase 8종 + 화면 전환 콜백 5종(파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
 
@@ -64,8 +64,9 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - **표지 우하단 장르 코너 뱃지 = `icGenreBackground`(흰 코너 삼각형 71pt) 우하단에 `genre.iconImage`(GenreIcon 방패형)를 `trailing 4 / bottom 5` 인셋으로 얹음.** V1(UIKit) 레이아웃 그대로. 주의: 아이콘은 배경을 꽉 채우지 않고 **32pt**로 코너에 작게 — 71pt로 키우면 틀림. 겹칠 아이콘은 `markImage`(GenreMark)가 **아니다**(헷갈리기 쉬움).
 - **Demo 실서버 모드는 토글 시 `syncKeywords()`를 직접 호출**한다 — 작품 상세의 키워드 매핑이 파일 캐시(keywords.json)만 읽는데, 실제 앱에선 App(DI)이 시작 시 채울 캐시를 Demo는 스스로 채워야 해서다. 안 부르면 캐시 없는 시뮬레이터에서 키워드 섹션이 통째로 빈다(에러 없이 조용히).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
-- 피드 셀의 좋아요 탭, **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요), 셀 드롭다운의 **삭제하기·신고 액션**(알럿+UseCase/API)은 **TODO(#154 범위 밖)** — UI만 배치됨.
-- **피드 셀 인터랙션**: 셀 탭=피드 상세 콜백, 프로필 탭=유저 프로필 콜백(**내 글이면 차단** — `isMyFeed`), threedots=셀 드롭다운(**내 글: 수정/삭제, 남의 글: 신고 2종 빨강** — Figma 6773-26280/26272). 드롭다운은 화면 레벨 오버레이로 띄우고 앵커는 **셀 y 실측**(네비 타이틀과 같은 스크롤 좌표공간 방식) + threedots 오프셋(52)으로 계산, 하단 셀에선 화면 안에 다 보이게 클램프. ⚠️ 앵커가 화면 최상단(상태바 포함) 기준이라 **오버레이 ZStack에 `ignoresSafeArea(edges: .top)` 필수** — 빼면 메뉴가 안전영역 높이만큼 내려앉는다.
+- 피드 셀의 **스포일러(isSpoiler) 가림 처리**(공용 `WSSFeadView`가 미지원 — 컴포넌트 확장 필요)는 **TODO(#154 범위 밖)** — UI만 배치됨.
+- **피드 셀 인터랙션**: 셀 탭=피드 상세 콜백, 프로필 영역(이미지+닉네임) 탭=유저 프로필 콜백(**내 글이면 차단** — `isMyFeed`), 좋아요=엔티티 `TotalFeed.toggleLike()` 낙관 반영+실패 롤백(셀별 병행 허용, 같은 셀 연타만 가드), threedots=셀 드롭다운(**내 글: 수정하기 콜백·삭제하기, 남의 글: 신고 2종 빨강** — Figma 6773-26280/26272). 드롭다운은 화면 레벨 오버레이로 띄우고 앵커는 **셀 y 실측**(네비 타이틀과 같은 스크롤 좌표공간 방식) + threedots 오프셋(52)으로 계산, 하단 셀에선 화면 안에 다 보이게 클램프. ⚠️ 앵커가 화면 최상단(상태바 포함) 기준이라 **오버레이 ZStack에 `ignoresSafeArea(edges: .top)` 필수** — 빼면 메뉴가 안전영역 높이만큼 내려앉는다.
+- **피드 삭제/신고는 2단 알럿 하나의 의미값(`FeedAlert`)으로 관리** — 삭제는 확인 알럿 → `DeleteFeedUseCase` → 목록 제거 + **상세 재로드**(헤더 피드 수 등 집계 동기화, 성공 토스트 없음 — 디자인에 없음). 신고는 확인 알럿 → SocialDomain UseCase → **접수 완료 알럿으로 전환**(문구가 종류별로 달라 완료 케이스 분리). 알럿 타입·버튼 매핑(WSSAlertType 5종)은 View가 한다.
 - **화면 드롭다운(오류 제보/평가 삭제)**: 오류 제보는 노션 문의 페이지를 외부 브라우저로 연다(`errorReportURL`). 평가 삭제는 알럿 확인 후 `DeleteNovelReviewUseCase`(NovelReviewDomain) → **성공 시 상세 재로드**(키워드·읽기 상태 집계가 함께 바뀌므로 화면 데이터를 서버와 재동기화). 삭제할 평가가 없으면 VM이 무시(관심 토글 no-op과 같은 정책).
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃 — **둘 다 상태별 개별 진입(탭한 상태를 seed)**. 있음은 추가로 박스의 칩·여백을 탭하면 현재 상태로 진입한다(상태 `Button`이 hit-test 우선이라 바깥 `onTapGesture`와 공존 — 중첩 Button은 불안정해 피함).
 - **대형 표지 오버레이(표지 탭)**: dim(`wssBlack60`)의 `onTapGesture`와 확대 표지를 ZStack **형제**로 두면 표지 위 탭은 자연히 무시된다(제스처는 형제 뷰에 안 닿음 — V1의 표지 탭 no-op과 동일 동작, 별도 처리 불필요). 확대 크기는 `scaledToFit` + 패딩(가로 20 / 세로 60 = X 버튼 44 + 여유)이 V1의 "두 여백 중 먼저 걸리는 기준" 비율 분기 계산을 대체한다.

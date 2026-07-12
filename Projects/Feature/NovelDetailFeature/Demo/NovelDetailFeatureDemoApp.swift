@@ -13,10 +13,12 @@ import BaseDomain
 import FeedDomain
 import NovelDomain
 import NovelReviewDomain
+import SocialDomain
 import BaseData
 import FeedData
 import NovelData
 import NovelReviewData
+import SocialData
 import Logger
 import Networking
 import DesignSystem
@@ -333,7 +335,11 @@ private struct DemoRootView: View {
                 loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario, reviewDeletion: reviewDeletion),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
                 loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(scenario: scenario),
+                feedLikeUseCase: DemoFeedLikeUseCase(),
+                deleteFeedUseCase: DemoDeleteFeedUseCase(),
                 deleteNovelReviewUseCase: DemoDeleteNovelReviewUseCase(reviewDeletion: reviewDeletion),
+                reportSpoilerFeedUseCase: DemoReportSpoilerFeedUseCase(),
+                reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
@@ -383,6 +389,10 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "NovelReviewData", underlying: consoleLogger)
         )
+        let socialRepository = SocialDataFactory.makeSocialRepository(
+            client: client,
+            underlying: consoleLogger
+        )
         return NovelDetailFactory.makeView(
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
@@ -391,7 +401,11 @@ private struct DemoRootView: View {
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),
+            feedLikeUseCase: DefaultLikeUseCase(feedRepository: feedRepository),
+            deleteFeedUseCase: DefaultDeleteFeedUseCase(repository: feedRepository),
             deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
+            reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
+            reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
@@ -536,6 +550,37 @@ private struct DemoDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
     func execute(novelID: NovelID) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 300_000_000)
         reviewDeletion.isDeleted = true
+    }
+}
+
+/// Mock 좋아요 — 항상 성공. 낙관 반영·롤백은 VM 소관이라 여기선 지연만 흉내낸다.
+private struct DemoFeedLikeUseCase: FeedLikeUseCase {
+    func like(feedID: FeedID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+
+    func unlike(feedID: FeedID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+/// Mock 피드 삭제 — 항상 성공. 목록 제거는 VM이 수행하므로 상태를 남길 필요가 없다.
+private struct DemoDeleteFeedUseCase: DeleteFeedUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+/// Mock 신고 — 항상 성공(접수 완료 알럿 전환 확인용).
+private struct DemoReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+private struct DemoReportImproperFeedUseCase: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
     }
 }
 

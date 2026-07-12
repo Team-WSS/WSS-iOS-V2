@@ -29,6 +29,8 @@ struct NovelDetailFeedTab: View {
     let onUserProfileTapped: (UserID) -> Void
     /// threedots 탭 → 셀 드롭다운 표시 요청. 두 번째 값은 드롭다운 앵커(threedots 하단의 화면 y).
     let onThreeDotsTapped: (TotalFeed, CGFloat) -> Void
+    /// 좋아요 탭 → 낙관 토글 요청(반영·롤백은 VM 소관).
+    let onToggleLike: (FeedID) -> Void
 
     /// 각 셀 상단의 화면 y(스크롤 좌표공간 실측) — threedots 앵커 계산용.
     /// 네비 타이틀·탭바와 같은 측정 방식(GeometryReader 안 onChange). 사라진 셀의 잔존 값은 무해하다.
@@ -91,8 +93,7 @@ struct NovelDetailFeedTab: View {
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑.
-    /// 좋아요·threedots 액션, 스포일러(isSpoiler) 가림 처리는
-    /// 이번 범위 밖(TODO — #154 이후 이슈, 스포일러는 WSSFeadView 확장 필요).
+    /// 스포일러(isSpoiler) 가림 처리는 이번 범위 밖(TODO — WSSFeadView 확장 필요).
     private func feedCell(_ feed: TotalFeed) -> some View {
         WSSFeadView(
             header: FeedHeader(
@@ -125,8 +126,9 @@ struct NovelDetailFeedTab: View {
             },
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
+                isLiked: feed.isLiked,
                 commentCount: feed.commentCount,
-                likeButtonTapped: {}
+                likeButtonTapped: { onToggleLike(feed.feedId) }
             )
         )
     }

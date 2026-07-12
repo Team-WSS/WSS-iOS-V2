@@ -13,6 +13,7 @@ import BaseDomain
 import FeedDomain
 import NovelDomain
 import NovelReviewDomain
+import SocialDomain
 import Logger
 
 @MainActor
@@ -40,6 +41,8 @@ final class NovelDetailViewModel {
         var shouldDismiss = false
         /// 평가 삭제 확인 알럿 표시 여부 — 삭제 가능 판단(평가 존재)이 필요해 VM이 소유한다.
         var isDeleteReviewAlertPresented = false
+        /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
+        var presentedFeedAlert: FeedAlert?
         /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
         /// 작품 본체 로드 실패는 전면 실패 뷰(`information == nil && !isLoading`)가 표현하므로 여기 없다.
         var presentedToast: DetailToast?
@@ -51,13 +54,26 @@ final class NovelDetailViewModel {
     }
 
     /// 사용자에게 표시할 토스트의 **의미값**. 카피·표현은 View가 결정한다.
-    /// 실패 셋은 모두 네트워크 실패로 정상 도달 가능한 경로다(도달 불가 가정으로 뭉치지 않고 맥락을 남긴다).
+    /// 실패들은 모두 네트워크 실패로 정상 도달 가능한 경로다(도달 불가 가정으로 뭉치지 않고 맥락을 남긴다).
     enum DetailToast: Equatable {
         case feedsLoadFailed
         case interestFailed
         case deleteReviewFailed
+        case likeFailed
+        case deleteFeedFailed
+        case reportFeedFailed
         /// 평가 삭제 완료 — 결과가 화면 재로드로만 보이면 알아차리기 어려워 성공도 토스트로 알린다.
         case reviewDeleted
+    }
+
+    /// 피드 셀 액션의 알럿 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
+    /// 신고는 확인 → API 성공 → 접수 완료의 2단 알럿이라 완료 케이스가 따로 있다(문구가 종류별로 다름).
+    enum FeedAlert: Equatable {
+        case deleteFeed(FeedID)
+        case reportSpoiler(FeedID)
+        case reportImproper(FeedID)
+        case reportSpoilerCompleted
+        case reportImproperCompleted
     }
 
     // MARK: - Action
@@ -67,6 +83,12 @@ final class NovelDetailViewModel {
         case selectTab(Tab)
         case toggleInterest
         case loadMoreFeeds
+        case toggleFeedLike(FeedID)
+        case deleteFeedTapped(FeedID)
+        case reportSpoilerFeedTapped(FeedID)
+        case reportImproperFeedTapped(FeedID)
+        case confirmFeedAlert
+        case dismissFeedAlert
         case deleteReviewTapped
         case confirmDeleteReview
         case dismissDeleteReviewAlert
@@ -87,6 +109,10 @@ final class NovelDetailViewModel {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
     @ObservationIgnored private var deleteReviewTask: Task<Void, Never>?
+    /// 피드 삭제/신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다.
+    @ObservationIgnored private var feedActionTask: Task<Void, Never>?
+    /// 좋아요는 셀별 독립 동기화 — 같은 피드의 연타만 막고 다른 피드는 병행을 허용한다.
+    @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
     @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
@@ -100,9 +126,15 @@ final class NovelDetailViewModel {
 
     // FeedDomain
     private let loadNovelFeedsUseCase: LoadNovelFeedsUseCase
+    private let feedLikeUseCase: FeedLikeUseCase
+    private let deleteFeedUseCase: DeleteFeedUseCase
 
     // NovelReviewDomain
     private let deleteNovelReviewUseCase: DeleteNovelReviewUseCase
+
+    // SocialDomain
+    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
+    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
     // MARK: - Init
 
@@ -111,14 +143,22 @@ final class NovelDetailViewModel {
         loadNovelUseCase: LoadNovelUseCase,
         novelInterestUseCase: NovelInterestUseCase,
         loadNovelFeedsUseCase: LoadNovelFeedsUseCase,
+        feedLikeUseCase: FeedLikeUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
         deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
+        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
+        reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil
     ) {
         self.novelID = novelID
         self.loadNovelUseCase = loadNovelUseCase
         self.novelInterestUseCase = novelInterestUseCase
         self.loadNovelFeedsUseCase = loadNovelFeedsUseCase
+        self.feedLikeUseCase = feedLikeUseCase
+        self.deleteFeedUseCase = deleteFeedUseCase
         self.deleteNovelReviewUseCase = deleteNovelReviewUseCase
+        self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
+        self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
         self.state = State()
     }
@@ -135,6 +175,18 @@ final class NovelDetailViewModel {
             toggleInterest()
         case .loadMoreFeeds:
             loadMoreFeeds()
+        case .toggleFeedLike(let feedID):
+            toggleFeedLike(feedID)
+        case .deleteFeedTapped(let feedID):
+            presentFeedAlert(.deleteFeed(feedID))
+        case .reportSpoilerFeedTapped(let feedID):
+            presentFeedAlert(.reportSpoiler(feedID))
+        case .reportImproperFeedTapped(let feedID):
+            presentFeedAlert(.reportImproper(feedID))
+        case .confirmFeedAlert:
+            confirmFeedAlert()
+        case .dismissFeedAlert:
+            state.presentedFeedAlert = nil
         case .deleteReviewTapped:
             presentDeleteReviewAlert()
         case .confirmDeleteReview:
@@ -194,6 +246,45 @@ private extension NovelDetailViewModel {
         feedsTask = Task { await loadFeeds(after: lastFeedID) }
     }
 
+    /// 피드 좋아요 토글. 정책(카운트 증감·음수 방지)은 엔티티 `TotalFeed.toggleLike()`에 위임하고,
+    /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다(관심 토글과 같은 패턴).
+    func toggleFeedLike(_ feedID: FeedID) {
+        guard !isClosing,
+              !syncingLikeFeedIDs.contains(feedID),
+              let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) else { return }
+        let before = state.feeds[index]
+        var feed = before
+        // 정책 위반(카운트 음수)이면 반영하지 않는다 — 서버 호출도 없다.
+        guard (try? feed.toggleLike()) != nil else { return }
+
+        state.feeds[index] = feed
+        syncingLikeFeedIDs.insert(feedID)
+        Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
+    }
+
+    /// 피드 삭제/신고 확인 알럿 표시. 진행 중인 액션이 있으면 무시한다.
+    func presentFeedAlert(_ alert: FeedAlert) {
+        guard !isClosing, feedActionTask == nil else { return }
+        state.presentedFeedAlert = alert
+    }
+
+    /// 알럿에서 확정. 접수 완료 알럿(1버튼)의 "확인"은 dismiss로만 들어오므로 여기 오지 않는다.
+    func confirmFeedAlert() {
+        guard let alert = state.presentedFeedAlert else { return }
+        state.presentedFeedAlert = nil
+        guard feedActionTask == nil, !isClosing else { return }
+        switch alert {
+        case .deleteFeed(let feedID):
+            feedActionTask = Task { await deleteFeed(feedID) }
+        case .reportSpoiler(let feedID):
+            feedActionTask = Task { await reportFeed(feedID, spoiler: true) }
+        case .reportImproper(let feedID):
+            feedActionTask = Task { await reportFeed(feedID, spoiler: false) }
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            break
+        }
+    }
+
     /// 평가 삭제 진입(드롭다운). 삭제할 평가가 없으면(미평가·비로그인) 알럿 없이 무시한다 —
     /// 관심 토글의 no-op과 같은 정책.
     func presentDeleteReviewAlert() {
@@ -217,6 +308,7 @@ private extension NovelDetailViewModel {
         loadTask?.cancel()
         feedsTask?.cancel()
         deleteReviewTask?.cancel()
+        feedActionTask?.cancel()
         state.shouldDismiss = true
     }
 }
@@ -281,6 +373,58 @@ private extension NovelDetailViewModel {
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
             presentError(error, as: .deleteReviewFailed)
+        }
+    }
+
+    /// 좋아요 서버 동기화. 실패하면 낙관 반영을 롤백한다.
+    /// 롤백 시점엔 페이지네이션 append로 인덱스가 변했을 수 있어 피드를 다시 찾는다.
+    func syncFeedLike(to isLiked: Bool, feedID: FeedID, rollbackTo before: TotalFeed) async {
+        defer { syncingLikeFeedIDs.remove(feedID) }
+        do {
+            if isLiked {
+                try await feedLikeUseCase.like(feedID: feedID)
+            } else {
+                try await feedLikeUseCase.unlike(feedID: feedID)
+            }
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
+                state.feeds[index] = before
+            }
+            presentError(error, as: .likeFailed)
+        }
+    }
+
+    /// 피드 삭제. 성공하면 목록에서 즉시 제거하고, 헤더의 피드 수 등 집계가 바뀌므로 상세를 재동기화한다.
+    func deleteFeed(_ feedID: FeedID) async {
+        defer { feedActionTask = nil }
+        do {
+            try await deleteFeedUseCase.execute(feedID: feedID)
+            guard !isClosing, !Task.isCancelled else { return }
+            state.feeds.removeAll { $0.feedId == feedID }
+            // 평가 삭제와 같은 이유의 재로드 — 실패해도 재진입 시 다시 시도되도록 가드를 미리 되돌린다.
+            hasLoaded = false
+            await loadNovel()
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            presentError(error, as: .deleteFeedFailed)
+        }
+    }
+
+    /// 피드 신고. 성공하면 접수 완료 알럿으로 전환한다(신고는 목록에 보이는 변화가 없다).
+    func reportFeed(_ feedID: FeedID, spoiler: Bool) async {
+        defer { feedActionTask = nil }
+        do {
+            if spoiler {
+                try await reportSpoilerFeedUseCase.execute(id: feedID)
+            } else {
+                try await reportImproperFeedUseCase.execute(id: feedID)
+            }
+            guard !isClosing, !Task.isCancelled else { return }
+            state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            presentError(error, as: .reportFeedFailed)
         }
     }
 
