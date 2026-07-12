@@ -345,7 +345,7 @@ extension NovelMapper {
         return NovelPlatform(
             name: dto.platformName,
             // 서버가 버킷 상대 경로(예: /platform/naver-series)로 주면 @스케일x.png로 완성한다.
-            image: BucketImageURL.imageURL(from: dto.platformImage),
+            image: ImageURLResolver.resolve(from: dto.platformImage),
             url: url
         )
     }

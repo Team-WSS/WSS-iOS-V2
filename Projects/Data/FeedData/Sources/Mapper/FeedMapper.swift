@@ -62,7 +62,7 @@ enum FeedMapper {
             userId: UserID(userId),
             nickname: nickname,
             // 아바타는 버킷 상대 경로로 올 수 있다 — 직조립하면 경로형에서 placeholder로 깨진다.
-            profileImage: BucketImageURL.imageURL(from: avatarImage)
+            profileImage: ImageURLResolver.resolve(from: avatarImage)
         )
     }
 
@@ -102,7 +102,7 @@ enum FeedMapper {
             )
             connectedNovelDetail = ConnectedNovelDetail(
                 basicInfo: basicInfo,
-                thumbnailImageURL: BucketImageURL.imageURL(from: thumbnailImage),
+                thumbnailImageURL: ImageURLResolver.resolve(from: thumbnailImage),
                 descirption: description,
                 feedWriterRating: response.feedWriterNovelRating
             )
@@ -115,7 +115,7 @@ enum FeedMapper {
             createdDate: response.createdDate,
             isModified: response.isModified,
             feedContent: response.feedContent,
-            feedImageURLs: response.images.map { BucketImageURL.imageURL(from: $0) },
+            feedImageURLs: response.images.map { ImageURLResolver.resolve(from: $0) },
             connectedNovel: connectedNovelDetail,
             likeCount: response.likeCount,
             isLiked: response.isLiked,
@@ -145,7 +145,7 @@ enum FeedMapper {
             isModified: response.isModified,
             isPublic: response.isPublic,
             isMyFeed: response.isMyFeed,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { BucketImageURL.imageURL(from: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }
@@ -182,7 +182,7 @@ enum FeedMapper {
             isModified: response.isModified,
             isPublic: response.isPublic,
             isMyFeed: isMyFeed,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { BucketImageURL.imageURL(from: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }
@@ -214,7 +214,7 @@ enum FeedMapper {
             isModified: response.isModified,
             isPublic: response.isPublic,
             isMyFeed: response.isMyFeed,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { BucketImageURL.imageURL(from: $0) },
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }

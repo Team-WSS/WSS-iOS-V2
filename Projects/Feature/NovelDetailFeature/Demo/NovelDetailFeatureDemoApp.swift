@@ -259,7 +259,7 @@ private struct DemoRootView: View {
                     .id(detailOpenCount)
             }
             // 버킷 이미지 스케일 주입 — 실제 앱에선 루트 뷰가 같은 방식으로 1회 설정한다.
-            .onAppear { BucketImageURL.displayScale = Int(displayScale.rounded()) }
+            .onAppear { ImageURLResolver.displayScale = Int(displayScale.rounded()) }
             // 실서버 키워드 매핑은 파일 캐시(keywords.json)만 읽는다 — 실제 앱은 App(DI)이
             // 시작 시 syncKeywords()로 채우지만 Demo엔 그 계층이 없어, 토글 시 여기서 채운다.
             // 안 채우면 캐시 없는 시뮬레이터에서 fetchKeywords()가 실패해 키워드가 통째로 빈다.
