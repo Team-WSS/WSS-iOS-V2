@@ -61,6 +61,8 @@ struct NovelDetailView: View {
     private let onFeedTapped: (FeedID) -> Void
     /// 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글 제외).
     private let onUserProfileTapped: (UserID) -> Void
+    /// 작품 상세 진입 콜백 — 피드 셀 연결 작품 배너 탭.
+    private let onNovelTapped: (NovelID) -> Void
     /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
     private let onEditFeedTapped: (TotalFeed) -> Void
 
@@ -70,6 +72,7 @@ struct NovelDetailView: View {
         onCreateFeedTapped: @escaping () -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (TotalFeed) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
@@ -77,6 +80,7 @@ struct NovelDetailView: View {
         self.onCreateFeedTapped = onCreateFeedTapped
         self.onFeedTapped = onFeedTapped
         self.onUserProfileTapped = onUserProfileTapped
+        self.onNovelTapped = onNovelTapped
         self.onEditFeedTapped = onEditFeedTapped
     }
 
@@ -205,6 +209,7 @@ struct NovelDetailView: View {
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onFeedTapped: onFeedTapped,
                                 onUserProfileTapped: onUserProfileTapped,
+                                onNovelTapped: onNovelTapped,
                                 onThreeDotsTapped: { feed, anchorY in
                                     feedMenuContext = FeedMenuContext(feed: feed, anchorY: anchorY)
                                 },
@@ -757,6 +762,7 @@ private extension UIView {
             onCreateFeedTapped: { print("피드 작성 진입") },
             onFeedTapped: { print("피드 상세 진입: \($0)") },
             onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
+            onNovelTapped: { print("작품 상세 진입: \($0)") },
             onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
         )
     }

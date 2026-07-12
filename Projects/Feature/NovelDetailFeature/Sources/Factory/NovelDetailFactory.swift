@@ -25,6 +25,7 @@ public enum NovelDetailFactory {
     ///   - onCreateFeedTapped: 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디"·피드 탭 플로팅 버튼 공용.
     ///   - onFeedTapped: 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
     ///   - onUserProfileTapped: 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글이면 호출되지 않음).
+    ///   - onNovelTapped: 작품 상세 진입 콜백 — 피드 셀 연결 작품 배너 탭.
     ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
     @MainActor
     public static func makeView(
@@ -42,6 +43,7 @@ public enum NovelDetailFactory {
         onCreateFeedTapped: @escaping () -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (TotalFeed) -> Void
     ) -> some View {
         NovelDetailView(
@@ -61,6 +63,7 @@ public enum NovelDetailFactory {
             onCreateFeedTapped: onCreateFeedTapped,
             onFeedTapped: onFeedTapped,
             onUserProfileTapped: onUserProfileTapped,
+            onNovelTapped: onNovelTapped,
             onEditFeedTapped: onEditFeedTapped
         )
     }

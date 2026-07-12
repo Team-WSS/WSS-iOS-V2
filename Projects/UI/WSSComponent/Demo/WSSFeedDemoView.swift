@@ -32,7 +32,8 @@ struct WSSFeedDemoView: View {
                     linkNovel: WSSLinkNovel(
                         genreType: .modernFantasy,
                         novelTitle: "스즈미야 하루히의 무료",
-                        novelRating: 4.3
+                        novelRating: 4.3,
+                        linkNovelTapped: { print("연결 작품 클릭!") }
                     ),
                     react: WSSFeedReact(
                         likeCount: 13,
@@ -85,7 +86,8 @@ struct WSSFeedDemoView: View {
                     linkNovel: WSSLinkNovel(
                         genreType: .romanceFantasy,
                         novelTitle: "공주는 아무나 하나요",
-                        novelRating: 4.2
+                        novelRating: 4.2,
+                        linkNovelTapped: { print("연결 작품 클릭!") }
                     ),
                     react: WSSFeedReact(
                         likeCount: 42,

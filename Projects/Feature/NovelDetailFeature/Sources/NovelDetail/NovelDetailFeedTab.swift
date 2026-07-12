@@ -27,6 +27,8 @@ struct NovelDetailFeedTab: View {
     let onFeedTapped: (FeedID) -> Void
     /// 프로필 영역(이미지+닉네임) 탭 → 유저 프로필 진입. 내 글이면 호출하지 않는다(셀 매핑에서 차단).
     let onUserProfileTapped: (UserID) -> Void
+    /// 연결 작품 배너 탭 → 해당 작품 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    let onNovelTapped: (NovelID) -> Void
     /// threedots 탭 → 셀 드롭다운 표시 요청. 두 번째 값은 드롭다운 앵커(threedots 하단의 화면 y).
     let onThreeDotsTapped: (TotalFeed, CGFloat) -> Void
     /// 좋아요 탭 → 낙관 토글 요청(반영·롤백은 VM 소관).
@@ -120,7 +122,8 @@ struct NovelDetailFeedTab: View {
                     WSSLinkNovel(
                         genreType: $0,
                         novelTitle: connected.title,
-                        novelRating: connected.rating ?? 0
+                        novelRating: connected.rating ?? 0,
+                        linkNovelTapped: { onNovelTapped(connected.id) }
                     )
                 }
             },
