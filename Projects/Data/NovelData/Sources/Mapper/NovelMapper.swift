@@ -103,15 +103,16 @@ extension NovelMapper {
         var userReview: UserNovelReview?
         if let readStatusString = basicDTO.readStatus {
             let readingStatus = try mapReadingStatus(from: readStatusString)
-            let attractivePoints = try detailDTO.attractivePoints.map { try mapAttractivePoint(from: $0) }
             let period = try mapReadingPeriod(startDate: basicDTO.startDate ?? "",
                                               endDate: basicDTO.endDate ?? "")
             let rating = try? Rating(Double(basicDTO.userNovelRating))
-            
+
             userReview = UserNovelReview(
                 readingStatus: readingStatus,
                 rating: rating,
-                attractivePoint: attractivePoints,
+                // 유저 본인 선택값(매력포인트·키워드)은 이 응답에 없다 — detailDTO의 집계값을
+                // 채워 넣지 말 것(내 평가가 아닌 독자 전체 값이라 의미가 다르다).
+                attractivePoint: [],
                 period: period,
                 keywords: []
             )
