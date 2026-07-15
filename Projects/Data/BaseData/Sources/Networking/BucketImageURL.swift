@@ -33,6 +33,20 @@ public enum BucketImageURL {
     }
 
     private final class Storage: @unchecked Sendable {
-        var displayScale: Int = 3
+        private let lock = NSLock()
+        private var _displayScale: Int = 3
+
+        var displayScale: Int {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return _displayScale
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                _displayScale = newValue
+            }
+        }
     }
 }

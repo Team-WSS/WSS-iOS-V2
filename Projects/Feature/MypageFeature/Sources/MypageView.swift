@@ -339,7 +339,7 @@ struct MypageView: View {
                 Spacer().frame(height: 20)
 
                 HStack(spacing: 0) {
-                    Text(viewModel.attractivePointsText)
+                    Text(attractivePointsText)
                         .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
                     Text("(이)가 매력적인 작품이에요.")
                         .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
@@ -389,6 +389,15 @@ struct MypageView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+}
+
+// MARK: - Presentation
+
+private extension MypageView {
+    var attractivePointsText: String {
+        let points = viewModel.state.novelPreference?.attractivePoints ?? []
+        return points.map(\.displayName).joined(separator: ", ")
     }
 }
 

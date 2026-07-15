@@ -31,7 +31,8 @@ final class MypageViewModel {
 
     // MARK: - Derived
 
-    /// 뱃지 개수 내림차순. 대표 3개/펼침 목록 분리에 쓴다.
+    /// 서버가 이미 뱃지 개수 내림차순으로 내려준다(클라이언트에서 재정렬하지 않음).
+    /// 대표 3개/펼침 목록 분리에만 쓴다.
     var topGenrePreferences: [GenrePreference] {
         Array(state.genrePreferences.prefix(3))
     }
@@ -42,11 +43,6 @@ final class MypageViewModel {
 
     var totalGenreBadgeCount: Int {
         state.genrePreferences.reduce(0) { $0 + $1.count }
-    }
-
-    var attractivePointsText: String {
-        let points = state.novelPreference?.attractivePoints ?? []
-        return points.map(\.displayName).joined(separator: ", ")
     }
 
     var keywordPreferences: [KeywordPreference] {
