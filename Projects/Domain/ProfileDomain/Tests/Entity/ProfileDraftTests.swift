@@ -9,6 +9,7 @@
 import Testing
 
 @testable import ProfileDomain
+import BaseDomain
 
 @Suite("ProfileDraft")
 struct ProfileDraftTests {
@@ -241,7 +242,7 @@ struct ProfileDraftTests {
     @Test("장르를 추가할 수 있다")
     func addsGenrePreference() {
         var draft = makeDraft()
-        let genre = makeGenre(name: "로맨스")
+        let genre = makeGenre(genre: .romance)
         draft.addGenrePreference(genre)
 
         #expect(draft.genrePreferences.contains(genre))
@@ -249,7 +250,7 @@ struct ProfileDraftTests {
 
     @Test("장르를 삭제할 수 있다")
     func removesGenrePreference() {
-        let genre = makeGenre(name: "로맨스")
+        let genre = makeGenre(genre: .romance)
         var draft = makeDraft(genrePreferences: [genre])
         draft.removeGenrePreference(genre)
 
@@ -258,8 +259,8 @@ struct ProfileDraftTests {
 
     @Test("존재하지 않는 장르를 삭제해도 기존 장르는 유지된다")
     func removingNonExistentGenreKeepsOthers() {
-        let romance = makeGenre(name: "로맨스")
-        let fantasy = makeGenre(name: "판타지")
+        let romance = makeGenre(genre: .romance)
+        let fantasy = makeGenre(genre: .fantasy)
         var draft = makeDraft(genrePreferences: [romance])
         draft.removeGenrePreference(fantasy)
 
@@ -285,8 +286,8 @@ extension ProfileDraftTests {
         )
     }
 
-    private func makeGenre(name: String = "로맨스") -> GenrePreference {
-        GenrePreference(name: name, image: nil, count: 0)
+    private func makeGenre(genre: NovelGenre = .romance) -> GenrePreference {
+        GenrePreference(genre: genre, count: 0)
     }
 
     // 닉네임 변경 + 중복확인까지 통과한 draft

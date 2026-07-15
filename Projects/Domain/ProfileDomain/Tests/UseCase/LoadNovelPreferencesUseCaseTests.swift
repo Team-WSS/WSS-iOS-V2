@@ -57,7 +57,7 @@ struct LoadNovelPreferencesUseCaseTests {
 
 private final class StubKeywordRepository: KeywordRepository {
     func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] { [] }
-    func searchKeywords(_ query: String) async throws(RepositoryError) -> [Keyword] { [] }
+    func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] { [] }
     func syncKeywords() async {}
 }
 
@@ -65,7 +65,7 @@ extension LoadNovelPreferencesUseCaseTests {
 
     private func makeNovelPreference(
         attractivePoints: [AttractivePoint] = [],
-        keywords: [Keyword: Int] = [:]
+        keywords: [KeywordPreference] = []
     ) -> NovelPreference {
         NovelPreference(attractivePoints: attractivePoints, keywords: keywords)
     }

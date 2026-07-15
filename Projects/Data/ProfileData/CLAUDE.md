@@ -14,3 +14,4 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 로컬/서버 책임이 메서드마다 다름 → 수정 전 `DefaultProfileRepository`에서 해당 메서드가 localStorage를 쓰는지 확인.
+- `GenrePreferences`(DTO) DTO의 `genreImage`는 더 이상 매핑에 쓰이지 않는 죽은 필드다 — `GenrePreference`(Domain)가 서버 이미지 URL 대신 `NovelGenre`의 로컬 에셋(`WSSComponent`)을 쓰도록 바뀌었기 때문. 디코딩만 하고 의도적으로 버림.

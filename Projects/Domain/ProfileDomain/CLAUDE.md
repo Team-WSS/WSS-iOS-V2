@@ -16,3 +16,5 @@
 
 - 본인/타인 로직이 `ProfileTarget`에 숨어있음 — 새 조회 추가 시 두 케이스 모두 고려.
 - userDefaults 저장 책임이 도메인 계약 주석에 박혀있음 (구현은 Data). 어떤 필드가 로컬인지 헷갈리면 `ProfileRepository.swift` 주석 확인.
+- `GenrePreference.genre`는 자유 문자열이 아니라 `BaseDomain.NovelGenre`(9개 케이스) 타입이다 — 서버가 그 9개 밖의 장르 토큰을 내려주면 Data의 `novelGenre(from:)` 매핑이 실패해 `RepositoryError.invalidData`로 전파된다(예전엔 임의 문자열을 그대로 통과시켰음). 표시용 한글 라벨/아이콘은 `WSSComponent`의 `NovelGenre+Presentation`(`displayName`/`iconImage`) 재사용.
+- `NovelPreference.keywords`는 `[Keyword: Int]` **Dictionary**다 — 서버 응답 순서가 있어도 매핑(`ProfileMapper.novelPreference`) 단계에서 소실된다. "서버가 정렬해서 준다"를 믿고 화면에서 순서를 그대로 쓰면 실제로는 Dictionary의 비결정적 순서가 노출된다. 순서 보존이 필요해지면 이 필드를 배열 기반으로 바꿔야 한다.

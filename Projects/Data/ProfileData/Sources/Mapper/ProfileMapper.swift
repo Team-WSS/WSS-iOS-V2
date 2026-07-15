@@ -24,8 +24,8 @@ enum ProfileMapper {
         )
     }
 
-    static func genrePreferences(from preferences: [GenrePreferences]) -> [GenrePreference] {
-        preferences.map { pref in
+    static func genrePreferences(from preferences: [GenrePreferences]) throws -> [GenrePreference] {
+        try preferences.map { pref in
             GenrePreference(
                 name: pref.genreName,
                 image: ImageURLResolver.resolve(from: pref.genreImage),
@@ -39,13 +39,14 @@ enum ProfileMapper {
         keywordLookup: [String: KeywordID]
     ) throws -> NovelPreference {
         let attractivePoints = try response.attractivePoints.map { try attractivePoint(from: $0) }
-        var keywords: [Keyword: Int] = [:]
-        for preference in response.keywords {
-            let keyword = Keyword(
-                id: keywordLookup[preference.keywordName] ?? KeywordID(-1),
-                name: preference.keywordName
+        let keywords = response.keywords.map { preference in
+            KeywordPreference(
+                keyword: Keyword(
+                    id: keywordLookup[preference.keywordName] ?? KeywordID(-1),
+                    name: preference.keywordName
+                ),
+                count: preference.keywordCount
             )
-            keywords[keyword] = preference.keywordCount
         }
         return NovelPreference(
             attractivePoints: attractivePoints,
@@ -69,9 +70,9 @@ enum ProfileMapper {
     static func profileDraft(
         from response: UserProfileResponse,
         characterID: Int
-    ) -> ProfileDraft {
-        let genrePreferences = response.genrePreferences.map {
-            GenrePreference(name: $0, image: nil, count: 0)
+    ) throws -> ProfileDraft {
+        let genrePreferences = try response.genrePreferences.map {
+            GenrePreference(genre: try novelGenre(from: $0), count: 0)
         }
         return ProfileDraft(
             characterID: characterID,
@@ -119,7 +120,7 @@ enum ProfileMapper {
         case "character":       return .character
         case "relationship":    return .relationship
         case "vibe":            return .vibe
-        case "writingSkill":    return .writingSkill
+        case "writingskill":    return .writingSkill
         default:
             throw MappingError.invalidConversion(type: "AttractivePoint", value: text)
         }
