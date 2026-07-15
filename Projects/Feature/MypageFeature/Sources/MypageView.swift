@@ -48,9 +48,7 @@ struct MypageView: View {
         .scrollBounceBehavior(.basedOnSize)
         .overlay {
             if viewModel.state.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(WSSColor.wssWhite.swiftUIColor)
+                LoadingView()
             }
         }
         .toolbar {
