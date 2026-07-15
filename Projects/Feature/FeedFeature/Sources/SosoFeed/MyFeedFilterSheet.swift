@@ -52,8 +52,6 @@ struct MyFeedFilterSheet: View {
                              dismiss()
                          })
             .padding(.vertical, 10)
-
-            Spacer()
         }
         .padding(.horizontal, 20)
         .onAppear {
@@ -157,67 +155,6 @@ struct MyFeedFilterSheet: View {
                 .frame(height: 1)
                 .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
         }
-    }
-}
-
-private struct FlowLayout: Layout {
-    var horizontalSpacing: CGFloat = 6
-    var verticalSpacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        let rows = computeRows(maxWidth: maxWidth, subviews: subviews)
-
-        let totalHeight = rows.reduce(0) { $0 + $1.height }
-            + verticalSpacing * CGFloat(max(rows.count - 1, 0))
-        let widestRow = rows.map(\.width).max() ?? 0
-        return CGSize(width: min(maxWidth, widestRow), height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = computeRows(maxWidth: bounds.width, subviews: subviews)
-        var y = bounds.minY
-
-        for row in rows {
-            var x = bounds.minX
-            for index in row.indices {
-                let subview = subviews[index]
-                let size = subview.sizeThatFits(.unspecified)
-                subview.place(at: CGPoint(x: x, y: y),
-                              anchor: .topLeading,
-                              proposal: ProposedViewSize(size))
-                x += size.width + horizontalSpacing
-            }
-            y += row.height + verticalSpacing
-        }
-    }
-
-    private struct Row {
-        var indices: [Int] = []
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-    }
-
-    private func computeRows(maxWidth: CGFloat, subviews: Subviews) -> [Row] {
-        var rows: [Row] = [Row()]
-
-        for (index, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(.unspecified)
-            var current = rows[rows.count - 1]
-            let projectedWidth = current.indices.isEmpty
-                ? size.width
-                : current.width + horizontalSpacing + size.width
-
-            if projectedWidth > maxWidth, !current.indices.isEmpty {
-                rows.append(Row(indices: [index], width: size.width, height: size.height))
-            } else {
-                current.indices.append(index)
-                current.width = projectedWidth
-                current.height = max(current.height, size.height)
-                rows[rows.count - 1] = current
-            }
-        }
-        return rows
     }
 }
 
