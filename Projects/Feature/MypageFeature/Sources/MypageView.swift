@@ -67,7 +67,7 @@ struct MypageView: View {
         }
     }
     
-    //MARK: - 프로필
+    // MARK: - 프로필
     
     private var myProfileSection: some View {
         HStack(alignment: .top, spacing: 24) {
@@ -121,7 +121,7 @@ struct MypageView: View {
             .frame(height: 3)
     }
     
-    //MARK: - 서재
+    // MARK: - 서재
     
     private var myLibrarySection: some View {
         HStack(spacing: 0) {
@@ -153,7 +153,7 @@ struct MypageView: View {
         .frame(maxWidth: .infinity)
     }
     
-    //MARK: - 컬렉션
+    // MARK: - 컬렉션
 
     private var myCollectionSection: some View {
         VStack(spacing: 0) {
@@ -224,7 +224,7 @@ struct MypageView: View {
         .frame(width: 88)
     }
 
-    //MARK: - 장르 취향
+    // MARK: - 장르 취향
     
     private var myGenreSection: some View {
         VStack(spacing: 0) {
@@ -326,7 +326,7 @@ struct MypageView: View {
         .padding(.horizontal, 13)
     }
     
-    //MARK: - 작품 취향
+    // MARK: - 작품 취향
     
     private var myNovelPreferenceSection: some View {
         VStack(spacing: 0) {

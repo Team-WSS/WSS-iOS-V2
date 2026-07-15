@@ -121,6 +121,7 @@ private extension MypageViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
         state.isLoading = true
+        state.hasLoadError = false
         loadTask = Task { await loadMypage() }
     }
 }
@@ -134,7 +135,6 @@ private extension MypageViewModel {
     func loadMypage() async {
         defer { loadTask = nil }
         state.isLoading = true
-        state.hasLoadError = false
         defer { state.isLoading = false }
 
         do {
