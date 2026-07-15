@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import FeedDomain
 import ProfileDomain
+import Logger
 
 enum FeedTab {
     case myFeed
@@ -58,6 +59,7 @@ final class SosoFeedViewModel {
         case load
         case loadMore
         case toggleLike(FeedID)
+        case toggleMyFeedSort
 
         // 필터 시트
         case resetMyFeedFilterDraft
@@ -89,6 +91,7 @@ final class SosoFeedViewModel {
     private let loadSosoFeedsUseCase: LoadSosoFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
     private let loadProfileUseCase: LoadProfileUseCase
+    private let logger: Logger?
 
     /// "내 피드" 목록 API가 작성자 정보(닉네임/프로필 이미지)를 내려주지 않아, 별도로 받아온 내 프로필로 채워 넣는다.
     /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시한다.
@@ -98,7 +101,8 @@ final class SosoFeedViewModel {
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadsosoFeedsUseCase: LoadSosoFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
-        loadProfileUseCase: LoadProfileUseCase
+        loadProfileUseCase: LoadProfileUseCase,
+        logger: Logger? = nil
     ) {
         self.state = State()
 
@@ -106,6 +110,7 @@ final class SosoFeedViewModel {
         self.loadSosoFeedsUseCase = loadsosoFeedsUseCase
         self.feedLikeUseCase = feedLikeUseCase
         self.loadProfileUseCase = loadProfileUseCase
+        self.logger = logger
     }
 
     //MARK: - Handle
@@ -116,12 +121,15 @@ final class SosoFeedViewModel {
             state.selectedTab = tab
         case .selectSosoFeedOption(let option):
             state.selectedSosoFeedOption = option
+            logger?.info("소소피드 옵션: \(option)")
         case .load:
             Task { await loadInitial() }
         case .loadMore:
             Task { await loadMore() }
         case .toggleLike(let feedID):
             Task { await toggleLike(feedID: feedID) }
+        case .toggleMyFeedSort:
+            toggleMyFeedSort()
 
         case .resetMyFeedFilterDraft:
             state.myFeedOptionDraft = state.myFeedOption
@@ -132,8 +140,7 @@ final class SosoFeedViewModel {
         case .toggleMyFeedFilterPrivate:
             toggleMyFeedFilterVisibility(togglingPublic: false)
         case .applyMyFeedFilter:
-            state.myFeedOption = state.myFeedOptionDraft
-            Task { await loadMyFeeds(refresh: true) }
+            applyMyFeedFilter()
         }
     }
 
@@ -237,6 +244,21 @@ final class SosoFeedViewModel {
         }
     }
 
+    //MARK: - Sort
+
+    private func toggleMyFeedSort() {
+        let draft = state.myFeedOption
+        let nextSortType: SortType = draft.sortType == .recent ? .old : .recent
+
+        state.myFeedOption = MyFeedOption(
+            genres: draft.genres,
+            visibilityType: draft.visibilityType,
+            sortType: nextSortType
+        )
+        logger?.info("내 피드 정렬: \(nextSortType)")
+        Task { await loadMyFeeds(refresh: true) }
+    }
+
     //MARK: - Like
 
     /// 낙관적 업데이트: 먼저 엔티티의 toggleLike()로 즉시 UI 반영,
@@ -271,6 +293,13 @@ final class SosoFeedViewModel {
     }
 
     //MARK: - Filter Draft
+
+    /// 필터 시트의 draft를 실제 fetch에 쓰는 커밋된 필터로 반영하고 재조회한다.
+    private func applyMyFeedFilter() {
+        state.myFeedOption = state.myFeedOptionDraft
+        logger?.info("\(state.myFeedOption.genres.map { $0.displayName }), \(state.myFeedOption.visibilityType)")
+        Task { await loadMyFeeds(refresh: true) }
+    }
 
     private func toggleMyFeedFilterGenre(_ genre: NovelGenre) {
         let draft = state.myFeedOptionDraft
