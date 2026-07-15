@@ -110,14 +110,16 @@ public enum FeedFeatureFactory {
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
-        loadProfileUseCase: LoadProfileUseCase
+        loadProfileUseCase: LoadProfileUseCase,
+        logger: Logger? = nil
     ) -> some View {
         SosoFeedView(
             viewModel: SosoFeedViewModel(
                 loadMyFeedsUseCase: loadMyFeedsUseCase,
                 loadsosoFeedsUseCase: loadSosoFeedsUseCase,
                 feedLikeUseCase: feedLikeUseCase,
-                loadProfileUseCase: loadProfileUseCase
+                loadProfileUseCase: loadProfileUseCase,
+                logger: logger
             )
         )
     }

@@ -27,7 +27,6 @@ let project = Project.createFeatureModule(
     ],
     demoDependencies: [
         .module(.core(.networking)),
-        .module(.core(.logger)),
         .module(.data(.base)),
         .module(.data(.feed)),
         .module(.data(.novel)),

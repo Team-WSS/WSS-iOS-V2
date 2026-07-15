@@ -3,7 +3,7 @@
 
 피드 작성/수정, 상세, 목록(내 피드/소소피드) 화면.
 
-- 식별자: `ModuleType.feature(.feed)` / 의존: `FeedDomain`, `NovelDomain`, `ProfileDomain`, `BaseDomain`
+- 식별자: `ModuleType.feature(.feed)` / 의존: `FeedDomain`, `NovelDomain`, `ProfileDomain`, `BaseDomain`, `Logger`(`SosoFeedViewModel`이 `logger: Logger? = nil` 주입받음)
 
 ## 주의사항 (작업 중 발견 시 누적)
 

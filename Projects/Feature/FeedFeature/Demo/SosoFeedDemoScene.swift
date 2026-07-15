@@ -53,7 +53,8 @@ struct SosoFeedDemoScene: View {
                 loadMyFeedsUseCase: loadMyFeedsUseCase,
                 loadSosoFeedsUseCase: loadSosoFeedsUseCase,
                 feedLikeUseCase: feedLikeUseCase,
-                loadProfileUseCase: loadProfileUseCase
+                loadProfileUseCase: loadProfileUseCase,
+                logger: OSLogger.feed
             )
         }
     }
