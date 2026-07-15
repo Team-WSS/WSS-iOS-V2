@@ -25,30 +25,38 @@ struct MypageView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                myProfileSection
-                myLibrarySection
-
-                divider
-
-                myCollectionSection
-
-                divider
-
-                if !viewModel.hasNoGenrePreferenceData {
-                    myGenreSection
-                    divider
+        Group {
+            if viewModel.state.hasLoadError {
+                NetworkErrorView {
+                    viewModel.handle(.load)
                 }
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        myProfileSection
+                        myLibrarySection
 
-                myNovelPreferenceSection
-            }
-        }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize)
-        .overlay {
-            if viewModel.state.isLoading {
-                LoadingView()
+                        divider
+
+                        myCollectionSection
+
+                        divider
+
+                        if !viewModel.hasNoGenrePreferenceData {
+                            myGenreSection
+                            divider
+                        }
+
+                        myNovelPreferenceSection
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .overlay {
+                    if viewModel.state.isLoading {
+                        LoadingView()
+                    }
+                }
             }
         }
         .toolbar {

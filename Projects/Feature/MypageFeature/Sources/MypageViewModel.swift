@@ -66,7 +66,6 @@ final class MypageViewModel {
 
     enum Action {
         case load
-        case dismissError
     }
 
     // MARK: - Output
@@ -112,8 +111,6 @@ final class MypageViewModel {
         switch action {
         case .load:
             load()
-        case .dismissError:
-            state.hasLoadError = false
         }
     }
 }
@@ -137,6 +134,7 @@ private extension MypageViewModel {
     func loadMypage() async {
         defer { loadTask = nil }
         state.isLoading = true
+        state.hasLoadError = false
         defer { state.isLoading = false }
 
         do {
