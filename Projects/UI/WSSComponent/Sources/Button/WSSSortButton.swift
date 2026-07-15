@@ -27,6 +27,7 @@ public struct WSSSortButton: View {
             }
             .frame(height: 33)
             .background(Color.wssWhite)
+            .animation(nil, value: sortType)
         }
         .buttonStyle(.plain)
     }

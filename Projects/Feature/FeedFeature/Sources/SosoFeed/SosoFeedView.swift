@@ -175,8 +175,8 @@ struct SosoFeedView: View {
 
                 Spacer()
 
-                WSSSortButton(sortType: .recent,
-                              action: { })
+                WSSSortButton(sortType: viewModel.state.myFeedOption.sortType,
+                              action: { viewModel.handle(.toggleMyFeedSort) })
 
             case .sosoFeed:
                 sosoFeedChipButton(
