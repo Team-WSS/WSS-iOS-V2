@@ -16,6 +16,10 @@ let project = Project.createFeatureModule(
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.setting)),
+        .module(.domain(.profile)),
+        .module(.domain(.notification)),
+        .module(.domain(.social)),
+        .module(.domain(.auth)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -24,6 +28,10 @@ let project = Project.createFeatureModule(
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
         .module(.data(.setting)),
+        .module(.data(.profile)),
+        .module(.data(.notification)),
+        .module(.data(.social)),
+        .module(.data(.auth)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]
