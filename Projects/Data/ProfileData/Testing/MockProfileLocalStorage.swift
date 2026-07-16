@@ -40,4 +40,9 @@ public final class MockProfileLocalStorage: AppStorage {
         get { get(.gender) }
         set { set(.gender, newValue) }
     }
+
+    public var birthYear: Int? {
+        get { get(.birthYear) }
+        set { set(.birthYear, newValue) }
+    }
 }

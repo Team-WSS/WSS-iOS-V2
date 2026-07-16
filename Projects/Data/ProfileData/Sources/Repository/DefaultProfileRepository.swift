@@ -105,13 +105,15 @@ public struct DefaultProfileRepository: ProfileRepository {
 
     public func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError) {
         let action = ProfileAction.saveAccountInfo
-        
+
         do {
             let request = AccountInfoRequest(
                 gender: ProfileMapper.genderRawValue(from: info.gender),
                 birth: info.birth.value
             )
             try await service.putAccountInfo(request)
+            localStorage.set(.gender, ProfileMapper.localGenderRawValue(from: info.gender))
+            localStorage.set(.birthYear, info.birth.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -119,6 +121,28 @@ public struct DefaultProfileRepository: ProfileRepository {
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
+        }
+    }
+
+    public func loadLocalGenderAndBirth() async throws(RepositoryError) -> AccountInfoDraft {
+        let action = ProfileAction.loadLocalGenderAndBirth
+
+        guard let genderRaw = localStorage.get(.gender),
+              let birthValue = localStorage.get(.birthYear) else {
+            logger?.logUnknownError(action: action.name, error: RepositoryError.notFound)
+            throw .notFound
+        }
+
+        do {
+            let result = try ProfileMapper.localGenderAndBirth(genderRaw: genderRaw, birthValue: birthValue)
+            logger?.logSuccess(action: action.name)
+            return result
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .invalidData
         }
     }
 

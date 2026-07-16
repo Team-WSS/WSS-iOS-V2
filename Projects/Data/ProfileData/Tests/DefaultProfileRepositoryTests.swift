@@ -175,6 +175,42 @@ struct DefaultProfileRepositoryTests {
         #expect(service.putProfileCallCount == 0)
     }
 
+    // MARK: - saveAccountInfo
+
+    @Test("saveAccountInfo 성공 시 localStorage(성별/출생연도) 갱신")
+    func saveAccountInfo_success_updatesLocalStorage() async throws {
+        let (sut, _, localStorage) = makeRepository()
+
+        try await sut.saveAccountInfo(AccountInfoDraft(email: nil, gender: .male, birth: try BirthYear(1995)))
+
+        #expect(localStorage.gender == "MALE")
+        #expect(localStorage.birthYear == 1995)
+    }
+
+    // MARK: - loadLocalGenderAndBirth
+
+    @Test("loadLocalGenderAndBirth 성공 시 localStorage 값을 반환")
+    func loadLocalGenderAndBirth_success() async throws {
+        let (sut, _, localStorage) = makeRepository()
+        localStorage.gender = "FEMALE"
+        localStorage.birthYear = 1998
+
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+        #expect(draft.birth.value == 1998)
+        #expect(draft.email == nil)
+    }
+
+    @Test("loadLocalGenderAndBirth localStorage에 값이 없으면 notFound 에러")
+    func loadLocalGenderAndBirth_missing_throwsNotFound() async {
+        let (sut, _, _) = makeRepository()
+
+        await #expect(throws: RepositoryError.notFound) {
+            _ = try await sut.loadLocalGenderAndBirth()
+        }
+    }
+
     // MARK: - profileVisibility
 
     @Test("loadProfileVisibility 성공")
