@@ -9,6 +9,7 @@
 import Foundation
 import NotificationDomain
 import BaseDomain
+import BaseData
 
 enum NotificationMapper {
     static func pagedNotifications(
@@ -24,7 +25,7 @@ enum NotificationMapper {
         from response: NotificationResponse
     ) -> NotificationItem {
         let notificationID = NotificationID(response.notificationId)
-        let iconURL = URL(string: response.notificationImage)
+        let iconURL = ImageURLResolver.resolve(from: response.notificationImage)
         let deepLink: NotificationDeeplink
         if response.isNotice {
             deepLink = .notificationDetail(id: notificationID)

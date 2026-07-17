@@ -10,6 +10,7 @@ import Foundation
 
 import RecommendationDomain
 import BaseDomain
+import BaseData
 
 public enum RecommendationMapper {
     
@@ -20,14 +21,14 @@ public enum RecommendationMapper {
     }
     
     static func todayDiscoveryNovel(from dto: TodayDiscoveryNovelResponse) -> TodayDiscovery {
-        let novelImageURL = URL(string: dto.novelImage)
+        let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         let isNovelIntroduction = (dto.nickname == nil || dto.avatarImage == nil)
         
         let content: TodayDiscovery.Content
         if isNovelIntroduction {
             content = .novel
         } else {
-            let profileImageURL = URL(string: dto.avatarImage ?? "")
+            let profileImageURL = ImageURLResolver.resolve(from: dto.avatarImage ?? "")
             let author = Author(nickname: dto.nickname ?? "웹소소",
                                 profileImage: profileImageURL)
             content = .userComment(user: author)
@@ -72,8 +73,8 @@ public enum RecommendationMapper {
     }
     
     static func interestFeed(from dto: InterestFeedResponse) -> InterestFeed {
-        let novelImageURL = URL(string: dto.novelImage)
-        let authorProfileImageURL = URL(string: dto.avatarImage)
+        let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
+        let authorProfileImageURL = ImageURLResolver.resolve(from: dto.avatarImage)
     
         return InterestFeed(
             novelID: NovelID(dto.novelId),
@@ -97,7 +98,7 @@ public enum RecommendationMapper {
     }
     
     static func preferenceGenreNovel(from dto: PreferenceGenreNovelResponse) -> PreferenceGenreNovel {
-        let novelImageURL = URL(string: dto.novelImage)
+        let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         let novelAuthorArray: [String] = dto.author.components(separatedBy: ",")
  
         return PreferenceGenreNovel(
@@ -118,7 +119,7 @@ public enum RecommendationMapper {
     }
     
     static func sosopickNovel(from dto: SosopickNovelResponse) -> SosoPick {
-        let imageURL = URL(string: dto.novelImage)
+        let imageURL = ImageURLResolver.resolve(from: dto.novelImage)
         
         return SosoPick(
             novelID: NovelID(dto.novelId),

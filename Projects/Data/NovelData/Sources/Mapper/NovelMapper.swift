@@ -33,7 +33,7 @@ extension NovelMapper {
     // MARK: - 서재 - 소설
     
     public static func libraryNovel(from dto: UserLibraryNovelResponse) throws -> LibraryNovel {
-        let novelImageURL = URL(string: dto.novelImage)
+        let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         
         var userReview: UserNovelReview?
         if let readStatusString = dto.readStatus {
@@ -89,7 +89,7 @@ extension NovelMapper {
 
         let novel = Novel(
             id: id,
-            thumbnailImage: URL(string: basicDTO.novelImage),
+            thumbnailImage: ImageURLResolver.resolve(from: basicDTO.novelImage),
             title: basicDTO.novelTitle,
             authors: authors,
             genres: genres,
@@ -158,7 +158,7 @@ extension NovelMapper {
     }
     
     public static func searchNovel(from dto: SearchNovelResponse) -> Novel {
-        let thumbnailImageURL = URL(string: dto.novelImage)
+        let thumbnailImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         let authors = dto.author
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }

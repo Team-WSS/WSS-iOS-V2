@@ -15,7 +15,7 @@ enum KeywordMapper {
     }
 
     static func keywordGroup(from dto: KeywordGroupResponse) -> KeywordGroup {
-        let groupImageURL = URL(string: dto.categoryImage)
+        let groupImageURL = ImageURLResolver.resolve(from: dto.categoryImage)
 
         return KeywordGroup(
             name: dto.categoryName,
