@@ -182,7 +182,7 @@ struct NovelLoggerDemoView: View {
             let info = try await repository.fetchNovel(id: NovelID(novelID), cachedKeywords: cachedKeywords)
             let novel = info.novel
             appendLog(level: .info,
-                      message: "성공: \(novel.title) | 장르: \(info.genres) | 평점: \(novel.rating) | 피드: \(info.feedCount)개 | 키워드: \(info.keywords)")
+                      message: "성공: \(novel.title) | 장르: \(info.novel.genres) | 평점: \(novel.rating) | 피드: \(info.feedCount)개 | 키워드: \(info.keywords)")
         } catch {
             appendError(action: .fetchNovel, error: error)
         }

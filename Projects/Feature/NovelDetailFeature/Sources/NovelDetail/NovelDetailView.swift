@@ -783,7 +783,6 @@ private struct PreviewLoadNovelUseCase: LoadNovelUseCase {
                 isInterested: false
             ),
             feedCount: 3,
-            genres: [.romanceFantasy],
             publicationStatus: .completed,
             userReview: nil,
             description: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다.",

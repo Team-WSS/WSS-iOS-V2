@@ -123,7 +123,6 @@ extension NovelMapper {
         return NovelInformation(
             novel: novel,
             feedCount: basicDTO.feedCount,
-            genres: genres,
             publicationStatus: mapPublicationStatus(from: basicDTO.isNovelCompleted),
             userReview: userReview,
             description: detailDTO.novelDescription,

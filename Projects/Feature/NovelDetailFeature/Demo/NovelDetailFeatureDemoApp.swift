@@ -495,7 +495,6 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                 isInterested: false
             ),
             feedCount: scenario.feedCount,
-            genres: [.romanceFantasy, .romance],
             publicationStatus: isMinimal ? .onGoing : .completed,
             // nil이면 평가 자체가 없다 → 상태바 대신 셀렉터. 빈 집합이면 읽기 상태만 있는 평가다.
             // 삭제된 뒤의 재로드면 시나리오와 무관하게 평가 없음 — 삭제 → 셀렉터 전환 흐름 시연.

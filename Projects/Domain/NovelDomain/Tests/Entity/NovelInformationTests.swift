@@ -101,7 +101,6 @@ extension NovelInformationTests {
         NovelInformation(
             novel: makeNovel(),
             feedCount: 4,
-            genres: [.BL],
             publicationStatus: .completed,
             userReview: nil,
             description: description,

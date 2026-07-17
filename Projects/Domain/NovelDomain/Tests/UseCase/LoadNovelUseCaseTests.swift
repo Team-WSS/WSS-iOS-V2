@@ -72,7 +72,6 @@ extension LoadNovelUseCaseTests {
         NovelInformation(
             novel: makeNovel(),
             feedCount: 4,
-            genres: [.BL],
             publicationStatus: .completed,
             userReview: nil,
             description: "재밌는 소설입니다.",

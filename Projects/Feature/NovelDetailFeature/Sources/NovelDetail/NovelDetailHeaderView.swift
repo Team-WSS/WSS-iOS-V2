@@ -102,7 +102,7 @@ struct NovelDetailHeaderView: View {
             .shadow(color: Color.wssBlack.opacity(0.1), radius: 15, x: 0, y: 2)
             // 장르 마크는 표지 우하단 모서리에 정렬(디자인 좌표: 표지 bottom/trailing 일치)
             .overlay(alignment: .bottomTrailing) {
-                if let genre = information.genres.first {
+                if let genre = information.novel.genres.first {
                     genreMark(genre)
                 }
             }
@@ -147,8 +147,8 @@ struct NovelDetailHeaderView: View {
     /// "로판/로맨스  ·  완결작  ·  이보라" — 장르 나열 / 연재 상태 / 작가.
     private var metaText: String {
         var parts: [String] = []
-        if !information.genres.isEmpty {
-            parts.append(information.genres.map(\.displayName).joined(separator: "/"))
+        if !information.novel.genres.isEmpty {
+            parts.append(information.novel.genres.map(\.displayName).joined(separator: "/"))
         }
         parts.append(publicationStatusName)
         if !novel.authors.isEmpty {
