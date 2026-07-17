@@ -65,6 +65,9 @@ struct NovelDetailView: View {
     private let onNovelTapped: (NovelID) -> Void
     /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
     private let onEditFeedTapped: (TotalFeed) -> Void
+    /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 어느 서버 호출에서 발생하든 공통.
+    /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: NovelDetailViewModel,
@@ -73,7 +76,8 @@ struct NovelDetailView: View {
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void
+        onEditFeedTapped: @escaping (TotalFeed) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onReviewTapped = onReviewTapped
@@ -82,6 +86,7 @@ struct NovelDetailView: View {
         self.onUserProfileTapped = onUserProfileTapped
         self.onNovelTapped = onNovelTapped
         self.onEditFeedTapped = onEditFeedTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     // body = 조립 + 화면 modifier만. 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 오버레이를 쓴다.
@@ -111,6 +116,10 @@ struct NovelDetailView: View {
             )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
+            }
+            // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
+            .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
             }
     }
 
@@ -763,7 +772,8 @@ private extension UIView {
             onFeedTapped: { print("피드 상세 진입: \($0)") },
             onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
+            onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") },
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
 }

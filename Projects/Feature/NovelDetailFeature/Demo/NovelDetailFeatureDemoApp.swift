@@ -355,7 +355,8 @@ private struct DemoRootView: View {
                 onFeedTapped: handleFeedTapped,
                 onUserProfileTapped: handleUserProfileTapped,
                 onNovelTapped: handleNovelTapped,
-                onEditFeedTapped: handleEditFeedTapped
+                onEditFeedTapped: handleEditFeedTapped,
+                onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
             makeLiveView()
@@ -422,7 +423,8 @@ private struct DemoRootView: View {
             onFeedTapped: handleFeedTapped,
             onUserProfileTapped: handleUserProfileTapped,
             onNovelTapped: handleNovelTapped,
-            onEditFeedTapped: handleEditFeedTapped
+            onEditFeedTapped: handleEditFeedTapped,
+            onAuthenticationRequired: handleAuthenticationRequired
         )
     }
 
@@ -454,6 +456,11 @@ private struct DemoRootView: View {
     /// 피드 수정 진입 콜백(내 글 드롭다운의 "수정하기"). 실제 앱은 CreateFeed 수정 모드로 전환한다 — Demo는 로그만.
     private func handleEditFeedTapped(_ feed: TotalFeed) {
         consoleLogger.info("피드 수정 진입 요청: \(feed.feedId)")
+    }
+
+    /// 인증 만료 콜백(화면 내 모든 서버 호출 공통). 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
+    private func handleAuthenticationRequired() {
+        consoleLogger.info("인증 만료 → 로그인 진입 요청")
     }
 }
 

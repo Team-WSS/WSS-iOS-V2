@@ -39,6 +39,9 @@ final class NovelDetailViewModel {
         /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
         var feedsLoadFailed = false
         var shouldDismiss = false
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
+        /// 어느 서버 호출에서 발생하든 여기로 모이며, View가 `onChange`로 소비한다(`shouldDismiss`와 대칭).
+        var requiresAuthentication = false
         /// 평가 삭제 확인 알럿 표시 여부 — 삭제 가능 판단(평가 존재)이 필요해 VM이 소유한다.
         var isDeleteReviewAlertPresented = false
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
@@ -330,6 +333,8 @@ private extension NovelDetailViewModel {
             hasLoaded = true
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
+            // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화한다(이 catch는 presentError를 안 거치므로 직접 감지).
+            if routeToLoginIfAuthenticationRequired(error) { return }
             // 본체 로드 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
             logger?.error("NovelDetail 실패(novelLoad): \(String(describing: error))")
         }
@@ -452,8 +457,19 @@ private extension NovelDetailViewModel {
     /// Repository 에러를 발생 맥락의 의미 토스트로 변환한다. 원인은 로그로 남긴다.
     /// (`handle(_:)`과 이름이 겹치지 않게 분리)
     func presentError(_ error: Error, as presented: DetailToast) {
+        // 인증 만료면 개별 실패 토스트 대신 로그인 유도로 일원화한다(피드/좋아요/삭제/신고/관심 공통 경로).
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("NovelDetail 실패(\(presented)): \(String(describing: error))")
         if state.presentedToast != nil { return }
         state.presentedToast = presented
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    /// 세션이 죽은 상황이라 개별 실패 토스트 대신 로그인 유도로 일원화한다.
+    /// (`RepositoryError`는 `Equatable` — 여기서 쓰는 건 import된 `BaseDomain.RepositoryError`다.)
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

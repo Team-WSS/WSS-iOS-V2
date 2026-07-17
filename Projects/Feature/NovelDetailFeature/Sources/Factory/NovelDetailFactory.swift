@@ -27,6 +27,8 @@ public enum NovelDetailFactory {
     ///   - onUserProfileTapped: 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글이면 호출되지 않음).
     ///   - onNovelTapped: 작품 상세 진입 콜백 — 피드 셀 연결 작품 배너 탭.
     ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
+    ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 모든 서버 호출 공통.
+    ///     실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
     @MainActor
     public static func makeView(
         novelID: NovelID,
@@ -44,7 +46,8 @@ public enum NovelDetailFactory {
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void
+        onEditFeedTapped: @escaping (TotalFeed) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         NovelDetailView(
             viewModel: NovelDetailViewModel(
@@ -64,7 +67,8 @@ public enum NovelDetailFactory {
             onFeedTapped: onFeedTapped,
             onUserProfileTapped: onUserProfileTapped,
             onNovelTapped: onNovelTapped,
-            onEditFeedTapped: onEditFeedTapped
+            onEditFeedTapped: onEditFeedTapped,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }
