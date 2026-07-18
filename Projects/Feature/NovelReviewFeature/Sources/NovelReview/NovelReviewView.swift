@@ -46,6 +46,10 @@ struct NovelReviewView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.wssWhite)
+            } else if viewModel.state.loadFailed {
+                // 로드 실패 — 재시도 버튼이 load를 다시 발화(실패는 hasLoaded 가드를 소진하지 않아 재시도 열림).
+                // NetworkErrorView가 자체 흰 배경으로 content를 덮는다(overlay 방식 → 루트 정체성 유지).
+                NetworkErrorView { viewModel.handle(.load) }
             }
         }
         .navigationTitle(title)
@@ -152,7 +156,8 @@ private extension NovelReviewView {
                         .foregroundStyle(Color.wssPrimary100)
                 }
             }
-            .disabled(viewModel.state.isSaving)
+            // 로드 실패(전면 실패 뷰) 상태에선 빈/초기 draft 저장을 막는다.
+            .disabled(viewModel.state.isSaving || viewModel.state.loadFailed)
         }
     }
 }
