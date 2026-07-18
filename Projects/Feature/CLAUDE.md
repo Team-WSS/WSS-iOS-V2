@@ -19,10 +19,19 @@
 
 파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
 
+**레퍼런스는 단일 정본이 아니라 "성격별 대표"다** — 뼈대(MARK 순서·State/Action·얇은 VM·Factory)는 어느 쪽이든 같으니, 만들 화면에 **가까운 쪽의 얹는 패턴**을 본다.
+| 만들 화면 성격 | 볼 정본 | 그 정본이 대표하는 얹는 패턴 |
+|---|---|---|
+| 입력 폼(로드+저장, 자기완결 dismiss) | `NovelReviewFeature` | 폼 검증 throw→토스트, 뼈대 풀세트 |
+| 순수 입력(UseCase 없음) | `ReadingPeriodSheet`(+VM) | `Action Handling`만, 결과는 `onApply` 등으로 상위 발화 |
+| 복합 조회(리스트·탭·헤더) | `NovelDetailFeature` | 지연 로드·커서 페이지네이션, 낙관 업데이트/롤백, **전면 실패 뷰↔토스트 분화**, 화면 전환 콜백 다수 위임 |
+
+인증 만료→로그인 라우팅(`requiresAuthentication` 신호 + `onAuthenticationRequired` 콜백)은 **두 모듈 공통**이라 성격과 무관하게 서버 호출이 있으면 넣는다.
+
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature VM은 아래 `// MARK:` 순서·역할을 그대로 따른다.** 순서를 바꾸거나 섹션을 임의로 추가하지 않는다.
-정본 레퍼런스: `NovelReviewViewModel`(섹션 풀세트) / `ReadingPeriodSheetViewModel`(UseCase 없는 순수 입력 변형).
+정본 레퍼런스: `NovelReviewViewModel`(섹션 풀세트·폼) / `ReadingPeriodSheetViewModel`(UseCase 없는 순수 입력 변형) / `NovelDetailViewModel`(복합 — 리스트·페이지네이션·낙관 업데이트/롤백·에러 분화). → 성격별 선택은 위 "코드 규칙" 표 참고.
 
 > **골격 전문(복붙용): [Docs/VIEWMODEL_TEMPLATE.md](Docs/VIEWMODEL_TEMPLATE.md)** — `// MARK:` 순서(State / Derived / Action / Output / Property / Dependency / Init / handle → Action Handling / UseCase Handling / Error Mapping)와 각 섹션 주석이 거기 있다.
 
@@ -35,7 +44,7 @@
 ### View 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature View는 아래 `// MARK:` 순서·역할·규칙을 그대로 따른다.**
-정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형).
+정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형) / `NovelDetailView`(복합 — 스티키 탭·리스트·콜백 위임. 단 몰입형 헤더·스크롤 트릭은 그 화면 특유라 참고 시 취사선택).
 
 > **골격 전문(복붙용): [Docs/VIEW_TEMPLATE.md](Docs/VIEW_TEMPLATE.md)** — 선언 순서(VM → View 전용 상태 → @Environment → 주입 let), body=조립+modifier, 그리고 `// MARK:` Toolbar / Sections / Presentation / Preview 골격이 거기 있다.
 
