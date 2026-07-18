@@ -5,8 +5,9 @@
 일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
+- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
+  - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백(이 화면의 유일한 상위 위임 콜백). 화면 전환은 호출자(App)가 수행 — 현재 소비처는 Demo 로그뿐(실제 로그인 화면·App 라우팅 미구현, 후속).
 
 ### 파일 구조 — 화면(영역)별 그룹
 `Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
@@ -29,7 +30,8 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 #### 에러 처리 정책 (`presentError` → 토스트)
-- **사용자에게 정상적으로 보여줄 검증 에러는 매력 포인트 초과(`tooManyAttractivePoints`) 하나뿐.** 나머지(네트워크/인증/서버/notFound/기간/평점)는 UI·도메인 가드(휠 미래 차단, 순서 보정, 슬라이더 범위, 단일 선택 등)가 **이미 입력단에서 막고 있어 도달하면 안 되는 경로**다. → `.unknown`으로 묶어 `logger?.error(...)`로 원인을 남기고 일반 토스트만 띄운다. 케이스별 친절 문구를 다시 늘리지 말 것(가드가 뚫린 거라 문구보다 로그가 중요).
+- **사용자에게 정상적으로 보여줄 검증 에러는 매력 포인트 초과(`tooManyAttractivePoints`) 하나뿐.** 나머지(네트워크/서버/notFound/기간/평점)는 UI·도메인 가드(휠 미래 차단, 순서 보정, 슬라이더 범위, 단일 선택 등)가 **이미 입력단에서 막고 있어 도달하면 안 되는 경로**다. → `.unknown`으로 묶어 `logger?.error(...)`로 원인을 남기고 일반 토스트만 띄운다. 케이스별 친절 문구를 다시 늘리지 말 것(가드가 뚫린 거라 문구보다 로그가 중요).
+- ⚠️ **인증 만료(`authenticationRequired`)만은 `.unknown`에 묶지 않는다** — 가드가 막을 수 없는 정상 도달 경로다. `presentError` 첫 줄의 `routeToLoginIfAuthenticationRequired`가 감지해 `state.requiresAuthentication` 신호만 세우고(개별 토스트 생략), View가 `onChange`로 소비해 `onAuthenticationRequired` 콜백을 발화한다(`shouldDismiss`→`dismiss`와 대칭). 모든 catch(로드/저장/검증)가 `presentError`로 수렴하므로 이 한 곳이 화면 내 모든 서버 호출을 커버한다. NovelDetail과 동일 배관.
 - **표현은 토스트**(알럿 ❌). `WSSToastViewModifier`(`.showWSSToast`)로 띄운다. 단, **VM은 의미값(`State.ReviewError`)만** 노출하고 **토스트 타입 매핑은 View**가 한다(얇은 ViewModel) — `attractivePointLimit→.selectionOverLimit`, `unknown→.unknownError`. 새 에러 표기가 필요하면 `WSSToastType`에 케이스를 더한다(문구는 `WSSToastStyle`).
 
 #### 도메인 값 매핑
