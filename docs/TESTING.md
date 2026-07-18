@@ -40,6 +40,7 @@ import Testing
 import [Module]DomainTesting   // Mock이 든 Testing 타깃
 import BaseDomain
 ```
+- **타 모듈의 Testing 타깃(Mock) 재사용**은 그 모듈 `Project.swift`에 `testDependencies: [.module(.domain(.base), type: .testing)]` 선언이 있어야 import 된다 — 없으면 "No such module"(템플릿 기본값은 빈 배열). 예: NovelDomain 테스트가 BaseDomain의 `MockKeywordRepository`를 재사용.
 
 ## 작성 규칙
 

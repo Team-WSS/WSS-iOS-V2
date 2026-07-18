@@ -9,6 +9,7 @@
 import Foundation
 import SocialDomain
 import BaseDomain
+import BaseData
 
 enum SocialMapper {
 
@@ -17,7 +18,7 @@ enum SocialMapper {
             blockID: BlockID(response.blockId),
             userID: UserID(response.userId),
             nickname: response.nickname,
-            profileImageURL: URL(string: response.avatarImage)
+            profileImageURL: ImageURLResolver.resolve(from: response.avatarImage)
         )
     }
 

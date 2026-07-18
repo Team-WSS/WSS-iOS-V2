@@ -21,7 +21,7 @@ struct WSSFeedDemoView: View {
                         nickname: "구리스",
                         createdDate: "2024년 6월 19일",
                         isEdited: true,
-                        profileImageTapped: { print("프로필 클릭") },
+                        profileTapped: { print("프로필 클릭") },
                         threeDotsButtonTapped: { print("드롭다운 클릭") }
                     ),
                     content: "대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고 설정을 짠게 느껴져서 좋아요. 대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고 설정을 짠게 느껴져서 좋아요. 대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고 설정을 짠게 느껴져서 좋아요.",
@@ -32,10 +32,12 @@ struct WSSFeedDemoView: View {
                     linkNovel: WSSLinkNovel(
                         genreType: .modernFantasy,
                         novelTitle: "스즈미야 하루히의 무료",
-                        novelRating: 4.3
+                        novelRating: 4.3,
+                        linkNovelTapped: { print("연결 작품 클릭!") }
                     ),
                     react: WSSFeedReact(
                         likeCount: 13,
+                        isLiked: true,
                         commentCount: 23,
                         likeButtonTapped: { print("좋아요 클릭") }
                     )
@@ -51,7 +53,7 @@ struct WSSFeedDemoView: View {
                         nickname: "독서왕",
                         createdDate: "2024년 7월 3일",
                         isEdited: false,
-                        profileImageTapped: { print("프로필 클릭") },
+                        profileTapped: { print("프로필 클릭") },
                         threeDotsButtonTapped: { print("드롭다운 클릭") }
                     ),
                     content: "오늘 읽은 책의 한 장면이 너무 인상적이었어요. 사진으로 남겨봅니다.",
@@ -61,6 +63,7 @@ struct WSSFeedDemoView: View {
                     ),
                     react: WSSFeedReact(
                         likeCount: 7,
+                        isLiked: false,
                         commentCount: 2,
                         likeButtonTapped: { print("좋아요 클릭") }
                     )
@@ -76,17 +79,19 @@ struct WSSFeedDemoView: View {
                         nickname: "로판덕후",
                         createdDate: "2024년 8월 15일",
                         isEdited: false,
-                        profileImageTapped: { print("프로필 클릭") },
+                        profileTapped: { print("프로필 클릭") },
                         threeDotsButtonTapped: { print("드롭다운 클릭") }
                     ),
                     content: "이 작품 진짜 강추합니다!! 요즘 로판 중에 제일 재밌어요. 여주가 너무 멋있고 스토리 전개도 빠르고 좋아요.",
                     linkNovel: WSSLinkNovel(
                         genreType: .romanceFantasy,
                         novelTitle: "공주는 아무나 하나요",
-                        novelRating: 4.2
+                        novelRating: 4.2,
+                        linkNovelTapped: { print("연결 작품 클릭!") }
                     ),
                     react: WSSFeedReact(
                         likeCount: 42,
+                        isLiked: false,
                         commentCount: 15,
                         likeButtonTapped: {}
                     )
@@ -102,12 +107,13 @@ struct WSSFeedDemoView: View {
                         nickname: "웹소소",
                         createdDate: "2024년 9월 1일",
                         isEdited: true,
-                        profileImageTapped: { print("프로필 클릭") },
+                        profileTapped: { print("프로필 클릭") },
                         threeDotsButtonTapped: { print("드롭다운 클릭") }
                     ),
                     content: "요즘 읽을 소설 추천 받습니다! 판타지나 무협 장르 좋아하는데 뭐 괜찮은 거 있을까요?",
                     react: WSSFeedReact(
                         likeCount: 3,
+                        isLiked: false,
                         commentCount: 8,
                         likeButtonTapped: {}
                     )

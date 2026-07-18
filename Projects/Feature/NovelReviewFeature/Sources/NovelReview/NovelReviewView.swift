@@ -23,10 +23,18 @@ struct NovelReviewView: View {
 
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
     private let title: String
+    /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 로드/저장 등 서버 호출 공통.
+    /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onAuthenticationRequired: () -> Void
 
-    init(viewModel: NovelReviewViewModel, title: String) {
+    init(
+        viewModel: NovelReviewViewModel,
+        title: String,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
         self._viewModel = State(initialValue: viewModel)
         self.title = title
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -38,6 +46,10 @@ struct NovelReviewView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.wssWhite)
+            } else if viewModel.state.loadFailed {
+                // 로드 실패 — 재시도 버튼이 load를 다시 발화(실패는 hasLoaded 가드를 소진하지 않아 재시도 열림).
+                // NetworkErrorView가 자체 흰 배경으로 content를 덮는다(overlay 방식 → 루트 정체성 유지).
+                NetworkErrorView { viewModel.handle(.load) }
             }
         }
         .navigationTitle(title)
@@ -69,6 +81,10 @@ struct NovelReviewView: View {
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             guard shouldDismiss else { return }
             dismiss()
+        }
+        // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
+        .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+            if needsAuth { onAuthenticationRequired() }
         }
     }
 
@@ -140,7 +156,8 @@ private extension NovelReviewView {
                         .foregroundStyle(Color.wssPrimary100)
                 }
             }
-            .disabled(viewModel.state.isSaving)
+            // 로드 실패(전면 실패 뷰) 상태에선 빈/초기 draft 저장을 막는다.
+            .disabled(viewModel.state.isSaving || viewModel.state.loadFailed)
         }
     }
 }
@@ -342,7 +359,8 @@ private extension NovelReviewView {
                 loadUseCase: PreviewLoadNovelReviewDraftUseCase(),
                 saveUseCase: PreviewSaveNovelReviewUseCase()
             ),
-            title: "당신의 이해를 돕기 위하여"
+            title: "당신의 이해를 돕기 위하여",
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
 }

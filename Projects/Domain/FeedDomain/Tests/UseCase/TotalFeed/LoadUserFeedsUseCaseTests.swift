@@ -66,6 +66,7 @@ extension LoadUserFeedsUseCaseTests {
                     isSpoiler: false,
                     isModified: false,
                     isPublic: false,
+                    isMyFeed: false,
                     imageCount: 1)
             ],
             hasNext: true)

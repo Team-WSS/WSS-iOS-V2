@@ -94,7 +94,8 @@ private struct DemoRootView: View {
                 status: .watching,
                 loadUseCase: DemoLoadNovelReviewDraftUseCase(),
                 saveUseCase: DemoSaveNovelReviewUseCase(),
-                logger: consoleLogger
+                logger: consoleLogger,
+                onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
             makeLiveView()
@@ -121,8 +122,14 @@ private struct DemoRootView: View {
             status: .watched,
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: repository),
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onAuthenticationRequired: handleAuthenticationRequired
         )
+    }
+
+    /// 인증 만료 콜백(로드/저장 등 서버 호출 공통). 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
+    private func handleAuthenticationRequired() {
+        consoleLogger.info("인증 만료 → 로그인 진입 요청")
     }
 }
 

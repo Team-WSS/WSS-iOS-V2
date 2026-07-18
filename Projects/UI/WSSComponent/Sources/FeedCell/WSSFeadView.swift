@@ -77,7 +77,8 @@ public struct WSSFeadView: View {
                 WSSLinkNovelView(
                     genreType: linkNovel.genreType,
                     novelTitle: linkNovel.novelTitle,
-                    novelRating: linkNovel.novelRating
+                    novelRating: linkNovel.novelRating,
+                    linkNovelTapped: linkNovel.linkNovelTapped
                 )
                 .padding(.horizontal, 16)
 
@@ -100,7 +101,7 @@ public struct WSSFeadView: View {
             nickname: "구리스",
             createdDate: "2024년 6월 19일",
             isEdited: true,
-            profileImageTapped: { print("프로필 클릭!") },
+            profileTapped: { print("프로필 클릭!") },
             threeDotsButtonTapped: { print("드롭다운 클릭!") }
         ),
         content: "대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고 설정을 짠게 느껴져서 좋아요. 요즘 하도 라이트하고 가짜 마법물이 많아서 ㅠ 찐 성장+마법물!! 글고 일단 작가님 필력이 무난하게 잘뽑으시고 연재도 빠르니까 너무너무 좋다!! 요즘 하도 라이트하고 가짜 마법물이 많아서 ㅠ 찐 ",
@@ -111,10 +112,12 @@ public struct WSSFeadView: View {
         linkNovel: WSSLinkNovel(
             genreType: .modernFantasy,
             novelTitle: "스즈미야 하루히의 무료",
-            novelRating: 4.3
+            novelRating: 4.3,
+            linkNovelTapped: { print("연결 작품 클릭!") }
         ),
         react: WSSFeedReact(
             likeCount: 13,
+            isLiked: false,
             commentCount: 23,
             likeButtonTapped: { print("좋아요 클릭!") }
         )

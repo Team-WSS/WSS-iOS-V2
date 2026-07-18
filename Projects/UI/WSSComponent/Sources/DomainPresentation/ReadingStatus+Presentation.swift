@@ -43,10 +43,11 @@ public extension ReadingStatus {
         }
     }
     
+    /// 상세 화면 그래프 문구 — "N명이 작품을 {여기}". (#154에서 watching↔watched 뒤바뀜 수정)
     var graphSectionTitle: String {
         switch self {
-        case .watching: "봤어요"
-        case .watched:  "같이 보고 있어요"
+        case .watching: "같이 보고 있어요"
+        case .watched:  "봤어요"
         case .quit:     "하차했어요"
         }
     }

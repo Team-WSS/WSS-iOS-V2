@@ -8,8 +8,9 @@
 
 import Foundation
 
-import NovelDomain
 import BaseDomain
+import NovelDomain
+import BaseData
 
 public enum NovelMapper {
     
@@ -32,7 +33,7 @@ extension NovelMapper {
     // MARK: - 서재 - 소설
     
     public static func libraryNovel(from dto: UserLibraryNovelResponse) throws -> LibraryNovel {
-        let novelImageURL = URL(string: dto.novelImage)
+        let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         
         var userReview: UserNovelReview?
         if let readStatusString = dto.readStatus {
@@ -80,32 +81,38 @@ extension NovelMapper {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
         
+        // 장르는 `/`로 이어진 한 문자열("로맨스/로판")로 온다 → 쪼개서 각각 매핑.
+        // (UI는 반대로 `displayName`을 `/`로 다시 이어 표기한다.)
         let genres = try basicDTO.novelGenres
+            .components(separatedBy: "/")
             .map { try mapNovelGenre(from: $0.trimmingCharacters(in: .whitespaces)) }
-        
+
         let novel = Novel(
             id: id,
-            thumbnailImage: URL(string: basicDTO.novelGenreImage),
+            thumbnailImage: ImageURLResolver.resolve(from: basicDTO.novelImage),
             title: basicDTO.novelTitle,
             authors: authors,
             genres: genres,
             interestCount: basicDTO.interestCount,
             rating: basicDTO.novelRating,
-            ratingCount: basicDTO.novelRatingCount
+            ratingCount: basicDTO.novelRatingCount,
+            // 안 넘기면 기본값 nil = "비로그인" → 관심 토글이 조용히 no-op이 된다.
+            isInterested: basicDTO.isUserNovelInterest
         )
         
         var userReview: UserNovelReview?
         if let readStatusString = basicDTO.readStatus {
             let readingStatus = try mapReadingStatus(from: readStatusString)
-            let attractivePoints = try detailDTO.attractivePoints.map { try mapAttractivePoint(from: $0) }
             let period = try mapReadingPeriod(startDate: basicDTO.startDate ?? "",
                                               endDate: basicDTO.endDate ?? "")
             let rating = try? Rating(Double(basicDTO.userNovelRating))
-            
+
             userReview = UserNovelReview(
                 readingStatus: readingStatus,
                 rating: rating,
-                attractivePoint: attractivePoints,
+                // 유저 본인 선택값(매력포인트·키워드)은 이 응답에 없다 — detailDTO의 집계값을
+                // 채워 넣지 말 것(내 평가가 아닌 독자 전체 값이라 의미가 다르다).
+                attractivePoint: [],
                 period: period,
                 keywords: []
             )
@@ -116,7 +123,6 @@ extension NovelMapper {
         return NovelInformation(
             novel: novel,
             feedCount: basicDTO.feedCount,
-            genres: genres,
             publicationStatus: mapPublicationStatus(from: basicDTO.isNovelCompleted),
             userReview: userReview,
             description: detailDTO.novelDescription,
@@ -151,7 +157,7 @@ extension NovelMapper {
     }
     
     public static func searchNovel(from dto: SearchNovelResponse) -> Novel {
-        let thumbnailImageURL = URL(string: dto.novelImage)
+        let thumbnailImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         let authors = dto.author
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -326,9 +332,11 @@ extension NovelMapper {
     }
     
     private static func mapKeywords(from dtos: [NovelKeywordResponse],
-                                    cachedKeywords: [Keyword]) -> [Keyword] {
+                                    cachedKeywords: [Keyword]) -> [NovelKeyword] {
         dtos.compactMap { dto in
-            cachedKeywords.first { $0.name == dto.keywordName }
+            cachedKeywords
+                .first { $0.name == dto.keywordName }
+                .map { NovelKeyword(keyword: $0, count: dto.keywordCount) }
         }
     }
     
@@ -338,7 +346,8 @@ extension NovelMapper {
         }
         return NovelPlatform(
             name: dto.platformName,
-            image: URL(string: dto.platformImage),
+            // 서버가 버킷 상대 경로(예: /platform/naver-series)로 주면 @스케일x.png로 완성한다.
+            image: ImageURLResolver.resolve(from: dto.platformImage),
             url: url
         )
     }

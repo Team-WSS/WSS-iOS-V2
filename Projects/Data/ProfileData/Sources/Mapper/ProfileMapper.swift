@@ -18,7 +18,7 @@ enum ProfileMapper {
         return Profile(
             nickname: response.nickname,
             introduction: response.intro,
-            characterImage: URL(string: response.avatarImage),
+            characterImage: ImageURLResolver.resolve(from: response.avatarImage),
             isPublic: response.isProfilePublic ?? false,
             genrePreferences: genrePreferences
         )
@@ -28,7 +28,7 @@ enum ProfileMapper {
         preferences.map { pref in
             GenrePreference(
                 name: pref.genreName,
-                image: URL(string: pref.genreImage),
+                image: ImageURLResolver.resolve(from: pref.genreImage),
                 count: pref.genreCount
             )
         }
@@ -59,8 +59,8 @@ enum ProfileMapper {
                 id: avatar.avatarProfileId,
                 name: avatar.avatarProfileName,
                 line: avatar.avatarProfileLine,
-                representativeImage: URL(string: avatar.avatarCharacterImage),
-                thumbnailImage: URL(string: avatar.avatarProfileImage),
+                representativeImage: ImageURLResolver.resolve(from: avatar.avatarCharacterImage),
+                thumbnailImage: ImageURLResolver.resolve(from: avatar.avatarProfileImage),
                 isRepresentative: avatar.isRepresentative
             )
         }

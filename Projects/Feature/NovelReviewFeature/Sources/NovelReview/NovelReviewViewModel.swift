@@ -22,8 +22,14 @@ final class NovelReviewViewModel {
     struct State {
         var draft: NovelReviewDraft
         var isLoading = false
+        /// 초안 로드 실패 → 전면 실패 뷰(재시도) 표시. draft는 항상 존재하고
+        /// "초안 없음(nil)=정상"이라 실패를 draft 유무로 판단할 수 없어 별도 플래그로 둔다.
+        var loadFailed = false
         var isSaving = false
         var shouldDismiss = false
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
+        /// 어느 서버 호출에서 발생하든 여기로 모이며, View가 `onChange`로 소비한다(`shouldDismiss`와 대칭).
+        var requiresAuthentication = false
         var isStopAlertPresented = false
         /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
         var presentedError: ReviewError?
@@ -235,10 +241,16 @@ private extension NovelReviewViewModel {
                 guard !isClosing, !Task.isCancelled else { return }
                 baselineDraft = state.draft          // 초안 없음 → 초기값(주입 상태)을 기준선으로
             }
+            state.loadFailed = false                 // 재시도 성공 시 실패 뷰 해제
             hasLoaded = true
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
-            presentError(error)
+            // 인증 만료는 로그인 라우팅으로 일원화한다(전면 실패 뷰 대신).
+            if routeToLoginIfAuthenticationRequired(error) { return }
+            // 로드 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
+            // (저장/검증 실패만 presentError→토스트, 로드 실패는 전면 뷰로 분화 — NovelDetail과 동일.)
+            logger?.error("NovelReview 실패(loadDraft): \(String(describing: error))")
+            state.loadFailed = true
         }
     }
 
@@ -265,7 +277,10 @@ private extension NovelReviewViewModel {
     /// 그 외(네트워크/인증/서버/기간/평점)는 UI·도메인 가드가 이미 막고 있어 **원래 도달하면 안 되는** 경로이므로,
     /// 사용자에겐 일반 문구만 보여주고 원인은 로그로 남겨 추적한다.
     func presentError(_ error: Error) {
-        if state.presentedError != nil { return } 
+        // 인증 만료는 일반 미지 에러(.unknown 토스트)에 묶지 않고 로그인 유도로 일원화한다.
+        // 모든 catch(로드/저장/검증)가 이 헬퍼로 수렴하므로 여기 한 곳이 화면 내 모든 서버 호출을 커버한다.
+        if routeToLoginIfAuthenticationRequired(error) { return }
+        if state.presentedError != nil { return }
         switch error {
         case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
             state.presentedError = .attractivePointLimit(max: max)
@@ -273,5 +288,14 @@ private extension NovelReviewViewModel {
             logger?.error("NovelReview 예기치 못한 에러: \(String(describing: error))")
             state.presentedError = .unknown
         }
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    /// 세션이 죽은 상황이라 개별 실패 토스트 대신 로그인 유도로 일원화한다.
+    /// (`RepositoryError`는 `Equatable` — 여기서 쓰는 건 import된 `BaseDomain.RepositoryError`다.)
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

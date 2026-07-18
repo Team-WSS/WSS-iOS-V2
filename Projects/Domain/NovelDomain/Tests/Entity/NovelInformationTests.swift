@@ -82,7 +82,8 @@ extension NovelInformationTests {
             id: NovelID(1),
             thumbnailImage: nil,
             title: "전지적 독자 시점",
-            author: ["싱숑"],
+            authors: ["싱숑"],
+            genres: [.fantasy],
             interestCount: 100,
             rating: 4.5,
             ratingCount: 50,
@@ -94,13 +95,12 @@ extension NovelInformationTests {
         description: String = "재밌는 소설입니다.",
         platforms: [NovelPlatform] = [],
         attractivePoints: [AttractivePoint] = [],
-        keywords: [Keyword] = [],
+        keywords: [NovelKeyword] = [],
         readingStatusCount: [ReadingStatus: Int] = [:]
     ) -> NovelInformation {
         NovelInformation(
             novel: makeNovel(),
             feedCount: 4,
-            genre: .BL,
             publicationStatus: .completed,
             userReview: nil,
             description: description,

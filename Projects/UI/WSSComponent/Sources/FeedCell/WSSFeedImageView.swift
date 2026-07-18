@@ -58,6 +58,11 @@ public struct WSSFeedImageView: View {
                 .padding(.bottom, 10)
                 .padding(.trailing, 12)
         }
+        // scaledToFill로 프레임 밖까지 커진 이미지는 clipShape가 그리기만 자르고 hit-test
+        // 영역은 그대로 남긴다 — 정사각형보다 세로로 긴 이미지면 보이지 않는 터치 영역이
+        // 위 헤더(프로필·threedots)까지 덮어 탭을 가로챈다. 이미지는 장식 요소이므로
+        // 터치를 통과시킨다(이미지 탭 = 셀 탭 폴스루, 기존 의도와 동일).
+        .allowsHitTesting(false)
     }
 }
 

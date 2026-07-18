@@ -17,3 +17,5 @@
 
 - `fetchMyLibraryNovels`/통계는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` 별도.
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
+- **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
+- 엔티티 시그니처를 바꾸면 **`Testing/` Mock과 `Tests/`도 같이 갱신**할 것 — #135에서 authors/genres/필터 변경이 미반영돼 테스트 타깃이 컴파일 불가로 방치됐었다(#154에서 수리).

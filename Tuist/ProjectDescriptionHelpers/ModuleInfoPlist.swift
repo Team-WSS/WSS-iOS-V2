@@ -35,6 +35,7 @@ public enum ModuleInfoPlist {
             var entries = commonEntries
             entries["BASE_URL"] = "$(BASE_URL)"
             entries["TEST_API_KEY"] = "$(TEST_API_KEY)"
+            entries["BUCKET_URL"] = "$(BUCKET_URL)"
             return entries
         case .domain:
             return commonEntries
@@ -43,6 +44,7 @@ public enum ModuleInfoPlist {
             entries["AMPLITUDE_API_KEY"] = "$(AMPLITUDE_API_KEY)"
             entries["BASE_URL"] = "$(BASE_URL)"
             entries["TEST_API_KEY"] = "$(TEST_API_KEY)"
+            entries["BUCKET_URL"] = "$(BUCKET_URL)"
             return entries
         case .core:
             return commonEntries

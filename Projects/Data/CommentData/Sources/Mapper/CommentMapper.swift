@@ -9,6 +9,7 @@
 import Foundation
 import CommentDomain
 import BaseDomain
+import BaseData
 
 enum CommentMapper {
     static func comments(from dto: CommentsResponse) -> (Int, [FeedComment]) {
@@ -18,7 +19,7 @@ enum CommentMapper {
     }
     
     static func comment(from dto: CommentResponse) -> FeedComment {
-        let profileImageURL = URL(string: dto.avatarImage)
+        let profileImageURL = ImageURLResolver.resolve(from: dto.avatarImage)
         let commentAuthor = Author(
             userId: UserID(dto.userId),
             nickname: dto.nickname,

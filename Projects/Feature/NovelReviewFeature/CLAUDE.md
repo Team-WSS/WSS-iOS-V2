@@ -5,8 +5,9 @@
 일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:)`** (`logger`는 옵셔널·nil 기본값)
+- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
+  - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백(이 화면의 유일한 상위 위임 콜백). 화면 전환은 호출자(App)가 수행 — 현재 소비처는 Demo 로그뿐(실제 로그인 화면·App 라우팅 미구현, 후속).
 
 ### 파일 구조 — 화면(영역)별 그룹
 `Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
@@ -28,8 +29,11 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-#### 에러 처리 정책 (`presentError` → 토스트)
-- **사용자에게 정상적으로 보여줄 검증 에러는 매력 포인트 초과(`tooManyAttractivePoints`) 하나뿐.** 나머지(네트워크/인증/서버/notFound/기간/평점)는 UI·도메인 가드(휠 미래 차단, 순서 보정, 슬라이더 범위, 단일 선택 등)가 **이미 입력단에서 막고 있어 도달하면 안 되는 경로**다. → `.unknown`으로 묶어 `logger?.error(...)`로 원인을 남기고 일반 토스트만 띄운다. 케이스별 친절 문구를 다시 늘리지 말 것(가드가 뚫린 거라 문구보다 로그가 중요).
+#### 에러 처리 정책 (표현이 셋으로 분화됨)
+에러 종류마다 표현이 다르다 — 한 catch가 다 받지 않는다:
+- **초안 로드 실패(`loadDraft`) → 전면 실패 뷰**(`NetworkErrorView`, 재시도). `state.loadFailed` 플래그를 세우고 View가 overlay로 띄운다. 로드 실패는 `presentError`(토스트)를 **거치지 않는다** — 토스트까지 띄우면 시그널 이중화. "초안 없음(nil)=정상"과 구별해야 해서 draft 유무가 아니라 별도 플래그로 판단(NovelDetail의 `information==nil` 대신). 실패 뷰가 뜬 동안 툴바 "완료"는 disabled(빈/초기 draft 저장 차단).
+- **저장·검증 실패 → 토스트**(`presentError`). 사용자에게 정상적으로 보여줄 검증 에러는 매력 포인트 초과(`tooManyAttractivePoints`) 하나뿐. 나머지(네트워크/서버/notFound/기간/평점)는 UI·도메인 가드(휠 미래 차단, 순서 보정, 슬라이더 범위, 단일 선택 등)가 **이미 입력단에서 막아 도달하면 안 되는 경로** → `.unknown`으로 묶어 `logger?.error(...)`로 원인만 남긴다. 케이스별 친절 문구를 다시 늘리지 말 것(가드가 뚫린 거라 문구보다 로그가 중요).
+- ⚠️ **인증 만료(`authenticationRequired`) → 로그인 라우팅**(어느 catch든 공통). `routeToLoginIfAuthenticationRequired`가 감지해 `state.requiresAuthentication` 신호만 세우고(토스트·실패 뷰 생략), View가 `onChange`로 소비해 `onAuthenticationRequired` 콜백을 발화(`shouldDismiss`→`dismiss`와 대칭). **로드 catch는 직접 호출**하고(전면 실패 뷰보다 먼저 체크), 저장·검증은 `presentError` 첫 줄이 대신 호출한다 — 두 경로 모두 인증을 먼저 걸러낸다. NovelDetail과 동일 배관.
 - **표현은 토스트**(알럿 ❌). `WSSToastViewModifier`(`.showWSSToast`)로 띄운다. 단, **VM은 의미값(`State.ReviewError`)만** 노출하고 **토스트 타입 매핑은 View**가 한다(얇은 ViewModel) — `attractivePointLimit→.selectionOverLimit`, `unknown→.unknownError`. 새 에러 표기가 필요하면 `WSSToastType`에 케이스를 더한다(문구는 `WSSToastStyle`).
 
 #### 도메인 값 매핑

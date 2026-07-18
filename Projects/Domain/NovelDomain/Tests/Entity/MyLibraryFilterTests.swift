@@ -127,11 +127,13 @@ extension MyLibraryFilterTests {
         readingStatus: [ReadingStatus] = [],
         attractivePoint: [AttractivePoint] = [],
         ratingThreshold: NovelRatingThreshold? = nil
-    ) -> LibraryFilter {
-        LibraryFilter(
+    ) -> MyLibraryFilter {
+        MyLibraryFilter(
+            isInterest: false,
             readingStatus: readingStatus,
             attractivePoint: attractivePoint,
-            ratingThreshold: ratingThreshold
+            ratingThreshold: ratingThreshold,
+            sortType: .recent
         )
     }
 }

@@ -66,7 +66,11 @@ enum NovelEndpoint: Endpoint {
     
     var authorization: AuthorizationPolicy {
         switch self {
-        case .getNovelBasicInfo, .getNovelDetailInfo, .getNormalSearchResult:
+        // 작품 상세는 공개 화면이지만 응답에 유저별 필드(관심·내 평가)가 있다
+        // → 로그인 시 토큰을 붙여야 익명 값이 아닌 내 상태가 온다.
+        case .getNovelBasicInfo, .getNovelDetailInfo:
+            return .usesTokenIfAvailable
+        case .getNormalSearchResult:
             return .withoutToken
         default: return .requireToken
         }

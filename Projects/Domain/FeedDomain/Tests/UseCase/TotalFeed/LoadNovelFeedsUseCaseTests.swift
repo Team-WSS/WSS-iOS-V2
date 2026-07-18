@@ -66,6 +66,7 @@ extension LoadNovelFeedsUseCaseTests {
                     isSpoiler: false,
                     isModified: false,
                     isPublic: true,
+                    isMyFeed: false,
                     imageCount: 0
                 )
             ],

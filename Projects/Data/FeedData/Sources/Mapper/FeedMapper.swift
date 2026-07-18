@@ -61,7 +61,8 @@ enum FeedMapper {
         Author(
             userId: UserID(userId),
             nickname: nickname,
-            profileImage: URL(string: avatarImage)
+            // 아바타는 버킷 상대 경로로 올 수 있다 — 직조립하면 경로형에서 placeholder로 깨진다.
+            profileImage: ImageURLResolver.resolve(from: avatarImage)
         )
     }
 
@@ -101,7 +102,7 @@ enum FeedMapper {
             )
             connectedNovelDetail = ConnectedNovelDetail(
                 basicInfo: basicInfo,
-                thumbnailImageURL: URL(string: thumbnailImage),
+                thumbnailImageURL: ImageURLResolver.resolve(from: thumbnailImage),
                 descirption: description,
                 feedWriterRating: response.feedWriterNovelRating
             )
@@ -114,7 +115,7 @@ enum FeedMapper {
             createdDate: response.createdDate,
             isModified: response.isModified,
             feedContent: response.feedContent,
-            feedImageURLs: response.images.map { URL(string: $0) },
+            feedImageURLs: response.images.map { ImageURLResolver.resolve(from: $0) },
             connectedNovel: connectedNovelDetail,
             likeCount: response.likeCount,
             isLiked: response.isLiked,
@@ -143,7 +144,8 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
+            isMyFeed: response.isMyFeed,
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }
@@ -158,7 +160,9 @@ enum FeedMapper {
     // MARK: - UserFeed
 
     // TODO: UserFeedResponse에 author 정보(nickname, avatarImage)가 없어 Author를 완전히 채울 수 없음
-    static func userFeed(userID: UserID, from response: UserFeedResponse) throws -> TotalFeed {
+    // 응답에 isMyFeed도 없다 — 이 목록은 "한 사용자의 피드"라 소유 여부가 목록 단위로 같으므로
+    // 호출 측(Repository)이 판단해 주입한다(내 피드 조회 = true, 타 유저 조회 = 저장된 userID 비교).
+    static func userFeed(userID: UserID, isMyFeed: Bool, from response: UserFeedResponse) throws -> TotalFeed {
         let novel = connectedNovel(
             novelId: response.novelId,
             title: response.title,
@@ -177,13 +181,14 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }
 
-    static func userFeeds(userID: UserID, from response: UserFeedListResponse) throws -> Paginated<TotalFeed> {
-        let feeds = try response.feeds.map { try userFeed(userID: userID, from: $0) }
+    static func userFeeds(userID: UserID, isMyFeed: Bool, from response: UserFeedListResponse) throws -> Paginated<TotalFeed> {
+        let feeds = try response.feeds.map { try userFeed(userID: userID, isMyFeed: isMyFeed, from: $0) }
         return Paginated(items: feeds, hasNext: response.isLoadable)
     }
 
@@ -208,7 +213,8 @@ enum FeedMapper {
             isSpoiler: response.isSpoiler,
             isModified: response.isModified,
             isPublic: response.isPublic,
-            thumbnailImageURL: response.thumbnailUrl.flatMap { URL(string: $0) },
+            isMyFeed: response.isMyFeed,
+            thumbnailImageURL: response.thumbnailUrl.flatMap { ImageURLResolver.resolve(from: $0) },
             imageCount: response.imageCount
         )
     }

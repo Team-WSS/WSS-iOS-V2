@@ -19,10 +19,19 @@
 
 파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
 
+**레퍼런스는 단일 정본이 아니라 "성격별 대표"다** — 뼈대(MARK 순서·State/Action·얇은 VM·Factory)는 어느 쪽이든 같으니, 만들 화면에 **가까운 쪽의 얹는 패턴**을 본다.
+| 만들 화면 성격 | 볼 정본 | 그 정본이 대표하는 얹는 패턴 |
+|---|---|---|
+| 입력 폼(로드+저장, 자기완결 dismiss) | `NovelReviewFeature` | 폼 검증 throw→토스트, 뼈대 풀세트 |
+| 순수 입력(UseCase 없음) | `ReadingPeriodSheet`(+VM) | `Action Handling`만, 결과는 `onApply` 등으로 상위 발화 |
+| 복합 조회(리스트·탭·헤더) | `NovelDetailFeature` | 지연 로드·커서 페이지네이션, 낙관 업데이트/롤백, **전면 실패 뷰↔토스트 분화**, 화면 전환 콜백 다수 위임 |
+
+인증 만료→로그인 라우팅(`requiresAuthentication` 신호 + `onAuthenticationRequired` 콜백)은 **두 모듈 공통**이라 성격과 무관하게 서버 호출이 있으면 넣는다.
+
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature VM은 아래 `// MARK:` 순서·역할을 그대로 따른다.** 순서를 바꾸거나 섹션을 임의로 추가하지 않는다.
-정본 레퍼런스: `NovelReviewViewModel`(섹션 풀세트) / `ReadingPeriodSheetViewModel`(UseCase 없는 순수 입력 변형).
+정본 레퍼런스: `NovelReviewViewModel`(섹션 풀세트·폼) / `ReadingPeriodSheetViewModel`(UseCase 없는 순수 입력 변형) / `NovelDetailViewModel`(복합 — 리스트·페이지네이션·낙관 업데이트/롤백·에러 분화). → 성격별 선택은 위 "코드 규칙" 표 참고.
 
 > **골격 전문(복붙용): [Docs/VIEWMODEL_TEMPLATE.md](Docs/VIEWMODEL_TEMPLATE.md)** — `// MARK:` 순서(State / Derived / Action / Output / Property / Dependency / Init / handle → Action Handling / UseCase Handling / Error Mapping)와 각 섹션 주석이 거기 있다.
 
@@ -35,7 +44,7 @@
 ### View 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature View는 아래 `// MARK:` 순서·역할·규칙을 그대로 따른다.**
-정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형).
+정본 레퍼런스: `NovelReviewView`(툴바·섹션·Presentation 풀세트) / `ReadingPeriodSheet`(시트, 툴바 없는 변형) / `NovelDetailView`(복합 — 스티키 탭·리스트·콜백 위임. 단 몰입형 헤더·스크롤 트릭은 그 화면 특유라 참고 시 취사선택).
 
 > **골격 전문(복붙용): [Docs/VIEW_TEMPLATE.md](Docs/VIEW_TEMPLATE.md)** — 선언 순서(VM → View 전용 상태 → @Environment → 주입 let), body=조립+modifier, 그리고 `// MARK:` Toolbar / Sections / Presentation / Preview 골격이 거기 있다.
 
@@ -48,6 +57,7 @@
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
 - **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨). 보통 `.buttonStyle(.plain)`과 함께.
+- **상태 기반 색·에셋 전환(토글·선택)엔 짧은 명시 애니메이션을 걸 것** — `.animation(.easeInOut(duration: 0.1), value: 상태)`. 미설정 시 기본 크로스페이드가 **느리게 번진다**(NovelReview 읽기 상태, NovelDetail 관심 버튼에서 재발 확인 — "토글이 굼뜨다"로 체감됨).
 - 화면 전용 서브뷰는 화면 폴더 동거. 여러 화면 재사용 시 WSSComponent로 승격(허락 후).
 
 ### Factory 골격
@@ -77,4 +87,4 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum에 선언만 있고 디스크 폴더가 없는 case(`home`, `feed`)는 아직 미구현. 실제 모듈은 `NovelReviewFeature`뿐.
+- `ModuleType.feature` enum에 선언만 있고 디스크 폴더가 없는 case(`home`)는 아직 미구현. 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`.
