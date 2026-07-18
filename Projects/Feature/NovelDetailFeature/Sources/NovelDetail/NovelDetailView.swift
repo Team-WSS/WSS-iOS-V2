@@ -65,6 +65,9 @@ struct NovelDetailView: View {
     private let onNovelTapped: (NovelID) -> Void
     /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
     private let onEditFeedTapped: (TotalFeed) -> Void
+    /// 작가 검색 진입 콜백 — 헤더 작품 정보의 작가 이름 탭. 전달값은 탭한 작가 한 명의 이름.
+    /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onAuthorTapped: (String) -> Void
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 어느 서버 호출에서 발생하든 공통.
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onAuthenticationRequired: () -> Void
@@ -77,6 +80,7 @@ struct NovelDetailView: View {
         onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (TotalFeed) -> Void,
+        onAuthorTapped: @escaping (String) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
@@ -86,6 +90,7 @@ struct NovelDetailView: View {
         self.onUserProfileTapped = onUserProfileTapped
         self.onNovelTapped = onNovelTapped
         self.onEditFeedTapped = onEditFeedTapped
+        self.onAuthorTapped = onAuthorTapped
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -173,7 +178,8 @@ struct NovelDetailView: View {
                         information: information,
                         novel: viewModel.state.novel ?? information.novel,
                         topInset: navigationBarBottomY,
-                        onCoverTapped: { isLargeCoverPresented = true }
+                        onCoverTapped: { isLargeCoverPresented = true },
+                        onAuthorTapped: onAuthorTapped
                     )
                     NovelDetailReviewSection(
                         information: information,
@@ -773,6 +779,7 @@ private extension UIView {
             onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },
             onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") },
+            onAuthorTapped: { print("작가 검색 진입: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }

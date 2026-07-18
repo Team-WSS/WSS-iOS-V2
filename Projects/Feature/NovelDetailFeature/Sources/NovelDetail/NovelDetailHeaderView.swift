@@ -24,6 +24,8 @@ struct NovelDetailHeaderView: View {
     let topInset: CGFloat
     /// 표지 탭 콜백 — 대형 표지 오버레이 표시 여부는 화면(NovelDetailView)이 소유한다.
     let onCoverTapped: () -> Void
+    /// 작가 이름 탭 콜백 — 전달값은 탭한 작가 한 명의 이름. 실제 화면 전환은 화면(NovelDetailView)을 거쳐 호출자가 수행한다.
+    let onAuthorTapped: (String) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -136,24 +138,56 @@ struct NovelDetailHeaderView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 250)
             Spacer().frame(height: 6)
-            Text(metaText)
-                .applyWSSFont(.body3)
-                .foregroundStyle(Color.wssGray200)
+            metaRow
             Spacer().frame(height: 6)
             countsRow
         }
     }
 
-    /// "로판/로맨스  ·  완결작  ·  이보라" — 장르 나열 / 연재 상태 / 작가.
-    private var metaText: String {
+    /// "로판/로맨스  ·  완결작  ·  이보라, 김작가" — 장르 나열 / 연재 상태 / 작가.
+    /// 작가만 개별 밑줄 버튼(탭 → 작가 검색)이라 세 값을 단일 `Text`로 합치지 못하고 HStack으로 분해한다.
+    /// 앞부분(장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자(`  ·  `/`, `)는 탭 대상이 아닌 텍스트.
+    private var metaRow: some View {
+        HStack(spacing: 0) {
+            Text(nonAuthorMetaText)
+                .applyWSSFont(.body3)
+                .foregroundStyle(Color.wssGray200)
+            if !novel.authors.isEmpty {
+                Text("  ·  ")
+                    .applyWSSFont(.body3)
+                    .foregroundStyle(Color.wssGray200)
+                ForEach(Array(novel.authors.enumerated()), id: \.offset) { index, author in
+                    if index > 0 {
+                        Text(", ")
+                            .applyWSSFont(.body3)
+                            .foregroundStyle(Color.wssGray200)
+                    }
+                    Button {
+                        onAuthorTapped(author)
+                    } label: {
+                        // ⚠️ `.underline()`은 raw `Text`에 먼저 걸어야 한다(Text.underline() → Text).
+                        // `applyWSSFont`/`foregroundStyle`이 반환하는 `some View` 단계에 걸면 밑줄이 글리프에
+                        // baked-in 되지 않아 컴파일은 되지만 조용히 렌더되지 않는다.
+                        Text(author)
+                            .underline()
+                            .applyWSSFont(.body3)
+                            .foregroundStyle(Color.wssGray200)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    /// 작가를 뺀 앞부분 = 장르 나열 / 연재 상태. 연재 상태는 항상 포함이라 절대 비지 않는다
+    /// → `metaRow`가 작가 앞 `  ·  ` 구분자를 안전하게 붙일 수 있다.
+    private var nonAuthorMetaText: String {
         var parts: [String] = []
         if !information.novel.genres.isEmpty {
             parts.append(information.novel.genres.map(\.displayName).joined(separator: "/"))
         }
         parts.append(publicationStatusName)
-        if !novel.authors.isEmpty {
-            parts.append(novel.authors.joined(separator: ", "))
-        }
         return parts.joined(separator: "  ·  ")
     }
 
