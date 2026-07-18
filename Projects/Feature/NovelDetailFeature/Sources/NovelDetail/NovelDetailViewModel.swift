@@ -358,6 +358,8 @@ private extension NovelDetailViewModel {
             if lastFeedID == nil { hasLoadedFirstFeeds = true }
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
+            // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다(loadNovel/loadDraft와 대칭).
+            if routeToLoginIfAuthenticationRequired(error) { return }
             if lastFeedID == nil { state.feedsLoadFailed = true }
             presentError(error, as: .feedsLoadFailed)
         }
