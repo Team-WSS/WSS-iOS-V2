@@ -4,9 +4,10 @@
 소설 상세(NovelDetail) 화면 — 몰입형 헤더 + 유저 평가 + 탭(정보/피드). 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고)을 쓴다
-- 진입점: `NovelDetailFactory.makeView(...)` — UseCase 8종 + 콜백 7종(화면 전환 6 + 인증 1, 파라미터는 코드가 진실)
+- 진입점: `NovelDetailFactory.makeView(...)` — UseCase 8종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
+  - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — 단 **작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)**이라 현재 소비처는 Demo 로그뿐.
   - **`onAuthenticationRequired()`**: 인증 만료(`RepositoryError.authenticationRequired`) 시 로그인 유도 콜백. **화면 내 모든 서버 호출 공통** — VM이 `state.requiresAuthentication` 신호만 세우고(어느 catch에서 발생하든 `presentError`/`loadNovel` 경유 `routeToLoginIfAuthenticationRequired`로 수렴), View가 `onChange`로 소비해 콜백 발화(`shouldDismiss`→`dismiss`와 대칭). 인증 만료면 개별 실패 토스트/실패 뷰 대신 이 신호만 낸다.
 
 ## 핵심 시나리오
@@ -44,6 +45,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 
 - 대응 `NovelDetailDomain`이 없다 — UseCase는 `NovelDomain`/`FeedDomain` 것을 주입받는다. `new-module` 기본 추론(`domain(.<같은이름>)`)과 다른 지점.
 - **`state.novel`을 `state.information.novel`과 분리 보유** — `NovelInformation.novel`이 `let`이라 관심 토글(mutating)을 반영할 수 없어서다. 헤더/관심 버튼은 `state.novel`을 읽는다.
+- **헤더 메타 줄(장르·연재상태·작가)은 작가만 개별 밑줄 버튼이라 단일 `Text`로 못 합치고 `HStack`으로 분해**(`NovelDetailHeaderView.metaRow`) — 앞부분(`nonAuthorMetaText`=장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자(`  ·  `/`, `)는 **비탭 `Text`**. 작가 `Text`엔 `.underline()`을 **raw Text에 먼저** 걸고 `applyWSSFont`를 뒤에 붙여야 밑줄이 렌더된다(순서 반대면 무증상 실패 — [[DesignSystem]] 주의사항 참고). 탭 영역은 작가 글자에만 국한(구분자 제외)됨을 diagnostic 배경으로 실측 확인.
 - **몰입형 헤더 = 시스템 네비바 숨김**(`.toolbar(.hidden)`) + 커스텀 고정 오버레이. `icNavigateLeft`/`icThreedots` 에셋은 **원색이 연회색(wssGray100)이라 밝은 배경에서 안 보임** → `renderingMode(.template)`로 색을 입혀야 한다.
   - ⚠️ **네비바를 숨기면 밀어서 뒤로가기(`interactivePopGestureRecognizer`)까지 iOS가 함께 꺼버린다** — 뒤로가기가 버튼으로만 되던 이유. `SwipeBackEnabler`(UIViewRepresentable)가 조상 `UINavigationController`를 responder chain으로 찾아 제스처를 다시 켠다. **superview 체인으론 뷰컨트롤러에 못 닿는다**(SwiftUI 뷰는 hosting VC의 child) → `next` responder를 타야 한다(같은 파일 `TopBounceDisabler`가 UIScrollView를 찾을 때 쓰는 superview 체인과 다른 점).
     - ⚠️ **제스처 delegate를 `nil`로 비우지 말 것** — 루트 화면에서도 제스처가 발화해 pop 대상이 없는데 전환이 시작되고 **내비게이션이 얼어붙는다**. Coordinator가 delegate를 맡아 `viewControllers.count > 1`일 때만 시작시킨다. (delegate는 약한 참조라 Coordinator가 살아 있어야 한다.)

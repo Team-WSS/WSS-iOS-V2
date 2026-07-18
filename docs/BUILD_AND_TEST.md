@@ -37,3 +37,4 @@
 5. **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 6. **`SNAPSHOT_EXPIRED`는 흔하다** — `tap`/`type_text` 직전에 `snapshot_ui`로 fresh `elementRef`를 다시 확보한다.
 7. **`build_run_sim`은 Feature 스킴에서 install이 framework를 잡아 실패**할 수 있다("installable app 없음" / "did not contain any installable apps"). 컴파일은 되지만 설치 대상을 `XxxFeature.framework`로 고르기 때문. → `build_sim`(컴파일)으로 빌드한 뒤 `install_app_sim`+`launch_app_sim`(bundleId `...XxxFeatureDemo`)으로 띄운다.
+8. ⚠️ **`build_sim`은 호출 인자로 준 `scheme`보다 세션 기본 스킴(`session_show_defaults`의 scheme)을 우선한다**(실측). 기본이 `WSS-iOS`인데 `build_sim(scheme: "XxxFeature")`를 줘도 **`WSS-iOS`(Websoso.app)를 빌드**하고 성공(SUCCEEDED)까지 반환한다 → Feature framework는 **낡은 채로 남아** 코드 변경이 반영 안 된 Demo를 검증하게 된다(무증상, 빌드 3초 내외로 빨리 끝나면 의심). **Feature Demo를 검증할 땐 먼저 `session_set_defaults(scheme: "XxxFeature")`로 기본 스킴을 바꾼 뒤 빌드**할 것. 실제 리빌드는 프레임워크 바이너리 mtime(`.../Build/Products/Debug-iphonesimulator/XxxFeature.framework/XxxFeature`)이 갱신됐는지로 확인 가능.
