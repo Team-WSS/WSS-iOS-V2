@@ -286,7 +286,7 @@ struct ProfileDataDemoView: View {
         let url = "/users/profile"
         do {
             let draft = try await repository.loadInitialProfile()
-            log = "endpoint: .getProfileInfo\n[GET] \(url)\n\n닉네임: \(draft.nickname.text)\n소개: \(draft.introduction)\n장르: \(draft.genrePreferences.map { $0.name }.joined(separator: ", "))"
+            log = "endpoint: .getProfileInfo\n[GET] \(url)\n\n닉네임: \(draft.nickname.text)\n소개: \(draft.introduction)\n장르: \(draft.genrePreferences.map { "\($0.genre)" }.joined(separator: ", "))"
         } catch {
             log = "endpoint: .getProfileInfo\n[GET] \(url)\n\n내 프로필 조회 실패\n\(error)"
         }
@@ -297,7 +297,7 @@ struct ProfileDataDemoView: View {
         let url = "/users/\(myUserID)/preferences/genres"
         do {
             let genres = try await repository.fetchGenrePreferences(.me)
-            let list = genres.map { "\($0.name): \($0.count)" }.joined(separator: "\n")
+            let list = genres.map { "\($0.genre): \($0.count)" }.joined(separator: "\n")
             log = "endpoint: .getGenrePreferences(userID: \(myUserID))\n[GET] \(url)\n\n\(list)"
         } catch {
             log = "endpoint: .getGenrePreferences(userID: \(myUserID))\n[GET] \(url)\n\n장르 선호도 조회 실패\n\(error)"
@@ -318,7 +318,7 @@ struct ProfileDataDemoView: View {
             let prefs = try await repository.fetchNovelPreferences(.me, cachedKeywords: cachedKeywords)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
             let keywords = prefs.keywords
-                .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }
+                .map { "\($0.keyword.name)(id: \($0.keyword.id.value)): \($0.count)" }
                 .sorted()
                 .joined(separator: "\n")
             log = "endpoint: .getNovelPreferences(userID: \(myUserID))\n[GET] \(url)\n\n매력 포인트: \(points)\n\n키워드:\n\(keywords)"
@@ -395,7 +395,7 @@ struct ProfileDataDemoView: View {
         let url = "/users/\(userID)/preferences/genres"
         do {
             let genres = try await repository.fetchGenrePreferences(.user(UserID(userID)))
-            let list = genres.map { "\($0.name): \($0.count)" }.joined(separator: "\n")
+            let list = genres.map { "\($0.genre): \($0.count)" }.joined(separator: "\n")
             log = "endpoint: .getGenrePreferences(userID: \(userID))\n[GET] \(url)\n\n\(list)"
         } catch {
             log = "endpoint: .getGenrePreferences(userID: \(userID))\n[GET] \(url)\n\n장르 선호도 조회 실패\n\(error)"
@@ -412,7 +412,7 @@ struct ProfileDataDemoView: View {
             let prefs = try await repository.fetchNovelPreferences(.user(UserID(userID)), cachedKeywords: cachedKeywords)
             let points = prefs.attractivePoints.map { "\($0)" }.joined(separator: ", ")
             let keywords = prefs.keywords
-                .map { "\($0.key.name)(id: \($0.key.id.value)): \($0.value)" }
+                .map { "\($0.keyword.name)(id: \($0.keyword.id.value)): \($0.count)" }
                 .sorted()
                 .joined(separator: "\n")
             log = "endpoint: .getNovelPreferences(userID: \(userID))\n[GET] \(url)\n\n매력 포인트: \(points)\n\n키워드:\n\(keywords)"
@@ -487,7 +487,7 @@ struct ProfileDataDemoView: View {
                 introduction: intro,
                 genrePreferences: []
             )
-            draft.addGenrePreference(GenrePreference(name: "fantasy", image: nil, count: 0))
+            draft.addGenrePreference(GenrePreference(genre: .fantasy, count: 0))
             try await repository.updateProfile(draft)
             log = "endpoint: .patchProfile\n[PATCH] \(url)\n파라미터: avatarId=\(avatarId), nickname=\(nickname), intro=\(intro), genrePreferences=[\"fantasy\"]\n\n프로필 수정 완료"
         } catch {

@@ -1,5 +1,5 @@
 //
-//  GenrePreference.swift
+//  KeywordPreference.swift
 //  ProfileDomain
 //
 //  Created by Seoyeon Choi on 2/25/26.
@@ -10,15 +10,15 @@ import Foundation
 
 import BaseDomain
 
-public struct GenrePreference: Equatable {
-    public let genre: NovelGenre
+public struct KeywordPreference: Equatable {
+    public let keyword: Keyword
     public let count: Int
 
     public init(
-        genre: NovelGenre,
+        keyword: Keyword,
         count: Int
     ) {
-        self.genre = genre
+        self.keyword = keyword
         self.count = count
     }
 }

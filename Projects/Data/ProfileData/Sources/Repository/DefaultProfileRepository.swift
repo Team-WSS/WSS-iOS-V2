@@ -184,12 +184,15 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let userID = try resolveUserID(for: target)
             let response = try await service.getGenrePreferences(userID: userID)
-            let result = ProfileMapper.genrePreferences(from: response.genrePreferences)
+            let result = try ProfileMapper.genrePreferences(from: response.genrePreferences)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
         } catch let error as RepositoryError {
             throw error
         } catch {
@@ -248,7 +251,7 @@ public struct DefaultProfileRepository: ProfileRepository {
         do {
             let characterID = localStorage.get(.characterID) ?? 0
             let response = try await service.getProfileEditInfo()
-            let result = ProfileMapper.profileDraft(
+            let result = try ProfileMapper.profileDraft(
                 from: response,
                 characterID: characterID
             )
@@ -257,6 +260,9 @@ public struct DefaultProfileRepository: ProfileRepository {
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
@@ -265,7 +271,7 @@ public struct DefaultProfileRepository: ProfileRepository {
 
     public func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError) {
         let action = ProfileAction.updateProfile
-        
+
         localStorage.set(.nickname, profile.nickname.text)
         localStorage.set(.characterID, profile.characterID)
 
@@ -276,7 +282,7 @@ public struct DefaultProfileRepository: ProfileRepository {
                 avatarId: profile.characterID,
                 nickname: profile.nickname.text,
                 intro: profile.introduction,
-                genrePreferences: profile.genrePreferences.map { $0.name }
+                genrePreferences: profile.genrePreferences.map { ProfileMapper.novelGenreRawValue(from: $0.genre) }
             )
             try await service.putProfile(request)
             logger?.logSuccess(action: action.name)

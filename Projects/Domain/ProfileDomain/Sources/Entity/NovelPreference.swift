@@ -11,11 +11,11 @@ import BaseDomain
 
 public struct NovelPreference {
     public let attractivePoints: [AttractivePoint]
-    public let keywords: [Keyword : Int]
-    
+    public let keywords: [KeywordPreference]
+
     public init(
         attractivePoints: [AttractivePoint],
-        keywords: [Keyword : Int]
+        keywords: [KeywordPreference]
     ) {
         self.attractivePoints = attractivePoints
         self.keywords = keywords

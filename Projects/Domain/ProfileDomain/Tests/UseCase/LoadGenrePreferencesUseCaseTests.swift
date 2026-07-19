@@ -18,7 +18,7 @@ struct LoadGenrePreferencesUseCaseTests {
     @Test("장르 취향 목록을 반환한다")
     func returnsGenrePreferences() async throws {
         let repo = MockProfileRepository()
-        let expected = [makeGenre(name: "로맨스"), makeGenre(name: "판타지")]
+        let expected = [makeGenre(genre: .romance), makeGenre(genre: .fantasy)]
         repo.fetchGenrePreferencesResult = .success(expected)
 
         let sut = DefaultLoadGenrePreferencesUseCase(profileRepository: repo)
@@ -62,7 +62,7 @@ struct LoadGenrePreferencesUseCaseTests {
 
 extension LoadGenrePreferencesUseCaseTests {
 
-    private func makeGenre(name: String = "로맨스") -> GenrePreference {
-        GenrePreference(name: name, image: nil, count: 0)
+    private func makeGenre(genre: NovelGenre = .romance) -> GenrePreference {
+        GenrePreference(genre: genre, count: 0)
     }
 }
