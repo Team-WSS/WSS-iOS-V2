@@ -62,6 +62,29 @@ public enum SettingFactory {
     }
 
     @MainActor
+    public static func makeAccountInfoView(
+        loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
+        saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
+        loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
+        unblockUserUseCase: UnblockUserUseCase,
+        withdrawUseCase: WithdrawUseCase,
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        logger: Logger? = nil,
+        onWithdrawSuccess: @escaping () -> Void = {}
+    ) -> some View {
+        SettingAccountInfoView(
+            loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
+            saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
+            loadBlockedUsersUseCase: loadBlockedUsersUseCase,
+            unblockUserUseCase: unblockUserUseCase,
+            withdrawUseCase: withdrawUseCase,
+            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+            logger: logger,
+            onWithdrawSuccess: onWithdrawSuccess
+        )
+    }
+
+    @MainActor
     public static func makeChangeGenderOrAgeView(
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
@@ -88,6 +111,32 @@ public enum SettingFactory {
             logger: logger
         )
         return SettingBlockUserListView(viewModel: viewModel)
+    }
+
+    @MainActor
+    public static func makeWithdrawConfirmView(
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        logger: Logger? = nil,
+        onConfirm: @escaping () -> Void = {}
+    ) -> some View {
+        let viewModel = WithdrawConfirmViewModel(
+            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+            logger: logger
+        )
+        return WithdrawConfirmView(viewModel: viewModel, onConfirm: onConfirm)
+    }
+
+    @MainActor
+    public static func makeWithdrawReasonView(
+        withdrawUseCase: WithdrawUseCase,
+        logger: Logger? = nil,
+        onWithdrawSuccess: @escaping () -> Void = {}
+    ) -> some View {
+        let viewModel = WithdrawReasonViewModel(
+            withdrawUseCase: withdrawUseCase,
+            logger: logger
+        )
+        return WithdrawReasonView(viewModel: viewModel, onWithdrawSuccess: onWithdrawSuccess)
     }
 
     @MainActor

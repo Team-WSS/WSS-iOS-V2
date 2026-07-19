@@ -83,40 +83,33 @@ struct SettingAccountInfoView: View {
             toolbarContent
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
         .navigationDestination(isPresented: $isChangeGenderOrAgePresented) {
-            SettingChangeGenderOrAgeView(
-                viewModel: SettingChangeGenderOrAgeViewModel(
-                    loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
-                    saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
-                    logger: logger
-                ),
+            SettingFactory.makeChangeGenderOrAgeView(
+                loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
+                saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
+                logger: logger,
                 onSaveSuccess: { isChangeSavedToastPresented = true }
             )
         }
         .navigationDestination(isPresented: $isBlockUserListPresented) {
-            SettingBlockUserListView(
-                viewModel: SettingBlockUserListViewModel(
-                    loadBlockedUsersUseCase: loadBlockedUsersUseCase,
-                    unblockUserUseCase: unblockUserUseCase,
-                    logger: logger
-                )
+            SettingFactory.makeBlockUserListView(
+                loadBlockedUsersUseCase: loadBlockedUsersUseCase,
+                unblockUserUseCase: unblockUserUseCase,
+                logger: logger
             )
         }
         .navigationDestination(isPresented: $isWithdrawConfirmPresented) {
-            WithdrawConfirmView(
-                viewModel: WithdrawConfirmViewModel(
-                    loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-                    logger: logger
-                ),
+            SettingFactory.makeWithdrawConfirmView(
+                loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+                logger: logger,
                 onConfirm: { isWithdrawReasonPresented = true }
             )
         }
         .navigationDestination(isPresented: $isWithdrawReasonPresented) {
-            WithdrawReasonView(
-                viewModel: WithdrawReasonViewModel(
-                    withdrawUseCase: withdrawUseCase,
-                    logger: logger
-                ),
+            SettingFactory.makeWithdrawReasonView(
+                withdrawUseCase: withdrawUseCase,
+                logger: logger,
                 onWithdrawSuccess: onWithdrawSuccess
             )
         }

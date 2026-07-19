@@ -99,8 +99,9 @@ struct SettingView: View {
             toolbarContent
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
         .navigationDestination(isPresented: $isAccountInfoPresented) {
-            SettingAccountInfoView(
+            SettingFactory.makeAccountInfoView(
                 loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
                 saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
                 loadBlockedUsersUseCase: loadBlockedUsersUseCase,
@@ -112,22 +113,18 @@ struct SettingView: View {
             )
         }
         .navigationDestination(isPresented: $isProfilePublicPresented) {
-            SettingProfilePublicView(
-                viewModel: SettingProfilePublicViewModel(
-                    loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
-                    updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
-                    logger: logger
-                ),
+            SettingFactory.makeProfilePublicView(
+                loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
+                updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
+                logger: logger,
                 onSaveSuccess: { showVisibilityChangedToast(isPublic: $0) }
             )
         }
         .navigationDestination(isPresented: $isNotificationSettingPresented) {
-            NotificationSettingView(
-                viewModel: NotificationSettingViewModel(
-                    loadPushPreferenceUseCase: loadPushPreferenceUseCase,
-                    updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-                    logger: logger
-                )
+            SettingFactory.makeNotificationSettingView(
+                loadPushPreferenceUseCase: loadPushPreferenceUseCase,
+                updatePushPreferenceUseCase: updatePushPreferenceUseCase,
+                logger: logger
             )
         }
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
