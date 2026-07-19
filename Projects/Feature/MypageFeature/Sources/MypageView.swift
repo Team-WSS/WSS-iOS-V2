@@ -124,19 +124,21 @@ struct MypageView: View {
     // MARK: - 서재
     
     private var myLibrarySection: some View {
-        HStack(spacing: 0) {
-            myLibraryItem(count: viewModel.state.registeredNovelStats?.interest ?? 0, title: "관심")
-            myLibraryItem(count: viewModel.state.registeredNovelStats?.watching ?? 0, title: "보는중")
-            myLibraryItem(count: viewModel.state.registeredNovelStats?.watched ?? 0, title: "봤어요")
-            myLibraryItem(count: viewModel.state.registeredNovelStats?.quit ?? 0, title: "하차")
-        }
-        .padding(.vertical, 14.5)
-        .background(WSSColor.wssPrimary20.swiftUIColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal, 20)
-        .onTapGesture {
+        Button {
             //TODO: - 서재 뷰로 이동
+        } label: {
+            HStack(spacing: 0) {
+                myLibraryItem(count: viewModel.state.registeredNovelStats?.interest ?? 0, title: "관심")
+                myLibraryItem(count: viewModel.state.registeredNovelStats?.watching ?? 0, title: "보는중")
+                myLibraryItem(count: viewModel.state.registeredNovelStats?.watched ?? 0, title: "봤어요")
+                myLibraryItem(count: viewModel.state.registeredNovelStats?.quit ?? 0, title: "하차")
+            }
+            .padding(.vertical, 14.5)
+            .background(WSSColor.wssPrimary20.swiftUIColor)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 20)
         }
+        .buttonStyle(.plain)
     }
     
     private func myLibraryItem(count: Int, title: String) -> some View {
