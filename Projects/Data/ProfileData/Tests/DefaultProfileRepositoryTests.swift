@@ -202,13 +202,19 @@ struct DefaultProfileRepositoryTests {
         #expect(draft.email == nil)
     }
 
-    @Test("loadLocalGenderAndBirth localStorage에 값이 없으면 notFound 에러")
-    func loadLocalGenderAndBirth_missing_throwsNotFound() async {
-        let (sut, _, _) = makeRepository()
+    @Test("loadLocalGenderAndBirth localStorage에 값이 없으면 서버로 폴백하고 결과를 localStorage에 캐시")
+    func loadLocalGenderAndBirth_missing_fallsBackToServerAndCaches() async throws {
+        let (sut, service, localStorage) = makeRepository()
+        service.getAccountInfoResult = .success(
+            AccountInfoResponse(email: "user@test.com", gender: "F", birth: 1998)
+        )
 
-        await #expect(throws: RepositoryError.notFound) {
-            _ = try await sut.loadLocalGenderAndBirth()
-        }
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+        #expect(draft.birth.value == 1998)
+        #expect(localStorage.gender == "FEMALE")
+        #expect(localStorage.birthYear == 1998)
     }
 
     // MARK: - profileVisibility

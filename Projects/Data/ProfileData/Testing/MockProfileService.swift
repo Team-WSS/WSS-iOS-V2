@@ -41,7 +41,7 @@ final class MockProfileService: ProfileService {
     )
     var postRegisterProfileResult: Result<Void, Error> = .success(())
     var getAccountInfoResult: Result<AccountInfoResponse, Error> = .success(
-        AccountInfoResponse(email: "", gender: "MALE", birth: 2000)
+        AccountInfoResponse(email: "", gender: "M", birth: 2000)
     )
     var putAccountInfoResult: Result<Void, Error> = .success(())
     var getProfileVisibilityResult: Result<ProfileVisibilityResponse, Error> = .success(
