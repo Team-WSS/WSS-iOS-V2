@@ -29,6 +29,7 @@ struct NotificationSettingView: View {
                 toolbarContent
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -45,36 +46,32 @@ struct NotificationSettingView: View {
             }
         } else {
             VStack(spacing: 0) {
-                settingRow(type: .toggle,
+                settingRow(type: .toggle(isOn: isOnBinding),
                            title: "활동 알림",
-                           description: "댓글, 좋아요 알림을 드려요",
-                           isOn: isOnBinding
+                           description: "댓글, 좋아요 알림을 드려요"
                 )
-                settingRow(type: .navigate,
+                settingRow(type: .navigate(action: {}), // TODO: 완결 알림 상세 화면 이동 연결
                            title: "완결 알림",
-                           description: "작품이 완결나면 알림을 드려요",
-                           isOn: isOnBinding
+                           description: "작품이 완결나면 알림을 드려요"
                 )
-                settingRow(type: .navigate,
+                settingRow(type: .navigate(action: {}), // TODO: 휴재 복귀 알림 상세 화면 이동 연결
                            title: "휴재 복귀 알림",
-                           description: "새로운 회차가 생기면 알림을 드려요",
-                           isOn: isOnBinding
+                           description: "새로운 회차가 생기면 알림을 드려요"
                 )
-                
+
                 Spacer()
             }
         }
     }
-    
+
     enum RowType {
-        case toggle
-        case navigate
+        case toggle(isOn: Binding<Bool>)
+        case navigate(action: () -> Void)
     }
 
     private func settingRow(type: RowType,
                             title: String,
-                            description: String,
-                            isOn: Binding<Bool>) -> some View {
+                            description: String) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -89,10 +86,25 @@ struct NotificationSettingView: View {
 
                 Spacer()
 
-                WSSToggleButton(isOn: isOn)
+                switch type {
+                case .toggle(let isOn):
+                    WSSToggleButton(isOn: isOn)
+                case .navigate:
+                    WSSImage.icNavigateRight.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+                        .frame(width: 24, height: 24)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12.5)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if case .navigate(let action) = type {
+                    action()
+                }
+            }
 
             Rectangle()
                 .frame(height: 1)
