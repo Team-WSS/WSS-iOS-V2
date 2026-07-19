@@ -34,6 +34,7 @@ struct SettingChangeGenderOrAgeView: View {
                 toolbarContent
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
             .onAppear {
                 viewModel.handle(.load)
             }

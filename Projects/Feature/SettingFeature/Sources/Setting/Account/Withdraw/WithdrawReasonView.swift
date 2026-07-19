@@ -90,6 +90,9 @@ struct WithdrawReasonView: View {
                 .padding(.vertical, 10)
                 .padding(.horizontal, 16)
             }
+            .onTapGesture {
+                isKeyboardFocused = false
+            }
         }
         .scrollIndicators(.hidden)
         .toolbar {
@@ -257,8 +260,8 @@ private extension WithdrawReasonView {
         Binding(
             get: { viewModel.state.draft.customReasonText },
             set: { newValue in
-                if newValue.count > WithdrawalReasonDraft.maxCustomReasonLength {
-                    self.customReasonTextBinding.wrappedValue = String(newValue.prefix(WithdrawalReasonDraft.maxCustomReasonLength))
+                guard newValue.count <= WithdrawalReasonDraft.maxCustomReasonLength else {
+                    return
                 }
                 viewModel.handle(.setCustomReasonText(newValue))
             }

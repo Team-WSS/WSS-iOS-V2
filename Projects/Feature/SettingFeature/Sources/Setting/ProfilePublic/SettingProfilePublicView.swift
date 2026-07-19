@@ -35,10 +35,10 @@ struct SettingProfilePublicView: View {
                 toolbarContent
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
             .onAppear {
                 viewModel.handle(.load)
             }
-            .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 guard shouldDismiss else { return }
                 onSaveSuccess(viewModel.state.isPublic)
@@ -55,11 +55,11 @@ struct SettingProfilePublicView: View {
                 viewModel.handle(.load)
             }
         } else {
-            settingRow
+            settingRowSection
         }
     }
 
-    private var settingRow: some View {
+    private var settingRowSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text("비공개")
@@ -131,19 +131,6 @@ private extension SettingProfilePublicView {
             get: { !viewModel.state.isPublic },
             set: { viewModel.handle(.togglePublic(!$0)) }
         )
-    }
-
-    var toastBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.presentedError != nil },
-            set: { if !$0 { viewModel.handle(.dismissError) } }
-        )
-    }
-
-    var toastType: WSSToastType {
-        switch viewModel.state.presentedError {
-        case .unknown, .none: .unknownError
-        }
     }
 }
 
