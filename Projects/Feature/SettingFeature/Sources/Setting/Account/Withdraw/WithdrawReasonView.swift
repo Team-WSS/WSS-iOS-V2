@@ -23,7 +23,8 @@ struct WithdrawReasonView: View {
     /// 이 화면은 성공 신호만 호출자에게 알린다.
     private let onWithdrawSuccess: () -> Void
 
-    init(viewModel: WithdrawReasonViewModel, onWithdrawSuccess: @escaping () -> Void = {}) {
+    init(viewModel: WithdrawReasonViewModel,
+         onWithdrawSuccess: @escaping () -> Void = {}) {
         self._viewModel = State(initialValue: viewModel)
         self.onWithdrawSuccess = onWithdrawSuccess
     }
@@ -68,7 +69,7 @@ struct WithdrawReasonView: View {
                     withdrawConfirmBlock(title: "삭제된 계정 정보는 복구할 수 없어요",
                                          description: "회원님이 평가하고 기록한 서재 정보와 계정 정보는 탈퇴 즉시 삭제되며, 절대 복구할 수 없어요.")
                     withdrawConfirmBlock(title: "게시글 및 댓글은 자동 삭제되지 않아요",
-                                         description: "리뷰, 피드 게시글, 댓글은 탈퇴 시 자동으로 삭제되지 않아요. \n탈퇴 전 개별적으로 삭제해 주세요.")
+                                         description: "리뷰, 피드 게시글, 댓글은 탈퇴 시 자동으로 삭제되지 않아요.\n탈퇴 전 개별적으로 삭제해 주세요.")
                     withdrawConfirmBlock(title: "처음부터 다시 가입해야 해요",
                                          description: "계정 정보는 탈퇴 즉시 삭제되어 바로 재가입 가능하지만,\n회원가입부터 작품 평가를 다시 해야 해요.")
                 }
@@ -95,7 +96,6 @@ struct WithdrawReasonView: View {
             toolbarContent
         }
         .navigationBarTitleDisplayMode(.inline)
-        .showWSSToast(isPresented: toastBinding, type: toastType)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             guard shouldDismiss else { return }
             onWithdrawSuccess()
@@ -165,7 +165,9 @@ struct WithdrawReasonView: View {
                 if viewModel.state.draft.option != .custom {
                     viewModel.handle(.selectReason(.custom))
                 }
-                isKeyboardFocused = true
+                Task { @MainActor in
+                    isKeyboardFocused = true
+                }
             }
 
             Spacer().frame(height: 4)
@@ -177,6 +179,7 @@ struct WithdrawReasonView: View {
                 Text(" / \(WithdrawalReasonDraft.maxCustomReasonLength)")
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
             }
+            .applyWSSFont(.body4)
         }
         .padding(.horizontal, 20)
     }
@@ -253,21 +256,13 @@ private extension WithdrawReasonView {
     var customReasonTextBinding: Binding<String> {
         Binding(
             get: { viewModel.state.draft.customReasonText },
-            set: { viewModel.handle(.setCustomReasonText($0)) }
+            set: { newValue in
+                if newValue.count > WithdrawalReasonDraft.maxCustomReasonLength {
+                    self.customReasonTextBinding.wrappedValue = String(newValue.prefix(WithdrawalReasonDraft.maxCustomReasonLength))
+                }
+                viewModel.handle(.setCustomReasonText(newValue))
+            }
         )
-    }
-
-    var toastBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.presentedError != nil },
-            set: { if !$0 { viewModel.handle(.dismissError) } }
-        )
-    }
-
-    var toastType: WSSToastType {
-        switch viewModel.state.presentedError {
-        case .unknown, .none: .unknownError
-        }
     }
 }
 

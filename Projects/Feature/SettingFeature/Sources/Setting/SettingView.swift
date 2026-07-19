@@ -14,6 +14,7 @@ import ProfileDomain
 import SocialDomain
 import NotificationDomain
 import AuthDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
@@ -51,6 +52,9 @@ struct SettingView: View {
     // AuthDomain
     private let withdrawUseCase: WithdrawUseCase
 
+    // NovelDomain
+    private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
+
     init(
         viewModel: SettingViewModel,
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
@@ -62,6 +66,7 @@ struct SettingView: View {
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         withdrawUseCase: WithdrawUseCase,
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {}
     ) {
@@ -75,6 +80,7 @@ struct SettingView: View {
         self.loadPushPreferenceUseCase = loadPushPreferenceUseCase
         self.updatePushPreferenceUseCase = updatePushPreferenceUseCase
         self.withdrawUseCase = withdrawUseCase
+        self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
     }
@@ -100,6 +106,7 @@ struct SettingView: View {
                 loadBlockedUsersUseCase: loadBlockedUsersUseCase,
                 unblockUserUseCase: unblockUserUseCase,
                 withdrawUseCase: withdrawUseCase,
+                loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
                 logger: logger,
                 onWithdrawSuccess: onWithdrawSuccess
             )
@@ -211,7 +218,8 @@ private extension SettingView {
             unblockUserUseCase: PreviewUnblockUserUseCase(),
             loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
             updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
-            withdrawUseCase: PreviewWithdrawUseCase()
+            withdrawUseCase: PreviewWithdrawUseCase(),
+            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
 }
@@ -256,4 +264,10 @@ private struct PreviewUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
 
 private struct PreviewWithdrawUseCase: WithdrawUseCase {
     func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
+    func execute() async throws(RepositoryError) -> RegisteredNovelStats {
+        RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
 }

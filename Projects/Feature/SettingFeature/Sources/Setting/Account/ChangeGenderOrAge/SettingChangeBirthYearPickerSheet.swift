@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+import ProfileDomain
+
 import DesignSystem
 import WSSComponent
 
@@ -15,7 +17,6 @@ struct SettingChangeBirthYearPickerSheet: View {
 
     @Binding var selectedYear: Int
     @State private var draftYear: Int
-    @State private var contentHeight: CGFloat = 300
     @Environment(\.dismiss) private var dismiss
 
     init(selectedYear: Binding<Int>) {
@@ -43,7 +44,9 @@ struct SettingChangeBirthYearPickerSheet: View {
             }
             .padding(.leading, 25)
 
-            SettingBirthYearWheel(year: $draftYear)
+            WSSBirthYearWheel(year: $draftYear,
+                              minYear: BirthYear.minYear,
+                              maxYear: BirthYear.maxYear)
 
             Spacer().frame(height: 20)
 
@@ -55,27 +58,9 @@ struct SettingChangeBirthYearPickerSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
         }
-        .background(
-            GeometryReader { proxy in
-                Color.clear.preference(key: SheetContentHeightKey.self,
-                                       value: proxy.size.height)
-            }
-        )
-        .onPreferenceChange(SheetContentHeightKey.self) { newValue in
-            guard newValue > 0 else { return }
-            contentHeight = newValue
-        }
-        .presentationDetents([.height(contentHeight)])
+        .presentationDetents([.height(300)])
         .presentationBackground(WSSColor.wssWhite.swiftUIColor)
         .interactiveDismissDisabled()
-    }
-}
-
-/// 시트 콘텐츠의 실측 높이를 부모로 끌어올리기 위한 PreferenceKey.
-private struct SheetContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }
 

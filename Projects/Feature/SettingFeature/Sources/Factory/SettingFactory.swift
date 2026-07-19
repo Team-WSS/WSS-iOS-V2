@@ -13,6 +13,7 @@ import ProfileDomain
 import SocialDomain
 import NotificationDomain
 import AuthDomain
+import NovelDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
@@ -37,6 +38,8 @@ public enum SettingFactory {
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         // AuthDomain
         withdrawUseCase: WithdrawUseCase,
+        // NovelDomain
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {}
     ) -> some View {
@@ -52,6 +55,7 @@ public enum SettingFactory {
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
             withdrawUseCase: withdrawUseCase,
+            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
             onWithdrawSuccess: onWithdrawSuccess
         )

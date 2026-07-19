@@ -13,6 +13,7 @@ import SettingDomain
 import ProfileDomain
 import SocialDomain
 import AuthDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
@@ -24,6 +25,7 @@ struct SettingAccountInfoView: View {
     @State private var isBlockUserListPresented = false
     @State private var isWithdrawConfirmPresented = false
     @State private var isWithdrawReasonPresented = false
+    @State private var showLogoutAlert = false
     /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 이 화면에서 띄운다.
     @State private var isChangeSavedToastPresented = false
 
@@ -43,12 +45,16 @@ struct SettingAccountInfoView: View {
     // AuthDomain
     private let withdrawUseCase: WithdrawUseCase
 
+    // NovelDomain
+    private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
+
     init(
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
         loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
         unblockUserUseCase: UnblockUserUseCase,
         withdrawUseCase: WithdrawUseCase,
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {}
     ) {
@@ -57,6 +63,7 @@ struct SettingAccountInfoView: View {
         self.loadBlockedUsersUseCase = loadBlockedUsersUseCase
         self.unblockUserUseCase = unblockUserUseCase
         self.withdrawUseCase = withdrawUseCase
+        self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
     }
@@ -96,7 +103,13 @@ struct SettingAccountInfoView: View {
             )
         }
         .navigationDestination(isPresented: $isWithdrawConfirmPresented) {
-            WithdrawConfirmView(onConfirm: { isWithdrawReasonPresented = true })
+            WithdrawConfirmView(
+                viewModel: WithdrawConfirmViewModel(
+                    loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+                    logger: logger
+                ),
+                onConfirm: { isWithdrawReasonPresented = true }
+            )
         }
         .navigationDestination(isPresented: $isWithdrawReasonPresented) {
             WithdrawReasonView(
@@ -107,7 +120,16 @@ struct SettingAccountInfoView: View {
                 onWithdrawSuccess: onWithdrawSuccess
             )
         }
-        .showWSSToast(isPresented: $isChangeSavedToastPresented, type: .changeInfo)
+        .showWSSToast(isPresented: $isChangeSavedToastPresented,
+                      type: .changeInfo)
+        .showWSSAlert(
+            isPresented: $showLogoutAlert,
+                      type: .logout,
+                      buttonActions: [
+                        { showLogoutAlert = false },
+                        { print("로그아웃 진행해!") }
+                      ]
+        )
     }
 
     private func select(_ menu: SettingMenu) {
@@ -119,7 +141,7 @@ struct SettingAccountInfoView: View {
         case .withdraw:
             isWithdrawConfirmPresented = true
         case .logout:
-            break // TODO: 하위 화면 이동 연결
+            showLogoutAlert = true
         case .email:
             break
         }
@@ -188,7 +210,8 @@ private extension SettingAccountInfoView {
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
             loadBlockedUsersUseCase: PreviewLoadBlockedUsersUseCase(),
             unblockUserUseCase: PreviewUnblockUserUseCase(),
-            withdrawUseCase: PreviewWithdrawUseCase()
+            withdrawUseCase: PreviewWithdrawUseCase(),
+            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
 }
@@ -215,4 +238,10 @@ private struct PreviewUnblockUserUseCase: UnblockUserUseCase {
 
 private struct PreviewWithdrawUseCase: WithdrawUseCase {
     func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
+    func execute() async throws(RepositoryError) -> RegisteredNovelStats {
+        RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
 }

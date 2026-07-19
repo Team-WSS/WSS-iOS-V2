@@ -15,11 +15,13 @@ import ProfileDomain
 import SocialDomain
 import NotificationDomain
 import AuthDomain
+import NovelDomain
 import BaseData
 import ProfileData
 import SocialData
 import NotificationData
 import AuthData
+import NovelData
 import Logger
 import Networking
 import DesignSystem
@@ -113,6 +115,7 @@ private struct DemoRootView: View {
                 loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
                 updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
                 withdrawUseCase: DemoWithdrawUseCase(),
+                loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 logger: consoleLogger,
                 onWithdrawSuccess: { isSettingPresented = false }
             )
@@ -148,6 +151,11 @@ private struct DemoRootView: View {
             deviceIdentifierStore: DefaultDeviceIdentifierStore(),
             logger: DataLogger(moduleName: "AuthData", underlying: consoleLogger)
         )
+        let novelRepository = NovelDataFactory.makeNovelRepository(
+            client: client,
+            appStorage: UserDefaultsStorage(),
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
+        )
         return SettingFactory.makeView(
             loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(repository: profileRepository),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: profileRepository),
@@ -158,6 +166,7 @@ private struct DemoRootView: View {
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: pushSettingRepository),
             withdrawUseCase: DefaultWithdrawUseCase(repository: authRepository),
+            loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             logger: consoleLogger,
             onWithdrawSuccess: { isSettingPresented = false }
         )
@@ -275,6 +284,13 @@ private struct DemoUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
 private struct DemoWithdrawUseCase: WithdrawUseCase {
     func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
+    }
+}
+
+private struct DemoLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
+    func execute() async throws(RepositoryError) -> RegisteredNovelStats {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
     }
 }
 

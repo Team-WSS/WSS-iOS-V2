@@ -12,8 +12,11 @@ import DesignSystem
 import WSSComponent
 
 import BaseDomain
+import NovelDomain
 
 struct WithdrawConfirmView: View {
+
+    @State private var viewModel: WithdrawConfirmViewModel
 
     private let stateColumnCount = 2
     private let statelItemSpacing: CGFloat = 6
@@ -22,7 +25,8 @@ struct WithdrawConfirmView: View {
     /// 이 화면은 다음 화면으로의 이동 신호만 호출자에게 알린다.
     private let onConfirm: () -> Void
 
-    init(onConfirm: @escaping () -> Void = {}) {
+    init(viewModel: WithdrawConfirmViewModel, onConfirm: @escaping () -> Void = {}) {
+        self._viewModel = State(initialValue: viewModel)
         self.onConfirm = onConfirm
     }
 
@@ -55,14 +59,22 @@ struct WithdrawConfirmView: View {
                     ),
                     spacing: stateColumnSpacing
                 ) {
+                    statItem(
+                        icon: WSSImage.icQuittingLike.swiftUIImage,
+                        title: "관심",
+                        count: viewModel.state.registeredNovelStats?.interest ?? 0
+                    )
                     ForEach(ReadingStatus.allCases, id: \.statusName) { status in
-                        readingStatesItem(status: status)
+                        statItem(
+                            icon: status.strokeImage,
+                            title: status.statusName,
+                            count: registeredNovelCount(for: status)
+                        )
                     }
-                    readingStatesItem(status: .quit)
                 }
-                
+
                 Spacer()
-                
+
                 WSSCTAButton(title: "확인",
                              action: onConfirm)
                 .padding(.vertical, 10)
@@ -73,23 +85,35 @@ struct WithdrawConfirmView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
         }
+        .onAppear {
+            viewModel.handle(.load)
+        }
     }
-    
-    private func readingStatesItem(status: ReadingStatus) -> some View {
+
+    private func registeredNovelCount(for status: ReadingStatus) -> Int {
+        guard let stats = viewModel.state.registeredNovelStats else { return 0 }
+        switch status {
+        case .watching: return stats.watching
+        case .watched:  return stats.watched
+        case .quit:     return stats.quit
+        }
+    }
+
+    private func statItem(icon: Image, title: String, count: Int) -> some View {
         VStack(spacing: 0) {
-            status.strokeImage
+            icon
                 .resizable()
                 .renderingMode(.template)
                 .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
                 .frame(width: 25, height: 25)
-            
+
             Spacer().frame(height: 5)
-            
-            Text(status.statusName)
+
+            Text(title)
                 .applyWSSFont(.title3)
                 .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-            
-            Text("12")
+
+            Text("\(count)")
                 .applyWSSFont(.title2)
                 .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
         }
@@ -123,6 +147,16 @@ extension WithdrawConfirmView {
 
 #Preview {
     NavigationStack {
-        WithdrawConfirmView()
+        WithdrawConfirmView(
+            viewModel: WithdrawConfirmViewModel(
+                loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
+            )
+        )
+    }
+}
+
+private struct PreviewLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
+    func execute() async throws(RepositoryError) -> RegisteredNovelStats {
+        RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
     }
 }
