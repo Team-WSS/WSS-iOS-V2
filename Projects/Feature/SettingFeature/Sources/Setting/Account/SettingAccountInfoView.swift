@@ -25,7 +25,6 @@ struct SettingAccountInfoView: View {
     @State private var isChangeGenderOrAgePresented = false
     @State private var isBlockUserListPresented = false
     @State private var isWithdrawConfirmPresented = false
-    @State private var isWithdrawReasonPresented = false
     /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 이 화면에서 띄운다.
     @State private var isChangeSavedToastPresented = false
 
@@ -107,14 +106,8 @@ struct SettingAccountInfoView: View {
             )
         }
         .navigationDestination(isPresented: $isWithdrawConfirmPresented) {
-            SettingFactory.makeWithdrawConfirmView(
+            SettingFactory.makeWithdrawFlowView(
                 loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-                logger: logger,
-                onConfirm: { isWithdrawReasonPresented = true }
-            )
-        }
-        .navigationDestination(isPresented: $isWithdrawReasonPresented) {
-            SettingFactory.makeWithdrawReasonView(
                 withdrawUseCase: withdrawUseCase,
                 logger: logger,
                 onWithdrawSuccess: onWithdrawSuccess

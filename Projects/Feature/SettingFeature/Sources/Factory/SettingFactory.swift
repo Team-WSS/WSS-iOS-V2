@@ -135,6 +135,24 @@ public enum SettingFactory {
         return WithdrawConfirmView(viewModel: viewModel, onConfirm: onConfirm)
     }
 
+    /// `WithdrawConfirmView` → `WithdrawReasonView`를 하나의 push 체인으로 묶는다.
+    /// `SettingAccountInfoView`가 두 destination을 각각 bool로 들면 Confirm 확인 시 두 bool이 동시에 true가 되어
+    /// 스택 push가 깨지므로, Reason의 트리거를 `WithdrawFlowView`(Confirm이 이미 push된 지점)로 옮겨 둔다.
+    @MainActor
+    public static func makeWithdrawFlowView(
+        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        withdrawUseCase: WithdrawUseCase,
+        logger: Logger? = nil,
+        onWithdrawSuccess: @escaping () -> Void = {}
+    ) -> some View {
+        WithdrawFlowView(
+            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+            withdrawUseCase: withdrawUseCase,
+            logger: logger,
+            onWithdrawSuccess: onWithdrawSuccess
+        )
+    }
+
     @MainActor
     public static func makeWithdrawReasonView(
         withdrawUseCase: WithdrawUseCase,
