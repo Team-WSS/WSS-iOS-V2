@@ -38,10 +38,12 @@ public enum SettingFactory {
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         // AuthDomain
         withdrawUseCase: WithdrawUseCase,
+        logoutUseCase: LogoutUseCase,
         // NovelDomain
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onLogoutSuccess: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingViewModel(logger: logger)
         return SettingView(
@@ -55,9 +57,11 @@ public enum SettingFactory {
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
             withdrawUseCase: withdrawUseCase,
+            logoutUseCase: logoutUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
-            onWithdrawSuccess: onWithdrawSuccess
+            onWithdrawSuccess: onWithdrawSuccess,
+            onLogoutSuccess: onLogoutSuccess
         )
     }
 
@@ -69,10 +73,14 @@ public enum SettingFactory {
         unblockUserUseCase: UnblockUserUseCase,
         withdrawUseCase: WithdrawUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        logoutUseCase: LogoutUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onLogoutSuccess: @escaping () -> Void = {}
     ) -> some View {
-        SettingAccountInfoView(
+        let viewModel = SettingAccountInfoViewModel(logoutUseCase: logoutUseCase, logger: logger)
+        return SettingAccountInfoView(
+            viewModel: viewModel,
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
             saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
             loadBlockedUsersUseCase: loadBlockedUsersUseCase,
@@ -80,7 +88,8 @@ public enum SettingFactory {
             withdrawUseCase: withdrawUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
-            onWithdrawSuccess: onWithdrawSuccess
+            onWithdrawSuccess: onWithdrawSuccess,
+            onLogoutSuccess: onLogoutSuccess
         )
     }
 

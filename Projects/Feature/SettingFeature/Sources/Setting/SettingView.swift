@@ -35,6 +35,9 @@ struct SettingView: View {
     /// 탈퇴 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
     /// 이 화면들을 모두 지나 호출자에게 성공 신호만 전달한다.
     private let onWithdrawSuccess: () -> Void
+    /// 로그아웃 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
+    /// 이 화면들을 모두 지나 호출자에게 성공 신호만 전달한다.
+    private let onLogoutSuccess: () -> Void
 
     // ProfileDomain
     private let loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase
@@ -52,6 +55,7 @@ struct SettingView: View {
 
     // AuthDomain
     private let withdrawUseCase: WithdrawUseCase
+    private let logoutUseCase: LogoutUseCase
 
     // NovelDomain
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
@@ -67,9 +71,11 @@ struct SettingView: View {
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         withdrawUseCase: WithdrawUseCase,
+        logoutUseCase: LogoutUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onLogoutSuccess: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
@@ -81,9 +87,11 @@ struct SettingView: View {
         self.loadPushPreferenceUseCase = loadPushPreferenceUseCase
         self.updatePushPreferenceUseCase = updatePushPreferenceUseCase
         self.withdrawUseCase = withdrawUseCase
+        self.logoutUseCase = logoutUseCase
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
+        self.onLogoutSuccess = onLogoutSuccess
     }
 
     var body: some View {
@@ -109,8 +117,10 @@ struct SettingView: View {
                 unblockUserUseCase: unblockUserUseCase,
                 withdrawUseCase: withdrawUseCase,
                 loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+                logoutUseCase: logoutUseCase,
                 logger: logger,
-                onWithdrawSuccess: onWithdrawSuccess
+                onWithdrawSuccess: onWithdrawSuccess,
+                onLogoutSuccess: onLogoutSuccess
             )
         }
         .navigationDestination(isPresented: $isProfilePublicPresented) {
@@ -228,6 +238,7 @@ private extension SettingView {
             loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
             updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
             withdrawUseCase: PreviewWithdrawUseCase(),
+            logoutUseCase: PreviewLogoutUseCase(),
             loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
@@ -273,6 +284,10 @@ private struct PreviewUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
 
 private struct PreviewWithdrawUseCase: WithdrawUseCase {
     func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewLogoutUseCase: LogoutUseCase {
+    func execute() async throws(RepositoryError) {}
 }
 
 private struct PreviewLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {

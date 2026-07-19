@@ -20,12 +20,12 @@ import Logger
 
 struct SettingAccountInfoView: View {
 
+    @State private var viewModel: SettingAccountInfoViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isChangeGenderOrAgePresented = false
     @State private var isBlockUserListPresented = false
     @State private var isWithdrawConfirmPresented = false
     @State private var isWithdrawReasonPresented = false
-    @State private var showLogoutAlert = false
     /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 이 화면에서 띄운다.
     @State private var isChangeSavedToastPresented = false
 
@@ -33,6 +33,9 @@ struct SettingAccountInfoView: View {
     /// 탈퇴 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
     /// 이 화면들을 모두 지나 호출자에게 성공 신호만 전달한다.
     private let onWithdrawSuccess: () -> Void
+    /// 로그아웃 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
+    /// 이 화면은 성공 신호만 호출자에게 전달한다.
+    private let onLogoutSuccess: () -> Void
 
     // ProfileDomain
     private let loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase
@@ -49,6 +52,7 @@ struct SettingAccountInfoView: View {
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
 
     init(
+        viewModel: SettingAccountInfoViewModel,
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
         loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
@@ -56,8 +60,10 @@ struct SettingAccountInfoView: View {
         withdrawUseCase: WithdrawUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onLogoutSuccess: @escaping () -> Void = {}
     ) {
+        self._viewModel = State(initialValue: viewModel)
         self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
         self.saveAccountInfoDraftUseCase = saveAccountInfoDraftUseCase
         self.loadBlockedUsersUseCase = loadBlockedUsersUseCase
@@ -66,6 +72,7 @@ struct SettingAccountInfoView: View {
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
+        self.onLogoutSuccess = onLogoutSuccess
     }
 
     var body: some View {
@@ -116,13 +123,18 @@ struct SettingAccountInfoView: View {
         .showWSSToast(isPresented: $isChangeSavedToastPresented,
                       type: .changeInfo)
         .showWSSAlert(
-            isPresented: $showLogoutAlert,
+            isPresented: logoutAlertBinding,
                       type: .logout,
                       buttonActions: [
-                        { showLogoutAlert = false },
-                        { print("로그아웃 진행해!") }
+                        { viewModel.handle(.cancelLogout) },
+                        { viewModel.handle(.confirmLogout) }
                       ]
         )
+        .showWSSToast(isPresented: logoutErrorToastBinding, type: .unknownError)
+        .onChange(of: viewModel.state.logoutSucceeded) { _, logoutSucceeded in
+            guard logoutSucceeded else { return }
+            onLogoutSuccess()
+        }
     }
 
     private func select(_ menu: SettingMenu) {
@@ -134,10 +146,28 @@ struct SettingAccountInfoView: View {
         case .withdraw:
             isWithdrawConfirmPresented = true
         case .logout:
-            showLogoutAlert = true
+            viewModel.handle(.presentLogoutAlert)
         case .email:
             break
         }
+    }
+}
+
+// MARK: - Presentation
+
+private extension SettingAccountInfoView {
+    var logoutAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isLogoutAlertPresented },
+            set: { if !$0 { viewModel.handle(.cancelLogout) } }
+        )
+    }
+
+    var logoutErrorToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedError != nil },
+            set: { if !$0 { viewModel.handle(.dismissError) } }
+        )
     }
 }
 
@@ -199,6 +229,7 @@ private extension SettingAccountInfoView {
 #Preview {
     NavigationStack {
         SettingAccountInfoView(
+            viewModel: SettingAccountInfoViewModel(logoutUseCase: PreviewLogoutUseCase()),
             loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
             loadBlockedUsersUseCase: PreviewLoadBlockedUsersUseCase(),
@@ -207,6 +238,10 @@ private extension SettingAccountInfoView {
             loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
+}
+
+private struct PreviewLogoutUseCase: LogoutUseCase {
+    func execute() async throws(RepositoryError) {}
 }
 
 private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {

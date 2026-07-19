@@ -115,9 +115,11 @@ private struct DemoRootView: View {
                 loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
                 updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
                 withdrawUseCase: DemoWithdrawUseCase(),
+                logoutUseCase: DemoLogoutUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 logger: consoleLogger,
-                onWithdrawSuccess: { isSettingPresented = false }
+                onWithdrawSuccess: { isSettingPresented = false },
+                onLogoutSuccess: { isSettingPresented = false }
             )
         case .live:
             makeLiveSettingView()
@@ -166,9 +168,11 @@ private struct DemoRootView: View {
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: pushSettingRepository),
             withdrawUseCase: DefaultWithdrawUseCase(repository: authRepository),
+            logoutUseCase: DefaultLogoutUseCase(authRepository: authRepository),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             logger: consoleLogger,
-            onWithdrawSuccess: { isSettingPresented = false }
+            onWithdrawSuccess: { isSettingPresented = false },
+            onLogoutSuccess: { isSettingPresented = false }
         )
     }
 }
@@ -284,6 +288,12 @@ private struct DemoUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
 private struct DemoWithdrawUseCase: WithdrawUseCase {
     func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
+    }
+}
+
+private struct DemoLogoutUseCase: LogoutUseCase {
+    func execute() async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
     }
 }
 
