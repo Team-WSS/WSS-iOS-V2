@@ -84,6 +84,7 @@ struct WithdrawConfirmView: View {
                 toolbarContent
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
         }
         .onAppear {
             viewModel.handle(.load)

@@ -99,6 +99,7 @@ struct WithdrawReasonView: View {
             toolbarContent
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             guard shouldDismiss else { return }
             onWithdrawSuccess()

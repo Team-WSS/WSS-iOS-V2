@@ -40,7 +40,7 @@ struct SettingMenuRow: View {
                         .frame(width: 24, height: 24)
                 }
             }
-            .padding(.vertical, 20)
+            .padding(.vertical, bottomText == nil ? 20 : 9.5)
             .padding(.horizontal, 20)
             .contentShape(Rectangle())
             .onTapGesture {
