@@ -90,6 +90,7 @@ struct MypageView: View {
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     //TODO: - 프로필 편집 뷰로 이동
+                    print("프로필 편집 뷰로 이동")
                 } label: {
                     WSSImage.icEditProfileMypage.swiftUIImage
                 }
@@ -126,6 +127,7 @@ struct MypageView: View {
     private var myLibrarySection: some View {
         Button {
             //TODO: - 서재 뷰로 이동
+            print("서재 뷰로 이동")
         } label: {
             HStack(spacing: 0) {
                 myLibraryItem(count: viewModel.state.registeredNovelStats?.interest ?? 0, title: "관심")
@@ -161,6 +163,7 @@ struct MypageView: View {
         VStack(spacing: 0) {
             Button {
                 //TODO: - 컬렉션 뷰로 이동
+                print("컬렉션 뷰로 이동")
             } label: {
                 HStack(spacing: 0) {
                     Text("컬렉션 ")
@@ -376,6 +379,7 @@ struct MypageView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 //TODO: - 설정 뷰로 이동
+                print("설정 뷰로 이동")
             } label: {
                 WSSImage.icSetting.swiftUIImage
             }
