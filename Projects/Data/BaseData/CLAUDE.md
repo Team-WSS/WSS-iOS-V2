@@ -22,4 +22,3 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 - `KeywordCache`는 **파일 기반**(캐시 디렉토리의 `keywords.json` JSON). "로컬 DB"라 부르지만 실제론 파일 캐시. 실패는 `CacheError`.
 - 키워드는 `syncKeywords()`로 서버→파일 동기화 후, 다른 도메인이 캐시에서 읽어 주입받는 구조.
 - `StorageKey` 추가 시 타입(`V`)을 정확히 — `UserDefaultsStorage`는 `as? V` 캐스팅이라 타입 불일치는 조용히 nil.
-- `BucketImageURL`: 서버 이미지 path → 풀 URL 변환(버킷 호스트 + `@Nx` 스케일). `displayScale`은 `configure()`(MainActor, 앱 시작 시 1회)로 캐시해야 실제 디바이스 스케일을 쓰는데, **현재 어떤 App 진입점도 `configure()`를 호출하지 않는다** → 지금은 항상 fallback `3`(3x)으로 동작 중. 실제 디바이스 스케일 반영이 필요해지면 `WSSIOSV2App`(App 모듈) 쪽에 `configure()` 호출을 추가해야 한다.
