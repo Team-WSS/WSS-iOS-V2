@@ -11,9 +11,9 @@ import SwiftUI
 import DesignSystem
 import WSSComponent
 
-public struct NovelNotificationRow: View {
+struct NovelNotificationRow: View {
 
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 18) {
             AsyncImage(url:
                         URL(string: "https://i.pinimg.com/736x/f5/09/cf/f509cf911c368b54f01e394dd47e4e23.jpg")) { phase in

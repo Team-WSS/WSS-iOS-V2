@@ -11,8 +11,6 @@ import SwiftUI
 import DesignSystem
 import WSSComponent
 
-import NovelDomain
-
 struct CompletionNotificationListView: View {
     @Environment(\.dismiss) private var dismiss
     let novelList: [String]

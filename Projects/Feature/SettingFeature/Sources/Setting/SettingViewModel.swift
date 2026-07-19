@@ -9,7 +9,6 @@
 import Foundation
 import Observation
 
-import SettingDomain
 import Logger
 
 /// 설정 메뉴 목록. 로그아웃·회원탈퇴 등 실제 액션은 하위 화면(`SettingAccountInfoView`)이 처리하고,
