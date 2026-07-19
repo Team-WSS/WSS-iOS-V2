@@ -147,10 +147,17 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: consoleLogger)
         )
+        let authTokenStore = DemoAuthTokenStore()
+        // 실서버 조립이지만 로그인 플로우가 없어 refreshToken이 비어있다 — 로그아웃/탈퇴 데모가
+        // 항상 "refreshToken 없음"으로 막히지 않도록 더미 값을 미리 심어둔다.
+        try? authTokenStore.saveRefreshToken("demo-refresh-token")
+        let deviceIdentifierStore = DefaultDeviceIdentifierStore()
+        // deviceIdentifier도 실기기 등록 플로우가 없으면 Keychain에 값이 없어 같은 이유로 막힌다.
+        try? deviceIdentifierStore.saveDeviceIdentifier("demo-device-identifier")
         let authRepository = AuthDataFactory.makeRepository(
             client: client,
-            tokenStore: DemoAuthTokenStore(),
-            deviceIdentifierStore: DefaultDeviceIdentifierStore(),
+            tokenStore: authTokenStore,
+            deviceIdentifierStore: deviceIdentifierStore,
             logger: DataLogger(moduleName: "AuthData", underlying: consoleLogger)
         )
         let novelRepository = NovelDataFactory.makeNovelRepository(
