@@ -23,6 +23,7 @@ struct SettingView: View {
 
     @State private var viewModel: SettingViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var isAccountInfoPresented = false
     @State private var isProfilePublicPresented = false
     @State private var isNotificationSettingPresented = false
@@ -139,7 +140,7 @@ struct SettingView: View {
         case .notification:
             isNotificationSettingPresented = true
         case .officialAccount, .inquiry, .privacyPolicy, .termsOfService:
-            break // TODO: 하위 화면 이동 연결
+            if let url = menu.externalURL { openURL(url) }
         }
     }
 
@@ -171,6 +172,17 @@ extension SettingView {
             case .inquiry:           "문의하기 & 의견 보내기"
             case .privacyPolicy:     "개인정보 처리방침"
             case .termsOfService:    "서비스 이용약관"
+            }
+        }
+
+        /// 웹으로 나가는 딥링크. `accountInfo`/`profileVisibility`/`notification`은 앱 내부 화면 전환이라 nil.
+        var externalURL: URL? {
+            switch self {
+            case .officialAccount:   URL(string: "https://www.instagram.com/websoso_official/")
+            case .inquiry:           URL(string: "https://helpwebsoso.notion.site/241a9688d1a381548c20dd314d0a0b0a")
+            case .privacyPolicy:     URL(string: "https://websoso.notion.site/143600bd746880668556fb005fcef491?pvs=143")
+            case .termsOfService:    URL(string: "https://websoso.notion.site/143600bd74688050be18f4da31d9403e?pvs=4")
+            case .accountInfo, .profileVisibility, .notification: nil
             }
         }
     }
