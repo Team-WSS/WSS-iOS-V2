@@ -27,8 +27,7 @@ enum ProfileMapper {
     static func genrePreferences(from preferences: [GenrePreferences]) throws -> [GenrePreference] {
         try preferences.map { pref in
             GenrePreference(
-                name: pref.genreName,
-                image: ImageURLResolver.resolve(from: pref.genreImage),
+                genre: try novelGenre(from: pref.genreName),
                 count: pref.genreCount
             )
         }
