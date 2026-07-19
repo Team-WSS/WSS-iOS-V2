@@ -23,8 +23,11 @@ final class SettingProfilePublicViewModel {
         var isLoading = false
         var isSaving = false
         var shouldDismiss = false
-        /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
-        var presentedError: SettingError?
+        /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 저장 실패와 분리한다.
+        /// 하나로 합치면 저장 실패 시에도 화면 전체가 에러로 뒤덮여, 방금 토글하던 화면으로 되돌아올 방법이 없어진다.
+        var loadError: SettingError?
+        /// 저장 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 토글 값도 유지한다.
+        var toastError: SettingError?
     }
 
     /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
@@ -86,7 +89,7 @@ final class SettingProfilePublicViewModel {
         case .save:
             save()
         case .dismissError:
-            state.presentedError = nil
+            state.toastError = nil
         }
     }
 }
@@ -97,6 +100,7 @@ private extension SettingProfilePublicViewModel {
     func load() {
         guard !hasLoaded else { return }
         state.isLoading = true
+        state.loadError = nil
         Task { await loadVisibility() }
     }
 
@@ -119,7 +123,7 @@ private extension SettingProfilePublicViewModel {
             baselineIsPublic = visibility.isPublic
             hasLoaded = true
         } catch {
-            presentError(error)
+            presentLoadError(error)
         }
     }
 
@@ -131,7 +135,7 @@ private extension SettingProfilePublicViewModel {
             try await updateProfileVisibilityUseCase.execute(ProfileVisibility(isPublic: state.isPublic))
             state.shouldDismiss = true
         } catch {
-            presentError(error)
+            presentToastError(error)
         }
     }
 }
@@ -139,8 +143,13 @@ private extension SettingProfilePublicViewModel {
 // MARK: - Error Mapping
 
 private extension SettingProfilePublicViewModel {
-    func presentError(_ error: Error) {
+    func presentLoadError(_ error: Error) {
+        logger?.error("SettingProfilePublic 로드 실패: \(String(describing: error))")
+        state.loadError = .unknown
+    }
+
+    func presentToastError(_ error: Error) {
         logger?.error("SettingProfilePublic 예기치 못한 에러: \(String(describing: error))")
-        state.presentedError = .unknown
+        state.toastError = .unknown
     }
 }

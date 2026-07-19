@@ -26,8 +26,11 @@ final class SettingBlockUserListViewModel {
         var unblockingBlockIDs: Set<BlockID> = []
         /// 방금 차단 해제에 성공한 유저. 성공 토스트("OO님을 차단 해제했어요") 표시용.
         var unblockedUser: BlockedUser?
-        /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
-        var presentedError: SettingError?
+        /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 차단 해제 실패와 분리한다.
+        /// 하나로 합치면 차단 해제 실패 시에도 화면 전체가 에러로 뒤덮여, 이미 로드된 목록으로 되돌아올 방법이 없어진다.
+        var loadError: SettingError?
+        /// 차단 해제 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 목록도 그대로 둔다.
+        var toastError: SettingError?
     }
 
     /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
@@ -80,7 +83,7 @@ final class SettingBlockUserListViewModel {
         case .unblock(let user):
             unblock(user)
         case .dismissToast:
-            state.presentedError = nil
+            state.toastError = nil
             state.unblockedUser = nil
         }
     }
@@ -92,6 +95,7 @@ private extension SettingBlockUserListViewModel {
     func load() {
         guard !hasLoaded else { return }
         state.isLoading = true
+        state.loadError = nil
         Task { await loadBlockedUsers() }
     }
 
@@ -111,7 +115,7 @@ private extension SettingBlockUserListViewModel {
             state.blockedUsers = try await loadBlockedUsersUseCase.execute()
             hasLoaded = true
         } catch {
-            presentError(error)
+            presentLoadError(error)
         }
     }
 
@@ -123,7 +127,7 @@ private extension SettingBlockUserListViewModel {
             state.blockedUsers.removeAll { $0.blockID == user.blockID }
             state.unblockedUser = user
         } catch {
-            presentError(error)
+            presentToastError(error)
         }
     }
 }
@@ -131,8 +135,13 @@ private extension SettingBlockUserListViewModel {
 // MARK: - Error Mapping
 
 private extension SettingBlockUserListViewModel {
-    func presentError(_ error: Error) {
+    func presentLoadError(_ error: Error) {
+        logger?.error("SettingBlockUserList 로드 실패: \(String(describing: error))")
+        state.loadError = .unknown
+    }
+
+    func presentToastError(_ error: Error) {
         logger?.error("SettingBlockUserList 예기치 못한 에러: \(String(describing: error))")
-        state.presentedError = .unknown
+        state.toastError = .unknown
     }
 }

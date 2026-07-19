@@ -44,13 +44,14 @@ struct SettingProfilePublicView: View {
                 onSaveSuccess(viewModel.state.isPublic)
                 dismiss()
             }
+            .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
     @ViewBuilder
     private var content: some View {
         if viewModel.state.isLoading {
             LoadingView()
-        } else if viewModel.state.presentedError != nil {
+        } else if viewModel.state.loadError != nil {
             NetworkErrorView {
                 viewModel.handle(.load)
             }
@@ -131,6 +132,19 @@ private extension SettingProfilePublicView {
             get: { !viewModel.state.isPublic },
             set: { viewModel.handle(.togglePublic(!$0)) }
         )
+    }
+
+    var toastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.toastError != nil },
+            set: { if !$0 { viewModel.handle(.dismissError) } }
+        )
+    }
+
+    var toastType: WSSToastType {
+        switch viewModel.state.toastError {
+        case .unknown, .none: .unknownError
+        }
     }
 }
 

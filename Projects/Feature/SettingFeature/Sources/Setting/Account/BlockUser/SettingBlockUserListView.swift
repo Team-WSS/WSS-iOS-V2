@@ -32,13 +32,14 @@ struct SettingBlockUserListView: View {
             .onAppear {
                 viewModel.handle(.load)
             }
+            .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
     private var content: some View {
         VStack(spacing: 0) {
             if viewModel.state.isLoading {
                 LoadingView()
-            } else if viewModel.state.presentedError != nil {
+            } else if viewModel.state.loadError != nil {
                 NetworkErrorView {
                     viewModel.handle(.load)
                 }
@@ -72,6 +73,26 @@ struct SettingBlockUserListView: View {
             Text("차단한 유저가 없어요")
                 .applyWSSFont(.body2)
                 .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+        }
+    }
+}
+
+// MARK: - Presentation
+
+private extension SettingBlockUserListView {
+    var toastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.toastError != nil || viewModel.state.unblockedUser != nil },
+            set: { if !$0 { viewModel.handle(.dismissToast) } }
+        )
+    }
+
+    var toastType: WSSToastType {
+        if let unblockedUser = viewModel.state.unblockedUser {
+            return .deleteBlockUser(nickname: unblockedUser.nickname)
+        }
+        switch viewModel.state.toastError {
+        case .unknown, .none: return .unknownError
         }
     }
 }
