@@ -13,7 +13,7 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- `SettingBirthYearWheel`(`ChangeGenderOrAge/`)은 **연도 1열 전용**이다. `NovelReviewFeature`의 연/월/일 3열 `WSSDateWheel`과 이름은 비슷하지만 다른 컴포넌트(Feature 모듈 간 직접 의존 금지라 복사본이 아니라 화면 전용으로 새로 축소한 버전)다. 연도 배열 자체가 `BirthYear.minYear...maxYear`로 하드 바운드돼 있어 오버슈트(미래 연도) 방지용 되돌림 로직이 필요 없다 — 원본의 settle/bounce 로직을 그대로 가져오지 말 것.
+- **`SettingChangeBirthYearPickerSheet`가 쓰는 연도 휠은 `WSSComponent`의 `WSSBirthYearWheel`이다** — Feature 화면 전용이 아니라 UI 레이어로 승격된 **공용** 컴포넌트다(과거엔 `ChangeGenderOrAge/` 안의 화면 전용 타입이었다가 이동했다). `NovelReviewFeature`의 연/월/일 3열 `WSSDateWheel`과 이름은 비슷하지만 다른 컴포넌트다(연도 1열 전용). 연도 배열 자체가 `BirthYear.minYear...maxYear`로 하드 바운드돼 있어 오버슈트(미래 연도) 방지용 되돌림 로직이 필요 없다 — `WSSDateWheel`의 settle/bounce 로직을 그대로 가져오지 말 것. 수정은 `Projects/UI/WSSComponent/Sources/WSSBirthYearWheel.swift`에서.
 - **`SettingFactory.makeView(...)`가 모듈의 유일한 public 진입점**이다(`SettingView` → `SettingAccountInfoView` → 성별/나이 변경·차단유저 목록·회원탈퇴, `SettingView` → 프로필 공개 설정·알림 설정). Demo/App은 이 하나에 모든 UseCase를 한 번에 주입만 하면 된다. **내부 네비게이션도 개별 `makeXxxView`를 그대로 재사용**한다 — `SettingView`/`SettingAccountInfoView`는 `navigationDestination` 안에서 ViewModel을 직접 만들지 않고 `SettingFactory.makeXxxView(...)`를 호출한다(VM 조립 로직을 Factory 한 곳에 모으기 위함). 딥링크 등 단독 진입 시에도 같은 메서드를 그대로 쓴다.
 - 회원탈퇴 실서버 조립 시 `BaseData`의 `DemoSessionTokenStore`는 `SessionTokenStore`만 구현해 `AuthDataFactory.makeRepository(tokenStore:)`가 요구하는 **`TokenStore`(저장/갱신 포함 상위 프로토콜)에는 못 쓴다** — save/refresh까지 갖춘 별도 TokenStore가 필요(Demo에선 `DemoAuthTokenStore` 참고).
 - **`WithdrawReasonView`에서 `.disabled`와 `@FocusState`를 같은 탭 핸들러로 함께 갱신할 때, 상태 변경(`selectReason`)과 포커스 요청(`isKeyboardFocused = true`)을 같은 틱에 실행하면 포커스가 씹힌다** — `.disabled`가 아직 갱신 전 렌더값(true)으로 평가되는 시점이라 비활성 뷰는 포커스를 못 받는다. 포커스 요청을 `Task { @MainActor in }`으로 한 틱 미뤄 상태 변경 렌더 뒤에 실행해야 탭 한 번에 선택+포커스가 같이 된다.

@@ -1,5 +1,5 @@
 //
-//  SettingBirthYearWheel.swift
+//  WSSBirthYearWheel.swift
 //  WSSComponent
 //
 //  Created by Seoyeon Choi on 7/16/26.
