@@ -9,7 +9,6 @@
 import SwiftUI
 
 import BaseDomain
-import SettingDomain
 import ProfileDomain
 import SocialDomain
 import AuthDomain

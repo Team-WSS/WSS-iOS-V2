@@ -9,7 +9,6 @@
 import SwiftUI
 
 import SettingFeature
-import SettingDomain
 import BaseDomain
 import ProfileDomain
 import SocialDomain
@@ -34,8 +33,8 @@ struct SettingFeatureDemoApp: App {
         Self.seedLocalGenderAndBirthIfNeeded()
     }
 
-    /// 실서버 모드는 userDefaults에 저장된 성별/출생연도를 읽어서 보여준다(서버 GET이 아님).
-    /// 시뮬레이터엔 그 값이 없으므로, Demo 최초 실행 시 한 번 심어둔다(실제 값이 있으면 덮어쓰지 않음).
+    /// `loadLocalGenderAndBirth()`는 userDefaults 미스 시 서버로 폴백하지만, Demo는 그 폴백 경로를
+    /// 타지 않고 항상 로컬 값을 바로 보여주도록 최초 실행 시 한 번 심어둔다(실제 값이 있으면 덮어쓰지 않음).
     private static func seedLocalGenderAndBirthIfNeeded() {
         let storage = UserDefaultsStorage()
         if storage.get(.gender) == nil {

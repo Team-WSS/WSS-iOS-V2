@@ -9,7 +9,7 @@
 
 - **`ProfileTarget`로 본인/타인 분기**: `.me`(저장된 userDefaults userID 사용) vs `.user(UserID)`(다른 repository에서 userID 확보). 조회 계열(`fetchUserProfile`, `fetchGenrePreferences`, `fetchNovelPreferences`)이 이 타깃을 받는다.
 - **로컬+서버 혼합**: 일부 정보(성별/출생연도/userID/닉네임/프로필캐릭터ID)는 userDefaults에, 나머지(소개글/선호장르)는 서버에서 가져와 합친다. (`syncUserBasicInfo`, `loadInitialProfile`, `updateProfile` 주석 참고)
-- **`loadAccountInfoDraft()`(서버 GET, email 포함) vs `loadLocalGenderAndBirth()`(userDefaults만, email 없음)**: 둘 다 성별/출생연도를 반환하지만 출처가 다르다. 계정정보 화면처럼 email이 필요하면 전자, 로컬 값만 빠르게 보여주면 되는 화면(성별/나이 변경 등)은 후자를 쓴다. `saveAccountInfo(_:)`는 서버 PUT 성공 시 userDefaults(성별/출생연도)도 함께 갱신한다.
+- **`loadAccountInfoDraft()`(서버 GET, email 포함) vs `loadLocalGenderAndBirth()`(userDefaults 우선, email 없음)**: 둘 다 성별/출생연도를 반환하지만 성격이 다르다. 계정정보 화면처럼 email이 필요하면 전자를 쓴다. 후자(성별/나이 변경 등)는 userDefaults를 먼저 보되, **캐시 미스면 `loadAccountInfoDraft()`와 같은 서버 API로 폴백하고 결과를 userDefaults에 캐시**한다 — `syncUserBasicInfo()`/`registerProfile()`이 출생연도를 로컬에 쓰지 않아서, "성별/나이 변경" 화면을 한 번도 저장한 적 없는 사용자는 로컬 캐시가 항상 비어있기 때문(이 폴백이 없으면 `notFound`로 실패하고, 화면이 이를 삼키면 하드코딩 기본값으로 서버 값을 덮어쓸 위험이 있었다). `saveAccountInfo(_:)`는 서버 PUT 성공 시 userDefaults(성별/출생연도)도 함께 갱신한다.
 - `fetchNovelPreferences`는 NovelDomain과 동일하게 **캐시 키워드 주입** 필요.
 - 닉네임 중복 검사 `validateNickname` → `Bool`.
 

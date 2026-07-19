@@ -8,7 +8,6 @@
 
 import SwiftUI
 
-import SettingDomain
 import ProfileDomain
 import SocialDomain
 import NotificationDomain
