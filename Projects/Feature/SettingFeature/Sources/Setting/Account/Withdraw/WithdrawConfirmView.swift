@@ -17,7 +17,8 @@ import NovelDomain
 struct WithdrawConfirmView: View {
 
     @State private var viewModel: WithdrawConfirmViewModel
-
+    @Environment(\.dismiss) private var dismiss
+    
     private let stateColumnCount = 2
     private let statelItemSpacing: CGFloat = 6
     private let stateColumnSpacing: CGFloat = 6
@@ -127,15 +128,19 @@ struct WithdrawConfirmView: View {
 
 // MARK: - Toolbar
 
-extension WithdrawConfirmView {
+private extension WithdrawConfirmView {
     @ToolbarContentBuilder
     var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            WSSImage.icNavigateLeft.swiftUIImage
-                .resizable()
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 24, height: 24)
+            Button {
+                dismiss()
+            } label: {
+                WSSImage.icNavigateLeft.swiftUIImage
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .frame(width: 24, height: 24)
+            }
         }
         
         ToolbarItem(placement: .principal) {
