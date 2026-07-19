@@ -108,6 +108,7 @@ private struct DemoRootView: View {
             SettingFactory.makeView(
                 loadLocalGenderAndBirthUseCase: DemoLoadLocalGenderAndBirthUseCase(),
                 saveAccountInfoDraftUseCase: DemoSaveAccountInfoDraftUseCase(),
+                loadAccountInfoDraftUseCase: DemoLoadAccountInfoDraftUseCase(),
                 loadProfileVisibilityUseCase: DemoLoadProfileVisibilityUseCase(store: mockProfileVisibilityStore),
                 updateProfileVisibilityUseCase: DemoUpdateProfileVisibilityUseCase(store: mockProfileVisibilityStore),
                 loadBlockedUsersUseCase: DemoLoadBlockedUsersUseCase(store: mockBlockedUsersStore),
@@ -168,6 +169,7 @@ private struct DemoRootView: View {
         return SettingFactory.makeView(
             loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(repository: profileRepository),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: profileRepository),
+            loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: profileRepository),
             loadProfileVisibilityUseCase: DefaultLoadProfileVisibilityUseCase(repository: profileRepository),
             updateProfileVisibilityUseCase: DefaultUpdateProfileVisibilityUseCase(repository: profileRepository),
             loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: socialRepository),
@@ -197,6 +199,13 @@ private struct DemoLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCas
 private struct DemoSaveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase {
     func execute(_ info: AccountInfoDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
+    }
+}
+
+private struct DemoLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
+    func execute() async throws(RepositoryError) -> AccountInfoDraft {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return AccountInfoDraft(email: "wss@websoso.kr", gender: .female, birth: try! BirthYear(2001))
     }
 }
 

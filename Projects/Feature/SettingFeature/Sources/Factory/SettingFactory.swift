@@ -28,6 +28,7 @@ public enum SettingFactory {
         // ProfileDomain
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
+        loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
         loadProfileVisibilityUseCase: LoadProfileVisibilityUseCase,
         updateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase,
         // SocialDomain
@@ -50,6 +51,7 @@ public enum SettingFactory {
             viewModel: viewModel,
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
             saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
+            loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
             loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
             updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
             loadBlockedUsersUseCase: loadBlockedUsersUseCase,
@@ -69,6 +71,7 @@ public enum SettingFactory {
     public static func makeAccountInfoView(
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
+        loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
         loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
         unblockUserUseCase: UnblockUserUseCase,
         withdrawUseCase: WithdrawUseCase,
@@ -78,7 +81,11 @@ public enum SettingFactory {
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
     ) -> some View {
-        let viewModel = SettingAccountInfoViewModel(logoutUseCase: logoutUseCase, logger: logger)
+        let viewModel = SettingAccountInfoViewModel(
+            loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
+            logoutUseCase: logoutUseCase,
+            logger: logger
+        )
         return SettingAccountInfoView(
             viewModel: viewModel,
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,

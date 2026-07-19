@@ -9,6 +9,7 @@
 import Foundation
 import Observation
 
+import ProfileDomain
 import AuthDomain
 import Logger
 
@@ -19,6 +20,9 @@ final class SettingAccountInfoViewModel {
     // MARK: - State
 
     struct State {
+        /// 계정정보 화면의 "이메일" 행 표시용. 로드 실패해도 화면을 막지 않고 그냥 안 보이게 둔다
+        /// (탈퇴/로그아웃 등 다른 액션은 이메일 없이도 항상 가능해야 함).
+        var email: String?
         var isLogoutAlertPresented = false
         var isLoggingOut = false
         /// 로그아웃 성공 신호. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
@@ -35,6 +39,7 @@ final class SettingAccountInfoViewModel {
     // MARK: - Action
 
     enum Action {
+        case load
         case presentLogoutAlert
         case cancelLogout
         case confirmLogout
@@ -45,16 +50,28 @@ final class SettingAccountInfoViewModel {
 
     private(set) var state = State()
 
+    // MARK: - Property
+
+    @ObservationIgnored private var hasLoaded = false
+
     // MARK: - Dependency
 
     private let logger: Logger?
+
+    // ProfileDomain
+    private let loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase
 
     // AuthDomain
     private let logoutUseCase: LogoutUseCase
 
     // MARK: - Init
 
-    init(logoutUseCase: LogoutUseCase, logger: Logger? = nil) {
+    init(
+        loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
+        logoutUseCase: LogoutUseCase,
+        logger: Logger? = nil
+    ) {
+        self.loadAccountInfoDraftUseCase = loadAccountInfoDraftUseCase
         self.logoutUseCase = logoutUseCase
         self.logger = logger
     }
@@ -63,6 +80,8 @@ final class SettingAccountInfoViewModel {
 
     func handle(_ action: Action) {
         switch action {
+        case .load:
+            load()
         case .presentLogoutAlert:
             state.isLogoutAlertPresented = true
         case .cancelLogout:
@@ -78,6 +97,11 @@ final class SettingAccountInfoViewModel {
 // MARK: - Action Handling
 
 private extension SettingAccountInfoViewModel {
+    func load() {
+        guard !hasLoaded else { return }
+        Task { await loadEmail() }
+    }
+
     func confirmLogout() {
         state.isLogoutAlertPresented = false
         guard !state.isLoggingOut else { return }
@@ -88,6 +112,16 @@ private extension SettingAccountInfoViewModel {
 // MARK: - UseCase Handling
 
 private extension SettingAccountInfoViewModel {
+    /// 이메일은 부가 정보라, 로드에 실패해도 화면을 막지 않고 그냥 안 보이게 둔다.
+    func loadEmail() async {
+        do {
+            state.email = try await loadAccountInfoDraftUseCase.execute().email
+            hasLoaded = true
+        } catch {
+            logger?.error("계정정보 이메일 로드 실패: \(String(describing: error))")
+        }
+    }
+
     func logout() async {
         state.isLoggingOut = true
         defer { state.isLoggingOut = false }

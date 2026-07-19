@@ -42,6 +42,7 @@ struct SettingView: View {
     // ProfileDomain
     private let loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase
     private let saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase
+    private let loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase
     private let loadProfileVisibilityUseCase: LoadProfileVisibilityUseCase
     private let updateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase
 
@@ -64,6 +65,7 @@ struct SettingView: View {
         viewModel: SettingViewModel,
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
+        loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
         loadProfileVisibilityUseCase: LoadProfileVisibilityUseCase,
         updateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase,
         loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
@@ -80,6 +82,7 @@ struct SettingView: View {
         self._viewModel = State(initialValue: viewModel)
         self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
         self.saveAccountInfoDraftUseCase = saveAccountInfoDraftUseCase
+        self.loadAccountInfoDraftUseCase = loadAccountInfoDraftUseCase
         self.loadProfileVisibilityUseCase = loadProfileVisibilityUseCase
         self.updateProfileVisibilityUseCase = updateProfileVisibilityUseCase
         self.loadBlockedUsersUseCase = loadBlockedUsersUseCase
@@ -113,6 +116,7 @@ struct SettingView: View {
             SettingFactory.makeAccountInfoView(
                 loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
                 saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
+                loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
                 loadBlockedUsersUseCase: loadBlockedUsersUseCase,
                 unblockUserUseCase: unblockUserUseCase,
                 withdrawUseCase: withdrawUseCase,
@@ -231,6 +235,7 @@ private extension SettingView {
             viewModel: SettingViewModel(),
             loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
+            loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
             loadProfileVisibilityUseCase: PreviewLoadProfileVisibilityUseCase(),
             updateProfileVisibilityUseCase: PreviewUpdateProfileVisibilityUseCase(),
             loadBlockedUsersUseCase: PreviewLoadBlockedUsersUseCase(),
@@ -252,6 +257,12 @@ private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUse
 
 private struct PreviewSaveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase {
     func execute(_ info: AccountInfoDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
+    func execute() async throws(RepositoryError) -> AccountInfoDraft {
+        AccountInfoDraft(email: "wss@websoso.kr", gender: .female, birth: try! BirthYear(2001))
+    }
 }
 
 private struct PreviewLoadProfileVisibilityUseCase: LoadProfileVisibilityUseCase {

@@ -79,6 +79,7 @@ struct SettingAccountInfoView: View {
             ForEach(SettingMenu.allCases, id: \.self) { menu in
                 SettingMenuRow(
                     title: menu.title,
+                    bottomText: menu == .email ? viewModel.state.email : nil,
                     action: menu.isSelectable ? { select(menu) } : nil
                 )
             }
@@ -90,6 +91,9 @@ struct SettingAccountInfoView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
+        .onAppear {
+            viewModel.handle(.load)
+        }
         .navigationDestination(isPresented: $isChangeGenderOrAgePresented) {
             SettingFactory.makeChangeGenderOrAgeView(
                 loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
@@ -222,7 +226,10 @@ private extension SettingAccountInfoView {
 #Preview {
     NavigationStack {
         SettingAccountInfoView(
-            viewModel: SettingAccountInfoViewModel(logoutUseCase: PreviewLogoutUseCase()),
+            viewModel: SettingAccountInfoViewModel(
+                loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
+                logoutUseCase: PreviewLogoutUseCase()
+            ),
             loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
             loadBlockedUsersUseCase: PreviewLoadBlockedUsersUseCase(),
@@ -235,6 +242,12 @@ private extension SettingAccountInfoView {
 
 private struct PreviewLogoutUseCase: LogoutUseCase {
     func execute() async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
+    func execute() async throws(RepositoryError) -> AccountInfoDraft {
+        AccountInfoDraft(email: "wss@websoso.kr", gender: .female, birth: try! BirthYear(2001))
+    }
 }
 
 private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {
