@@ -75,6 +75,7 @@ private struct DemoRootView: View {
                 loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
                 removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
                 clearRecentSearchWordsUseCase: DemoClearRecentSearchWordsUseCase(store: demoRecentSearchStore),
+                searchAutoCompletionWordsUseCase: DemoSearchAutoCompletionWordsUseCase(),
                 loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
                 logger: consoleLogger
             )
@@ -110,6 +111,7 @@ private struct DemoRootView: View {
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
             clearRecentSearchWordsUseCase: DefaultClearRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
+            searchAutoCompletionWordsUseCase: DefaultSearchAutoCompletionWordsUseCase(searchAutoCompletionRepository: searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
             logger: consoleLogger
         )
@@ -160,6 +162,17 @@ private struct DemoClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase 
 
     func execute() async throws(RepositoryError) {
         store.words = []
+    }
+}
+
+private struct DemoSearchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase {
+    func execute(searchText: String) async throws(RepositoryError) -> [SearchAutoCompletionWord] {
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        return [
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 1"),
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 2"),
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 3")
+        ]
     }
 }
 

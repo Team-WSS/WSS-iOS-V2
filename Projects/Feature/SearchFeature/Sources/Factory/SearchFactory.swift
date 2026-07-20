@@ -22,6 +22,7 @@ public enum SearchFactory {
         loadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase,
         removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase,
         clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase,
+        searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil
     ) -> some View {
@@ -31,6 +32,7 @@ public enum SearchFactory {
                 loadRecentSearchWordsUseCase: loadRecentSearchWordsUseCase,
                 removeRecentSearchWordUseCase: removeRecentSearchWordUseCase,
                 clearRecentSearchWordsUseCase: clearRecentSearchWordsUseCase,
+                searchAutoCompletionWordsUseCase: searchAutoCompletionWordsUseCase,
                 loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
                 logger: logger
             )
