@@ -45,6 +45,7 @@ public extension OSLogger {
     static let keyword      = OSLogger(category: .keyword)
     static let comment      = OSLogger(category: .comment)
     static let profile      = OSLogger(category: .profile)
+    static let search       = OSLogger(category: .search)
 }
 
 // MARK: - LogCategory
@@ -61,4 +62,5 @@ public enum LogCategory: String {
     case keyword
     case comment
     case profile
+    case search
 }
