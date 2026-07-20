@@ -15,7 +15,7 @@ import Logger
 
 @MainActor
 @Observable
-public class NormalSearchViewModel {
+final class NormalSearchViewModel {
 
     struct State {
         var sosoPickNovels: [SosoPick] = []
@@ -114,18 +114,19 @@ private extension NormalSearchViewModel {
         recentSearchWordsTask = Task { await loadRecentSearchWordsList() }
     }
 
-    /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다.
+    /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 그 단어만 되돌린다.
+    /// 전체 삭제와는 상호 배타적(동시 진행 시 배열 스냅샷 롤백이 서로를 덮어써 데이터 불일치가 남는다).
     func removeRecentSearchWord(_ word: RecentSearchWord) {
-        guard !removingRecentSearchWordIDs.contains(word.id) else { return }
-        let before = state.recentSearchWords
+        guard !isClearingRecentSearchWords, !removingRecentSearchWordIDs.contains(word.id) else { return }
         state.recentSearchWords.removeAll { $0.id == word.id }
         removingRecentSearchWordIDs.insert(word.id)
-        Task { await syncRemoveRecentSearchWord(word, rollbackTo: before) }
+        Task { await syncRemoveRecentSearchWord(word) }
     }
 
-    /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다(개별 삭제와 같은 패턴).
+    /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다.
+    /// 개별 삭제와 상호 배타적 — 진행 중인 개별 삭제가 있으면 그 스냅샷 복원과 충돌할 수 있어 대기시킨다.
     func clearRecentSearchWords() {
-        guard !isClearingRecentSearchWords, !state.recentSearchWords.isEmpty else { return }
+        guard !isClearingRecentSearchWords, removingRecentSearchWordIDs.isEmpty, !state.recentSearchWords.isEmpty else { return }
         let before = state.recentSearchWords
         state.recentSearchWords = []
         isClearingRecentSearchWords = true
@@ -173,7 +174,7 @@ private extension NormalSearchViewModel {
         }
     }
 
-    func syncRemoveRecentSearchWord(_ word: RecentSearchWord, rollbackTo before: [RecentSearchWord]) async {
+    func syncRemoveRecentSearchWord(_ word: RecentSearchWord) async {
         defer { removingRecentSearchWordIDs.remove(word.id) }
 
         do {
@@ -181,7 +182,9 @@ private extension NormalSearchViewModel {
         } catch {
             guard !Task.isCancelled else { return }
             logger?.error("최근 검색어 삭제 실패: \(String(describing: error))")
-            state.recentSearchWords = before
+            if !state.recentSearchWords.contains(where: { $0.id == word.id }) {
+                state.recentSearchWords.append(word)
+            }
         }
     }
 

@@ -11,24 +11,23 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import SearchDomain
-
 import DesignSystem
 import WSSComponent
 
-public struct NormalSearchView: View {
-    
+struct NormalSearchView: View {
+
     @State private var viewModel: NormalSearchViewModel
-    
+
     @State private var searchText: String = ""
     @FocusState var isFocused: Bool
-    
-    public init(viewModel: NormalSearchViewModel) {
+
+    init(viewModel: NormalSearchViewModel) {
         self._viewModel = State(initialValue: viewModel)
     }
-    
-    public var body: some View {
+
+    var body: some View {
         VStack(spacing: 0) {
-            TopbarSection
+            topbarSection
                 .padding(.leading, 6)
                 .padding(.trailing, 20)
 
@@ -60,9 +59,9 @@ public struct NormalSearchView: View {
     }
     
     // MARK: - Top Bar
-    
-    private var TopbarSection: some View {
-        HStack(spacing: 6) {
+
+    private var topbarSection: some View {
+        HStack(spacing: 0) {
             Button {
                 // dismiss
             } label: {
@@ -73,7 +72,9 @@ public struct NormalSearchView: View {
                     .frame(width: 24, height: 24)
             }
             .frame(width: 44, height: 44)
-            
+
+            Spacer().frame(width: 6)
+
             WSSSearchBar(text: $searchText,
                          placeholder: "작품 제목, 작가를 검색하세요",
                          isFocused: $isFocused,
@@ -84,14 +85,14 @@ public struct NormalSearchView: View {
     // MARK: - 최근 검색어
     
     private var recentSearchKeywordSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text("최근 검색어")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                
+
                 Spacer()
-                
+
                 Button {
                     viewModel.handle(.clearRecentSearchWords)
                 } label: {
@@ -101,6 +102,8 @@ public struct NormalSearchView: View {
                 }
             }
             .padding(.horizontal, 20)
+
+            Spacer().frame(height: 12)
 
             ScrollView(.horizontal,
                        showsIndicators: false) {
@@ -126,12 +129,14 @@ public struct NormalSearchView: View {
     // MARK: - 장르별 검색
     
     private var genreSearchSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 3) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
                 Text("장르별 검색")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                
+
+                Spacer().frame(width: 3)
+
                 Button {
                     // TODO: - 탐색 정보탭으로 이동
                 } label: {
@@ -143,7 +148,9 @@ public struct NormalSearchView: View {
                 }
             }
             .padding(.horizontal, 20)
-            
+
+            Spacer().frame(height: 12)
+
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -177,12 +184,14 @@ public struct NormalSearchView: View {
     // MARK: - 키워드 검색
     
     private var keywordSearchSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 3) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
                 Text("키워드 검색")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                
+
+                Spacer().frame(width: 3)
+
                 Button {
                     // TODO: - 탐색 키워드탭으로 이동
                 } label: {
@@ -193,7 +202,9 @@ public struct NormalSearchView: View {
                         .frame(width: 16, height: 16)
                 }
             }
-            
+
+            Spacer().frame(height: 12)
+
             WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 8) {
                 ForEach(viewModel.state.popularKeywords, id: \.id) { keyword in
                     CapsuleSelectableKeywordChip(
@@ -214,29 +225,34 @@ public struct NormalSearchView: View {
     
     private var sosoPickSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 2) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 0) {
                     Text("소소")
                         .applyWSSFont(.title2)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    
+
+                    Spacer().frame(width: 2)
+
                     WSSImage.icTextPick.swiftUIImage
                 }
-                
+
+                Spacer().frame(height: 2)
+
                 Text("다른 독자들이 최근에 찾아본 웹소설이에요")
                     .applyWSSFont(.body4)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
             }
             .padding(.horizontal, 20)
-            
+
             Spacer().frame(height: 12)
-            
+
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.sosoPickNovels, id: \.novelID) { pick in
                         sosoPickItem(imageURL: pick.novelThumbnailimage,
                                      title: pick.novelTitle)
+                        .contentShape(Rectangle())
                         .onTapGesture {
                             print("\(pick.novelID)번 작품 상세로 이동")
                         }
