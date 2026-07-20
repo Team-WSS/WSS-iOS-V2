@@ -11,7 +11,7 @@
 - `Paginated<T>` (`PaginatedWrapper`) — 페이지네이션 공통 래퍼.
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
-- **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordGroup` Entity + `KeywordRepository` + `SearchKeywordsUseCase` + 루트의 `LoadTotalKeywordsUseCase`.
+- **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordGroup`, `PopularKeywords` Entity + `KeywordRepository` + `SearchKeywordsUseCase`/`LoadTotalKeywordsUseCase`(`Keyword/Usecase/`, 전부 이 하위로 통일됨).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
