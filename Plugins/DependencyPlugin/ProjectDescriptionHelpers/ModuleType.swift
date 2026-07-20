@@ -59,6 +59,7 @@ public enum DataModule: String, ModuleSpec {
     case profile
     case feed
     case novel
+    case search
 }
 
 public enum CoreModule: String, ModuleSpec {
