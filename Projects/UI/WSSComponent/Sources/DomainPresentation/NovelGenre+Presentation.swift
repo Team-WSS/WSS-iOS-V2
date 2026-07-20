@@ -86,4 +86,8 @@ public extension NovelGenre {
     static let myFeedFilter: [NovelGenre] = [
         .fantasy, .modernFantasy, .romance, .romanceFantasy, .wuxia, .mystery, .drama, .lightNovel, .BL
     ]
+
+    static let searchGenre: [NovelGenre] = [
+        .fantasy, .modernFantasy, .romance, .romanceFantasy, .wuxia, .BL, .lightNovel, .drama, .mystery
+    ]
 }

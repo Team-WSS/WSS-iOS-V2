@@ -12,7 +12,6 @@ import BaseDomain
 public struct SosoPick {
     
     public let novelID: NovelID
-    
     public let novelTitle: String
     public let novelThumbnailimage: URL?
     
