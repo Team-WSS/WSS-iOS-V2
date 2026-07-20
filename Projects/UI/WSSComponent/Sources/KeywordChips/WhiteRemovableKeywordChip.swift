@@ -34,9 +34,8 @@ public struct WhiteRemovableKeywordChip: View {
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 5)
-        .background(Color.wssWhite)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.wssPrimary100, lineWidth: 1))
+        .background { Capsule().fill(Color.wssWhite) }
+        .overlay { Capsule().strokeBorder(Color.wssPrimary100, lineWidth: 1) }
         .contentShape(Capsule())
         .onTapGesture { action() }
     }
