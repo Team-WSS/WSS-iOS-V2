@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseDomain
 import RecommendationDomain
 import SearchDomain
 import Logger
@@ -21,6 +22,7 @@ public enum SearchFactory {
         loadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase,
         removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase,
         clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase,
+        loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil
     ) -> some View {
         NormalSearchView(
@@ -29,6 +31,7 @@ public enum SearchFactory {
                 loadRecentSearchWordsUseCase: loadRecentSearchWordsUseCase,
                 removeRecentSearchWordUseCase: removeRecentSearchWordUseCase,
                 clearRecentSearchWordsUseCase: clearRecentSearchWordsUseCase,
+                loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
                 logger: logger
             )
         )

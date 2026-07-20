@@ -55,6 +55,7 @@ public struct NormalSearchView: View {
         .onAppear {
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
+            viewModel.handle(.loadPopularKeywords)
         }
     }
     
@@ -194,10 +195,15 @@ public struct NormalSearchView: View {
             }
             
             WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 8) {
-                ForEach(0..<10, id: \.self) { _ in
-                    CapsuleSelectableKeywordChip(keyword: "안녕",
-                                                 isSelected: false,
-                                                 action: { })
+                ForEach(viewModel.state.popularKeywords, id: \.id) { keyword in
+                    CapsuleSelectableKeywordChip(
+                        keyword: keyword.name,
+                        isSelected: false,
+                        action: {
+                            searchText = keyword.name
+                            // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
+                        }
+                    )
                 }
             }
         }
@@ -274,7 +280,8 @@ public struct NormalSearchView: View {
                 loadSosoPickUseCase: PreviewLoadSosoPickUseCase(),
                 loadRecentSearchWordsUseCase: PreviewLoadRecentSearchWordsUseCase(),
                 removeRecentSearchWordUseCase: PreviewRemoveRecentSearchWordUseCase(),
-                clearRecentSearchWordsUseCase: PreviewClearRecentSearchWordsUseCase()
+                clearRecentSearchWordsUseCase: PreviewClearRecentSearchWordsUseCase(),
+                loadPopularKeywordsUseCase: PreviewLoadPopularKeywordsUseCase()
             )
         )
     }
@@ -307,4 +314,14 @@ private struct PreviewRemoveRecentSearchWordUseCase: RemoveRecentSearchWordUseCa
 
 private struct PreviewClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase {
     func execute() async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadPopularKeywordsUseCase: LoadPopularKeywordsUseCase {
+    func execute() async throws(RepositoryError) -> PopularKeywords {
+        PopularKeywords(keywords: [
+            Keyword(id: KeywordID(1), name: "이세계"),
+            Keyword(id: KeywordID(2), name: "회귀"),
+            Keyword(id: KeywordID(3), name: "환생")
+        ])
+    }
 }
