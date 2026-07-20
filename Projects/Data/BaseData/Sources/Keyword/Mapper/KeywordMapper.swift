@@ -29,4 +29,15 @@ enum KeywordMapper {
             name: dto.keywordName
         )
     }
+
+    static func popularKeywords(from dto: PopularKeywordsResponse) -> PopularKeywords {
+        PopularKeywords(keywords: dto.keywords.map { popularKeyword(from: $0) })
+    }
+
+    static func popularKeyword(from dto: PopularKeywordResponse) -> Keyword {
+        Keyword(
+            id: KeywordID(dto.keywordId),
+            name: dto.keywordName
+        )
+    }
 }

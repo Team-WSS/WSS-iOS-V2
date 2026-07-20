@@ -11,7 +11,7 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 - **로컬 저장**: `AppStorage` 프로토콜 + `UserDefaultsStorage` 구현 + `StorageKey<V>`(타입 안전 키). 예: `appStorage.get(.userID)`.
 - **로깅**: `DataLogger` (모듈명 + underlying `Logger`).
 - **에러 타입**: `MappingError`, `CacheError`.
-- **Keyword 전체 스택**: `DefaultKeywordRepository`/`Service`/`Mapper`/`Endpoint`/`Factory` + `KeywordCache`. → BaseDomain `KeywordRepository`의 실제 구현이 여기 있다.
+- **Keyword 전체 스택**: `DefaultKeywordRepository`/`Service`/`Mapper`/`Endpoint`/`Factory` + `KeywordCache`. → BaseDomain `KeywordRepository`의 실제 구현이 여기 있다. `KeywordRepository.fetchPopularKeywords`(실시간 인기 키워드)만 캐시를 안 거치고 **매번 서버 직접 호출** — 나머지(`fetchKeywords`/`searchKeywords`)는 캐시 경유이니 혼동 말 것.
 - `NetworkingConfig` (Bundle plist에서 `BASE_URL`/`TEST_API_KEY`/`BUCKET_URL` 로드).
 - **이미지 URL 해석**: `ImageURLResolver.resolve(from:)` — 서버가 full URL과 버킷 상대 경로를 섞어 주는 이미지 문자열을 URL로 통일(경로형은 `@{scale}x.png` 조립). **모든 매퍼의 이미지 필드는 예외 없이 이걸 경유**(직조립 금지) — 전 Data 모듈 매퍼에 전수 적용 완료. ⚠️ 단 **이미지가 아닌 외부 링크**(예: `NovelMapper`의 `platformUrl` — 플랫폼 사이트 주소)는 대상이 아니다(`URL(string:)` 유지, 실패 시 throw). 신규 매퍼도 이미지 필드는 반드시 경유할 것.
 

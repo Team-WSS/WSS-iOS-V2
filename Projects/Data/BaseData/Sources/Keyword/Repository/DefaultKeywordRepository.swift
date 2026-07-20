@@ -74,4 +74,21 @@ public struct DefaultKeywordRepository: KeywordRepository {
             logger?.logUnknownError(action: action.text, error: error)
         }
     }
+    
+    public func fetchPopularKeywords() async throws(RepositoryError) -> PopularKeywords {
+        let action = KeywordAction.getPopularKeywords
+
+        do {
+            let response = try await keywordService.getPopularKeywords()
+            let result = KeywordMapper.popularKeywords(from: response)
+            logger?.logSuccess(action: action.text)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.text, error: error)
+            throw error.toRepositoryError()
+        } catch {
+            logger?.logUnknownError(action: action.text, error: error)
+            throw .unknown
+        }
+    }
 }

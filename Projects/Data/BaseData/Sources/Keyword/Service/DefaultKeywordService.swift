@@ -22,4 +22,10 @@ public struct DefaultKeywordService: KeywordService {
         return try await client.request(endpoint,
                                         decodeTo: KeywordGroupsResponse.self)
     }
+    
+    func getPopularKeywords() async throws -> PopularKeywordsResponse {
+        let endPoint = KeywordEndpoint.getPopularKeywords
+        return try await client.request(endPoint,
+                                        decodeTo: PopularKeywordsResponse.self)
+    }
 }

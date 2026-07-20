@@ -35,6 +35,11 @@ struct KeywordDemoView: View {
                         Task { await fetchKeywords() }
                     }
                     .buttonStyle(.bordered)
+
+                    Button("인기 키워드 조회") {
+                        Task { await fetchPopularKeywords() }
+                    }
+                    .buttonStyle(.bordered)
                 }
 
                 HStack {
@@ -87,6 +92,22 @@ struct KeywordDemoView: View {
         } catch {
             log = "검색 실패: \(error)"
         }
+    }
+
+    private func fetchPopularKeywords() async {
+        do {
+            let popularKeywords = try await repository.fetchPopularKeywords()
+            log = formatPopularKeywords(popularKeywords)
+        } catch {
+            log = "인기 키워드 조회 실패: \(error)"
+        }
+    }
+
+    private func formatPopularKeywords(_ popularKeywords: PopularKeywords) -> String {
+        guard !popularKeywords.keywords.isEmpty else { return "인기 키워드 없음" }
+        return popularKeywords.keywords.enumerated()
+            .map { index, keyword in "\(index + 1). [\(keyword.id.value)] \(keyword.name)" }
+            .joined(separator: "\n")
     }
 
     private func formatGroups(_ groups: [KeywordGroup]) -> String {
