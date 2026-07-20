@@ -15,7 +15,6 @@ let project = Project.createFeatureModule(
     targets: [.sources, .demo],
     internalDependencies: [
         .module(.domain(.base)),
-        .module(.domain(.novel)),
         .module(.domain(.recommendation)),
         .module(.domain(.search)),
         .module(.ui(.designSystem)),
@@ -23,7 +22,6 @@ let project = Project.createFeatureModule(
         .module(.core(.logger))
     ],
     demoDependencies: [
-        .module(.data(.novel)),
         .module(.data(.recommendation)),
         .module(.data(.search)),
         .module(.data(.base)),
