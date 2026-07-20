@@ -15,3 +15,4 @@ public typealias KeywordID = IDWrapper<Int>
 public typealias CommentID = IDWrapper<Int>
 public typealias NotificationID = IDWrapper<Int>
 public typealias BlockID = IDWrapper<Int>
+public typealias SearchWordID = IDWrapper<Int>
