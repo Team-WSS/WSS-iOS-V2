@@ -10,6 +10,8 @@ import Networking
 
 public struct DefaultSearchService: SearchService {
 
+    private static let autoCompletionSize = 20
+
     private let network: NetworkingRequestable
 
     public init(network: NetworkingRequestable) {
@@ -34,7 +36,7 @@ public struct DefaultSearchService: SearchService {
     public func getAutoCompletionWords(searchText: String) async throws -> SearchAutoCompletionWordsResponse {
         try await network.request(
             SearchEndpoint.getAutoCompletionWords(
-                SearchAutoCompletionQuery(query: searchText, size: 20)
+                SearchAutoCompletionQuery(query: searchText, size: Self.autoCompletionSize)
             ),
             decodeTo: SearchAutoCompletionWordsResponse.self
         )
