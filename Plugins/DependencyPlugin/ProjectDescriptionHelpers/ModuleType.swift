@@ -41,6 +41,7 @@ public enum DomainModule: String, ModuleSpec {
     case notification
     case profile
     case social
+    case search
 }
 
 public enum DataModule: String, ModuleSpec {
