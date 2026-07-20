@@ -21,3 +21,4 @@
 - ID는 반드시 래퍼 타입 사용. raw `Int`/`String`을 도메인 경계로 넘기지 말 것.
 - 화면 전용 부분집합/순서가 있는 필터 목록(예: 구 `NovelGenre.filterGenre`)은 여기 두지 않는다 — `BaseDomain`은 순수 enum만 갖고, 그런 목록은 `WSSComponent`의 `DomainPresentation` 확장(`NovelGenre+Presentation`)에 둔다.
 - `PopularKeywords`(`Keyword/Entity/`)는 실시간 인기 키워드 랭킹을 담는 별도 타입 — 랭킹은 `keywords: [Keyword]` **배열 순서로만** 표현한다(명시적 rank/count 필드 없음).
+- `NovelGenre.filterGenre`(필터용)와 `.searchGenre`(검색 화면 장르 그리드용)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
