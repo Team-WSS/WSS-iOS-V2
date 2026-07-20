@@ -26,6 +26,7 @@ public enum FeatureModule: String, ModuleSpec {
     case novelDetail
     case mypage
     case setting
+    case search
 }
 
 public enum DomainModule: String, ModuleSpec {
