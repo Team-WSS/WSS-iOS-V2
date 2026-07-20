@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import RecommendationDomain
+import SearchDomain
 
 import DesignSystem
 import WSSComponent
@@ -30,27 +31,30 @@ public struct NormalSearchView: View {
             TopbarSection
                 .padding(.leading, 6)
                 .padding(.trailing, 20)
-            
+
             Spacer().frame(height: 20)
-            
-            recentSearchKeywordSection
-            
-            Spacer().frame(height: 32)
-            
+
+            if !viewModel.state.recentSearchWords.isEmpty {
+                recentSearchKeywordSection
+
+                Spacer().frame(height: 32)
+            }
+
             genreSearchSection
-            
+
             Spacer().frame(height: 32)
-            
+
             keywordSearchSection
-            
+
             Spacer().frame(height: 32)
-            
+
             sosoPickSection
 
             Spacer()
         }
         .onAppear {
             viewModel.handle(.loadSosoPick)
+            viewModel.handle(.loadRecentSearchWords)
         }
     }
     
@@ -88,7 +92,7 @@ public struct NormalSearchView: View {
                 Spacer()
                 
                 Button {
-                    // TODO: - 전체 삭제
+                    viewModel.handle(.clearRecentSearchWords)
                 } label: {
                     Text("전체 삭제")
                         .applyWSSFont(.body4)
@@ -96,30 +100,28 @@ public struct NormalSearchView: View {
                 }
             }
             .padding(.horizontal, 20)
-            
+
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 6) {
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
-                    WhiteRemovableKeywordChip(keyword: "안녕",
-                                              action: {})
+                    ForEach(viewModel.state.recentSearchWords, id: \.id) { word in
+                        WhiteRemovableKeywordChip(
+                            keyword: word.title,
+                            onSelect: {
+                                searchText = word.title
+                                // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
+                            },
+                            onDelete: { viewModel.handle(.removeRecentSearchWord(word)) }
+                        )
+                    }
                 }
             }
+            .scrollBounceBehavior(.basedOnSize,
+                                  axes: .horizontal)
             .contentMargins(.horizontal, 20)
         }
     }
-    
+
     // MARK: - 장르별 검색
     
     private var genreSearchSection: some View {
@@ -269,7 +271,10 @@ public struct NormalSearchView: View {
     NavigationStack {
         NormalSearchView(
             viewModel: NormalSearchViewModel(
-                loadSosoPickUseCase: PreviewLoadSosoPickUseCase()
+                loadSosoPickUseCase: PreviewLoadSosoPickUseCase(),
+                loadRecentSearchWordsUseCase: PreviewLoadRecentSearchWordsUseCase(),
+                removeRecentSearchWordUseCase: PreviewRemoveRecentSearchWordUseCase(),
+                clearRecentSearchWordsUseCase: PreviewClearRecentSearchWordsUseCase()
             )
         )
     }
@@ -285,4 +290,21 @@ private struct PreviewLoadSosoPickUseCase: LoadSosoPickUseCase {
             )
         ]
     }
+}
+
+private struct PreviewLoadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase {
+    func execute() async throws(RepositoryError) -> [RecentSearchWord] {
+        [
+            RecentSearchWord(id: SearchWordID(1), title: "환생물"),
+            RecentSearchWord(id: SearchWordID(2), title: "회귀물")
+        ]
+    }
+}
+
+private struct PreviewRemoveRecentSearchWordUseCase: RemoveRecentSearchWordUseCase {
+    func execute(word: RecentSearchWord) async throws(RepositoryError) {}
+}
+
+private struct PreviewClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase {
+    func execute() async throws(RepositoryError) {}
 }

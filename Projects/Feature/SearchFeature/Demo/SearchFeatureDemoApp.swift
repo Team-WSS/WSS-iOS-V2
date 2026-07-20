@@ -11,8 +11,10 @@ import SwiftUI
 import SearchFeature
 import BaseDomain
 import RecommendationDomain
+import SearchDomain
 import BaseData
 import RecommendationData
+import SearchData
 import Logger
 import Networking
 import DesignSystem
@@ -61,12 +63,18 @@ private struct DemoRootView: View {
         }
     }
 
+    /// Mock 모드에서 최근 검색어 삭제가 실제로 반영되어 보이도록 공유하는 인메모리 저장소.
+    private let demoRecentSearchStore = DemoRecentSearchStore()
+
     @ViewBuilder
     private var searchView: some View {
         switch dataSource {
         case .mock:
             SearchFactory.makeView(
                 loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
+                loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
+                removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
+                clearRecentSearchWordsUseCase: DemoClearRecentSearchWordsUseCase(store: demoRecentSearchStore),
                 logger: consoleLogger
             )
         case .live:
@@ -84,12 +92,19 @@ private struct DemoRootView: View {
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
         )
-        let repository = RecommendationDataFactory.makeRepository(
+        let recommendationRepository = RecommendationDataFactory.makeRepository(
             network: client,
             logger: DataLogger(moduleName: "RecommendationData", underlying: consoleLogger)
         )
+        let searchRepository = SearchDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
+        )
         return SearchFactory.makeView(
-            loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: repository),
+            loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
+            loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
+            removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
+            clearRecentSearchWordsUseCase: DefaultClearRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             logger: consoleLogger
         )
     }
@@ -108,5 +123,36 @@ private struct DemoLoadSosoPickUseCase: LoadSosoPickUseCase {
                 novelThumbnailimage: URL(string: "https://i.pinimg.com/1200x/40/cb/df/40cbdfcce149156643cc6eae5e0dec6f.jpg")
             )
         }
+    }
+}
+
+/// Mock UseCase 3개가 공유하는 인메모리 최근 검색어 목록.
+private final class DemoRecentSearchStore {
+    var words: [RecentSearchWord] = (1...5).map { number in
+        RecentSearchWord(id: SearchWordID(number), title: "데모 검색어 \(number)")
+    }
+}
+
+private struct DemoLoadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase {
+    let store: DemoRecentSearchStore
+
+    func execute() async throws(RepositoryError) -> [RecentSearchWord] {
+        store.words
+    }
+}
+
+private struct DemoRemoveRecentSearchWordUseCase: RemoveRecentSearchWordUseCase {
+    let store: DemoRecentSearchStore
+
+    func execute(word: RecentSearchWord) async throws(RepositoryError) {
+        store.words.removeAll { $0.id == word.id }
+    }
+}
+
+private struct DemoClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase {
+    let store: DemoRecentSearchStore
+
+    func execute() async throws(RepositoryError) {
+        store.words = []
     }
 }
