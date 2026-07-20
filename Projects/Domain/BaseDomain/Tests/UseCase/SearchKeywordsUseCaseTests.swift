@@ -6,6 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
 @testable import BaseDomain
@@ -18,8 +19,10 @@ struct SearchKeywordsUseCaseTests {
     func searchKeywordsSuccess() async throws {
         let mock = MockKeywordRepository()
         mock.searchKeywordsResult = .success([
-            makeKeyword(id: 1, name: "삼국지"),
-            makeKeyword(id: 2, name: "성장")
+            makeKeywordGroup(keywords: [
+                makeKeyword(id: 1, name: "삼국지"),
+                makeKeyword(id: 2, name: "성장")
+            ])
         ])
 
         let usecase = DefaultSearchKeywordUseCase(keywordRepository: mock)
@@ -73,5 +76,9 @@ struct SearchKeywordsUseCaseTests {
 extension SearchKeywordsUseCaseTests {
     private func makeKeyword(id: Int, name: String) -> Keyword {
         Keyword(id: KeywordID(id), name: name)
+    }
+
+    private func makeKeywordGroup(name: String = "로맨스", keywords: [Keyword]) -> KeywordGroup {
+        KeywordGroup(name: name, image: nil, keywords: keywords)
     }
 }
