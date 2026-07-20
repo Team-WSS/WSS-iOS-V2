@@ -22,4 +22,5 @@ public enum NovelGenre: CaseIterable {
 
 extension NovelGenre {
     public static let filterGenre: [NovelGenre] = [.romance, .romanceFantasy, .fantasy, .modernFantasy, .wuxia, .mystery, .drama, .lightNovel, .BL]
+    public static let searchGenre: [NovelGenre] = [.fantasy, .modernFantasy, .romance, .romanceFantasy, .wuxia, .BL, .lightNovel, .drama, .mystery]
 }
