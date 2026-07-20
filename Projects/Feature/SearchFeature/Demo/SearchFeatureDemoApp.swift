@@ -75,6 +75,7 @@ private struct DemoRootView: View {
                 loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
                 removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
                 clearRecentSearchWordsUseCase: DemoClearRecentSearchWordsUseCase(store: demoRecentSearchStore),
+                loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
                 logger: consoleLogger
             )
         case .live:
@@ -100,11 +101,16 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
         )
+        let keywordRepository = KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
         return SearchFactory.makeView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
             clearRecentSearchWordsUseCase: DefaultClearRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
+            loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
             logger: consoleLogger
         )
     }
@@ -154,5 +160,15 @@ private struct DemoClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase 
 
     func execute() async throws(RepositoryError) {
         store.words = []
+    }
+}
+
+private struct DemoLoadPopularKeywordsUseCase: LoadPopularKeywordsUseCase {
+    func execute() async throws(RepositoryError) -> PopularKeywords {
+        PopularKeywords(
+            keywords: ["이세계", "회귀", "환생", "빙의", "먼치킨", "집착", "복수"].enumerated().map { index, name in
+                Keyword(id: KeywordID(index + 1), name: name)
+            }
+        )
     }
 }

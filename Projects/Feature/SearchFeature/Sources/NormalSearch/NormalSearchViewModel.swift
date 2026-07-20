@@ -20,6 +20,7 @@ public class NormalSearchViewModel {
     struct State {
         var sosoPickNovels: [SosoPick] = []
         var recentSearchWords: [RecentSearchWord] = []
+        var popularKeywords: [Keyword] = []
         var isLoading = false
         var hasLoadError = false
     }
@@ -29,6 +30,7 @@ public class NormalSearchViewModel {
         case loadRecentSearchWords
         case removeRecentSearchWord(RecentSearchWord)
         case clearRecentSearchWords
+        case loadPopularKeywords
     }
 
     // MARK: - Output
@@ -43,6 +45,8 @@ public class NormalSearchViewModel {
     @ObservationIgnored private var recentSearchWordsTask: Task<Void, Never>?
     @ObservationIgnored private var removingRecentSearchWordIDs: Set<SearchWordID> = []
     @ObservationIgnored private var isClearingRecentSearchWords = false
+    @ObservationIgnored private var hasLoadedPopularKeywords = false
+    @ObservationIgnored private var popularKeywordsTask: Task<Void, Never>?
 
     // MARK: - Dependency
 
@@ -54,6 +58,9 @@ public class NormalSearchViewModel {
     private let removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase
     private let clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase
 
+    // BaseDomain
+    private let loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase
+
     private let logger: Logger?
 
     // MARK: - Init
@@ -63,12 +70,14 @@ public class NormalSearchViewModel {
         loadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase,
         removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase,
         clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase,
+        loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil
     ) {
         self.loadSosoPickUseCase = loadSosoPickUseCase
         self.loadRecentSearchWordsUseCase = loadRecentSearchWordsUseCase
         self.removeRecentSearchWordUseCase = removeRecentSearchWordUseCase
         self.clearRecentSearchWordsUseCase = clearRecentSearchWordsUseCase
+        self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
     }
 
@@ -84,6 +93,8 @@ public class NormalSearchViewModel {
             removeRecentSearchWord(word)
         case .clearRecentSearchWords:
             clearRecentSearchWords()
+        case .loadPopularKeywords:
+            loadPopularKeywords()
         }
     }
 }
@@ -119,6 +130,11 @@ private extension NormalSearchViewModel {
         state.recentSearchWords = []
         isClearingRecentSearchWords = true
         Task { await syncClearRecentSearchWords(rollbackTo: before) }
+    }
+
+    func loadPopularKeywords() {
+        guard !hasLoadedPopularKeywords, popularKeywordsTask == nil else { return }
+        popularKeywordsTask = Task { await loadPopularKeywordsList() }
     }
 }
 
@@ -178,6 +194,20 @@ private extension NormalSearchViewModel {
             guard !Task.isCancelled else { return }
             logger?.error("최근 검색어 전체 삭제 실패: \(String(describing: error))")
             state.recentSearchWords = before
+        }
+    }
+
+    func loadPopularKeywordsList() async {
+        defer { popularKeywordsTask = nil }
+
+        do {
+            let popularKeywords = try await loadPopularKeywordsUseCase.execute()
+            guard !Task.isCancelled else { return }
+            state.popularKeywords = popularKeywords.keywords
+            hasLoadedPopularKeywords = true
+        } catch {
+            guard !Task.isCancelled else { return }
+            logger?.error("인기 키워드 조회 실패: \(String(describing: error))")
         }
     }
 }
