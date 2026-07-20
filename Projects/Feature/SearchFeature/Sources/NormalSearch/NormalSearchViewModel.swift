@@ -21,6 +21,8 @@ final class NormalSearchViewModel {
         var sosoPickNovels: [SosoPick] = []
         var recentSearchWords: [RecentSearchWord] = []
         var popularKeywords: [Keyword] = []
+        var searchText: String = ""
+        var autoCompletionWords: [SearchAutoCompletionWord] = []
         var isLoading = false
         var hasLoadError = false
     }
@@ -31,6 +33,7 @@ final class NormalSearchViewModel {
         case removeRecentSearchWord(RecentSearchWord)
         case clearRecentSearchWords
         case loadPopularKeywords
+        case updateSearchText(String)
     }
 
     // MARK: - Output
@@ -47,6 +50,7 @@ final class NormalSearchViewModel {
     @ObservationIgnored private var isClearingRecentSearchWords = false
     @ObservationIgnored private var hasLoadedPopularKeywords = false
     @ObservationIgnored private var popularKeywordsTask: Task<Void, Never>?
+    @ObservationIgnored private var autoCompletionTask: Task<Void, Never>?
 
     // MARK: - Dependency
 
@@ -57,6 +61,7 @@ final class NormalSearchViewModel {
     private let loadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase
     private let removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase
     private let clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase
+    private let searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase
 
     // BaseDomain
     private let loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase
@@ -70,6 +75,7 @@ final class NormalSearchViewModel {
         loadRecentSearchWordsUseCase: LoadRecentSearchWordsUseCase,
         removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase,
         clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase,
+        searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil
     ) {
@@ -77,6 +83,7 @@ final class NormalSearchViewModel {
         self.loadRecentSearchWordsUseCase = loadRecentSearchWordsUseCase
         self.removeRecentSearchWordUseCase = removeRecentSearchWordUseCase
         self.clearRecentSearchWordsUseCase = clearRecentSearchWordsUseCase
+        self.searchAutoCompletionWordsUseCase = searchAutoCompletionWordsUseCase
         self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
     }
@@ -95,6 +102,8 @@ final class NormalSearchViewModel {
             clearRecentSearchWords()
         case .loadPopularKeywords:
             loadPopularKeywords()
+        case .updateSearchText(let text):
+            updateSearchText(text)
         }
     }
 }
@@ -136,6 +145,18 @@ private extension NormalSearchViewModel {
     func loadPopularKeywords() {
         guard !hasLoadedPopularKeywords, popularKeywordsTask == nil else { return }
         popularKeywordsTask = Task { await loadPopularKeywordsList() }
+    }
+
+    /// 입력마다 이전 요청은 취소하고 새로 debounce한다(타이핑 중 매 글자마다 서버를 치지 않기 위함).
+    func updateSearchText(_ text: String) {
+        state.searchText = text
+        autoCompletionTask?.cancel()
+
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            state.autoCompletionWords = []
+            return
+        }
+        autoCompletionTask = Task { await loadAutoCompletionWords(searchText: text) }
     }
 }
 
@@ -211,6 +232,24 @@ private extension NormalSearchViewModel {
         } catch {
             guard !Task.isCancelled else { return }
             logger?.error("인기 키워드 조회 실패: \(String(describing: error))")
+        }
+    }
+
+    func loadAutoCompletionWords(searchText: String) async {
+        // 짧은 debounce — 타이핑이 끝난 뒤에만 조회한다.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        guard !Task.isCancelled else { return }
+
+        defer { autoCompletionTask = nil }
+
+        do {
+            let words = try await searchAutoCompletionWordsUseCase.execute(searchText: searchText)
+            guard !Task.isCancelled else { return }
+            state.autoCompletionWords = words
+        } catch {
+            guard !Task.isCancelled else { return }
+            logger?.error("검색어 자동완성 조회 실패: \(String(describing: error))")
+            state.autoCompletionWords = []
         }
     }
 }

@@ -18,11 +18,18 @@ struct NormalSearchView: View {
 
     @State private var viewModel: NormalSearchViewModel
 
-    @State private var searchText: String = ""
     @FocusState var isFocused: Bool
 
     init(viewModel: NormalSearchViewModel) {
         self._viewModel = State(initialValue: viewModel)
+    }
+
+    /// 검색어는 VM이 소유(입력마다 자동완성 조회를 트리거)하므로 View는 Binding으로 중계만 한다.
+    private var searchTextBinding: Binding<String> {
+        Binding(
+            get: { viewModel.state.searchText },
+            set: { viewModel.handle(.updateSearchText($0)) }
+        )
     }
 
     var body: some View {
@@ -33,21 +40,32 @@ struct NormalSearchView: View {
 
             Spacer().frame(height: 20)
 
-            if !viewModel.state.recentSearchWords.isEmpty {
-                recentSearchKeywordSection
+            if isFocused, !viewModel.state.searchText.isEmpty {
+                NormalSearchAutoCompletionView(
+                    searchText: viewModel.state.searchText,
+                    words: viewModel.state.autoCompletionWords,
+                    onSelect: { word in
+                        viewModel.handle(.updateSearchText(word.word))
+                        // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
+                    }
+                )
+            } else {
+                if !viewModel.state.recentSearchWords.isEmpty {
+                    recentSearchKeywordSection
+
+                    Spacer().frame(height: 32)
+                }
+
+                genreSearchSection
 
                 Spacer().frame(height: 32)
+
+                keywordSearchSection
+
+                Spacer().frame(height: 32)
+
+                sosoPickSection
             }
-
-            genreSearchSection
-
-            Spacer().frame(height: 32)
-
-            keywordSearchSection
-
-            Spacer().frame(height: 32)
-
-            sosoPickSection
 
             Spacer()
         }
@@ -57,7 +75,7 @@ struct NormalSearchView: View {
             viewModel.handle(.loadPopularKeywords)
         }
     }
-    
+
     // MARK: - Top Bar
 
     private var topbarSection: some View {
@@ -75,7 +93,7 @@ struct NormalSearchView: View {
 
             Spacer().frame(width: 6)
 
-            WSSSearchBar(text: $searchText,
+            WSSSearchBar(text: searchTextBinding,
                          placeholder: "작품 제목, 작가를 검색하세요",
                          isFocused: $isFocused,
                          onSearch: { })
@@ -112,7 +130,7 @@ struct NormalSearchView: View {
                         WhiteRemovableKeywordChip(
                             keyword: word.title,
                             onSelect: {
-                                searchText = word.title
+                                viewModel.handle(.updateSearchText(word.title))
                                 // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
                             },
                             onDelete: { viewModel.handle(.removeRecentSearchWord(word)) }
@@ -211,7 +229,7 @@ struct NormalSearchView: View {
                         keyword: keyword.name,
                         isSelected: false,
                         action: {
-                            searchText = keyword.name
+                            viewModel.handle(.updateSearchText(keyword.name))
                             // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
                         }
                     )
@@ -297,6 +315,7 @@ struct NormalSearchView: View {
                 loadRecentSearchWordsUseCase: PreviewLoadRecentSearchWordsUseCase(),
                 removeRecentSearchWordUseCase: PreviewRemoveRecentSearchWordUseCase(),
                 clearRecentSearchWordsUseCase: PreviewClearRecentSearchWordsUseCase(),
+                searchAutoCompletionWordsUseCase: PreviewSearchAutoCompletionWordsUseCase(),
                 loadPopularKeywordsUseCase: PreviewLoadPopularKeywordsUseCase()
             )
         )
@@ -330,6 +349,15 @@ private struct PreviewRemoveRecentSearchWordUseCase: RemoveRecentSearchWordUseCa
 
 private struct PreviewClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase {
     func execute() async throws(RepositoryError) {}
+}
+
+private struct PreviewSearchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase {
+    func execute(searchText: String) async throws(RepositoryError) -> [SearchAutoCompletionWord] {
+        [
+            SearchAutoCompletionWord(word: "\(searchText) 로맨스"),
+            SearchAutoCompletionWord(word: "\(searchText) 판타지")
+        ]
+    }
 }
 
 private struct PreviewLoadPopularKeywordsUseCase: LoadPopularKeywordsUseCase {
