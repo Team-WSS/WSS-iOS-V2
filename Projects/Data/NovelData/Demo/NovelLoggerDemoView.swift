@@ -211,7 +211,7 @@ struct NovelLoggerDemoView: View {
     private func searchNovelByText(_ text: String) async {
         appendLog(level: .debug, message: "텍스트 검색 '\(text)' 요청...")
         do {
-            let (paginated, totalCount) = try await repository.searchNovelByText(text)
+            let (paginated, totalCount) = try await repository.searchNovelByText(text, page: 0)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             appendLog(level: .info,
                       message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
@@ -259,7 +259,7 @@ struct NovelLoggerDemoView: View {
                                       publicationStatus: nil,
                                       ratingThreshold: nil,
                                       keywords: [])
-            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter)
+            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter, page: 0)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             appendLog(level: .info,
                       message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")

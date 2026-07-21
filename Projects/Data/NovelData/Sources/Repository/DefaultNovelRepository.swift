@@ -89,11 +89,11 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    public func searchNovelByText(_ text: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = NovelAction.searchByText(query: text)
         let query = NormalSearchQuery(
             query: text,
-            page: 0,
+            page: page,
             size: 20
         )
         
@@ -114,11 +114,11 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    public func searchNovelByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = NovelAction.searchByFilter
-        
+
         do {
-            let query = NovelMapper.detailSearchQuery(from: filter)
+            let query = NovelMapper.detailSearchQuery(from: filter, page: page)
             let response = try await service.getDetailSearchNovels(query: query)
             let result = NovelMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.text)
