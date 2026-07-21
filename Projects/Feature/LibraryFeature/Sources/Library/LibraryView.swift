@@ -134,11 +134,13 @@ private extension LibraryView {
 
     /// 그리드/리스트 모드 토글 + 필터 칩 행(관심 + 시트 필터 6종).
     var controlSection: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             displayModeToggle
+            Spacer().frame(width: 12)
             Rectangle()
                 .fill(Color.wssGray70)
                 .frame(width: 1, height: 29)
+            Spacer().frame(width: 12)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 3) {
                     interestChip
@@ -231,6 +233,7 @@ private extension LibraryView {
                     onNovelSelected(novel.id)
                 } label: {
                     LibraryGridCell(novel: novel)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onAppear { loadMoreIfLast(novel) }
@@ -246,7 +249,9 @@ private extension LibraryView {
                     onNovelSelected(novel.id)
                 } label: {
                     LibraryListCell(novel: novel)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onAppear { loadMoreIfLast(novel) }
@@ -290,8 +295,7 @@ private extension LibraryView {
     }
 }
 
-// MARK: - Controls
-
+// 화면 전용 컨트롤(모드 토글·필터 칩) — Sections가 조립하는 leaf들.
 private extension LibraryView {
 
     /// 그리드/리스트 보기 방식 미니 세그먼트 — 선택 세그먼트만 흰 배경 + 그림자.
@@ -428,6 +432,7 @@ private extension LibraryView {
     }
 
     var toastType: WSSToastType {
+        // 더보기·키워드 실패 모두 네트워크 실패 계열 — 정본(NovelDetail)과 동일하게 unknownError 하나로 표현(의도).
         .unknownError
     }
 
@@ -459,7 +464,7 @@ private extension LibraryView {
             return summary(values: filter.genres.map(\.displayName), fallback: "장르")
         case .publicationStatus:
             guard let status = filter.publicationStatus else { return "연재상태" }
-            return status == .onGoing ? "연재중" : "완결작"
+            return status.libraryDisplayName
         case .rating:
             switch filter.rating {
             case .range(let min, let max): return String(format: "%.1f~%.1f", min, max)
@@ -476,5 +481,50 @@ private extension LibraryView {
     func summary(values: [String], fallback: String) -> String {
         guard let first = values.first else { return fallback }
         return values.count == 1 ? first : "\(first) 외 \(values.count - 1)"
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    LibraryView(
+        viewModel: LibraryViewModel(
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            loadMyLibraryKeywordsUseCase: PreviewLoadMyLibraryKeywordsUseCase()
+        ),
+        onNovelSelected: { print("작품 상세: \($0)") },
+        onSearchTapped: { print("웹소설 찾기") },
+        onRegisterTapped: { print("작품 등록") },
+        onNotificationTapped: { print("알림 관리") },
+        onAuthenticationRequired: { print("로그인 유도") }
+    )
+}
+
+private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        let novels = (1...6).map { index in
+            LibraryNovel(
+                id: NovelID(index),
+                title: "미리보기 작품 \(index)",
+                thumbnailImage: nil,
+                rating: 4.2,
+                isInterested: index.isMultiple(of: 2),
+                userReview: UserNovelReview(
+                    readingStatus: .watching,
+                    rating: try? Rating(4.0),
+                    attractivePoint: [.character],
+                    period: nil,
+                    keywords: []
+                ),
+                writtenFeeds: []
+            )
+        }
+        return (CursorPaginated(items: novels, hasNext: false, nextCursor: nil), novels.count)
+    }
+}
+
+private struct PreviewLoadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase {
+    func execute() async throws(RepositoryError) -> [Keyword] {
+        [Keyword(id: KeywordID(1), name: "빙의")]
     }
 }

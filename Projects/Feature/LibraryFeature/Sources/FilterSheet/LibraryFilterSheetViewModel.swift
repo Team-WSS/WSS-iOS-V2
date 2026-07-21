@@ -56,6 +56,18 @@ final class LibraryFilterSheetViewModel {
         }
     }
 
+    /// 현재 활성 필터 전체를 칩 목록으로 (탭 순서대로).
+    var chips: [Chip] {
+        var result: [Chip] = []
+        result += state.filter.readingStatus.map { .readingStatus($0) }
+        result += state.filter.genres.map { .genre($0) }
+        if let status = state.filter.publicationStatus { result.append(.publicationStatus(status)) }
+        if let rating = state.filter.rating { result.append(.rating(rating)) }
+        result += state.filter.attractivePoint.map { .attractivePoint($0) }
+        result += state.filter.keywords.map { .keyword($0) }
+        return result
+    }
+
     // MARK: - Action
 
     enum Action {
@@ -79,18 +91,6 @@ final class LibraryFilterSheetViewModel {
         case rating(LibraryRatingFilter)
         case attractivePoint(AttractivePoint)
         case keyword(Keyword)
-    }
-
-    /// 현재 활성 필터 전체를 칩 목록으로 (탭 순서대로).
-    var chips: [Chip] {
-        var result: [Chip] = []
-        result += state.filter.readingStatus.map { .readingStatus($0) }
-        result += state.filter.genres.map { .genre($0) }
-        if let status = state.filter.publicationStatus { result.append(.publicationStatus(status)) }
-        if let rating = state.filter.rating { result.append(.rating(rating)) }
-        result += state.filter.attractivePoint.map { .attractivePoint($0) }
-        result += state.filter.keywords.map { .keyword($0) }
-        return result
     }
 
     // MARK: - Output

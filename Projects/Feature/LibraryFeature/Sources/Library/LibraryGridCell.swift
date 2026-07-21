@@ -105,3 +105,26 @@ struct LibraryGridCell: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    LibraryGridCell(
+        novel: LibraryNovel(
+            id: NovelID(1),
+            title: "당신의 이해를 돕기 위하여",
+            thumbnailImage: nil,
+            rating: 4.2,
+            isInterested: true,
+            userReview: UserNovelReview(
+                readingStatus: .watching,
+                rating: try? Rating(4.0),
+                attractivePoint: [.character],
+                period: nil,
+                keywords: []
+            ),
+            writtenFeeds: []
+        )
+    )
+    .frame(width: 108)
+}

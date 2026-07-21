@@ -172,3 +172,40 @@ struct LibraryListCell: View {
         String(format: "%.1f", value)
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    VStack(spacing: 28) {
+        LibraryListCell(
+            novel: LibraryNovel(
+                id: NovelID(1),
+                title: "당신의 이해를 돕기 위하여",
+                thumbnailImage: nil,
+                rating: 4.2,
+                isInterested: true,
+                userReview: UserNovelReview(
+                    readingStatus: .watching,
+                    rating: try? Rating(4.0),
+                    attractivePoint: [.character, .vibe],
+                    period: nil,
+                    keywords: [Keyword(id: KeywordID(1), name: "빙의")]
+                ),
+                writtenFeeds: []
+            )
+        )
+        // 평가 없는 작품 — 뱃지·별점·매력포인트·키워드 행이 숨는다.
+        LibraryListCell(
+            novel: LibraryNovel(
+                id: NovelID(2),
+                title: "전지적 독자 시점",
+                thumbnailImage: nil,
+                rating: 4.2,
+                isInterested: true,
+                userReview: nil,
+                writtenFeeds: []
+            )
+        )
+    }
+    .padding(.horizontal, 20)
+}

@@ -207,18 +207,17 @@ private extension LibraryFilterSheet {
     }
 
     var publicationStatusContent: some View {
-        HStack(spacing: 11) {
-            RectangleSelectableKeywordChip(
-                keyword: "연재중",
-                isSelected: viewModel.state.filter.publicationStatus == .onGoing
-            ) {
-                viewModel.handle(.togglePublicationStatus(.onGoing))
-            }
-            RectangleSelectableKeywordChip(
-                keyword: "완결작",
-                isSelected: viewModel.state.filter.publicationStatus == .completed
-            ) {
-                viewModel.handle(.togglePublicationStatus(.completed))
+        HStack(spacing: 0) {
+            ForEach(Array([NovelPublicationStatus.onGoing, .completed].enumerated()), id: \.element) { index, status in
+                if index > 0 {
+                    Spacer().frame(width: 11)
+                }
+                RectangleSelectableKeywordChip(
+                    keyword: status.libraryDisplayName,
+                    isSelected: viewModel.state.filter.publicationStatus == status
+                ) {
+                    viewModel.handle(.togglePublicationStatus(status))
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -323,7 +322,7 @@ private extension LibraryFilterSheet {
 
     /// 초기화(시트 필터만 리셋, 시트 유지) + 작품 찾기(적용 후 닫기).
     var ctaSection: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             Button {
                 viewModel.handle(.clearAll)
             } label: {
@@ -346,6 +345,8 @@ private extension LibraryFilterSheet {
             }
             .buttonStyle(.plain)
 
+            Spacer().frame(width: 10)
+
             WSSCTAButton(title: "작품 찾기") {
                 onApply(viewModel.state.filter)
                 dismiss()
@@ -354,8 +355,11 @@ private extension LibraryFilterSheet {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
+}
 
-    // MARK: - Presentation
+// MARK: - Presentation
+
+private extension LibraryFilterSheet {
 
     var unratedOnlyBinding: Binding<Bool> {
         Binding(
@@ -382,7 +386,7 @@ private extension LibraryFilterSheet {
         case .genre(let genre):
             return genre.displayName
         case .publicationStatus(let status):
-            return status == .onGoing ? "연재중" : "완결작"
+            return status.libraryDisplayName
         case .rating(.range(let min, let max)):
             return String(format: "%.1f~%.1f", min, max)
         case .rating(.unratedOnly):
@@ -393,4 +397,20 @@ private extension LibraryFilterSheet {
             return keyword.name
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    var filter = MyLibraryFilter()
+    filter.addReadingStatus(.watching)
+    filter.addAttractivePoint(.writingSkill)
+    return LibraryFilterSheet(
+        filter: filter,
+        initialTab: .attractivePoint,
+        registeredKeywords: [
+            Keyword(id: KeywordID(1), name: "빙의"),
+            Keyword(id: KeywordID(2), name: "후회")
+        ]
+    ) { print("필터 적용: \($0)") }
 }
