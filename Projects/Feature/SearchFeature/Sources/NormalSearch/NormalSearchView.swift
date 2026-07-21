@@ -11,19 +11,33 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import SearchDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 
+/// `.navigationDestination(item:)`는 `Hashable` 아이템이 필요하지만, `SearchFilter`(Domain)에 UI 내비게이션
+/// 전용 `Hashable`을 얹고 싶지 않아 UUID 기반 얇은 래퍼로 감싼다 — 탭마다 매번 새 값이라 값 동일성 비교는 불필요.
+private struct DetailSearchNavigation: Hashable {
+    let id = UUID()
+    let filter: SearchFilter
+    
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
 struct NormalSearchView: View {
-
+    
+    @Environment(\.dismiss) private var dismiss
+    
     @State private var viewModel: NormalSearchViewModel
-
+    @State private var detailSearchNavigation: DetailSearchNavigation?
+    
     @FocusState var isFocused: Bool
-
+    
     init(viewModel: NormalSearchViewModel) {
         self._viewModel = State(initialValue: viewModel)
     }
-
+    
     /// 검색어는 VM이 소유(입력마다 자동완성 조회를 트리거)하므로 View는 Binding으로 중계만 한다.
     private var searchTextBinding: Binding<String> {
         Binding(
@@ -31,57 +45,85 @@ struct NormalSearchView: View {
             set: { viewModel.handle(.updateSearchText($0)) }
         )
     }
-
+    
     var body: some View {
-        VStack(spacing: 0) {
-            topbarSection
-                .padding(.leading, 6)
-                .padding(.trailing, 20)
-
-            Spacer().frame(height: 20)
-
-            if isFocused, !viewModel.state.searchText.isEmpty {
-                NormalSearchAutoCompletionView(
-                    searchText: viewModel.state.searchText,
-                    words: viewModel.state.autoCompletionWords,
-                    onSelect: { word in
-                        viewModel.handle(.updateSearchText(word.word))
-                        // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                topbarSection
+                    .padding(.leading, 6)
+                    .padding(.trailing, 20)
+                
+                Spacer().frame(height: 11)
+                
+                if viewModel.state.isSearchExecuted {
+                    NormalSearchResultView(
+                        novels: viewModel.state.searchResultNovels,
+                        resultCount: viewModel.state.searchResultCount,
+                        isLoading: viewModel.state.isSearchingResult,
+                        hasLoadError: viewModel.state.hasSearchResultError,
+                        isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
+                        onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
+                        onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) }
+                    )
+                } else if isFocused, !viewModel.state.searchText.isEmpty {
+                    NormalSearchAutoCompletionView(
+                        searchText: viewModel.state.searchText,
+                        words: viewModel.state.autoCompletionWords,
+                        onSelect: { word in
+                            isFocused = false
+                            viewModel.handle(.executeSearch(word.word))
+                        }
+                    )
+                } else {
+                    Spacer().frame(height: 8)
+                    
+                    if !viewModel.state.recentSearchWords.isEmpty {
+                        recentSearchKeywordSection
+                        
+                        Spacer().frame(height: 32)
                     }
-                )
-            } else {
-                if !viewModel.state.recentSearchWords.isEmpty {
-                    recentSearchKeywordSection
-
+                    
+                    genreSearchSection
+                    
                     Spacer().frame(height: 32)
+                    
+                    keywordSearchSection
+                    
+                    Spacer().frame(height: 32)
+                    
+                    sosoPickSection
                 }
-
-                genreSearchSection
-
-                Spacer().frame(height: 32)
-
-                keywordSearchSection
-
-                Spacer().frame(height: 32)
-
-                sosoPickSection
+                
+                Spacer()
             }
-
-            Spacer()
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+            .contentShape(Rectangle())
+            .onTapGesture { isFocused = false }
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .background(WSSColor.wssWhite.swiftUIColor)
+        .ignoresSafeArea(.container, edges: .bottom)
+        .navigationBarBackButtonHidden()
         .onAppear {
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
             viewModel.handle(.loadPopularKeywords)
         }
+        .navigationDestination(item: $detailSearchNavigation) { navigation in
+            DetailSearchResultView(
+                viewModel: viewModel.makeDetailSearchResultViewModel(
+                    filter: navigation.filter
+                )
+            )
+        }
     }
-
+    
     // MARK: - Top Bar
-
+    
     private var topbarSection: some View {
         HStack(spacing: 0) {
             Button {
-                // dismiss
+                dismiss()
             } label: {
                 WSSImage.icNavigateLeft.swiftUIImage
                     .resizable()
@@ -90,13 +132,16 @@ struct NormalSearchView: View {
                     .frame(width: 24, height: 24)
             }
             .frame(width: 44, height: 44)
-
+            
             Spacer().frame(width: 6)
-
+            
             WSSSearchBar(text: searchTextBinding,
                          placeholder: "작품 제목, 작가를 검색하세요",
                          isFocused: $isFocused,
-                         onSearch: { })
+                         onSearch: {
+                isFocused = false
+                viewModel.handle(.executeSearch(viewModel.state.searchText))
+            })
         }
     }
     
@@ -108,9 +153,9 @@ struct NormalSearchView: View {
                 Text("최근 검색어")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-
+                
                 Spacer()
-
+                
                 Button {
                     viewModel.handle(.clearRecentSearchWords)
                 } label: {
@@ -120,30 +165,27 @@ struct NormalSearchView: View {
                 }
             }
             .padding(.horizontal, 20)
-
+            
             Spacer().frame(height: 12)
-
+            
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.recentSearchWords, id: \.id) { word in
                         WhiteRemovableKeywordChip(
                             keyword: word.title,
-                            onSelect: {
-                                viewModel.handle(.updateSearchText(word.title))
-                                // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
-                            },
+                            onSelect: { viewModel.handle(.executeSearch(word.title)) },
                             onDelete: { viewModel.handle(.removeRecentSearchWord(word)) }
                         )
                     }
                 }
             }
-            .scrollBounceBehavior(.basedOnSize,
-                                  axes: .horizontal)
-            .contentMargins(.horizontal, 20)
+                       .scrollBounceBehavior(.basedOnSize,
+                                             axes: .horizontal)
+                       .contentMargins(.horizontal, 20)
         }
     }
-
+    
     // MARK: - 장르별 검색
     
     private var genreSearchSection: some View {
@@ -152,9 +194,9 @@ struct NormalSearchView: View {
                 Text("장르별 검색")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-
+                
                 Spacer().frame(width: 3)
-
+                
                 Button {
                     // TODO: - 탐색 정보탭으로 이동
                 } label: {
@@ -166,9 +208,9 @@ struct NormalSearchView: View {
                 }
             }
             .padding(.horizontal, 20)
-
+            
             Spacer().frame(height: 12)
-
+            
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -177,13 +219,13 @@ struct NormalSearchView: View {
                     }
                 }
             }
-            .contentMargins(.horizontal, 20)
+                       .contentMargins(.horizontal, 20)
         }
     }
     
     private func genreItem(genre: NovelGenre) -> some View {
         Button {
-            // TODO: - genre 검색 이동
+            detailSearchNavigation = DetailSearchNavigation(filter: SearchFilter(genres: [genre]))
         } label: {
             VStack(spacing: 9) {
                 genre.iconImage
@@ -207,9 +249,9 @@ struct NormalSearchView: View {
                 Text("키워드 검색")
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-
+                
                 Spacer().frame(width: 3)
-
+                
                 Button {
                     // TODO: - 탐색 키워드탭으로 이동
                 } label: {
@@ -220,17 +262,16 @@ struct NormalSearchView: View {
                         .frame(width: 16, height: 16)
                 }
             }
-
+            
             Spacer().frame(height: 12)
-
+            
             WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 8) {
                 ForEach(viewModel.state.popularKeywords, id: \.id) { keyword in
                     CapsuleSelectableKeywordChip(
                         keyword: keyword.name,
                         isSelected: false,
                         action: {
-                            viewModel.handle(.updateSearchText(keyword.name))
-                            // TODO: - 검색 실행(WSSSearchBar의 onSearch와 동일 로직 필요)
+                            detailSearchNavigation = DetailSearchNavigation(filter: SearchFilter(keywords: [keyword]))
                         }
                     )
                 }
@@ -248,22 +289,22 @@ struct NormalSearchView: View {
                     Text("소소")
                         .applyWSSFont(.title2)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-
+                    
                     Spacer().frame(width: 2)
-
+                    
                     WSSImage.icTextPick.swiftUIImage
                 }
-
+                
                 Spacer().frame(height: 2)
-
+                
                 Text("다른 독자들이 최근에 찾아본 웹소설이에요")
                     .applyWSSFont(.body4)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
             }
             .padding(.horizontal, 20)
-
+            
             Spacer().frame(height: 12)
-
+            
             ScrollView(.horizontal,
                        showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -277,7 +318,7 @@ struct NormalSearchView: View {
                     }
                 }
             }
-            .contentMargins(.horizontal, 20)
+                       .contentMargins(.horizontal, 20)
         }
     }
     
@@ -296,7 +337,7 @@ struct NormalSearchView: View {
             .scaledToFill()
             .frame(width: 121, height: 180)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-
+            
             Text(title)
                 .applyWSSFont(.body4)
                 .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
@@ -316,6 +357,7 @@ struct NormalSearchView: View {
                 removeRecentSearchWordUseCase: PreviewRemoveRecentSearchWordUseCase(),
                 clearRecentSearchWordsUseCase: PreviewClearRecentSearchWordsUseCase(),
                 searchAutoCompletionWordsUseCase: PreviewSearchAutoCompletionWordsUseCase(),
+                searchNovelUseCase: PreviewSearchNovelUseCase(),
                 loadPopularKeywordsUseCase: PreviewLoadPopularKeywordsUseCase()
             )
         )
@@ -357,6 +399,27 @@ private struct PreviewSearchAutoCompletionWordsUseCase: SearchAutoCompletionWord
             SearchAutoCompletionWord(word: "\(searchText) 로맨스"),
             SearchAutoCompletionWord(word: "\(searchText) 판타지")
         ]
+    }
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        let novels = [
+            Novel(id: NovelID(1),
+                  thumbnailImage: URL(string: "https://i.pinimg.com/1200x/40/cb/df/40cbdfcce149156643cc6eae5e0dec6f.jpg"),
+                  title: "\(query) 미리보기 작품",
+                  authors: ["프리뷰 작가"],
+                  genres: [],
+                  interestCount: 8,
+                  rating: 4.9,
+                  ratingCount: 2,
+                  isInterested: false)
+        ]
+        return (Paginated(items: novels, hasNext: false), novels.count)
+    }
+    
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
     }
 }
 
