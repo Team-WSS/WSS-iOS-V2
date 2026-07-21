@@ -12,7 +12,9 @@ import BaseData
 
 enum NovelEndpoint: Endpoint {
     case getUserLibraryNovels(userID: Int, UserLibraryQuery)
-    
+    case getUserLibraryNovelsV2(userID: Int, UserLibraryV2Query)
+    case getUserLibraryKeywords(userID: Int)
+
     case getNovelBasicInfo(novelID: Int)
     case getNovelDetailInfo(novelID: Int)
     case getRegisteredNovelStats(userID: Int)
@@ -23,6 +25,8 @@ enum NovelEndpoint: Endpoint {
     var method: HTTPMethod {
         switch self {
         case .getUserLibraryNovels:     return .get
+        case .getUserLibraryNovelsV2:   return .get
+        case .getUserLibraryKeywords:   return .get
         case .getNovelBasicInfo:        return .get
         case .getNovelDetailInfo:       return .get
         case .getRegisteredNovelStats:  return .get
@@ -38,6 +42,8 @@ enum NovelEndpoint: Endpoint {
     var path: String {
         switch self {
         case .getUserLibraryNovels(let userID, _):      return "/users/\(userID)/novels"
+        case .getUserLibraryNovelsV2(let userID, _):    return "/users/\(userID)/novels/v2"
+        case .getUserLibraryKeywords(let userID):       return "/users/\(userID)/novels/keywords"
         case .getNovelBasicInfo(let novelID):           return "/novels/\(novelID)"
         case .getNovelDetailInfo(let novelID):          return "/novels/\(novelID)/info"
         case .getRegisteredNovelStats(let userID):      return "/users/\(userID)/user-novel-stats"
@@ -49,6 +55,7 @@ enum NovelEndpoint: Endpoint {
     var query: QueryParameters {
         switch self {
         case .getUserLibraryNovels(_, let query):   return .convertible(query)
+        case .getUserLibraryNovelsV2(_, let query): return .convertible(query)
         default: return .none
         }
     }

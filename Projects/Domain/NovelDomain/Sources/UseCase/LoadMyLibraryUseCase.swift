@@ -11,18 +11,19 @@ import Foundation
 import BaseDomain
 
 public protocol LoadMyLibraryUseCase {
-    func execute(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+    /// - Parameter cursor: 직전 페이지 응답의 `nextCursor`. 첫 페이지는 nil.
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int)
 }
 
 public final class DefaultLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    
+
     private let novelRepository: NovelRepository
-    
+
     public init(novelRepository: NovelRepository) {
         self.novelRepository = novelRepository
     }
-    
-    public func execute(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
-        try await novelRepository.fetchMyLibraryNovels(filter)
+
+    public func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        try await novelRepository.fetchMyLibraryNovels(filter, cursor: cursor)
     }
 }

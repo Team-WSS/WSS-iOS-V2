@@ -22,9 +22,8 @@ struct LoadMyLibraryUseCaseTests {
         mock.fetchMyLibraryResult = .success((expected, 2))
 
         let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
-        let filter = makeFilter()
 
-        let result = try await usecase.execute(filter)
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
 
         #expect(result.0.items.count == expected.items.count)
         #expect(result.0.hasNext == expected.hasNext)
@@ -37,26 +36,50 @@ struct LoadMyLibraryUseCaseTests {
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 37))
 
         let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
-        let result = try await usecase.execute(makeFilter())
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
 
         #expect(result.1 == 37)
     }
 
-    @Test("필터 조건이 결과에 전달된다")
+    @Test("필터 조건이 저장소에 그대로 전달된다")
     func filterIsPassedToRepository() async throws {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
 
         let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
-        var filter = makeFilter()
+        var filter = MyLibraryFilter()
         filter.addReadingStatus(.watching)
-        filter.addAttractivePoint(.worldview)
+        filter.addGenre(.fantasy)
 
-        _ = try await usecase.execute(filter)
+        _ = try await usecase.execute(filter: filter, cursor: nil)
 
         let passedFilter = mock.fetchedMyLibraryFilters.last
         #expect(passedFilter?.readingStatus == [.watching])
-        #expect(passedFilter?.attractivePoint == [.worldview])
+        #expect(passedFilter?.genres == [.fantasy])
+    }
+
+    @Test("커서가 저장소에 그대로 전달된다")
+    func cursorIsPassedToRepository() async throws {
+        let mock = MockNovelRepository()
+        mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
+
+        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: "cursor-42")
+
+        #expect(mock.fetchedMyLibraryCursors.last == "cursor-42")
+    }
+
+    @Test("첫 페이지 조회는 커서 없이(nil) 저장소에 전달된다")
+    func firstPagePassesNilCursor() async throws {
+        let mock = MockNovelRepository()
+        mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
+
+        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+
+        #expect(mock.fetchedMyLibraryCursors.last == .some(nil))
     }
 
     @Test("내 서재 조회에 실패하면 에러를 던진다")
@@ -67,25 +90,15 @@ struct LoadMyLibraryUseCaseTests {
         let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute(makeFilter())
+            try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
         }
     }
 }
 
 extension LoadMyLibraryUseCaseTests {
 
-    private func makeFilter() -> MyLibraryFilter {
-        MyLibraryFilter(
-            isInterest: false,
-            readingStatus: [],
-            attractivePoint: [],
-            ratingThreshold: nil,
-            sortType: .recent
-        )
-    }
-
-    private func makeLibraryPage() -> Paginated<LibraryNovel> {
-        Paginated(
+    private func makeLibraryPage() -> CursorPaginated<LibraryNovel> {
+        CursorPaginated(
             items: [
                 LibraryNovel(
                     id: NovelID(1),
@@ -97,7 +110,8 @@ extension LoadMyLibraryUseCaseTests {
                     writtenFeeds: []
                 )
             ],
-            hasNext: false
+            hasNext: false,
+            nextCursor: nil
         )
     }
 }

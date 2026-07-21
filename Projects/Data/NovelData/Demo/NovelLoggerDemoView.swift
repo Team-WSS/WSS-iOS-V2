@@ -189,17 +189,10 @@ struct NovelLoggerDemoView: View {
     private func fetchMyLibraryNovels() async {
         appendLog(level: .debug, message: "내 서재 조회 요청...")
         do {
-            let filter = MyLibraryFilter(
-                isInterest: false,
-                readingStatus: [],
-                attractivePoint: [],
-                ratingThreshold: nil,
-                sortType: .recent
-            )
-            let (paginated, totalCount) = try await repository.fetchMyLibraryNovels(filter)
+            let (paginated, totalCount) = try await repository.fetchMyLibraryNovels(MyLibraryFilter(), cursor: nil)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             appendLog(level: .info,
-                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
+                      message: "성공: 총 \(totalCount)건 | 다음 커서: \(paginated.nextCursor ?? "없음") | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
         } catch {
             appendError(action: .fetchMyLibrary, error: error)
         }

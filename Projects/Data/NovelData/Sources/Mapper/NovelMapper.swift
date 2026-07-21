@@ -70,6 +70,21 @@ extension NovelMapper {
                               hasNext: dto.isLoadable)
         )
     }
+
+    public static func libraryNovelsV2(from dto: UserLibraryNovelsV2Response) throws -> (CursorPaginated<LibraryNovel>, Int) {
+        let page = CursorPaginated(
+            items: try dto.userNovels.map { try libraryNovel(from: $0) },
+            hasNext: dto.isLoadable,
+            nextCursor: dto.nextCursor
+        )
+        return (page, dto.userNovelCount)
+    }
+
+    // MARK: - 서재 - 등록 키워드
+
+    public static func libraryKeywords(from dto: LibraryKeywordsResponse) -> [Keyword] {
+        dto.keywords.map { Keyword(id: KeywordID($0.keywordId), name: $0.keywordName) }
+    }
     
     // MARK: - 작품 상세 정보
     
@@ -156,20 +171,42 @@ extension NovelMapper {
     
     // MARK: - 서재 조회 Query
     
-    static func myLibraryQuery(from filter: MyLibraryFilter) -> UserLibraryQuery {
-        UserLibraryQuery(
-            lastUserNovelId: 0,
+    /// 서재 V2 쿼리. 미적용 필터는 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+    /// isInterest는 "관심만 보기" 토글이라 true일 때만 전송한다(false를 보내면 비관심만 필터됨).
+    static func myLibraryV2Query(from filter: MyLibraryFilter, cursor: String?) -> UserLibraryV2Query {
+        var ratingMin: Float?
+        var ratingMax: Float?
+        var unratedOnly: Bool?
+        switch filter.rating {
+        case .range(let min, let max):
+            ratingMin = min
+            ratingMax = max
+        case .unratedOnly:
+            unratedOnly = true
+        case nil:
+            break
+        }
+
+        return UserLibraryV2Query(
+            cursor: cursor,
             size: 20,
-            sortCriteria: filter.sortType.rawValue,
-            isInterest: filter.isInterest,
-            readStatuses: filter.readingStatus.map { mapReadingStatusString(from: $0) },
-            attractivePoints: filter.attractivePoint.map { mapAttractivePointString(from: $0) },
-            novelRating: filter.ratingThreshold?.rawValue ?? 0,
-            query: "",
-            updatedSince: ""
+            sortType: mapLibrarySortTypeString(from: filter.sortType),
+            isInterest: filter.isInterest ? true : nil,
+            readStatuses: filter.readingStatus.isEmpty
+                ? nil : filter.readingStatus.map { mapReadingStatusString(from: $0) },
+            genres: filter.genres.isEmpty
+                ? nil : filter.genres.map { mapNovelGenreString(from: $0) },
+            isCompleted: filter.publicationStatus.map { $0 == .completed },
+            ratingMin: ratingMin,
+            ratingMax: ratingMax,
+            unratedOnly: unratedOnly,
+            attractivePoints: filter.attractivePoint.isEmpty
+                ? nil : filter.attractivePoint.map { mapAttractivePointString(from: $0) },
+            // 서재 키워드 필터는 서버가 keywordName(한글명) 매칭 — 검색의 keywordIds와 다르다.
+            keywords: filter.keywords.isEmpty ? nil : filter.keywords.map { $0.name }
         )
     }
-    
+
     static func userLibraryQuery(from filter: LibraryFilter) -> UserLibraryQuery {
         UserLibraryQuery(
             lastUserNovelId: 0,
@@ -258,6 +295,31 @@ extension NovelMapper {
         } catch {
             // 미래 날짜·역전 등 도메인 불변식 위반은 손상 데이터로 보고 매핑 실패로 변환(→ .invalidData).
             throw MappingError.invalidReadingPeriod(start: startDate, end: endDate)
+        }
+    }
+
+    private static func mapLibrarySortTypeString(from value: LibrarySortType) -> String {
+        switch value {
+        case .registeredNewest:  return "created_desc"
+        case .registeredOldest:  return "created_asc"
+        case .title:             return "title"
+        case .readDate:          return "read_date"
+        case .ratingHighest:     return "rating_desc"
+        case .ratingLowest:      return "rating_asc"
+        }
+    }
+
+    static func mapNovelGenreString(from genre: NovelGenre) -> String {
+        switch genre {
+        case .lightNovel:      return "lightNovel"
+        case .wuxia:           return "wuxia"
+        case .fantasy:         return "fantasy"
+        case .romance:         return "romance"
+        case .BL:              return "BL"
+        case .romanceFantasy:  return "romanceFantasy"
+        case .modernFantasy:   return "modernFantasy"
+        case .drama:           return "drama"
+        case .mystery:         return "mystery"
         }
     }
 

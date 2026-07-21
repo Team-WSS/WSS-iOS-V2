@@ -23,12 +23,16 @@ public protocol NovelRepository {
     func addNovelInterest(id: NovelID) async throws(RepositoryError)
     func removeNovelInterest(id: NovelID) async throws(RepositoryError)
 
-    /// 현재 로그인한 사용자의 서재 작품 목록을 조회한다.
+    /// 현재 로그인한 사용자의 서재 작품 목록을 조회한다. (V2 — 커서 기반)
     ///
-    /// 내부적으로 저장된 userID를 기반으로
-    /// 필터 조건을 적용하여 서재 작품을 페이지네이션 형태로 반환한다.
-    func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+    /// 내부적으로 저장된 userID를 기반으로 필터·정렬을 적용해 조회한다.
+    /// - Parameter cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
+    /// - Returns: (커서 페이지, 필터 적용된 전체 작품 수)
+    func fetchMyLibraryNovels(_ filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int)
     func fetchUserLibraryNovels(id: UserID, _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+
+    /// 현재 로그인한 사용자가 서재 작품들에 등록한 키워드 목록을 조회한다. (필터 시트 키워드 탭 데이터)
+    func fetchMyLibraryKeywords() async throws(RepositoryError) -> [Keyword]
     
     func fetchRegisteredNovelStats() async throws(RepositoryError) -> RegisteredNovelStats
 }

@@ -15,6 +15,13 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **내 서재는 V2 엔드포인트(`/users/{id}/novels/v2`)를 쓴다**(#166) — 구 `/users/{id}/novels`는 **타유저 서재(`fetchUserLibraryNovels`)만** 사용. V2 쿼리(`UserLibraryV2Query`) 함정:
+  - **미적용 필터는 nil로 보내 파라미터를 생략**한다. 빈 배열을 넣으면 `?genres=`(빈 값)로 직렬화돼 서버가 `[""]` 필터로 오해한다(`QueryItemConvertible`이 배열을 콤마 join).
+  - **`isInterest`는 true일 때만 전송** — false를 보내면 "비관심 작품만" 필터가 되어버린다(관심 토글 OFF ≠ 비관심 필터).
+  - **`genres`는 영문 라벨**(`mapNovelGenreString` — 서버 DB `genreName`이 영문), **`keywords`는 한글 `keywordName`** — 검색 API의 `keywordIds`(ID 배열)와 다르다.
+  - 정렬 문자열은 `created_desc/created_asc/title/read_date/rating_desc/rating_asc` (서버 `UserNovelSortType`).
+- 서재 커서는 서버 발급 opaque 문자열(`nextCursor`)을 그대로 왕복 — 클라에서 해석·조립하지 말 것.
+
 - **작품 상세 응답의 `novelGenres`는 배열이 아니라 `/`로 이은 한 문자열**(`"로맨스/로판"`)이다 — `author`가 콤마 문자열인 것과 **구분자가 다르다**. DTO를 `[String]`으로 두면 디코딩이 통째로 실패해 화면이 "네트워크 연결 실패"로 뜬다(실제 원인은 `.invalidData`라 원인 찾기 어렵다). Mapper가 `/`로 쪼개 `NovelGenre`로 매핑하고, UI는 반대로 `displayName`을 `/`로 이어 되돌린다.
 - **`novelImage`(표지)와 `novelGenreImage`(장르 아이콘 경로, 예 `/icGenre/BL`)는 다른 필드**다 — 상세 매핑이 표지에 `novelGenreImage`를 넣고 있었다(#154에서 수정). 서재 매퍼는 처음부터 `novelImage`를 쓴다.
 - **이미지 필드(표지 `novelImage`·`platformImage`)는 버킷 상대 경로로 올 수 있다** — `URL(string:)` 직조립 금지, `ImageURLResolver.resolve(from:)`(BaseData) 경유(full URL/경로 혼재를 흡수하고 경로엔 `@{scale}x.png`를 붙인다). 표지(서재·상세)와 `platformImage` 모두 경유 완료. ⚠️ 단 `platformUrl`(플랫폼 사이트 주소)은 **이미지가 아니라 외부 링크**라 resolver 대상이 아니다 — `URL(string:)` 유지(실패 시 `MappingError.invalidPlatformUrl` throw).

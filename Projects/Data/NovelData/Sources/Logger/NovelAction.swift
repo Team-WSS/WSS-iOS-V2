@@ -14,6 +14,7 @@ public enum NovelAction {
     case addInterest
     case removeInterest
     case fetchMyLibrary
+    case fetchMyLibraryKeywords
     case fetchUserLibrary
     case fetchRegisteredStats
 
@@ -23,6 +24,7 @@ public enum NovelAction {
         case .addInterest:                      return "작품 관심 등록"
         case .removeInterest:                   return "작품 관심 해제"
         case .fetchMyLibrary:                   return "내 서재 조회"
+        case .fetchMyLibraryKeywords:           return "서재 등록 키워드 조회"
         case .fetchUserLibrary:                 return "유저 서재 조회"
         case .fetchRegisteredStats:             return "등록 작품 통계 조회"
         }

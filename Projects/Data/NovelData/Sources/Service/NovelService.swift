@@ -11,7 +11,10 @@ import Foundation
 public protocol NovelService {
     func getUserLibraryNovels(userID: Int,
                               query: UserLibraryQuery) async throws -> UserLibraryNovelsResponse
-    
+    func getUserLibraryNovelsV2(userID: Int,
+                                query: UserLibraryV2Query) async throws -> UserLibraryNovelsV2Response
+    func getUserLibraryKeywords(userID: Int) async throws -> LibraryKeywordsResponse
+
     func getNovelBasicInfo(novelID: Int) async throws -> NovelBasicResponse
     func getNovelDetailInfo(novelID: Int) async throws -> NovelInfoResponse
     
