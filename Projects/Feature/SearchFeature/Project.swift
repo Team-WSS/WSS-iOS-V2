@@ -17,6 +17,7 @@ let project = Project.createFeatureModule(
         .module(.domain(.base)),
         .module(.domain(.recommendation)),
         .module(.domain(.search)),
+        .module(.domain(.novel)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -24,6 +25,7 @@ let project = Project.createFeatureModule(
     demoDependencies: [
         .module(.data(.recommendation)),
         .module(.data(.search)),
+        .module(.data(.novel)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]

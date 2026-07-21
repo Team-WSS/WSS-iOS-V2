@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import SearchDomain
+import NovelDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
@@ -23,6 +24,7 @@ public enum SearchFactory {
         removeRecentSearchWordUseCase: RemoveRecentSearchWordUseCase,
         clearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase,
         searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase,
+        searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil
     ) -> some View {
@@ -33,6 +35,7 @@ public enum SearchFactory {
                 removeRecentSearchWordUseCase: removeRecentSearchWordUseCase,
                 clearRecentSearchWordsUseCase: clearRecentSearchWordsUseCase,
                 searchAutoCompletionWordsUseCase: searchAutoCompletionWordsUseCase,
+                searchNovelUseCase: searchNovelUseCase,
                 loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
                 logger: logger
             )
