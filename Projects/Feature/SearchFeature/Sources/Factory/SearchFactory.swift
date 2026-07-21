@@ -9,9 +9,9 @@
 import SwiftUI
 
 import BaseDomain
+import NovelDomain
 import RecommendationDomain
 import SearchDomain
-import NovelDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
