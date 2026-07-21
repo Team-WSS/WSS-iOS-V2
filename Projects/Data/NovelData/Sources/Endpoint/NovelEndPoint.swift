@@ -70,8 +70,10 @@ enum NovelEndpoint: Endpoint {
         // → 로그인 시 토큰을 붙여야 익명 값이 아닌 내 상태가 온다.
         case .getNovelBasicInfo, .getNovelDetailInfo:
             return .usesTokenIfAvailable
+        // 검색도 비로그인 허용이지만, 토큰이 없으면 서버가 검색을 익명 요청으로 봐서
+        // 최근 검색어로 기록하지 못한다 → 로그인 시엔 토큰을 붙여야 한다.
         case .getNormalSearchResult:
-            return .withoutToken
+            return .usesTokenIfAvailable
         default: return .requireToken
         }
     }

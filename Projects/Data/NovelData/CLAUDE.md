@@ -20,6 +20,7 @@
 - **이미지 필드(표지 `novelImage`·`platformImage`)는 버킷 상대 경로로 올 수 있다** — `URL(string:)` 직조립 금지, `ImageURLResolver.resolve(from:)`(BaseData) 경유(full URL/경로 혼재를 흡수하고 경로엔 `@{scale}x.png`를 붙인다). 표지 3곳(서재·상세·검색)과 `platformImage` 모두 경유 완료. ⚠️ 단 `platformUrl`(플랫폼 사이트 주소)은 **이미지가 아니라 외부 링크**라 resolver 대상이 아니다 — `URL(string:)` 유지(실패 시 `MappingError.invalidPlatformUrl` throw).
 - **`Novel.isInterested`는 nil = "비로그인" 의미** — 매퍼가 이 인자를 안 넘기면 기본값 nil이 되어 관심 버튼이 **에러·로그 없이 no-op**이 된다(엔티티 정책 + VM 가드가 조용히 스킵). `basicDTO.isUserNovelInterest` 매핑 필수(#154에서 수정).
 - **작품 상세 조회(`getNovelBasicInfo`/`getNovelDetailInfo`)의 토큰 정책은 `.usesTokenIfAvailable`** — 공개 화면이라 `.withoutToken`으로 두기 쉽지만, 응답에 유저별 필드(관심·읽기 상태·내 별점·시작/종료일)가 있어 토큰이 없으면 **항상 익명 값**이 온다(실서버에서 내 평가·관심이 안 뜨는 증상 — #154에서 수정).
+- **일반 검색(`getNormalSearchResult`)도 같은 이유로 `.usesTokenIfAvailable`**(#165에서 `.withoutToken` → 수정) — 비로그인도 검색은 되지만, 토큰이 없으면 서버가 요청을 익명으로 봐서 `SearchDomain`이 기대하는 "검색 실행 시 서버 자동 기록"(최근 검색어)이 로그인 유저에게 남지 않았다. `SearchNovelResponse`엔 애초에 `isInterested` 필드가 없어(토큰을 보내도) 검색 결과 카드의 관심 여부는 여전히 반영 안 됨 — 별개 갭, 필요해지면 서버 응답에 필드 추가 여부부터 확인.
 - **`userReview`의 매력포인트·키워드는 `[]`로 둔다** — 유저 본인 선택값이 이 응답에 없어서다. `detailDTO.attractivePoints`(독자 전체 집계값)를 채워 넣지 말 것 — 과거에 그렇게 돼 있었고(미소비 필드라 실동작 영향은 없었음) #154에서 `[]`로 정리했다. 본인 선택값이 필요해지면 유저별 API에서 받아야 한다.
 - `fetchNovel`은 2회 호출 → **하나라도 실패하면 전체 실패**.
 - userID 부재 시 `?? 0` fallback — 비로그인 흐름 동작 확인 필요.
