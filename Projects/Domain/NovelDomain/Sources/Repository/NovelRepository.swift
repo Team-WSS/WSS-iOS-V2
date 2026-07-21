@@ -23,8 +23,9 @@ public protocol NovelRepository {
     func addNovelInterest(id: NovelID) async throws(RepositoryError)
     func removeNovelInterest(id: NovelID) async throws(RepositoryError)
     
-    func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int)
-    func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int)
+    /// `page`는 0부터 시작 — 무한스크롤 다음 페이지 요청 시 호출 측이 증가시켜 넘긴다.
+    func searchNovelByText(_ text: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
+    func searchNovelByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
     
     /// 현재 로그인한 사용자의 서재 작품 목록을 조회한다.
     ///
