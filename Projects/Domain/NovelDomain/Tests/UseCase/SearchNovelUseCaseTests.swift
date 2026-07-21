@@ -24,12 +24,23 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
-        let result = try await usecase.searchByText("전지적")
+        let result = try await usecase.searchByText("전지적", page: 0)
 
         #expect(result.0.items.count == 1)
         #expect(result.0.items.first?.title == "전지적 독자 시점")
         #expect(mock.searchByTextCallCount == 1)
         #expect(mock.lastSearchQuery == "전지적")
+    }
+
+    @Test("텍스트 검색은 다음 페이지 번호를 그대로 전달한다")
+    func searchByTextForwardsPage() async throws {
+        let mock = MockNovelRepository()
+        mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: true), 42))
+
+        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        _ = try await usecase.searchByText("전지적", page: 2)
+
+        #expect(mock.lastSearchTextPage == 2)
     }
 
     @Test("텍스트 검색 결과에 전체 작품 수가 포함된다")
@@ -38,7 +49,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 42))
 
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
-        let result = try await usecase.searchByText("전지적")
+        let result = try await usecase.searchByText("전지적", page: 0)
 
         #expect(result.1 == 42)
     }
@@ -51,7 +62,7 @@ struct SearchNovelUseCaseTests {
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.searchByText("전지적")
+            try await usecase.searchByText("전지적", page: 0)
         }
 
         #expect(mock.searchByTextCallCount == 1)
@@ -73,11 +84,23 @@ struct SearchNovelUseCaseTests {
             keywords: []
         )
 
-        let result = try await usecase.searchByFilter(filter)
+        let result = try await usecase.searchByFilter(filter, page: 0)
 
         #expect(result.0.items.count == 2)
         #expect(result.0.hasNext == true)
         #expect(mock.searchByFilterCallCount == 1)
+    }
+
+    @Test("필터 검색은 다음 페이지 번호를 그대로 전달한다")
+    func searchByFilterForwardsPage() async throws {
+        let mock = MockNovelRepository()
+        mock.searchByFilterResult = .success((Paginated(items: [makeNovel()], hasNext: true), 42))
+
+        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let filter = SearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
+        _ = try await usecase.searchByFilter(filter, page: 3)
+
+        #expect(mock.lastSearchFilterPage == 3)
     }
 
     @Test("필터 검색 결과에 전체 작품 수가 포함된다")
@@ -87,7 +110,7 @@ struct SearchNovelUseCaseTests {
 
         let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
         let filter = SearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
-        let result = try await usecase.searchByFilter(filter)
+        let result = try await usecase.searchByFilter(filter, page: 0)
 
         #expect(result.1 == 128)
     }
@@ -106,7 +129,7 @@ struct SearchNovelUseCaseTests {
         )
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.searchByFilter(filter)
+            try await usecase.searchByFilter(filter, page: 0)
         }
 
         #expect(mock.searchByFilterCallCount == 1)
