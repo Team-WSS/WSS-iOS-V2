@@ -55,11 +55,11 @@ private struct StubCreateFeedUseCase: CreateFeedUseCase {
 }
 
 private struct StubSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(_ query: String, page: Int) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
-    
-    func searchByFilter(_ filter: NovelDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+
+    func searchByFilter(_ filter: NovelDomain.SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: [], hasNext: false), 0)
     }
 }

@@ -208,7 +208,7 @@ private extension CreateFeedViewModel {
 
         state.isSearchingNovel = true
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0)
             state.searchedNovels = paginated.items
         } catch {
             state.searchedNovels = []
