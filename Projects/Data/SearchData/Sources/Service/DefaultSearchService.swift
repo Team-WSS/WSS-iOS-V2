@@ -14,7 +14,7 @@ public struct DefaultSearchService: SearchService {
 
     private let network: NetworkingRequestable
 
-    public init(network: NetworkingRequestable) {
+    init(network: NetworkingRequestable) {
         self.network = network
     }
 
