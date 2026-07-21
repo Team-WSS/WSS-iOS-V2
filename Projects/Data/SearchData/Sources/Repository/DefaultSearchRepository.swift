@@ -17,7 +17,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
     private let service: SearchService
     private let logger: DataLogger?
 
-    public init(
+    init(
         service: SearchService,
         logger: DataLogger?
     ) {
