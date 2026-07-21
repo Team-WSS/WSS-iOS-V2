@@ -56,13 +56,13 @@ public enum SearchMapper {
         )
     }
 
-    static func detailSearchQuery(from filter: SearchFilter) -> DetailSearchQuery {
+    static func detailSearchQuery(from filter: SearchFilter, page: Int) -> DetailSearchQuery {
         DetailSearchQuery(
             genres: filter.genres.map { mapNovelGenreString(from: $0) },
             isCompleted: filter.publicationStatus == .completed,
             novelRating: filter.ratingThreshold?.rawValue ?? 0,
             keywordIds: filter.keywords.map { $0.id.value },
-            page: 0,
+            page: page,
             size: 20
         )
     }

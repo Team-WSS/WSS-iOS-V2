@@ -24,7 +24,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
-        let result = try await usecase.searchByText("전지적")
+        let result = try await usecase.searchByText("전지적", page: 0)
 
         #expect(result.0.items.count == 1)
         #expect(result.0.items.first?.title == "전지적 독자 시점")
@@ -38,7 +38,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 42))
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
-        let result = try await usecase.searchByText("전지적")
+        let result = try await usecase.searchByText("전지적", page: 0)
 
         #expect(result.1 == 42)
     }
@@ -51,7 +51,7 @@ struct SearchNovelUseCaseTests {
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.searchByText("전지적")
+            try await usecase.searchByText("전지적", page: 0)
         }
 
         #expect(mock.searchByTextCallCount == 1)
@@ -73,7 +73,7 @@ struct SearchNovelUseCaseTests {
             keywords: []
         )
 
-        let result = try await usecase.searchByFilter(filter)
+        let result = try await usecase.searchByFilter(filter, page: 0)
 
         #expect(result.0.items.count == 2)
         #expect(result.0.hasNext == true)
@@ -87,7 +87,7 @@ struct SearchNovelUseCaseTests {
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let filter = SearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
-        let result = try await usecase.searchByFilter(filter)
+        let result = try await usecase.searchByFilter(filter, page: 0)
 
         #expect(result.1 == 128)
     }
@@ -106,7 +106,7 @@ struct SearchNovelUseCaseTests {
         )
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.searchByFilter(filter)
+            try await usecase.searchByFilter(filter, page: 0)
         }
 
         #expect(mock.searchByFilterCallCount == 1)

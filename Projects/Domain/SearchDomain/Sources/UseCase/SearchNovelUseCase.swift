@@ -11,8 +11,8 @@ import Foundation
 import BaseDomain
 
 public protocol SearchNovelUseCase {
-    func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int)
-    func searchByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int)
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
 }
 
 public final class DefaultSearchNovelUseCase: SearchNovelUseCase {
@@ -23,11 +23,11 @@ public final class DefaultSearchNovelUseCase: SearchNovelUseCase {
         self.searchNovelRepository = searchNovelRepository
     }
 
-    public func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        try await searchNovelRepository.searchNovelByText(query)
+    public func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        try await searchNovelRepository.searchNovelByText(query, page: page)
     }
 
-    public func searchByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        try await searchNovelRepository.searchNovelByFilter(filter)
+    public func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        try await searchNovelRepository.searchNovelByFilter(filter, page: page)
     }
 }
