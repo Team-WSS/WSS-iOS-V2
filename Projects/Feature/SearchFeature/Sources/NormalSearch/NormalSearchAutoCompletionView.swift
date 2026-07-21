@@ -48,6 +48,8 @@ struct NormalSearchAutoCompletionView: View {
                 .applyWSSFont(.body3)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            
+            Spacer()
         }
     }
 
