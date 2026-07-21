@@ -9,9 +9,9 @@
 import Foundation
 
 import BaseDomain
+import NovelDomain
 import RecommendationDomain
 import SearchDomain
-import NovelDomain
 import Logger
 
 @MainActor
