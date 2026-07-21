@@ -174,7 +174,10 @@ struct NormalSearchView: View {
                     ForEach(viewModel.state.recentSearchWords, id: \.id) { word in
                         WhiteRemovableKeywordChip(
                             keyword: word.title,
-                            onSelect: { viewModel.handle(.executeSearch(word.title)) },
+                            onSelect: {
+                                isFocused = false
+                                viewModel.handle(.executeSearch(word.title))
+                            },
                             onDelete: { viewModel.handle(.removeRecentSearchWord(word)) }
                         )
                     }
