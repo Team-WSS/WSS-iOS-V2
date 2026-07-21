@@ -8,6 +8,13 @@
 
 import SwiftUI
 
+import LibraryFeature
+import BaseDomain
+import NovelDomain
+import BaseData
+import NovelData
+import Logger
+import Networking
 import DesignSystem
 
 @main
@@ -20,8 +27,153 @@ struct LibraryFeatureDemoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // 화면 골격 작성 후 LibraryFactory 진입으로 교체한다.
-            Text("LibraryFeature Demo")
+            DemoRootView()
         }
+    }
+}
+
+// MARK: - Root: Mock ↔ 실서버 토글
+
+// Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
+// Mock = 인메모리(흐름 시연), 실서버 = NetworkingClient + 실제 Repository.
+private struct DemoRootView: View {
+    private enum DataSource: String, CaseIterable, Identifiable {
+        case mock = "Mock"
+        case live = "실서버"
+        var id: String { rawValue }
+    }
+
+    @State private var dataSource: DataSource = .mock
+    /// 소스 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
+    private var libraryViewID: String { dataSource.rawValue }
+
+    /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
+    private let consoleLogger = ConsoleLogger()
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Picker("데이터 소스", selection: $dataSource) {
+                    ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 20)
+
+                libraryView
+                    .id(libraryViewID)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var libraryView: some View {
+        switch dataSource {
+        case .mock:
+            LibraryFactory.makeView(
+                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
+                loadMyLibraryKeywordsUseCase: DemoLoadMyLibraryKeywordsUseCase(),
+                logger: consoleLogger,
+                onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+                onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },
+                onRegisterTapped: { consoleLogger.info("작품 등록 진입 요청") },
+                onNotificationTapped: { consoleLogger.info("알림 관리 진입 요청") },
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveView()
+        }
+    }
+
+    // MARK: - 실서버 조립
+
+    // NetworkingConfig.baseURL로 호출하고, DemoSessionTokenStore가 TEST_API_KEY를
+    // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
+    // 내 서재 조회는 저장된 userID를 쓰므로 Demo가 직접 세팅한다(NovelData Demo와 동일 값).
+    @MainActor
+    private func makeLiveView() -> some View {
+        let client = NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DemoSessionTokenStore()
+        )
+        let userDefaults = UserDefaultsStorage()
+        userDefaults.set(.userID, 10035)
+        let repository = NovelDataFactory.makeNovelRepository(
+            client: client,
+            appStorage: userDefaults,
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
+        )
+        return LibraryFactory.makeView(
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(novelRepository: repository),
+            loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(novelRepository: repository),
+            logger: consoleLogger,
+            onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+            onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },
+            onRegisterTapped: { consoleLogger.info("작품 등록 진입 요청") },
+            onNotificationTapped: { consoleLogger.info("알림 관리 진입 요청") },
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    /// 인증 만료 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
+    private func handleAuthenticationRequired() {
+        consoleLogger.info("인증 만료 → 로그인 진입 요청")
+    }
+}
+
+// MARK: - Demo UseCases (Mock)
+// 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 페이지 크기 20, 총 25개 → 2페이지.
+
+private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        let all = Self.novels
+        let pageSize = 20
+        let start = cursor.flatMap(Int.init) ?? 0
+        let end = min(start + pageSize, all.count)
+        guard start < end else {
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), all.count)
+        }
+
+        let hasNext = end < all.count
+        let page = CursorPaginated(
+            items: Array(all[start..<end]),
+            hasNext: hasNext,
+            nextCursor: hasNext ? "\(end)" : nil
+        )
+        return (page, all.count)
+    }
+
+    private static let novels: [LibraryNovel] = (1...25).map { index in
+        LibraryNovel(
+            id: NovelID(index),
+            title: "데모 작품 \(index) — 당신의 이해를 돕기 위하여",
+            thumbnailImage: nil,
+            rating: 4.2,
+            isInterested: index.isMultiple(of: 3),
+            userReview: index.isMultiple(of: 2)
+                ? UserNovelReview(
+                    readingStatus: .watching,
+                    rating: try? Rating(4.0),
+                    attractivePoint: [.character, .vibe],
+                    period: nil,
+                    keywords: [Keyword(id: KeywordID(1), name: "빙의")]
+                )
+                : nil,
+            writtenFeeds: []
+        )
+    }
+}
+
+private struct DemoLoadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase {
+    func execute() async throws(RepositoryError) -> [Keyword] {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        return [
+            Keyword(id: KeywordID(1), name: "빙의"),
+            Keyword(id: KeywordID(2), name: "후회"),
+            Keyword(id: KeywordID(3), name: "궁중암투"),
+            Keyword(id: KeywordID(4), name: "웹툰화")
+        ]
     }
 }

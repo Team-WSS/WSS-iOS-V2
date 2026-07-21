@@ -8,7 +8,44 @@
 
 import SwiftUI
 
+import BaseDomain
+import NovelDomain
+import Logger
+
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
-public enum LibraryFactory {}
+public enum LibraryFactory {
+
+    /// - Parameters:
+    ///   - onNovelSelected: 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
+    ///   - onSearchTapped: 빈 상태 "웹소설 찾기" → 검색 화면 진입 콜백.
+    ///   - onRegisterTapped: 우상단 등록 버튼 → 작품 등록 진입 콜백.
+    ///   - onNotificationTapped: "알림 관리" → 관심 작품 알림 설정 진입 콜백.
+    ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 서버 호출 공통.
+    @MainActor
+    public static func makeView(
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
+        logger: Logger? = nil,
+        onNovelSelected: @escaping (NovelID) -> Void,
+        onSearchTapped: @escaping () -> Void,
+        onRegisterTapped: @escaping () -> Void,
+        onNotificationTapped: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        let viewModel = LibraryViewModel(
+            loadMyLibraryUseCase: loadMyLibraryUseCase,
+            loadMyLibraryKeywordsUseCase: loadMyLibraryKeywordsUseCase,
+            logger: logger
+        )
+        return LibraryView(
+            viewModel: viewModel,
+            onNovelSelected: onNovelSelected,
+            onSearchTapped: onSearchTapped,
+            onRegisterTapped: onRegisterTapped,
+            onNotificationTapped: onNotificationTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}
