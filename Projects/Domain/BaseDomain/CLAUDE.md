@@ -12,6 +12,7 @@
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
 - **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordGroup`, `PopularKeywords` Entity + `KeywordRepository` + `SearchKeywordsUseCase`/`LoadTotalKeywordsUseCase`(`Keyword/Usecase/`, 전부 이 하위로 통일됨).
+- **`AppURL`** — 앱 전역 외부 웹 링크 카탈로그(예: 작품 등록 문의, 오류 제보 노션 폼). Data가 아니라 여기 있는 이유: Feature는 Data를 import할 수 없어서(`App → Feature → Domain ← Data`), Feature가 직접 참조 가능한 곳이 BaseDomain뿐이다. 순수 `URL?` 상수 나열 — 네트워크 호출·설정 로딩 없음(그런 게 필요해지면 BaseData의 `NetworkingConfig`처럼 Data 레이어로 옮길 것).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
