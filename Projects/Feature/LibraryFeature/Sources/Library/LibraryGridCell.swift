@@ -16,28 +16,32 @@ import WSSComponent
 // 그리드 모드 셀 — 표지(상태 뱃지·관심 하트 오버레이) + 제목 + 내 별점 + 날짜.
 struct LibraryGridCell: View {
 
+    /// 셀 높이를 **고정**하기 위한 치수. 제목 줄 수(1~2)·별점/날짜 유무에 따라 높이가 달라지면
+    /// 그리드 행이 어긋나므로, 각 요소가 값 유무와 무관하게 같은 자리를 차지하게 한다.
+    private enum Metric {
+        static let thumbnailHeight: CGFloat = 160
+        /// body4 2줄 (13 × 1.45 × 2 ≈ 37.7) — 제목은 항상 2줄만큼 자리를 잡는다.
+        static let titleHeight: CGFloat = 38
+        static let starSize: CGFloat = 9
+        /// label2 1줄 (10 × 1.0).
+        static let dateHeight: CGFloat = 10
+    }
+
     let novel: LibraryNovel
 
     var body: some View {
         VStack(spacing: 0) {
             thumbnail
             Spacer().frame(height: 6)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(novel.title)
-                    .applyWSSFont(.body4, color: .wssBlack, alignment: .leading)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if let rating = novel.userReview?.rating {
-                    Spacer().frame(height: 2)
-                    starRow(rating: Float(rating.value))
-                }
-                if let dateText = LibraryDateFormatter.text(for: novel.userReview?.period) {
-                    Spacer().frame(height: 4)
-                    Text(dateText)
-                        .applyWSSFont(.label2, color: .wssGray200)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(novel.title)
+                .applyWSSFont(.body4, color: .wssBlack, alignment: .leading)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, minHeight: Metric.titleHeight, maxHeight: Metric.titleHeight, alignment: .topLeading)
+            Spacer().frame(height: 2)
+            starRow
+            Spacer().frame(height: 4)
+            dateRow
         }
     }
 
@@ -48,7 +52,7 @@ struct LibraryGridCell: View {
         } placeholder: {
             Color.wssGray50
         }
-        .frame(height: 160)
+        .frame(height: Metric.thumbnailHeight)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         // 잘린 그림 밖 원본 크기로 hit-test 영역이 남지 않게 명시(스크롤·셀 탭 간섭 예방).
@@ -82,16 +86,37 @@ struct LibraryGridCell: View {
     }
 
     /// 내 별점 5개 표기 — 0.5 단위 반별. (도메인 Rating은 0.5~5.0만 허용)
-    private func starRow(rating: Float) -> some View {
-        HStack(spacing: 2) {
-            ForEach(0..<5, id: \.self) { index in
-                starImage(at: index, rating: rating)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 9, height: 9)
+    /// 평점이 없어도 **자리는 유지**한다(셀 높이 고정).
+    @ViewBuilder
+    private var starRow: some View {
+        if let rating = novel.userReview?.rating {
+            HStack(spacing: 2) {
+                ForEach(0..<5, id: \.self) { index in
+                    starImage(at: index, rating: Float(rating.value))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: Metric.starSize, height: Metric.starSize)
+                }
             }
+            .frame(maxWidth: .infinity, minHeight: Metric.starSize, maxHeight: Metric.starSize, alignment: .leading)
+        } else {
+            Color.clear
+                .frame(height: Metric.starSize)
         }
-        .padding(.bottom, 4)
+    }
+
+    /// 독서 기간 — 없으면 빈 자리로 높이만 차지한다(셀 높이 고정).
+    @ViewBuilder
+    private var dateRow: some View {
+        if let dateText = LibraryDateFormatter.text(for: novel.userReview?.period) {
+            Text(dateText)
+                .applyWSSFont(.label2, color: .wssGray200)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, minHeight: Metric.dateHeight, maxHeight: Metric.dateHeight, alignment: .leading)
+        } else {
+            Color.clear
+                .frame(height: Metric.dateHeight)
+        }
     }
 
     private func starImage(at index: Int, rating: Float) -> Image {

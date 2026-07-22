@@ -145,22 +145,30 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
         return (page, all.count)
     }
 
+    // 셀 높이가 값 유무에 흔들리지 않는지 보려고 4가지 조합을 순환시킨다
+    // (제목 1줄/2줄 × 별점·날짜 유무). 그리드 행이 어긋나면 여기서 바로 드러난다.
     private static let novels: [LibraryNovel] = (1...25).map { index in
-        LibraryNovel(
+        let isLongTitle = index.isMultiple(of: 2)
+        let hasRating = index % 4 != 0
+        let hasPeriod = index % 3 != 0
+
+        let review: UserNovelReview? = index % 5 == 0
+            ? nil
+            : UserNovelReview(
+                readingStatus: .watching,
+                rating: hasRating ? try? Rating(4.0) : nil,
+                attractivePoint: [.character, .vibe],
+                period: hasPeriod ? try? ReadingPeriod(start: Date(timeIntervalSince1970: 1_700_000_000), end: nil) : nil,
+                keywords: [Keyword(id: KeywordID(1), name: "빙의")]
+            )
+
+        return LibraryNovel(
             id: NovelID(index),
-            title: "데모 작품 \(index) — 당신의 이해를 돕기 위하여",
+            title: isLongTitle ? "데모 작품 \(index) — 당신의 이해를 돕기 위하여" : "데모 작품 \(index)",
             thumbnailImage: nil,
             rating: 4.2,
             isInterested: index.isMultiple(of: 3),
-            userReview: index.isMultiple(of: 2)
-                ? UserNovelReview(
-                    readingStatus: .watching,
-                    rating: try? Rating(4.0),
-                    attractivePoint: [.character, .vibe],
-                    period: nil,
-                    keywords: [Keyword(id: KeywordID(1), name: "빙의")]
-                )
-                : nil,
+            userReview: review,
             writtenFeeds: []
         )
     }
