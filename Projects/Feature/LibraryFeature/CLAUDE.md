@@ -15,8 +15,8 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 서재 Domain을 찾을 때 `LibraryDomain`을 만들지 말 것 — 정본은 `NovelDomain/Sources/Entity/Library/`와 `NovelDomain/Sources/UseCase/`다.
-- ⚠️ **그리드 셀(`LibraryGridCell`)은 높이가 반드시 고정이어야 한다** — 제목 줄 수(1~2)·내 별점 유무·날짜 유무가 작품마다 달라서, 자연 높이로 두면 `LazyVGrid` 행이 어긋나 목록이 삐뚤빼뚤해진다(실제로 그렇게 보였음). 제목은 `Metric.titleHeight`로 **항상 2줄만큼**, 별점·날짜는 값이 없어도 `Color.clear`로 자리를 유지한다. 값 유무로 요소를 빼는 리팩터링 금지.
-  - 높이 상수는 폰트 규약에서 유도한다: `applyWSSFont`가 `lineSpacing + 상하 패딩`으로 **한 줄 = fontSize × lineHeight**를 만들므로 body4 2줄 = `13 × 1.45 × 2 ≈ 37.7`(→38), label2 1줄 = `10 × 1.0 = 10`. 폰트 스타일을 바꾸면 이 상수도 같이 고쳐야 한다.
+- ⚠️ **그리드 셀(`LibraryGridCell`)의 표지 아래 정보 스택은 고정 높이(`Metric.infoHeight` 65)** — 제목 줄 수(1~2)·내 별점 유무·날짜 유무가 작품마다 달라서, 자연 높이로 두면 `LazyVGrid` 행이 어긋나 목록이 삐뚤빼뚤해진다(실제 발생). 스택 **내부는 자연스럽게 흐르게** 두고(1줄 제목이면 별점이 바로 따라옴 — Figma와 동일) 스택 **자체만** 고정한다. 별점·날짜를 빈 자리로 채우거나 제목을 2줄로 강제하지 말 것.
+  - **표지는 고정 높이가 아니라 비율**(`Metric.thumbnailAspectRatio` = 108:160) — 열 너비를 따라 커진다. 화면 폭이 달라져도 비율이 유지돼야 하므로 `height:` 고정으로 되돌리지 말 것.
   - ⚠️ `.frame(maxWidth:height:)` 조합은 컴파일 안 된다(`maxWidth` 오버로드엔 `height`가 없음) — `minHeight`/`maxHeight`를 같은 값으로 주거나 `.frame`을 두 번 건다.
 - **iOS 26 시트 기본 배경은 글래스(반투명)** — 디자인은 불투명 흰색이라 정렬/필터 시트 모두 `.presentationBackground(Color.wssWhite)` 명시 필수. 빼면 뒤 콘텐츠가 비쳐 보인다.
 - **필터 시트 탭 행(6탭)은 화면 폭보다 넓어 가로 스크롤** — 디자인 시안에서도 우측 탭이 잘려 있다. 고정 HStack으로 두면 "매력포인트"가 2줄로 꺾인다(`fixedSize()`+ScrollView).
