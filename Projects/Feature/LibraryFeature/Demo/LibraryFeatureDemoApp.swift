@@ -145,21 +145,36 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
         return (page, all.count)
     }
 
-    // 셀 높이가 값 유무에 흔들리지 않는지 보려고 4가지 조합을 순환시킨다
-    // (제목 1줄/2줄 × 별점·날짜 유무). 그리드 행이 어긋나면 여기서 바로 드러난다.
+    private static let demoKeywordNames = ["빙의", "후회", "궁중암투", "웹툰화"]
+
+    /// 셀이 값 조합에 따라 어떻게 보이는지 한 화면에서 확인하려고 축을 서로 다른 주기로 돌린다 —
+    /// 제목 줄 수(2) · 표지 유무(5) · 읽기 상태(3) · 별점 유무(4) · 기간 유무(4) · 매력포인트 수(4) · 키워드 수(5).
+    /// 그리드 행이 어긋나거나 특정 조합이 깨지면 여기서 바로 드러난다.
     private static let novels: [LibraryNovel] = (1...25).map { index in
         let isLongTitle = index.isMultiple(of: 2)
         let hasRating = index % 4 != 0
-        let hasPeriod = index % 3 != 0
+        let hasPeriod = index % 4 != 1
+
+        let status = ReadingStatus.allCases[index % ReadingStatus.allCases.count]
+
+        // 기간은 상태별로 채워지는 날짜가 다르다(보는 중=시작, 봤어요=시작+종료, 하차=종료).
+        // 그 규칙은 도메인이 강제하므로 Mock이 흉내내지 말고 normalized(for:)를 태운다.
+        let rawStart = Date(timeIntervalSince1970: 1_700_000_000 + Double(index) * 86_400 * 10)
+        let period = hasPeriod
+            ? (try? ReadingPeriod(start: rawStart, end: rawStart.addingTimeInterval(86_400 * 60)))?
+                .normalized(for: status)
+            : nil
 
         let review: UserNovelReview? = index % 5 == 0
             ? nil
             : UserNovelReview(
-                readingStatus: .watching,
-                rating: hasRating ? try? Rating(4.0) : nil,
-                attractivePoint: [.character, .vibe],
-                period: hasPeriod ? try? ReadingPeriod(start: Date(timeIntervalSince1970: 1_700_000_000), end: nil) : nil,
-                keywords: [Keyword(id: KeywordID(1), name: "빙의")]
+                readingStatus: status,
+                rating: hasRating ? try? Rating(Double(index % 9 + 1) * 0.5) : nil,
+                attractivePoint: Array(AttractivePoint.allCases.prefix(index % 4)),
+                period: period,
+                keywords: (0..<(index % 5)).map {
+                    Keyword(id: KeywordID($0 + 1), name: demoKeywordNames[$0])
+                }
             )
 
         return LibraryNovel(
