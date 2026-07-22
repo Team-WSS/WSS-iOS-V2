@@ -77,11 +77,18 @@ struct LibraryListCell: View {
         }
     }
 
+    /// 이미지가 없거나 로딩/실패면 WSS 빈 표지(`imgLoadingThumbnail`)로 대체한다(정본: NovelDetail 헤더).
     private var thumbnail: some View {
-        AsyncImage(url: novel.thumbnailImage) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            Color.wssGray50
+        AsyncImage(url: novel.thumbnailImage) { phase in
+            if case .success(let image) = phase {
+                image
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                WSSImage.imgLoadingThumbnail.swiftUIImage
+                    .resizable()
+                    .scaledToFill()
+            }
         }
         .frame(width: 60, height: 80)
         .clipShape(RoundedRectangle(cornerRadius: 8))

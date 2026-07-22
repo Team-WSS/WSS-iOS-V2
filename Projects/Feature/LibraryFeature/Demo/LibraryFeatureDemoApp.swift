@@ -165,7 +165,10 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
         return LibraryNovel(
             id: NovelID(index),
             title: isLongTitle ? "데모 작품 \(index) — 당신의 이해를 돕기 위하여" : "데모 작품 \(index)",
-            thumbnailImage: nil,
+            // 표지 비율(108:160)의 실제 이미지. 5번째마다 nil로 둬 WSS 빈 표지 폴백도 함께 확인한다.
+            thumbnailImage: index.isMultiple(of: 5)
+                ? nil
+                : URL(string: "https://picsum.photos/seed/wss\(index)/216/320"),
             rating: 4.2,
             isInterested: index.isMultiple(of: 3),
             userReview: review,
