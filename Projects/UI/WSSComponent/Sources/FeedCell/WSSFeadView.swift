@@ -128,7 +128,8 @@ public struct WSSFeadView: View {
             linkNovel: WSSLinkNovel(
                 genreType: .modernFantasy,
                 novelTitle: "스즈미야 하루히의 무료",
-                novelRating: 4.3
+                novelRating: 4.3,
+                linkNovelTapped: { print("연결 작품 탭!") }
             ),
             react: WSSFeedReact(
                 likeCount: 13,
