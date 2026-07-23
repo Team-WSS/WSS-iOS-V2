@@ -41,7 +41,7 @@ struct FeedDetailCommentInputBar: View {
                                   axis: .vertical)
                         .applyWSSFont(.body3)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                        .lineLimit(1)
+                        .lineLimit(5)
                         .focused(externalFocus ?? $internalFocus)
                     }
                 }
