@@ -27,8 +27,7 @@ struct FeedDetailView: View {
     @FocusState private var isCommentFocused: Bool
 
     // 이미지 확대 뷰
-    @State private var showImageViewer: Bool = false
-    @State private var selectedImageIndex: Int = 0
+    @State private var selectedImage: SelectedImage?
 
     // 드롭다운 변수
     @State private var showFeedDropdown: Bool = false
@@ -82,6 +81,12 @@ struct FeedDetailView: View {
         .onAppear {
             Task { await viewModel.handle(.load) }
         }
+        .fullScreenCover(item: $selectedImage) { item in
+            FeedDetailImageViewer(
+                imageURLs: viewModel.state.detail?.feedImageURLs ?? [],
+                initialIndex: item.index
+            )
+        }
         // 이 화면의 모든 알럿(신고 확인/완료, 삭제 확인, 피드 접근 불가)은 VM의 `state.alert` 하나로 표현된다.
         // detail이 로드되지 않은 상태에서도 떠야 하므로(피드 접근 불가) 최상위에 건다.
         .showWSSAlert(
@@ -128,8 +133,7 @@ struct FeedDetailView: View {
                         FeedDetailAttachImageBlock(
                             imageURLs: detail.feedImageURLs,
                             onImageTapped: { index in
-                                selectedImageIndex = index
-                                showImageViewer = true
+                                selectedImage = SelectedImage(id: index)
                             }
                         )
 
@@ -253,12 +257,6 @@ struct FeedDetailView: View {
                 },
                 isSubmitting: viewModel.state.isSubmittingComment,
                 externalFocus: $isCommentFocused
-            )
-        }
-        .fullScreenCover(isPresented: $showImageViewer) {
-            FeedDetailImageViewer(
-                imageURLs: detail.feedImageURLs,
-                initialIndex: selectedImageIndex
             )
         }
     }

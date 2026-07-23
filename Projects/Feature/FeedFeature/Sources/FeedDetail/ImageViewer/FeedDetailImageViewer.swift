@@ -16,26 +16,37 @@ struct FeedDetailImageViewer: View {
     let imageURLs: [URL?]
     let initialIndex: Int
     @State private var selectedIndex: Int?
-
+    
     @Environment(\.dismiss) private var dismiss
-
+    
     init(imageURLs: [URL?], initialIndex: Int) {
         self.imageURLs = imageURLs
         self.initialIndex = initialIndex
-        self._selectedIndex = State(initialValue: initialIndex)
+        
+        _selectedIndex = State(initialValue: nil)
     }
-
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-
-            ScrollViewReader { proxy in
+            
                 ScrollView(.horizontal) {
-                    HStack(spacing: 0) {
+                    LazyHStack(spacing: 0) {
                         ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
-                            imageView(url: url)
-                                .containerRelativeFrame(.horizontal)
-                                .id(index)
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                default:
+                                    WSSImage.imgEmpty.swiftUIImage
+                                        .resizable()
+                                        .scaledToFit()
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .containerRelativeFrame(.horizontal)
                         }
                     }
                     .scrollTargetLayout()
@@ -43,15 +54,7 @@ struct FeedDetailImageViewer: View {
                 .scrollPosition(id: $selectedIndex)
                 .scrollTargetBehavior(.paging)
                 .scrollIndicators(.hidden)
-                .onAppear {
-                    // scrollPosition(id:)의 초깃값 반영은 fullScreenCover 등장 전환 중엔 무시되는
-                    // 경우가 있다(최초 진입에서만 재현). ScrollViewReader.scrollTo는 UIScrollView에
-                    // 직접 오프셋을 지시하는 명령형 API라 전환 중에도 더 확실히 반영된다.
-                    guard initialIndex != 0 else { return }
-                    proxy.scrollTo(initialIndex, anchor: .leading)
-                }
-            }
-
+            
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     Button {
@@ -67,7 +70,7 @@ struct FeedDetailImageViewer: View {
                     
                     Spacer()
                 }
-
+                
                 Spacer()
             }
             
@@ -80,25 +83,8 @@ struct FeedDetailImageViewer: View {
                 Spacer()
             }
         }
-    }
-    
-    private func imageView(url: URL?) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFit()
-                
-            case .failure:
-                WSSImage.imgLoadingThumbnail.swiftUIImage
-                    .resizable()
-                    .scaledToFit()
-                
-            default:
-                ProgressView()
-                    .tint(WSSColor.wssWhite.swiftUIColor)
-            }
+        .onAppear {
+            selectedIndex = initialIndex
         }
     }
 }
