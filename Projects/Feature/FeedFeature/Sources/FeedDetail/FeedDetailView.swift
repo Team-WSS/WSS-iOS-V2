@@ -33,17 +33,15 @@ struct FeedDetailView: View {
     // 드롭다운 변수
     @State private var showFeedDropdown: Bool = false
     @State private var showCommentDropdown: Bool = false
-    
-    // 알럿 변수
-    @State private var showSpoilerReportAlert: Bool = false
-    @State private var showImproperReportAlert: Bool = false
-    @State private var showSpoilerReceivedAlert: Bool = false
-    @State private var showImproperReceivedAlert: Bool = false
-    @State private var showDeleteCommentAlert: Bool = false
-    @State private var showDeleteFeedAlert: Bool = false
-    
-    init(viewModel: FeedDetailViewModel) {
+
+    private let onNovelTapped: (NovelID) -> Void
+
+    init(
+        viewModel: FeedDetailViewModel,
+        onNovelTapped: @escaping (NovelID) -> Void
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onNovelTapped = onNovelTapped
     }
     
     var body: some View {
@@ -84,16 +82,12 @@ struct FeedDetailView: View {
         .onAppear {
             Task { await viewModel.handle(.load) }
         }
-        // 삭제됨(404)/숨김·차단(403) — detail이 로드되지 않은 상태에서도 떠야 하므로 최상위에 건다.
+        // 이 화면의 모든 알럿(신고 확인/완료, 삭제 확인, 피드 접근 불가)은 VM의 `state.alert` 하나로 표현된다.
+        // detail이 로드되지 않은 상태에서도 떠야 하므로(피드 접근 불가) 최상위에 건다.
         .showWSSAlert(
-            isPresented: Binding(
-                get: { viewModel.state.feedUnavailable },
-                set: { _ in }
-            ),
-            type: .alreadyDeletedFeed,
-            buttonActions: [
-                { dismiss() }
-            ]
+            isPresented: alertBinding,
+            type: alertType,
+            buttonActions: alertActions
         )
     }
     
@@ -156,7 +150,7 @@ struct FeedDetailView: View {
                         )
                         .padding(.horizontal, 16)
                         .onTapGesture {
-                            print("\(String(describing: detail.connectedNovel?.basicInfo.id.value)) 으로 이동")
+                            onNovelTapped(novel.basicInfo.id)
                         }
 
                         Spacer().frame(height: 30)
@@ -261,93 +255,6 @@ struct FeedDetailView: View {
                 externalFocus: $isCommentFocused
             )
         }
-        .showWSSAlert(
-            isPresented: $showSpoilerReportAlert,
-            type: .reportSpoilerContent,
-            buttonActions: [
-                { showSpoilerReportAlert.toggle() },
-                {
-                    Task {
-                        if let commentID = selectedCommentID {
-                            await viewModel.handle(.reportSpoilerComment(commentID))
-                        } else {
-                            await viewModel.handle(.reportSpoilerFeed)
-                        }
-                        showSpoilerReceivedAlert = true
-                    }
-                }
-            ]
-        )
-        .showWSSAlert(
-            isPresented: $showImproperReportAlert,
-            type: .reportImproperContent,
-            buttonActions: [
-                { showImproperReportAlert.toggle() },
-                {
-                    Task {
-                        if let commentID = selectedCommentID {
-                            await viewModel.handle(.reportImproperComment(commentID))
-                        } else {
-                            await viewModel.handle(.reportImproperFeed)
-                        }
-                        showImproperReceivedAlert = true
-                    }
-                }
-            ]
-        )
-        .showWSSAlert(
-            isPresented: $showSpoilerReceivedAlert,
-            type: .receivedReportSpoilerContent,
-            buttonActions: [
-                {
-                    selectedCommentID = nil
-                    showSpoilerReceivedAlert.toggle()
-                    showSpoilerReportAlert.toggle()
-                }
-            ]
-        )
-        .showWSSAlert(
-            isPresented: $showImproperReceivedAlert,
-            type: .receivedReportImproperContent,
-            buttonActions: [
-                {
-                    selectedCommentID = nil
-                    showImproperReceivedAlert.toggle()
-                    showImproperReportAlert.toggle()
-                }
-            ]
-        )
-        .showWSSAlert(
-            isPresented: $showDeleteCommentAlert,
-            type: .deleteMyComment,
-            buttonActions: [
-                {
-                    selectedCommentID = nil
-                    showDeleteCommentAlert.toggle()
-                },
-                {
-                    if let commentID = selectedCommentID {
-                        Task { await viewModel.handle(.deleteComment(commentID)) }
-                    }
-                    selectedCommentID = nil
-                    showDeleteCommentAlert.toggle()
-                }
-            ]
-        )
-        .showWSSAlert(
-            isPresented: $showDeleteFeedAlert,
-            type: .deleteMyFeed,
-            buttonActions: [
-                { showDeleteFeedAlert.toggle() },
-                {
-                    showDeleteFeedAlert.toggle()
-                    Task {
-                        await viewModel.handle(.deleteFeed)
-                        if viewModel.state.didDeleteFeed { dismiss() }
-                    }
-                }
-            ]
-        )
         .fullScreenCover(isPresented: $showImageViewer) {
             FeedDetailImageViewer(
                 imageURLs: detail.feedImageURLs,
@@ -399,7 +306,7 @@ struct FeedDetailView: View {
                     title: "삭제",
                     action: {
                         showFeedDropdown = false
-                        showDeleteFeedAlert = true
+                        Task { await viewModel.handle(.presentAlert(.deleteFeed)) }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 )
@@ -411,7 +318,7 @@ struct FeedDetailView: View {
                     action: {
                         showFeedDropdown = false
                         selectedCommentID = nil
-                        showSpoilerReportAlert = true
+                        Task { await viewModel.handle(.presentAlert(.reportSpoiler(commentID: nil))) }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 ),
@@ -420,16 +327,16 @@ struct FeedDetailView: View {
                     action: {
                         showFeedDropdown = false
                         selectedCommentID = nil
-                        showImproperReportAlert = true
+                        Task { await viewModel.handle(.presentAlert(.reportImproper(commentID: nil))) }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 )
             ]
         }
     }
-    
+
     //MARK: - 댓글 드롭다운
-    
+
     private func commentDropdownItems() -> [WSSDropdownItem] {
         if selectedCommentIsMine {
             return [
@@ -449,7 +356,9 @@ struct FeedDetailView: View {
                     title: "삭제",
                     action: {
                         showCommentDropdown = false
-                        showDeleteCommentAlert = true
+                        if let commentID = selectedCommentID {
+                            Task { await viewModel.handle(.presentAlert(.deleteComment(commentID))) }
+                        }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 )
@@ -460,17 +369,15 @@ struct FeedDetailView: View {
                     title: "스포일러 신고",
                     action: {
                         showCommentDropdown = false
-                        showSpoilerReportAlert = true
+                        Task { await viewModel.handle(.presentAlert(.reportSpoiler(commentID: selectedCommentID))) }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
-                    
-                    
                 ),
                 WSSDropdownItem(
                     title: "부적절한 표현 신고",
                     action: {
                         showCommentDropdown = false
-                        showImproperReportAlert = true
+                        Task { await viewModel.handle(.presentAlert(.reportImproper(commentID: selectedCommentID))) }
                     },
                     textColor: WSSColor.wssSecondary100.swiftUIColor
                 )
@@ -488,6 +395,80 @@ struct FeedDetailView: View {
             withAnimation {
                 proxy.scrollTo("bottomAnchor", anchor: .bottom)
             }
+        }
+    }
+
+    //MARK: - 알럿 Presentation
+
+    /// VM의 의미 알럿(`state.alert`) → 표시 여부. "취소" 없이 확인 한 번뿐인 알럿(`feedUnavailable` 등)도
+    /// 버튼 액션에서 명시적으로 `dismissAlert`를 호출하므로 set은 쓰이지 않는다.
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.alert != nil },
+            set: { _ in }
+        )
+    }
+
+    /// VM의 의미 알럿 → 실제 `WSSAlertType`(문구·버튼 개수) 매핑. `nil`이면 안 뜨므로 값은 임의.
+    private var alertType: WSSAlertType {
+        switch viewModel.state.alert {
+        case .reportSpoiler:
+            return .reportSpoilerContent
+        case .reportImproper:
+            return .reportImproperContent
+        case .reportSpoilerCompleted:
+            return .receivedReportSpoilerContent
+        case .reportImproperCompleted:
+            return .receivedReportImproperContent
+        case .deleteComment:
+            return .deleteMyComment
+        case .deleteFeed:
+            return .deleteMyFeed
+        case .feedUnavailable, nil:
+            return .alreadyDeletedFeed
+        }
+    }
+
+    /// VM의 의미 알럿 → 버튼 액션. 신고 확인은 완료 알럿으로 전환되고, 삭제/안내는 실행 후 닫힌다.
+    private var alertActions: [() -> Void] {
+        switch viewModel.state.alert {
+        case .reportSpoiler, .reportImproper:
+            return [
+                { Task { await viewModel.handle(.dismissAlert) } },
+                { Task { await viewModel.handle(.confirmAlert) } }
+            ]
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            return [
+                {
+                    selectedCommentID = nil
+                    Task { await viewModel.handle(.dismissAlert) }
+                }
+            ]
+        case .deleteComment:
+            return [
+                {
+                    selectedCommentID = nil
+                    Task { await viewModel.handle(.dismissAlert) }
+                },
+                {
+                    selectedCommentID = nil
+                    Task { await viewModel.handle(.confirmAlert) }
+                }
+            ]
+        case .deleteFeed:
+            return [
+                { Task { await viewModel.handle(.dismissAlert) } },
+                {
+                    Task {
+                        await viewModel.handle(.confirmAlert)
+                        if viewModel.state.didDeleteFeed { dismiss() }
+                    }
+                }
+            ]
+        case .feedUnavailable:
+            return [ { dismiss() } ]
+        case nil:
+            return []
         }
     }
 }
@@ -508,7 +489,7 @@ struct FeedDetailView: View {
             reportImproperFeedUseCase: PreviewReportImproperFeedUseCase(),
             reportSpoilerCommentUseCase: PreviewReportSpoilerCommentUseCase(),
             reportImproperCommentUseCase: PreviewReportImproperCommentUseCase()
-        ))
+        ), onNovelTapped: { print("작품 상세 진입: \($0)") })
     }
 }
 

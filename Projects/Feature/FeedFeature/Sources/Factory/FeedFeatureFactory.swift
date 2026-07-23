@@ -58,7 +58,8 @@ public enum FeedFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onNovelTapped: @escaping (NovelID) -> Void
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
@@ -76,7 +77,8 @@ public enum FeedFeatureFactory {
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                 reportImproperCommentUseCase: reportImproperCommentUseCase,
                 logger: logger
-            )
+            ),
+            onNovelTapped: onNovelTapped
         )
     }
 

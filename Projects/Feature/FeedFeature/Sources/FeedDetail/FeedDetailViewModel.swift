@@ -30,11 +30,10 @@ public final class FeedDetailViewModel {
         var editingCommentID: CommentID?
         var isSubmittingComment: Bool = false
         var didDeleteFeed: Bool = false
+        /// 현재 떠 있는 알럿의 의미값. `nil`이면 알럿 없음 — View는 이 값 하나로 모든 알럿을 표현한다.
         var alert: AlertType?
-        /// 피드 상세/댓글 조회가 "존재하지 않음"(404) 또는 "접근 불가"(403 — 숨김·차단)로 실패했는지.
-        /// 서버가 사유를 세분화해 내려줘도 이 화면은 하나의 알럿으로 보여준다.
-        var feedUnavailable: Bool = false
-        /// 피드 상세 조회가 위 두 사유가 아닌 다른 이유로 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현.
+        /// 피드 상세 조회가 `alert`로 표현되는 사유(존재하지 않음·접근 불가)가 아닌 다른 이유로
+        /// 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현한다.
         /// 댓글 조회의 동종 실패는 화면 전체를 덮지 않고 로그만 남긴다(부차 콘텐츠).
         var detailLoadFailed: Bool = false
     }
@@ -58,6 +57,10 @@ public final class FeedDetailViewModel {
 
         case deleteComment(CommentID)
         case deleteFeed
+
+        /// 피드 상세/댓글 조회가 "존재하지 않음"(404) 또는 "접근 불가"(403 — 숨김·차단)로 실패함.
+        /// 서버가 사유를 세분화해 내려줘도 이 화면은 하나의 알럿으로 뭉뚱그려 보여준다.
+        case feedUnavailable
     }
 
     // MARK: - Properties
@@ -130,16 +133,15 @@ public final class FeedDetailViewModel {
     public enum Action {
         case load
         case toggleLike
-        case deleteFeed
         case updateCommentText(String)
         case submitComment
-        case deleteComment(CommentID)
         case beginEditingComment(CommentID)
         case cancelEditingComment
-        case reportSpoilerFeed
-        case reportImproperFeed
-        case reportSpoilerComment(CommentID)
-        case reportImproperComment(CommentID)
+
+        /// 알럿 하나로 화면의 모든 확인/신고/완료 알럿을 표현한다 — present → (confirm | dismiss).
+        case presentAlert(AlertType)
+        case confirmAlert
+        case dismissAlert
     }
 
     public func handle(_ action: Action) async {
@@ -164,12 +166,6 @@ public final class FeedDetailViewModel {
             state.commentText = ""
             Task { await loadComments() }
 
-        case .deleteFeed:
-            await deleteFeed()
-
-        case .deleteComment(let commentID):
-            await deleteComment(commentID: commentID)
-
         case .beginEditingComment(let commentID):
             beginEditingComment(commentID: commentID)
 
@@ -180,17 +176,14 @@ public final class FeedDetailViewModel {
         case .toggleLike:
             await toggleLike()
 
-        case .reportSpoilerFeed:
-            try? await reportSpoilerFeedUseCase.execute(id: feedID)
+        case .presentAlert(let type):
+            state.alert = type
 
-        case .reportImproperFeed:
-            try? await reportImproperFeedUseCase.execute(id: feedID)
+        case .confirmAlert:
+            await confirmAlert()
 
-        case .reportSpoilerComment(let commentID):
-            try? await reportSpoilerCommentUseCase.execute(feedID: feedID, commentID: commentID)
-
-        case .reportImproperComment(let commentID):
-            try? await reportImproperCommentUseCase.execute(feedID: feedID, commentID: commentID)
+        case .dismissAlert:
+            state.alert = nil
         }
     }
 
@@ -206,7 +199,7 @@ public final class FeedDetailViewModel {
             state.detail = feed
         } catch {
             if isFeedUnavailable(error) {
-                state.feedUnavailable = true
+                state.alert = .feedUnavailable
             } else {
                 logger?.error("FeedDetail fetchFeedDetail 실패: \(String(describing: error))")
                 state.detailLoadFailed = true
@@ -220,7 +213,7 @@ public final class FeedDetailViewModel {
             state.comments = comments
         } catch {
             if isFeedUnavailable(error) {
-                state.feedUnavailable = true
+                state.alert = .feedUnavailable
             } else {
                 logger?.error("FeedDetail loadComments 실패: \(String(describing: error))")
             }
@@ -232,7 +225,51 @@ public final class FeedDetailViewModel {
     private func isFeedUnavailable(_ error: RepositoryError) -> Bool {
         error == .notFound || error == .forbidden
     }
-    
+
+    /// 현재 떠 있는 알럿(`state.alert`)의 "확인" 버튼 동작. 신고류는 완료 알럿으로 전환하고,
+    /// 그 외(삭제·안내)는 실행 후 알럿을 닫는다.
+    private func confirmAlert() async {
+        guard let alert = state.alert else { return }
+        switch alert {
+        case .reportSpoiler(let commentID):
+            await reportSpoiler(commentID: commentID)
+            state.alert = .reportSpoilerCompleted
+
+        case .reportImproper(let commentID):
+            await reportImproper(commentID: commentID)
+            state.alert = .reportImproperCompleted
+
+        case .reportSpoilerCompleted, .reportImproperCompleted, .feedUnavailable:
+            state.alert = nil
+
+        case .deleteComment(let commentID):
+            await deleteComment(commentID: commentID)
+            state.alert = nil
+
+        case .deleteFeed:
+            await deleteFeed()
+            state.alert = nil
+        }
+    }
+
+    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고.
+    private func reportSpoiler(commentID: CommentID?) async {
+        if let commentID {
+            try? await reportSpoilerCommentUseCase.execute(feedID: feedID, commentID: commentID)
+        } else {
+            try? await reportSpoilerFeedUseCase.execute(id: feedID)
+        }
+    }
+
+    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고.
+    private func reportImproper(commentID: CommentID?) async {
+        if let commentID {
+            try? await reportImproperCommentUseCase.execute(feedID: feedID, commentID: commentID)
+        } else {
+            try? await reportImproperFeedUseCase.execute(id: feedID)
+        }
+    }
+
     private func deleteFeed() async {
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)

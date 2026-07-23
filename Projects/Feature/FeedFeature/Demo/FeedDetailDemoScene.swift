@@ -123,7 +123,8 @@ struct FeedDetailDemoScene: View {
                     reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                     reportImproperFeedUseCase: reportImproperFeedUseCase,
                     reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
-                    reportImproperCommentUseCase: reportImproperCommentUseCase
+                    reportImproperCommentUseCase: reportImproperCommentUseCase,
+                    onNovelTapped: { print("작품 상세 진입: \($0)") }
                 )
             }
         }
