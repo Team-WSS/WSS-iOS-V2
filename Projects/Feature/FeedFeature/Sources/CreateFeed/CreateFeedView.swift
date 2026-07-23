@@ -25,6 +25,7 @@ public struct CreateFeedView: View {
     
     @FocusState private var isKeyboardFocused: Bool
     
+    @Environment(\.dismiss) private var dismiss
     
     public init(viewModel: CreateFeedViewModel) {
         self._viewModel = State(initialValue: viewModel)
@@ -32,7 +33,6 @@ public struct CreateFeedView: View {
     
     public var body: some View {
         ZStack {
-            NavigationStack {
                 VStack(spacing: 0) {
                     privateSection
                     
@@ -80,6 +80,8 @@ public struct CreateFeedView: View {
                     for: .navigationBar
                 )
                 .toolbarBackground(.visible, for: .navigationBar)
+                .navigationBarBackButtonHidden()
+                .navigationBarTitleDisplayMode(.inline)
                 .photosPicker(
                     isPresented: $showPhotosPicker,
                     selection: $pickerItems,
@@ -128,13 +130,12 @@ public struct CreateFeedView: View {
                     ),
                     type: toastType
                 )
-            }
         }
         .showWSSAlert(
             isPresented: $showDismissAlert,
             type: .stopWritingFeed,
             buttonActions: [
-                { },
+                { dismiss() },
                 { showDismissAlert = false }
             ]
         )
@@ -429,18 +430,20 @@ public struct CreateFeedView: View {
 //MARK: - Preview
 
 #Preview {
-    CreateFeedView(
-        viewModel: CreateFeedViewModel(
-            createFeedUseCase: PreviewCreateFeedUseCase(),
-            searchNovelUseCase: PreviewSearchNovelUseCase(),
-            initialDraft: FeedDraft(
-                content: "",
-                isSpoiler: false,
-                isPrivate: false,
-                attachedImages: []
+    NavigationStack {
+        CreateFeedView(
+            viewModel: CreateFeedViewModel(
+                createFeedUseCase: PreviewCreateFeedUseCase(),
+                searchNovelUseCase: PreviewSearchNovelUseCase(),
+                initialDraft: FeedDraft(
+                    content: "",
+                    isSpoiler: false,
+                    isPrivate: false,
+                    attachedImages: []
+                )
             )
         )
-    )
+    }
 }
 
 private struct PreviewCreateFeedUseCase: CreateFeedUseCase {
