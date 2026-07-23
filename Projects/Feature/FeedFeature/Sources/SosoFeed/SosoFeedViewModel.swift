@@ -217,6 +217,7 @@ final class SosoFeedViewModel {
             isSpoiler: feed.isSpoiler,
             isModified: feed.isModified,
             isPublic: feed.isPublic,
+            isMyFeed: feed.isMyFeed,
             thumbnailImageURL: feed.thumbnailImageURL,
             imageCount: feed.imageCount
         )

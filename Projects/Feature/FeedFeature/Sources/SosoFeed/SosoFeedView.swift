@@ -237,7 +237,7 @@ struct SosoFeedView: View {
                 nickname: feed.author.nickname,
                 createdDate: feed.createdDate,
                 isEdited: feed.isModified,
-                profileImageTapped: { },
+                profileTapped: { print("\(String(describing: feed.author.userId)) 프로필로 이동") },
                 threeDotsButtonTapped: { }
             ),
             content: feed.content,
@@ -252,12 +252,14 @@ struct SosoFeedView: View {
                     WSSLinkNovel(
                         genreType: genre,
                         novelTitle: novel.title,
-                        novelRating: novel.rating ?? 0
+                        novelRating: novel.rating ?? 0,
+                        linkNovelTapped: { print("\(novel.id) 작품 상세로 이동") }
                     )
                 }
             },
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
+                isLiked: feed.isLiked,
                 commentCount: feed.commentCount,
                 likeButtonTapped: { viewModel.handle(.toggleLike(feed.feedId)) }
             )
