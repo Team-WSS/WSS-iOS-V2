@@ -94,17 +94,17 @@ struct LibraryView: View {
     private var content: some View {
         VStack(spacing: 0) {
             headerSection
-            controlSection
-            countSortSection
-            novelListSection
-        }
-        .background(Color.wssWhite)
-        .overlay {
+            // 첫 페이지 실패는 헤더(타이틀·등록 버튼)만 남기고 그 아래를 전면 실패 뷰로 대체한다 —
+            // 필터/정렬/카운트는 실패 상태에서 조작할 게 없어 함께 숨긴다.
             if viewModel.state.loadFailed {
                 NetworkErrorView { viewModel.handle(.retry) }
-                    .background(Color.wssWhite)
+            } else {
+                controlSection
+                countSortSection
+                novelListSection
             }
         }
+        .background(Color.wssWhite)
     }
 }
 
@@ -298,9 +298,17 @@ private extension LibraryView {
 // 화면 전용 컨트롤(모드 토글·필터 칩) — Sections가 조립하는 leaf들.
 private extension LibraryView {
 
-    /// 그리드/리스트 보기 방식 미니 세그먼트 — 선택 세그먼트만 흰 배경 + 그림자.
+    private enum ToggleMetric {
+        static let segmentWidth: CGFloat = 31
+        static let segmentHeight: CGFloat = 26
+        static let spacing: CGFloat = 2
+        /// 리스트 선택 시 흰 원이 오른쪽 세그먼트로 미끄러지는 거리 = 세그먼트 폭 + 세그먼트 간격.
+        static var knobSlide: CGFloat { segmentWidth + spacing }
+    }
+
+    /// 그리드/리스트 보기 방식 미니 세그먼트 — 선택 표시인 흰 원 하나가 좌↔우로 미끄러진다(토글 스위치 느낌).
     var displayModeToggle: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: ToggleMetric.spacing) {
             displayModeSegment(.grid) {
                 gridIcon(color: displayMode == .grid ? Color.wssBlack : Color.wssGray100)
             }
@@ -308,10 +316,20 @@ private extension LibraryView {
                 listIcon(color: displayMode == .list ? Color.wssBlack : Color.wssGray100)
             }
         }
+        // 흰 원 하나를 항상 그려두고 x offset만 바꿔 대놓고 미끄러뜨린다.
+        // (조건부 insert/remove + matchedGeometry는 이동이 아니라 크로스페이드로 보여서 버림.)
+        .background(alignment: .leading) {
+            Capsule()
+                .fill(Color.wssWhite)
+                .shadow(color: Color.wssBlack.opacity(0.12), radius: 2, y: 1)
+                .frame(width: ToggleMetric.segmentWidth, height: ToggleMetric.segmentHeight)
+                .offset(x: displayMode == .grid ? 0 : ToggleMetric.knobSlide)
+        }
         .padding(3)
         .background(Color.wssGray20)
         .clipShape(Capsule())
         .overlay(Capsule().stroke(Color.wssGray70, lineWidth: 1))
+        .animation(.spring(response: 0.35, dampingFraction: 0.72), value: displayMode)
     }
 
     func displayModeSegment(_ mode: DisplayMode, @ViewBuilder icon: () -> some View) -> some View {
@@ -319,17 +337,10 @@ private extension LibraryView {
             displayMode = mode
         } label: {
             icon()
-                .frame(width: 31, height: 26)
-                .background(displayMode == mode ? Color.wssWhite : Color.clear)
-                .clipShape(Capsule())
-                .shadow(
-                    color: displayMode == mode ? Color.wssBlack.opacity(0.12) : .clear,
-                    radius: 2, y: 1
-                )
+                .frame(width: ToggleMetric.segmentWidth, height: ToggleMetric.segmentHeight)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.1), value: displayMode == mode)
     }
 
     func gridIcon(color: Color) -> some View {
