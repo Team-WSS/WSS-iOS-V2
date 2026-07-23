@@ -62,22 +62,12 @@ struct LibraryGridCell: View {
     }
 
     /// 표지 — 열 너비에 맞춰 비율(108:160)대로 커지고, 좌하단 읽기 상태 뱃지·우하단 관심 하트를 얹는다.
-    /// 이미지가 없거나 로딩/실패면 WSS 빈 표지(`imgLoadingThumbnail`)로 대체한다(정본: NovelDetail 헤더).
+    /// 표지 로드·캐시·빈 표지 폴백은 `WSSNovelCoverImage`가 담당(토글·재활용 시 번쩍임 방지).
     private var thumbnail: some View {
         Color.clear
             .aspectRatio(Metric.thumbnailAspectRatio, contentMode: .fit)
             .overlay {
-                AsyncImage(url: novel.thumbnailImage) { phase in
-                    if case .success(let image) = phase {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                            .resizable()
-                            .scaledToFill()
-                    }
-                }
+                WSSNovelCoverImage(url: novel.thumbnailImage)
             }
         .clipShape(RoundedRectangle(cornerRadius: 8))
         // 잘린 그림 밖 원본 크기로 hit-test 영역이 남지 않게 명시(스크롤·셀 탭 간섭 예방).

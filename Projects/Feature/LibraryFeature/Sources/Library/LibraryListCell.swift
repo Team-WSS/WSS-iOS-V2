@@ -77,19 +77,9 @@ struct LibraryListCell: View {
         }
     }
 
-    /// 이미지가 없거나 로딩/실패면 WSS 빈 표지(`imgLoadingThumbnail`)로 대체한다(정본: NovelDetail 헤더).
+    /// 표지 로드·캐시·빈 표지 폴백은 `WSSNovelCoverImage`가 담당(토글·재활용 시 번쩍임 방지).
     private var thumbnail: some View {
-        AsyncImage(url: novel.thumbnailImage) { phase in
-            if case .success(let image) = phase {
-                image
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                WSSImage.imgLoadingThumbnail.swiftUIImage
-                    .resizable()
-                    .scaledToFill()
-            }
-        }
+        WSSNovelCoverImage(url: novel.thumbnailImage)
         .frame(width: 60, height: 80)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .contentShape(RoundedRectangle(cornerRadius: 8))
