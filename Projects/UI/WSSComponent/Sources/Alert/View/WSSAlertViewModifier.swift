@@ -22,15 +22,19 @@ public struct WSSAlertViewModifier: ViewModifier {
                         .ignoresSafeArea()
                         .transition(.opacity)
 
+                    // 신고 확인 → 접수 완료처럼 `isPresented`는 그대로 두고 `alertType`만
+                    // 바뀌는 다단계 알럿이 있다 — `.id`로 뷰 정체성을 갈라줘야 다음 알럿이
+                    // 스냅되지 않고 이전 알럿과 크로스페이드된다.
                     WSSAlertView(
                         type: alertType,
                         buttonActions: buttonActions
                     )
+                    .id(alertType)
                     .padding(.horizontal, 42)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
-            .animation(.easeInOut(duration: 0.25),
-                       value: isPresented)
+            .animation(.easeInOut(duration: 0.25), value: isPresented)
+            .animation(.easeInOut(duration: 0.25), value: alertType)
     }
 }

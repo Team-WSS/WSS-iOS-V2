@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum WSSAlertType: CaseIterable {
+public enum WSSAlertType: CaseIterable, Hashable {
     // 앱 관리
     case needTermsAgreement
     case needVersionUpdate
