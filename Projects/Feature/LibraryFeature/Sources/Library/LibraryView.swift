@@ -66,11 +66,6 @@ struct LibraryView: View {
                     isSortSheetPresented = false
                     viewModel.handle(.selectSortType(sortType))
                 }
-                .presentationDetents([.height(LibrarySortSheet.sheetHeight)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(16)
-                // iOS 26 시트 기본 배경은 글래스 — 디자인은 불투명 흰색.
-                .presentationBackground(Color.wssWhite)
             }
             .sheet(isPresented: $isFilterSheetPresented) {
                 LibraryFilterSheet(
