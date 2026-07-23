@@ -15,7 +15,6 @@ struct FeedFeatureDemoApp: App {
 
     init() {
         DesignSystemFontFamily.registerAllCustomFonts()
-        BucketImageURL.configure()
 
         let storage = UserDefaultsStorage()
         storage.set(.userID, 10035)
