@@ -19,10 +19,11 @@ public extension NetworkingError {
             return .invalidData
         case .responseFailure(let code, _):
             switch code {
-            case 401: return .authenticationRequired
-            case 404:      return .notFound
-            case 500...599: return .serverUnavailable
-            default:       return .unknown
+            case 401:           return .authenticationRequired
+            case 403:           return .forbidden
+            case 404:           return .notFound
+            case 500...599:     return .serverUnavailable
+            default:            return .unknown
             }
         case .requiresReauthentication:
             return .authenticationRequired

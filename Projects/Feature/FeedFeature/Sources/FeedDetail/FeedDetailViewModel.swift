@@ -14,6 +14,7 @@ import FeedDomain
 import CommentDomain
 import SocialDomain
 import WSSComponent
+import Logger
 
 @Observable
 @MainActor
@@ -30,6 +31,12 @@ public final class FeedDetailViewModel {
         var isSubmittingComment: Bool = false
         var didDeleteFeed: Bool = false
         var alert: AlertType?
+        /// 피드 상세/댓글 조회가 "존재하지 않음"(404) 또는 "접근 불가"(403 — 숨김·차단)로 실패했는지.
+        /// 서버가 사유를 세분화해 내려줘도 이 화면은 하나의 알럿으로 보여준다.
+        var feedUnavailable: Bool = false
+        /// 피드 상세 조회가 위 두 사유가 아닌 다른 이유로 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현.
+        /// 댓글 조회의 동종 실패는 화면 전체를 덮지 않고 로그만 남긴다(부차 콘텐츠).
+        var detailLoadFailed: Bool = false
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -76,6 +83,8 @@ public final class FeedDetailViewModel {
     private let reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase
     private let reportImproperCommentUseCase: ReportImproperCommentUseCase
 
+    private let logger: Logger?
+
     // MARK: - Init
 
     public init(
@@ -91,7 +100,8 @@ public final class FeedDetailViewModel {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
-        reportImproperCommentUseCase: ReportImproperCommentUseCase
+        reportImproperCommentUseCase: ReportImproperCommentUseCase,
+        logger: Logger? = nil
     ) {
         self.feedID = feedID
         self.currentUserID = currentUserID
@@ -111,6 +121,7 @@ public final class FeedDetailViewModel {
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.reportSpoilerCommentUseCase = reportSpoilerCommentUseCase
         self.reportImproperCommentUseCase = reportImproperCommentUseCase
+        self.logger = logger
     }
 
     
@@ -187,13 +198,19 @@ public final class FeedDetailViewModel {
 
     private func loadFeed() async {
         state.isLoading = true
+        state.detailLoadFailed = false
         defer { state.isLoading = false }
 
         do {
             let feed = try await loadFeedDetailUseCase.execute(feedID: feedID)
             state.detail = feed
         } catch {
-            
+            if isFeedUnavailable(error) {
+                state.feedUnavailable = true
+            } else {
+                logger?.error("FeedDetail fetchFeedDetail 실패: \(String(describing: error))")
+                state.detailLoadFailed = true
+            }
         }
     }
 
@@ -202,8 +219,18 @@ public final class FeedDetailViewModel {
             let comments = try await loadCommentsUseCase.execute(feedID: feedID)
             state.comments = comments
         } catch {
-
+            if isFeedUnavailable(error) {
+                state.feedUnavailable = true
+            } else {
+                logger?.error("FeedDetail loadComments 실패: \(String(describing: error))")
+            }
         }
+    }
+
+    /// `.notFound`(삭제됨)·`.forbidden`(숨김·차단)은 서버가 사유를 세분화해도 이 화면에서는
+    /// 하나의 "피드를 찾을 수 없어요" 알럿으로 뭉뚱그린다.
+    private func isFeedUnavailable(_ error: RepositoryError) -> Bool {
+        error == .notFound || error == .forbidden
     }
     
     private func deleteFeed() async {

@@ -37,6 +37,7 @@ private func describeError(_ error: RepositoryError) -> String {
     case .serverUnavailable:       return "❌ serverUnavailable\n→ 서버 오류 (HTTP 5xx)"
     case .invalidData:             return "❌ invalidData\n→ 서버 응답 파싱 실패 (JSON 디코딩 오류)"
     case .notFound:                return "❌ notFound\n→ 리소스를 찾을 수 없음 (HTTP 404)"
+    case .forbidden:               return "❌ forbidden\n→ 접근 거부 (HTTP 403)"
     case .unknown:                 return "❌ unknown\n→ 매핑되지 않은 오류 (기타 HTTP 오류 또는 예외)"
     }
 }

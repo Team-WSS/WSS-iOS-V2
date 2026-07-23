@@ -56,6 +56,8 @@ struct FeedDetailView: View {
                     isEdited: detail.isModified
                 )
                 loadedFeedDetailView(detail: detail, header: header)
+            } else if viewModel.state.detailLoadFailed {
+                NetworkErrorView { Task { await viewModel.handle(.load) } }
             } else {
                 LoadingView()
             }
@@ -72,6 +74,8 @@ struct FeedDetailView: View {
         .toolbar {
             createFeedDetailToolBarContent()
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
         .onTapGesture {
             if showFeedDropdown { showFeedDropdown = false }
             if showCommentDropdown { showCommentDropdown = false }
@@ -80,6 +84,17 @@ struct FeedDetailView: View {
         .onAppear {
             Task { await viewModel.handle(.load) }
         }
+        // 삭제됨(404)/숨김·차단(403) — detail이 로드되지 않은 상태에서도 떠야 하므로 최상위에 건다.
+        .showWSSAlert(
+            isPresented: Binding(
+                get: { viewModel.state.feedUnavailable },
+                set: { _ in }
+            ),
+            type: .alreadyDeletedFeed,
+            buttonActions: [
+                { dismiss() }
+            ]
+        )
     }
     
     @ViewBuilder
@@ -246,7 +261,6 @@ struct FeedDetailView: View {
                 externalFocus: $isCommentFocused
             )
         }
-        
         .showWSSAlert(
             isPresented: $showSpoilerReportAlert,
             type: .reportSpoilerContent,
@@ -288,6 +302,7 @@ struct FeedDetailView: View {
                 {
                     selectedCommentID = nil
                     showSpoilerReceivedAlert.toggle()
+                    showSpoilerReportAlert.toggle()
                 }
             ]
         )
@@ -298,6 +313,7 @@ struct FeedDetailView: View {
                 {
                     selectedCommentID = nil
                     showImproperReceivedAlert.toggle()
+                    showImproperReportAlert.toggle()
                 }
             ]
         )

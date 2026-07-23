@@ -7,7 +7,7 @@
 
 ## 여기 들어있는 핵심 공통 타입
 
-- `RepositoryError` — 전 레이어 공통 에러 (Data가 여기로 변환해 throw).
+- `RepositoryError` — 전 레이어 공통 에러 (Data가 여기로 변환해 throw). `notFound`(404)와 `forbidden`(403, 숨김·차단 등 "존재하나 접근 불가")은 의도적으로 분리돼 있다 — 특정 화면이 둘을 같은 취급으로 묶고 싶으면 그 화면에서 `error == .notFound || error == .forbidden`처럼 판단하고, 전역 매핑에서 섞지 말 것(FeedDetail의 "피드를 찾을 수 없어요" 알럿이 그 예).
 - `Paginated<T>` (`PaginatedWrapper`) — 페이지네이션 공통 래퍼.
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.

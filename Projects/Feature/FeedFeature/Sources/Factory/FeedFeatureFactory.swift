@@ -13,6 +13,7 @@ import FeedDomain
 import NovelDomain
 import CommentDomain
 import SocialDomain
+import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
 public enum FeedFeatureFactory {
@@ -56,7 +57,8 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
-        reportImproperCommentUseCase: ReportImproperCommentUseCase
+        reportImproperCommentUseCase: ReportImproperCommentUseCase,
+        logger: Logger? = nil
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
@@ -72,7 +74,8 @@ public enum FeedFeatureFactory {
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
-                reportImproperCommentUseCase: reportImproperCommentUseCase
+                reportImproperCommentUseCase: reportImproperCommentUseCase,
+                logger: logger
             )
         )
     }

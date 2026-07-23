@@ -21,7 +21,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.comment)),
         .module(.domain(.social)),
         .module(.ui(.designSystem)),
-        .module(.ui(.wssComponent))
+        .module(.ui(.wssComponent)),
+        .module(.core(.logger))
     ],
     demoDependencies: [
         .module(.core(.networking)),
