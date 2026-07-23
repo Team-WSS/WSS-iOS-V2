@@ -40,9 +40,7 @@ struct FeedDetailImageViewer: View {
                                         .resizable()
                                         .scaledToFit()
                                 default:
-                                    WSSImage.imgEmpty.swiftUIImage
-                                        .resizable()
-                                        .scaledToFit()
+                                    ProgressView()
                                 }
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
