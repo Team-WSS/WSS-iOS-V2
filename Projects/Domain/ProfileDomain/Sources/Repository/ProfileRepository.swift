@@ -18,7 +18,11 @@ public protocol ProfileRepository {
     func registerProfile(_ profile: ProfileRegistration) async throws(RepositoryError)
     
     func loadAccountInfoDraft() async throws(RepositoryError) -> AccountInfoDraft
+    /// 성공 시 서버 전송뿐 아니라 userDefaults(성별/출생연도)도 갱신한다.
     func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError)
+
+    /// userDefaults에 저장된 성별/출생연도를 가져온다. (email은 채우지 않음 — nil)
+    func loadLocalGenderAndBirth() async throws(RepositoryError) -> AccountInfoDraft
     
     func loadProfileVisibility() async throws(RepositoryError) -> ProfileVisibility
     func updateProfileVisibility(_ visibility: ProfileVisibility) async throws(RepositoryError)

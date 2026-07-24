@@ -28,6 +28,8 @@ public final class MockProfileRepository: ProfileRepository {
     public private(set) var saveAccountInfoCallCount = 0
     public private(set) var savedAccountInfos: [AccountInfoDraft] = []
 
+    public private(set) var loadLocalGenderAndBirthCallCount = 0
+
     public private(set) var loadProfileVisibilityCallCount = 0
 
     public private(set) var updateProfileVisibilityCallCount = 0
@@ -58,6 +60,8 @@ public final class MockProfileRepository: ProfileRepository {
 
     public var loadAccountInfoDraftResult: Result<AccountInfoDraft, RepositoryError>!
     public var saveAccountInfoResult: Result<Void, RepositoryError> = .success(())
+
+    public var loadLocalGenderAndBirthResult: Result<AccountInfoDraft, RepositoryError>!
 
     public var loadProfileVisibilityResult: Result<ProfileVisibility, RepositoryError>!
     public var updateProfileVisibilityResult: Result<Void, RepositoryError> = .success(())
@@ -126,6 +130,17 @@ public final class MockProfileRepository: ProfileRepository {
         switch saveAccountInfoResult {
         case .success:
             return
+        case .failure(let e):
+            throw e
+        }
+    }
+
+    public func loadLocalGenderAndBirth() async throws(RepositoryError) -> AccountInfoDraft {
+        loadLocalGenderAndBirthCallCount += 1
+
+        switch loadLocalGenderAndBirthResult! {
+        case .success(let draft):
+            return draft
         case .failure(let e):
             throw e
         }

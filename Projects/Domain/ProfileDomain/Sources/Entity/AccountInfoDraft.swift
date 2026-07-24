@@ -22,11 +22,11 @@ public struct AccountInfoDraft: Equatable {
     
     // MARK: - Mutating
     
-    mutating func setGender(_ gender: Gender) {
+    public mutating func setGender(_ gender: Gender) {
         self.gender = gender
     }
-    
-    mutating func setBirth(_ birth: BirthYear) {
+
+    public mutating func setBirth(_ birth: BirthYear) {
         self.birth = birth
     }
 }

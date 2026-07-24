@@ -14,6 +14,7 @@ enum ProfileAction: String {
     case registerProfile
     case loadAccountInfoDraft
     case saveAccountInfo
+    case loadLocalGenderAndBirth
     case loadProfileVisibility
     case updateProfileVisibility
     case fetchUserProfile

@@ -105,17 +105,59 @@ public struct DefaultProfileRepository: ProfileRepository {
 
     public func saveAccountInfo(_ info: AccountInfoDraft) async throws(RepositoryError) {
         let action = ProfileAction.saveAccountInfo
-        
+
         do {
             let request = AccountInfoRequest(
                 gender: ProfileMapper.genderRawValue(from: info.gender),
                 birth: info.birth.value
             )
             try await service.putAccountInfo(request)
+            localStorage.set(.gender, ProfileMapper.localGenderRawValue(from: info.gender))
+            localStorage.set(.birthYear, info.birth.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
+
+    public func loadLocalGenderAndBirth() async throws(RepositoryError) -> AccountInfoDraft {
+        let action = ProfileAction.loadLocalGenderAndBirth
+
+        if let genderRaw = localStorage.get(.gender),
+           let birthValue = localStorage.get(.birthYear) {
+            do {
+                let result = try ProfileMapper.localGenderAndBirth(genderRaw: genderRaw, birthValue: birthValue)
+                logger?.logSuccess(action: action.name)
+                return result
+            } catch let error as MappingError {
+                logger?.logMappingError(action: action.name, error: error)
+                throw .invalidData
+            } catch {
+                logger?.logUnknownError(action: action.name, error: error)
+                throw .invalidData
+            }
+        }
+
+        // syncUserBasicInfo()는 birthYear를 로컬에 쓰지 않아, "성별/나이 변경" 화면을 한 번도
+        // 저장한 적 없는 사용자는 로컬에 값이 없다 — 이 경우 서버(계정정보 API)에서 읽어와
+        // 다음부터는 로컬로도 읽을 수 있도록 캐시한다.
+        do {
+            let response = try await service.getAccountInfo()
+            let result = try ProfileMapper.accountInfoDraft(from: response)
+            localStorage.set(.gender, ProfileMapper.localGenderRawValue(from: result.gender))
+            localStorage.set(.birthYear, result.birth.value)
+            logger?.logSuccess(action: action.name)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
             throw .unknown

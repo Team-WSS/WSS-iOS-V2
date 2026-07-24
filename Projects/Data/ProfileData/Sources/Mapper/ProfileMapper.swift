@@ -154,4 +154,34 @@ enum ProfileMapper {
         case .female:   return "F"
         }
     }
+
+    /// userDefaults 로컬 저장 포맷. 계정정보 API(`gender(from:)`/`genderRawValue(from:)`)의 "M"/"F"와 다르다 —
+    /// `syncUserBasicInfo()`가 `UserInfoResponse.gender`(예: "MALE"/"FEMALE")를 원문 그대로 저장하기 때문.
+    static func localGender(from text: String) throws -> Gender {
+        switch text {
+        case "MALE":    return .male
+        case "FEMALE":  return .female
+        default:
+            throw MappingError.invalidConversion(type: "Gender", value: text)
+        }
+    }
+
+    static func localGenderRawValue(from gender: Gender) -> String {
+        switch gender {
+        case .male:     return "MALE"
+        case .female:   return "FEMALE"
+        }
+    }
+
+    /// userDefaults에서 읽은 원시값(성별 문자열·출생연도)을 `AccountInfoDraft`로 변환한다. (email 없음)
+    static func localGenderAndBirth(genderRaw: String, birthValue: Int) throws -> AccountInfoDraft {
+        let birth: BirthYear
+        do {
+            birth = try BirthYear(birthValue)
+        } catch {
+            throw MappingError.invalidPayload(reason: "Invalid birthYear: \(birthValue)")
+        }
+        let gender = try ProfileMapper.localGender(from: genderRaw)
+        return AccountInfoDraft(email: nil, gender: gender, birth: birth)
+    }
 }

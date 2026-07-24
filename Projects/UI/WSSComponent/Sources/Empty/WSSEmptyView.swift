@@ -10,30 +10,11 @@ import SwiftUI
 
 import DesignSystem
 
-public enum EmptyType {
-    case novel
-    case keyword
-    
-    var description: String {
-        switch self {
-        case .novel:    "해당 검색어를 가진 작품은\n아직 등록되지 않았어요.."
-        case .keyword:  "해당 키워드는\n아직 등록되지 않았어요.."
-        }
-    }
-    
-    var buttonTitle: String {
-        switch self {
-        case .novel: "작품 문의하러 가기"
-        case .keyword: "키워드 문의하러 가기"
-        }
-    }
-}
-
 public struct WSSEmptyView: View {
-    let type: EmptyType
+    let type: WSSEmptyType
     let action: () -> Void
     
-    public init(type: EmptyType,
+    public init(type: WSSEmptyType,
                 action: @escaping () -> Void) {
         self.type = type
         self.action = action
@@ -69,6 +50,6 @@ public struct WSSEmptyView: View {
 }
 
 #Preview {
-    WSSEmptyView(type: .novel,
+    WSSEmptyView(type: .novelNotification,
                  action: { print("버튼 클릭") })
 }

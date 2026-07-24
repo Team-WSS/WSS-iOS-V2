@@ -25,4 +25,5 @@ extension StorageKey {
     public static var nickname: StorageKey<String> { .init("nickname") }
     public static var characterID: StorageKey<Int> { .init("characterID") }
     public static var gender: StorageKey<String> { .init("gender") }
+    public static var birthYear: StorageKey<Int> { .init("birthYear") }
 }
