@@ -52,7 +52,7 @@ public final class CreateFeedViewModel {
         state.submitState == .submitting
     }
 
-    /// 수정 모드 여부. View에서 타이틀/버튼 라벨 분기에 사용.
+    /// 수정 모드 여부. View의 상단 타이틀("피드 작성"/"피드 수정") 분기에 사용.
     public var isEditing: Bool {
         if case .edit = mode { return true }
         return false
@@ -212,10 +212,18 @@ private extension CreateFeedViewModel {
         do {
             switch mode {
             case .create:
-                guard let createFeedUseCase else { return }
+                // UseCase 미주입은 Factory 조립 오류라 정상 경로에선 발생하지 않지만,
+                // 여기서 조용히 return하면 submitState가 .submitting에 고착된다 — 실패로 귀결시킨다.
+                guard let createFeedUseCase else {
+                    state.submitState = .failed(.unknown)
+                    return
+                }
                 try await createFeedUseCase.execute(draft, imageDatas: imageDatas)
             case .edit(let feedID):
-                guard let editFeedUseCase else { return }
+                guard let editFeedUseCase else {
+                    state.submitState = .failed(.unknown)
+                    return
+                }
                 try await editFeedUseCase.execute(feedID: feedID, editedFeed: draft, imageDatas: imageDatas)
             }
             state.submitState = .submitted

@@ -170,7 +170,13 @@ public struct CreateFeedView: View {
                     showDismissAlert = true
                 }
         }
-        
+
+        ToolbarItem(placement: .principal) {
+            Text(viewModel.isEditing ? "피드 수정" : "피드 작성")
+                .applyWSSFont(.title3)
+                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+        }
+
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 viewModel.handle(.submitFeed)
