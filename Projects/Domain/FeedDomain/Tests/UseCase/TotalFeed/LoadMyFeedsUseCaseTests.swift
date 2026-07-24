@@ -53,6 +53,7 @@ extension LoadMyFeedsUseCaseTests {
     private func makeMyFeedOption() -> MyFeedOption {
         MyFeedOption(
             genres: [.BL, .drama, .fantasy],
+            includesUncategorized: false,
             visibilityType: .publicOnly,
             sortType: .recent
         )
