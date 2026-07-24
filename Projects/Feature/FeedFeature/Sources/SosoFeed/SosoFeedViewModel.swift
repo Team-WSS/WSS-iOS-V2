@@ -35,6 +35,7 @@ final class SosoFeedViewModel {
         /// 실제 fetch에 사용되는 커밋된 필터.
         var myFeedOption: MyFeedOption = MyFeedOption(
             genres: NovelGenre.allCases,
+            includesUncategorized: true,
             visibilityType: .all,
             sortType: .recent
         )
@@ -42,6 +43,7 @@ final class SosoFeedViewModel {
         /// 필터 시트가 편집하는 임시 버퍼. CTA로 commit 되기 전까지 fetch에 영향 없음.
         var myFeedOptionDraft: MyFeedOption = MyFeedOption(
             genres: NovelGenre.allCases,
+            includesUncategorized: true,
             visibilityType: .all,
             sortType: .recent
         )
@@ -64,6 +66,7 @@ final class SosoFeedViewModel {
         // 필터 시트
         case resetMyFeedFilterDraft
         case toggleMyFeedFilterGenre(NovelGenre)
+        case toggleMyFeedFilterEtc
         case toggleMyFeedFilterPublic
         case toggleMyFeedFilterPrivate
         case applyMyFeedFilter
@@ -81,6 +84,10 @@ final class SosoFeedViewModel {
 
     func isMyFeedFilterGenreSelected(_ genre: NovelGenre) -> Bool {
         state.myFeedOptionDraft.genres.contains(genre)
+    }
+
+    var isMyFeedFilterEtcSelected: Bool {
+        state.myFeedOptionDraft.includesUncategorized
     }
 
     // MARK: - Properties
@@ -135,6 +142,8 @@ final class SosoFeedViewModel {
             state.myFeedOptionDraft = state.myFeedOption
         case .toggleMyFeedFilterGenre(let genre):
             toggleMyFeedFilterGenre(genre)
+        case .toggleMyFeedFilterEtc:
+            toggleMyFeedFilterEtc()
         case .toggleMyFeedFilterPublic:
             toggleMyFeedFilterVisibility(togglingPublic: true)
         case .toggleMyFeedFilterPrivate:
@@ -253,6 +262,7 @@ final class SosoFeedViewModel {
 
         state.myFeedOption = MyFeedOption(
             genres: draft.genres,
+            includesUncategorized: draft.includesUncategorized,
             visibilityType: draft.visibilityType,
             sortType: nextSortType
         )
@@ -310,6 +320,18 @@ final class SosoFeedViewModel {
 
         state.myFeedOptionDraft = MyFeedOption(
             genres: newGenres,
+            includesUncategorized: draft.includesUncategorized,
+            visibilityType: draft.visibilityType,
+            sortType: draft.sortType
+        )
+    }
+
+    /// "기타"(연결 작품 없는 피드) 칩 토글.
+    private func toggleMyFeedFilterEtc() {
+        let draft = state.myFeedOptionDraft
+        state.myFeedOptionDraft = MyFeedOption(
+            genres: draft.genres,
+            includesUncategorized: !draft.includesUncategorized,
             visibilityType: draft.visibilityType,
             sortType: draft.sortType
         )
@@ -340,6 +362,7 @@ final class SosoFeedViewModel {
 
         state.myFeedOptionDraft = MyFeedOption(
             genres: draft.genres,
+            includesUncategorized: draft.includesUncategorized,
             visibilityType: nextVisibility,
             sortType: draft.sortType
         )

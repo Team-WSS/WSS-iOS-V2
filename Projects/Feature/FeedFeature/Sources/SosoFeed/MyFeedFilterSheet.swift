@@ -57,6 +57,10 @@ struct MyFeedFilterSheet: View {
         .onAppear {
             viewModel.handle(.resetMyFeedFilterDraft)
         }
+        .presentationBackgroundInteraction(.disabled)
+        .presentationDetents([.height(460)])
+        .presentationBackground(WSSColor.wssWhite.swiftUIColor)
+        .presentationCornerRadius(16)
     }
 
     //MARK: - 카테고리
@@ -76,6 +80,12 @@ struct MyFeedFilterSheet: View {
                             action: { viewModel.handle(.toggleMyFeedFilterGenre(genre)) }
                         )
                     }
+
+                    CapsuleSelectableKeywordChip(
+                        keyword: "그 외",
+                        isSelected: viewModel.isMyFeedFilterEtcSelected,
+                        action: { viewModel.handle(.toggleMyFeedFilterEtc) }
+                    )
                 }
             }
             Spacer()
