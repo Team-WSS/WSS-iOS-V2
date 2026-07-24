@@ -39,7 +39,7 @@ struct WSSFeedDemoView: View {
                         likeCount: 13,
                         commentCount: 23
                     ),
-                    isSpoiler: true,
+                    isSpoiler: false,
                     isPrivate: false
                 )
                 
@@ -93,8 +93,8 @@ struct WSSFeedDemoView: View {
                         likeCount: 42,
                         commentCount: 15
                     ),
-                    isSpoiler: true,
-                    isPrivate: false
+                    isSpoiler: false,
+                    isPrivate: true
                 )
                 
                 Divider()
@@ -116,7 +116,7 @@ struct WSSFeedDemoView: View {
                         commentCount: 8
                     ),
                     isSpoiler: true,
-                    isPrivate: false
+                    isPrivate: true
                 )
             }
             .padding(.vertical, 20)
