@@ -38,7 +38,9 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 13,
                         commentCount: 23
-                    )
+                    ),
+                    isSpoiler: true,
+                    isPrivate: false
                 )
                 
                 Divider()
@@ -62,7 +64,9 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 7,
                         commentCount: 2
-                    )
+                    ),
+                    isSpoiler: true,
+                    isPrivate: false
                 )
                 
                 Divider()
@@ -88,7 +92,9 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 42,
                         commentCount: 15
-                    )
+                    ),
+                    isSpoiler: true,
+                    isPrivate: false
                 )
                 
                 Divider()
@@ -108,7 +114,9 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 3,
                         commentCount: 8
-                    )
+                    ),
+                    isSpoiler: true,
+                    isPrivate: false
                 )
             }
             .padding(.vertical, 20)
