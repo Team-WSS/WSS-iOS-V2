@@ -39,14 +39,12 @@ struct SosoFeedView: View {
 
             FeedListSection
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
         .sheet(isPresented: $showMyFeedFilterSheet) {
             MyFeedFilterSheet(
                 viewModel: viewModel,
                 dismiss: { showMyFeedFilterSheet.toggle() }
             )
-            .presentationDetents([.height(520)])
-            .presentationBackground(WSSColor.wssWhite.swiftUIColor)
-            .presentationCornerRadius(16)
         }
         .onAppear {
             viewModel.handle(.load)
@@ -209,24 +207,44 @@ struct SosoFeedView: View {
         }
     }
 
+    @ViewBuilder
     private var FeedListSection: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(currentFeeds, id: \.feedId) { feed in
-                    feedRow(feed)
-                        .onAppear {
-                            if feed.feedId == currentFeeds.last?.feedId {
-                                viewModel.handle(.loadMore)
+        if viewModel.state.isLoading, currentFeeds.isEmpty {
+            LoadingView()
+        } else if viewModel.state.selectedTab == .myFeed,
+           currentFeeds.isEmpty {
+            WSSEmptyView(type: .myFeed,
+                         action: { })
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(currentFeeds, id: \.feedId) { feed in
+                        feedRow(feed)
+                            .onAppear {
+                                if feed.feedId == currentFeeds.last?.feedId {
+                                    viewModel.handle(.loadMore)
+                                }
                             }
-                        }
-                        .onTapGesture {
-                            // 피드 상세뷰로 이동
-                        }
+                            // 일반 .onTapGesture는 행 전체를 덮어써 안의 좋아요 버튼(WSSFeedReactView)
+                            // 탭을 가로챈다 — simultaneousGesture로 걸어야 안쪽 제스처와 공존한다.
+                            .simultaneousGesture(
+                                TapGesture().onEnded {
+                                    // 피드 상세뷰로 이동
+                                }
+                            )
+                        Rectangle()
+                            .frame(height: 1)
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
+                    }
                 }
             }
+            .refreshable {
+                viewModel.handle(.load)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollIndicators(.hidden)
     }
 
     @ViewBuilder
@@ -262,7 +280,9 @@ struct SosoFeedView: View {
                 isLiked: feed.isLiked,
                 commentCount: feed.commentCount,
                 likeButtonTapped: { viewModel.handle(.toggleLike(feed.feedId)) }
-            )
+            ),
+            isSpoiler: feed.isSpoiler,
+            isPrivate: !feed.isPublic
         )
     }
 
