@@ -35,16 +35,16 @@ private struct DemoRootView: View {
     private let consoleLogger = ConsoleLogger()
 
     var body: some View {
-        KeywordFeatureFactory.makeSearchKeywordView(
-            loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(
-                keywordRepository: KeywordDataFactory.makeRepository(
-                    client: NetworkingClient(
-                        logger: DefaultNetworkLogger(base: consoleLogger),
-                        tokenStore: DemoSessionTokenStore()
-                    ),
-                    logger: DataLogger(moduleName: "KeywordFeatureDemo", underlying: consoleLogger)
-                )
+        let repository = KeywordDataFactory.makeRepository(
+            client: NetworkingClient(
+                logger: DefaultNetworkLogger(base: consoleLogger),
+                tokenStore: DemoSessionTokenStore()
             ),
+            logger: DataLogger(moduleName: "KeywordFeatureDemo", underlying: consoleLogger)
+        )
+        KeywordFeatureFactory.makeSearchKeywordView(
+            loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: repository),
+            searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: repository),
             logger: consoleLogger
         )
     }

@@ -18,10 +18,12 @@ public enum KeywordFeatureFactory {
     @MainActor
     public static func makeSearchKeywordView(
         loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase,
+        searchKeywordsUseCase: SearchKeywordsUseCase,
         logger: Logger? = nil
     ) -> some View {
         let viewModel = SearchKeywordViewModel(
             loadTotalKeywordsUseCase: loadTotalKeywordsUseCase,
+            searchKeywordsUseCase: searchKeywordsUseCase,
             logger: logger
         )
         return SearchKeywordView(viewModel: viewModel)
