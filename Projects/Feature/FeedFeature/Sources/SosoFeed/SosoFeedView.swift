@@ -9,11 +9,11 @@
 import SwiftUI
 
 import BaseDomain
-import DesignSystem
-import WSSComponent
 import FeedDomain
 import ProfileDomain
 import SocialDomain
+import DesignSystem
+import WSSComponent
 
 struct SosoFeedView: View {
 

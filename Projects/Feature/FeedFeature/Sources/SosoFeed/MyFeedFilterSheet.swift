@@ -8,12 +8,12 @@
 
 import SwiftUI
 
-import DesignSystem
-import WSSComponent
 import BaseDomain
 import FeedDomain
 import ProfileDomain
 import SocialDomain
+import DesignSystem
+import WSSComponent
 
 struct MyFeedFilterSheet: View {
 
@@ -73,7 +73,7 @@ struct MyFeedFilterSheet: View {
                     .applyWSSFont(.title2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
 
-                FlowLayout(horizontalSpacing: 6, verticalSpacing: 12) {
+                WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 12) {
                     ForEach(NovelGenre.myFeedFilter, id: \.displayName) { genre in
                         CapsuleSelectableKeywordChip(
                             keyword: genre.displayName,
