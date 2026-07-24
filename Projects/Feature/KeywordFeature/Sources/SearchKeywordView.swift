@@ -8,10 +8,9 @@
 
 import SwiftUI
 
+import BaseDomain
 import DesignSystem
 import WSSComponent
-
-import BaseDomain
 
 struct SearchKeywordView: View {
     
@@ -19,9 +18,7 @@ struct SearchKeywordView: View {
     @State private var keywordText: String = ""
     @State private var expandedCategories: Set<KeywordCategory> = []
     @FocusState private var isSearchBarFocused: Bool
-    
-    @Environment(\.openURL) private var openURL
-    
+
     init(viewModel: SearchKeywordViewModel) {
         self._viewModel = State(initialValue: viewModel)
     }
@@ -74,7 +71,7 @@ struct SearchKeywordView: View {
                                 searchResultSection
                             }
                         } else {
-                            ForEach(KeywordCategory.allCases, id: \.displayName) { category in
+                            ForEach(KeywordCategory.allCases, id: \.self) { category in
                                 keywordBlock(category: category)
 
                                 Spacer().frame(height: 14)

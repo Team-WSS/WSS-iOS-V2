@@ -8,13 +8,12 @@
 
 import SwiftUI
 
-import DesignSystem
+import KeywordFeature
 import BaseDomain
 import BaseData
 import Logger
 import Networking
-
-import KeywordFeature
+import DesignSystem
 
 @main
 struct KeywordFeatureDemoApp: App {
