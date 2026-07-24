@@ -113,7 +113,7 @@ struct KeywordDemoView: View {
     private func formatGroups(_ groups: [KeywordGroup]) -> String {
         groups.map { group in
             let keywords = group.keywords.map { "  - [\($0.id.value)] \($0.name)" }.joined(separator: "\n")
-            return "[\(group.name)] (\(group.keywords.count)개)\n\(keywords)"
+            return "[\(group.category)] (\(group.keywords.count)개)\n\(keywords)"
         }.joined(separator: "\n\n")
     }
 }
