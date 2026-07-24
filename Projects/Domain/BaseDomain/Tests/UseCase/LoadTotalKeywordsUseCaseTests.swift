@@ -24,7 +24,7 @@ struct LoadTotalKeywordsUseCaseTests {
         let result = try await usecase.execute()
 
         #expect(result.count == 1)
-        #expect(result.first?.name == "로맨스")
+        #expect(result.first?.category == .worldview)
         #expect(mock.fetchKeywordsCallCount == 1)
     }
 
@@ -32,9 +32,9 @@ struct LoadTotalKeywordsUseCaseTests {
     func loadMultipleKeywordGroupsSuccess() async throws {
         let mock = MockKeywordRepository()
         mock.fetchKeywordsResult = .success([
-            makeKeywordGroup(name: "로맨스"),
-            makeKeywordGroup(name: "판타지"),
-            makeKeywordGroup(name: "현대")
+            makeKeywordGroup(category: .worldview),
+            makeKeywordGroup(category: .material),
+            makeKeywordGroup(category: .character)
         ])
 
         let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
@@ -67,15 +67,33 @@ struct LoadTotalKeywordsUseCaseTests {
             try await usecase.execute()
         }
 
-        #expect(mock.fetchKeywordsCallCount == 1)
+        // 최초 조회 실패 → 동기화 1회 → 재조회까지 시도한 뒤에도 실패하면 그 에러를 던진다.
+        #expect(mock.fetchKeywordsCallCount == 2)
+        #expect(mock.syncKeywordsCallCount == 1)
+    }
+
+    @Test("로컬 캐시가 비어있으면 동기화 후 재조회로 복구한다.")
+    func loadTotalKeywordsRecoversAfterSyncOnCacheMiss() async throws {
+        let mock = MockKeywordRepository()
+        mock.fetchKeywordsResults = [
+            .failure(.unknown),
+            .success([makeKeywordGroup(category: .vibe)])
+        ]
+
+        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let result = try await usecase.execute()
+
+        #expect(result.count == 1)
+        #expect(result.first?.category == .vibe)
+        #expect(mock.fetchKeywordsCallCount == 2)
+        #expect(mock.syncKeywordsCallCount == 1)
     }
 }
 
 extension LoadTotalKeywordsUseCaseTests {
-    private func makeKeywordGroup(name: String = "로맨스") -> KeywordGroup {
+    private func makeKeywordGroup(category: KeywordCategory = .worldview) -> KeywordGroup {
         KeywordGroup(
-            name: name,
-            image: URL(string: "https://test.com/image.png"),
+            category: category,
             keywords: [
                 Keyword(id: KeywordID(1), name: "이세계"),
                 Keyword(id: KeywordID(2), name: "웹툰화")
