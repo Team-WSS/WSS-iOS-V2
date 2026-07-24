@@ -13,39 +13,85 @@ import DesignSystem
 import WSSComponent
 import FeedDomain
 import ProfileDomain
+import SocialDomain
 
 struct SosoFeedView: View {
+
+    /// 피드 셀 threedots 드롭다운 표시 컨텍스트 — 대상 피드(항목 분기)와 앵커(threedots 하단의 화면 y).
+    struct FeedMenuContext {
+        let feed: TotalFeed
+        let anchorY: CGFloat
+    }
 
     @State private var viewModel: SosoFeedViewModel
 
     @State private var showMyFeedFilterSheet: Bool = false
 
+    /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다. VM 판단이 필요 없는 순수 표시 상태.
+    @State private var feedMenuContext: FeedMenuContext?
+    /// 각 셀 상단의 화면 y(루트 좌표공간 실측) — threedots 앵커 계산용.
+    @State private var cellTopYs: [FeedID: CGFloat] = [:]
+    /// 드롭다운이 화면 밖으로 잘리지 않게 클램프하기 위한 화면 가용 높이.
+    @State private var containerHeight: CGFloat = 0
+
     @Namespace private var tabAnimation
 
-    init(viewModel: SosoFeedViewModel) {
+    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onEditFeedTapped: (TotalFeed) -> Void
+
+    /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
+    private let threeDotsBottomOffset: CGFloat = 52
+
+    private let feedMenuSpaceName = "sosoFeedRoot"
+
+    init(
+        viewModel: SosoFeedViewModel,
+        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in }
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onEditFeedTapped = onEditFeedTapped
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            FeedTabSection
-                .padding(.horizontal, 20)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                FeedTabSection
+                    .padding(.horizontal, 20)
 
-            Spacer().frame(height: 12)
+                Spacer().frame(height: 12)
 
-            FeedChipSection
-                .transaction { $0.animation = nil }
-                .padding(.horizontal, 20)
+                FeedChipSection
+                    .transaction { $0.animation = nil }
+                    .padding(.horizontal, 20)
 
-            FeedListSection
+                FeedListSection
+            }
+            .background(WSSColor.wssWhite.swiftUIColor)
+
+            if let feedMenuContext {
+                feedMenuOverlay(feedMenuContext)
+            }
         }
-        .background(WSSColor.wssWhite.swiftUIColor)
+        .coordinateSpace(name: feedMenuSpaceName)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        containerHeight = height
+                    }
+            }
+        )
         .sheet(isPresented: $showMyFeedFilterSheet) {
             MyFeedFilterSheet(
                 viewModel: viewModel,
                 dismiss: { showMyFeedFilterSheet.toggle() }
             )
         }
+        .showWSSAlert(
+            isPresented: feedAlertBinding,
+            type: feedAlertType,
+            buttonActions: feedAlertActions
+        )
         .onAppear {
             viewModel.handle(.load)
         }
@@ -174,7 +220,10 @@ struct SosoFeedView: View {
                 Spacer()
 
                 WSSSortButton(sortType: viewModel.state.myFeedOption.sortType,
-                              action: { viewModel.handle(.toggleMyFeedSort) })
+                              action: {
+                    HapticManager.selection()
+                    viewModel.handle(.toggleMyFeedSort)
+                })
 
             case .sosoFeed:
                 sosoFeedChipButton(
@@ -220,6 +269,15 @@ struct SosoFeedView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(currentFeeds, id: \.feedId) { feed in
                         feedRow(feed)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .onChange(of: proxy.frame(in: .named(feedMenuSpaceName)).minY,
+                                                  initial: true) { _, newY in
+                                            cellTopYs[feed.feedId] = newY
+                                        }
+                                }
+                            )
                             .onAppear {
                                 if feed.feedId == currentFeeds.last?.feedId {
                                     viewModel.handle(.loadMore)
@@ -256,7 +314,12 @@ struct SosoFeedView: View {
                 createdDate: feed.createdDate,
                 isEdited: feed.isModified,
                 profileTapped: { print("\(String(describing: feed.author.userId)) 프로필로 이동") },
-                threeDotsButtonTapped: { }
+                threeDotsButtonTapped: {
+                    feedMenuContext = FeedMenuContext(
+                        feed: feed,
+                        anchorY: (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset
+                    )
+                }
             ),
             content: feed.content,
             feedImage: feed.imageCount > 0
@@ -279,22 +342,122 @@ struct SosoFeedView: View {
                 likeCount: feed.likeCount,
                 isLiked: feed.isLiked,
                 commentCount: feed.commentCount,
-                likeButtonTapped: { viewModel.handle(.toggleLike(feed.feedId)) }
+                likeButtonTapped: {
+                    HapticManager.selection()
+                    viewModel.handle(.toggleLike(feed.feedId))
+                }
             ),
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
         )
     }
 
+    //MARK: - 피드 셀 threedots 드롭다운
+
+    /// 화면 하단 셀에서는 앵커를 그대로 쓰면 메뉴가 화면 밖으로 잘린다 →
+    /// 전부 보이는 위치까지만 내려가게 클램프한다(threedots에서 떨어져도 전부 보이는 쪽 우선).
+    /// 메뉴 높이 107 = WSSDropdownMenu 항목 고정 높이 53 × 2 + 구분선.
+    private func feedMenuOverlay(_ context: FeedMenuContext) -> some View {
+        let anchorY = containerHeight > 0
+            ? min(context.anchorY, containerHeight - 107 - 20)
+            : context.anchorY
+        return ZStack(alignment: .topTrailing) {
+            // 바깥 탭으로 닫기 위한 투명 레이어.
+            Color.wssBlack.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { feedMenuContext = nil }
+
+            WSSDropdownMenu(items: feedMenuItems(context.feed))
+                .frame(width: 190)
+                .padding(.top, anchorY)
+                .padding(.trailing, 20)
+        }
+    }
+
+    /// 피드 소유 여부 → 드롭다운 항목. 내 글 = 수정/삭제, 남의 글 = 신고 2종(빨강).
+    private func feedMenuItems(_ feed: TotalFeed) -> [WSSDropdownItem] {
+        if feed.isMyFeed {
+            [
+                WSSDropdownItem(title: "수정하기") {
+                    feedMenuContext = nil
+                    onEditFeedTapped(feed)
+                },
+                WSSDropdownItem(title: "삭제하기") {
+                    feedMenuContext = nil
+                    viewModel.handle(.deleteFeedTapped(feed.feedId))
+                }
+            ]
+        } else {
+            [
+                WSSDropdownItem(title: "스포일러 신고", titleColor: Color.wssSecondary100) {
+                    feedMenuContext = nil
+                    viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
+                },
+                WSSDropdownItem(title: "부적절한 표현 신고", titleColor: Color.wssSecondary100) {
+                    feedMenuContext = nil
+                    viewModel.handle(.reportImproperFeedTapped(feed.feedId))
+                }
+            ]
+        }
+    }
+
+    private var feedAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedFeedAlert != nil },
+            set: { if !$0 { viewModel.handle(.dismissFeedAlert) } }
+        )
+    }
+
+    /// 피드 알럿 의미값 → 컴포넌트 알럿 타입. nil일 땐 어떤 타입이든 상관없다(알럿이 숨겨져 있음).
+    private var feedAlertType: WSSAlertType {
+        switch viewModel.state.presentedFeedAlert {
+        case .deleteFeed, nil: .deleteMyFeed
+        case .reportSpoiler: .reportSpoilerContent
+        case .reportImproper: .reportImproperContent
+        case .reportSpoilerCompleted: .receivedReportSpoilerContent
+        case .reportImproperCompleted: .receivedReportImproperContent
+        }
+    }
+
+    /// 알럿 버튼 액션 — 인덱스가 버튼 순서와 일치해야 한다(확인 알럿 [취소, 실행] / 완료 알럿 [확인]).
+    private var feedAlertActions: [() -> Void] {
+        switch viewModel.state.presentedFeedAlert {
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            [{ viewModel.handle(.dismissFeedAlert) }]
+        default:
+            [
+                { viewModel.handle(.dismissFeedAlert) },
+                { viewModel.handle(.confirmFeedAlert) }
+            ]
+        }
+    }
 }
 
 #Preview {
-    SosoFeedView(viewModel: SosoFeedViewModel(
-        loadMyFeedsUseCase: PreviewLoadMyFeedsUseCase(),
-        loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCase(),
-        feedLikeUseCase: PreviewFeedLikeUseCase(),
-        loadProfileUseCase: PreviewLoadProfileUseCase()
-    ))
+    SosoFeedView(
+        viewModel: SosoFeedViewModel(
+            loadMyFeedsUseCase: PreviewLoadMyFeedsUseCase(),
+            loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCase(),
+            feedLikeUseCase: PreviewFeedLikeUseCase(),
+            loadProfileUseCase: PreviewLoadProfileUseCase(),
+            deleteFeedUseCase: PreviewDeleteFeedUseCase(),
+            reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
+            reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
+        ),
+        onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
+    )
+}
+
+private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportImproperFeedUseCase: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
 }
 
 private struct PreviewLoadMyFeedsUseCase: LoadMyFeedsUseCase {

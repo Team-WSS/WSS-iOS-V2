@@ -11,6 +11,7 @@ import SwiftUI
 import FeedFeature
 import FeedDomain
 import ProfileDomain
+import SocialDomain
 
 struct FeedListDemoView: View {
 
@@ -18,17 +19,26 @@ struct FeedListDemoView: View {
     private let loadSosoFeedsUseCase: LoadSosoFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
     private let loadProfileUseCase: LoadProfileUseCase
+    private let deleteFeedUseCase: DeleteFeedUseCase
+    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
+    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
     public init(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
-        loadProfileUseCase: LoadProfileUseCase
+        loadProfileUseCase: LoadProfileUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
+        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
+        reportImproperFeedUseCase: ReportImproperFeedUseCase
     ) {
         self.loadMyFeedsUseCase = loadMyFeedsUseCase
         self.loadSosoFeedsUseCase = loadSosoFeedsUseCase
         self.feedLikeUseCase = feedLikeUseCase
         self.loadProfileUseCase = loadProfileUseCase
+        self.deleteFeedUseCase = deleteFeedUseCase
+        self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
+        self.reportImproperFeedUseCase = reportImproperFeedUseCase
     }
 
     var body: some View {
@@ -36,7 +46,10 @@ struct FeedListDemoView: View {
             loadMyFeedsUseCase: loadMyFeedsUseCase,
             loadSosoFeedsUseCase: loadSosoFeedsUseCase,
             feedLikeUseCase: feedLikeUseCase,
-            loadProfileUseCase: loadProfileUseCase
+            loadProfileUseCase: loadProfileUseCase,
+            deleteFeedUseCase: deleteFeedUseCase,
+            reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
+            reportImproperFeedUseCase: reportImproperFeedUseCase
         )
     }
 }

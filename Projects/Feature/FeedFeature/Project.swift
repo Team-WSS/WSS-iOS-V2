@@ -30,8 +30,7 @@ let project = Project.createFeatureModule(
         .module(.data(.base)),
         .module(.data(.feed)),
         .module(.data(.novel)),
-        .module(.data(.comment)),
-        .module(.data(.social)),
         .module(.data(.profile)),
+        .module(.data(.social))
     ]
 )

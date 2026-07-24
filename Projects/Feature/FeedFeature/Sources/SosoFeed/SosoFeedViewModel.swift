@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import FeedDomain
 import ProfileDomain
+import SocialDomain
 import Logger
 
 enum FeedTab {
@@ -53,6 +54,19 @@ final class SosoFeedViewModel {
 
         var isLoading: Bool = false
         var errorMessage: String?
+
+        /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
+        var presentedFeedAlert: FeedAlert?
+    }
+
+    /// 피드 셀 액션의 알럿 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
+    /// 신고는 확인 → API 성공 → 접수 완료의 2단 알럿이라 완료 케이스가 따로 있다(문구가 종류별로 다름).
+    enum FeedAlert: Equatable {
+        case deleteFeed(FeedID)
+        case reportSpoiler(FeedID)
+        case reportImproper(FeedID)
+        case reportSpoilerCompleted
+        case reportImproperCompleted
     }
 
     enum Action {
@@ -70,6 +84,13 @@ final class SosoFeedViewModel {
         case toggleMyFeedFilterPublic
         case toggleMyFeedFilterPrivate
         case applyMyFeedFilter
+
+        // 피드 셀 threedots 드롭다운
+        case deleteFeedTapped(FeedID)
+        case reportSpoilerFeedTapped(FeedID)
+        case reportImproperFeedTapped(FeedID)
+        case confirmFeedAlert
+        case dismissFeedAlert
     }
 
     //MARK: - Filter Selection Helpers
@@ -98,17 +119,26 @@ final class SosoFeedViewModel {
     private let loadSosoFeedsUseCase: LoadSosoFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
     private let loadProfileUseCase: LoadProfileUseCase
+    private let deleteFeedUseCase: DeleteFeedUseCase
+    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
+    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
     private let logger: Logger?
 
     /// "내 피드" 목록 API가 작성자 정보(닉네임/프로필 이미지)를 내려주지 않아, 별도로 받아온 내 프로필로 채워 넣는다.
     /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시한다.
     private var cachedMyProfile: Profile?
 
+    /// 피드 삭제/신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다.
+    @ObservationIgnored private var feedActionTask: Task<Void, Never>?
+
     init(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadsosoFeedsUseCase: LoadSosoFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         loadProfileUseCase: LoadProfileUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
+        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
+        reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil
     ) {
         self.state = State()
@@ -117,6 +147,9 @@ final class SosoFeedViewModel {
         self.loadSosoFeedsUseCase = loadsosoFeedsUseCase
         self.feedLikeUseCase = feedLikeUseCase
         self.loadProfileUseCase = loadProfileUseCase
+        self.deleteFeedUseCase = deleteFeedUseCase
+        self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
+        self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
     }
 
@@ -150,6 +183,17 @@ final class SosoFeedViewModel {
             toggleMyFeedFilterVisibility(togglingPublic: false)
         case .applyMyFeedFilter:
             applyMyFeedFilter()
+
+        case .deleteFeedTapped(let feedID):
+            presentFeedAlert(.deleteFeed(feedID))
+        case .reportSpoilerFeedTapped(let feedID):
+            presentFeedAlert(.reportSpoiler(feedID))
+        case .reportImproperFeedTapped(let feedID):
+            presentFeedAlert(.reportImproper(feedID))
+        case .confirmFeedAlert:
+            confirmFeedAlert()
+        case .dismissFeedAlert:
+            state.presentedFeedAlert = nil
         }
     }
 
@@ -366,5 +410,57 @@ final class SosoFeedViewModel {
             visibilityType: nextVisibility,
             sortType: draft.sortType
         )
+    }
+
+    //MARK: - Feed Menu
+
+    /// 피드 삭제/신고 확인 알럿 표시. 진행 중인 액션이 있으면 무시한다.
+    private func presentFeedAlert(_ alert: FeedAlert) {
+        guard feedActionTask == nil else { return }
+        state.presentedFeedAlert = alert
+    }
+
+    /// 알럿에서 확정. 접수 완료 알럿(1버튼)의 "확인"은 dismiss로만 들어오므로 여기 오지 않는다.
+    private func confirmFeedAlert() {
+        guard let alert = state.presentedFeedAlert else { return }
+        state.presentedFeedAlert = nil
+        guard feedActionTask == nil else { return }
+        switch alert {
+        case .deleteFeed(let feedID):
+            feedActionTask = Task { await deleteFeed(feedID) }
+        case .reportSpoiler(let feedID):
+            feedActionTask = Task { await reportFeed(feedID, spoiler: true) }
+        case .reportImproper(let feedID):
+            feedActionTask = Task { await reportFeed(feedID, spoiler: false) }
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            break
+        }
+    }
+
+    /// 피드 삭제. 성공하면 두 목록(내 피드/소소피드) 중 해당 피드가 있는 쪽에서 제거한다.
+    private func deleteFeed(_ feedID: FeedID) async {
+        defer { feedActionTask = nil }
+        do {
+            try await deleteFeedUseCase.execute(feedID: feedID)
+            state.myFeeds.removeAll { $0.feedId == feedID }
+            state.sosoFeeds.removeAll { $0.feedId == feedID }
+        } catch {
+            state.errorMessage = "피드 삭제에 실패했어요."
+        }
+    }
+
+    /// 피드 신고. 성공하면 접수 완료 알럿으로 전환한다(신고는 목록에 보이는 변화가 없다).
+    private func reportFeed(_ feedID: FeedID, spoiler: Bool) async {
+        defer { feedActionTask = nil }
+        do {
+            if spoiler {
+                try await reportSpoilerFeedUseCase.execute(id: feedID)
+            } else {
+                try await reportImproperFeedUseCase.execute(id: feedID)
+            }
+            state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
+        } catch {
+            state.errorMessage = "신고 접수에 실패했어요."
+        }
     }
 }

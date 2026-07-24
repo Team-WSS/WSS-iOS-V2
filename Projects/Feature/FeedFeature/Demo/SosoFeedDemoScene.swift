@@ -11,10 +11,12 @@ import FeedFeature
 import FeedDomain
 import BaseDomain
 import ProfileDomain
+import SocialDomain
 
 import FeedData
 import BaseData
 import ProfileData
+import SocialData
 
 import Networking
 import Logger
@@ -26,6 +28,9 @@ struct SosoFeedDemoScene: View {
     private let loadSosoFeedsUseCase: LoadSosoFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
     private let loadProfileUseCase: LoadProfileUseCase
+    private let deleteFeedUseCase: DeleteFeedUseCase
+    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
+    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
     init() {
         let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
@@ -40,11 +45,18 @@ struct SosoFeedDemoScene: View {
             localStorage: storage,
             logger: DataLogger(moduleName: "ProfileData", underlying: OSLogger.profile)
         )
+        let socialRepository = SocialDataFactory.makeSocialRepository(
+            client: client,
+            logger: DataLogger(moduleName: "SocialData", underlying: OSLogger.social)
+        )
 
         self.loadMyFeedsUseCase = DefaultLoadMyFeedsUseCase(feedRepository: feedRepository)
         self.loadSosoFeedsUseCase = DefaultLoadSosoFeedsUseCase(feedRepository: feedRepository)
         self.feedLikeUseCase = DefaultLikeUseCase(feedRepository: feedRepository)
         self.loadProfileUseCase = DefaultLoadProfileUseCase(profileRepository: profileRepository)
+        self.deleteFeedUseCase = DefaultDeleteFeedUseCase(repository: feedRepository)
+        self.reportSpoilerFeedUseCase = DefaultReportSpoilerFeedUseCase(repository: socialRepository)
+        self.reportImproperFeedUseCase = DefaultReportImproperFeedUseCase(repository: socialRepository)
     }
 
     var body: some View {
@@ -54,7 +66,11 @@ struct SosoFeedDemoScene: View {
                 loadSosoFeedsUseCase: loadSosoFeedsUseCase,
                 feedLikeUseCase: feedLikeUseCase,
                 loadProfileUseCase: loadProfileUseCase,
-                logger: OSLogger.feed
+                deleteFeedUseCase: deleteFeedUseCase,
+                reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
+                reportImproperFeedUseCase: reportImproperFeedUseCase,
+                logger: OSLogger.feed,
+                onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
             )
         }
     }

@@ -14,6 +14,7 @@ import NovelDomain
 import CommentDomain
 import SocialDomain
 import ProfileDomain
+import SocialDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
@@ -105,13 +106,19 @@ public enum FeedFeatureFactory {
     }
 
     /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
+    /// - Parameter onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
+    ///   실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
     @MainActor
     public static func makeSosoFeedView(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         loadProfileUseCase: LoadProfileUseCase,
-        logger: Logger? = nil
+        deleteFeedUseCase: DeleteFeedUseCase,
+        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
+        reportImproperFeedUseCase: ReportImproperFeedUseCase,
+        logger: Logger? = nil,
+        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in }
     ) -> some View {
         SosoFeedView(
             viewModel: SosoFeedViewModel(
@@ -119,8 +126,12 @@ public enum FeedFeatureFactory {
                 loadsosoFeedsUseCase: loadSosoFeedsUseCase,
                 feedLikeUseCase: feedLikeUseCase,
                 loadProfileUseCase: loadProfileUseCase,
+                deleteFeedUseCase: deleteFeedUseCase,
+                reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
+                reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: logger
-            )
+            ),
+            onEditFeedTapped: onEditFeedTapped
         )
     }
 

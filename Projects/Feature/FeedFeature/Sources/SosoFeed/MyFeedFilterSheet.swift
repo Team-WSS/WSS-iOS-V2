@@ -13,6 +13,7 @@ import WSSComponent
 import BaseDomain
 import FeedDomain
 import ProfileDomain
+import SocialDomain
 
 struct MyFeedFilterSheet: View {
 
@@ -174,7 +175,10 @@ struct MyFeedFilterSheet: View {
             loadMyFeedsUseCase: PreviewLoadMyFeedsUseCaseForSheet(),
             loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCaseForSheet(),
             feedLikeUseCase: PreviewFeedLikeUseCaseForSheet(),
-            loadProfileUseCase: PreviewLoadProfileUseCaseForSheet()
+            loadProfileUseCase: PreviewLoadProfileUseCaseForSheet(),
+            deleteFeedUseCase: PreviewDeleteFeedUseCaseForSheet(),
+            reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCaseForSheet(),
+            reportImproperFeedUseCase: PreviewReportImproperFeedUseCaseForSheet()
         ),
         dismiss: { print("닫기 버튼") }
     )
@@ -203,4 +207,16 @@ private struct PreviewLoadProfileUseCaseForSheet: LoadProfileUseCase {
     func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         Profile(nickname: "미리보기", introduction: "", characterImage: nil, isPublic: true, genrePreferences: [])
     }
+}
+
+private struct PreviewDeleteFeedUseCaseForSheet: DeleteFeedUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportSpoilerFeedUseCaseForSheet: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportImproperFeedUseCaseForSheet: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
 }
