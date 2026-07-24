@@ -31,11 +31,17 @@ public struct DefaultKeywordRepository: KeywordRepository {
 
         do {
             let cached = try cache.load()
-            let result = KeywordMapper.keywordGroups(from: cached)
+            let result = try KeywordMapper.keywordGroups(from: cached)
             logger?.logSuccess(action: action.text)
             return result
-        } catch {
+        } catch let error as CacheError {
             logger?.logCacheError(action: action.text, error: error)
+            throw .unknown
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.text, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.text, error: error)
             throw .unknown
         }
     }
@@ -52,7 +58,7 @@ public struct DefaultKeywordRepository: KeywordRepository {
                 $0.name.localizedCaseInsensitiveContains(query)
             }
             guard !matched.isEmpty else { return nil }
-            return KeywordGroup(name: group.name, image: group.image, keywords: matched)
+            return KeywordGroup(category: group.category, keywords: matched)
         }
         logger?.logSuccess(action: action.text)
         return filtered
