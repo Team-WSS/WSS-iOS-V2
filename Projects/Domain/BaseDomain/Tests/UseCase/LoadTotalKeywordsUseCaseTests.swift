@@ -56,7 +56,7 @@ struct LoadTotalKeywordsUseCaseTests {
         #expect(mock.fetchKeywordsCallCount == 1)
     }
 
-    @Test("전체 키워드 조회 실패 시 에러를 던진다.")
+    @Test("전체 키워드 조회가 동기화 후 재조회에도 계속 실패하면 에러를 던진다.")
     func loadTotalKeywordsFailureThrows() async {
         let mock = MockKeywordRepository()
         mock.fetchKeywordsResult = .failure(RepositoryError.unknown)
