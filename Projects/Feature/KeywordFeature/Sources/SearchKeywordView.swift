@@ -19,6 +19,10 @@ struct SearchKeywordView: View {
     @State private var expandedCategories: Set<KeywordCategory> = []
     @FocusState private var isSearchBarFocused: Bool
 
+    // TODO: - 키워드 문의 URL enum이 아직 develop에 없는 별도 브랜치에 있음. 그 브랜치가 머지되면
+    // WSSEmptyView(type: .keyword)의 action에서 openURL(...)로 연결할 것.
+    @Environment(\.openURL) private var openURL
+
     init(viewModel: SearchKeywordViewModel) {
         self._viewModel = State(initialValue: viewModel)
     }
@@ -60,6 +64,7 @@ struct SearchKeywordView: View {
                 if isSearching && viewModel.state.searchedKeywords.isEmpty {
                     // ScrollView 안에 두면 콘텐츠 크기만큼만 차지해 상단에 붙어버린다 — 화면을 다 차지하는
                     // 뷰로 빼서 화면 정중앙에 오도록 한다(스크롤도 불필요한 상태).
+                    // action(문의 URL 연결)은 TODO — 위 openURL 프로퍼티 주석 참고.
                     WSSEmptyView(type: .keyword, action: { })
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
