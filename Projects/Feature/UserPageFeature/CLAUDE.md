@@ -1,10 +1,14 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
-# MypageFeature
+# UserPageFeature
+
+(현재 이 문서는 모듈 리네이밍 직후 MyPage 섹션 내용만 담고 있다 — UserPage 섹션 문서는 뒤 커밋에서 추가된다.)
+
+## MyPage
 
 마이페이지 탭 — 프로필 요약(닉네임·소개·프로필 이미지)·서재 통계·컬렉션·장르 뱃지·작품 취향을 보여주고,
 프로필 편집(닉네임·소개·프로필 캐릭터·선호장르)으로 진입한다.
 
-- 식별자: `ModuleType.feature(.mypage)` / 의존: `BaseDomain`, `ProfileDomain`, `NovelDomain`(서재 통계 조회만),
+- 식별자: `ModuleType.feature(.userPage)` / 의존: `BaseDomain`, `ProfileDomain`, `NovelDomain`(서재 통계 조회만),
   `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점: `MypageFactory.makeView(...)`(탭 콘텐츠), `.makeEditView(...)`(프로필 편집), `.makeCharacterEditSheet(...)`(캐릭터 선택 시트)
 

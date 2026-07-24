@@ -24,7 +24,7 @@ public enum FeatureModule: String, ModuleSpec {
     case feed
     case novelReview
     case novelDetail
-    case mypage
+    case userPage
     case setting
     case search
     case keyword

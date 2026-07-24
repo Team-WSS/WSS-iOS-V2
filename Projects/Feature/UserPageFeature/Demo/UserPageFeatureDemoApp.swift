@@ -1,6 +1,6 @@
 //
-//  MypageFeatureDemoApp.swift
-//  MypageFeature
+//  UserPageFeatureDemoApp.swift
+//  UserPageFeature
 //
 //  Created by Seoyeon Choi on 7/8/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -9,7 +9,7 @@
 import Foundation
 import SwiftUI
 
-import MypageFeature
+import UserPageFeature
 import BaseDomain
 import NovelDomain
 import ProfileDomain
@@ -21,7 +21,7 @@ import Networking
 import DesignSystem
 
 @main
-struct MypageFeatureDemoApp: App {
+struct UserPageFeatureDemoApp: App {
 
     init() {
         // 커스텀 폰트(Pretendard) 등록. 없으면 applyWSSFont의 UIFont(name:)! 가 nil → 크래시.

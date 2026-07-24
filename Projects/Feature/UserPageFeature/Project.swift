@@ -12,7 +12,7 @@ import ProjectDescriptionHelpers
 import DependencyPlugin
 
 let project = Project.createFeatureModule(
-    name: ModuleType.feature(.mypage).name,
+    name: ModuleType.feature(.userPage).name,
     targets: [.sources, .demo],
     internalDependencies: [
         .module(.domain(.base)),

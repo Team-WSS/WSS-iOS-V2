@@ -1,6 +1,6 @@
 //
 //  MyPageEditViewModel.swift
-//  MypageFeature
+//  UserPageFeature
 //
 //  Created by Seoyeon Choi on 7/28/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
