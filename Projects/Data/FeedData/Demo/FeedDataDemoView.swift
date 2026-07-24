@@ -491,7 +491,7 @@ struct FeedDataDemoView: View {
 
     private func fetchMyFeeds() async {
         let myUserID = UserDefaultsStorage().get(.userID) ?? 0
-        let option = MyFeedOption(genres: [], visibilityType: visibilityType, sortType: .recent)
+        let option = MyFeedOption(genres: [], includesUncategorized: true, visibilityType: visibilityType, sortType: .recent)
         let url = "/users/\(myUserID)/feeds"
         isLoading = true; defer { isLoading = false }
         do {

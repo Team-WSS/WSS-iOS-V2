@@ -166,7 +166,12 @@ public struct DefaultFeedRepository: FeedRepository {
     public func fetchMyFeeds(option: MyFeedOption, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchMyFeeds
         let userID = storage.get(.userID) ?? 0
-        let genres = option.genres.map { FeedMapper.genreString(from: $0) }
+        // 연결 작품이 없는(장르 없는) 피드는 서버 장르 필터에서 그냥 빠지므로, 그런 피드도 포함하려면
+        // genreNames에 "etc"를 명시적으로 함께 보내야 한다(서버 스펙 — 실제 NovelGenre 값이 아니라 서버 전용 sentinel).
+        var genres = option.genres.map { FeedMapper.genreString(from: $0) }
+        if option.includesUncategorized {
+            genres.append("etc")
+        }
         let visibilityType = FeedMapper.visibilityString(from: option.visibilityType)
         let sortType = option.sortType.rawValue
         do {
