@@ -256,6 +256,15 @@ struct SosoFeedView: View {
         }
     }
 
+    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다 다른 값 — ScrollView의 `.id()`로
+    /// 걸어 전환 시 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다.
+    private var scrollIdentity: String {
+        let option = viewModel.state.myFeedOption
+        let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
+        return "\(viewModel.state.selectedTab)_\(viewModel.state.selectedSosoFeedOption.rawValue)"
+            + "_\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
+    }
+
     @ViewBuilder
     private var FeedListSection: some View {
         if viewModel.state.isLoading, currentFeeds.isEmpty {
@@ -297,6 +306,7 @@ struct SosoFeedView: View {
                     }
                 }
             }
+            .id(scrollIdentity)
             .refreshable {
                 viewModel.handle(.load)
             }
