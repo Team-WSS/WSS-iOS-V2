@@ -83,6 +83,7 @@ struct MypageView: View {
                 }
             }
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
         .toolbar {
             createMypageViewToolBarContent()
         }
