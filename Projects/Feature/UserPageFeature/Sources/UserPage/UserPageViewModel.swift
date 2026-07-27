@@ -214,7 +214,8 @@ private extension UserPageViewModel {
     /// "활동" 탭 첫 진입 시 지연 로드(`NovelDetailFeature` 피드 탭과 동일 패턴). 미리보기라 첫 페이지만
     /// 가져온다 — 5개 넘게 있으면 전체 목록은 `UserFeedListView`(무한스크롤)로 넘어간다.
     func loadFeeds() {
-        guard !hasLoadedFirstFeeds, feedsTask == nil else { return }
+        // 이미 비공개로 판정된 프로필이면 탭을 눌러도 다시 요청하지 않는다 — 어차피 같은 결과.
+        guard !state.isProfilePrivate, !hasLoadedFirstFeeds, feedsTask == nil else { return }
         state.isLoadingFeeds = true
         state.feedsLoadFailed = false
         feedsTask = Task { await loadFirstFeedsPage() }
