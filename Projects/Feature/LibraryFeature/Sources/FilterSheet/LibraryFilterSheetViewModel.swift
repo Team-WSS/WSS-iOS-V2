@@ -56,17 +56,8 @@ final class LibraryFilterSheetViewModel {
         }
     }
 
-    /// 현재 활성 필터 전체를 칩 목록으로 (탭 순서대로).
-    var chips: [Chip] {
-        var result: [Chip] = []
-        result += state.filter.readingStatus.map { .readingStatus($0) }
-        result += state.filter.genres.map { .genre($0) }
-        if let status = state.filter.publicationStatus { result.append(.publicationStatus(status)) }
-        if let rating = state.filter.rating { result.append(.rating(rating)) }
-        result += state.filter.attractivePoint.map { .attractivePoint($0) }
-        result += state.filter.keywords.map { .keyword($0) }
-        return result
-    }
+    /// 현재 활성 필터 전체를 칩 목록으로 — **최근 선택이 앞**(선택 순서의 역순, 정본 동작).
+    var chips: [Chip] { Array(chipOrder.reversed()) }
 
     // MARK: - Action
 
@@ -84,11 +75,13 @@ final class LibraryFilterSheetViewModel {
     }
 
     /// 선택 칩 행의 칩 하나 — 어떤 필터의 어떤 값인지 의미값으로 식별한다(카피는 View가 매핑).
+    /// 별점만 **연관값 없이 하나**다 — 구간이든 "별점 없음"이든 칩은 하나뿐이고,
+    /// 값이 바뀔 때마다 다른 케이스가 되면 선택 순서 추적이 끊긴다(슬라이더를 움직일 때마다 칩이 맨 앞으로 튐).
     enum Chip: Equatable, Hashable {
         case readingStatus(ReadingStatus)
         case genre(NovelGenre)
         case publicationStatus(NovelPublicationStatus)
-        case rating(LibraryRatingFilter)
+        case rating
         case attractivePoint(AttractivePoint)
         case keyword(Keyword)
     }
@@ -96,6 +89,12 @@ final class LibraryFilterSheetViewModel {
     // MARK: - Output
 
     private(set) var state: State
+
+    // MARK: - Property
+
+    /// 칩 노출 순서 — 선택한 순서를 기록한다(탭 순서와 무관). 표시 순서만 갖고 필터의 진실은 `state.filter`다.
+    /// 필터를 바꾸는 모든 경로에서 **반드시 함께 갱신**해야 칩이 유령으로 남지 않는다.
+    private var chipOrder: [Chip]
 
     // MARK: - Init
 
@@ -112,6 +111,8 @@ final class LibraryFilterSheetViewModel {
             ratingMin: ratingMin,
             ratingMax: ratingMax
         )
+        // 이미 걸려 있던 필터는 선택 순서를 알 수 없으니 탭 순서로 채운다.
+        self.chipOrder = Self.initialChipOrder(from: filter)
     }
 
     // MARK: - handle
@@ -149,16 +150,20 @@ private extension LibraryFilterSheetViewModel {
     func toggleReadingStatus(_ status: ReadingStatus) {
         if state.filter.readingStatus.contains(status) {
             state.filter.removeReadingStatus(status)
+            removeFromOrder(.readingStatus(status))
         } else {
             state.filter.addReadingStatus(status)
+            appendToOrder(.readingStatus(status))
         }
     }
 
     func toggleGenre(_ genre: NovelGenre) {
         if state.filter.genres.contains(genre) {
             state.filter.removeGenre(genre)
+            removeFromOrder(.genre(genre))
         } else {
             state.filter.addGenre(genre)
+            appendToOrder(.genre(genre))
         }
     }
 
@@ -166,8 +171,14 @@ private extension LibraryFilterSheetViewModel {
     func togglePublicationStatus(_ status: NovelPublicationStatus) {
         if state.filter.publicationStatus == status {
             state.filter.setPublicationStatus(nil)
+            removeFromOrder(.publicationStatus(status))
         } else {
+            // 단일 선택이라 값을 바꾸면 이전 값의 칩이 남는다 — 먼저 걷어낸다.
+            if let previous = state.filter.publicationStatus {
+                removeFromOrder(.publicationStatus(previous))
+            }
             state.filter.setPublicationStatus(status)
+            appendToOrder(.publicationStatus(status))
         }
     }
 
@@ -176,6 +187,7 @@ private extension LibraryFilterSheetViewModel {
         state.ratingMin = min
         state.ratingMax = max
         state.filter.setRatingRange(min: min, max: max)
+        reconcileRatingOrder()
     }
 
     func toggleUnratedOnly() {
@@ -185,21 +197,26 @@ private extension LibraryFilterSheetViewModel {
         } else {
             state.filter.setUnratedOnly()
         }
+        reconcileRatingOrder()
     }
 
     func toggleAttractivePoint(_ point: AttractivePoint) {
         if state.filter.attractivePoint.contains(point) {
             state.filter.removeAttractivePoint(point)
+            removeFromOrder(.attractivePoint(point))
         } else {
             state.filter.addAttractivePoint(point)
+            appendToOrder(.attractivePoint(point))
         }
     }
 
     func toggleKeyword(_ keyword: Keyword) {
         if state.filter.keywords.contains(keyword) {
             state.filter.removeKeyword(keyword)
+            removeFromOrder(.keyword(keyword))
         } else {
             state.filter.addKeyword(keyword)
+            appendToOrder(.keyword(keyword))
         }
     }
 
@@ -220,6 +237,7 @@ private extension LibraryFilterSheetViewModel {
         case .keyword(let keyword):
             state.filter.removeKeyword(keyword)
         }
+        removeFromOrder(chip)
     }
 
     /// 시트 "초기화" — 시트 필터 6종만 리셋(관심·정렬 유지, 도메인 clearAll 규칙).
@@ -227,5 +245,42 @@ private extension LibraryFilterSheetViewModel {
         state.filter.clearAll()
         state.ratingMin = MyLibraryFilter.ratingRangeBounds.lowerBound
         state.ratingMax = MyLibraryFilter.ratingRangeBounds.upperBound
+        chipOrder.removeAll()
+    }
+}
+
+// MARK: - Chip Order
+
+private extension LibraryFilterSheetViewModel {
+
+    /// 이미 있으면 순서를 유지한다 — 재추가로 맨 뒤(=칩 맨 앞)로 튀지 않게.
+    func appendToOrder(_ chip: Chip) {
+        guard !chipOrder.contains(chip) else { return }
+
+        chipOrder.append(chip)
+    }
+
+    func removeFromOrder(_ chip: Chip) {
+        chipOrder.removeAll { $0 == chip }
+    }
+
+    /// 별점 칩은 값이 아니라 **활성 여부**로만 순서에 들어간다 — 슬라이더를 계속 움직여도 칩 위치가 고정된다.
+    func reconcileRatingOrder() {
+        if state.filter.rating == nil {
+            removeFromOrder(.rating)
+        } else {
+            appendToOrder(.rating)
+        }
+    }
+
+    static func initialChipOrder(from filter: MyLibraryFilter) -> [Chip] {
+        var order: [Chip] = []
+        order += filter.readingStatus.map { .readingStatus($0) }
+        order += filter.genres.map { .genre($0) }
+        if let status = filter.publicationStatus { order.append(.publicationStatus(status)) }
+        if filter.rating != nil { order.append(.rating) }
+        order += filter.attractivePoint.map { .attractivePoint($0) }
+        order += filter.keywords.map { .keyword($0) }
+        return order
     }
 }

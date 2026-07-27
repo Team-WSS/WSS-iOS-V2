@@ -76,8 +76,8 @@ struct LibraryView: View {
                     viewModel.handle(.applyFilter(filter))
                 }
                 .presentationDetents([.height(LibraryFilterSheet.sheetHeight)])
-                .presentationCornerRadius(16)
                 // iOS 26 시트 기본 배경은 글래스 — 디자인은 불투명 흰색.
+                // presentationCornerRadius는 쓰지 않는다(배경이 둥근 모서리에 클립되지 않아 삐져나옴).
                 .presentationBackground(Color.wssWhite)
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
