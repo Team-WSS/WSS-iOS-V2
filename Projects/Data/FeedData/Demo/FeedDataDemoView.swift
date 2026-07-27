@@ -482,7 +482,7 @@ struct FeedDataDemoView: View {
         userIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
-            let result = try await repository.fetchUserFeeds(id: UserID(userIDValue), lastFeedID: lastFeedID)
+            let result = try await repository.fetchUserFeeds(id: UserID(userIDValue), nickname: "", profileImage: nil, lastFeedID: lastFeedID)
             log = "endpoint: .getUserFeeds(userID: \(userIDValue))\n[GET] \(url)\n파라미터: lastFeedId=\(lastFeedID.value)\n\n\(formatFeeds(result))"
         } catch {
             log = "endpoint: .getUserFeeds(userID: \(userIDValue))\n[GET] \(url)\n\n유저 피드 조회 실패\n\(error)"
