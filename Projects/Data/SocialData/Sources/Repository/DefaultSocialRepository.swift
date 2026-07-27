@@ -28,7 +28,7 @@ public struct DefaultSocialRepository: SocialRepository {
         let action = SocialAction.blockUser
         
         do {
-            let query = BlockUserQuery(userID: id.value)
+            let query = BlockUserQuery(userId: id.value)
             try await service.postBlockUser(query)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
