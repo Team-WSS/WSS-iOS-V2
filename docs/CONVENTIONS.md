@@ -112,3 +112,4 @@ root `CLAUDE.md` Non-negotiable #2가 **정본**. 여기선 **throwing 규약만
 ## 주의사항 (작업 중 발견 시 누적)
 
 - `EndPoint`/`Endpoint` 표기가 모듈마다 섞여 있음 (`NovelEndPoint` vs `AuthEndpoint`). 새 코드는 기존 모듈 표기를 따르되 신규는 `Endpoint` 권장.
+- **위 "일반" 변환표는 HTTP 상태 코드 기준이다.** 서버가 상태 코드가 아니라 응답 바디의 비즈니스 코드(`ErrorResponse.code`, 예: 비공개 프로필의 `"USER-015"`)로만 구분해주는 에러는 이 표로 못 잡는다. 이런 에러는 공용 `toRepositoryError()`를 고치지 않고, **그 코드를 실제로 받는 Repository 메서드 안에서만 개별로** `body?.code == "..."`를 확인해 처리한다 — 정본은 `RepositoryError.privateProfile`(`ProfileData.fetchGenrePreferences`/`fetchNovelPreferences`, `FeedData.fetchUserFeeds`, UserPageFeature #172). 같은 화면이 병렬로 부르는 다른 조회라고 자동으로 같이 처리해야 하는 건 아니다 — 예를 들어 서재 통계(`NovelData.fetchUserRegisteredNovelStats`)는 서버가 그 엔드포인트엔 이 코드를 아예 안 내려줘서 뺐다.
