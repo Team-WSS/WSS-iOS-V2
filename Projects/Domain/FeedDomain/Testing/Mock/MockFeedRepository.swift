@@ -22,7 +22,7 @@ public final class MockFeedRepository: FeedRepository {
     public var fetchedDetailIDs: FeedID?
 
     public var fetchedSosoFeeds: [(option: SosoFeedOption, lastFeedID: FeedID)] = []
-    public var fetchedUserFeeds: [(id: UserID, lastFeedID: FeedID)] = []
+    public var fetchedUserFeeds: [(id: UserID, nickname: String, profileImage: URL?, lastFeedID: FeedID)] = []
     public var fetchedMyFeeds: [(option: MyFeedOption, lastFeedID: FeedID)] = []
     public var fetchedNovelFeeds: [(novelID: NovelID, lastFeedID: FeedID)] = []
 
@@ -101,8 +101,8 @@ public final class MockFeedRepository: FeedRepository {
         }
     }
 
-    public func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
-        fetchedUserFeeds.append((id, lastFeedID))
+    public func fetchUserFeeds(id: UserID, nickname: String, profileImage: URL?, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+        fetchedUserFeeds.append((id, nickname, profileImage, lastFeedID))
         switch fetchUserFeedsResult {
         case .success(let value):
             return value

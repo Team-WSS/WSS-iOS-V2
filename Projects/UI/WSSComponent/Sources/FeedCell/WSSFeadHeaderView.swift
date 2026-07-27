@@ -78,6 +78,7 @@ public struct WSSFeadHeaderView: View {
                 Text(header.nickname)
                     .applyWSSFont(.body4)
                     .foregroundStyle(Color.wssBlack)
+                    .lineLimit(1)
             }
             .contentShape(Rectangle())
             .onTapGesture {
