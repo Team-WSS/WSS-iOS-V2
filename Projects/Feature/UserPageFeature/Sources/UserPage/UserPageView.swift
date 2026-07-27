@@ -123,6 +123,9 @@ struct UserPageView: View {
                 .coordinateSpace(name: scrollCoordinateSpace)
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
+                // ScrollView 뷰포트 고정 배경(스크롤 콘텐츠와 무관) — 하단으로 당겨 바운싱해도
+                // wssWhite가 비치도록. 상단은 profileSection의 오버슈트 배경이 그 위를 덮는다.
+                .background(WSSColor.wssWhite.swiftUIColor)
                 .overlay {
                     if viewModel.state.isLoading {
                         LoadingView()
@@ -298,7 +301,7 @@ struct UserPageView: View {
             VStack(spacing: 0) {
                 Text(tab.displayName)
                     .applyWSSFont(.body2)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .foregroundStyle(selectedTab == tab ? WSSColor.wssBlack.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
                     .frame(height: 46)
 
                 ZStack(alignment: .bottom) {
