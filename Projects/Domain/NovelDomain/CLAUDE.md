@@ -27,4 +27,5 @@
 - **서재 별점 필터(`LibraryRatingFilter`)는 검색의 `NovelRatingThreshold`(이상 4단계)와 다른 타입**(범위+별점없음). 혼용 금지.
   전체 범위(0.0~5.0)는 `setRatingRange`가 **nil로 정규화**한다("필터 없음"의 표현을 하나로 유지) — UI는 `rating != nil`로 칩 유무를 판단하면 된다.
 - **`MyLibraryFilter.clearAll()`(시트 "초기화")은 시트 필터 6종만 리셋** — 관심(isInterest)·정렬(sortType)은 시트 소속이 아니라 유지된다.
+- **연재상태(`publicationStatus`)가 단일 선택인 건 의도된 설계** — 서버 쿼리가 `isCompleted: Bool?` **하나뿐**이라 애초에 "연재중+완결작"을 표현할 수단이 없다. 구 WSSiOS는 이걸 배열로 들고 UI에서 둘 다 켤 수 있게 해뒀지만, Repository가 `count == 1`일 때만 파라미터를 실어서 **둘 다 고르면 필터가 통째로 무시**됐다(칩은 2개인데 결과는 전체). V1이 다중이라는 이유로 배열로 되돌리지 말 것.
 - 서재 정렬은 공용 `SortType`(2종)이 아니라 **서재 전용 `LibrarySortType`(6종)** — 타유저 서재(`LibraryFilter`)는 여전히 공용 `SortType`을 쓴다.

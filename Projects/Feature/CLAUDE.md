@@ -83,6 +83,7 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 - **별점 등 커스텀 드로잉은 접근성 tap 타겟으로 안 잡힌다** → `snapshot_ui`에 안 뜨면 좌표 탭. 표준 버튼/세그먼트/매력포인트는 `elementRef`로 잡힌다.
 - **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 - **`build_run_sim`은 이 스킴에서 install이 framework를 잡아 실패**할 수 있다("installable app 없음") → `build_sim`(컴파일) 후 `install_app_sim`+`launch_app_sim`(bundleId `...XxxFeatureDemo`)이 안정적.
+- ⚠️ **install할 `.app`은 `get_sim_app_path`가 알려주는 Products 디렉토리에서 고른다**(그 안의 `XxxFeatureDemo.app`). XcodeBuildMCP는 Xcode의 `~/Library/Developer/Xcode/DerivedData`가 **아니라 자체 `~/Library/Developer/XcodeBuildMCP/workspaces/<repo>/DerivedData/`** 에 빌드한다 — `find`로 Xcode DerivedData의 `.app`을 잡아 설치하면 **며칠 전 빌드가 조용히 올라가** 방금 고친 게 반영 안 된 화면을 보고 오진한다(실제 발생). 의심되면 `.app`의 mtime을 빌드 시각과 대조할 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
