@@ -135,7 +135,6 @@ private extension LibraryView {
             Rectangle()
                 .fill(Color.wssGray70)
                 .frame(width: 1, height: 29)
-            Spacer().frame(width: 12)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 3) {
                     interestChip
@@ -144,6 +143,12 @@ private extension LibraryView {
                     }
                 }
             }
+            // 스크롤 영역은 divider에 바로 붙이고(칩이 divider에서 곧장 잘린다), 첫 칩과의 간격 12·
+            // 마지막 칩 뒤 여백 20은 **콘텐츠 마진**으로 준다.
+            // 이걸 Spacer/패딩으로 주면 스크롤 영역 자체가 그만큼 좁아져, 왼쪽은 divider에서 떨어진 자리에서
+            // 오른쪽은 화면 끝보다 일찍 칩이 잘린다.
+            .contentMargins(.leading, 12, for: .scrollContent)
+            .contentMargins(.trailing, 20, for: .scrollContent)
         }
         .padding(.leading, 20)
         .frame(height: 50)
