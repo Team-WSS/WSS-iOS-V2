@@ -188,4 +188,24 @@ public struct DefaultNovelRepository: NovelRepository {
             throw .unknown
         }
     }
+
+    public func fetchUserRegisteredNovelStats(id: UserID) async throws(RepositoryError) -> RegisteredNovelStats {
+        let action = NovelAction.fetchUserRegisteredStats
+
+        do {
+            let response = try await service.getUserRegisteredNovelStats(userID: id.value)
+            let result = NovelMapper.userRegisteredNovelStats(from: response)
+            logger?.logSuccess(action: action.text)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.text, error: error)
+            throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.text, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.text, error: error)
+            throw .unknown
+        }
+    }
 }

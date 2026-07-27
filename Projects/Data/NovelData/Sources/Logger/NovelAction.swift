@@ -17,6 +17,7 @@ public enum NovelAction {
     case fetchMyLibraryKeywords
     case fetchUserLibrary
     case fetchRegisteredStats
+    case fetchUserRegisteredStats
 
     public var text: String {
         switch self {
@@ -27,6 +28,7 @@ public enum NovelAction {
         case .fetchMyLibraryKeywords:           return "서재 등록 키워드 조회"
         case .fetchUserLibrary:                 return "유저 서재 조회"
         case .fetchRegisteredStats:             return "등록 작품 통계 조회"
+        case .fetchUserRegisteredStats:         return "유저 등록 작품 통계 조회"
         }
     }
 }
