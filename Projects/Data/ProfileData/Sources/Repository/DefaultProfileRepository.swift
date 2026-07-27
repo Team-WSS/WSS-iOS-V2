@@ -230,6 +230,10 @@ public struct DefaultProfileRepository: ProfileRepository {
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
+            // 상대가 프로필을 비공개로 설정한 경우 — HTTP 상태 코드보다 서버 비즈니스 코드로 식별한다.
+            if case .responseFailure(_, let body) = error, body?.code == "USER-015" {
+                throw .privateProfile
+            }
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
@@ -257,6 +261,10 @@ public struct DefaultProfileRepository: ProfileRepository {
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
+            // 상대가 프로필을 비공개로 설정한 경우 — HTTP 상태 코드보다 서버 비즈니스 코드로 식별한다.
+            if case .responseFailure(_, let body) = error, body?.code == "USER-015" {
+                throw .privateProfile
+            }
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
