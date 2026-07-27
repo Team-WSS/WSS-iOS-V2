@@ -23,7 +23,6 @@ struct LibrarySortSheet: View {
         static let topPadding: CGFloat = 24
         static let rowHeight: CGFloat = 39
         static let rowSpacing: CGFloat = 10
-        static let bottomPadding: CGFloat = 24
         static let horizontalPadding: CGFloat = 20
         static let checkSize: CGFloat = 22
         /// 체크와 글씨 사이 간격 — overlay offset에만 쓰인다(글씨 레이아웃엔 영향 없음).
@@ -32,12 +31,13 @@ struct LibrarySortSheet: View {
 
     private static let rowCount = LibrarySortType.allCases.count
 
-    // 시트 높이 = 상단여백 + 행 + 간격 + 하단여백. detent 계산에 쓴다(콘텐츠에 딱 맞춤).
+    // 시트 높이 = 상단여백 + 행 + 간격. detent 계산에 쓴다(콘텐츠에 딱 맞춤).
+    // 하단 여백은 두지 않는다 — 시스템이 이 높이 **아래에 홈 인디케이터 safe area를 더해** 시트를 그리므로,
+    // 여기서 또 주면 여백이 두 겹이 되어 마지막 행 아래가 휑해진다.
     static let sheetHeight: CGFloat =
         Metric.topPadding
         + CGFloat(rowCount) * Metric.rowHeight
         + CGFloat(rowCount - 1) * Metric.rowSpacing
-        + Metric.bottomPadding
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,7 +48,6 @@ struct LibrarySortSheet: View {
                 }
                 row(sortType)
             }
-            Spacer().frame(height: Metric.bottomPadding)
         }
         // 패딩은 VStack 전체에 한 번(ReadingPeriodSheet와 동일) — 행마다 걸면 폭 계산이 어긋나기 쉽다.
         .padding(.horizontal, Metric.horizontalPadding)
