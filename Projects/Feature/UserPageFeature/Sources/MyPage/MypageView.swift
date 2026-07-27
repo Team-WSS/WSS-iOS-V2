@@ -18,7 +18,6 @@ import WSSComponent
 struct MypageView: View {
 
     @State private var viewModel: MypageViewModel
-    @State private var isGenreListExpanded: Bool = false
     @State private var showEditView: Bool = false
     @State private var showProfileSavedToast: Bool = false
 
@@ -55,7 +54,11 @@ struct MypageView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         myProfileSection
-                        myLibrarySection
+
+                        LibrarySection(stats: viewModel.state.registeredNovelStats) {
+                            //TODO: - 서재 뷰로 이동
+                            print("서재 뷰로 이동")
+                        }
 
                         divider
 
@@ -64,11 +67,11 @@ struct MypageView: View {
                         divider
 
                         if !viewModel.hasNoGenrePreferenceData {
-                            myGenreSection
+                            GenreSection(genrePreferences: viewModel.state.genrePreferences)
                             divider
                         }
 
-                        myNovelPreferenceSection
+                        myPageKeywordSection
                     }
                 }
                 .scrollIndicators(.hidden)
@@ -153,41 +156,6 @@ struct MypageView: View {
             .frame(height: 3)
     }
     
-    // MARK: - 서재
-    
-    private var myLibrarySection: some View {
-        Button {
-            //TODO: - 서재 뷰로 이동
-            print("서재 뷰로 이동")
-        } label: {
-            HStack(spacing: 0) {
-                myLibraryItem(count: viewModel.state.registeredNovelStats?.interest ?? 0, title: "관심")
-                myLibraryItem(count: viewModel.state.registeredNovelStats?.watching ?? 0, title: "보는중")
-                myLibraryItem(count: viewModel.state.registeredNovelStats?.watched ?? 0, title: "봤어요")
-                myLibraryItem(count: viewModel.state.registeredNovelStats?.quit ?? 0, title: "하차")
-            }
-            .padding(.vertical, 14.5)
-            .background(WSSColor.wssPrimary20.swiftUIColor)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 20)
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private func myLibraryItem(count: Int, title: String) -> some View {
-        VStack(spacing: 2) {
-            Text(String(count))
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
-                .lineLimit(1)
-            
-            Text(title)
-                .applyWSSFont(.body5)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-        .frame(maxWidth: .infinity)
-    }
-    
     // MARK: - 컬렉션
 
     private var myCollectionSection: some View {
@@ -259,112 +227,8 @@ struct MypageView: View {
         }
         .frame(width: 88)
     }
-
-    // MARK: - 장르 취향
     
-    private var myGenreSection: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                Text("\(viewModel.totalGenreBadgeCount)")
-                    .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
-                Text("개의 장르 뱃지")
-                    .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                
-                Spacer()
-            }
-            .applyWSSFont(.title2)
-            .padding(.vertical, 10)
-            
-            Spacer().frame(height: 9)
-            
-            HStack(spacing: 0) {
-                ForEach(viewModel.topGenrePreferences, id: \.genre) { preference in
-                    representativeGenreItem(preference: preference)
-                }
-            }
-            
-            if isGenreListExpanded {
-                Spacer().frame(height: 20)
-                
-                VStack(spacing: 2) {
-                    ForEach(viewModel.remainingGenrePreferences, id: \.genre) { preference in
-                        genreItemRow(preference: preference)
-                    }
-                }
-                .transition(.opacity)
-            }
-            
-            Spacer().frame(height: 6)
-            
-            if !viewModel.remainingGenrePreferences.isEmpty {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        isGenreListExpanded.toggle()
-                    }
-                } label: {
-                    WSSImage.icDropdownsmall.swiftUIImage
-                        .renderingMode(.template)
-                        .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
-                        .frame(width: 44, height: 44)
-                        .rotationEffect(.degrees(isGenreListExpanded ? 180 : 0))
-                        .animation(nil, value: isGenreListExpanded)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    private func representativeGenreItem(preference: GenrePreference) -> some View {
-        VStack(spacing: 0) {
-            preference.genre.iconImage
-                .resizable()
-                .scaledToFit()
-                .frame(width: 30, height: 30)
-            
-            Spacer().frame(height: 11)
-            
-            Text(preference.genre.displayName)
-                .applyWSSFont(.title3)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-            
-            Spacer().frame(height: 2)
-            
-            Text("\(preference.count)개")
-                .applyWSSFont(.body5)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-    }
-    
-    private func genreItemRow(preference: GenrePreference) -> some View {
-        HStack(spacing: 0) {
-            preference.genre.iconImage
-                .resizable()
-                .scaledToFit()
-                .frame(width: 24, height: 24)
-            
-            Spacer().frame(width: 21)
-            
-            Text(preference.genre.displayName)
-                .applyWSSFont(.body3)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-            
-            Spacer()
-            
-            Text("\(preference.count)개")
-                .applyWSSFont(.body3)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                .lineLimit(1)
-                .padding(.trailing, 20)
-        }
-        .frame(height: 40)
-        .padding(.horizontal, 13)
-    }
-    
-    // MARK: - 작품 취향
-    
-    private var myNovelPreferenceSection: some View {
+    private var myPageKeywordSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text("주로 보는 작품은...")
@@ -374,37 +238,16 @@ struct MypageView: View {
             }
             .applyWSSFont(.title2)
             .padding(.vertical, 10)
+            .padding(.horizontal, 20)
 
-            if viewModel.hasNoPreferenceData {
-                preferenceNodataSection
-            } else {
-                Spacer().frame(height: 20)
-
-                HStack(spacing: 0) {
-                    Text(attractivePointsText)
-                        .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
-                    Text("(이)가 매력적인 작품이에요.")
-                        .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                }
-                .frame(maxWidth: .infinity)
-                .applyWSSFont(.title3)
-                .padding(.vertical, 14.5)
-                .background(WSSColor.wssGray50.swiftUIColor)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                Spacer().frame(height: 20)
-
-                WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 6) {
-                    ForEach(viewModel.keywordPreferences, id: \.keyword.id) { item in
-                        CountedKeywordChip(keyword: item.keyword.name,
-                                           count: item.count)
-                    }
-                }
-            }
+            KeywordSection(
+                hasNoData: viewModel.hasNoPreferenceData,
+                attractivePointsText: attractivePointsText,
+                keywordPreferences: viewModel.keywordPreferences
+            )
         }
-        .padding([.horizontal, .bottom], 20)
     }
-    
+
     @ToolbarContentBuilder
     private func createMypageViewToolBarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -415,23 +258,6 @@ struct MypageView: View {
                 WSSImage.icSetting.swiftUIImage
             }
         }
-    }
-    
-    // MARK: - 작품 취향 파악 불가 뷰
-    
-    private var preferenceNodataSection: some View {
-        VStack(spacing: 20) {
-            WSSImage.imgEmptyCatQuestionmark.swiftUIImage
-                .resizable()
-                .scaledToFit()
-                .frame(width: 166)
-
-            Text("작품 취향을 파악할 수 없어요")
-                .applyWSSFont(.body2)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
     }
 }
 
