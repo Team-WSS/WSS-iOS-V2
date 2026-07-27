@@ -83,6 +83,7 @@ struct UserFeedListView: View {
                 }
             }
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
         .navigationBarBackButtonHidden()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
