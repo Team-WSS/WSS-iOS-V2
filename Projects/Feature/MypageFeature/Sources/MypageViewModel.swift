@@ -74,7 +74,6 @@ final class MypageViewModel {
 
     // MARK: - Property
 
-    @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
     // MARK: - Dependency
@@ -118,8 +117,10 @@ final class MypageViewModel {
 // MARK: - Action Handling
 
 private extension MypageViewModel {
+    /// 화면이 (재)등장할 때마다 다시 불러온다 — 프로필 편집에서 저장하고 돌아왔을 때 바뀐 값을
+    /// 반영하려면, 최초 1회만 로드하는 가드를 두면 안 된다(뒤로가기로 돌아와도 onAppear는 다시 불린다).
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
+        guard loadTask == nil else { return }
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadMypage() }
@@ -147,7 +148,6 @@ private extension MypageViewModel {
             state.genrePreferences = try await genrePreferences
             state.novelPreference = try await novelPreference
             state.registeredNovelStats = try await registeredNovelStats
-            hasLoaded = true
         } catch {
             presentError(error)
         }

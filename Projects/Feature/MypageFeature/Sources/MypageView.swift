@@ -14,16 +14,38 @@ import BaseDomain
 import ProfileDomain
 import NovelDomain
 import WSSComponent
+import Logger
 
 struct MypageView: View {
-    
+
     @State private var viewModel: MypageViewModel
     @State private var isGenreListExpanded: Bool = false
-    
-    init(viewModel: MypageViewModel) {
+    @State private var showEditView: Bool = false
+    @State private var showProfileSavedToast: Bool = false
+
+    /// 프로필 편집 화면으로의 내부 네비게이션 조립에만 쓴다(VM은 만들지 않음, `MypageFactory.makeEditView` 재사용).
+    private let loadInitialProfileUseCase: LoadInitialProfileUseCase
+    private let loadProfileCharacterUseCase: LoadProfileCharacterUseCase
+    private let validateNicknameUseCase: ValidateNicknameUseCase
+    private let updateProfileUseCase: UpdateProfileUseCase
+    private let logger: Logger?
+
+    init(
+        viewModel: MypageViewModel,
+        loadInitialProfileUseCase: LoadInitialProfileUseCase,
+        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
+        validateNicknameUseCase: ValidateNicknameUseCase,
+        updateProfileUseCase: UpdateProfileUseCase,
+        logger: Logger? = nil
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.loadInitialProfileUseCase = loadInitialProfileUseCase
+        self.loadProfileCharacterUseCase = loadProfileCharacterUseCase
+        self.validateNicknameUseCase = validateNicknameUseCase
+        self.updateProfileUseCase = updateProfileUseCase
+        self.logger = logger
     }
-    
+
     var body: some View {
         Group {
             if viewModel.state.hasLoadError {
@@ -65,6 +87,17 @@ struct MypageView: View {
         .onAppear {
             viewModel.handle(.load)
         }
+        .navigationDestination(isPresented: $showEditView) {
+            MypageFactory.makeEditView(
+                loadInitialProfileUseCase: loadInitialProfileUseCase,
+                loadProfileCharacterUseCase: loadProfileCharacterUseCase,
+                validateNicknameUseCase: validateNicknameUseCase,
+                updateProfileUseCase: updateProfileUseCase,
+                onSaved: { showProfileSavedToast = true },
+                logger: logger
+            )
+        }
+        .showWSSToast(isPresented: $showProfileSavedToast, type: .editProfile)
     }
     
     // MARK: - 프로필
@@ -89,8 +122,7 @@ struct MypageView: View {
             .frame(width: 86, height: 86)
             .overlay(alignment: .bottomTrailing) {
                 Button {
-                    //TODO: - 프로필 편집 뷰로 이동
-                    print("프로필 편집 뷰로 이동")
+                    showEditView = true
                 } label: {
                     WSSImage.icEditProfileMypage.swiftUIImage
                 }
@@ -423,8 +455,46 @@ private extension MypageView {
                 loadGenrePreferencesUseCase: PreviewLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: PreviewLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
-            )
+            ),
+            loadInitialProfileUseCase: PreviewLoadInitialProfileUseCase(),
+            loadProfileCharacterUseCase: PreviewLoadProfileCharacterUseCase(),
+            validateNicknameUseCase: PreviewValidateNicknameUseCase(),
+            updateProfileUseCase: PreviewUpdateProfileUseCase()
         )
+    }
+}
+
+private struct PreviewLoadInitialProfileUseCase: LoadInitialProfileUseCase {
+    func execute() async throws(RepositoryError) -> ProfileDraft {
+        ProfileDraft(
+            characterID: 1,
+            nickname: "구리구리스",
+            introduction: "백덕수 작가입니다. 반갑습니다.",
+            genrePreferences: [GenrePreference(genre: .romance, count: 12)]
+        )
+    }
+}
+
+private struct PreviewValidateNicknameUseCase: ValidateNicknameUseCase {
+    func execute(_ nickname: String) async throws(RepositoryError) -> Bool { true }
+}
+
+private struct PreviewUpdateProfileUseCase: UpdateProfileUseCase {
+    func execute(_ draft: ProfileDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadProfileCharacterUseCase: LoadProfileCharacterUseCase {
+    func execute() async throws(RepositoryError) -> [ProfileCharacter] {
+        (1...20).map { index in
+            ProfileCharacter(
+                id: index,
+                name: "팬텀 \(index)",
+                line: "만나서 반가워요, %s",
+                representativeImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
+                thumbnailImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
+                isRepresentative: index == 1
+            )
+        }
     }
 }
 
