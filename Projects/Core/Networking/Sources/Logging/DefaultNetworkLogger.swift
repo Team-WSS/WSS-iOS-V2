@@ -34,10 +34,8 @@ public final class DefaultNetworkLogger: NetworkLogging {
         """
 
         if showBody,
-           let body = request.httpBody,
-           let bodyString = String(data: body, encoding: .utf8),
-           !bodyString.isEmpty {
-            message += "\n- body:\n\(bodyString)"
+           let body = formattedBody(from: request.httpBody) {
+            message += "\n- body:\n\(body)"
         }
 
         base.debug(message)
@@ -63,10 +61,8 @@ public final class DefaultNetworkLogger: NetworkLogging {
         """
 
         if showBody,
-           let data,
-           let bodyString = String(data: data, encoding: .utf8),
-           !bodyString.isEmpty {
-            message += "\n- body:\n\(bodyString)"
+           let body = formattedBody(from: data) {
+            message += "\n- body:\n\(body)"
         }
 
         if (200..<300).contains(http.statusCode) {
@@ -106,5 +102,24 @@ public final class DefaultNetworkLogger: NetworkLogging {
             }
         }
         return new
+    }
+
+    private func formattedBody(from data: Data?) -> String? {
+        guard let data,
+              let body = String(data: data, encoding: .utf8),
+              !body.isEmpty else {
+            return nil
+        }
+
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data),
+              let prettyData = try? JSONSerialization.data(
+                  withJSONObject: jsonObject,
+                  options: [.prettyPrinted, .sortedKeys]
+              ),
+              let prettyBody = String(data: prettyData, encoding: .utf8) else {
+            return body
+        }
+
+        return prettyBody
     }
 }
