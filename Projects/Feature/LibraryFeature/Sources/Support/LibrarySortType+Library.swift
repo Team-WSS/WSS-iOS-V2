@@ -24,11 +24,11 @@ extension LibrarySortType {
         }
     }
 
-    /// 메인 화면 정렬 버튼의 축약 라벨 — 디자인은 "최신순"으로 짧게 표기.
+    /// 메인 화면 정렬 버튼 라벨.
     var libraryShortDisplayName: String {
         switch self {
-        case .registeredNewest: "최신순"
-        case .registeredOldest: "오래된순"
+        case .registeredNewest: "등록 최신순"
+        case .registeredOldest: "등록 오래된순"
         case .title:            "제목순"
         case .readDate:         "날짜순"
         case .ratingHighest:    "별점 높은순"
