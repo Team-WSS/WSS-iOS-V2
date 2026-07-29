@@ -89,7 +89,11 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func fetchMyLibraryNovels(_ filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    public func fetchMyLibraryNovels(
+        _ filter: MyLibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchMyLibrary
 
         do {
@@ -97,7 +101,10 @@ public struct DefaultNovelRepository: NovelRepository {
             let query = NovelMapper.myLibraryV2Query(from: filter, cursor: cursor)
             let response = try await service.getUserLibraryNovelsV2(userID: myID ?? 0,
                                                                     query: query)
-            let result = try NovelMapper.libraryNovelsV2(from: response)
+            let result = try NovelMapper.libraryNovelsV2(
+                from: response,
+                cachedKeywords: cachedKeywords
+            )
             logger?.logSuccess(action: action.text)
             return result
         } catch let error as NetworkingError {

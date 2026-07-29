@@ -32,7 +32,10 @@ extension NovelMapper {
     
     // MARK: - 서재 - 소설
     
-    public static func libraryNovel(from dto: UserLibraryNovelResponse) throws -> LibraryNovel {
+    public static func libraryNovel(
+        from dto: UserLibraryNovelResponse,
+        cachedKeywords: [Keyword] = []
+    ) throws -> LibraryNovel {
         let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         
         var userReview: UserNovelReview?
@@ -48,7 +51,7 @@ extension NovelMapper {
                 rating: rating,
                 attractivePoint: attractivePoints,
                 period: period,
-                keywords: []
+                keywords: mapKeywords(from: dto.keywords, cachedKeywords: cachedKeywords)
             )
         }
         
@@ -71,9 +74,14 @@ extension NovelMapper {
         )
     }
 
-    public static func libraryNovelsV2(from dto: UserLibraryNovelsV2Response) throws -> (CursorPaginated<LibraryNovel>, Int) {
+    public static func libraryNovelsV2(
+        from dto: UserLibraryNovelsV2Response,
+        cachedKeywords: [Keyword]
+    ) throws -> (CursorPaginated<LibraryNovel>, Int) {
         let page = CursorPaginated(
-            items: try dto.userNovels.map { try libraryNovel(from: $0) },
+            items: try dto.userNovels.map {
+                try libraryNovel(from: $0, cachedKeywords: cachedKeywords)
+            },
             hasNext: dto.isLoadable,
             nextCursor: dto.nextCursor
         )
@@ -348,6 +356,14 @@ extension NovelMapper {
             cachedKeywords
                 .first { $0.name == dto.keywordName }
                 .map { NovelKeyword(keyword: $0, count: dto.keywordCount) }
+        }
+    }
+
+    /// 서재 목록 API는 키워드 이름만 내려준다. 전체 키워드 캐시에서 동일한 이름의 ID를 찾아
+    /// `UserNovelReview`에 넣을 값을 복원하며, 서버에 없는 이름은 표시하지 않는다.
+    private static func mapKeywords(from names: [String], cachedKeywords: [Keyword]) -> [Keyword] {
+        names.compactMap { name in
+            cachedKeywords.first { $0.name == name }
         }
     }
     

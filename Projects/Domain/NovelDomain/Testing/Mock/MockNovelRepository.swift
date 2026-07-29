@@ -27,6 +27,7 @@ public final class MockNovelRepository: NovelRepository {
     public private(set) var removedInterestIDs: [NovelID] = []
     public private(set) var fetchedMyLibraryFilters: [MyLibraryFilter] = []
     public private(set) var fetchedMyLibraryCursors: [String?] = []
+    public private(set) var lastMyLibraryCachedKeywords: [Keyword]?
     public private(set) var fetchedUserLibraryIDs: [UserID] = []
     public private(set) var fetchedUserLibraryFilters: [LibraryFilter] = []
     public private(set) var fetchMyLibraryKeywordsCallCount = 0
@@ -50,9 +51,14 @@ public final class MockNovelRepository: NovelRepository {
         try removeInterestResult.get()
     }
 
-    public func fetchMyLibraryNovels(_ filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    public func fetchMyLibraryNovels(
+        _ filter: MyLibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         fetchedMyLibraryFilters.append(filter)
         fetchedMyLibraryCursors.append(cursor)
+        lastMyLibraryCachedKeywords = cachedKeywords
         return try fetchMyLibraryResult.get()
     }
 

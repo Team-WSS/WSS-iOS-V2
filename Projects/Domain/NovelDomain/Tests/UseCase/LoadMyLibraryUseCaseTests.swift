@@ -11,6 +11,7 @@ import Testing
 @testable import NovelDomain
 import NovelDomainTesting
 import BaseDomain
+import BaseDomainTesting
 
 @Suite
 struct LoadMyLibraryUseCaseTests {
@@ -21,7 +22,7 @@ struct LoadMyLibraryUseCaseTests {
         let expected = makeLibraryPage()
         mock.fetchMyLibraryResult = .success((expected, 2))
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
 
         let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
 
@@ -35,7 +36,7 @@ struct LoadMyLibraryUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 37))
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
         let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
 
         #expect(result.1 == 37)
@@ -46,7 +47,7 @@ struct LoadMyLibraryUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
         var filter = MyLibraryFilter()
         filter.addReadingStatus(.watching)
         filter.addGenre(.fantasy)
@@ -63,7 +64,7 @@ struct LoadMyLibraryUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
 
         _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: "cursor-42")
 
@@ -75,11 +76,31 @@ struct LoadMyLibraryUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
 
         _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
 
         #expect(mock.fetchedMyLibraryCursors.last == .some(nil))
+    }
+
+    @Test("키워드 캐시를 서재 저장소에 전달한다")
+    func passesCachedKeywordsToRepository() async throws {
+        let novelRepository = MockNovelRepository()
+        novelRepository.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
+        let keyword = Keyword(id: KeywordID(11), name: "회귀")
+        let keywordRepository = MockKeywordRepository()
+        keywordRepository.fetchKeywordsResult = .success([
+            KeywordGroup(name: "소재", image: nil, keywords: [keyword])
+        ])
+        let usecase = DefaultLoadMyLibraryUseCase(
+            novelRepository: novelRepository,
+            keywordRepository: keywordRepository
+        )
+
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+
+        #expect(novelRepository.lastMyLibraryCachedKeywords == [keyword])
+        #expect(keywordRepository.fetchKeywordsCallCount == 1)
     }
 
     @Test("내 서재 조회에 실패하면 에러를 던진다")
@@ -87,7 +108,7 @@ struct LoadMyLibraryUseCaseTests {
         let mock = MockNovelRepository()
         mock.fetchMyLibraryResult = .failure(RepositoryError.unknown)
 
-        let usecase = DefaultLoadMyLibraryUseCase(novelRepository: mock)
+        let usecase = makeUseCase(novelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
@@ -96,6 +117,13 @@ struct LoadMyLibraryUseCaseTests {
 }
 
 extension LoadMyLibraryUseCaseTests {
+
+    private func makeUseCase(novelRepository: MockNovelRepository) -> DefaultLoadMyLibraryUseCase {
+        DefaultLoadMyLibraryUseCase(
+            novelRepository: novelRepository,
+            keywordRepository: MockKeywordRepository()
+        )
+    }
 
     private func makeLibraryPage() -> CursorPaginated<LibraryNovel> {
         CursorPaginated(
