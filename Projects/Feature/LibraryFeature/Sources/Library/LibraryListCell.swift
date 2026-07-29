@@ -23,7 +23,7 @@ struct LibraryListCell: View {
         VStack(alignment: .leading, spacing: 0) {
             if hasBadgeRow {
                 badgeRow
-                Spacer().frame(height: 8)
+                Spacer().frame(height: 6)
             }
             infoRow
             if let keywords = novel.userReview?.keywords, !keywords.isEmpty {
@@ -45,8 +45,7 @@ struct LibraryListCell: View {
             if let status = novel.userReview?.readingStatus {
                 Text(status.statusName)
                     .applyWSSFont(.label2, color: .wssWhite)
-                    .padding(.vertical, 4)
-                    .frame(width: 60)
+                    .frame(width: 60, height: 18)
                     .background(status.tagBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
@@ -63,11 +62,12 @@ struct LibraryListCell: View {
             thumbnail
             Spacer().frame(width: 16)
             VStack(alignment: .leading, spacing: 0) {
+                Spacer().frame(height: 5)
                 Text(novel.title)
                     .applyWSSFont(.title2, color: .wssBlack, alignment: .leading)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .multilineTextAlignment(.leading)
-                Spacer().frame(height: 6)
+                Spacer().frame(height: 2)
                 ratingRow
                 if let points = novel.userReview?.attractivePoint, !points.isEmpty {
                     Spacer().frame(height: 6)
@@ -123,6 +123,7 @@ struct LibraryListCell: View {
                     .applyWSSFont(.body5, color: .wssGray200)
             }
         }
+        .frame(height: 17)
     }
 
     /// 매력포인트 — 아이콘 12px + 이름, 항목 사이 2px 점 구분자.
@@ -146,23 +147,28 @@ struct LibraryListCell: View {
                 }
             }
         }
+        .frame(height: 23)
     }
 
-    /// 키워드 칩 — 한 줄, 넘치면 잘림(디자인 overflow-clip).
+    /// 키워드 칩 — 뷰포트는 화면 끝까지 확장하고, 칩 시작·끝 정렬만 콘텐츠 마진으로 맞춘다.
     private func keywordRow(_ keywords: [Keyword]) -> some View {
-        HStack(spacing: 6) {
-            ForEach(keywords) { keyword in
-                Text(keyword.name)
-                    .applyWSSFont(.body5, color: .wssGray200)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(Color.wssPrimary20)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .fixedSize()
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(keywords) { keyword in
+                    Text(keyword.name)
+                        .applyWSSFont(.body5, color: .wssGray200)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color.wssPrimary20)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .fixedSize()
+                }
             }
         }
+        .contentMargins(.horizontal, 20, for: .scrollContent)
+        // 셀의 공통 좌우 여백은 유지하되, 키워드 스크롤 영역만 화면 끝까지 넓힌다.
+        .padding(.horizontal, -20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .clipped()
     }
 
     private func ratingText(_ value: Float) -> String {

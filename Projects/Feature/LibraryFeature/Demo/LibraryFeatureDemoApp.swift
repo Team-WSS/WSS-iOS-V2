@@ -44,6 +44,8 @@ private struct DemoRootView: View {
     }
 
     @State private var dataSource: DataSource = .mock
+    /// 실서버 서재 응답의 키워드 이름을 `Keyword`로 복원할 수 있도록, 목록을 만들기 전에 캐시를 채운다.
+    @State private var isLiveKeywordCacheReady = false
     /// 소스 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
     private var libraryViewID: String { dataSource.rawValue }
 
@@ -61,6 +63,16 @@ private struct DemoRootView: View {
 
                 libraryView
                     .id(libraryViewID)
+            }
+            .task(id: dataSource) {
+                guard dataSource == .live else {
+                    isLiveKeywordCacheReady = false
+                    return
+                }
+
+                let client = makeLiveClient()
+                await makeLiveKeywordRepository(client: client).syncKeywords()
+                isLiveKeywordCacheReady = true
             }
         }
     }
@@ -80,7 +92,12 @@ private struct DemoRootView: View {
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
-            makeLiveView()
+            if isLiveKeywordCacheReady {
+                makeLiveView()
+            } else {
+                ProgressView("키워드 목록 불러오는 중")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 
@@ -90,11 +107,24 @@ private struct DemoRootView: View {
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     // 내 서재 조회는 저장된 userID를 쓰므로 Demo가 직접 세팅한다(NovelData Demo와 동일 값).
     @MainActor
-    private func makeLiveView() -> some View {
-        let client = NetworkingClient(
+    private func makeLiveClient() -> NetworkingClient {
+        NetworkingClient(
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
         )
+    }
+
+    @MainActor
+    private func makeLiveKeywordRepository(client: NetworkingClient) -> KeywordRepository {
+        KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
+    }
+
+    @MainActor
+    private func makeLiveView() -> some View {
+        let client = makeLiveClient()
         let userDefaults = UserDefaultsStorage()
         userDefaults.set(.userID, 10041)
         let repository = NovelDataFactory.makeNovelRepository(
@@ -102,8 +132,12 @@ private struct DemoRootView: View {
             appStorage: userDefaults,
             logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
+        let keywordRepository = makeLiveKeywordRepository(client: client)
         return LibraryFactory.makeView(
-            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(novelRepository: repository),
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
+                novelRepository: repository,
+                keywordRepository: keywordRepository
+            ),
             loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(novelRepository: repository),
             logger: consoleLogger,
             onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
@@ -179,7 +213,10 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
         return LibraryNovel(
             id: NovelID(index),
-            title: isLongTitle ? "데모 작품 \(index) — 당신의 이해를 돕기 위하여" : "데모 작품 \(index)",
+            // 그리드 2줄·리스트 1줄 말줄임을 모두 확인할 수 있는 긴 제목 케이스.
+            title: isLongTitle
+                ? "나는 분명 조용히 살고 싶었을 뿐인데 어쩌다 보니 황태자비가 되어 버렸다 \(index)"
+                : "데모 작품 \(index)",
             // 표지 비율(108:160)의 실제 이미지. 5번째마다 nil로 둬 WSS 빈 표지 폴백도 함께 확인한다.
             thumbnailImage: index.isMultiple(of: 5)
                 ? nil

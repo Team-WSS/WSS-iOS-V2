@@ -23,6 +23,7 @@ struct LibraryGridCell: View {
         /// 제목 줄 수·별점/날짜 유무로 높이가 흔들리면 그리드 행이 어긋나므로 값에 상관없이 고정한다.
         static let infoHeight: CGFloat = 65
         static let starSize: CGFloat = 9
+        static let statusBadgeWidth: CGFloat = 49
     }
 
     let novel: LibraryNovel
@@ -94,7 +95,7 @@ struct LibraryGridCell: View {
     private func statusBadge(_ status: ReadingStatus) -> some View {
         Text(status.statusName)
             .applyWSSFont(.label2, color: .wssWhite)
-            .padding(.horizontal, 6)
+            .frame(width: Metric.statusBadgeWidth)
             .padding(.vertical, 4)
             .background(status.tagBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 4))

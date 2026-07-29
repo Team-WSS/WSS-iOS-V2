@@ -158,14 +158,17 @@ private extension LibraryFilterSheet {
         }
     }
 
-    /// 탭 콘텐츠 — 시트 높이가 고정이라 **남은 공간을 전부 차지**하고 넘치면 안에서 스크롤한다.
-    /// (탭마다 자연 높이가 달라, 아래를 Spacer로 밀면 탭 전환 때 콘텐츠가 위아래로 튄다.)
+    /// 탭 콘텐츠 — 공통 세로 스크롤은 두지 않는다. 현재 탭 중 키워드만 가변 길이라,
+    /// 키워드 칩 영역만 자체 스크롤하고 나머지 탭은 고정 콘텐츠로 둔다.
+    @ViewBuilder
     var tabContentSection: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        if viewModel.state.selectedTab == .keyword {
+            keywordContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
             tabContent
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     @ViewBuilder
@@ -318,7 +321,7 @@ private extension LibraryFilterSheet {
         .animation(.easeInOut(duration: 0.1), value: isSelected)
     }
 
-    /// 키워드 — 내가 서재 작품에 등록한 키워드에서 고른다. 스크롤은 바깥 콘텐츠 영역이 담당한다.
+    /// 키워드 — 카운트는 고정하고, 가변 길이인 칩 영역만 남은 높이 안에서 스크롤한다.
     @ViewBuilder
     var keywordContent: some View {
         if registeredKeywords.isEmpty {
@@ -330,19 +333,26 @@ private extension LibraryFilterSheet {
             VStack(alignment: .leading, spacing: 0) {
                 Text("등록한 키워드 \(registeredKeywords.count)개")
                     .applyWSSFont(.body4, color: .wssGray200)
+                    .padding(.horizontal, 20)
                 Spacer().frame(height: 16)
-                WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 14) {
-                    ForEach(registeredKeywords) { keyword in
-                        CapsuleSelectableKeywordChip(
-                            keyword: keyword.name,
-                            isSelected: viewModel.state.filter.keywords.contains(keyword)
-                        ) {
-                            viewModel.handle(.toggleKeyword(keyword))
+                ScrollView(.vertical, showsIndicators: false) {
+                    WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 14) {
+                        ForEach(registeredKeywords) { keyword in
+                            CapsuleSelectableKeywordChip(
+                                keyword: keyword.name,
+                                isSelected: viewModel.state.filter.keywords.contains(keyword)
+                            ) {
+                                viewModel.handle(.toggleKeyword(keyword))
+                            }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .frame(maxHeight: .infinity, alignment: .top)
             }
-            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 
