@@ -81,12 +81,12 @@ struct LibraryGridCell: View {
         }
         .overlay(alignment: .bottomTrailing) {
             if novel.isInterested {
-                WSSImage.icHeartFilled.swiftUIImage
+                WSSImage.icHeartFilledStroke.swiftUIImage
                     .resizable()
                     .scaledToFit()
                     .frame(width: 13, height: 13)
-                    .padding(.trailing, 10)
-                    .padding(.bottom, 10)
+                    .padding(.trailing, 9.5)
+                    .padding(.bottom, 9.5)
             }
         }
     }

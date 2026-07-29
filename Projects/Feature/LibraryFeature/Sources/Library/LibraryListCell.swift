@@ -85,7 +85,7 @@ struct LibraryListCell: View {
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .bottomTrailing) {
             if novel.isInterested {
-                WSSImage.icHeartFilled.swiftUIImage
+                WSSImage.icHeartFilledStroke.swiftUIImage
                     .resizable()
                     .scaledToFit()
                     .frame(width: 13, height: 13)
@@ -102,8 +102,6 @@ struct LibraryListCell: View {
                 HStack(spacing: 5) {
                     HStack(spacing: 2) {
                         WSSImage.icSmallStarFilled.swiftUIImage
-                            .resizable()
-                            .scaledToFit()
                             .frame(width: 12, height: 12)
                         Text(ratingText(Float(rating.value)))
                             .applyWSSFont(.body5_2, color: .wssSecondary100)
@@ -115,8 +113,8 @@ struct LibraryListCell: View {
             HStack(spacing: 5) {
                 HStack(spacing: 2) {
                     WSSImage.icSmallStarEmpty.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
+                        .renderingMode(.template)
+                        .foregroundStyle(Color.wssGray200)
                         .frame(width: 12, height: 12)
                     Text(ratingText(novel.rating))
                         .applyWSSFont(.body5, color: .wssGray200)
@@ -133,13 +131,15 @@ struct LibraryListCell: View {
             ForEach(Array(points.enumerated()), id: \.offset) { index, point in
                 if index > 0 {
                     Circle()
-                        .fill(Color.wssGray100)
+                        .fill(Color.wssPrimary100)
                         .frame(width: 2, height: 2)
                 }
                 HStack(spacing: 3) {
                     point.iconImage
+                        .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
+                        .foregroundStyle(Color.wssPrimary100)
                         .frame(width: 12, height: 12)
                     Text(point.displayName)
                         .applyWSSFont(.body5, color: .wssGray300)
