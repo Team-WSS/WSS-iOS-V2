@@ -120,8 +120,12 @@ private extension LibraryView {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 24, height: 24)
+                    // 아이콘 24는 그대로는 잡기 어려워 주변으로만 히트 영역을 넓힌다(좌 10 · 상하 8).
+                    // 우측은 헤더 패딩 20이 이미 여백이라 더 주지 않는다 — 주면 그만큼 아이콘이 왼쪽으로 밀린다.
+                    .padding(.leading, 10)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .frame(height: 40)

@@ -56,7 +56,8 @@
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
-- **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨). 보통 `.buttonStyle(.plain)`과 함께.
+- **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨).
+  - ⚠️ **`.buttonStyle(.plain)`은 기본 눌림 피드백(누를 때 흐려짐)까지 없앤다** — "버튼인데 눌러도 반응이 없다"의 원인. 이 스타일이 필요한 건 label의 `Text`가 accent 색으로 물드는 걸 막을 때뿐이고, **아이콘·커스텀 뷰만 있는 버튼은 빼야** 눌린 게 보인다(서재 헤더 등록 버튼에서 제거). 습관적으로 `.contentShape`와 세트로 붙이지 말 것.
 - **상태 기반 색·에셋 전환(토글·선택)엔 짧은 명시 애니메이션을 걸 것** — `.animation(.easeInOut(duration: 0.1), value: 상태)`. 미설정 시 기본 크로스페이드가 **느리게 번진다**(NovelReview 읽기 상태, NovelDetail 관심 버튼에서 재발 확인 — "토글이 굼뜨다"로 체감됨).
 - 화면 전용 서브뷰는 화면 폴더 동거. 여러 화면 재사용 시 WSSComponent로 승격(허락 후).
 
