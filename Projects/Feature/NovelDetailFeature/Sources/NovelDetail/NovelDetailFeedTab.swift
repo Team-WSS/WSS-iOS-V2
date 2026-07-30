@@ -102,16 +102,16 @@ struct NovelDetailFeedTab: View {
                 profileImageURL: feed.author.profileImage,
                 nickname: feed.author.nickname,
                 createdDate: feed.createdDate,
-                isEdited: feed.isModified,
-                profileTapped: {
-                    // 내 글이면 이동하지 않는다. userId가 없으면(응답 미제공) 이동할 곳이 없다.
-                    guard !feed.isMyFeed, let userId = feed.author.userId else { return }
-                    onUserProfileTapped(userId)
-                },
-                threeDotsButtonTapped: {
-                    onThreeDotsTapped(feed, (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset)
-                }
+                isEdited: feed.isModified
             ),
+            profileImageTapped: {
+                // 내 글이면 이동하지 않는다. userId가 없으면(응답 미제공) 이동할 곳이 없다.
+                guard !feed.isMyFeed, let userId = feed.author.userId else { return }
+                onUserProfileTapped(userId)
+            },
+            threeDotsButtonTapped: {
+                onThreeDotsTapped(feed, (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset)
+            },
             content: feed.content,
             feedImage: feed.thumbnailImageURL.map {
                 WSSFeedImage(thumbnailImageURL: $0, imageCount: feed.imageCount)
@@ -129,9 +129,7 @@ struct NovelDetailFeedTab: View {
             },
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
-                isLiked: feed.isLiked,
-                commentCount: feed.commentCount,
-                likeButtonTapped: { onToggleLike(feed.feedId) }
+                commentCount: feed.commentCount
             )
         )
     }

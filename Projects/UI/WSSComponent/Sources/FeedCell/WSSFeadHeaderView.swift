@@ -17,24 +17,17 @@ public struct FeedHeader {
     public let nickname: String
     public let createdDate: String
     public let isEdited: Bool
-    /// 프로필 영역(이미지 + 닉네임) 탭 — 이미지만이 아니라 닉네임까지가 프로필 진입 버튼이다.
-    public let profileTapped: () -> Void
-    public let threeDotsButtonTapped: () -> Void
 
     public init(
         profileImageURL: URL?,
         nickname: String,
         createdDate: String,
-        isEdited: Bool,
-        profileTapped: @escaping () -> Void,
-        threeDotsButtonTapped: @escaping () -> Void
+        isEdited: Bool
     ) {
         self.profileImageURL = profileImageURL
         self.nickname = nickname
         self.createdDate = createdDate
         self.isEdited = isEdited
-        self.profileTapped = profileTapped
-        self.threeDotsButtonTapped = threeDotsButtonTapped
     }
 }
 
@@ -44,8 +37,20 @@ public struct WSSFeadHeaderView: View {
 
     let header: FeedHeader
 
-    public init(header: FeedHeader) {
+    public let profileImageTapped: () -> Void
+    public let showThreeDotsButton: Bool
+    public let threeDotsButtonTapped: () -> Void
+
+    public init(
+        header: FeedHeader,
+        profileImageTapped: @escaping () -> Void,
+        showThreeDotsButton: Bool = true,
+        threeDotsButtonTapped: @escaping () -> Void = { }
+    ) {
         self.header = header
+        self.profileImageTapped = profileImageTapped
+        self.showThreeDotsButton = showThreeDotsButton
+        self.threeDotsButtonTapped = threeDotsButtonTapped
     }
 
     public var body: some View {
@@ -57,10 +62,9 @@ public struct WSSFeadHeaderView: View {
                     phase in
                     switch phase {
                     case .success(let image):
-                        image
-                            .resizable()
+                        image.resizable()
                     case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
+                        WSSColor.wssGray200.swiftUIColor
                     default:
                         ProgressView()
                     }
@@ -77,7 +81,7 @@ public struct WSSFeadHeaderView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                header.profileTapped()
+                profileImageTapped()
             }
             // 순수 이미지·텍스트 + 제스처라 접근성 트리에 안 잡힌다 — VoiceOver·UI 자동화가 버튼 하나로 인식하게 한다.
             .accessibilityElement(children: .ignore)
@@ -85,36 +89,41 @@ public struct WSSFeadHeaderView: View {
             .accessibilityAddTraits(.isButton)
 
             Spacer().frame(width: 4)
-            
+
             Circle()
                 .frame(width: 2, height: 2)
                 .foregroundColor(Color.wssGray200)
                 .frame(width: 8, height: 8)
-            
+
             Spacer().frame(width: 4)
-            
+
             Text(header.createdDate)
                 .applyWSSFont(.body5)
                 .foregroundStyle(Color.wssGray200)
-            
+
             Spacer().frame(width: 4)
-            
+
             if (header.isEdited) {
                 Text("(수정됨)")
                     .applyWSSFont(.body5)
                     .foregroundStyle(Color.wssGray200)
             }
-            
+
             Spacer()
-            
-            WSSImage.icThreedots.swiftUIImage
-                .frame(width: 32, height: 32, alignment: .trailing)
-                .onTapGesture {
-                    header.threeDotsButtonTapped()
+
+            if showThreeDotsButton {
+                Button {
+                    threeDotsButtonTapped()
+                } label: {
+                    WSSImage.icThreedots.swiftUIImage
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+                        .frame(width: 32, height: 32, alignment: .trailing)
                 }
                 // 위 프로필 이미지와 같은 이유의 접근성 보완.
                 .accessibilityLabel("더보기")
                 .accessibilityAddTraits(.isButton)
+            }
         }
         .background(Color.wssWhite)
     }
@@ -126,9 +135,8 @@ public struct WSSFeadHeaderView: View {
             profileImageURL: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
             nickname: "구리스",
             createdDate: "2024년 6월 19일",
-            isEdited: true,
-            profileTapped: {},
-            threeDotsButtonTapped: {}
-        )
+            isEdited: true
+        ),
+        profileImageTapped: { }
     )
 }

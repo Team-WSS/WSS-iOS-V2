@@ -44,6 +44,33 @@ struct FeedDetailTests {
             try mock.toggleLike()
         }
     }
+
+    @Test("댓글을 작성하면 댓글 수가 늘어난다.")
+    func addCommentCount() {
+        var mock = makeMock(commentCount: 2)
+
+        mock.addCommentCount()
+
+        #expect(mock.commentCount == 3)
+    }
+
+    @Test("댓글을 삭제하면 댓글 수가 줄어든다.")
+    func removeCommentCount() {
+        var mock = makeMock(commentCount: 2)
+
+        mock.removeCommentCount()
+
+        #expect(mock.commentCount == 1)
+    }
+
+    @Test("댓글 수는 음수가 될 수 없다.")
+    func commentCountCannotBeNegative() {
+        var mock = makeMock(commentCount: 0)
+
+        mock.removeCommentCount()
+
+        #expect(mock.commentCount == 0)
+    }
 }
 
 extension FeedDetailTests {
@@ -67,7 +94,8 @@ extension FeedDetailTests {
     private func makeMock(
         _ userId: UserID = UserID(1),
         likeCount: Int = 0,
-        isLiked: Bool = false
+        isLiked: Bool = false,
+        commentCount: Int = 0
     ) -> FeedDetail {
         FeedDetail(
             id: FeedID(1),
@@ -83,7 +111,9 @@ extension FeedDetailTests {
             connectedNovel: makeMockConnectedNovelDetail(),
             likeCount: likeCount,
             isLiked: isLiked,
-            commentCount: 0
+            commentCount: commentCount,
+            isSpoiler: false,
+            isPublic: true
         )
     }
 }

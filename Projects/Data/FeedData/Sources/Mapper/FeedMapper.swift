@@ -111,7 +111,9 @@ enum FeedMapper {
         }
         return FeedDetail(
             id: id,
-            author: author(userId: response.userId, nickname: response.nickname, avatarImage: response.avatarImage),
+            author: author(userId: response.userId,
+                           nickname: response.nickname,
+                           avatarImage: response.avatarImage),
             createdDate: response.createdDate,
             isModified: response.isModified,
             feedContent: response.feedContent,
@@ -119,7 +121,9 @@ enum FeedMapper {
             connectedNovel: connectedNovelDetail,
             likeCount: response.likeCount,
             isLiked: response.isLiked,
-            commentCount: response.commentCount
+            commentCount: response.commentCount,
+            isSpoiler: response.isSpoiler,
+            isPublic: response.isPublic
         )
     }
 
@@ -136,7 +140,9 @@ enum FeedMapper {
             feedId: FeedID(response.feedId),
             createdDate: response.createdDate,
             content: response.feedContent,
-            author: author(userId: response.userId, nickname: response.nickname, avatarImage: response.avatarImage),
+            author: author(userId: response.userId,
+                           nickname: response.nickname,
+                           avatarImage: response.avatarImage),
             likeCount: response.likeCount,
             isLiked: response.isLiked,
             commentCount: response.commentCount,
@@ -173,7 +179,9 @@ enum FeedMapper {
             feedId: FeedID(response.feedId),
             createdDate: response.createdDate,
             content: response.feedContent,
-            author: Author(userId: userID, nickname: "", profileImage: nil),
+            author: Author(userId: userID,
+                           nickname: "",
+                           profileImage: nil),
             likeCount: response.likeCount,
             isLiked: response.isLiked,
             commentCount: response.commentCount,

@@ -11,7 +11,7 @@ import CommentDomain
 import BaseData
 
 public enum CommentDataFactory {
-    public static func makeRepository(
+    public static func makeCommentRepository(
         client: NetworkingRequestable,
         logger: DataLogger? = nil
     ) -> CommentRepository {

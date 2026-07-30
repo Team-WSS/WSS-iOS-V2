@@ -18,14 +18,21 @@ let project = Project.createFeatureModule(
         .module(.domain(.base)),
         .module(.domain(.feed)),
         .module(.domain(.novel)),
+        .module(.domain(.comment)),
+        .module(.domain(.social)),
+        .module(.domain(.profile)),
         .module(.ui(.designSystem)),
-        .module(.ui(.wssComponent))
+        .module(.ui(.wssComponent)),
+        .module(.core(.logger))
     ],
     demoDependencies: [
         .module(.core(.networking)),
         .module(.core(.logger)),
         .module(.data(.base)),
         .module(.data(.feed)),
-        .module(.data(.novel))
+        .module(.data(.novel)),
+        .module(.data(.comment)),
+        .module(.data(.social)),
+        .module(.data(.profile)),
     ]
 )

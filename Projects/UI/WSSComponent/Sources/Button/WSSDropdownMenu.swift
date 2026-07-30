@@ -3,16 +3,16 @@ import DesignSystem
 
 public struct WSSDropdownItem {
     public let title: String
-    /// 항목 글자색 — 기본 검정, 신고류 항목은 `Color.wssSecondary100`(빨강).
-    public let titleColor: Color
     public let action: () -> Void
+    /// 항목 글자색 — 기본 검정, 신고류 항목은 `Color.wssSecondary100`(빨강).
+    public let textColor: Color
 
     public init(title: String,
-                titleColor: Color = Color.wssBlack,
-                action: @escaping () -> Void) {
+                action: @escaping () -> Void,
+                textColor: Color = WSSColor.wssBlack.swiftUIColor) {
         self.title = title
-        self.titleColor = titleColor
         self.action = action
+        self.textColor = textColor
     }
 }
 
@@ -44,7 +44,7 @@ public struct WSSDropdownMenu: View {
             VStack(spacing: 0) {
                 Text(item.title)
                     .applyWSSFont(.body2)
-                    .foregroundStyle(item.titleColor)
+                    .foregroundStyle(item.textColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 53)
 
@@ -66,7 +66,9 @@ public struct WSSDropdownMenu: View {
         .frame(width: 160)
 
         WSSDropdownMenu(items: [
-            WSSDropdownItem(title: "차단하기") { print("차단") }
+            WSSDropdownItem(title: "차단하기",
+                            action: { print("차단") },
+                            textColor: WSSColor.wssSecondary100.swiftUIColor)
         ])
         .frame(width: 200)
     }

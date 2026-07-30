@@ -403,7 +403,7 @@ private struct DemoRootView: View {
         )
         let socialRepository = SocialDataFactory.makeSocialRepository(
             client: client,
-            underlying: consoleLogger
+            logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
         return NovelDetailFactory.makeView(
             novelID: liveNovelID,

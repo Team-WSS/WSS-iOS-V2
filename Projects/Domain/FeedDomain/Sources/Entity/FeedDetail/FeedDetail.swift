@@ -26,6 +26,37 @@ public struct FeedDetail {
     public private(set) var isLiked: Bool
     public private(set) var commentCount: Int
     
+    public let isSpoiler: Bool
+    public let isPublic: Bool
+    
+    public init(
+        id: FeedID,
+        author: Author,
+        createdDate: String,
+        isModified: Bool,
+        feedContent: String,
+        feedImageURLs: [URL?],
+        connectedNovel: ConnectedNovelDetail? = nil,
+        likeCount: Int,
+        isLiked: Bool,
+        commentCount: Int,
+        isSpoiler: Bool,
+        isPublic: Bool
+    ) {
+        self.id = id
+        self.author = author
+        self.createdDate = createdDate
+        self.isModified = isModified
+        self.feedContent = feedContent
+        self.feedImageURLs = feedImageURLs
+        self.connectedNovel = connectedNovel
+        self.likeCount = likeCount
+        self.isLiked = isLiked
+        self.commentCount = commentCount
+        self.isSpoiler = isSpoiler
+        self.isPublic = isPublic
+    }
+    
     // MARK: - Policy
     
     public enum PolicyError: Error, Equatable {
@@ -43,28 +74,13 @@ public struct FeedDetail {
         }
         isLiked.toggle()
     }
-    
-    public init(
-        id: FeedID,
-        author: Author,
-        createdDate: String,
-        isModified: Bool,
-        feedContent: String,
-        feedImageURLs: [URL?],
-        connectedNovel: ConnectedNovelDetail? = nil,
-        likeCount: Int,
-        isLiked: Bool,
-        commentCount: Int
-    ) {
-        self.id = id
-        self.author = author
-        self.createdDate = createdDate
-        self.isModified = isModified
-        self.feedContent = feedContent
-        self.feedImageURLs = feedImageURLs
-        self.connectedNovel = connectedNovel
-        self.likeCount = likeCount
-        self.isLiked = isLiked
-        self.commentCount = commentCount
+
+    public mutating func addCommentCount() {
+        commentCount += 1
+    }
+
+    public mutating func removeCommentCount() {
+        guard commentCount > 0 else { return }
+        commentCount -= 1
     }
 }

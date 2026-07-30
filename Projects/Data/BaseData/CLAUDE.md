@@ -7,7 +7,7 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 
 ## 여기 들어있는 핵심 인프라
 
-- **에러 변환의 본진**: `NetworkingError.toRepositoryError()` — 401→`authenticationRequired`, 404→`notFound`, 5xx→`serverUnavailable`, decoding→`invalidData`, unknown→`networkUnavailable`. (전 Data 모듈이 이걸 씀)
+- **에러 변환의 본진**: `NetworkingError.toRepositoryError()` — 401→`authenticationRequired`, 403→`forbidden`, 404→`notFound`, 5xx→`serverUnavailable`, decoding→`invalidData`, unknown→`networkUnavailable`. (전 Data 모듈이 이걸 씀)
 - **로컬 저장**: `AppStorage` 프로토콜 + `UserDefaultsStorage` 구현 + `StorageKey<V>`(타입 안전 키). 예: `appStorage.get(.userID)`.
 - **로깅**: `DataLogger` (모듈명 + underlying `Logger`).
 - **에러 타입**: `MappingError`, `CacheError`.
