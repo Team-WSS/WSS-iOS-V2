@@ -15,7 +15,8 @@ import UIKit
 /// SwiftUI `AsyncImage`는 뷰 정체성이 바뀔 때마다 `.empty` phase부터 다시 시작해 **캐시 히트여도**
 /// placeholder가 한 프레임 번쩍인다(목록 셀 모드 전환·스크롤 재활용에서 매번 도진다). `URLCache`는
 /// **응답 데이터**만 갖고 있어 재디코딩 사이 그 틈이 남는다. 그래서 여기선 **디코딩된 `UIImage`를
-/// 인메모리 캐시(`WSSImageCache`)에 두고 `init`에서 동기 조회** → 히트면 첫 프레임부터 실제 이미지를 그린다.
+/// 인메모리 캐시(`WSSImageCache`)에 두고 렌더 경로(`displayedImage`)에서 동기 조회** →
+/// 히트면 첫 프레임부터 실제 이미지를 그린다. (`init`이나 `.task`에서 조회하면 늦는다 — 아래 `displayedImage` 주석 참고.)
 ///
 /// `content`/`placeholder`는 호출자가 정한다(`AsyncImage(url:content:placeholder:)`와 같은 형태).
 /// 프레임·클립 등은 바깥에서 얹는다.
@@ -26,6 +27,8 @@ public struct WSSAsyncImage<Content: View, Placeholder: View>: View {
     private let placeholder: () -> Placeholder
 
     @State private var image: UIImage?
+    /// `image`가 **어느 url의** 결과인지. 이게 없으면 url이 바뀐 첫 프레임에 옛 이미지를 그린다.
+    @State private var loadedURL: URL?
 
     public init(
         url: URL?,
@@ -35,51 +38,56 @@ public struct WSSAsyncImage<Content: View, Placeholder: View>: View {
         self.url = url
         self.content = content
         self.placeholder = placeholder
-        // 인메모리 캐시 동기 조회 — 히트면 image가 채워진 채로 첫 렌더에 실제 이미지가 나온다(번쩍임 없음).
-        _image = State(initialValue: url.flatMap(WSSImageCache.shared.image(for:)))
+    }
+
+    /// 렌더 시점에 **현재 url과 짝이 맞는** 이미지만 그린다.
+    /// `@State`는 url이 바뀐 첫 프레임엔 아직 옛 값이고(`.task`는 렌더 *뒤*에 돈다), 초기값도 저장소가
+    /// 처음 만들어질 때만 적용된다 → 여기서 캐시를 **동기 조회**해야 캐시 히트가 첫 프레임부터 보인다.
+    private var displayedImage: UIImage? {
+        guard loadedURL == url else {
+            return url.flatMap(WSSImageCache.shared.image(for:))
+        }
+        return image
     }
 
     public var body: some View {
         Group {
-            if let image {
-                content(Image(uiImage: image))
+            if let displayedImage {
+                content(Image(uiImage: displayedImage))
             } else {
                 placeholder()
             }
         }
-        .task(id: url) { await loadIfNeeded() }
+        .task(id: url) { await load() }
     }
 
-    private func loadIfNeeded() async {
-        // 캐시 히트로 이미 그렸으면 네트워크로 안 간다.
-        guard image == nil, let url else { return }
+    /// `url`이 바뀔 때마다 다시 돈다.
+    ///
+    /// `loadedURL`은 **이미지를 실제로 확보했을 때만** 현재 url로 확정한다. 실패·취소 때 미리 찍어두면
+    /// `loadedURL == url && image == nil`로 굳어, 이후 다른 인스턴스가 같은 url을 공유 캐시에 넣어도
+    /// `displayedImage`가 캐시를 다시 보지 않고 placeholder에 갇힌다(`.task`는 url이 바뀌어야 재실행).
+    private func load() async {
+        guard let url else {
+            image = nil
+            loadedURL = nil
+            return
+        }
+        // 캐시 히트면 네트워크로 안 간다.
+        if let cached = WSSImageCache.shared.image(for: url) {
+            image = cached
+            loadedURL = url
+            return
+        }
+        image = nil  // 옛 url의 이미지를 지우고 placeholder로 되돌린다.
         guard
             let (data, _) = try? await URLSession.shared.data(from: url),
-            let loaded = UIImage(data: data)
+            let loaded = UIImage(data: data),
+            // 취소는 await 재개 뒤에도 확인해야 한다 — 안 그러면 취소된 옛 요청이 새 url의 그림을 덮고,
+            // 그 뒤 새 요청까지 막아버린다.
+            !Task.isCancelled
         else { return }
         WSSImageCache.shared.insert(loaded, for: url)
         image = loaded
-    }
-}
-
-/// 인메모리 이미지 캐시 — **디코딩된** `UIImage`를 URL 기준으로 보관한다.
-/// URLCache(응답 데이터)와 별개로 디코딩 결과를 들고 있어야 동기 조회로 번쩍임 없이 그릴 수 있다.
-/// `NSCache`는 스레드 세이프하고 메모리 압박 시 자동 축출한다. `WSSAsyncImage`를 쓰는 모든 화면이 공유한다.
-final class WSSImageCache {
-
-    static let shared = WSSImageCache()
-
-    private let cache = NSCache<NSURL, UIImage>()
-
-    private init() {
-        cache.countLimit = 300  // 표지·프로필 수백 장 수준 — 목록 화면 규모에 충분.
-    }
-
-    func image(for url: URL) -> UIImage? {
-        cache.object(forKey: url as NSURL)
-    }
-
-    func insert(_ image: UIImage, for url: URL) {
-        cache.setObject(image, forKey: url as NSURL)
+        loadedURL = url
     }
 }
