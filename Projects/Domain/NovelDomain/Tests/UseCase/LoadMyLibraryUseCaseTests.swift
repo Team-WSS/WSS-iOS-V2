@@ -103,6 +103,25 @@ struct LoadMyLibraryUseCaseTests {
         #expect(keywordRepository.fetchKeywordsCallCount == 1)
     }
 
+    @Test("키워드 캐시 조회에 실패해도 서재 목록은 빈 캐시로 정상 조회된다")
+    func fallsBackToEmptyKeywordsWhenCacheFails() async throws {
+        let novelRepository = MockNovelRepository()
+        let expected = makeLibraryPage()
+        novelRepository.fetchMyLibraryResult = .success((expected, 2))
+        let keywordRepository = MockKeywordRepository()
+        keywordRepository.fetchKeywordsResult = .failure(RepositoryError.networkUnavailable)
+        let usecase = DefaultLoadMyLibraryUseCase(
+            novelRepository: novelRepository,
+            keywordRepository: keywordRepository
+        )
+
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+
+        #expect(result.0.items.count == expected.items.count)
+        #expect(novelRepository.lastMyLibraryCachedKeywords == [])
+        #expect(keywordRepository.fetchKeywordsCallCount == 1)
+    }
+
     @Test("내 서재 조회에 실패하면 에러를 던진다")
     func loadMyLibraryFailureThrows() async {
         let mock = MockNovelRepository()
