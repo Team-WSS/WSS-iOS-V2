@@ -322,15 +322,15 @@ struct SosoFeedView: View {
                 profileImageURL: feed.author.profileImage,
                 nickname: feed.author.nickname,
                 createdDate: feed.createdDate,
-                isEdited: feed.isModified,
-                profileTapped: { print("\(String(describing: feed.author.userId)) 프로필로 이동") },
-                threeDotsButtonTapped: {
-                    feedMenuContext = FeedMenuContext(
-                        feed: feed,
-                        anchorY: (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset
-                    )
-                }
+                isEdited: feed.isModified
             ),
+            profileImageTapped: { print("\(String(describing: feed.author.userId)) 프로필로 이동") },
+            threeDotsButtonTapped: {
+                feedMenuContext = FeedMenuContext(
+                    feed: feed,
+                    anchorY: (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset
+                )
+            },
             content: feed.content,
             feedImage: feed.imageCount > 0
                 ? WSSFeedImage(
@@ -350,12 +350,7 @@ struct SosoFeedView: View {
             },
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
-                isLiked: feed.isLiked,
-                commentCount: feed.commentCount,
-                likeButtonTapped: {
-                    HapticManager.selection()
-                    viewModel.handle(.toggleLike(feed.feedId))
-                }
+                commentCount: feed.commentCount
             ),
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
@@ -399,14 +394,22 @@ struct SosoFeedView: View {
             ]
         } else {
             [
-                WSSDropdownItem(title: "스포일러 신고", titleColor: Color.wssSecondary100) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
-                },
-                WSSDropdownItem(title: "부적절한 표현 신고", titleColor: Color.wssSecondary100) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportImproperFeedTapped(feed.feedId))
-                }
+                WSSDropdownItem(
+                    title: "스포일러 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                ),
+                WSSDropdownItem(
+                    title: "부적절한 표현 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportImproperFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                )
             ]
         }
     }
