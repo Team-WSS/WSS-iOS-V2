@@ -17,7 +17,7 @@ public final class MockNovelRepository: NovelRepository {
     public var addInterestResult: Result<Void, RepositoryError> = .success(())
     public var removeInterestResult: Result<Void, RepositoryError> = .success(())
     public var fetchMyLibraryResult: Result<(CursorPaginated<LibraryNovel>, Int), RepositoryError>!
-    public var fetchUserLibraryResult: Result<(Paginated<LibraryNovel>, Int), RepositoryError>!
+    public var fetchUserLibraryResult: Result<(CursorPaginated<LibraryNovel>, Int), RepositoryError>!
     public var fetchMyLibraryKeywordsResult: Result<[Keyword], RepositoryError>!
     public var fetchRegisteredNovelStatsResult: Result<RegisteredNovelStats, RepositoryError>!
 
@@ -30,6 +30,8 @@ public final class MockNovelRepository: NovelRepository {
     public private(set) var lastMyLibraryCachedKeywords: [Keyword]?
     public private(set) var fetchedUserLibraryIDs: [UserID] = []
     public private(set) var fetchedUserLibraryFilters: [LibraryFilter] = []
+    public private(set) var fetchedUserLibraryCursors: [String?] = []
+    public private(set) var lastUserLibraryCachedKeywords: [Keyword]?
     public private(set) var fetchMyLibraryKeywordsCallCount = 0
     public private(set) var fetchRegisteredNovelStatsCallCount = 0
 
@@ -67,9 +69,16 @@ public final class MockNovelRepository: NovelRepository {
         return try fetchMyLibraryKeywordsResult.get()
     }
 
-    public func fetchUserLibraryNovels(id: UserID, _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
+    public func fetchUserLibraryNovels(
+        id: UserID,
+        _ filter: LibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         fetchedUserLibraryIDs.append(id)
         fetchedUserLibraryFilters.append(filter)
+        fetchedUserLibraryCursors.append(cursor)
+        lastUserLibraryCachedKeywords = cachedKeywords
         return try fetchUserLibraryResult.get()
     }
 

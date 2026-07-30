@@ -35,7 +35,22 @@ public protocol NovelRepository {
         cursor: String?,
         cachedKeywords: [Keyword]
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int)
-    func fetchUserLibraryNovels(id: UserID, _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int)
+
+    /// 다른 사용자의 서재 작품 목록을 조회한다. (V2 — 커서 기반)
+    ///
+    /// 내 서재와 **같은 엔드포인트**(`/users/{userId}/novels/v2`)를 userID만 바꿔 호출한다 →
+    /// 커서 페이지네이션·정렬 6종·키워드 복원이 내 서재와 동일하게 동작한다.
+    /// - Parameters:
+    ///   - id: 조회 대상 사용자.
+    ///   - cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
+    ///   - cachedKeywords: 응답의 키워드 이름을 `Keyword`로 복원할 때 사용할 전체 키워드 캐시.
+    /// - Returns: (커서 페이지, 전체 작품 수)
+    func fetchUserLibraryNovels(
+        id: UserID,
+        _ filter: LibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int)
 
     /// 현재 로그인한 사용자가 서재 작품들에 등록한 키워드 목록을 조회한다. (필터 시트 키워드 탭 데이터)
     func fetchMyLibraryKeywords() async throws(RepositoryError) -> [Keyword]

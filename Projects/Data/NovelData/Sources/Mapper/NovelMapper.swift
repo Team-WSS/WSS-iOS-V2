@@ -215,17 +215,22 @@ extension NovelMapper {
         )
     }
 
-    static func userLibraryQuery(from filter: LibraryFilter) -> UserLibraryQuery {
-        UserLibraryQuery(
-            lastUserNovelId: 0,
+    /// 타유저 서재 V2 쿼리. 내 서재와 **같은 엔드포인트**를 쓰지만 필터 UI가 없는 화면이라 정렬만 싣고
+    /// 나머지 필터는 전부 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+    static func userLibraryV2Query(from filter: LibraryFilter, cursor: String?) -> UserLibraryV2Query {
+        UserLibraryV2Query(
+            cursor: cursor,
             size: 20,
-            sortCriteria: filter.sortType.rawValue,
-            isInterest: false,
-            readStatuses: [],
-            attractivePoints: [],
-            novelRating: 0,
-            query: "",
-            updatedSince: ""
+            sortType: mapLibrarySortTypeString(from: filter.sortType),
+            isInterest: nil,
+            readStatuses: nil,
+            genres: nil,
+            isCompleted: nil,
+            ratingMin: nil,
+            ratingMax: nil,
+            unratedOnly: nil,
+            attractivePoints: nil,
+            keywords: nil
         )
     }
     

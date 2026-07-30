@@ -15,10 +15,15 @@
 - **내 서재(V2, #166)**: `LoadMyLibraryUseCase.execute(filter:cursor:)` → `(CursorPaginated<LibraryNovel>, Int)`.
   커서는 **서버 발급 opaque 문자열**(`nextCursor`) — 마지막 아이템 ID로 유도하지 말고 그대로 왕복한다.
   필터 시트 키워드 탭 데이터는 `LoadMyLibraryKeywordsUseCase`(등록 키워드 목록) 별도.
+- **타유저 서재(V2, #166)**: `LoadUserLibraryUseCase.execute(id:filter:cursor:)` → 내 서재와 **같은 반환 타입·같은 엔드포인트**.
+  ⚠️ **서버 경로가 `/users/{userId}/novels/v2`라 내 서재와 타유저 서재의 차이는 "어떤 userID를 넣느냐"뿐**이다 —
+  내 서재는 Data가 저장된 userID를 채우고, 타유저는 호출자가 `UserID`를 넘긴다. 그래서 커서 페이지네이션·정렬 6종·
+  키워드 복원이 양쪽에서 동일하게 동작한다(타유저용 별도 페이지네이션 규약을 만들 필요 없음).
+  필터는 `LibraryFilter`(**정렬만** 보유) — 타유저 서재 화면엔 필터 UI가 없다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- `fetchMyLibraryNovels`/통계는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` 별도.
+- `fetchMyLibraryNovels`/통계는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:cursor:cachedKeywords:)` 별도 — 시그니처는 userID 인자를 빼면 내 서재와 같다.
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
 - ⚠️ **`KeywordRepository.fetchKeywords()`는 네트워크를 타지 않고 로컬 캐시만 읽는다** — 캐시를 채우는 건 `syncKeywords()` 뿐이다. 즉 **App 조립에서 `syncKeywords()`를 선행하지 않으면 서재·작품 상세의 키워드가 화면상 아무 오류 없이 통째로 빈다**(UseCase의 `try?` + `?? []` 폴백이 실패를 삼킨다 — 목록 자체를 막지 않으려는 의도된 설계. 단, Data 레이어에는 `logger?.logCacheError`가 남으므로 **원인 추적은 로그로** 한다). `LoadNovelUseCase`·`LoadMyLibraryUseCase` 둘 다 해당하며, 서재는 목록 전체가 영향받아 체감이 크다. Demo 앱들이 화면을 띄우기 전에 `await ...syncKeywords()`를 부르는 게 이 때문이다.
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
@@ -29,4 +34,4 @@
   전체 범위(0.0~5.0)는 `setRatingRange`가 **nil로 정규화**한다("필터 없음"의 표현을 하나로 유지) — UI는 `rating != nil`로 칩 유무를 판단하면 된다.
 - **`MyLibraryFilter.clearAll()`(시트 "초기화")은 시트 필터 6종만 리셋** — 관심(isInterest)·정렬(sortType)은 시트 소속이 아니라 유지된다.
 - **연재상태(`publicationStatus`)가 단일 선택인 건 의도된 설계** — 서버 쿼리가 `isCompleted: Bool?` **하나뿐**이라 애초에 "연재중+완결작"을 표현할 수단이 없다. 구 WSSiOS는 이걸 배열로 들고 UI에서 둘 다 켤 수 있게 해뒀지만, Repository가 `count == 1`일 때만 파라미터를 실어서 **둘 다 고르면 필터가 통째로 무시**됐다(칩은 2개인데 결과는 전체). V1이 다중이라는 이유로 배열로 되돌리지 말 것.
-- 서재 정렬은 공용 `SortType`(2종)이 아니라 **서재 전용 `LibrarySortType`(6종)** — 타유저 서재(`LibraryFilter`)는 여전히 공용 `SortType`을 쓴다.
+- 서재 정렬은 공용 `SortType`(2종)이 아니라 **서재 전용 `LibrarySortType`(6종)** — 내 서재·타유저 서재 **둘 다** 이걸 쓴다(같은 V2 엔드포인트라 서버가 받는 정렬 문자열이 같다). 공용 `SortType`을 쓰던 구 `LibraryFilter`는 #166에서 `LibrarySortType`으로 전환했다.
