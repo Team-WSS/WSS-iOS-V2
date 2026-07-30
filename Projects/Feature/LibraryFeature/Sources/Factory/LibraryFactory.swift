@@ -56,6 +56,8 @@ public enum LibraryFactory {
     ///   - userID: 조회 대상 사용자. 진입 시점(유저 프로필 등)에서 넘긴다.
     ///   - onNovelSelected: 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백.
+    ///     ⚠️ **idempotent해야 한다** — 화면이 신호를 소진하고 다시 세우므로 만료가 반복되면 여러 번 불린다.
+    ///     루트 교체는 무해하지만 `path.append(.login)`류면 로그인 화면이 겹쳐 쌓인다.
     @MainActor
     public static func makeUserLibraryView(
         userID: UserID,

@@ -158,7 +158,9 @@ private extension UserLibraryViewModel {
         nextCursor = nil
         hasNext = true
         state.novels = []
-        state.totalCount = 0
+        // ⚠️ `totalCount`는 비우지 않는다 — 이 화면이 바꿀 수 있는 건 정렬뿐이라 개수가 달라지지 않는데,
+        // 0으로 떨어뜨리면 로딩 동안 헤더의 "n개"가 "0개"로 깜빡였다 돌아온다.
+        // (내 서재는 필터로 개수가 실제로 바뀌므로 거기선 비우는 게 맞다.)
         state.isLoading = true
         state.isLoadingMore = false
         state.loadFailed = false
@@ -199,13 +201,20 @@ private extension UserLibraryViewModel {
             state.loadFailed = false
         } catch {
             guard generation == loadGeneration, !Task.isCancelled else { return }
-            // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
-            if routeToLoginIfAuthenticationRequired(error) { return }
             if cursor == nil {
                 // 첫 페이지 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
+                //
+                // ⚠️ **인증 만료도 여기 포함한다**(내 서재와 다른 점). 내 서재는 탭이라 다시 들어오면
+                // `onAppear`가 재발화해 복구되지만, 이 화면은 push라 그 경로가 없다 → 로그인 콜백이
+                // 화면을 치우지 않는 배선(시트로 띄우는 등)이면 목록이 **"보관함이 비어있어요"로 영구히 굳고**
+                // 재시도 버튼조차 없다. 실패 뷰를 세워 두면 스택을 교체하는 배선에선 어차피 화면이 사라져 손해가 없고,
+                // 아니면 재시도가 유일한 탈출구로 남는다. (헤더 "n개"와 "비어있어요"가 동시에 뜨는 모순도 함께 막힌다.)
                 state.loadFailed = true
                 logger?.error("UserLibrary 실패(load): \(String(describing: error))")
-            } else {
+            }
+            // 인증 만료는 개별 실패 토스트 대신 로그인 유도로 일원화한다.
+            if routeToLoginIfAuthenticationRequired(error) { return }
+            if cursor != nil {
                 presentError(error, as: .loadMoreFailed)
             }
         }

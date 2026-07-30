@@ -33,6 +33,8 @@ struct UserLibraryView: View {
         /// 모드 토글 버튼의 히트 영역 — 아이콘(12)만으론 잡기 어려워 디자인이 33을 잡아뒀다.
         static let displayModeButtonSize: CGFloat = 33
         static let displayModeIconSize: CGFloat = 12
+        /// 정렬 버튼 라벨(자연 높이 21)을 카운트 행(40)에 맞추는 세로 여백.
+        static let sortButtonVerticalPadding: CGFloat = 9.5
     }
 
     // 선언 순서: VM → View 전용 상태 → @Environment → 주입 let
@@ -159,9 +161,13 @@ private extension UserLibraryView {
                 Text(viewModel.state.filter.sortType.libraryShortDisplayName)
                     .applyWSSFont(.body3, color: .wssGray300)
             }
+            // 라벨 자연 높이가 21뿐이라 contentShape 전에 세로 여백을 줘 카운트 행(40)을 채운다 —
+            // 안 주면 그 21pt만 눌린다. (12를 주면 45가 되어 행을 넘는다.)
+            .padding(.vertical, Metric.sortButtonVerticalPadding)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // `.buttonStyle(.plain)`을 붙이지 않는다 — `applyWSSFont(_:color:)`가 라벨 안쪽에 foregroundStyle을
+        // 명시해 accent 물듦이 애초에 없고(아이콘도 original 렌더링), 붙이면 눌림 피드백만 사라진다.
     }
 
     /// 모드 토글 — 아이콘 하나가 **지금 보고 있는 모드**를 나타내고, 탭하면 반대 모드로 간다.
@@ -176,7 +182,7 @@ private extension UserLibraryView {
                 .frame(width: Metric.displayModeButtonSize, height: Metric.displayModeButtonSize, alignment: .trailing)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // 라벨이 도형뿐이라 `.buttonStyle(.plain)`을 붙이면 얻는 것 없이 눌림 피드백만 사라진다(Feature 규칙).
         .animation(.easeInOut(duration: 0.1), value: displayMode)
     }
 

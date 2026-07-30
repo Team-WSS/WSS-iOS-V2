@@ -87,7 +87,7 @@ private extension LibraryFilterSheet {
                         .frame(width: 65, height: 65)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                // 아이콘만 있는 버튼이라 `.buttonStyle(.plain)`을 빼야 눌린 게 보인다(Feature 규칙).
             }
     }
 

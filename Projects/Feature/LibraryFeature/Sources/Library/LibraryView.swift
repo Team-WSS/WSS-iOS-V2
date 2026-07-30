@@ -369,7 +369,8 @@ private extension LibraryView {
                 .frame(width: ToggleMetric.segmentWidth, height: ToggleMetric.segmentHeight)
                 .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        // 아이콘만 있는 버튼이라 `.buttonStyle(.plain)`을 빼야 눌린 게 보인다(Feature 규칙) —
+        // 이미 선택된 세그먼트를 눌렀을 때 아무 반응이 없던 원인.
     }
 
     /// 관심 칩 — 시트 없이 즉시 토글.

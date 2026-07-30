@@ -36,14 +36,49 @@ struct SwipeBackEnabler: UIViewRepresentable {
         }
     }
 
+    /// 화면이 사라질 때 가로챈 delegate를 반납한다.
+    /// **`deinit`이 아니라 여기서 하는 이유**: `dismantleUIView`는 메인 액터에서 불리고(`deinit`은 마지막
+    /// 릴리스가 일어난 스레드라 보장이 없다 — `UINavigationController`는 메인 전용 API),
+    /// Coordinator가 **아직 살아 있어** `delegate === coordinator`로 소유권을 명시적으로 비교할 수 있다.
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.restoreDelegate()
+    }
+
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         private weak var navigationController: UINavigationController?
+        /// UIKit이 원래 꽂아둔 delegate. 이 화면을 떠날 때 **되돌려줘야** 한다(아래 `deinit`).
+        private weak var originalDelegate: UIGestureRecognizerDelegate?
+        private var didReplaceDelegate = false
 
         func enableSwipeBack(on navigationController: UINavigationController) {
+            // 다른 UINavigationController로 재부착되면(호스팅 컨트롤러 재생성 등) 원본을 다시 잡아야 한다 —
+            // 안 그러면 NC B의 제스처에 NC A의 원본 delegate를 꽂게 된다.
+            if self.navigationController !== navigationController {
+                didReplaceDelegate = false
+            }
             self.navigationController = navigationController
             guard let gesture = navigationController.interactivePopGestureRecognizer else { return }
             gesture.isEnabled = true
+            // updateUIView가 매 갱신마다 부르므로, 원본 보관은 **처음 가로챌 때 한 번만** 한다
+            // (두 번째부터는 self를 원본으로 저장해버려 복원이 무의미해진다).
+            if !didReplaceDelegate {
+                originalDelegate = gesture.delegate
+                didReplaceDelegate = true
+            }
             gesture.delegate = self
+        }
+
+        /// ⚠️ **delegate를 반납하지 않으면, 이 화면을 떠난 뒤 루트에서 사고가 난다.**
+        /// `delegate`는 weak라 Coordinator가 해제되면 자동으로 nil이 되는데, UIKit은 nav controller를
+        /// 만들 때 한 번만 delegate를 꽂으므로 **스스로 돌아오지 않는다** → 그 뒤로 `shouldBegin` 기본값(YES)이
+        /// 적용돼 되돌아갈 화면이 없는 루트에서도 pop 전환이 시작되고 내비게이션이 얼어붙는다.
+        /// 가로챈 뒤 남이 delegate를 가져갔으면 우리 것이 아니므로 건드리지 않는다.
+        func restoreDelegate() {
+            guard didReplaceDelegate,
+                  let gesture = navigationController?.interactivePopGestureRecognizer,
+                  gesture.delegate === self else { return }
+            gesture.delegate = originalDelegate
+            didReplaceDelegate = false
         }
 
         /// 스택에 되돌아갈 화면이 있을 때만 제스처를 시작시킨다(루트에선 무시).

@@ -38,6 +38,9 @@ private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
     case filled = "정상"
     case empty = "빈 서재"
     case failure = "실패"
+    /// 인증 만료 — 로그인 라우팅 콜백이 만료마다 정확히 1회씩 발화하는지 보는 축.
+    /// (신호를 소진하는 구조라 정렬을 바꿔 재로드하면 다시 발화해야 한다.)
+    case authExpired = "인증만료"
     var id: String { rawValue }
 }
 
@@ -241,7 +244,7 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
     func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
-        return DemoLibraryNovels.page(cursor: cursor)
+        return DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
     }
 }
 
@@ -260,11 +263,13 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
 
         switch scenario {
         case .filled:
-            return DemoLibraryNovels.page(cursor: cursor)
+            return DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
         case .empty:
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
         case .failure:
             throw .networkUnavailable
+        case .authExpired:
+            throw .authenticationRequired
         }
     }
 }
@@ -272,21 +277,37 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
 private enum DemoLibraryNovels {
 
     /// 페이지 크기 20, 총 25개 → 2페이지. 커서는 다음 시작 인덱스를 문자열로 왕복한다.
-    static func page(cursor: String?) -> (CursorPaginated<LibraryNovel>, Int) {
+    ///
+    /// `sortType`은 **순서가 실제로 바뀌는지 눈으로 보려고만** 쓴다(서버 정렬 규칙을 흉내내지 않는다) —
+    /// 정렬을 바꿔도 목록이 그대로면 재로드가 도는지 알 수 없어서다.
+    static func page(cursor: String?, sortType: LibrarySortType = .registeredNewest) -> (CursorPaginated<LibraryNovel>, Int) {
+        let sorted = Self.sorted(by: sortType)
         let pageSize = 20
         let start = cursor.flatMap(Int.init) ?? 0
-        let end = min(start + pageSize, all.count)
+        let end = min(start + pageSize, sorted.count)
         guard start < end else {
-            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), all.count)
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), sorted.count)
         }
 
-        let hasNext = end < all.count
+        let hasNext = end < sorted.count
         let page = CursorPaginated(
-            items: Array(all[start..<end]),
+            items: Array(sorted[start..<end]),
             hasNext: hasNext,
             nextCursor: hasNext ? "\(end)" : nil
         )
-        return (page, all.count)
+        return (page, sorted.count)
+    }
+
+    /// 정렬마다 **눈에 보이게 다른 순서**를 낸다 — 두 정렬이 같은 결과면 재로드가 도는지 확인할 수 없어서다.
+    private static func sorted(by sortType: LibrarySortType) -> [LibraryNovel] {
+        switch sortType {
+        case .registeredNewest: all
+        case .registeredOldest: all.reversed()
+        case .title:            all.sorted { $0.title < $1.title }
+        case .readDate:         all.sorted { $0.title > $1.title }
+        case .ratingHighest:    all.sorted { ($0.userReview?.rating?.value ?? 0) > ($1.userReview?.rating?.value ?? 0) }
+        case .ratingLowest:     all.sorted { ($0.userReview?.rating?.value ?? 0) < ($1.userReview?.rating?.value ?? 0) }
+        }
     }
 
     private static let demoKeywordNames = ["빙의", "후회", "궁중암투", "웹툰화"]

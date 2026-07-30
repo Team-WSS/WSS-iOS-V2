@@ -32,11 +32,16 @@
 - **타이틀은 "서재" 고정** — 대상 유저의 닉네임을 넣지 않는다(디자인).
 - **빈 상태는 한 가지뿐**(`"보관함이 비어있어요"`, CTA 없음, 남은 공간 가운데). 필터가 없으니 내 서재의 "필터로 0건" 분화가 존재하지 않는다. 카운트·정렬·토글 행은 **빈 상태에서도 유지**한다(디자인 시안 그대로).
 - **첫 페이지 실패는 네비게이션 바만 남기고** 그 아래를 `NetworkErrorView`로 대체한다(카운트·정렬·토글 함께 숨김 — 내 서재와 같은 규칙).
+  - ⚠️ **인증 만료도 여기 포함한다 — 내 서재와 갈리는 지점이다.** 내 서재는 탭이라 다시 들어오면 `onAppear`가 재발화해 복구되지만, 타유저 서재는 **push라 그 경로가 없다** → 로그인 콜백이 화면을 치우지 않는 배선(시트로 띄우는 등)이면 목록이 "보관함이 비어있어요"로 **영구히 굳고 재시도 버튼조차 없다**. 실패 뷰를 세워 두면 스택을 교체하는 배선에선 어차피 화면이 사라져 손해가 없다. 정본(NovelDetail)의 "인증은 실패 뷰 대신 로그인 유도로 일원화"를 그대로 복사하지 말 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
 - ⚠️ **`icNavigateLeft`를 그냥 쓰면 디자인보다 훨씬 흐리다** — 이 에셋의 원색은 연회색(#C7C7D0)인데 시안의 뒤로가기 화살표는 검정이다. `renderingMode(.template)` + `foregroundStyle(Color.wssBlack)`으로 색을 입혀야 한다(DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목이 이 화면에서 실제로 걸렸다). 위치도 화면 왼쪽 끝이 아니라 **6pt 안쪽**에서 시작한다.
-- ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → `SwipeBackEnabler`(Support/)를 `.background`에 걸어 되살린다. 이 구현은 **`NovelDetailFeature`에도 같은 게 있다**(Feature끼리 import하지 않는 규칙 때문에 복제). 커스텀 헤더 화면이 더 늘면 공용 모듈 승격을 검토할 것.
+- ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → `SwipeBackEnabler`(Support/)를 `.background`에 걸어 되살린다.
+  - ⚠️ **가로챈 `interactivePopGestureRecognizer.delegate`는 화면을 떠날 때 반드시 반납해야 한다**(`dismantleUIView` → `restoreDelegate()`). delegate는 **weak**라 Coordinator가 죽으면 nil이 되는데 UIKit은 스스로 되꽂지 않는다 → 그 뒤로 `shouldBegin` 기본값(YES)이 적용돼 **루트에서 pop 대상 없는 전환이 시작되고 내비게이션이 얼어붙는다**. 반납을 `deinit`이 아니라 `dismantleUIView`에서 하는 이유는 두 가지다: `deinit`은 마지막 릴리스가 일어난 스레드라 메인 보장이 없고(UIKit은 메인 전용), Coordinator가 아직 살아 있어야 `delegate === self`로 **소유권을 명시 비교**할 수 있다(`deinit` 중엔 weak가 이미 nil로 읽혀 비교가 불가능하다).
+  - ⚠️ **`NovelDetailFeature`에 같은 구현의 옛 복제본이 있는데, 그쪽엔 이 반납 로직이 없다**(Feature끼리 import하지 않는 규칙 때문에 복제된 것이 #166에서 한쪽만 고쳐져 갈라졌다). **두 화면이 같은 `NavigationStack`을 공유하면 NovelDetail을 먼저 다녀온 순간 delegate가 nil로 남아, 이 화면이 나중에 "원본"으로 nil을 캡처해 복원이 무력화된다.** NovelDetail 쪽도 같이 고치기 전에는 이 가드가 완전하지 않다. 복사해 갈 때 **반드시 이 파일 쪽을 정본으로** 삼을 것.
+  - 커스텀 헤더 화면이 더 늘면 공용 모듈 승격을 검토할 것(그때 두 복제본을 하나로 합치는 게 자연스럽다).
+- **`reloadFromScratch()`에서 `totalCount`를 비우는지는 두 화면이 다르다** — 타유저 서재는 **정렬만** 바꿀 수 있어 개수가 불변이라 보존하고(비우면 로딩 동안 "n개"가 "0개"로 깜빡인다), 내 서재는 필터로 개수가 실제로 바뀌므로 비운다. 한쪽에 맞춰 통일하지 말 것.
 - 서재 Domain을 찾을 때 `LibraryDomain`을 만들지 말 것 — 정본은 `NovelDomain/Sources/Entity/Library/`와 `NovelDomain/Sources/UseCase/`다.
 - ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.
