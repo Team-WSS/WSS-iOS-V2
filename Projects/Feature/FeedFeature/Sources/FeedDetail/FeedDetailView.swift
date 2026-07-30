@@ -190,12 +190,13 @@ struct FeedDetailView: View {
                     ForEach(viewModel.state.comments, id: \.id) { comment in
                         let isMine = viewModel.isMyComment(comment)
                         CommentRow(
-                            userID: comment.user.userId?.value ?? 1,
+                            userID: comment.user.userId?.value ?? -1,
                             profileImageURL: comment.user.profileImage,
                             username:   comment.user.nickname,
                             content: comment.content,
                             createdAt: comment.createdDate,
                             isEdited: comment.isModified,
+                            visibility: comment.visibility,
                             myComment: isMine,
                             threeDotsAction: {
                                 if showCommentDropdown, selectedCommentID == comment.id {

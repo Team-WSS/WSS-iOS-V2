@@ -14,3 +14,4 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 수정/삭제는 `CommentID` + `FeedID` **둘 다** 필요.
+- `FeedComment`의 `isSpoiler`/`isBlocked`/`isHidden`은 서로 배타적이지 않은 독립 플래그라 동시에 여러 개가 `true`일 수 있다 — 겹칠 때 무엇을 먼저 보여줄지(차단 > 숨김 > 스포일러)는 **Domain의 정책**(`FeedComment.visibility` 계산 프로퍼티, `CommentVisibility` enum)이 결정한다. Feature(`CommentRow`)는 이 우선순위를 다시 계산하지 않고 결과값만 받아 표시만 한다.
