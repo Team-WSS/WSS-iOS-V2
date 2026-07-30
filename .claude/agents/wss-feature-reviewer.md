@@ -31,6 +31,9 @@ tools: Bash, Read, Grep, Glob
 - `Projects/Feature/CLAUDE.md` — 레이어 계약(의존 규칙·State/Action·View 규칙·Factory 골격)
 - `Projects/Feature/Docs/VIEWMODEL_TEMPLATE.md`, `Projects/Feature/Docs/VIEW_TEMPLATE.md` — `// MARK:` 순서·역할 정본
 - `Projects/Feature/<해당 모듈>/CLAUDE.md` — 그 모듈 고유의 함정·결정
+  - ⚠️ 그 안의 **`## 화면 동작 계약`** 절은 정적 Figma로는 안 잡혀 **사람에게 확인받은 동작**(스크롤 고정 영역·
+    로딩/빈/실패 분화·탭 결과·말줄임 줄 수 등)이다 → **구현이 이 계약과 어긋나면 지적**한다. 반대로 계약에
+    없는 동작을 두고 "디자인 의도와 다르다"고 단정하지 말고 *확인 필요*로 올린다(계약이 곧 확정된 근거).
 - 정본 레퍼런스 구현(패턴 비교용):
   - `Projects/Feature/NovelReviewFeature/Sources/NovelReview/NovelReviewViewModel.swift`, `NovelReviewView.swift`
   - `Projects/Feature/NovelReviewFeature/Sources/ReadingPeriodSheet/*`

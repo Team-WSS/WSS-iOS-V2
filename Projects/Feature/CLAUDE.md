@@ -19,6 +19,12 @@
 
 파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
 
+> **화면의 동작 계약은 모듈 `CLAUDE.md`의 `## 화면 동작 계약` 절이 정본이다.** 정적 Figma로는 안 잡혀
+> 사람에게 확인받은 것(스크롤 고정 영역·로딩/빈/실패 분화·탭 결과·말줄임 줄 수 등)이 거기 쌓인다.
+> 화면을 수정할 때 **디자인만 보고 추측하지 말고 그 절을 먼저 읽는다**. 새 화면은 `new-feature` 3B가
+> 채운다([design-gap-checklist.md](../../.claude/skills/new-feature/design-gap-checklist.md) — 기존 화면
+> 수정 시에도 갭 점검용으로 쓸 수 있다).
+
 **레퍼런스는 단일 정본이 아니라 "성격별 대표"다** — 뼈대(MARK 순서·State/Action·얇은 VM·Factory)는 어느 쪽이든 같으니, 만들 화면에 **가까운 쪽의 얹는 패턴**을 본다.
 | 만들 화면 성격 | 볼 정본 | 그 정본이 대표하는 얹는 패턴 |
 |---|---|---|
