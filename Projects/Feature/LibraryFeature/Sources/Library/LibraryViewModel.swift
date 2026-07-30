@@ -34,7 +34,9 @@ final class LibraryViewModel {
         var loadFailed = false
         /// 필터 시트 키워드 탭에 보여줄, 내가 서재 작품들에 등록한 키워드 목록.
         var registeredKeywords: [Keyword] = []
-        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호. View가 `onChange`로 소비한다.
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
+        /// View가 `onChange`로 받은 뒤 **반드시 `.consumeAuthenticationRequired`로 내려야** 한다 —
+        /// 서재는 탭 콘텐츠라 VM이 앱 세션 내내 살아서, true로 굳으면 2회차 만료가 조용히 삼켜진다.
         var requiresAuthentication = false
         /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
         /// 첫 페이지 로드 실패는 전면 실패 뷰(`loadFailed`)가 표현하므로 여기 없다.
@@ -58,6 +60,7 @@ final class LibraryViewModel {
         case applyFilter(MyLibraryFilter)
         case loadRegisteredKeywords
         case dismissToast
+        case consumeAuthenticationRequired
     }
 
     // MARK: - Output
@@ -117,6 +120,8 @@ final class LibraryViewModel {
             loadRegisteredKeywords()
         case .dismissToast:
             state.presentedToast = nil
+        case .consumeAuthenticationRequired:
+            state.requiresAuthentication = false
         }
     }
 }

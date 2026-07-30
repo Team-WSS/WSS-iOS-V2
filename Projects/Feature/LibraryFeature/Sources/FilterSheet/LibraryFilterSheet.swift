@@ -159,16 +159,11 @@ private extension LibraryFilterSheet {
     }
 
     /// 탭 콘텐츠 — 공통 세로 스크롤은 두지 않는다. 현재 탭 중 키워드만 가변 길이라,
-    /// 키워드 칩 영역만 자체 스크롤하고 나머지 탭은 고정 콘텐츠로 둔다.
-    @ViewBuilder
+    /// 키워드 칩 영역만 자체 스크롤하고(`keywordContent`) 나머지 탭은 고정 콘텐츠로 둔다.
+    /// 남은 공간을 전부 차지해야 탭 전환 때 콘텐츠가 위아래로 튀지 않는다.
     var tabContentSection: some View {
-        if viewModel.state.selectedTab == .keyword {
-            keywordContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        } else {
-            tabContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
+        tabContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     @ViewBuilder

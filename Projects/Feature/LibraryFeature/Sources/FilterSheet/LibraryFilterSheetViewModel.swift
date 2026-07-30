@@ -247,11 +247,6 @@ private extension LibraryFilterSheetViewModel {
         state.ratingMax = MyLibraryFilter.ratingRangeBounds.upperBound
         chipOrder.removeAll()
     }
-}
-
-// MARK: - Chip Order
-
-private extension LibraryFilterSheetViewModel {
 
     /// 이미 있으면 순서를 유지한다 — 재추가로 맨 뒤(=칩 맨 앞)로 튀지 않게.
     func appendToOrder(_ chip: Chip) {

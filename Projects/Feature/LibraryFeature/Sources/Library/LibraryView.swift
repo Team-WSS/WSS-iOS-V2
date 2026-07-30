@@ -82,7 +82,10 @@ struct LibraryView: View {
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.requiresAuthentication) { _, required in
-                if required { onAuthenticationRequired() }
+                guard required else { return }
+                onAuthenticationRequired()
+                // 신호를 즉시 되돌려야 2회차 만료도 onChange를 다시 발화시킨다(탭이라 VM이 계속 산다).
+                viewModel.handle(.consumeAuthenticationRequired)
             }
     }
 
@@ -209,7 +212,13 @@ private extension LibraryView {
                 LoadingView()
                     .frame(minHeight: 400)
             } else if viewModel.state.novels.isEmpty {
-                emptySection
+                // 서재 자체가 빈 것과 필터로 걸러져 0건인 것은 필요한 행동이 다르다
+                // ("웹소설 찾기" vs "필터 완화").
+                if hasAnyFilter {
+                    noMatchSection
+                } else {
+                    emptySection
+                }
             } else {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 12)
@@ -267,6 +276,27 @@ private extension LibraryView {
                 Spacer().frame(height: 28)
             }
         }
+    }
+
+    /// 관심·시트 필터 6종 중 하나라도 걸려 있는지 — 빈 상태 카피를 가르는 기준.
+    /// (정렬은 결과 개수를 바꾸지 않으므로 필터로 치지 않는다.)
+    var hasAnyFilter: Bool {
+        viewModel.state.filter.hasActiveSheetFilter || viewModel.state.filter.isInterest
+    }
+
+    /// 필터 결과 0건 — 서재는 비어있지 않으므로 "웹소설 찾기" 대신 범위를 넓히라고 안내한다.
+    var noMatchSection: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 120)
+            WSSImage.imgEmpty.swiftUIImage
+                .resizable()
+                .scaledToFit()
+                .frame(width: 39, height: 48)
+            Spacer().frame(height: 8)
+            Text("해당하는 작품이 없어요\n검색의 범위를 더 넓혀보세요")
+                .applyWSSFont(.body1, color: .wssGray200)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     /// 빈 상태 — "서재가 비어있어요" + 웹소설 찾기.
