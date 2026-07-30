@@ -55,6 +55,7 @@ struct CommentRow: View {
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         
                     Circle()
+                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         .frame(width: 2, height: 2)
                      
                     Text(createdAt)
