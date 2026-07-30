@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 import DesignSystem
 
 public struct WSSAlertViewModifier: ViewModifier {
@@ -36,5 +37,12 @@ public struct WSSAlertViewModifier: ViewModifier {
             }
             .animation(.easeInOut(duration: 0.25), value: isPresented)
             .animation(.easeInOut(duration: 0.25), value: alertType)
+            // 알럿이 화면 위 키보드를 가리는 걸 막는다. 호출부마다 어떤 필드가 포커스인지
+            // 몰라도 되도록, 퍼스트 리스폰더에게 직접 resign을 보내는 전역 트릭을 쓴다.
+            .onChange(of: isPresented) { _, newValue in
+                if newValue {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
     }
 }
