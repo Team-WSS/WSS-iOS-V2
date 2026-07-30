@@ -25,6 +25,12 @@
 ## 코드 규칙
 
 - 순수 표현(presentation) 컴포넌트. 네트워크·저장·도메인 정책 금지.
+  - **예외 — URL 기반 이미지 로딩은 표현 인프라로 보고 허용한다**(`WSSAsyncImage`, SwiftUI `AsyncImage`).
+    **값으로 받은 URL에서 바이트만 읽을 뿐, 앱의 네트워킹 스택(`Core/Networking`)·엔드포인트·인증·에러 타입을 알지 않는다**는 선은 지킨다
+    (`WSSComponent`는 `Core/Networking`에 의존하지 않는다 — `Project.swift` 확인). 이미지 로딩을 Feature로 올리면
+    화면마다 prefetch를 손으로 짜게 되어(구 `NovelDetailView`) 중복이 되살아나므로 컴포넌트에 두는 편이 낫다.
+  - ⚠️ **이 예외로 못 덮는 순간이 온다 — 인증 헤더가 필요한 이미지가 생기면** `URLSession.shared` 직행으로는 안 되니
+    그때는 로더 주입(상위가 로딩 결과·로더를 내려주는) 구조로 전환할 것. 예외를 넓혀 토큰·헤더를 UI에 들이지 말 것.
 - 입력은 값/콜백으로 받는 것이 기본. `BaseDomain` 공통 값 타입만 `DomainPresentation` 매핑 목적에 한해 직접 사용하고, 그 외 도메인 타입에는 의존하지 않는다.
 - `Resources/`, `Demo/` 타깃으로 단독 미리보기·검증.
 
