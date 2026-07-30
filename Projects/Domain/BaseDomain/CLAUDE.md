@@ -18,3 +18,4 @@
 - `KeywordRepository`는 **로컬 DB 기반** — `fetchKeywords`/`searchKeywords`는 로컬 조회, `syncKeywords()`는 서버→로컬 동기화이며 **`throws` 없는 `async`** (실패를 던지지 않음). 구현은 `BaseData`.
 - 키워드는 여러 도메인(Novel, Profile 등)이 캐시로 주입받아 쓴다 → Keyword 변경 시 교차 영향 확인.
 - ID는 반드시 래퍼 타입 사용. raw `Int`/`String`을 도메인 경계로 넘기지 말 것.
+- 화면 전용 부분집합/순서가 있는 필터 목록(예: 구 `NovelGenre.filterGenre`)은 여기 두지 않는다 — `BaseDomain`은 순수 enum만 갖고, 그런 목록은 `WSSComponent`의 `DomainPresentation` 확장(`NovelGenre+Presentation`)에 둔다.

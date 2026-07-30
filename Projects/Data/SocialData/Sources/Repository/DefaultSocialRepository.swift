@@ -18,7 +18,7 @@ public struct DefaultSocialRepository: SocialRepository {
 
     init(
         service: SocialService,
-        logger: DataLogger?
+        logger: DataLogger? = nil
     ) {
         self.service = service
         self.logger = logger

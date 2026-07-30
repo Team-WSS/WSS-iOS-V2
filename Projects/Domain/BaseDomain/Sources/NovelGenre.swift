@@ -19,7 +19,3 @@ public enum NovelGenre: CaseIterable {
     case drama
     case mystery
 }
-
-extension NovelGenre {
-    public static let filterGenre: [NovelGenre] = [.romance, .romanceFantasy, .fantasy, .modernFantasy, .wuxia, .mystery, .drama, .lightNovel, .BL]
-}

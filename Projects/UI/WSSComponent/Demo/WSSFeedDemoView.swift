@@ -38,9 +38,13 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 13,
                         commentCount: 23
-                    )
+                    ),
+                    isLiked: true,
+                    likeButtonTapped: { print("좋아요 버튼 탭!") },
+                    isSpoiler: false,
+                    isPrivate: false
                 )
-                
+
                 Divider()
 
                 // 이미지만 있는 경우
@@ -62,7 +66,11 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 7,
                         commentCount: 2
-                    )
+                    ),
+                    isLiked: false,
+                    likeButtonTapped: { print("좋아요 버튼 탭!") },
+                    isSpoiler: true,
+                    isPrivate: false
                 )
                 
                 Divider()
@@ -88,7 +96,11 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 42,
                         commentCount: 15
-                    )
+                    ),
+                    isLiked: true,
+                    likeButtonTapped: { print("좋아요 버튼 탭!") },
+                    isSpoiler: false,
+                    isPrivate: true
                 )
                 
                 Divider()
@@ -108,7 +120,11 @@ struct WSSFeedDemoView: View {
                     react: WSSFeedReact(
                         likeCount: 3,
                         commentCount: 8
-                    )
+                    ),
+                    isLiked: false,
+                    likeButtonTapped: { print("좋아요 버튼 탭!") },
+                    isSpoiler: true,
+                    isPrivate: true
                 )
             }
             .padding(.vertical, 20)

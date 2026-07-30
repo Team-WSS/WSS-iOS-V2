@@ -40,6 +40,7 @@ public struct WSSFeedImageView: View {
                         .resizable()
                 case .failure:
                     WSSImage.imgLoadingThumbnail.swiftUIImage
+                        .resizable()
                 default:
                     ProgressView()
                 }
@@ -69,7 +70,7 @@ public struct WSSFeedImageView: View {
 #Preview {
     WSSFeedImageView(feedImage:
                         WSSFeedImage(
-                            thumbnailImageURL: URL(string: "https://i.pinimg.com/736x/fd/fc/ef/fdfcefdd9bc7d69e9adf1dde8293fe6e.jpg"),
+                            thumbnailImageURL: URL(string: "https:"),
                             imageCount: 5
                         )
     )

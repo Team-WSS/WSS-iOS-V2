@@ -12,7 +12,6 @@ struct UserFeedResponse: Decodable {
     let createdDate: String
     let isSpoiler: Bool
     let isModified: Bool
-    let likerUsers: [Int]
     let isLiked: Bool
     let likeCount: Int
     let commentCount: Int

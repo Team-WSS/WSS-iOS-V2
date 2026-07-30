@@ -170,7 +170,13 @@ public struct CreateFeedView: View {
                     showDismissAlert = true
                 }
         }
-        
+
+        ToolbarItem(placement: .principal) {
+            Text(viewModel.isEditing ? "피드 수정" : "피드 작성")
+                .applyWSSFont(.title3)
+                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+        }
+
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 viewModel.handle(.submitFeed)
@@ -388,6 +394,7 @@ public struct CreateFeedView: View {
             .background(WSSColor.wssGray50.swiftUIColor)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture {
+                //TODO: - ViewModel로 로직빼기 + 알럿 띄우는 bool변수도 viewModel에 포함될 수 있도록 한다.
                 if viewModel.state.draft.connectedNovel == nil {
                     showLinkNovelSheet.toggle()
                 } else {

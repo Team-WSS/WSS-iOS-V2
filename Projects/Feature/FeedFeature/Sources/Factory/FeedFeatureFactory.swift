@@ -14,6 +14,7 @@ import NovelDomain
 import CommentDomain
 import SocialDomain
 import ProfileDomain
+import SocialDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
@@ -30,6 +31,25 @@ public enum FeedFeatureFactory {
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
                 initialDraft: emptyDraft()
+            )
+        )
+    }
+
+    /// 기존 피드를 수정하는 CreateFeedView를 생성한다.
+    /// `initialDraft`에 기존 피드 내용을 채워 prefill한다.
+    @MainActor
+    public static func makeEditFeedView(
+        feedID: FeedID,
+        initialDraft: FeedDraft,
+        editFeedUseCase: EditFeedUseCase,
+        searchNovelUseCase: SearchNovelUseCase
+    ) -> CreateFeedView {
+        CreateFeedView(
+            viewModel: CreateFeedViewModel(
+                mode: .edit(feedID),
+                editFeedUseCase: editFeedUseCase,
+                searchNovelUseCase: searchNovelUseCase,
+                initialDraft: initialDraft
             )
         )
     }
@@ -85,6 +105,36 @@ public enum FeedFeatureFactory {
         )
     }
 
+    /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
+    /// - Parameter onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
+    ///   실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    @MainActor
+    public static func makeSosoFeedView(
+        loadMyFeedsUseCase: LoadMyFeedsUseCase,
+        loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
+        feedLikeUseCase: FeedLikeUseCase,
+        loadProfileUseCase: LoadProfileUseCase,
+        deleteFeedUseCase: DeleteFeedUseCase,
+        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
+        reportImproperFeedUseCase: ReportImproperFeedUseCase,
+        logger: Logger? = nil,
+        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in }
+    ) -> some View {
+        SosoFeedView(
+            viewModel: SosoFeedViewModel(
+                loadMyFeedsUseCase: loadMyFeedsUseCase,
+                loadsosoFeedsUseCase: loadSosoFeedsUseCase,
+                feedLikeUseCase: feedLikeUseCase,
+                loadProfileUseCase: loadProfileUseCase,
+                deleteFeedUseCase: deleteFeedUseCase,
+                reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
+                reportImproperFeedUseCase: reportImproperFeedUseCase,
+                logger: logger
+            ),
+            onEditFeedTapped: onEditFeedTapped
+        )
+    }
+
     private static func emptyDraft() -> FeedDraft {
         FeedDraft(
             content: "",
@@ -106,7 +156,7 @@ private struct StubSearchNovelUseCase: SearchNovelUseCase {
     func searchByText(_ query: String) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
-    
+
     func searchByFilter(_ filter: NovelDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: [], hasNext: false), 0)
     }

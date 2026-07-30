@@ -9,7 +9,6 @@
 import Networking
 import SocialDomain
 import BaseData
-import Logger
 
 public enum SocialDataFactory {
 

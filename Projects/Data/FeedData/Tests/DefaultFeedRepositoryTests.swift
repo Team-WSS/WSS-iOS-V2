@@ -143,7 +143,7 @@ struct DefaultFeedRepositoryTests {
     func fetchMyFeeds_success_callsServiceWithCorrectParams() async throws {
         let (sut, service) = makeRepository()
         service.getMyFeedsResult = .success(makeUserFeedListResponse(count: 2, isLoadable: false))
-        let option = MyFeedOption(genres: [.romance], visibilityType: .publicOnly, sortType: .recent)
+        let option = MyFeedOption(genres: [.romance], includesUncategorized: false, visibilityType: .publicOnly, sortType: .recent)
 
         _ = try await sut.fetchMyFeeds(option: option, lastFeedID: FeedID(100))
 
@@ -151,6 +151,17 @@ struct DefaultFeedRepositoryTests {
         #expect(service.fetchedMyGenres[0] == ["romance"])
         #expect(service.fetchedMyVisibilityTypes[0] == "PUBLIC")
         #expect(service.fetchedMySortTypes[0] == "recent")
+    }
+
+    @Test("fetchMyFeeds includesUncategorized가 true면 genreNames에 etc가 함께 실린다")
+    func fetchMyFeeds_includesUncategorized_appendsEtcToGenres() async throws {
+        let (sut, service) = makeRepository()
+        service.getMyFeedsResult = .success(makeUserFeedListResponse(count: 0, isLoadable: false))
+        let option = MyFeedOption(genres: [.romance], includesUncategorized: true, visibilityType: .all, sortType: .recent)
+
+        _ = try await sut.fetchMyFeeds(option: option, lastFeedID: FeedID(0))
+
+        #expect(service.fetchedMyGenres[0] == ["romance", "etc"])
     }
 
     // MARK: - fetchNovelFeeds
@@ -304,7 +315,6 @@ private extension DefaultFeedRepositoryTests {
             createdDate: "2026-04-23",
             isSpoiler: false,
             isModified: false,
-            likerUsers: [],
             isLiked: false,
             likeCount: 0,
             commentCount: 0,

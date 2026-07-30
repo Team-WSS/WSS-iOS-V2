@@ -27,12 +27,11 @@ let project = Project.createFeatureModule(
     ],
     demoDependencies: [
         .module(.core(.networking)),
-        .module(.core(.logger)),
         .module(.data(.base)),
         .module(.data(.feed)),
         .module(.data(.novel)),
-        .module(.data(.comment)),
-        .module(.data(.social)),
         .module(.data(.profile)),
+        .module(.data(.social)),
+        .module(.data(.comment))
     ]
 )

@@ -95,7 +95,6 @@ struct NovelDetailFeedTab: View {
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑.
-    /// 스포일러(isSpoiler) 가림 처리는 이번 범위 밖(TODO — WSSFeadView 확장 필요).
     private func feedCell(_ feed: TotalFeed) -> some View {
         WSSFeadView(
             header: FeedHeader(
@@ -130,7 +129,11 @@ struct NovelDetailFeedTab: View {
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
                 commentCount: feed.commentCount
-            )
+            ),
+            isLiked: feed.isLiked,
+            likeButtonTapped: { onToggleLike(feed.feedId) },
+            isSpoiler: feed.isSpoiler,
+            isPrivate: !feed.isPublic
         )
     }
 

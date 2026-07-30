@@ -141,7 +141,7 @@ private struct DemoRootView: View {
         )
         let socialRepository = SocialDataFactory.makeSocialRepository(
             client: client,
-            underlying: consoleLogger
+            logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
         let pushSettingRepository = NotificationDataFactory.makePushSettingRepository(
             client: client,

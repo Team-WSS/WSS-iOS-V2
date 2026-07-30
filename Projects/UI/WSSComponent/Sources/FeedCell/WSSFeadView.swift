@@ -29,7 +29,12 @@ public struct WSSFeadView: View {
 
     // 피드 리액션
     let react: WSSFeedReact
-    
+    let isLiked: Bool
+    let likeButtonTapped: () -> Void
+
+    let isSpoiler: Bool
+    let isPrivate: Bool
+
     public init(
         header: FeedHeader,
         profileImageTapped: @escaping () -> Void,
@@ -37,7 +42,11 @@ public struct WSSFeadView: View {
         content: String,
         feedImage: WSSFeedImage? = nil,
         linkNovel: WSSLinkNovel? = nil,
-        react: WSSFeedReact
+        react: WSSFeedReact,
+        isLiked: Bool,
+        likeButtonTapped: @escaping () -> Void,
+        isSpoiler: Bool,
+        isPrivate: Bool
     ) {
         self.header = header
         self.profileImageTapped = profileImageTapped
@@ -46,6 +55,10 @@ public struct WSSFeadView: View {
         self.feedImage = feedImage
         self.linkNovel = linkNovel
         self.react = react
+        self.isLiked = isLiked
+        self.likeButtonTapped = likeButtonTapped
+        self.isSpoiler = isSpoiler
+        self.isPrivate = isPrivate
     }
     
     public var body: some View {
@@ -63,11 +76,17 @@ public struct WSSFeadView: View {
             
             // 피드 글
             HStack(spacing: 0) {
-                Text(content)
-                    .applyWSSFont(.body2)
-                    .foregroundStyle(Color.wssBlack)
-                    .lineLimit(5)
-                    .multilineTextAlignment(.leading)
+                if isSpoiler {
+                     Text("스포일러가 포함된 글 보기")
+                        .applyWSSFont(.body2)
+                        .foregroundStyle(Color.wssSecondary100)
+                } else {
+                    Text(content)
+                        .applyWSSFont(.body2)
+                        .foregroundStyle(Color.wssBlack)
+                        .lineLimit(5)
+                        .multilineTextAlignment(.leading)
+                }
                 
                 Spacer()
             }
@@ -76,7 +95,7 @@ public struct WSSFeadView: View {
             Spacer().frame(height: 20)
             
             // 피드 첨부 이미지
-            if let feedImage {
+            if let feedImage, !isSpoiler {
                 WSSFeedImageView(feedImage: feedImage)
                     .padding(.horizontal, 12.5)
                 
@@ -97,15 +116,34 @@ public struct WSSFeadView: View {
             }
             
             // 피드 리액션
-            WSSFeedReactView(
-                react: react,
-                isLiked: true,
-                likeButtonTapped: { print("좋아요 클릭!") }
-            )
-            .padding(.horizontal, 20)
+            if isPrivate {
+                privateSection
+                    .padding(.horizontal, 20)
+            } else {
+                WSSFeedReactView(
+                    react: react,
+                    isLiked: isLiked,
+                    likeButtonTapped: likeButtonTapped
+                )
+                .padding(.horizontal, 20)
+            }
         }
         .padding(.top, 20)
         .padding(.bottom, 10)
+    }
+    
+    private var privateSection: some View {
+        HStack(spacing: 6) {
+            WSSImage.icLock.swiftUIImage
+                .renderingMode(.template)
+            
+            Text("나만 보는 기록이에요.")
+                .applyWSSFont(.body4)
+            
+            Spacer()
+        }
+        .foregroundStyle(Color.wssGray200)
+        .padding(.vertical, 10)
     }
 }
 
@@ -134,7 +172,11 @@ public struct WSSFeadView: View {
             react: WSSFeedReact(
                 likeCount: 13,
                 commentCount: 23
-            )
+            ),
+            isLiked: true,
+            likeButtonTapped: { print("좋아요 클릭!") },
+            isSpoiler: true,
+            isPrivate: true
         )
     }
 }

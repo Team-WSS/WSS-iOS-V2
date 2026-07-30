@@ -4,8 +4,8 @@
 `SocialDomain.SocialRepository` 구현 — 차단 + 신고.
 
 - 식별자: `ModuleType.data(.social)` / 의존: `SocialDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
-- 진입점: `SocialDataFactory.makeSocialRepository(client:underlying:)`
+- 진입점: `SocialDataFactory.makeSocialRepository(client:logger:)` — 다른 Data 모듈과 동일하게 `DataLogger?`를 직접 받는다(호출부가 `DataLogger(moduleName: "SocialData", underlying:)`를 조립해 넘김).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- ⚠️ Factory 로깅 패턴이 다름: 다른 모듈은 `DataLogger`를 직접 받지만, 여기는 **`underlying: Logger?`를 받아 내부에서 `DataLogger(moduleName:"SocialData", ...)`를 생성**한다. 조립 시 넘기는 인자 타입 주의.
+- 특이사항 없음.
