@@ -12,11 +12,13 @@ import FeedDomain
 import BaseDomain
 import CommentDomain
 import SocialDomain
+import ProfileDomain
 
 import FeedData
 import BaseData
 import CommentData
 import SocialData
+import ProfileData
 
 import Networking
 import Logger
@@ -43,6 +45,8 @@ struct FeedDetailDemoScene: View {
     private let reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase
     private let reportImproperCommentUseCase: ReportImproperCommentUseCase
 
+    private let loadProfileUseCase: LoadProfileUseCase
+
     init() {
         let storage = UserDefaultsStorage()
         self.currentUserID = storage.get(.userID)
@@ -64,6 +68,12 @@ struct FeedDetailDemoScene: View {
             logger: DataLogger(moduleName: "SocialData", underlying: OSLogger.social)
         )
 
+        let profileRepository = ProfileDataFactory.makeProfileRepository(
+            client: client,
+            localStorage: storage,
+            logger: DataLogger(moduleName: "ProfileData", underlying: OSLogger.profile)
+        )
+
         self.loadFeedDetailUseCase = DefaultLoadFeedUseCase(feedRepository: feedRepository)
         self.feedLikeUseCase = DefaultLikeUseCase(feedRepository: feedRepository)
         self.deleteFeedUseCase = DefaultDeleteFeedUseCase(repository: feedRepository)
@@ -77,6 +87,8 @@ struct FeedDetailDemoScene: View {
         self.reportImproperFeedUseCase = DefaultReportImproperFeedUseCase(repository: socialRepository)
         self.reportSpoilerCommentUseCase = DefaultReportSpoilerCommentUseCase(repository: socialRepository)
         self.reportImproperCommentUseCase = DefaultReportImproperCommentUseCase(repository: socialRepository)
+
+        self.loadProfileUseCase = DefaultLoadProfileUseCase(profileRepository: profileRepository)
     }
 
     var body: some View {
@@ -124,6 +136,7 @@ struct FeedDetailDemoScene: View {
                     reportImproperFeedUseCase: reportImproperFeedUseCase,
                     reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                     reportImproperCommentUseCase: reportImproperCommentUseCase,
+                    loadProfileUseCase: loadProfileUseCase,
                     onNovelTapped: { print("작품 상세 진입: \($0)") }
                 )
             }

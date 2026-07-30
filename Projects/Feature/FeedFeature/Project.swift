@@ -20,6 +20,7 @@ let project = Project.createFeatureModule(
         .module(.domain(.novel)),
         .module(.domain(.comment)),
         .module(.domain(.social)),
+        .module(.domain(.profile)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -32,5 +33,6 @@ let project = Project.createFeatureModule(
         .module(.data(.novel)),
         .module(.data(.comment)),
         .module(.data(.social)),
+        .module(.data(.profile)),
     ]
 )

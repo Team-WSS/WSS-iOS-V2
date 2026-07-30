@@ -13,6 +13,7 @@ import DesignSystem
 struct FeedDetailCommentInputBar: View {
 
     @Binding var text: String
+    let profileImageURL: URL?
     let sendAction: () -> Void
     var isSubmitting: Bool = false
     var externalFocus: FocusState<Bool>.Binding? = nil
@@ -21,10 +22,23 @@ struct FeedDetailCommentInputBar: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            RoundedRectangle(cornerRadius: 14)
-                .frame(width: 42, height: 42)
-                .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
-            
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+
+                if let profileImageURL {
+                    AsyncImage(url: profileImageURL) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+            .frame(width: 42, height: 42)
+
             Spacer().frame(width: 10)
             
             VStack(spacing: 0) {
@@ -87,5 +101,6 @@ struct FeedDetailCommentInputBar: View {
 #Preview {
     @Previewable @State var text: String = ""
     FeedDetailCommentInputBar(text: $text,
+                              profileImageURL: URL(string: "https://i.pinimg.com/736x/07/b1/33/07b1330bb9b7b96ea5845371c924397a.jpg"),
                               sendAction: { })
 }

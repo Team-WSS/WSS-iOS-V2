@@ -13,6 +13,7 @@ import FeedDomain
 import NovelDomain
 import CommentDomain
 import SocialDomain
+import ProfileDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
@@ -58,6 +59,7 @@ public enum FeedFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
+        loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil,
         onNovelTapped: @escaping (NovelID) -> Void
     ) -> some View {
@@ -76,6 +78,7 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                 reportImproperCommentUseCase: reportImproperCommentUseCase,
+                loadProfileUseCase: loadProfileUseCase,
                 logger: logger
             ),
             onNovelTapped: onNovelTapped

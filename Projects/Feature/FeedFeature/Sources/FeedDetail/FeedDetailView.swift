@@ -12,6 +12,7 @@ import BaseDomain
 import FeedDomain
 import CommentDomain
 import SocialDomain
+import ProfileDomain
 import WSSComponent
 import DesignSystem
 
@@ -246,6 +247,7 @@ struct FeedDetailView: View {
                         get: { viewModel.state.commentText },
                         set: { value in Task { await viewModel.handle(.updateCommentText(value)) }}
                     ),
+                profileImageURL: viewModel.state.currentUserProfileImageURL,
                 sendAction: {
                     Task {
                         let wasEditing = viewModel.state.editingCommentID != nil
@@ -486,7 +488,8 @@ struct FeedDetailView: View {
             reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
             reportImproperFeedUseCase: PreviewReportImproperFeedUseCase(),
             reportSpoilerCommentUseCase: PreviewReportSpoilerCommentUseCase(),
-            reportImproperCommentUseCase: PreviewReportImproperCommentUseCase()
+            reportImproperCommentUseCase: PreviewReportImproperCommentUseCase(),
+            loadProfileUseCase: PreviewLoadProfileUseCase()
         ), onNovelTapped: { print("작품 상세 진입: \($0)") })
     }
 }
@@ -596,5 +599,17 @@ private struct PreviewReportSpoilerCommentUseCase: ReportSpoilerCommentUseCase {
 
 private struct PreviewReportImproperCommentUseCase: ReportImproperCommentUseCase {
     func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) { }
+}
+
+private struct PreviewLoadProfileUseCase: LoadProfileUseCase {
+    func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
+        Profile(
+            nickname: "구리구리스",
+            introduction: "",
+            characterImage: URL(string: "https://i.pinimg.com/736x/07/b1/33/07b1330bb9b7b96ea5845371c924397a.jpg"),
+            isPublic: true,
+            genrePreferences: []
+        )
+    }
 }
 

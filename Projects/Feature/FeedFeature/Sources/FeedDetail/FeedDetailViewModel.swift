@@ -13,6 +13,7 @@ import BaseDomain
 import FeedDomain
 import CommentDomain
 import SocialDomain
+import ProfileDomain
 import WSSComponent
 import Logger
 
@@ -27,6 +28,9 @@ public final class FeedDetailViewModel {
         var comments: [FeedComment]
         var isLoading: Bool
         var commentText: String
+        /// 댓글 입력창에 표시할 로그인한 사용자의 프로필 이미지.
+        /// TODO: 현재는 서버(`LoadProfileUseCase`)에서 매번 조회한다. 추후 userDefaults 로컬 캐시로 전환 예정.
+        var currentUserProfileImageURL: URL?
         var editingCommentID: CommentID?
         var isSubmittingComment: Bool = false
         var didDeleteFeed: Bool = false
@@ -86,6 +90,8 @@ public final class FeedDetailViewModel {
     private let reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase
     private let reportImproperCommentUseCase: ReportImproperCommentUseCase
 
+    private let loadProfileUseCase: LoadProfileUseCase
+
     private let logger: Logger?
 
     // MARK: - Init
@@ -104,6 +110,7 @@ public final class FeedDetailViewModel {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
+        loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil
     ) {
         self.feedID = feedID
@@ -124,6 +131,7 @@ public final class FeedDetailViewModel {
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.reportSpoilerCommentUseCase = reportSpoilerCommentUseCase
         self.reportImproperCommentUseCase = reportImproperCommentUseCase
+        self.loadProfileUseCase = loadProfileUseCase
         self.logger = logger
     }
 
@@ -149,6 +157,7 @@ public final class FeedDetailViewModel {
         case .load:
             Task { await loadFeed() }
             Task { await loadComments() }
+            Task { await loadCurrentUserProfileImage() }
 
         case .updateCommentText(let text):
             state.commentText = text
@@ -217,6 +226,16 @@ public final class FeedDetailViewModel {
             } else {
                 logger?.error("FeedDetail loadComments 실패: \(String(describing: error))")
             }
+        }
+    }
+
+    /// 댓글 입력창 프로필 이미지 — 부차 콘텐츠라 실패해도 로그만 남기고 기본(회색) 표시로 둔다.
+    private func loadCurrentUserProfileImage() async {
+        do {
+            let profile = try await loadProfileUseCase.execute(target: .me)
+            state.currentUserProfileImageURL = profile.characterImage
+        } catch {
+            logger?.error("FeedDetail loadCurrentUserProfileImage 실패: \(String(describing: error))")
         }
     }
 
