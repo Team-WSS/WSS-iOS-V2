@@ -352,6 +352,8 @@ struct SosoFeedView: View {
                 likeCount: feed.likeCount,
                 commentCount: feed.commentCount
             ),
+            isLiked: feed.isLiked,
+            likeButtonTapped: { viewModel.handle(.toggleLike(feed.feedId)) },
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
         )

@@ -29,10 +29,12 @@ public struct WSSFeadView: View {
 
     // 피드 리액션
     let react: WSSFeedReact
-    
+    let isLiked: Bool
+    let likeButtonTapped: () -> Void
+
     let isSpoiler: Bool
     let isPrivate: Bool
-    
+
     public init(
         header: FeedHeader,
         profileImageTapped: @escaping () -> Void,
@@ -41,6 +43,8 @@ public struct WSSFeadView: View {
         feedImage: WSSFeedImage? = nil,
         linkNovel: WSSLinkNovel? = nil,
         react: WSSFeedReact,
+        isLiked: Bool,
+        likeButtonTapped: @escaping () -> Void,
         isSpoiler: Bool,
         isPrivate: Bool
     ) {
@@ -51,6 +55,8 @@ public struct WSSFeadView: View {
         self.feedImage = feedImage
         self.linkNovel = linkNovel
         self.react = react
+        self.isLiked = isLiked
+        self.likeButtonTapped = likeButtonTapped
         self.isSpoiler = isSpoiler
         self.isPrivate = isPrivate
     }
@@ -116,8 +122,8 @@ public struct WSSFeadView: View {
             } else {
                 WSSFeedReactView(
                     react: react,
-                    isLiked: true,
-                    likeButtonTapped: { print("좋아요 클릭!") }
+                    isLiked: isLiked,
+                    likeButtonTapped: likeButtonTapped
                 )
                 .padding(.horizontal, 20)
             }
@@ -167,6 +173,8 @@ public struct WSSFeadView: View {
                 likeCount: 13,
                 commentCount: 23
             ),
+            isLiked: true,
+            likeButtonTapped: { print("좋아요 클릭!") },
             isSpoiler: true,
             isPrivate: true
         )

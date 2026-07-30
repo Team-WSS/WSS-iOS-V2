@@ -130,6 +130,8 @@ struct NovelDetailFeedTab: View {
                 likeCount: feed.likeCount,
                 commentCount: feed.commentCount
             ),
+            isLiked: feed.isLiked,
+            likeButtonTapped: { onToggleLike(feed.feedId) },
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
         )
