@@ -17,15 +17,10 @@ import WSSComponent
 // "얇은 VM": 카피·포맷·색은 전부 View가 결정한다.
 struct LibraryView: View {
 
-    /// 목록 표시 모드 — VM 처리가 필요 없는 순수 표시 상태라 View가 소유한다.
-    fileprivate enum DisplayMode {
-        case grid
-        case list
-    }
-
     // 선언 순서: VM → View 전용 상태 → @Environment → 주입 let
     @State private var viewModel: LibraryViewModel
-    @State private var displayMode: DisplayMode = .grid
+    /// 목록 표시 모드 — VM 처리가 필요 없는 순수 표시 상태라 View가 소유한다(타입은 타유저 서재와 공유).
+    @State private var displayMode: LibraryDisplayMode = .grid
     @State private var isSortSheetPresented = false
     @State private var isFilterSheetPresented = false
     /// 필터 시트를 열 때 진입할 탭 — 메인 칩에서 해당 탭으로 바로 들어간다.
@@ -344,10 +339,10 @@ private extension LibraryView {
     var displayModeToggle: some View {
         HStack(spacing: ToggleMetric.spacing) {
             displayModeSegment(.grid) {
-                gridIcon(color: displayMode == .grid ? Color.wssBlack : Color.wssGray100)
+                LibraryDisplayModeIcon(mode: .grid, color: displayMode == .grid ? .wssBlack : .wssGray100)
             }
             displayModeSegment(.list) {
-                listIcon(color: displayMode == .list ? Color.wssBlack : Color.wssGray100)
+                LibraryDisplayModeIcon(mode: .list, color: displayMode == .list ? .wssBlack : .wssGray100)
             }
         }
         // 흰 원 하나를 항상 그려두고 x offset만 바꿔 대놓고 미끄러뜨린다.
@@ -366,7 +361,7 @@ private extension LibraryView {
         .animation(.spring(response: 0.35, dampingFraction: 0.72), value: displayMode)
     }
 
-    func displayModeSegment(_ mode: DisplayMode, @ViewBuilder icon: () -> some View) -> some View {
+    func displayModeSegment(_ mode: LibraryDisplayMode, @ViewBuilder icon: () -> some View) -> some View {
         Button {
             displayMode = mode
         } label: {
@@ -375,35 +370,6 @@ private extension LibraryView {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-    }
-
-    func gridIcon(color: Color) -> some View {
-        VStack(spacing: 2) {
-            ForEach(0..<2, id: \.self) { _ in
-                HStack(spacing: 2) {
-                    ForEach(0..<2, id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(color)
-                            .frame(width: 5, height: 5)
-                    }
-                }
-            }
-        }
-    }
-
-    func listIcon(color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            ForEach(0..<3, id: \.self) { _ in
-                HStack(spacing: 2) {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(color)
-                        .frame(width: 2, height: 2)
-                    Capsule()
-                        .fill(color)
-                        .frame(width: 7, height: 2)
-                }
-            }
-        }
     }
 
     /// 관심 칩 — 시트 없이 즉시 토글.

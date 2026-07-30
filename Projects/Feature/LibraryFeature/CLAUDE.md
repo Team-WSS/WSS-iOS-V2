@@ -1,10 +1,18 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # LibraryFeature
 
-서재 탭 화면 — 사용자가 등록·기록한 작품 목록(`LibraryNovel`)을 필터·정렬로 조회한다.
+서재 화면 **2개**를 담는다 — 작품 목록(`LibraryNovel`)을 그리드/리스트로 조회한다는 뼈대가 같아 셀·정렬 시트를 공유한다.
 
-- 식별자: `ModuleType.feature(.library)` / 의존: `BaseDomain`, **`NovelDomain`**(서재 Domain 코드가 별도 LibraryDomain이 아니라 여기 있음 — `LoadMyLibraryUseCase`·`LoadMyLibraryKeywordsUseCase`·`LibraryNovel(s)`·`MyLibraryFilter`), `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점: `LibraryFactory.makeView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:logger:onNovelSelected:onSearchTapped:onRegisterTapped:onNotificationTapped:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫)
+| 화면 | 성격 | 상단 구성 |
+|---|---|---|
+| **내 서재**(`Library/`) | 탭 콘텐츠(앱 세션 내내 삶) | "서재" 타이틀 + 등록 버튼 / 필터 칩 7종 + 캡슐 세그먼트 토글 / 카운트·알림관리·정렬 |
+| **타유저 서재**(`UserLibrary/`) | `NavigationStack` push(dismiss로 빠짐) | 커스텀 네비바(뒤로가기 + 중앙 "서재") / 카운트·정렬·아이콘 토글 **(필터 없음)** |
+
+- 식별자: `ModuleType.feature(.library)` / 의존: `BaseDomain`, **`NovelDomain`**(서재 Domain 코드가 별도 LibraryDomain이 아니라 여기 있음 — `LoadMyLibraryUseCase`·`LoadUserLibraryUseCase`·`LoadMyLibraryKeywordsUseCase`·`LibraryNovel(s)`·`MyLibraryFilter`·`LibraryFilter`), `DesignSystem`, `WSSComponent`, `Logger`
+- 진입점(둘 다 `LibraryFactory`):
+  - `makeView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:logger:onNovelSelected:onSearchTapped:onRegisterTapped:onNotificationTapped:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫)
+  - `makeUserLibraryView(userID:loadUserLibraryUseCase:logger:onNovelSelected:onAuthenticationRequired:)` — **push 대상**. 대상 사용자는 진입 시점(유저 프로필 등)에서 `UserID`로 넘긴다.
+- 공유 자산: `LibraryGridCell`·`LibraryListCell`(셀), `LibrarySortSheet`(정렬 6종), `LibraryDisplayMode(+Icon)`(표시 모드·아이콘), `LibrarySortType+Library`(카피).
 
 ## 핵심 시나리오
 
@@ -13,8 +21,22 @@
 - **에러 3분화**: 첫 페이지 실패=**헤더(타이틀·등록 버튼)만 남기고** 그 아래를 실패 뷰(`NetworkErrorView`+재시도)로 대체(컨트롤·카운트·목록은 함께 숨김 — 실패 상태에서 조작할 게 없음), 더보기·키워드 실패=토스트, 인증 만료=`requiresAuthentication` 신호 → `onAuthenticationRequired` 콜백(NovelDetail 배관과 동일).
 - **빈 상태 2분화**: 서재 자체가 빔=`emptySection`("서재가 비어있어요" + 웹소설 찾기 CTA), 필터로 걸러져 0건=`noMatchSection`("해당하는 작품이 없어요" 2줄, CTA 없음). 가르는 기준은 `filter.hasActiveSheetFilter || filter.isInterest`(정렬은 개수를 안 바꾸니 제외).
 
+## 화면 동작 계약 — 타유저 서재 (#166)
+
+정적 디자인으로는 안 잡혀 **사람에게 확인받아 확정한 것**만 적는다(정본·컨벤션으로 정해지는 건 제외).
+
+- **데이터는 내 서재와 같은 V2 엔드포인트**를 대상 userID로 호출한다 → 커서 무한 스크롤·키워드 칩이 내 서재와 동일하게 동작한다. 구 V1(`LoadUserLibraryUseCase` 이전 버전)은 첫 20개 고정·필터 무시라 버렸다.
+- **정렬은 내 서재와 같은 6종**(`LibrarySortSheet` 재사용). ⚠️ **Figma 시안의 "최신 순"(공용 `SortType` 2종)과 다른 건 의도된 결정**이다 — 시안만 보고 2종으로 되돌리지 말 것.
+- **그리드↔리스트 토글은 아이콘 버튼 하나**이고, 아이콘은 **지금 보고 있는 모드**를 나타낸다(누르면 갈 모드 ❌). 내 서재의 캡슐 세그먼트와 컨트롤 모양이 다른 건 디자인이 화면별로 다르게 잡힌 결과다.
+- **상단은 커스텀 헤더**(뒤로가기 `icNavigateLeft` + 중앙 "서재" title2). 시스템 네비바를 쓰지 않는 이유는 폰트·back 아이콘이 디자인과 달라서다 → 그 대가로 `SwipeBackEnabler`가 필요하다(아래 주의사항).
+- **타이틀은 "서재" 고정** — 대상 유저의 닉네임을 넣지 않는다(디자인).
+- **빈 상태는 한 가지뿐**(`"보관함이 비어있어요"`, CTA 없음, 남은 공간 가운데). 필터가 없으니 내 서재의 "필터로 0건" 분화가 존재하지 않는다. 카운트·정렬·토글 행은 **빈 상태에서도 유지**한다(디자인 시안 그대로).
+- **첫 페이지 실패는 네비게이션 바만 남기고** 그 아래를 `NetworkErrorView`로 대체한다(카운트·정렬·토글 함께 숨김 — 내 서재와 같은 규칙).
+
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`icNavigateLeft`를 그냥 쓰면 디자인보다 훨씬 흐리다** — 이 에셋의 원색은 연회색(#C7C7D0)인데 시안의 뒤로가기 화살표는 검정이다. `renderingMode(.template)` + `foregroundStyle(Color.wssBlack)`으로 색을 입혀야 한다(DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목이 이 화면에서 실제로 걸렸다). 위치도 화면 왼쪽 끝이 아니라 **6pt 안쪽**에서 시작한다.
+- ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → `SwipeBackEnabler`(Support/)를 `.background`에 걸어 되살린다. 이 구현은 **`NovelDetailFeature`에도 같은 게 있다**(Feature끼리 import하지 않는 규칙 때문에 복제). 커스텀 헤더 화면이 더 늘면 공용 모듈 승격을 검토할 것.
 - 서재 Domain을 찾을 때 `LibraryDomain`을 만들지 말 것 — 정본은 `NovelDomain/Sources/Entity/Library/`와 `NovelDomain/Sources/UseCase/`다.
 - ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.

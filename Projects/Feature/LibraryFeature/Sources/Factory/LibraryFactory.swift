@@ -48,4 +48,31 @@ public enum LibraryFactory {
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
+
+    /// 다른 사용자의 서재 화면. **`NavigationStack`에 push되는 화면**이라 뒤로가기는 화면이 스스로 처리한다
+    /// (내 서재는 탭 콘텐츠라 반대 — 그쪽엔 뒤로가기가 없다).
+    ///
+    /// - Parameters:
+    ///   - userID: 조회 대상 사용자. 진입 시점(유저 프로필 등)에서 넘긴다.
+    ///   - onNovelSelected: 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
+    ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백.
+    @MainActor
+    public static func makeUserLibraryView(
+        userID: UserID,
+        loadUserLibraryUseCase: LoadUserLibraryUseCase,
+        logger: Logger? = nil,
+        onNovelSelected: @escaping (NovelID) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        let viewModel = UserLibraryViewModel(
+            userID: userID,
+            loadUserLibraryUseCase: loadUserLibraryUseCase,
+            logger: logger
+        )
+        return UserLibraryView(
+            viewModel: viewModel,
+            onNovelSelected: onNovelSelected,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
 }

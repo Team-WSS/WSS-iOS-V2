@@ -32,6 +32,15 @@ struct LibraryFeatureDemoApp: App {
     }
 }
 
+/// 타유저 서재 Mock 시나리오 — **버튼 하나 = 데이터 조건 하나**(NovelDetailFeature Demo 규약).
+/// 실서버 모드에선 무시되고 실제 응답을 그린다.
+private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
+    case filled = "정상"
+    case empty = "빈 서재"
+    case failure = "실패"
+    var id: String { rawValue }
+}
+
 // MARK: - Root: Mock ↔ 실서버 토글
 
 // Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
@@ -46,11 +55,16 @@ private struct DemoRootView: View {
     @State private var dataSource: DataSource = .mock
     /// 실서버 서재 응답의 키워드 이름을 `Keyword`로 복원할 수 있도록, 목록을 만들기 전에 캐시를 채운다.
     @State private var isLiveKeywordCacheReady = false
+    /// push된 타유저 서재 — nil이면 닫힌 상태.
+    @State private var presentedUserLibrary: DemoUserLibraryScenario?
     /// 소스 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
     private var libraryViewID: String { dataSource.rawValue }
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
+
+    /// 실서버 타유저 서재 조회 대상 — 내 서재(10041)와 다른 사용자여야 "타유저" 경로가 실제로 검증된다.
+    private let liveOtherUserID = 10032
 
     var body: some View {
         NavigationStack {
@@ -61,8 +75,13 @@ private struct DemoRootView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 20)
 
+                userLibraryEntryRow
+
                 libraryView
                     .id(libraryViewID)
+            }
+            .navigationDestination(item: $presentedUserLibrary) { scenario in
+                userLibraryView(scenario)
             }
             .task(id: dataSource) {
                 guard dataSource == .live else {
@@ -74,6 +93,44 @@ private struct DemoRootView: View {
                 await makeLiveKeywordRepository(client: client).syncKeywords()
                 isLiveKeywordCacheReady = true
             }
+        }
+    }
+
+    /// 타유저 서재 진입 — 실제 흐름과 같이 **push**로 띄워 뒤로가기·스와이프백까지 함께 검증한다.
+    private var userLibraryEntryRow: some View {
+        HStack(spacing: 8) {
+            Text("타유저 서재")
+                .font(.caption)
+            if dataSource == .mock {
+                ForEach(DemoUserLibraryScenario.allCases) { scenario in
+                    Button(scenario.rawValue) { presentedUserLibrary = scenario }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            } else {
+                Button("ID \(liveOtherUserID)") { presentedUserLibrary = .filled }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func userLibraryView(_ scenario: DemoUserLibraryScenario) -> some View {
+        switch dataSource {
+        case .mock:
+            LibraryFactory.makeUserLibraryView(
+                userID: UserID(1003),
+                loadUserLibraryUseCase: DemoLoadUserLibraryUseCase(scenario: scenario),
+                logger: consoleLogger,
+                onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveUserLibraryView()
         }
     }
 
@@ -122,8 +179,9 @@ private struct DemoRootView: View {
         )
     }
 
+    /// 실서버 Repository 조립 — 내 서재·타유저 서재가 같은 배관을 쓴다.
     @MainActor
-    private func makeLiveView() -> some View {
+    private func makeLiveRepositories() -> (novel: NovelRepository, keyword: KeywordRepository) {
         let client = makeLiveClient()
         let userDefaults = UserDefaultsStorage()
         userDefaults.set(.userID, 10041)
@@ -132,7 +190,29 @@ private struct DemoRootView: View {
             appStorage: userDefaults,
             logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
-        let keywordRepository = makeLiveKeywordRepository(client: client)
+        return (repository, makeLiveKeywordRepository(client: client))
+    }
+
+    @MainActor
+    private func makeLiveUserLibraryView() -> some View {
+        let repositories = makeLiveRepositories()
+        return LibraryFactory.makeUserLibraryView(
+            userID: UserID(liveOtherUserID),
+            loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
+                novelRepository: repositories.novel,
+                keywordRepository: repositories.keyword
+            ),
+            logger: consoleLogger,
+            onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    @MainActor
+    private func makeLiveView() -> some View {
+        let repositories = makeLiveRepositories()
+        let repository = repositories.novel
+        let keywordRepository = repositories.keyword
         return LibraryFactory.makeView(
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: repository,
@@ -161,8 +241,38 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
     func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
+        return DemoLibraryNovels.page(cursor: cursor)
+    }
+}
 
-        let all = Self.novels
+/// 타유저 서재 Mock — 시나리오(정상·빈 서재·실패)별로 다른 응답을 낸다.
+/// 목록 데이터는 내 서재 Mock과 공유한다(같은 셀을 그리므로 값 조합 축이 같아야 비교가 된다).
+private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
+
+    let scenario: DemoUserLibraryScenario
+
+    func execute(
+        id: UserID,
+        filter: LibraryFilter,
+        cursor: String?
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        switch scenario {
+        case .filled:
+            return DemoLibraryNovels.page(cursor: cursor)
+        case .empty:
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
+        case .failure:
+            throw .networkUnavailable
+        }
+    }
+}
+
+private enum DemoLibraryNovels {
+
+    /// 페이지 크기 20, 총 25개 → 2페이지. 커서는 다음 시작 인덱스를 문자열로 왕복한다.
+    static func page(cursor: String?) -> (CursorPaginated<LibraryNovel>, Int) {
         let pageSize = 20
         let start = cursor.flatMap(Int.init) ?? 0
         let end = min(start + pageSize, all.count)
@@ -184,7 +294,7 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
     /// 셀이 값 조합에 따라 어떻게 보이는지 한 화면에서 확인하려고 축을 서로 다른 주기로 돌린다 —
     /// 제목 줄 수(2) · 표지 유무(5) · 읽기 상태(3) · 별점 유무(4) · 기간 유무(4) · 매력포인트 수(4) · 키워드 수(5).
     /// 그리드 행이 어긋나거나 특정 조합이 깨지면 여기서 바로 드러난다.
-    private static let novels: [LibraryNovel] = (1...25).map { index in
+    private static let all: [LibraryNovel] = (1...25).map { index in
         let isLongTitle = index.isMultiple(of: 2)
         let hasRating = index % 4 != 0
         let hasPeriod = index % 4 != 1
