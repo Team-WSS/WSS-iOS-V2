@@ -88,6 +88,6 @@ public extension NovelGenre {
     ]
 
     static let searchGenre: [NovelGenre] = [
-        .fantasy, .modernFantasy, .romance, .romanceFantasy, .wuxia, .BL, .lightNovel, .drama, .mystery
+        .fantasy, .modernFantasy, .romanceFantasy, .romance, .wuxia, .BL, .lightNovel, .drama, .mystery
     ]
 }
