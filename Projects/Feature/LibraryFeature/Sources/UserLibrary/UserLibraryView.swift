@@ -64,7 +64,7 @@ struct UserLibraryView: View {
         content
             .toolbar(.hidden, for: .navigationBar)
             // 네비바를 숨기면 스와이프 뒤로가기까지 함께 꺼진다 → 제스처만 따로 되살린다.
-            .background(SwipeBackEnabler())
+            .enableSwipeBack()
             .onAppear { viewModel.handle(.load) }
             .sheet(isPresented: $isSortSheetPresented) {
                 LibrarySortSheet(selected: viewModel.state.filter.sortType) { sortType in
