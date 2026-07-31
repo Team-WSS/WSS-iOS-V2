@@ -194,10 +194,21 @@ private extension LibraryFilterSheet {
         .padding(.horizontal, 20)
     }
 
+    /// 선택 칩 행이 생기거나 사라져 **레이아웃이 바뀌는** 액션은 애니메이션 트랜잭션 자체를 꺼서 반영한다.
+    /// ⚠️ 뷰에서 `.animation` modifier를 떼는 것만으론 부족하다 — 액션 시점 트랜잭션이 살아 있으면
+    /// 칩 행 등장/제거로 밀리는 레이아웃이 그대로 애니메이트돼, **방금 누른 항목만** 뒤늦게 따라온다.
+    func handleWithoutAnimation(_ action: LibraryFilterSheetViewModel.Action) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            viewModel.handle(action)
+        }
+    }
+
     func readingStatusItem(_ status: ReadingStatus) -> some View {
         let isSelected = viewModel.state.filter.readingStatus.contains(status)
         return Button {
-            viewModel.handle(.toggleReadingStatus(status))
+            handleWithoutAnimation(.toggleReadingStatus(status))
         } label: {
             VStack(spacing: 5) {
                 (isSelected ? status.fillImage : status.strokeImage)
@@ -213,7 +224,8 @@ private extension LibraryFilterSheet {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.1), value: isSelected)
+        // ⚠️ 색 전환 애니메이션(`.animation(value: isSelected)`)을 걸지 않는다 — 위치 변화까지 함께 애니메이트돼,
+        // 첫 선택으로 선택 칩 행이 생겨 아래가 밀릴 때 **방금 누른 버튼만** 뒤늦게 미끄러져 내려온다.
     }
 
     var genreContent: some View {
@@ -298,7 +310,7 @@ private extension LibraryFilterSheet {
     func attractivePointItem(_ point: AttractivePoint) -> some View {
         let isSelected = viewModel.state.filter.attractivePoint.contains(point)
         return Button {
-            viewModel.handle(.toggleAttractivePoint(point))
+            handleWithoutAnimation(.toggleAttractivePoint(point))
         } label: {
             VStack(spacing: 6) {
                 point.iconImage
@@ -313,7 +325,7 @@ private extension LibraryFilterSheet {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.1), value: isSelected)
+        // ⚠️ 애니메이션 금지 — 이유는 `readingStatusItem` 주석 참고(선택 칩 행 등장 시 이 버튼만 늦게 내려온다).
     }
 
     /// 키워드 — 카운트는 고정하고, 가변 길이인 칩 영역만 남은 높이 안에서 스크롤한다.
