@@ -42,5 +42,11 @@ enum KeywordEndpoint: Endpoint {
 
     var body: RequestBody { .none }
 
-    var authorization: AuthorizationPolicy { .requireToken }
+    var authorization: AuthorizationPolicy {
+        switch self {
+        case .searchKeywords(_): .requireToken
+        case .getPopularKeywords: .withoutToken
+        }
+        
+    }
 }

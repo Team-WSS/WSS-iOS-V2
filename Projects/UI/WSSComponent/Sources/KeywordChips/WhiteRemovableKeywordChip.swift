@@ -11,14 +11,17 @@ import DesignSystem
 
 public struct WhiteRemovableKeywordChip: View {
     private let keyword: String
-    private let action: () -> Void
+    private let onSelect: () -> Void
+    private let onDelete: () -> Void
 
     public init(
         keyword: String,
-        action: @escaping () -> Void
+        onSelect: @escaping () -> Void,
+        onDelete: @escaping () -> Void
     ) {
         self.keyword = keyword
-        self.action = action
+        self.onSelect = onSelect
+        self.onDelete = onDelete
     }
 
     public var body: some View {
@@ -27,28 +30,33 @@ public struct WhiteRemovableKeywordChip: View {
                 .applyWSSFont(.body3, color: .wssPrimary100)
                 .fixedSize()
 
-            WSSImage.icKeywordCancel.swiftUIImage
-                .resizable()
-                .scaledToFit()
-                .frame(width: 16, height: 16)
+            Button(action: onDelete) {
+                WSSImage.icKeywordCancel.swiftUIImage
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+            }
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 5)
-        .background(Color.wssWhite)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.wssPrimary100, lineWidth: 1))
+        .background { Capsule().fill(Color.wssWhite) }
+        .overlay { Capsule().strokeBorder(Color.wssPrimary100, lineWidth: 1) }
         .contentShape(Capsule())
-        .onTapGesture { action() }
+        .onTapGesture { onSelect() }
     }
 }
 
 #Preview {
     VStack(spacing: 12) {
-        WhiteRemovableKeywordChip(keyword: "환생물", action: {
-            print("칩 클릭")
+        WhiteRemovableKeywordChip(keyword: "환생물", onSelect: {
+            print("키워드로 검색")
+        }, onDelete: {
+            print("삭제")
         })
-        WhiteRemovableKeywordChip(keyword: "긴 키워드 텍스트 예시", action: {
-            print("칩 클릭")
+        WhiteRemovableKeywordChip(keyword: "긴 키워드 텍스트 예시", onSelect: {
+            print("키워드로 검색")
+        }, onDelete: {
+            print("삭제")
         })
     }
     .padding()
