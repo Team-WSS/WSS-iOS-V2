@@ -10,7 +10,7 @@ import PhotosUI
 
 import BaseDomain
 import FeedDomain
-import NovelDomain
+import SearchDomain
 import DesignSystem
 import WSSComponent
 
@@ -462,7 +462,7 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
     
-    func searchByFilter(_ filter: NovelDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByFilter(_ filter: SearchDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: [], hasNext: false), 0)
     }
 }

@@ -10,7 +10,7 @@ import Observation
 
 import BaseDomain
 import FeedDomain
-import NovelDomain
+import SearchDomain
 
 @MainActor
 @Observable

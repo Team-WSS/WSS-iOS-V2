@@ -9,11 +9,11 @@ import SwiftUI
 
 import FeedFeature
 import FeedDomain
-import NovelDomain
+import SearchDomain
 import BaseDomain
 
 import FeedData
-import NovelData
+import SearchData
 import BaseData
 
 import Networking
@@ -26,8 +26,6 @@ struct CreateFeedDemoScene: View {
     private let searchNovelUseCase: SearchNovelUseCase
 
     init() {
-        let storage = UserDefaultsStorage()
-
         let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
 
         let feedRepository = FeedDataFactory.makeFeedRepository(
@@ -35,14 +33,13 @@ struct CreateFeedDemoScene: View {
             logger: DataLogger(moduleName: "FeedData", underlying: OSLogger.feed)
         )
 
-        let novelRepository = NovelDataFactory.makeNovelRepository(
-            client: client,
-            appStorage: storage,
-            logger: DataLogger(moduleName: "NovelData", underlying: OSLogger.novel)
+        let searchRepository = SearchDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "SearchData", underlying: OSLogger.search)
         )
 
         self.createFeedUseCase = DefaultCreateFeedUseCase(repository: feedRepository)
-        self.searchNovelUseCase = DefaultSearchNovelUseCase(novelRepository: novelRepository)
+        self.searchNovelUseCase = DefaultSearchNovelUseCase(searchNovelRepository: searchRepository)
     }
 
     var body: some View {

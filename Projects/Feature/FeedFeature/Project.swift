@@ -17,7 +17,7 @@ let project = Project.createFeatureModule(
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.feed)),
-        .module(.domain(.novel)),
+        .module(.domain(.search)),
         .module(.domain(.comment)),
         .module(.domain(.social)),
         .module(.domain(.profile)),
@@ -29,7 +29,7 @@ let project = Project.createFeatureModule(
         .module(.core(.networking)),
         .module(.data(.base)),
         .module(.data(.feed)),
-        .module(.data(.novel)),
+        .module(.data(.search)),
         .module(.data(.profile)),
         .module(.data(.social)),
         .module(.data(.comment))

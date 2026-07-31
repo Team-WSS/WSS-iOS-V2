@@ -9,7 +9,6 @@
 import SwiftUI
 
 import BaseDomain
-import NovelDomain
 import DesignSystem
 import WSSComponent
 
