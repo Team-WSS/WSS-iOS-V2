@@ -71,7 +71,8 @@ struct NormalSearchView: View {
                         onSelect: { word in
                             isFocused = false
                             viewModel.handle(.executeSearch(word.word))
-                        }
+                        },
+                        onDismissKeyboard: { isFocused = false }
                     )
                 } else {
                     Spacer().frame(height: 8)
