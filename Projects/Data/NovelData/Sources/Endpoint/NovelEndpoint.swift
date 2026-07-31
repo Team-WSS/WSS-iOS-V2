@@ -1,5 +1,5 @@
 //
-//  NovelEndPoint.swift
+//  NovelEndpoint.swift
 //  NovelData
 //
 //  Created by Seoyeon Choi on 3/27/26.
