@@ -11,7 +11,7 @@
 - **브라우징**: 진입 시 `LoadTotalKeywordsUseCase`로 전체 카테고리(`KeywordCategory.allCases`)를 로드. 카테고리별 블록은 기본 2줄만 보이고 chevron으로 펼침/접힘.
 - **검색**: `WSSSearchBar`의 제출(엔터·버튼)에서만 `SearchKeywordsUseCase`를 호출 — 실시간(타이핑 중) 검색 아님. 결과는 카테고리 구분 없는 평탄한 키워드 칩 리스트, 빈 결과는 화면 중앙 `WSSEmptyView`.
 - **취소**: `WSSSearchBar`의 x 버튼(`onCancel`)을 누르면 검색을 취소하고 포커스를 내려 브라우징 화면으로 복귀한다.
-- **선택**: 브라우징·검색 결과 어디서든 칩을 탭하면 선택 토글(`state.selectedKeywords`, 선택 순서 유지). 선택된 키워드는 서치바 바로 아래 가로 스크롤 트레이(`WhiteRemovableKeywordChip`)에 표시되며, 트레이에서도 탭으로 해제 가능(동일한 `.toggleKeyword` 액션). 하단 액션바의 "초기화"로 전체 해제.
+- **선택**: 브라우징·검색 결과 어디서든 칩을 탭하면 선택 토글(`state.selectedKeywords`, 선택 순서 유지). 선택된 키워드는 서치바 바로 아래 가로 스크롤 트레이(`WhiteRemovableKeywordChip`)에 표시된다. **트레이 칩은 `onSelect`를 생략해 몸통 탭을 의도적으로 비활성화하고, X 버튼(`onDelete`)만 `.toggleKeyword`로 해제한다**(`onSelect`는 `WhiteRemovableKeywordChip`에서 `(() -> Void)? = nil`) — 브라우징/검색 결과 칩(`CapsuleSelectableKeywordChip`, 몸통 탭=토글)과 인터랙션이 다르니 섞어 가정하지 말 것. 하단 액션바의 "초기화"로 전체 해제.
 - **포커스 시 흰 화면**: 서치바가 포커스를 얻으면(`isSearchBarFocused`) 검색 여부와 무관하게 카테고리 브라우징(회색 배경)을 숨기고 흰 배경만 보여준다.
 
 ## 주의사항 (작업 중 발견 시 누적)
