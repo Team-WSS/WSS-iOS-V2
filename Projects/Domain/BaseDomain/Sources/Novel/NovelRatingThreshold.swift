@@ -1,6 +1,6 @@
 //
 //  NovelRatingThreshold.swift
-//  NovelDomain
+//  BaseDomain
 //
 //  Created by Seoyeon Choi on 2/22/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.

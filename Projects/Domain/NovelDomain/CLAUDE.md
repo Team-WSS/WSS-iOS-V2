@@ -19,3 +19,4 @@
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
 - 엔티티 시그니처를 바꾸면 **`Testing/` Mock과 `Tests/`도 같이 갱신**할 것 — #135에서 authors/genres/필터 변경이 미반영돼 테스트 타깃이 컴파일 불가로 방치됐었다(#154에서 수리).
+- **`Novel`/`NovelRatingThreshold`/`NovelPublicationStatus`는 이 모듈 소유가 아니라 `BaseDomain`에 있다** — `SearchDomain`도 참조해야 해서 공통 토대로 승격됐다. `NovelInformation`/`MyLibraryFilter` 등은 그대로 `import BaseDomain`으로 쓴다.
