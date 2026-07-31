@@ -23,6 +23,7 @@ final class NormalSearchViewModel {
         var popularKeywords: [Keyword] = []
         var searchText: String = ""
         var autoCompletionWords: [SearchAutoCompletionWord] = []
+        var isLoadingAutoCompletion = false
         var isSearchExecuted = false
         var searchResultNovels: [Novel] = []
         var searchResultCount: Int = 0
@@ -195,8 +196,10 @@ private extension NormalSearchViewModel {
 
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             state.autoCompletionWords = []
+            state.isLoadingAutoCompletion = false
             return
         }
+        state.isLoadingAutoCompletion = true
         autoCompletionTask = Task { await loadAutoCompletionWords(searchText: text) }
     }
 
@@ -209,6 +212,7 @@ private extension NormalSearchViewModel {
         state.searchText = trimmedText
         autoCompletionTask?.cancel()
         state.autoCompletionWords = []
+        state.isLoadingAutoCompletion = false
         state.isSearchExecuted = true
 
         searchResultTask?.cancel()
@@ -311,7 +315,10 @@ private extension NormalSearchViewModel {
         try? await Task.sleep(nanoseconds: 300_000_000)
         guard !Task.isCancelled else { return }
 
-        defer { autoCompletionTask = nil }
+        defer {
+            autoCompletionTask = nil
+            state.isLoadingAutoCompletion = false
+        }
 
         do {
             let words = try await searchAutoCompletionWordsUseCase.execute(searchText: searchText)

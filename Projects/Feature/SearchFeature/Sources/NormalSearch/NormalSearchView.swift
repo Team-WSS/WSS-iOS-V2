@@ -68,6 +68,7 @@ struct NormalSearchView: View {
                     NormalSearchAutoCompletionView(
                         searchText: viewModel.state.searchText,
                         words: viewModel.state.autoCompletionWords,
+                        isLoading: viewModel.state.isLoadingAutoCompletion,
                         onSelect: { word in
                             isFocused = false
                             viewModel.handle(.executeSearch(word.word))
