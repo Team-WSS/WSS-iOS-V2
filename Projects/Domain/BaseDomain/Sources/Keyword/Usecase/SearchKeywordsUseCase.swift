@@ -21,7 +21,14 @@ public final class DefaultSearchKeywordUseCase: SearchKeywordsUseCase {
     }
 
     public func execute(searchText: String) async throws(RepositoryError) -> [Keyword] {
-        let groups = try await keywordRepository.searchKeywords(searchText)
-        return groups.flatMap { $0.keywords }
+        do {
+            let groups = try await keywordRepository.searchKeywords(searchText)
+            return groups.flatMap { $0.keywords }
+        } catch {
+            // LoadTotalKeywordsUseCase와 동일한 폴백: 원인을 가리지 않고 서버 동기화 1회 후 재조회한다.
+            await keywordRepository.syncKeywords()
+            let groups = try await keywordRepository.searchKeywords(searchText)
+            return groups.flatMap { $0.keywords }
+        }
     }
 }

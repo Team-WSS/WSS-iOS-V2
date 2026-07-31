@@ -21,6 +21,13 @@ public final class DefaultFetchTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
     }
 
     public func execute() async throws(RepositoryError) -> [KeywordGroup] {
-        try await keywordRepository.fetchKeywords()
+        do {
+            return try await keywordRepository.fetchKeywords()
+        } catch {
+            // 원인(캐시 미스·매핑 실패 등)을 가리지 않고 조회 실패 시 서버 동기화를 한 번 시도한 뒤 재조회한다.
+            // syncKeywords()는 throw하지 않으므로 동기화 자체가 실패해도 재조회를 시도하며, 그 결과(성공 또는 새 에러)를 그대로 전달한다.
+            await keywordRepository.syncKeywords()
+            return try await keywordRepository.fetchKeywords()
+        }
     }
 }

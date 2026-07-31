@@ -12,7 +12,7 @@
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
 - **Novel 서브도메인** (`Novel/`): `Novel` Entity(관심 등록 정책 포함) + `NovelRatingThreshold` + `NovelPublicationStatus`. 원래 `NovelDomain` 소유였으나 `NovelDomain`(서재·상세)과 `SearchDomain`(작품 검색) 양쪽이 참조해야 해서 이곳으로 승격했다(작품 검색을 `SearchDomain`으로 옮긴 리팩토링, 관련 배경은 `SearchDomain/CLAUDE.md` 참고).
-- **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordGroup`, `PopularKeywords` Entity + `KeywordRepository` + `SearchKeywordsUseCase`/`LoadTotalKeywordsUseCase`(`Keyword/Usecase/`, 전부 이 하위로 통일됨).
+- **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordCategory`(카테고리 enum), `KeywordGroup`(`category` + `keywords`), `PopularKeywords` Entity + `KeywordRepository` + `SearchKeywordsUseCase`/`LoadTotalKeywordsUseCase`(전부 `Keyword/` 하위로 통합됨).
 - **`AppURL`** — 앱 전역 외부 웹 링크 카탈로그(예: 작품 등록 문의, 오류 제보 노션 폼). Data가 아니라 여기 있는 이유: Feature는 Data를 import할 수 없어서(`App → Feature → Domain ← Data`), Feature가 직접 참조 가능한 곳이 BaseDomain뿐이다. 순수 `URL?` 상수 나열 — 네트워크 호출·설정 로딩 없음(그런 게 필요해지면 BaseData의 `NetworkingConfig`처럼 Data 레이어로 옮길 것).
 
 ## 주의사항 (작업 중 발견 시 누적)
@@ -23,3 +23,4 @@
 - 화면 전용 부분집합/순서가 있는 필터 목록(예: 구 `NovelGenre.filterGenre`)은 여기 두지 않는다 — `BaseDomain`은 순수 enum만 갖고, 그런 목록은 `WSSComponent`의 `DomainPresentation` 확장(`NovelGenre+Presentation`)에 둔다.
 - `PopularKeywords`(`Keyword/Entity/`)는 실시간 인기 키워드 랭킹을 담는 별도 타입 — 랭킹은 `keywords: [Keyword]` **배열 순서로만** 표현한다(명시적 rank/count 필드 없음).
 - `NovelGenre.filterGenre`(필터용)와 `.searchGenre`(검색 화면 장르 그리드용)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
+- **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.

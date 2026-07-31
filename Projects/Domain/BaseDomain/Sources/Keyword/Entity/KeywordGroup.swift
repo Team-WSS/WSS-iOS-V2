@@ -9,17 +9,14 @@
 import Foundation
 
 public struct KeywordGroup {
-    public let name: String
-    public let image: URL?
+    public let category: KeywordCategory
     public let keywords: [Keyword]
 
     public init(
-        name: String,
-        image: URL?,
+        category: KeywordCategory,
         keywords: [Keyword]
     ) {
-        self.name = name
-        self.image = image
+        self.category = category
         self.keywords = keywords
     }
 }

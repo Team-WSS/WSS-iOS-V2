@@ -58,14 +58,14 @@ V2는 이런 문제를 줄이기 위해 시작한 리빌드 프로젝트입니�
 ## 🏗 아키텍처
 
 현재는 `Core / Domain / Data` 기반 레이어를 안정화하면서,
-`Feature`를 화면 단위(`NovelReviewFeature` → `FeedFeature` → `NovelDetailFeature` → `SearchFeature`)로 점진 연결하고 있으며, 나머지 화면과 `App` 조립을 이어갈 계획입니다.
+`Feature`를 화면 단위(`NovelReviewFeature` → `FeedFeature` → `NovelDetailFeature` → `SearchFeature` → `KeywordFeature`)로 점진 연결하고 있으며, 나머지 화면과 `App` 조립을 이어갈 계획입니다.
 
 현재 V2는 기능을 한 번에 모두 옮기기보다, 기반 구조를 먼저 분리하고 검증 가능한 단위로 쪼개는 데 초점을 맞추고 있습니다.
 
 - `Core`는 Networking, Keychain, Logger처럼 재사용 가능한 기반 기술을 담당합니다.
 - `Domain`은 Entity, UseCase, Repository 프로토콜 등 비즈니스 로직을 담당합니다.
 - `Data`는 DTO, Mapper, Service, Repository 구현체를 통해 외부 데이터를 연결합니다.
-- `Feature`는 화면 단위로 점진 연결 중(`NovelReviewFeature`·`FeedFeature`·`NovelDetailFeature`·`SearchFeature`)이며, 나머지 화면과 `App` 조립을 단계적으로 이어갈 계획입니다.
+- `Feature`는 화면 단위로 점진 연결 중(`NovelReviewFeature`·`FeedFeature`·`NovelDetailFeature`·`SearchFeature`·`KeywordFeature`)이며, 나머지 화면과 `App` 조립을 단계적으로 이어갈 계획입니다.
 
 ### 전체 구조
 
@@ -94,6 +94,7 @@ App
 │
 Feature
 ├── FeedFeature           # 피드 작성 화면
+├── KeywordFeature        # 키워드 브라우징·검색 화면
 ├── NovelDetailFeature    # 작품 상세 화면
 ├── NovelReviewFeature    # 작품 리뷰 화면 (첫 Feature 모듈)
 └── SearchFeature         # 검색 화면

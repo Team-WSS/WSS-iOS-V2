@@ -34,7 +34,7 @@ public struct CapsuleSelectableKeywordChip: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.wssPrimary100, lineWidth: 1)
+                    .strokeBorder(Color.wssPrimary100, lineWidth: 1)
                     .opacity(isSelected ? 1 : 0)
             )
             .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)

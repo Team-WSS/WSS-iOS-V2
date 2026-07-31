@@ -5,6 +5,9 @@ public struct WSSSearchBar: View {
     @Binding var text: String
     let placeholder: String
     let onSearch: () -> Void
+    /// 텍스트를 비우는 x 버튼(`icCancel`)을 탭했을 때 추가로 호출된다. 검색 취소·이전 화면 복귀 등
+    /// 호출부가 텍스트 초기화 이상의 반응이 필요할 때만 넘긴다(기본 nil이면 텍스트만 비움).
+    let onCancel: (() -> Void)?
     let externalFocus: FocusState<Bool>.Binding?
 
     @FocusState private var internalFocus: Bool
@@ -13,12 +16,14 @@ public struct WSSSearchBar: View {
         text: Binding<String>,
         placeholder: String,
         isFocused: FocusState<Bool>.Binding? = nil,
-        onSearch: @escaping () -> Void
+        onSearch: @escaping () -> Void,
+        onCancel: (() -> Void)? = nil
     ) {
         self._text = text
         self.placeholder = placeholder
         self.externalFocus = isFocused
         self.onSearch = onSearch
+        self.onCancel = onCancel
     }
 
     private var isActive: Bool { (externalFocus?.wrappedValue ?? internalFocus) || !text.isEmpty }
@@ -51,7 +56,10 @@ public struct WSSSearchBar: View {
                 Spacer()
 
                 if !text.isEmpty {
-                    Button(action: { text = "" }) {
+                    Button(action: {
+                        text = ""
+                        onCancel?()
+                    }) {
                         WSSImage.icCancel.swiftUIImage
                             .frame(width: 36, height: 36)
                     }

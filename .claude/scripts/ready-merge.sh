@@ -6,6 +6,7 @@
 # 사용법:
 #   ready-merge.sh preflight <base>   # 안전 확인 + PR/behind/ahead 출력 (되돌릴 수 있음)
 #   ready-merge.sh rebase <base>      # git rebase origin/<base> (충돌이면 REBASE=CONFLICT, exit 2)
+#   ready-merge.sh build-all [sim]    # (선택) tuist build로 전체 buildable scheme 순회 검증 (되돌릴 수 있음, 느림)
 #   ready-merge.sh push               # git push --force-with-lease (외부 비가역 — 훅이 승인 게이트)
 set -euo pipefail
 
@@ -80,6 +81,27 @@ cmd_rebase() {
   fi
 }
 
+# ── build-all: 되돌릴 수 있음(레포 상태 불변). rebase 이후, push 전에 선택 실행 ──────────────
+cmd_build_all() {
+  local sim="${1:-iPhone 17}"
+  echo "🔨 전체 모듈 빌드 확인 중 (tuist build --platform ios -d \"$sim\")... 모듈이 많아 수 분 걸릴 수 있습니다."
+
+  local runner=()
+  if command -v mise >/dev/null 2>&1; then
+    runner=(mise exec --)
+  elif [[ -x "$HOME/.local/bin/mise" ]]; then
+    runner=("$HOME/.local/bin/mise" exec --)
+  fi
+
+  if "${runner[@]}" tuist build --platform ios -d "$sim"; then
+    echo "BUILD_ALL=OK"
+  else
+    echo "BUILD_ALL=FAIL"
+    echo "위 xcodebuild 출력에서 실패한 scheme/파일을 확인하세요(tuist build는 첫 실패 지점에서 멈춥니다)." >&2
+    exit 1
+  fi
+}
+
 # ── push: 외부 비가역. 훅 승인 게이트 후 호출 ───────────────────────────────────────
 cmd_push() {
   local cur; cur="$(assert_work_branch)"
@@ -94,6 +116,7 @@ sub="${1:-}"; shift || true
 case "$sub" in
   preflight) cmd_preflight "$@" ;;
   rebase)    cmd_rebase "$@" ;;
+  build-all) cmd_build_all "$@" ;;
   push)      cmd_push "$@" ;;
-  *)         die "사용법: ready-merge.sh {preflight <base> | rebase <base> | push}" ;;
+  *)         die "사용법: ready-merge.sh {preflight <base> | rebase <base> | build-all [sim] | push}" ;;
 esac
