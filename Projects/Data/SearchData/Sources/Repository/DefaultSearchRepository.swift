@@ -30,7 +30,9 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
 
         do {
             let response = try await service.getRecentSearchWords()
-            return SearchMapper.recentSearchWords(from: response)
+            let result = SearchMapper.recentSearchWords(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -48,6 +50,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
 
         do {
             try await service.deleteRecentSearchWord(id: word.id.value)
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -62,6 +65,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
 
         do {
             try await service.deleteAllRecentSearchWords()
+            logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -76,7 +80,9 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
 
         do {
             let response = try await service.getAutoCompletionWords(searchText: searchText)
-            return SearchMapper.searchAutoCompletionWords(from: response)
+            let result = SearchMapper.searchAutoCompletionWords(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -96,6 +102,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
         do {
             let response = try await service.getNormalSearchNovels(query: query)
             let result = SearchMapper.searchNovels(from: response)
+            logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
@@ -116,6 +123,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
             let query = SearchMapper.detailSearchQuery(from: filter)
             let response = try await service.getDetailSearchNovels(query: query)
             let result = SearchMapper.searchNovels(from: response)
+            logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

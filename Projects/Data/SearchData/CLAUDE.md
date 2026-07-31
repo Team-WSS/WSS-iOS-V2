@@ -20,3 +20,4 @@
 - `deleteRecentSearchWord`는 `RecentSearchWord.id.value`(서버 발급 Int)를 경로에 그대로 심는다(`CommentData`/`FeedData`의 delete 패턴과 동일) — 쿼리 DTO 없음.
 - **일반 검색(`getNormalSearchResult`, `/novels`)은 `.withoutToken`, 상세/필터 검색(`getDetailSearchResult`, `/novels/filtered`)은 `.requireToken`** — 인가 정책이 서로 다르다(`NovelData`에서 이관 시 그대로 유지). 자동완성(`.usesTokenIfAvailable`)과도 다르니 새 검색 엔드포인트 추가 시 이 셋 중 어디에 해당하는지 확인할 것.
 - **`searchNovel` 매퍼가 만드는 `Novel.genres`는 항상 `[]`다** — 검색 응답(`SearchNovelResponse`)에 장르 필드가 없어서다(상세 조회의 `novelGenres`와 달리). 검색 결과 카드에서 장르를 보여줘야 하면 이 응답만으로는 안 되고 상세 조회가 별도로 필요하다.
+- **`NovelData`에서 옮겨온 메서드는 성공 로깅(`logger?.logSuccess(action:)`)이 누락되기 쉽다** — `searchNovelByText`/`searchNovelByFilter` 이관 시 catch 분기의 에러 로깅만 그대로 옮기고 성공 분기의 `logSuccess` 호출을 빠뜨렸다가 PR 리뷰에서 발견됐다(#163). 다른 모듈에서 메서드를 이관할 때도 성공 로깅이 딸려왔는지 확인할 것.
