@@ -16,7 +16,7 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **전용 SearchDomain이 생겼다**(#163). 검색 관련 UseCase는 여전히 도메인별로 흩어져 있다: 작품 검색은 `NovelDomain.SearchNovelUseCase`, 키워드 검색은 `BaseDomain.SearchKeywordsUseCase`, 소소픽은 `RecommendationDomain.LoadSosoPickUseCase`, 최근 검색어/자동완성은 `SearchDomain`. 나머지 섹션 구현 시 어떤 UseCase를 쓸지 확정하고 필요하면 `Project.swift`의 `internalDependencies`를 갱신할 것.
-- 장르별 검색 그리드는 `BaseDomain.NovelGenre.searchGenre`(필터용 `filterGenre`와 순서가 다른 별개 목록) 순서를 그대로 쓴다.
+- 장르별 검색 그리드는 `WSSComponent`의 `NovelGenre.searchGenre`(`myFeedFilter`와 순서가 다른 별개 목록, `DomainPresentation` 확장) 순서를 그대로 쓴다.
 - `WhiteRemovableKeywordChip(keyword:onSelect:onDelete:)`로 콜백이 분리됨 — X 버튼(`onDelete`)은 `Button`, 나머지 칩 영역(`onSelect`)은 바깥 `onTapGesture`(WSSComponent CLAUDE.md의 "Button이 onTapGesture보다 hit-test 우선" 패턴). X는 이제 `Button`이라 접근성 트리에 잡혀 자동화 탭 가능. `onSelect`는 현재 검색창 텍스트만 채우고 실제 검색 실행은 TODO(`WSSSearchBar.onSearch`와 같이 아직 미구현).
 - `.tests` 타깃은 아직 없다. 화면 로직(특히 나머지 섹션의 UseCase 연동)이 늘어나면 `Project.swift`의 `targets`에 `.tests`를 추가하고 `Tests/` 폴더를 만든다.
 - **`.scrollBounceBehavior(.basedOnSize)`의 `axes` 기본값은 `.vertical`** — 가로 `ScrollView`(이 화면의 최근 검색어/장르별 검색/소소픽 전부 가로)에 걸려면 `axes: .horizontal`을 반드시 명시해야 한다. 안 그러면 아무 효과 없이 무시된다(에러도 없이 조용히 무시돼 원인 찾기 어렵다). 지금은 최근 검색어 섹션만 적용, 나머지 가로 스크롤도 필요해지면 같은 함정 주의.
