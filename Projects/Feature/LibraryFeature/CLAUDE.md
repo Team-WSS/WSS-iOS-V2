@@ -37,11 +37,10 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - ⚠️ **`icNavigateLeft`를 그냥 쓰면 디자인보다 훨씬 흐리다** — 이 에셋의 원색은 연회색(#C7C7D0)인데 시안의 뒤로가기 화살표는 검정이다. `renderingMode(.template)` + `foregroundStyle(Color.wssBlack)`으로 색을 입혀야 한다(DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목이 이 화면에서 실제로 걸렸다). 위치도 화면 왼쪽 끝이 아니라 **6pt 안쪽**에서 시작한다.
-- ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → `SwipeBackEnabler`(Support/)를 `.background`에 걸어 되살린다.
-  - ⚠️ **가로챈 `interactivePopGestureRecognizer.delegate`는 화면을 떠날 때 반드시 반납해야 한다**(`dismantleUIView` → `restoreDelegate()`). delegate는 **weak**라 Coordinator가 죽으면 nil이 되는데 UIKit은 스스로 되꽂지 않는다 → 그 뒤로 `shouldBegin` 기본값(YES)이 적용돼 **루트에서 pop 대상 없는 전환이 시작되고 내비게이션이 얼어붙는다**. 반납을 `deinit`이 아니라 `dismantleUIView`에서 하는 이유는 두 가지다: `deinit`은 마지막 릴리스가 일어난 스레드라 메인 보장이 없고(UIKit은 메인 전용), Coordinator가 아직 살아 있어야 `delegate === self`로 **소유권을 명시 비교**할 수 있다(`deinit` 중엔 weak가 이미 nil로 읽혀 비교가 불가능하다).
-  - ⚠️ **`NovelDetailFeature`에 같은 구현의 옛 복제본이 있는데, 그쪽엔 이 반납 로직이 없다**(Feature끼리 import하지 않는 규칙 때문에 복제된 것이 #166에서 한쪽만 고쳐져 갈라졌다). **두 화면이 같은 `NavigationStack`을 공유하면 NovelDetail을 먼저 다녀온 순간 delegate가 nil로 남아, 이 화면이 나중에 "원본"으로 nil을 캡처해 복원이 무력화된다.** NovelDetail 쪽도 같이 고치기 전에는 이 가드가 완전하지 않다. 복사해 갈 때 **반드시 이 파일 쪽을 정본으로** 삼을 것.
-  - 커스텀 헤더 화면이 더 늘면 공용 모듈 승격을 검토할 것(그때 두 복제본을 하나로 합치는 게 자연스럽다).
+- ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → WSSComponent의 **`.enableSwipeBack()`** 을 걸어 되살린다. 화면 안에 자체 구현을 두지 말 것 — 이 모듈에도 `Support/SwipeBackEnabler.swift`로 복제돼 있었으나 `NovelDetailFeature` 복제본과 갈라져 사고가 나 #166에서 공용으로 통합했다. **delegate 수명·반납이 왜 함정인지는 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 같은 항목이 정본.**
 - **`reloadFromScratch()`에서 `totalCount`를 비우는지는 두 화면이 다르다** — 타유저 서재는 **정렬만** 바꿀 수 있어 개수가 불변이라 보존하고(비우면 로딩 동안 "n개"가 "0개"로 깜빡인다), 내 서재는 필터로 개수가 실제로 바뀌므로 비운다. 한쪽에 맞춰 통일하지 말 것.
+- ⚠️ **Demo 실서버 모드는 키워드 캐시가 준비된 뒤에 화면을 세워야 한다**(내 서재·타유저 서재 **둘 다**) — 캐시가 비어 있어도 UseCase가 `try?` + `?? []`로 폴백해 **에러 없이 키워드 칩만 통째로 빈 채** 그려진다. "키워드가 안 나온다"를 화면 버그로 오진하기 딱 좋으니, Demo는 준비 플래그로 가드하고 그동안 `ProgressView`를 띄운다.
+  - `authExpired` 시나리오의 **2회차 발화**를 확인할 땐 정렬 변경이 아니라 `NetworkErrorView`의 "페이지 다시 불러오기"를 쓴다 — 타유저 서재는 인증 만료도 실패 뷰로 덮어(위 동작 계약) **정렬 행 자체가 안 보인다**.
 - 서재 Domain을 찾을 때 `LibraryDomain`을 만들지 말 것 — 정본은 `NovelDomain/Sources/Entity/Library/`와 `NovelDomain/Sources/UseCase/`다.
 - ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.
