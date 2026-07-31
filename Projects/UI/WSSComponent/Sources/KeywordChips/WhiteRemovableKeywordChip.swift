@@ -11,12 +11,12 @@ import DesignSystem
 
 public struct WhiteRemovableKeywordChip: View {
     private let keyword: String
-    private let onSelect: () -> Void
+    private let onSelect: (() -> Void)?
     private let onDelete: () -> Void
 
     public init(
         keyword: String,
-        onSelect: @escaping () -> Void,
+        onSelect: (() -> Void)? = nil,
         onDelete: @escaping () -> Void
     ) {
         self.keyword = keyword
@@ -25,7 +25,7 @@ public struct WhiteRemovableKeywordChip: View {
     }
 
     public var body: some View {
-        HStack(spacing: 6) {
+        HStack(alignment: .center, spacing: 6) {
             Text(keyword)
                 .applyWSSFont(.body3, color: .wssPrimary100)
                 .fixedSize()
@@ -42,15 +42,13 @@ public struct WhiteRemovableKeywordChip: View {
         .background { Capsule().fill(Color.wssWhite) }
         .overlay { Capsule().strokeBorder(Color.wssPrimary100, lineWidth: 1) }
         .contentShape(Capsule())
-        .onTapGesture { onSelect() }
+        .onTapGesture { onSelect?() }
     }
 }
 
 #Preview {
     VStack(spacing: 12) {
-        WhiteRemovableKeywordChip(keyword: "환생물", onSelect: {
-            print("키워드로 검색")
-        }, onDelete: {
+        WhiteRemovableKeywordChip(keyword: "환생물", onDelete: {
             print("삭제")
         })
         WhiteRemovableKeywordChip(keyword: "긴 키워드 텍스트 예시", onSelect: {

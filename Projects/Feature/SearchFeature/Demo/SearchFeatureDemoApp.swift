@@ -33,54 +33,39 @@ struct SearchFeatureDemoApp: App {
     }
 }
 
-// MARK: - Root: Mock ↔ 실서버 토글
+// MARK: - Root: Mock ↔ 실서버 진입점 선택
 
 // Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
 // Mock = 인메모리(흐름 시연), 실서버 = NetworkingClient + 실제 Repository.
 private struct DemoRootView: View {
-    private enum DataSource: String, CaseIterable, Identifiable {
-        case mock = "Mock"
-        case live = "실서버"
-        var id: String { rawValue }
-    }
-
-    @State private var dataSource: DataSource = .mock
-
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("데이터 소스", selection: $dataSource) {
-                    ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding()
-
-                searchView
-            }
-        }
-    }
 
     /// Mock 모드에서 최근 검색어 삭제가 실제로 반영되어 보이도록 공유하는 인메모리 저장소.
     private let demoRecentSearchStore = DemoRecentSearchStore()
 
-    @ViewBuilder
-    private var searchView: some View {
-        switch dataSource {
-        case .mock:
-            SearchFactory.makeView(
-                loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
-                loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
-                removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
-                clearRecentSearchWordsUseCase: DemoClearRecentSearchWordsUseCase(store: demoRecentSearchStore),
-                loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
-                logger: consoleLogger
-            )
-        case .live:
-            makeLiveView()
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                NavigationLink("Mock으로 보기") { mockView }
+                NavigationLink("실서버로 보기") { makeLiveView() }
+            }
+            .padding()
         }
+    }
+
+    private var mockView: some View {
+        SearchFactory.makeView(
+            loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
+            loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
+            removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
+            clearRecentSearchWordsUseCase: DemoClearRecentSearchWordsUseCase(store: demoRecentSearchStore),
+            searchAutoCompletionWordsUseCase: DemoSearchAutoCompletionWordsUseCase(),
+            searchNovelUseCase: DemoSearchNovelUseCase(),
+            loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
+            logger: consoleLogger
+        )
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     // MARK: - 실서버 조립
@@ -110,9 +95,12 @@ private struct DemoRootView: View {
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
             clearRecentSearchWordsUseCase: DefaultClearRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
+            searchAutoCompletionWordsUseCase: DefaultSearchAutoCompletionWordsUseCase(searchAutoCompletionRepository: searchRepository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
             logger: consoleLogger
         )
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
@@ -160,6 +148,66 @@ private struct DemoClearRecentSearchWordsUseCase: ClearRecentSearchWordsUseCase 
 
     func execute() async throws(RepositoryError) {
         store.words = []
+    }
+}
+
+private struct DemoSearchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase {
+    func execute(searchText: String) async throws(RepositoryError) -> [SearchAutoCompletionWord] {
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        return [
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 1"),
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 2"),
+            SearchAutoCompletionWord(word: "\(searchText) 데모 자동완성 3")
+        ]
+    }
+}
+
+private struct DemoSearchNovelUseCase: SearchNovelUseCase {
+    /// Mock에서도 무한스크롤을 시연할 수 있도록 3페이지(0~2)까지는 채워서 반환하고 그 뒤로는 hasNext를 끈다.
+    private static let demoPageCount = 3
+
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        guard page < Self.demoPageCount else {
+            return (Paginated(items: [], hasNext: false), 5 * Self.demoPageCount)
+        }
+        let novels = (1...5).map { number in
+            let sequence = page * 5 + number
+            return Novel(
+                id: NovelID(sequence),
+                thumbnailImage: URL(string: "https://i.pinimg.com/1200x/40/cb/df/40cbdfcce149156643cc6eae5e0dec6f.jpg"),
+                title: "\(query) 데모 검색결과 \(sequence)",
+                authors: ["데모 작가 \(sequence)"],
+                genres: [],
+                interestCount: sequence * 3,
+                rating: 4.5,
+                ratingCount: sequence,
+                isInterested: false
+            )
+        }
+        return (Paginated(items: novels, hasNext: page < Self.demoPageCount - 1), 5 * Self.demoPageCount)
+    }
+
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        guard page < Self.demoPageCount else {
+            return (Paginated(items: [], hasNext: false), 4 * Self.demoPageCount)
+        }
+        let novels = (1...4).map { number in
+            let sequence = page * 4 + number
+            return Novel(
+                id: NovelID(sequence),
+                thumbnailImage: URL(string: "https://i.pinimg.com/1200x/40/cb/df/40cbdfcce149156643cc6eae5e0dec6f.jpg"),
+                title: "필터 데모 검색결과 \(sequence)",
+                authors: ["데모 작가 \(sequence)"],
+                genres: [],
+                interestCount: sequence * 3,
+                rating: 4.5,
+                ratingCount: sequence,
+                isInterested: false
+            )
+        }
+        return (Paginated(items: novels, hasNext: page < Self.demoPageCount - 1), 4 * Self.demoPageCount)
     }
 }
 

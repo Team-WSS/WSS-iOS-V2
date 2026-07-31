@@ -161,7 +161,7 @@ extension SearchDataDemoView {
         defer { isLoading = false }
 
         do {
-            let (paginated, totalCount) = try await repository.searchNovelByText(text)
+            let (paginated, totalCount) = try await repository.searchNovelByText(text, page: 0)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             log = "✅ 텍스트 검색 '\(text)' (총 \(totalCount)건)\n\n\(titles)"
         } catch {
@@ -178,7 +178,7 @@ extension SearchDataDemoView {
                                       publicationStatus: nil,
                                       ratingThreshold: nil,
                                       keywords: [])
-            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter)
+            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter, page: 0)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             log = "✅ 필터 검색 (로맨스) (총 \(totalCount)건)\n\n\(titles)"
         } catch {

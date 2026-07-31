@@ -17,7 +17,7 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
     private let service: SearchService
     private let logger: DataLogger?
 
-    public init(
+    init(
         service: SearchService,
         logger: DataLogger?
     ) {
@@ -95,9 +95,9 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
         }
     }
 
-    public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    public func searchNovelByText(_ text: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = SearchAction.searchNovelByText(query: text)
-        let query = NormalSearchQuery(query: text, page: 0, size: 20)
+        let query = NormalSearchQuery(query: text, page: page, size: 20)
 
         do {
             let response = try await service.getNormalSearchNovels(query: query)
@@ -116,11 +116,11 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
         }
     }
 
-    public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    public func searchNovelByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = SearchAction.searchNovelByFilter
 
         do {
-            let query = SearchMapper.detailSearchQuery(from: filter)
+            let query = SearchMapper.detailSearchQuery(from: filter, page: page)
             let response = try await service.getDetailSearchNovels(query: query)
             let result = SearchMapper.searchNovels(from: response)
             logger?.logSuccess(action: action.name)

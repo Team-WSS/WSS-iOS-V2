@@ -10,11 +10,11 @@ import Networking
 
 public struct DefaultSearchService: SearchService {
 
-    private static let autoCompletionSize = 20
+    private static let autoCompletionSize = 10
 
     private let network: NetworkingRequestable
 
-    public init(network: NetworkingRequestable) {
+    init(network: NetworkingRequestable) {
         self.network = network
     }
 

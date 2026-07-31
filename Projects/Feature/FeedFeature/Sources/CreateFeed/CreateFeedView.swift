@@ -458,11 +458,11 @@ private struct PreviewCreateFeedUseCase: CreateFeedUseCase {
 }
 
 private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
-    
-    func searchByFilter(_ filter: SearchDomain.SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+
+    func searchByFilter(_ filter: SearchDomain.SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: [], hasNext: false), 0)
     }
 }

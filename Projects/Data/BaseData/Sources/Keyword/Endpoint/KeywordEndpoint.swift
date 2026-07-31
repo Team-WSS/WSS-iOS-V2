@@ -44,9 +44,8 @@ enum KeywordEndpoint: Endpoint {
 
     var authorization: AuthorizationPolicy {
         switch self {
-        case .searchKeywords(_): .requireToken
-        case .getPopularKeywords: .withoutToken
+        case .searchKeywords(_):    .requireToken
+        case .getPopularKeywords:   .withoutToken
         }
-        
     }
 }

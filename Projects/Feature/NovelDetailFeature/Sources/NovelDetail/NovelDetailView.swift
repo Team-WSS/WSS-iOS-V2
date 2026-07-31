@@ -355,7 +355,7 @@ private extension NovelDetailView {
             WSSDropdownMenu(items: [
                 WSSDropdownItem(title: "오류 제보") {
                     isMenuPresented = false
-                    if let errorReportURL { openURL(errorReportURL) }
+                    if let url = AppURL.errorReport { openURL(url) }
                 },
                 WSSDropdownItem(title: "평가 삭제") {
                     isMenuPresented = false
@@ -647,9 +647,6 @@ private extension NovelDetailView {
 
 /// 스크롤 오프셋 측정용 ScrollView 좌표공간 이름.
 private let scrollSpaceName = "novelDetailScroll"
-
-/// threedots 드롭다운 "오류 제보"가 여는 웹소소 노션 문의 페이지.
-private let errorReportURL = URL(string: "https://helpwebsoso.notion.site/241a9688d1a381548c20dd314d0a0b0a")
 
 // MARK: - Scroll bounce control
 
