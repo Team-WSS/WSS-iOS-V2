@@ -39,7 +39,8 @@ private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
     case empty = "빈 서재"
     case failure = "실패"
     /// 인증 만료 — 로그인 라우팅 콜백이 만료마다 정확히 1회씩 발화하는지 보는 축.
-    /// (신호를 소진하는 구조라 정렬을 바꿔 재로드하면 다시 발화해야 한다.)
+    /// (신호를 소진하는 구조라 재로드하면 다시 발화해야 한다. 이 화면은 인증 만료도 실패 뷰로 덮어
+    ///  정렬 행이 숨겨지므로, 2회차 발화를 보려면 `NetworkErrorView`의 "페이지 다시 불러오기"를 쓴다.)
     case authExpired = "인증만료"
     var id: String { rawValue }
 }
@@ -93,6 +94,8 @@ private struct DemoRootView: View {
                 }
 
                 let client = makeLiveClient()
+                // ⚠️ `syncKeywords()`는 실패를 안으로 삼키므로 이 플래그는 "동기화를 **시도**했다"까지만 뜻한다 —
+                // 네트워크가 죽어 캐시가 비어도 true가 된다(그땐 키워드 칩만 조용히 빈다). Demo 편의 가드라 이 정도로 둔다.
                 await makeLiveKeywordRepository(client: client).syncKeywords()
                 isLiveKeywordCacheReady = true
             }
@@ -133,7 +136,14 @@ private struct DemoRootView: View {
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
-            makeLiveUserLibraryView()
+            // 내 서재와 같은 가드 — 키워드 캐시가 비어 있으면 목록의 키워드 칩이
+            // 에러 없이 통째로 빈 채로 그려져(UseCase가 try? + ?? []로 폴백) 오진하기 쉽다.
+            if isLiveKeywordCacheReady {
+                makeLiveUserLibraryView()
+            } else {
+                ProgressView("키워드 목록 불러오는 중")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 
