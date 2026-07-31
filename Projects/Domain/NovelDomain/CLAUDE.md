@@ -1,7 +1,7 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Domain/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # NovelDomain
 
-작품(Novel) 도메인 — 조회·검색·서재·관심 등록의 비즈니스 로직과 계약.
+작품(Novel) 도메인 — 상세 조회·서재·관심 등록의 비즈니스 로직과 계약.
 구성요소 목록은 `Sources/{Entity,UseCase,Repository}/`를 직접 보면 된다. 여기엔 **코드만 봐선 모르는 것**만 적는다.
 
 - 식별자: `ModuleType.domain(.novel)` / 의존: `BaseDomain` only
@@ -11,7 +11,7 @@
 - **작품 상세(`LoadNovelUseCase`)**: 키워드 매핑을 위해 `KeywordRepository`에서 캐시 키워드를 모아
   `NovelRepository.fetchNovel(id:cachedKeywords:)`에 주입한다. → 이 UseCase는 NovelRepository + KeywordRepository **둘 다** 의존.
 - **관심 토글**: 도메인 정책은 Entity `Novel`의 `mutating` 메서드(`markAsInterested`/`toggleInterest`)가 담당. 서버 반영(`addNovelInterest`/`removeNovelInterest`)은 Repository 별도 호출.
-- **검색/서재**: 결과는 `(Paginated<T>, Int)` = (페이지 목록, 총 개수) 튜플.
+- **서재**: 결과는 `(Paginated<T>, Int)` = (페이지 목록, 총 개수) 튜플.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -20,3 +20,4 @@
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
 - 엔티티 시그니처를 바꾸면 **`Testing/` Mock과 `Tests/`도 같이 갱신**할 것 — #135에서 authors/genres/필터 변경이 미반영돼 테스트 타깃이 컴파일 불가로 방치됐었다(#154에서 수리).
 - **`Novel`/`NovelRatingThreshold`/`NovelPublicationStatus`는 이 모듈 소유가 아니라 `BaseDomain`에 있다** — `SearchDomain`도 참조해야 해서 공통 토대로 승격됐다. `NovelInformation`/`MyLibraryFilter` 등은 그대로 `import BaseDomain`으로 쓴다.
+- **작품 제목/필터 검색(`SearchNovelUseCase`, `SearchFilter`)은 `SearchDomain` 소유**다 — 예전엔 이 모듈이 갖고 있었으나 계약과 구현(엔드포인트·매퍼) 전부 `SearchDomain`/`SearchData`로 이동했다. 이 모듈의 `NovelRepository`/`NovelData`는 더 이상 검색을 모른다.

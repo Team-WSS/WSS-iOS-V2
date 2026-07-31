@@ -1,6 +1,6 @@
 //
 //  SearchNovelUseCaseTests.swift
-//  NovelDomain
+//  SearchDomain
 //
 //  Created by Seoyeon Choi on 2/11/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -8,9 +8,9 @@
 
 import Testing
 
-@testable import NovelDomain
-@testable import BaseDomain
-import NovelDomainTesting
+@testable import SearchDomain
+import SearchDomainTesting
+import BaseDomain
 
 @Suite
 struct SearchNovelUseCaseTests {
@@ -19,11 +19,11 @@ struct SearchNovelUseCaseTests {
 
     @Test("텍스트로 소설을 검색할 수 있다")
     func searchByTextSuccess() async throws {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         let expected = Paginated(items: [makeNovel()], hasNext: false)
         mock.searchByTextResult = .success((expected, 2))
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let result = try await usecase.searchByText("전지적")
 
         #expect(result.0.items.count == 1)
@@ -34,10 +34,10 @@ struct SearchNovelUseCaseTests {
 
     @Test("텍스트 검색 결과에 전체 작품 수가 포함된다")
     func searchByTextReturnsCount() async throws {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 42))
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let result = try await usecase.searchByText("전지적")
 
         #expect(result.1 == 42)
@@ -45,10 +45,10 @@ struct SearchNovelUseCaseTests {
 
     @Test("텍스트 검색에 실패하면 에러를 던진다")
     func searchByTextFailureThrows() async {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         mock.searchByTextResult = .failure(RepositoryError.unknown)
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
             try await usecase.searchByText("전지적")
@@ -61,11 +61,11 @@ struct SearchNovelUseCaseTests {
 
     @Test("필터로 소설을 검색할 수 있다")
     func searchByFilterSuccess() async throws {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         let expected = Paginated(items: [makeNovel(), makeNovel(id: 2, title: "나 혼자만 레벨업")], hasNext: true)
         mock.searchByFilterResult = .success((expected, 2))
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let filter = SearchFilter(
             genres: [.fantasy],
             publicationStatus: .completed,
@@ -82,10 +82,10 @@ struct SearchNovelUseCaseTests {
 
     @Test("필터 검색 결과에 전체 작품 수가 포함된다")
     func searchByFilterReturnsCount() async throws {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         mock.searchByFilterResult = .success((Paginated(items: [makeNovel()], hasNext: true), 128))
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let filter = SearchFilter(genres: [], publicationStatus: nil, ratingThreshold: nil, keywords: [])
         let result = try await usecase.searchByFilter(filter)
 
@@ -94,10 +94,10 @@ struct SearchNovelUseCaseTests {
 
     @Test("필터 검색에 실패하면 에러를 던진다")
     func searchByFilterFailureThrows() async {
-        let mock = MockNovelRepository()
+        let mock = MockSearchNovelRepository()
         mock.searchByFilterResult = .failure(RepositoryError.unknown)
 
-        let usecase = DefaultSearchNovelUseCase(novelRepository: mock)
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
         let filter = SearchFilter(
             genres: [],
             publicationStatus: nil,
