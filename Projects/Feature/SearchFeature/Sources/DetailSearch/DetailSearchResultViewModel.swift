@@ -9,7 +9,8 @@
 import Foundation
 import Observation
 
-import NovelDomain
+import BaseDomain
+import SearchDomain
 import Logger
 
 @MainActor

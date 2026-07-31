@@ -12,11 +12,9 @@ import SearchFeature
 import BaseDomain
 import RecommendationDomain
 import SearchDomain
-import NovelDomain
 import BaseData
 import RecommendationData
 import SearchData
-import NovelData
 import Logger
 import Networking
 import DesignSystem
@@ -92,18 +90,13 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
-        let novelRepository = NovelDataFactory.makeNovelRepository(
-            client: client,
-            appStorage: UserDefaultsStorage(),
-            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
-        )
         return SearchFactory.makeView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
             clearRecentSearchWordsUseCase: DefaultClearRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             searchAutoCompletionWordsUseCase: DefaultSearchAutoCompletionWordsUseCase(searchAutoCompletionRepository: searchRepository),
-            searchNovelUseCase: DefaultSearchNovelUseCase(novelRepository: novelRepository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
             logger: consoleLogger
         )

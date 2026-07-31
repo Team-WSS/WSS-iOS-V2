@@ -2,7 +2,7 @@
 
 화면 두 개: `NormalSearchView`(일반 검색 진입점, 브라우즈/자동완성/검색 결과가 **같은 화면 안에서** 콘텐츠만 스왑) + `DetailSearchResultView`(장르 탭·키워드 탭에서 **진짜 push**되는 필터 검색 결과 그리드). 소소픽·최근 검색어·키워드 검색(인기 키워드)·검색어 자동완성·검색 실행/결과·장르/키워드 필터 검색까지 전부 실제 UseCase로 연동 완료.
 
-- 식별자: `ModuleType.feature(.search)` / 의존: `BaseDomain`, `RecommendationDomain`, `SearchDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger`
+- 식별자: `ModuleType.feature(.search)` / 의존: `BaseDomain`, `RecommendationDomain`, `SearchDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점: `SearchFactory.makeView(loadSosoPickUseCase:loadRecentSearchWordsUseCase:removeRecentSearchWordUseCase:clearRecentSearchWordsUseCase:searchAutoCompletionWordsUseCase:searchNovelUseCase:loadPopularKeywordsUseCase:logger:)` — 모듈의 public 진입점은 `NormalSearchView` 하나뿐. `NormalSearchResultView`(props-only 서브뷰)와 `DetailSearchResultView`(아래 "화면 간 이동" 참고) 둘 다 `NormalSearchView`가 내부에서 조립해서 별도 Factory 메서드가 없다.
 
 ## 핵심 시나리오
