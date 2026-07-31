@@ -24,6 +24,7 @@
 
 | 용어 | 타입 | 의미 |
 |---|---|---|
+| 작품 검색 | `SearchNovelUseCase`, `SearchFilter` | 텍스트(제목·작가) 또는 필터(장르·연재상태·별점 등) 기반 작품 검색 |
 | 최근 검색어 | `RecentSearchWord` | 검색 실행 시 서버가 자동 기록하는 사용자별 검색 이력 |
 | 검색어 자동완성 | `SearchAutoCompletionWord` | 입력 중인 검색어에 대한 제목 기반 자동완성 후보 |
 

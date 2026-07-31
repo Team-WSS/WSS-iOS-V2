@@ -112,11 +112,11 @@ Domain
 ├── CommentDomain         # 댓글 작성, 수정, 삭제, 조회
 ├── FeedDomain            # 피드 작성/수정/삭제, 상세 조회, 좋아요
 ├── NotificationDomain    # 알림 조회와 푸시 설정
-├── NovelDomain           # 작품 조회, 검색, 서재, 관심 등록
+├── NovelDomain           # 작품 조회, 서재, 관심 등록
 ├── NovelReviewDomain     # 리뷰 초안 조회, 저장, 삭제
 ├── ProfileDomain         # 프로필, 닉네임, 선호 장르/작품 설정
 ├── RecommendationDomain  # 홈 추천, 소소픽, 트렌딩 피드
-├── SearchDomain          # 최근 검색어, 검색어 자동완성
+├── SearchDomain          # 작품 검색, 최근 검색어, 검색어 자동완성
 ├── SettingDomain         # 앱 업데이트 정책과 약관 동의
 └── SocialDomain          # 차단 사용자 관리와 신고 기능
 │
@@ -130,7 +130,7 @@ Data
 ├── NovelReviewData       # 리뷰 API 연동, DTO 매핑
 ├── ProfileData           # 프로필 API 연동(로컬+서버 혼합)
 ├── RecommendationData    # 추천 데이터 연동
-├── SearchData            # 최근 검색어/자동완성 API 연동
+├── SearchData            # 작품 검색/최근 검색어/자동완성 API 연동
 ├── SettingData           # 앱 업데이트/약관 API 연동
 └── SocialData            # 차단/신고 API 연동
 ```
