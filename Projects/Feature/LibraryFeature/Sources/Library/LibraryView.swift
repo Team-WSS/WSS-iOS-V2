@@ -357,7 +357,7 @@ private extension LibraryView {
         .padding(3)
         .background(Color.wssGray20)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.wssGray70, lineWidth: 1))
+        .overlay(Capsule().strokeBorder(Color.wssGray70, lineWidth: 1))
         .animation(.spring(response: 0.35, dampingFraction: 0.72), value: displayMode)
     }
 
@@ -421,9 +421,10 @@ private extension LibraryView {
             .frame(height: 30)
             .background(isSelected ? Color.wssBlack : Color.wssWhite)
             .clipShape(Capsule())
+            // strokeBorder(= 안쪽으로 그림). stroke면 선의 절반이 프레임 밖으로 나가 가로 ScrollView 클립에 잘린다.
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? Color.wssBlack : Color.wssGray80, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.wssBlack : Color.wssGray80, lineWidth: 1)
             )
             .contentShape(Capsule())
         }

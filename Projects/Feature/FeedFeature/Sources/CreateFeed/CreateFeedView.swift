@@ -240,8 +240,8 @@ public struct CreateFeedView: View {
         .frame(height: 50)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(WSSColor.wssGray70.swiftUIColor,
-                        lineWidth: 1)
+                .strokeBorder(WSSColor.wssGray70.swiftUIColor,
+                              lineWidth: 1)
         )
     }
     

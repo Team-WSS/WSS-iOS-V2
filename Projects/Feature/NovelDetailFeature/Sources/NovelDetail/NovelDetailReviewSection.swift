@@ -54,9 +54,10 @@ struct NovelDetailReviewSection: View {
             .frame(maxWidth: .infinity)
             .background(Color.wssWhite)
             .clipShape(RoundedRectangle(cornerRadius: 15))
+            // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 클립 경계에서 잘린다.
             .overlay(
                 RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.wssGray80, lineWidth: 1)
+                    .strokeBorder(Color.wssGray80, lineWidth: 1)
             )
             .contentShape(Rectangle())
             .onTapGesture {
@@ -86,7 +87,7 @@ struct NovelDetailReviewSection: View {
             .clipShape(RoundedRectangle(cornerRadius: 15))
             .overlay(
                 RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.wssGray80, lineWidth: 1)
+                    .strokeBorder(Color.wssGray80, lineWidth: 1)
             )
         }
     }
@@ -126,7 +127,7 @@ struct NovelDetailReviewSection: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.wssGray80, lineWidth: 1)
+                .strokeBorder(Color.wssGray80, lineWidth: 1)
         )
     }
 
@@ -218,7 +219,7 @@ struct NovelDetailReviewSection: View {
             .clipShape(RoundedRectangle(cornerRadius: 15))
             .overlay(
                 RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.wssPrimary100, lineWidth: 1)
+                    .strokeBorder(Color.wssPrimary100, lineWidth: 1)
             )
             .contentShape(Rectangle())
             // 하트 에셋 교체·배경색의 기본 크로스페이드를 짧게 고정

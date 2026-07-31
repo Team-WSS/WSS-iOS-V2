@@ -370,7 +370,7 @@ private extension LibraryFilterSheet {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.wssGray80, lineWidth: 1)
+                        .strokeBorder(Color.wssGray80, lineWidth: 1)
                 )
                 .contentShape(RoundedRectangle(cornerRadius: 14))
             }

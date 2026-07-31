@@ -36,7 +36,8 @@ public struct PrimaryRemovableKeywordChip: View {
         .padding(.vertical, 6)
         .background(Color.wssPrimary50)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.wssPrimary100, lineWidth: 1))
+        // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 ScrollView 클립에 잘린다.
+        .overlay(Capsule().strokeBorder(Color.wssPrimary100, lineWidth: 1))
         .contentShape(Capsule())
         .onTapGesture { action() }
     }

@@ -32,9 +32,10 @@ public struct WSSSearchBar: View {
         ZStack {
             RoundedRectangle(cornerRadius: 14)
                 .fill(isActive ? Color.wssWhite : Color.wssGray50)
+                // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 클립 경계에서 잘린다.
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(isActive ? Color.wssGray70 : Color.clear, lineWidth: 1)
+                        .strokeBorder(isActive ? Color.wssGray70 : Color.clear, lineWidth: 1)
                 )
 
             HStack(spacing: 0) {

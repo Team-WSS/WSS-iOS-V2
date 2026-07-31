@@ -31,9 +31,10 @@ public struct RectangleSelectableKeywordChip: View {
             .padding(.vertical, 10)
             .background(isSelected ? Color.wssPrimary50 : Color.wssGray50)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 ScrollView 클립에 잘린다.
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.wssPrimary100, lineWidth: 1)
+                    .strokeBorder(Color.wssPrimary100, lineWidth: 1)
                     .opacity(isSelected ? 1 : 0)
             )
             .contentShape(RoundedRectangle(cornerRadius: 8))
