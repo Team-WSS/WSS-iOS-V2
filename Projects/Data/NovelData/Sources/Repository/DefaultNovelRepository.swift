@@ -89,52 +89,6 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        let action = NovelAction.searchByText(query: text)
-        let query = NormalSearchQuery(
-            query: text,
-            page: 0,
-            size: 20
-        )
-        
-        do {
-            let response = try await service.getNormalSearchNovels(query: query)
-            let result = NovelMapper.searchNovels(from: response)
-            logger?.logSuccess(action: action.text)
-            return result
-        } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
-            throw error.toRepositoryError()
-        } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
-            throw .invalidData
-        } catch {
-            logger?.logUnknownError(action: action.text, error: error)
-            throw .unknown
-        }
-    }
-    
-    public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        let action = NovelAction.searchByFilter
-        
-        do {
-            let query = NovelMapper.detailSearchQuery(from: filter)
-            let response = try await service.getDetailSearchNovels(query: query)
-            let result = NovelMapper.searchNovels(from: response)
-            logger?.logSuccess(action: action.text)
-            return result
-        } catch let error as NetworkingError {
-            logger?.logNetworkError(action: action.text, error: error)
-            throw error.toRepositoryError()
-        } catch let error as MappingError {
-            logger?.logMappingError(action: action.text, error: error)
-            throw .invalidData
-        } catch {
-            logger?.logUnknownError(action: action.text, error: error)
-            throw .unknown
-        }
-    }
-    
     public func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchMyLibrary
         

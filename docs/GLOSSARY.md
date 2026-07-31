@@ -18,6 +18,15 @@
 | 연재 상태 | `NovelPublicationStatus` | 완결/연재중 |
 | 플랫폼 | `NovelPlatform` | 작품 연재 플랫폼 |
 | 키워드 | `Keyword`, `KeywordGroup` | 작품 태그 키워드(로컬 캐시) |
+| 인기 키워드 | `PopularKeywords` | 실시간 인기 키워드 랭킹(서버 직접 조회, 캐시 아님) |
+
+## 검색 (Search)
+
+| 용어 | 타입 | 의미 |
+|---|---|---|
+| 작품 검색 | `SearchNovelUseCase`, `SearchFilter` | 텍스트(제목·작가) 또는 필터(장르·연재상태·별점 등) 기반 작품 검색 |
+| 최근 검색어 | `RecentSearchWord` | 검색 실행 시 서버가 자동 기록하는 사용자별 검색 이력 |
+| 검색어 자동완성 | `SearchAutoCompletionWord` | 입력 중인 검색어에 대한 제목 기반 자동완성 후보 |
 
 ## 추천 / 홈 (Recommendation)
 

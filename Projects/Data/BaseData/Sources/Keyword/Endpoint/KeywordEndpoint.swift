@@ -11,10 +11,12 @@ import Networking
 
 enum KeywordEndpoint: Endpoint {
     case searchKeywords(SearchKeywordQuery)
-
+    case getPopularKeywords
+    
     var method: HTTPMethod {
         switch self {
-        case .searchKeywords: return .get
+        case .searchKeywords, .getPopularKeywords:
+            return .get
         }
     }
 
@@ -24,13 +26,15 @@ enum KeywordEndpoint: Endpoint {
 
     var path: String {
         switch self {
-        case .searchKeywords: "/keywords"
+        case .searchKeywords:       "/keywords"
+        case .getPopularKeywords:   "/keywords/popular"
         }
     }
     
     var query: QueryParameters {
         switch self {
         case .searchKeywords(let query): return .convertible(query)
+        default: return .none
         }
     }
 

@@ -1,6 +1,6 @@
 //
 //  SearchNovelUseCase.swift
-//  NovelDomain
+//  SearchDomain
 //
 //  Created by Seoyeon Choi on 2/11/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -16,18 +16,18 @@ public protocol SearchNovelUseCase {
 }
 
 public final class DefaultSearchNovelUseCase: SearchNovelUseCase {
-    
-    private let novelRepository: NovelRepository
-    
-    public init(novelRepository: NovelRepository) {
-        self.novelRepository = novelRepository
+
+    private let searchNovelRepository: SearchNovelRepository
+
+    public init(searchNovelRepository: SearchNovelRepository) {
+        self.searchNovelRepository = searchNovelRepository
     }
-    
+
     public func searchByText(_ query: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        try await novelRepository.searchNovelByText(query)
+        try await searchNovelRepository.searchNovelByText(query)
     }
-    
+
     public func searchByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        try await novelRepository.searchNovelByFilter(filter)
+        try await searchNovelRepository.searchNovelByFilter(filter)
     }
 }

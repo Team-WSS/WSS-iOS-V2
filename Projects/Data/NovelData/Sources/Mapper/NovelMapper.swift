@@ -148,31 +148,6 @@ extension NovelMapper {
         )
     }
     
-    //MARK: - 일반 검색 작품
-    
-    public static func searchNovels(from dto: SearchNovelsResponse) -> (Paginated<Novel>, Int) {
-        let novels = dto.novels.map { searchNovel(from: $0) }
-        let paginated = Paginated(items: novels, hasNext: dto.isLoadable)
-        return (paginated, dto.resultCount)
-    }
-    
-    public static func searchNovel(from dto: SearchNovelResponse) -> Novel {
-        let thumbnailImageURL = ImageURLResolver.resolve(from: dto.novelImage)
-        let authors = dto.author
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-        
-        return Novel(
-            id: NovelID(dto.novelId),
-            thumbnailImage: thumbnailImageURL,
-            title: dto.title,
-            authors: authors,
-            genres: [], // dto값에 장르 값이 포함되지 않음
-            interestCount: dto.interestCount,
-            rating: dto.novelRating,
-            ratingCount: dto.novelRatingCount
-        )
-    }
 }
 
 //MARK: - Entity -> DTO
@@ -209,18 +184,6 @@ extension NovelMapper {
         )
     }
     
-    // MARK: - 상세 탐색 Query
-    
-    static func detailSearchQuery(from filter: SearchFilter) -> DetailSearchQuery {
-        DetailSearchQuery(
-            genres: filter.genres.map { mapNovelGenreString(from: $0) },
-            isCompleted: filter.publicationStatus == .completed,
-            novelRating: filter.ratingThreshold?.rawValue ?? 0,
-            keywordIds: filter.keywords.map { $0.id.value },
-            page: 0,
-            size: 20
-        )
-    }
 }
 
 // MARK: - Mapping Helpers
@@ -298,20 +261,6 @@ extension NovelMapper {
         }
     }
 
-    static func mapNovelGenreString(from genre: NovelGenre) -> String {
-        switch genre {
-        case .lightNovel:      return "lightNovel"
-        case .wuxia:           return "wuxia"
-        case .fantasy:         return "fantasy"
-        case .romance:         return "romance"
-        case .BL:              return "BL"
-        case .romanceFantasy:  return "romanceFantasy"
-        case .modernFantasy:   return "modernFantasy"
-        case .drama:           return "drama"
-        case .mystery:         return "mystery"
-        }
-    }
-    
     private static func mapNovelGenre(from value: String) throws -> NovelGenre {
         switch value {
         case "라노벨":   return .lightNovel

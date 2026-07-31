@@ -1,6 +1,6 @@
 //
 //  SearchFilterTests.swift
-//  NovelDomain
+//  SearchDomain
 //
 //  Created by Seoyeon Choi on 2/11/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -8,8 +8,7 @@
 
 import Testing
 
-@testable import NovelDomain
-import NovelDomainTesting
+@testable import SearchDomain
 import BaseDomain
 
 @Suite

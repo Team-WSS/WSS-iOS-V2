@@ -1,6 +1,6 @@
 //
 //  NovelTests.swift
-//  NovelDomain
+//  BaseDomain
 //
 //  Created by Seoyeon Choi on 2/22/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -8,9 +8,7 @@
 
 import Testing
 
-@testable import NovelDomain
-import NovelDomainTesting
-import BaseDomain
+@testable import BaseDomain
 
 @Suite
 struct NovelTests {

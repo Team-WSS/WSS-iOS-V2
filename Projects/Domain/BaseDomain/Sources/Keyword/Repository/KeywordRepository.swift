@@ -15,4 +15,7 @@ public protocol KeywordRepository {
     func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup]
     /// 서버에서 키워드를 가져와 로컬 DB와 동기화한다.
     func syncKeywords() async
+    
+    /// 실시간 인기 키워드를 서버에서 조회한다.
+    func fetchPopularKeywords() async throws(RepositoryError) -> PopularKeywords
 }

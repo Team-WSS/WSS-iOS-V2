@@ -46,14 +46,4 @@ public struct DefaultNovelService: NovelService {
         let endpoint = NovelEndpoint.deleteNovelInterest(novelID: novelID)
         _ = try await client.request(endpoint)
     }
-
-    public func getNormalSearchNovels(query: NormalSearchQuery) async throws -> SearchNovelsResponse {
-        let endpoint = NovelEndpoint.getNormalSearchResult(query)
-        return try await client.request(endpoint, decodeTo: SearchNovelsResponse.self)
-    }
-
-    public func getDetailSearchNovels(query: DetailSearchQuery) async throws -> SearchNovelsResponse {
-        let endpoint = NovelEndpoint.getDetailSearchResult(query)
-        return try await client.request(endpoint, decodeTo: SearchNovelsResponse.self)
-    }
 }
