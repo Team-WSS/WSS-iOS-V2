@@ -151,7 +151,7 @@ struct SearchKeywordView: View {
                     ForEach(viewModel.state.selectedKeywords) { keyword in
                         WhiteRemovableKeywordChip(
                             keyword: keyword.name,
-                            action: { viewModel.handle(.toggleKeyword(keyword)) }
+                            onDelete: { viewModel.handle(.toggleKeyword(keyword)) }
                         )
                         .id(keyword.id)
                     }
