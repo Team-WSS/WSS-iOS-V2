@@ -58,7 +58,7 @@ struct SearchKeywordsUseCaseTests {
         #expect(mock.searchedQueries.last == query)
     }
 
-    @Test("키워드 검색 실패 시 에러를 던진다.")
+    @Test("키워드 검색이 동기화 후 재조회에도 계속 실패하면 에러를 던진다.")
     func searchKeywordsFailureThrows() async {
         let mock = MockKeywordRepository()
         mock.searchKeywordsResult = .failure(RepositoryError.unknown)
@@ -70,6 +70,28 @@ struct SearchKeywordsUseCaseTests {
         }
 
         #expect(mock.searchedQueries.contains("집착"))
+        // 최초 조회 실패 → 동기화 1회 → 재조회까지 시도한 뒤에도 실패하면 그 에러를 던진다.
+        #expect(mock.searchKeywordsCallCount == 2)
+        #expect(mock.syncKeywordsCallCount == 1)
+    }
+
+    @Test("로컬 캐시가 비어있으면 동기화 후 재조회로 복구한다.")
+    func searchKeywordsRecoversAfterSyncOnCacheMiss() async throws {
+        let mock = MockKeywordRepository()
+        mock.searchKeywordsResults = [
+            .failure(.unknown),
+            .success([
+                KeywordGroup(category: .worldview, keywords: [makeKeyword(id: 1, name: "삼국지")])
+            ])
+        ]
+
+        let usecase = DefaultSearchKeywordUseCase(keywordRepository: mock)
+        let result = try await usecase.execute(searchText: "삼국지")
+
+        #expect(result.count == 1)
+        #expect(result.first?.name == "삼국지")
+        #expect(mock.searchKeywordsCallCount == 2)
+        #expect(mock.syncKeywordsCallCount == 1)
     }
 }
 
