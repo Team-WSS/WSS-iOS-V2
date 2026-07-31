@@ -24,4 +24,4 @@
 - **화면 전체에 `.ignoresSafeArea(.keyboard, edges: .bottom)`가 걸려 있다** — 서치바가 화면 맨 위라 키보드에 가려질 일이 없는데, 이게 없으면 키보드가 뜰 때 SwiftUI 기본 키보드 회피로 하단 액션바까지 키보드를 따라 올라온다. 의도는 액션바가 물리적 하단에 고정된 채 키보드에 덮이는 것.
 - **선택 트레이는 새 키워드가 끝(오른쪽)에 추가될 때만 자동 스크롤한다**(`onChange(of: selectedKeywords.count)`, 개수가 늘 때만 — 삭제 시엔 스크롤 안 함). 새 항목을 맨 앞(왼쪽)에 넣는 방식은 일부러 안 씀 — 그러면 기존 칩들이 매번 오른쪽으로 밀리며 위치가 바뀌어 더 산만하다.
 - **`CapsuleSelectableKeywordChip`/`WhiteRemovableKeywordChip`은 `Button`이 아니라 `.onTapGesture`라 `snapshot_ui`(UI 자동화) 접근성 트리에 안 잡힌다** — 시뮬레이터 자동 탭 검증이 필요하면 스크린샷으로 좌표를 가늠해 탭해야 한다.
-- **검색 결과가 비어있을 때(`WSSEmptyView(type: .keyword)`)의 "키워드 문의하러 가기" 버튼 action이 비어있다(TODO)** — `openURL`로 열어야 할 문의 URL이 정리된 enum이 아직 develop에 병합 안 된 별도 브랜치에 있어서다. 그 브랜치가 머지되면 `SearchKeywordView`의 `openURL` 프로퍼티(이미 선언해둠)를 이용해 action을 채울 것.
+- **검색 결과가 비어있을 때(`WSSEmptyView(type: .keyword)`)의 "키워드 문의하러 가기" 버튼은 키워드 전용 문의 폼이 따로 없어 `AppURL.inquiryAddNovel`(작품 등록 문의 폼)을 그대로 재사용한다** — 별도 `inquiryAddKeyword` 케이스를 만들지 않은 의도적 선택. 실제로 키워드 전용 폼이 생기면 그때 `AppURL`에 케이스를 추가하고 이 화면의 참조를 바꿀 것.
