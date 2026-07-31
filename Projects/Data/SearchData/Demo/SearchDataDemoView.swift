@@ -9,6 +9,7 @@ import SwiftUI
 
 import SearchData
 import SearchDomain
+import BaseDomain
 import Networking
 import BaseData
 import Logger
@@ -19,7 +20,7 @@ struct SearchDataDemoView: View {
     @State private var searchText: String = ""
     @State private var lastFetchedRecentSearchWords: [RecentSearchWord] = []
 
-    private let repository: any RecentSearchRepository & SearchAutoCompletionRepository
+    private let repository: any RecentSearchRepository & SearchAutoCompletionRepository & SearchNovelRepository
 
     init() {
         let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
@@ -42,6 +43,8 @@ struct SearchDataDemoView: View {
                     .buttonStyle(.bordered)
                 }
                 .padding(.horizontal)
+
+                novelSearchButtons
 
                 ScrollView {
                     Text(log)
@@ -71,6 +74,19 @@ struct SearchDataDemoView: View {
             }
         }
         .buttonStyle(.borderedProminent)
+        .disabled(isLoading)
+    }
+
+    private var novelSearchButtons: some View {
+        VStack(spacing: 8) {
+            Button("텍스트 검색 '소녀'") {
+                Task { await searchNovelByText("소녀") }
+            }
+            Button("필터 검색 (로맨스)") {
+                Task { await searchNovelByFilter() }
+            }
+        }
+        .buttonStyle(.bordered)
         .disabled(isLoading)
     }
 }
@@ -137,6 +153,36 @@ extension SearchDataDemoView {
             }
         } catch {
             log = "❌ 자동완성 조회 실패\n\(error)"
+        }
+    }
+
+    private func searchNovelByText(_ text: String) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let (paginated, totalCount) = try await repository.searchNovelByText(text)
+            let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
+            log = "✅ 텍스트 검색 '\(text)' (총 \(totalCount)건)\n\n\(titles)"
+        } catch {
+            log = "❌ 텍스트 검색 실패\n\(error)"
+        }
+    }
+
+    private func searchNovelByFilter() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let filter = SearchFilter(genres: [.romance],
+                                      publicationStatus: nil,
+                                      ratingThreshold: nil,
+                                      keywords: [])
+            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter)
+            let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
+            log = "✅ 필터 검색 (로맨스) (총 \(totalCount)건)\n\n\(titles)"
+        } catch {
+            log = "❌ 필터 검색 실패\n\(error)"
         }
     }
 }

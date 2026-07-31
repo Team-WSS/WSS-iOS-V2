@@ -13,4 +13,7 @@ public protocol SearchService {
     func deleteRecentSearchWord(id: Int) async throws
     func deleteAllRecentSearchWords() async throws
     func getAutoCompletionWords(searchText: String) async throws -> SearchAutoCompletionWordsResponse
+
+    func getNormalSearchNovels(query: NormalSearchQuery) async throws -> SearchNovelsResponse
+    func getDetailSearchNovels(query: DetailSearchQuery) async throws -> SearchNovelsResponse
 }

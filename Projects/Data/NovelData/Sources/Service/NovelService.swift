@@ -19,7 +19,4 @@ public protocol NovelService {
     
     func postNovelInterest(novelID: Int) async throws
     func deleteNovelInterest(novelID: Int) async throws
-    
-    func getNormalSearchNovels(query: NormalSearchQuery) async throws -> SearchNovelsResponse
-    func getDetailSearchNovels(query: DetailSearchQuery) async throws -> SearchNovelsResponse
 }

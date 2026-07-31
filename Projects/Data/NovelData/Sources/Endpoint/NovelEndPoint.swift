@@ -19,10 +19,7 @@ enum NovelEndpoint: Endpoint {
 
     case postNovelInterest(novelID: Int)
     case deleteNovelInterest(novelID: Int)
-    
-    case getNormalSearchResult(NormalSearchQuery)
-    case getDetailSearchResult(DetailSearchQuery)
-    
+
     var method: HTTPMethod {
         switch self {
         case .getUserLibraryNovels:     return .get
@@ -31,8 +28,6 @@ enum NovelEndpoint: Endpoint {
         case .getRegisteredNovelStats:  return .get
         case .postNovelInterest:        return .post
         case .deleteNovelInterest:      return .delete
-        case .getNormalSearchResult:    return .get
-        case .getDetailSearchResult:    return .get
         }
     }
     
@@ -48,16 +43,12 @@ enum NovelEndpoint: Endpoint {
         case .getRegisteredNovelStats(let userID):      return "/users/\(userID)/user-novel-stats"
         case .postNovelInterest(let novelID):           return "/novels/\(novelID)/is-interest"
         case .deleteNovelInterest(let novelID):         return "/novels/\(novelID)/is-interest"
-        case .getNormalSearchResult:                    return "/novels"
-        case .getDetailSearchResult:                    return "/novels/filtered"
         }
     }
-    
+
     var query: QueryParameters {
         switch self {
         case .getUserLibraryNovels(_, let query):   return .convertible(query)
-        case .getNormalSearchResult(let query):     return .convertible(query)
-        case .getDetailSearchResult(let query):     return .convertible(query)
         default: return .none
         }
     }
@@ -70,8 +61,6 @@ enum NovelEndpoint: Endpoint {
         // → 로그인 시 토큰을 붙여야 익명 값이 아닌 내 상태가 온다.
         case .getNovelBasicInfo, .getNovelDetailInfo:
             return .usesTokenIfAvailable
-        case .getNormalSearchResult:
-            return .withoutToken
         default: return .requireToken
         }
     }

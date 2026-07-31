@@ -16,7 +16,7 @@ public enum SearchDataFactory {
     public static func makeRepository(
         network: NetworkingRequestable,
         logger: DataLogger? = nil
-    ) -> any RecentSearchRepository & SearchAutoCompletionRepository {
+    ) -> any RecentSearchRepository & SearchAutoCompletionRepository & SearchNovelRepository {
         let service = DefaultSearchService(network: network)
         return DefaultSearchRepository(
             service: service,

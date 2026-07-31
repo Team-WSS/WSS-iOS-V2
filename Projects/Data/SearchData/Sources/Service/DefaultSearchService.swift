@@ -41,4 +41,12 @@ public struct DefaultSearchService: SearchService {
             decodeTo: SearchAutoCompletionWordsResponse.self
         )
     }
+
+    public func getNormalSearchNovels(query: NormalSearchQuery) async throws -> SearchNovelsResponse {
+        try await network.request(SearchEndpoint.getNormalSearchResult(query), decodeTo: SearchNovelsResponse.self)
+    }
+
+    public func getDetailSearchNovels(query: DetailSearchQuery) async throws -> SearchNovelsResponse {
+        try await network.request(SearchEndpoint.getDetailSearchResult(query), decodeTo: SearchNovelsResponse.self)
+    }
 }

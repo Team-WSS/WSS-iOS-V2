@@ -12,7 +12,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoCompletionRepository {
+public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoCompletionRepository, SearchNovelRepository {
 
     private let service: SearchService
     private let logger: DataLogger?
@@ -77,6 +77,46 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
         do {
             let response = try await service.getAutoCompletionWords(searchText: searchText)
             return SearchMapper.searchAutoCompletionWords(from: response)
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
+
+    public func searchNovelByText(_ text: String) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        let action = SearchAction.searchNovelByText(query: text)
+        let query = NormalSearchQuery(query: text, page: 0, size: 20)
+
+        do {
+            let response = try await service.getNormalSearchNovels(query: query)
+            let result = SearchMapper.searchNovels(from: response)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
+
+    public func searchNovelByFilter(_ filter: SearchFilter) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        let action = SearchAction.searchNovelByFilter
+
+        do {
+            let query = SearchMapper.detailSearchQuery(from: filter)
+            let response = try await service.getDetailSearchNovels(query: query)
+            let result = SearchMapper.searchNovels(from: response)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()

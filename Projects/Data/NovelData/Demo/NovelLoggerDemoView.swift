@@ -17,7 +17,7 @@ import BaseData
 struct NovelLoggerDemoView: View {
     @State private var logs: [LogEntry] = []
     @State private var isLoading: Bool = false
-    
+
     private let repository: NovelRepository
     private let keywordRepository: KeywordRepository
     
@@ -121,29 +121,7 @@ struct NovelLoggerDemoView: View {
                 }
                 
                 Divider()
-                
-                // MARK: 검색
-                
-                sectionHeader("작품 검색")
-                
-                HStack(spacing: 12) {
-                    asyncButton("텍스트 검색 '소녀'", color: .cyan) {
-                        await searchNovelByText("소녀")
-                    }
-                    
-                    asyncButton("텍스트 검색 ''(빈값)", color: .orange) {
-                        await searchNovelByText("")
-                    }
-                }
-                
-                HStack(spacing: 12) {
-                    asyncButton("필터 검색 (로맨스)", color: .purple) {
-                        await searchNovelByFilter()
-                    }
-                }
-                
-                Divider()
-                
+
                 // MARK: 서재 / 통계
                 
                 sectionHeader("서재 / 통계 조회")
@@ -208,18 +186,6 @@ struct NovelLoggerDemoView: View {
         }
     }
     
-    private func searchNovelByText(_ text: String) async {
-        appendLog(level: .debug, message: "텍스트 검색 '\(text)' 요청...")
-        do {
-            let (paginated, totalCount) = try await repository.searchNovelByText(text)
-            let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
-            appendLog(level: .info,
-                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
-        } catch {
-            appendError(action: .searchByText(query: text), error: error)
-        }
-    }
-    
     private func fetchMyLibraryNovels() async {
         appendLog(level: .debug, message: "내 서재 조회 요청...")
         do {
@@ -249,22 +215,6 @@ struct NovelLoggerDemoView: View {
                       message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
         } catch {
             appendError(action: .fetchUserLibrary, error: error)
-        }
-    }
-    
-    private func searchNovelByFilter() async {
-        appendLog(level: .debug, message: "필터 검색 (로맨스) 요청...")
-        do {
-            let filter = SearchFilter(genres: [.romance],
-                                      publicationStatus: nil,
-                                      ratingThreshold: nil,
-                                      keywords: [])
-            let (paginated, totalCount) = try await repository.searchNovelByFilter(filter)
-            let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
-            appendLog(level: .info,
-                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
-        } catch {
-            appendError(action: .searchByFilter, error: error)
         }
     }
     
