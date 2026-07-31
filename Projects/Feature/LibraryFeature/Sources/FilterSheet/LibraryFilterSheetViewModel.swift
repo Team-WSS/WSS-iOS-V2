@@ -13,13 +13,16 @@ import BaseDomain
 import NovelDomain
 
 /// 필터 탭 식별 — 메인 화면 칩에서 특정 탭으로 바로 진입할 때도 쓴다.
-enum LibraryFilterTab: CaseIterable, Equatable {
+/// `Identifiable`은 진입 탭을 `.sheet(item:)`으로 넘기기 위한 것(`.sheet(isPresented:)`는 첫 진입 탭을 놓친다 — LibraryView 참고).
+enum LibraryFilterTab: CaseIterable, Equatable, Identifiable {
     case readingStatus
     case genre
     case publicationStatus
     case rating
     case attractivePoint
     case keyword
+
+    var id: Self { self }
 }
 
 // 필터 시트 전용 순수 입력 VM — UseCase·콜백 없이 필터 편집본만 소유한다(ReadingPeriodSheet 패턴).

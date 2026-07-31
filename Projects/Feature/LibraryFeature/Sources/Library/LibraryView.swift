@@ -22,9 +22,9 @@ struct LibraryView: View {
     /// 목록 표시 모드 — VM 처리가 필요 없는 순수 표시 상태라 View가 소유한다(타입은 타유저 서재와 공유).
     @State private var displayMode: LibraryDisplayMode = .grid
     @State private var isSortSheetPresented = false
-    @State private var isFilterSheetPresented = false
-    /// 필터 시트를 열 때 진입할 탭 — 메인 칩에서 해당 탭으로 바로 들어간다.
-    @State private var filterSheetTab: LibraryFilterTab = .readingStatus
+    /// 필터 시트를 열 때 진입할 탭 — 메인 칩에서 해당 탭으로 바로 들어간다. non-nil이 곧 "시트 열림"이다.
+    /// ⚠️ `isPresented` + 별도 탭 State 조합이면 **첫 진입에서만** 탭이 무시된다(아래 `.sheet(item:)` 주석 참고).
+    @State private var filterSheetTab: LibraryFilterTab?
 
     /// 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
     private let onNovelSelected: (NovelID) -> Void
@@ -62,10 +62,14 @@ struct LibraryView: View {
                     viewModel.handle(.selectSortType(sortType))
                 }
             }
-            .sheet(isPresented: $isFilterSheetPresented) {
+            // ⚠️ `isPresented:` + 별도 탭 State로 열면 **앱 실행 후 첫 시트만** 기본 탭(읽기상태)으로 열린다 —
+            // SwiftUI가 시트 콘텐츠를 미리 평가하며 시트 VM의 `@State` 저장소를 그때의 탭 값으로 만들어버려,
+            // 뒤늦게 바뀐 탭이 반영되지 않는다(두 번째부터는 이전 값이 이미 맞아떨어져 정상처럼 보인다).
+            // `item:`은 진입 탭이 확정된 뒤 그 값을 인자로 받아 콘텐츠를 만들므로 이 틈이 없다.
+            .sheet(item: $filterSheetTab) { tab in
                 LibraryFilterSheet(
                     filter: viewModel.state.filter,
-                    initialTab: filterSheetTab,
+                    initialTab: tab,
                     registeredKeywords: viewModel.state.registeredKeywords
                 ) { filter in
                     viewModel.handle(.applyFilter(filter))
@@ -391,9 +395,9 @@ private extension LibraryView {
             isSelected: hasActiveFilter(tab),
             showsDropdownIcon: true
         ) {
-            filterSheetTab = tab
             viewModel.handle(.loadRegisteredKeywords)
-            isFilterSheetPresented = true
+            // 탭을 넣는 것이 곧 시트 열기(`.sheet(item:)`).
+            filterSheetTab = tab
         }
     }
 

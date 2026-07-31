@@ -57,6 +57,7 @@
 **규칙 (코드만 봐선 모르는 것):**
 - **View→VM 입력은 오직 `viewModel.handle(.xxx)`** (생명주기도 액션: `onAppear → .load`). `state`는 `private(set)` → 직접 변경 ❌.
 - **표시 상태 소유 구분**: VM 처리가 필요 없는 순수 표시 상태(시트 bool 등)는 View가 `@State`로. **VM이 판단을 소유한 표시 상태(alert/toast)는 `Binding(get:set:)`** 으로 만들고 set을 `handle` 경유.
+  - ⚠️ **시트에 "진입 파라미터"를 넘길 땐 `isPresented:` + 별도 State 조합을 쓰지 말고 `.sheet(item:)`으로 그 값을 넘긴다.** `bool = true`와 파라미터 State를 같이 세팅하면 **앱 실행 후 첫 표시에서만** 파라미터가 무시된다 — SwiftUI가 시트 콘텐츠를 미리 평가하면서 시트 뷰의 `@State`(VM 등) 저장소를 그때의 값으로 굳혀, 나중에 바뀐 값이 반영되지 않는다. 두 번째부터는 이전 값이 맞아떨어져 정상처럼 보이니 **재현이 "첫 진입"에만 걸린다**(서재 필터 시트에서 실제 발생 — 어느 칩을 눌러도 첫 번엔 읽기상태 탭). `item:`은 값이 확정된 뒤 그것을 인자로 받아 콘텐츠를 만들어 이 틈이 없다(파라미터 타입에 `Identifiable` 필요).
 - **표현은 View가**: 의미값(VM enum) → 컴포넌트 타입/카피/색 매핑은 View. 날짜 포맷·"평점 없음" 등 표기도 View(얇은 VM).
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
