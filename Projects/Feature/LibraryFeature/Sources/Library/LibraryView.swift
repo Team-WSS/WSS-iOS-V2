@@ -205,12 +205,15 @@ private extension LibraryView {
     }
 
     /// 작품 목록 — 그리드/리스트 모드, 무한 스크롤, 빈 상태.
+    @ViewBuilder
     var novelListSection: some View {
-        ScrollView {
-            if viewModel.state.isLoading {
+        if viewModel.state.isLoading {
+            ScrollView {
                 LoadingView()
                     .frame(minHeight: 400)
-            } else if viewModel.state.novels.isEmpty {
+            }
+        } else if viewModel.state.novels.isEmpty {
+            ScrollView {
                 // 서재 자체가 빈 것과 필터로 걸러져 0건인 것은 필요한 행동이 다르다
                 // ("웹소설 찾기" vs "필터 완화").
                 if hasAnyFilter {
@@ -218,21 +221,39 @@ private extension LibraryView {
                 } else {
                     emptySection
                 }
-            } else {
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 12)
-                    switch displayMode {
-                    case .grid: gridList
-                    case .list: rowList
-                    }
-                    if viewModel.state.isLoadingMore {
-                        ProgressView()
-                            .padding(.vertical, 16)
-                    }
-                    Spacer().frame(height: 24)
-                }
+            }
+        } else {
+            // 두 모드가 **각자의 스크롤 위치**를 지키려면 두 목록이 동시에 살아 있어야 한다.
+            // (스크롤 뷰 하나 안에서 콘텐츠만 갈아끼우면 contentOffset이 공유돼 한쪽에서 내린 만큼
+            //  다른 쪽도 내려가 있다 — 실제 증상.)
+            ZStack {
+                novelScroll(for: .grid) { gridList }
+                novelScroll(for: .list) { rowList }
             }
         }
+    }
+
+    /// 모드별 목록 스크롤 — 안 보이는 쪽도 **지우지 않고 숨기기만** 한다(스크롤 위치 보존).
+    /// 살아 있는 채 겹쳐 있으므로 탭·VoiceOver가 새지 않게 함께 막는다.
+    /// ⚠️ 숨은 쪽의 `loadMore`(마지막 셀 onAppear)는 막지 않는다 — 모드로 가드하면 그 셀이 이미
+    /// onAppear를 소진해, 나중에 그 모드로 전환했을 때 무한 스크롤이 되살아나지 않는다.
+    /// 중복 요청은 VM의 `loadTask == nil` 가드가 막는다.
+    func novelScroll(for mode: LibraryDisplayMode, @ViewBuilder list: () -> some View) -> some View {
+        let isVisible = displayMode == mode
+        return ScrollView {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 12)
+                list()
+                if viewModel.state.isLoadingMore {
+                    ProgressView()
+                        .padding(.vertical, 16)
+                }
+                Spacer().frame(height: 24)
+            }
+        }
+        .opacity(isVisible ? 1 : 0)
+        .allowsHitTesting(isVisible)
+        .accessibilityHidden(!isVisible)
     }
 
     var gridList: some View {
