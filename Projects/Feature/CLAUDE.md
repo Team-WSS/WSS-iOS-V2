@@ -34,6 +34,14 @@
 
 인증 만료→로그인 라우팅(`requiresAuthentication` 신호 + `onAuthenticationRequired` 콜백)은 **두 모듈 공통**이라 성격과 무관하게 서버 호출이 있으면 넣는다.
 
+### 인증 만료 처리 계약 (화면 성격과 무관한 앱 전체 규칙 — 여기가 정본)
+
+- **catch에서 실패 플래그·토스트보다 먼저 걸러 `return`한다**(`routeToLoginIfAuthenticationRequired`). 순서를 뒤집어 `loadFailed = true`를 먼저 세우면 로그인 라우팅과 전면 실패 뷰가 **동시에** 걸린다.
+- **전면 실패 뷰(`NetworkErrorView`)로 덮지 않는다.** 세션이 죽은 상태라 "페이지 다시 불러오기"가 같은 `.authenticationRequired`로 되돌아와 **탈출구가 되지 못하고**, 문구도 원인을 네트워크 오류라고 잘못 말한다.
+- ⚠️ **"push 화면이라 `onAppear` 재발화 복구가 없다"는 이유로 예외를 만들지 말 것.** 타유저 서재가 실제로 그 예외를 뒀다가 #166에서 되돌렸다 — 방어하려던 건 Feature가 아니라 App 배선의 문제였다(아래).
+- **인증 만료 뒤 화면을 치우는 건 콜백을 받은 App의 책임이다.** Feature는 신호만 올리고 목록은 빈 채 남으므로 빈 상태("서재가 비어있어요" 등)가 비칠 수 있다 — 이걸 Feature에서 가리려 하면 위의 "갇히는 실패 뷰"로 되돌아간다. `onAuthenticationRequired`는 **화면(또는 루트)을 교체하는 배선**이어야 하고, **idempotent해야 한다**(한 화면에서 로드가 여러 개면 시간차로 2회 발화할 수 있다).
+- 신호를 **소진**할지(`.consumeAuthenticationRequired`)는 VM 수명에 달렸다 — 탭 콘텐츠처럼 VM이 앱 세션 내내 살면 소진해야 2회차 만료가 삼켜지지 않는다(→ [LibraryFeature](LibraryFeature/CLAUDE.md)).
+
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature VM은 아래 `// MARK:` 순서·역할을 그대로 따른다.** 순서를 바꾸거나 섹션을 임의로 추가하지 않는다.
