@@ -40,6 +40,7 @@ public struct WhiteRemovableKeywordChip: View {
         .padding(.horizontal, 13)
         .padding(.vertical, 5)
         .background { Capsule().fill(Color.wssWhite) }
+        // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 ScrollView 클립에 잘린다.
         .overlay { Capsule().strokeBorder(Color.wssPrimary100, lineWidth: 1) }
         .contentShape(Capsule())
         .onTapGesture { onSelect?() }

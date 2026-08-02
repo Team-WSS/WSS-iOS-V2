@@ -32,7 +32,10 @@ extension NovelMapper {
     
     // MARK: - 서재 - 소설
     
-    public static func libraryNovel(from dto: UserLibraryNovelResponse) throws -> LibraryNovel {
+    public static func libraryNovel(
+        from dto: UserLibraryNovelResponse,
+        cachedKeywords: [Keyword] = []
+    ) throws -> LibraryNovel {
         let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         
         var userReview: UserNovelReview?
@@ -48,7 +51,7 @@ extension NovelMapper {
                 rating: rating,
                 attractivePoint: attractivePoints,
                 period: period,
-                keywords: []
+                keywords: mapKeywords(from: dto.keywords, cachedKeywords: cachedKeywords)
             )
         }
         
@@ -69,6 +72,26 @@ extension NovelMapper {
             novels: Paginated(items: try dto.userNovels.map { try libraryNovel(from: $0) },
                               hasNext: dto.isLoadable)
         )
+    }
+
+    public static func libraryNovelsV2(
+        from dto: UserLibraryNovelsV2Response,
+        cachedKeywords: [Keyword]
+    ) throws -> (CursorPaginated<LibraryNovel>, Int) {
+        let page = CursorPaginated(
+            items: try dto.userNovels.map {
+                try libraryNovel(from: $0, cachedKeywords: cachedKeywords)
+            },
+            hasNext: dto.isLoadable,
+            nextCursor: dto.nextCursor
+        )
+        return (page, dto.userNovelCount)
+    }
+
+    // MARK: - 서재 - 등록 키워드
+
+    public static func libraryKeywords(from dto: LibraryKeywordsResponse) -> [Keyword] {
+        dto.keywords.map { Keyword(id: KeywordID($0.keywordId), name: $0.keywordName) }
     }
     
     // MARK: - 작품 상세 정보
@@ -156,31 +179,58 @@ extension NovelMapper {
     
     // MARK: - 서재 조회 Query
     
-    static func myLibraryQuery(from filter: MyLibraryFilter) -> UserLibraryQuery {
-        UserLibraryQuery(
-            lastUserNovelId: 0,
+    /// 서재 V2 쿼리. 미적용 필터는 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+    /// isInterest는 "관심만 보기" 토글이라 true일 때만 전송한다(false를 보내면 비관심만 필터됨).
+    static func myLibraryV2Query(from filter: MyLibraryFilter, cursor: String?) -> UserLibraryV2Query {
+        var ratingMin: Float?
+        var ratingMax: Float?
+        var unratedOnly: Bool?
+        switch filter.rating {
+        case .range(let min, let max):
+            ratingMin = min
+            ratingMax = max
+        case .unratedOnly:
+            unratedOnly = true
+        case nil:
+            break
+        }
+
+        return UserLibraryV2Query(
+            cursor: cursor,
             size: 20,
-            sortCriteria: filter.sortType.rawValue,
-            isInterest: filter.isInterest,
-            readStatuses: filter.readingStatus.map { mapReadingStatusString(from: $0) },
-            attractivePoints: filter.attractivePoint.map { mapAttractivePointString(from: $0) },
-            novelRating: filter.ratingThreshold?.rawValue ?? 0,
-            query: "",
-            updatedSince: ""
+            sortType: mapLibrarySortTypeString(from: filter.sortType),
+            isInterest: filter.isInterest ? true : nil,
+            readStatuses: filter.readingStatus.isEmpty
+                ? nil : filter.readingStatus.map { mapReadingStatusString(from: $0) },
+            genres: filter.genres.isEmpty
+                ? nil : filter.genres.map { mapNovelGenreString(from: $0) },
+            isCompleted: filter.publicationStatus.map { $0 == .completed },
+            ratingMin: ratingMin,
+            ratingMax: ratingMax,
+            unratedOnly: unratedOnly,
+            attractivePoints: filter.attractivePoint.isEmpty
+                ? nil : filter.attractivePoint.map { mapAttractivePointString(from: $0) },
+            // 서재 키워드 필터는 서버가 keywordName(한글명) 매칭 — 검색의 keywordIds와 다르다.
+            keywords: filter.keywords.isEmpty ? nil : filter.keywords.map { $0.name }
         )
     }
-    
-    static func userLibraryQuery(from filter: LibraryFilter) -> UserLibraryQuery {
-        UserLibraryQuery(
-            lastUserNovelId: 0,
+
+    /// 타유저 서재 V2 쿼리. 내 서재와 **같은 엔드포인트**를 쓰지만 필터 UI가 없는 화면이라 정렬만 싣고
+    /// 나머지 필터는 전부 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+    static func userLibraryV2Query(from filter: LibraryFilter, cursor: String?) -> UserLibraryV2Query {
+        UserLibraryV2Query(
+            cursor: cursor,
             size: 20,
-            sortCriteria: filter.sortType.rawValue,
-            isInterest: false,
-            readStatuses: [],
-            attractivePoints: [],
-            novelRating: 0,
-            query: "",
-            updatedSince: ""
+            sortType: mapLibrarySortTypeString(from: filter.sortType),
+            isInterest: nil,
+            readStatuses: nil,
+            genres: nil,
+            isCompleted: nil,
+            ratingMin: nil,
+            ratingMax: nil,
+            unratedOnly: nil,
+            attractivePoints: nil,
+            keywords: nil
         )
     }
     
@@ -261,6 +311,31 @@ extension NovelMapper {
         }
     }
 
+    private static func mapLibrarySortTypeString(from value: LibrarySortType) -> String {
+        switch value {
+        case .registeredNewest:  return "created_desc"
+        case .registeredOldest:  return "created_asc"
+        case .title:             return "title"
+        case .readDate:          return "read_date"
+        case .ratingHighest:     return "rating_desc"
+        case .ratingLowest:      return "rating_asc"
+        }
+    }
+
+    static func mapNovelGenreString(from genre: NovelGenre) -> String {
+        switch genre {
+        case .lightNovel:      return "lightNovel"
+        case .wuxia:           return "wuxia"
+        case .fantasy:         return "fantasy"
+        case .romance:         return "romance"
+        case .BL:              return "BL"
+        case .romanceFantasy:  return "romanceFantasy"
+        case .modernFantasy:   return "modernFantasy"
+        case .drama:           return "drama"
+        case .mystery:         return "mystery"
+        }
+    }
+
     private static func mapNovelGenre(from value: String) throws -> NovelGenre {
         switch value {
         case "라노벨":   return .lightNovel
@@ -286,6 +361,14 @@ extension NovelMapper {
             cachedKeywords
                 .first { $0.name == dto.keywordName }
                 .map { NovelKeyword(keyword: $0, count: dto.keywordCount) }
+        }
+    }
+
+    /// 서재 목록 API는 키워드 이름만 내려준다. 전체 키워드 캐시에서 동일한 이름의 ID를 찾아
+    /// `UserNovelReview`에 넣을 값을 복원하며, 서버에 없는 이름은 표시하지 않는다.
+    private static func mapKeywords(from names: [String], cachedKeywords: [Keyword]) -> [Keyword] {
+        names.compactMap { name in
+            cachedKeywords.first { $0.name == name }
         }
     }
     

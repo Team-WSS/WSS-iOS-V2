@@ -89,17 +89,24 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func fetchMyLibraryNovels(_ filter: MyLibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
+    public func fetchMyLibraryNovels(
+        _ filter: MyLibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchMyLibrary
-        
+
         do {
             let myID = appStorage.get(.userID)
-            let query = NovelMapper.myLibraryQuery(from: filter)
-            let response = try await service.getUserLibraryNovels(userID: myID ?? 0,
-                                                                  query: query)
-            let libraryNovels = try NovelMapper.libraryNovels(from: response)
+            let query = NovelMapper.myLibraryV2Query(from: filter, cursor: cursor)
+            let response = try await service.getUserLibraryNovelsV2(userID: myID ?? 0,
+                                                                    query: query)
+            let result = try NovelMapper.libraryNovelsV2(
+                from: response,
+                cachedKeywords: cachedKeywords
+            )
             logger?.logSuccess(action: action.text)
-            return (libraryNovels.novels, libraryNovels.totalCount)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()
@@ -112,16 +119,43 @@ public struct DefaultNovelRepository: NovelRepository {
         }
     }
     
-    public func fetchUserLibraryNovels(id: UserID,
-                                       _ filter: LibraryFilter) async throws(RepositoryError) -> (Paginated<LibraryNovel>, Int) {
-        let action = NovelAction.fetchUserLibrary
-        
+    public func fetchMyLibraryKeywords() async throws(RepositoryError) -> [Keyword] {
+        let action = NovelAction.fetchMyLibraryKeywords
+
         do {
-            let query = NovelMapper.userLibraryQuery(from: filter)
-            let response = try await service.getUserLibraryNovels(userID: id.value, query: query)
-            let libraryNovels = try NovelMapper.libraryNovels(from: response)
+            let myID = appStorage.get(.userID)
+            let response = try await service.getUserLibraryKeywords(userID: myID ?? 0)
+            let result = NovelMapper.libraryKeywords(from: response)
             logger?.logSuccess(action: action.text)
-            return (libraryNovels.novels, libraryNovels.totalCount)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.text, error: error)
+            throw error.toRepositoryError()
+        } catch {
+            logger?.logUnknownError(action: action.text, error: error)
+            throw .unknown
+        }
+    }
+
+    /// 타유저 서재 — 내 서재와 **같은 V2 엔드포인트**를 대상 userID로 호출한다
+    /// (`fetchMyLibraryNovels`는 저장된 내 userID를 넣을 뿐 경로·쿼리는 동일하다).
+    public func fetchUserLibraryNovels(
+        id: UserID,
+        _ filter: LibraryFilter,
+        cursor: String?,
+        cachedKeywords: [Keyword]
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        let action = NovelAction.fetchUserLibrary
+
+        do {
+            let query = NovelMapper.userLibraryV2Query(from: filter, cursor: cursor)
+            let response = try await service.getUserLibraryNovelsV2(userID: id.value, query: query)
+            let result = try NovelMapper.libraryNovelsV2(
+                from: response,
+                cachedKeywords: cachedKeywords
+            )
+            logger?.logSuccess(action: action.text)
+            return result
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.text, error: error)
             throw error.toRepositoryError()

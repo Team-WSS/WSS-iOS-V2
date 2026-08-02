@@ -1,14 +1,15 @@
 ---
 name: new-feature
-description: WSS-iOS-V2 프로젝트에서, 새 Feature 화면을 처음부터 구현할 때 사용한다. 모듈명을 받아 ① new-module 스킬로 Feature 모듈 생성 → ② View/ViewModel·Factory 골격 작성 → ③ Figma URL을 받아 WSS 디자인 시스템으로 UI 구현 → ④ wss-feature-reviewer로 리뷰→수정을 Blocker·Warning이 0이 될 때까지 수렴, 까지 단계별 게이트로 진행한다. "새 화면 만들자", "Feature 구현 시작", 또는 "/new-feature <ModuleName> [FigmaURL]" 같은 요청에 트리거.
+description: WSS-iOS-V2 프로젝트에서, 새 Feature 화면을 처음부터 구현할 때 사용한다. 모듈명을 받아 ① new-module 스킬로 Feature 모듈 생성 → ② View/ViewModel·Factory 골격 작성 → ③ Figma URL을 받아 동작 계약(정적 디자인으로 안 잡히는 것)을 질문으로 확정한 뒤 WSS 디자인 시스템으로 UI 구현·스크린샷 대조 → ④ wss-feature-reviewer로 리뷰→수정을 Blocker·Warning이 0이 될 때까지 수렴, 까지 단계별 게이트로 진행한다. "새 화면 만들자", "Feature 구현 시작", 또는 "/new-feature <ModuleName> [FigmaURL]" 같은 요청에 트리거.
 metadata:
-  short-description: 새 Feature 화면 구현 (모듈 생성 → 골격 → Figma UI → 리뷰·수정 수렴), 단계별 게이트
+  short-description: 새 Feature 화면 구현 (모듈 생성 → 골격 → 동작 계약 확정·Figma UI → 리뷰·수정 수렴), 단계별 게이트
 ---
 
 # New Feature — 새 Feature 화면 구현 (WSS-iOS-V2)
 
 새 Feature 화면을 처음부터 구현한다. 인자: `<ModuleName> [FigmaURL]` (예: `Home`, `Home https://figma.com/...`).
-네 단계 — **① 모듈 생성 → ② View/ViewModel·Factory 골격 → ③ Figma → WSS UI 구현 → ④ 리뷰·수정 수렴** — 을 **단계별 게이트**로 진행한다.
+네 단계 — **① 모듈 생성 → ② View/ViewModel·Factory 골격 → ③ Figma → 동작 계약 확정 → UI 구현·대조 검증
+→ ④ 리뷰·수정 수렴** — 을 **단계별 게이트**로 진행한다.
 
 > ⚠️ **추측 금지 — 정본을 먼저 읽는다.** 값·패턴을 지어내지 말고 항상:
 > `Projects/Feature/CLAUDE.md`(레이어 규칙·함정), `Projects/Feature/Docs/VIEWMODEL_TEMPLATE.md`·
@@ -18,6 +19,8 @@ metadata:
 > ⚠️ **모호하면 묻고, 확실하면 안 묻는다.** 각 단계에서 진행에 필요한 정보가 부족하거나 여러 해석으로
 > 갈리면 **반드시 사용자에게 물어 하나로 확정한 뒤** 진행한다. 반대로 정본·컨벤션·디자인으로 이미
 > 정해지는 것은 하나하나 되묻지 않는다(과잉 질문 금지).
+> 단, 이 원칙을 **자기판정에 맡기면 실효가 없다**("충분히 명확하다"고 넘어간다) → UI는 3B에서
+> [design-gap-checklist.md](design-gap-checklist.md) 판정이라는 **산출물로 강제**한다.
 >
 > ⚠️ **구현은 메인이 직접, 리뷰만 위임.** ①②③은 순차 의존·게이트가 사용자 상호작용이라 subagent
 > 위임이 cold start 재독·핸드오프 손실로 손해다 → 메인이 직접 한다. **예외: ④ 리뷰는 격리 컨텍스트가
@@ -70,20 +73,49 @@ metadata:
   코드 서명/교차 모듈 의존으로 실패한다. → **확인 게이트**. 승인 시 골격을 `[Add]`로 커밋(push ❌)하고 3단계로.
 
 ### 3. Figma → WSS 구현
+
+**정적 스냅샷으로는 동작을 알 수 없다**는 게 이 단계의 근본 제약이다 → `3A 수집 → 3B 동작 계약·질문 →
+3C 구현 → 3D 대조 검증` 순으로 간다. **3B의 ❓미결이 0이 되기 전에 UI 코드를 한 줄도 쓰지 않는다.**
+
+#### 3A. 컨텍스트 수집 (묻기 전에 Figma를 최대한 캔다)
 - URL이 없으면 받는다(또는 Figma Dev Mode에서 선택된 노드).
-- `mcp__plugin_figma_figma__get_screenshot`(시각 확인) + `get_design_context`(구조/레이아웃) +
-  `get_variable_defs`(디자인 변수)로 컨텍스트를 확보한다.
-- ⚠️ **인터랙션 확정 게이트**: 디자인은 정적이라 *동작*이 안 보인다. 탭/스와이프 결과, 빈·로딩·에러 상태,
-  화면 전환 등이 디자인만으로 안 잡히거나 여러 해석으로 갈리면 **하나로 확정될 때까지 사용자에게 묻는다**
-  (임의로 정하지 않는다). 정적 레이아웃·치수·디자인 시스템 매핑처럼 디자인으로 이미 정해진 것은 되묻지 않는다.
-- ⚠️ **raw 출력(hex 색·시스템 폰트·인라인 SVG)을 그대로 쓰지 않는다.** WSS 디자인 시스템에 매핑한다:
-  - 색 = `Color.wssXxx`, 폰트 = `.applyWSSFont(.xxx)`, 아이콘 = `WSSImage`
-  - 컴포넌트 = `WSSComponent` (CTA = `WSSCTAButton`, 오버레이 = `.showWSSAlert`/`.showWSSToast` 등)
-  - 도메인 라벨·아이콘·색은 `WSSComponent`의 `DomainPresentation/` 확장 재사용(Feature 중복 매핑 ❌).
-  - **없거나 수정이 필요한 컴포넌트는 먼저 허락**을 받는다(임의 추가·수정 ❌).
-- 간격은 stack `spacing: 0` + `Spacer().frame(height:/width:)`. 커스텀 탭 영역엔 `.contentShape(Rectangle())`.
-- View→VM 입력은 오직 `viewModel.handle(.xxx)`(생명주기도 액션). 시뮬레이터로 빌드/렌더 확인 →
-  **확인 게이트**: 승인 시 UI 구현분을 `[Design]`으로 커밋(push ❌)하고 **④로 진입**.
+- **`get_design_context` 호출 전에 `figma:figma-design-to-code`와 `figma:figma-swiftui`를 `Skill`로 로드**한다
+  (MANDATORY). 힌트 우선순위·에셋 규칙·SwiftUI 매핑은 **그 스킬들이 정본**이라 여기 복제하지 않는다.
+- `get_design_context`가 주력. 보조로 `get_screenshot`(3D 대조용 원본), `get_variable_defs`,
+  그리고 **`get_metadata`로 부모·형제 노드명 훑기** — `Empty`/`Loading`/`Selected` 같은 상태 프레임 단서가
+  거기 있어서, 먼저 캐면 3B의 ❓가 줄고 질문이 진짜 미결에만 집중된다.
+
+#### 3B. 동작 계약 게이트 — 이 단계가 결과물 품질을 정한다
+- **[design-gap-checklist.md](design-gap-checklist.md)를 읽고 A~F 전 항목을 판정**한다. 항목을 임의로
+  건너뛰지 않는다(그 목록이 곧 정적 스냅샷의 blind spot이다).
+- 판정은 **✅확인됨(Figma 근거) / ⚙️기본값(정본 근거 — 파일·화면명 필수) / ❓미결 / ➖해당없음**.
+  ⚠️ **근거를 못 적으면 ⚙️가 아니라 ❓다.** 추측이 새는 구멍은 여기 하나뿐이라 엄격히 판정한다.
+- **출력은 압축**한다 — ✅·❓만 표로, ⚙️·➖는 `ID 나열 + 근거` 한 줄씩. 판정 자체는 전 항목을 하되
+  화면을 표로 다 채우지 않는다.
+- ⚠️ **❓미결은 `AskUserQuestion`으로 확정하고, 0이 되기 전에는 UI 코드를 한 줄도 쓰지 않는다.**
+  4개씩 묶어 라운드를 줄이고, 선택지는 *이 프로젝트에서 실제로 가능한 구현*으로, 레이아웃·문구가 갈리면 `preview`로.
+- ⚙️기본값과 ②에서 확정한 State/Action/UseCase는 되묻지 않는다(과잉 질문 금지). ②는 *무엇을 하는 화면인가*,
+  3B는 *어떻게 보이고 반응하나* 레벨이다.
+- **확정 결과를 모듈 `CLAUDE.md`의 `## 화면 동작 계약` 절에 기록**한다 — ✅ 중 비자명한 것 + 물어서 확정한
+  것만(⚙️는 정본 중복이라 제외). ④ 리뷰어와 이후 세션이 보는 근거가 된다.
+- 데이터에 따라 갈리는 항목은 **Demo Mock 시나리오 축 후보**로 표시한다(3D에서 렌더 확인할 대상).
+
+#### 3C. 구현
+- **디자인 시스템 매핑이 핵심** — raw hex·시스템 폰트·손으로 그린 SVG ❌. 매핑 규칙(색·폰트·아이콘·오버레이·
+  `DomainPresentation` 재사용·간격·`contentShape`)은 `Feature/CLAUDE.md` "View 표준 구조"가 정본이다.
+  상태 표현엔 기존 컴포넌트를 먼저 찾는다(로딩 `LoadingView` / 실패 `NetworkErrorView` / 빈 `WSSEmptyView`).
+- ⚠️ **없거나 수정이 필요한 WSSComponent·에셋은 먼저 허락**을 받는다(임의 추가·수정 ❌).
+- 3B에서 확정한 데이터 분기는 **Demo Mock 시나리오로도 만든다**(버튼 하나 = 데이터 조건 하나 —
+  `NovelDetailFeature/CLAUDE.md` 정본). 3D에서 눈으로 확인할 수단이다.
+
+#### 3D. 대조 검증
+- 시뮬레이터로 빌드·실행(절차·함정은 `Feature/CLAUDE.md` "UI 검증") 후 **`screenshot`을 3A의 Figma
+  스크린샷과 나란히 대조**한다 — 간격·정렬·폰트·색·잘린 텍스트를 훑어 **어긋난 목록을 뽑고 고친다**
+  (빌드 성공 ≠ 디자인 일치).
+- 3B에서 확정한 **주요 상태(빈·실패·조건부)는 Demo Mock을 전환해 최소 1회 렌더 확인** — 구현했지만 한 번도
+  눈으로 못 본 상태가 남지 않게.
+- **확인 게이트**: 대조 결과·고친 항목·확인한 상태를 보고하고, 승인 시 UI 구현분 + `화면 동작 계약` 문서를
+  `[Design]`으로 커밋(push ❌)하고 **④로 진입**.
 
 ### 4. 자동 리뷰·수정 수렴 루프
 
@@ -91,7 +123,9 @@ metadata:
 
 - **대상**: 방금 만든 `Projects/Feature/<ModuleName>Feature/` 전체. 브랜치·세션 상태에 기대지 말고 **모듈 경로를 prompt에 명시**해 호출한다.
 - **루프 (최대 3라운드)**:
-  1. **리뷰** — `Agent` 도구로 `subagent_type: wss-feature-reviewer`를 호출하고, 대상 모듈 경로를 prompt에 적는다. (검사는 격리 컨텍스트가 유리 → ①②③과 달리 위임. 모듈 생성을 `new-module`에 위임하는 것과 같은 "단일 진실 소스" 철학.)
+  1. **리뷰** — `Agent` 도구로 `subagent_type: wss-feature-reviewer`를 호출하고, 대상 모듈 경로를 prompt에 적는다.
+     **3B의 `## 화면 동작 계약`을 근거로 검사하라고 prompt에 명시**한다 — 없으면 리뷰어가 의도를 몰라 오판한다.
+     (검사는 격리 컨텍스트가 유리 → ①②③과 달리 위임. 모듈 생성을 `new-module`에 위임하는 것과 같은 "단일 진실 소스" 철학.)
   2. **판정** — 리포트의 🔴 Blocker·🟡 Warning이 **둘 다 0이면 수렴 → 루프 종료**.
   3. **수정** — 🔴는 전부 고친다. 🟡도 고치되, **정답을 임의로 못 정하는 항목**(코드 vs 디자인/문서 의도 불일치, WSSComponent 신규·수정 필요 등)**은 사용자에게 확인한 뒤** 반영한다(추측으로 결정 ❌ — "모호하면 묻는다" 원칙). 라운드별 수정 요약을 한 줄로 보고.
   4. 수정이 새 위반을 부를 수 있으므로 **매 라운드 모듈 전체를 다시 리뷰**(1로 돌아간다).
@@ -106,6 +140,8 @@ metadata:
 - **정본 우선(추측 ❌)**: 의존성 = `NovelReviewFeature/Project.swift`, 골격 = `Docs/*_TEMPLATE.md`, 규칙 = `Feature/CLAUDE.md`.
 - 모듈 생성은 `new-module`에 위임(중복 ❌). Figma는 **디자인 시스템 매핑이 핵심**(raw 출력 ❌).
 - 모호하면 묻고(이해될 때까지 / 여러 해석은 하나로 확정), 정본·컨벤션·디자인으로 확실하면 되묻지 않는다.
+- **정적 디자인은 동작을 담지 못한다** → 갭을 체크리스트로 *열거*해 드러내고(3B), ❓는 물어 확정한 뒤 구현하며,
+  확정한 것은 모듈 `CLAUDE.md` `## 화면 동작 계약`에 남긴다. **빌드 성공 ≠ 디자인 일치** → 스크린샷 대조(3D)까지가 ③이다.
 - **완성 = 코드 작성이 아니라 리뷰 수렴**: ④에서 `wss-feature-reviewer`의 🔴+🟡가 0이 될 때까지가 한 화면의 끝. 검사는 리뷰어, 수정은 메인.
 - 각 단계 후 보고→사용자 확인 뒤 진행하며, **그 승인 시 단계 산출물을 커밋**한다(게이트 승인=커밋 지시,
   단계별 Type ①`[Setting]` ②`[Add]` ③`[Design]` ④`[Fix]`/`[Refactor]`). **push는 사용자가 따로 지시할 때만.**

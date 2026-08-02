@@ -19,6 +19,12 @@
 
 파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
 
+> **화면의 동작 계약은 모듈 `CLAUDE.md`의 `## 화면 동작 계약` 절이 정본이다.** 정적 Figma로는 안 잡혀
+> 사람에게 확인받은 것(스크롤 고정 영역·로딩/빈/실패 분화·탭 결과·말줄임 줄 수 등)이 거기 쌓인다.
+> 화면을 수정할 때 **디자인만 보고 추측하지 말고 그 절을 먼저 읽는다**. 새 화면은 `new-feature` 3B가
+> 채운다([design-gap-checklist.md](../../.claude/skills/new-feature/design-gap-checklist.md) — 기존 화면
+> 수정 시에도 갭 점검용으로 쓸 수 있다).
+
 **레퍼런스는 단일 정본이 아니라 "성격별 대표"다** — 뼈대(MARK 순서·State/Action·얇은 VM·Factory)는 어느 쪽이든 같으니, 만들 화면에 **가까운 쪽의 얹는 패턴**을 본다.
 | 만들 화면 성격 | 볼 정본 | 그 정본이 대표하는 얹는 패턴 |
 |---|---|---|
@@ -27,6 +33,14 @@
 | 복합 조회(리스트·탭·헤더) | `NovelDetailFeature` | 지연 로드·커서 페이지네이션, 낙관 업데이트/롤백, **전면 실패 뷰↔토스트 분화**, 화면 전환 콜백 다수 위임 |
 
 인증 만료→로그인 라우팅(`requiresAuthentication` 신호 + `onAuthenticationRequired` 콜백)은 **두 모듈 공통**이라 성격과 무관하게 서버 호출이 있으면 넣는다.
+
+### 인증 만료 처리 계약 (화면 성격과 무관한 앱 전체 규칙 — 여기가 정본)
+
+- **catch에서 실패 플래그·토스트보다 먼저 걸러 `return`한다**(`routeToLoginIfAuthenticationRequired`). 순서를 뒤집어 `loadFailed = true`를 먼저 세우면 로그인 라우팅과 전면 실패 뷰가 **동시에** 걸린다.
+- **전면 실패 뷰(`NetworkErrorView`)로 덮지 않는다.** 세션이 죽은 상태라 "페이지 다시 불러오기"가 같은 `.authenticationRequired`로 되돌아와 **탈출구가 되지 못하고**, 문구도 원인을 네트워크 오류라고 잘못 말한다.
+- ⚠️ **"push 화면이라 `onAppear` 재발화 복구가 없다"는 이유로 예외를 만들지 말 것.** 타유저 서재가 실제로 그 예외를 뒀다가 #166에서 되돌렸다 — 방어하려던 건 Feature가 아니라 App 배선의 문제였다(아래).
+- **인증 만료 뒤 화면을 치우는 건 콜백을 받은 App의 책임이다.** Feature는 신호만 올리고 목록은 빈 채 남으므로 빈 상태("서재가 비어있어요" 등)가 비칠 수 있다 — 이걸 Feature에서 가리려 하면 위의 "갇히는 실패 뷰"로 되돌아간다. `onAuthenticationRequired`는 **화면(또는 루트)을 교체하는 배선**이어야 하고, **idempotent해야 한다**(한 화면에서 로드가 여러 개면 시간차로 2회 발화할 수 있다).
+- 신호를 **소진**할지(`.consumeAuthenticationRequired`)는 VM 수명에 달렸다 — 탭 콘텐츠처럼 VM이 앱 세션 내내 살면 소진해야 2회차 만료가 삼켜지지 않는다(→ [LibraryFeature](LibraryFeature/CLAUDE.md)).
 
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 
@@ -51,13 +65,16 @@
 **규칙 (코드만 봐선 모르는 것):**
 - **View→VM 입력은 오직 `viewModel.handle(.xxx)`** (생명주기도 액션: `onAppear → .load`). `state`는 `private(set)` → 직접 변경 ❌.
 - **표시 상태 소유 구분**: VM 처리가 필요 없는 순수 표시 상태(시트 bool 등)는 View가 `@State`로. **VM이 판단을 소유한 표시 상태(alert/toast)는 `Binding(get:set:)`** 으로 만들고 set을 `handle` 경유.
+  - ⚠️ **시트에 "진입 파라미터"를 넘길 땐 `isPresented:` + 별도 State 조합을 쓰지 말고 `.sheet(item:)`으로 그 값을 넘긴다.** `bool = true`와 파라미터 State를 같이 세팅하면 **앱 실행 후 첫 표시에서만** 파라미터가 무시된다 — SwiftUI가 시트 콘텐츠를 미리 평가하면서 시트 뷰의 `@State`(VM 등) 저장소를 그때의 값으로 굳혀, 나중에 바뀐 값이 반영되지 않는다. 두 번째부터는 이전 값이 맞아떨어져 정상처럼 보이니 **재현이 "첫 진입"에만 걸린다**(서재 필터 시트에서 실제 발생 — 어느 칩을 눌러도 첫 번엔 읽기상태 탭). `item:`은 값이 확정된 뒤 그것을 인자로 받아 콘텐츠를 만들어 이 틈이 없다(파라미터 타입에 `Identifiable` 필요).
 - **표현은 View가**: 의미값(VM enum) → 컴포넌트 타입/카피/색 매핑은 View. 날짜 포맷·"평점 없음" 등 표기도 View(얇은 VM).
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
-- **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨). 보통 `.buttonStyle(.plain)`과 함께.
+- **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨).
+  - ⚠️ **`.buttonStyle(.plain)`은 기본 눌림 피드백(누를 때 흐려짐)까지 없앤다** — "버튼인데 눌러도 반응이 없다"의 원인. 이 스타일이 필요한 건 label의 `Text`가 accent 색으로 물드는 걸 막을 때뿐이고, **아이콘·커스텀 뷰만 있는 버튼은 빼야** 눌린 게 보인다(서재 헤더 등록 버튼에서 제거). 습관적으로 `.contentShape`와 세트로 붙이지 말 것.
 - **상태 기반 색·에셋 전환(토글·선택)엔 짧은 명시 애니메이션을 걸 것** — `.animation(.easeInOut(duration: 0.1), value: 상태)`. 미설정 시 기본 크로스페이드가 **느리게 번진다**(NovelReview 읽기 상태, NovelDetail 관심 버튼에서 재발 확인 — "토글이 굼뜨다"로 체감됨).
+  - ⚠️ **단, 그 선택이 레이아웃까지 바꾸는 화면에선 이 규칙을 접는다** — 선택 즉시 다른 요소가 생겨(선택 칩 행 등장 등) 아래가 밀리면, 형제들은 즉시 새 자리로 가는데 **방금 누른 버튼 하나만 뒤늦게 미끄러져 내려온다**. 어디까지나 **그런 화면 한정 예외**이지 기본값을 뒤집는 게 아니다 — 레이아웃이 안 바뀌는 토글엔 위 규칙대로 애니메이션을 건다. 끄는 방법과 실측 근거는 [LibraryFeature](LibraryFeature/CLAUDE.md)의 필터 시트 항목이 정본.
 - 화면 전용 서브뷰는 화면 폴더 동거. 여러 화면 재사용 시 WSSComponent로 승격(허락 후).
 
 ### Factory 골격
@@ -71,6 +88,7 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 }
 ```
 
+- **`makeView`는 모듈에 화면이 하나일 때만 쓴다** — 화면이 둘 이상이면 **전부** `makeXxxView`로 무엇을 만드는지 이름에 넣는다(`makeCreateFeedView`·`makeMyLibraryView`·`makeUserLibraryView`). 대등한 화면 중 하나만 `makeView`로 남기면 호출부에서 어느 화면인지 읽히지 않는다(`LibraryFactory`가 실제로 그랬다). 단 `SettingFactory`는 **메인 설정 화면 + 그 하위 상세들**이라 대표 화면이 `makeView`인 게 자연스러운 경우다 — 대등한지 종속인지로 판단할 것.
 - **Demo·Preview 필수**: `.demo` 타깃의 Demo 앱이 Factory를 `NavigationStack`에 띄워 단독 실행. Preview는 Sources 내부(internal 접근).
 - **⚠️ Demo 앱 `init()`에서 `DesignSystemFontFamily.registerAllCustomFonts()` 호출.** `applyWSSFont`가 `UIFont(name:)!`를 강제 언래핑 → 폰트 미등록 시 **런타임 크래시(SIGTRAP)**. 프리뷰도 Demo 앱을 호스트로 띄우므로 같이 죽는다.
 - 테스트는 mock UseCase 주입으로 충분. View에 가짜 VM을 통째로 주입할 일이 생기면 그때 가벼운 프로토콜을 다시 얹는다.
@@ -83,8 +101,9 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 - **별점 등 커스텀 드로잉은 접근성 tap 타겟으로 안 잡힌다** → `snapshot_ui`에 안 뜨면 좌표 탭. 표준 버튼/세그먼트/매력포인트는 `elementRef`로 잡힌다.
 - **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 - **`build_run_sim`은 이 스킴에서 install이 framework를 잡아 실패**할 수 있다("installable app 없음") → `build_sim`(컴파일) 후 `install_app_sim`+`launch_app_sim`(bundleId `...XxxFeatureDemo`)이 안정적.
+- ⚠️ **install할 `.app`은 `get_sim_app_path`가 알려주는 Products 디렉토리에서 고른다**(그 안의 `XxxFeatureDemo.app`). XcodeBuildMCP는 Xcode의 `~/Library/Developer/Xcode/DerivedData`가 **아니라 자체 `~/Library/Developer/XcodeBuildMCP/workspaces/<repo>/DerivedData/`** 에 빌드한다 — `find`로 Xcode DerivedData의 `.app`을 잡아 설치하면 **며칠 전 빌드가 조용히 올라가** 방금 고친 게 반영 안 된 화면을 보고 오진한다(실제 발생). 의심되면 `.app`의 mtime을 빌드 시각과 대조할 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum 중 `home`만 아직 미구현(`HomeFeature` 폴더는 있어도 `Project.swift` 없음). 나머지는 전부 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- `ModuleType.feature` enum 중 `home`만 아직 미구현(`HomeFeature` 폴더는 있어도 `Project.swift` 없음). 나머지는 전부 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.

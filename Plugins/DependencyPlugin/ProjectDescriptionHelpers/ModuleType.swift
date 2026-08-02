@@ -28,6 +28,7 @@ public enum FeatureModule: String, ModuleSpec {
     case setting
     case search
     case keyword
+    case library
 }
 
 public enum DomainModule: String, ModuleSpec {

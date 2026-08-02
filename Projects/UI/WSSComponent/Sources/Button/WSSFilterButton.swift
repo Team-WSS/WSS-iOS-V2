@@ -38,9 +38,10 @@ public struct WSSFilterButton: View {
             .foregroundColor(isSelected ? WSSColor.wssWhite.swiftUIColor : WSSColor.wssGray300.swiftUIColor)
             .background(isSelected ? WSSColor.wssBlack.swiftUIColor : WSSColor.wssWhite.swiftUIColor)
             .clipShape(Capsule())
+            // strokeBorder(= 안쪽으로 그림). stroke는 선의 절반이 프레임 밖으로 나가 상위 ScrollView 클립에 잘린다.
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? WSSColor.wssBlack.swiftUIColor : WSSColor.wssGray80.swiftUIColor, lineWidth: 1)
+                    .strokeBorder(isSelected ? WSSColor.wssBlack.swiftUIColor : WSSColor.wssGray80.swiftUIColor, lineWidth: 1)
             )
         }
     }

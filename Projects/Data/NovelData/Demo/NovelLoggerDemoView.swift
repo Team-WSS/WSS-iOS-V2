@@ -189,30 +189,33 @@ struct NovelLoggerDemoView: View {
     private func fetchMyLibraryNovels() async {
         appendLog(level: .debug, message: "내 서재 조회 요청...")
         do {
-            let filter = MyLibraryFilter(
-                isInterest: false,
-                readingStatus: [],
-                attractivePoint: [],
-                ratingThreshold: nil,
-                sortType: .recent
+            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+            let (paginated, totalCount) = try await repository.fetchMyLibraryNovels(
+                MyLibraryFilter(),
+                cursor: nil,
+                cachedKeywords: cachedKeywords
             )
-            let (paginated, totalCount) = try await repository.fetchMyLibraryNovels(filter)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             appendLog(level: .info,
-                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
+                      message: "성공: 총 \(totalCount)건 | 다음 커서: \(paginated.nextCursor ?? "없음") | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
         } catch {
             appendError(action: .fetchMyLibrary, error: error)
         }
     }
     
     private func fetchUserLibraryNovels(userID: Int) async {
-        appendLog(level: .debug, message: "유저 서재 조회 (ID=\(10033)) 요청...")
+        appendLog(level: .debug, message: "유저 서재 조회 (ID=\(userID)) 요청...")
         do {
-            let filter = LibraryFilter(sortType: .recent)
-            let (paginated, totalCount) = try await repository.fetchUserLibraryNovels(id: UserID(userID), filter)
+            let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+            let (paginated, totalCount) = try await repository.fetchUserLibraryNovels(
+                id: UserID(userID),
+                LibraryFilter(),
+                cursor: nil,
+                cachedKeywords: cachedKeywords
+            )
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             appendLog(level: .info,
-                      message: "성공: 총 \(totalCount)건 | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
+                      message: "성공: 총 \(totalCount)건 | 다음 커서: \(paginated.nextCursor ?? "없음") | \(titles)\(paginated.items.count > 3 ? " ..." : "")")
         } catch {
             appendError(action: .fetchUserLibrary, error: error)
         }

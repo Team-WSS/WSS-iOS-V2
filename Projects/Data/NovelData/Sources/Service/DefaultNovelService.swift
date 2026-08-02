@@ -22,6 +22,17 @@ public struct DefaultNovelService: NovelService {
         return try await client.request(endpoint, decodeTo: UserLibraryNovelsResponse.self)
     }
 
+    public func getUserLibraryNovelsV2(userID: Int,
+                                       query: UserLibraryV2Query) async throws -> UserLibraryNovelsV2Response {
+        let endpoint = NovelEndpoint.getUserLibraryNovelsV2(userID: userID, query)
+        return try await client.request(endpoint, decodeTo: UserLibraryNovelsV2Response.self)
+    }
+
+    public func getUserLibraryKeywords(userID: Int) async throws -> LibraryKeywordsResponse {
+        let endpoint = NovelEndpoint.getUserLibraryKeywords(userID: userID)
+        return try await client.request(endpoint, decodeTo: LibraryKeywordsResponse.self)
+    }
+
     public func getNovelBasicInfo(novelID: Int) async throws -> NovelBasicResponse {
         let endpoint = NovelEndpoint.getNovelBasicInfo(novelID: novelID)
         return try await client.request(endpoint, decodeTo: NovelBasicResponse.self)
