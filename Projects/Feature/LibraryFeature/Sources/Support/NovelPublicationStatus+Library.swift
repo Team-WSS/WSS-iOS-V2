@@ -8,7 +8,7 @@
 
 import Foundation
 
-import NovelDomain
+import BaseDomain
 
 extension NovelPublicationStatus {
     /// 서재 화면 카피 — 칩·시트에서 공용. (WSSComponent DomainPresentation 승격은 허락 필요라 Feature-local)

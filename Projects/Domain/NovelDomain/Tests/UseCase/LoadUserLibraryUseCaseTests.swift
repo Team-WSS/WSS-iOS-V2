@@ -90,7 +90,7 @@ struct LoadUserLibraryUseCaseTests {
         let keyword = Keyword(id: KeywordID(11), name: "회귀")
         let keywordRepository = MockKeywordRepository()
         keywordRepository.fetchKeywordsResult = .success([
-            KeywordGroup(name: "소재", image: nil, keywords: [keyword])
+            KeywordGroup(category: .material, keywords: [keyword])
         ])
         let usecase = DefaultLoadUserLibraryUseCase(
             novelRepository: novelRepository,
