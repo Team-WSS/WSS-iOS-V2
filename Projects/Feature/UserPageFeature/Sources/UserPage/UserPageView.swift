@@ -465,13 +465,13 @@ struct UserPageView: View {
                 profileImageURL: feed.author.profileImage,
                 nickname: feed.author.nickname,
                 createdDate: feed.createdDate,
-                isEdited: feed.isModified,
-                profileTapped: {},
-                threeDotsButtonTapped: {
-                    // 셀 상단 패딩(20) + 헤더 높이(32) = 52. NovelDetailFeedTab과 동일 계산.
-                    feedMenuContext = FeedMenuContext(feed: feed, anchorY: (feedCellTopYs[feed.feedId] ?? 0) + 52)
-                }
+                isEdited: feed.isModified
             ),
+            profileImageTapped: {},
+            threeDotsButtonTapped: {
+                // 셀 상단 패딩(20) + 헤더 높이(32) = 52. NovelDetailFeedTab과 동일 계산.
+                feedMenuContext = FeedMenuContext(feed: feed, anchorY: (feedCellTopYs[feed.feedId] ?? 0) + 52)
+            },
             content: feed.content,
             feedImage: feed.thumbnailImageURL.map {
                 WSSFeedImage(thumbnailImageURL: $0, imageCount: feed.imageCount)
@@ -490,12 +490,14 @@ struct UserPageView: View {
             },
             react: WSSFeedReact(
                 likeCount: feed.likeCount,
-                isLiked: feed.isLiked,
-                commentCount: feed.commentCount,
-                likeButtonTapped: {
-                    viewModel.handle(.toggleFeedLike(feed.feedId))
-                }
-            )
+                commentCount: feed.commentCount
+            ),
+            isLiked: feed.isLiked,
+            likeButtonTapped: {
+                viewModel.handle(.toggleFeedLike(feed.feedId))
+            },
+            isSpoiler: feed.isSpoiler,
+            isPrivate: !feed.isPublic
         )
     }
 }
@@ -571,14 +573,22 @@ private extension UserPageView {
                 .onTapGesture { feedMenuContext = nil }
 
             WSSDropdownMenu(items: [
-                WSSDropdownItem(title: "스포일러 신고", titleColor: WSSColor.wssSecondary100.swiftUIColor) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportSpoilerFeedTapped(context.feed.feedId))
-                },
-                WSSDropdownItem(title: "부적절한 표현 신고", titleColor: WSSColor.wssSecondary100.swiftUIColor) {
-                    feedMenuContext = nil
-                    viewModel.handle(.reportImproperFeedTapped(context.feed.feedId))
-                }
+                WSSDropdownItem(
+                    title: "스포일러 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportSpoilerFeedTapped(context.feed.feedId))
+                    },
+                    textColor: WSSColor.wssSecondary100.swiftUIColor
+                ),
+                WSSDropdownItem(
+                    title: "부적절한 표현 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportImproperFeedTapped(context.feed.feedId))
+                    },
+                    textColor: WSSColor.wssSecondary100.swiftUIColor
+                )
             ])
             .frame(width: 190)
             .padding(.top, context.anchorY)

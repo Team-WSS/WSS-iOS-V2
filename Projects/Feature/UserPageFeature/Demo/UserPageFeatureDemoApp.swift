@@ -189,7 +189,7 @@ private enum DemoFactory {
                 logger: DefaultNetworkLogger(base: consoleLogger),
                 tokenStore: DemoSessionTokenStore()
             ),
-            underlying: consoleLogger
+            logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
         return UserPageFactory.makeView(
             userID: userID,
