@@ -12,7 +12,7 @@ import DependencyPlugin
 
 let project = Project.createFeatureModule(
     name: ModuleType.feature(.onboarding).name,
-    targets: [.sources, .demo, .tests],
+    targets: [.sources, .demo],
     // 전용 OnboardingDomain은 없다 — 이번 이슈 범위(인트로+소셜로그인 화면)는 AuthDomain의
     // SocialLoginUseCase를 그대로 재사용한다. 가입약관 시트·닉네임·성별/출생년도·장르 선택(ProfileDomain
     // 의존)은 후속 이슈에서 이어간다 — 그때 domain(.profile)/data(.profile)을 추가한다.
