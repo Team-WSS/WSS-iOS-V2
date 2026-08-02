@@ -39,8 +39,8 @@ private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
     case empty = "빈 서재"
     case failure = "실패"
     /// 인증 만료 — 로그인 라우팅 콜백이 만료마다 정확히 1회씩 발화하는지 보는 축.
-    /// (신호를 소진하는 구조라 재로드하면 다시 발화해야 한다. 이 화면은 인증 만료도 실패 뷰로 덮어
-    ///  정렬 행이 숨겨지므로, 2회차 발화를 보려면 `NetworkErrorView`의 "페이지 다시 불러오기"를 쓴다.)
+    /// (신호를 소진하는 구조라 재로드하면 다시 발화해야 한다. 인증 만료는 실패 뷰를 세우지 않으므로
+    ///  카운트·정렬 행이 살아 있다 → 2회차 발화는 정렬 변경으로 확인한다.)
     case authExpired = "인증만료"
     var id: String { rawValue }
 }
