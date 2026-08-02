@@ -151,7 +151,7 @@ private struct DemoRootView: View {
     private var libraryView: some View {
         switch dataSource {
         case .mock:
-            LibraryFactory.makeView(
+            LibraryFactory.makeMyLibraryView(
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
                 loadMyLibraryKeywordsUseCase: DemoLoadMyLibraryKeywordsUseCase(),
                 logger: consoleLogger,
@@ -226,7 +226,7 @@ private struct DemoRootView: View {
         let repositories = makeLiveRepositories()
         let repository = repositories.novel
         let keywordRepository = repositories.keyword
-        return LibraryFactory.makeView(
+        return LibraryFactory.makeMyLibraryView(
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: repository,
                 keywordRepository: keywordRepository

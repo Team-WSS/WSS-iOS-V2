@@ -80,6 +80,7 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 }
 ```
 
+- **`makeView`는 모듈에 화면이 하나일 때만 쓴다** — 화면이 둘 이상이면 **전부** `makeXxxView`로 무엇을 만드는지 이름에 넣는다(`makeCreateFeedView`·`makeMyLibraryView`·`makeUserLibraryView`). 대등한 화면 중 하나만 `makeView`로 남기면 호출부에서 어느 화면인지 읽히지 않는다(`LibraryFactory`가 실제로 그랬다). 단 `SettingFactory`는 **메인 설정 화면 + 그 하위 상세들**이라 대표 화면이 `makeView`인 게 자연스러운 경우다 — 대등한지 종속인지로 판단할 것.
 - **Demo·Preview 필수**: `.demo` 타깃의 Demo 앱이 Factory를 `NavigationStack`에 띄워 단독 실행. Preview는 Sources 내부(internal 접근).
 - **⚠️ Demo 앱 `init()`에서 `DesignSystemFontFamily.registerAllCustomFonts()` 호출.** `applyWSSFont`가 `UIFont(name:)!`를 강제 언래핑 → 폰트 미등록 시 **런타임 크래시(SIGTRAP)**. 프리뷰도 Demo 앱을 호스트로 띄우므로 같이 죽는다.
 - 테스트는 mock UseCase 주입으로 충분. View에 가짜 VM을 통째로 주입할 일이 생기면 그때 가벼운 프로토콜을 다시 얹는다.

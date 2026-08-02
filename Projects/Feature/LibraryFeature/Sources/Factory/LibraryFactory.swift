@@ -17,6 +17,9 @@ import Logger
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
 public enum LibraryFactory {
 
+    /// 로그인한 사용자 본인의 서재 화면. **탭 콘텐츠로 쓰이는 화면**이라 뒤로가기가 없다
+    /// (타유저 서재는 반대 — push되는 화면이라 스스로 뒤로가기를 갖는다).
+    ///
     /// - Parameters:
     ///   - onNovelSelected: 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
     ///   - onSearchTapped: 빈 상태 "웹소설 찾기" → 검색 화면 진입 콜백.
@@ -24,7 +27,7 @@ public enum LibraryFactory {
     ///   - onNotificationTapped: "알림 관리" → 관심 작품 알림 설정 진입 콜백.
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 서버 호출 공통.
     @MainActor
-    public static func makeView(
+    public static func makeMyLibraryView(
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
         logger: Logger? = nil,
