@@ -21,13 +21,21 @@ let project = Project.createFeatureModule(
         .module(.domain(.auth)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        // 인트로 화면의 카카오 로그인 버튼이 UserApi.shared.loginWithKakaoAccount(...)를 직접 호출한다.
+        // OAuthToken 타입 때문에 KakaoSDKAuth도 필요.
+        .external(name: "KakaoSDKUser"),
+        .external(name: "KakaoSDKAuth")
     ],
     // Demo 앱만 실서버 조립을 위해 Data/Networking을 의존한다(App의 DI 역할 대행).
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
         .module(.data(.auth)),
         .module(.data(.base)),
-        .module(.core(.networking))
-    ]
+        .module(.core(.networking)),
+        // Demo 앱 자체 진입점에서 KakaoSDK.initSDK(appKey:)를 호출해야 한다(App 조립을 Demo가 대행).
+        .external(name: "KakaoSDKCommon")
+    ],
+    // Apple 로그인(SignInWithAppleButton) capability. 없으면 인증 시도 시 실패한다.
+    demoEntitlements: .file(path: "Demo/OnboardingFeatureDemo.entitlements")
 )
