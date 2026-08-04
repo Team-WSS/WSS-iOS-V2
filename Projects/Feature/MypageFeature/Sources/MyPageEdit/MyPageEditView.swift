@@ -19,9 +19,6 @@ struct MyPageEditView: View {
     @State private var viewModel: MyPageEditViewModel
     @State private var showCharacterEditSheet: Bool = false
 
-    private let descriptionMaxLineCount = 3
-    private let descriptionFont = DesignSystemFontFamily.Pretendard.regular.font(size: 15)
-
     @FocusState private var isKeyboardFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -253,12 +250,11 @@ struct MyPageEditView: View {
                         }
                     }
 
-                    LineLimitedTextView(
-                        text: introductionTextBinding,
-                        font: descriptionFont,
-                        maxLineCount: descriptionMaxLineCount,
-                        isFocused: $isKeyboardFocused
-                    )
+                    TextField("", text: introductionTextBinding, axis: .vertical)
+                        .applyWSSFont(.body2)
+                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                        .tint(WSSColor.wssBlack.swiftUIColor)
+                        .focused($isKeyboardFocused)
                 }
                 Spacer()
             }

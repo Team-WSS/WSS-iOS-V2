@@ -22,3 +22,4 @@
 - `fetchGenrePreferences`가 반환하는 `[GenrePreference]`는 **서버가 이미 개수 내림차순으로 정렬해 내려준다** — 클라이언트(Feature)에서 재정렬하지 않는다. 매핑(`ProfileMapper.genrePreferences`)도 배열 `.map`이라 순서를 그대로 보존한다.
 - `validateNickname(_:)`의 `Bool` 반환은 **`true` = 사용 가능(중복 아님)** 이다("검증 통과"가 아니라 "가용"으로 읽을 것). `ProfileData`의 `NicknameValidationResponse.isValid`를 그대로 전달한다.
 - `ProfileDraft.removeGenrePreference(_:)`는 `GenrePreference`의 **완전 일치(Equatable: genre+count)** 비교로 제거한다 — `GenrePreference(genre: someGenre, count: 0)`처럼 count를 임의로 채운 새 값으로는 지워지지 않고 조용히 실패한다. 토글 등에서 제거하려면 `genrePreferences.first(where: { $0.genre == genre })`로 draft에 실제 들어있는 인스턴스를 찾아 그대로 넘겨야 한다.
+- `ProfileDraft.updateIntroduction(_:)`은 더 이상 3줄 제한을 하지 않는다(50자 길이만 즉시 clamp). 3줄 제한은 별도 `truncateIntroductionToLineLimit()`로 분리됐고, 호출자(Feature)가 **제출 직전에 직접 호출**해야만 적용된다 — 안 부르면 4줄 이상도 그대로 저장됨. 이 메서드는 `\n` 개수만 세므로 워드랩으로 시각적으로 3줄을 넘는 입력은 걸러내지 못한다(예전 UIKit `NSLayoutManager` 기반 실시간 검증을 걷어내고 단순화한 결과 — Feature `MyPageEditView` 참고).

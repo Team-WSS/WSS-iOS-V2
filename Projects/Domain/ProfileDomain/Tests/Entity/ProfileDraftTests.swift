@@ -205,22 +205,6 @@ struct ProfileDraftTests {
         #expect(draft.introduction.count == 50)
     }
 
-    @Test("소개글 3줄 이하면 그대로 저장된다")
-    func keeps3LinesExactly() {
-        var draft = makeDraft()
-        draft.updateIntroduction("1줄\n2줄\n3줄")
-
-        #expect(draft.introduction == "1줄\n2줄\n3줄")
-    }
-
-    @Test("소개글이 3줄을 초과하면 3줄까지만 저장된다")
-    func clipsIntroductionTo3Lines() {
-        var draft = makeDraft()
-        draft.updateIntroduction("1줄\n2줄\n3줄\n4줄")
-
-        #expect(draft.introduction == "1줄\n2줄\n3줄")
-    }
-
     @Test("소개글에 앞뒤 공백이 포함되어도 그대로 저장된다")
     func allowsWhitespaceInIntroduction() {
         var draft = makeDraft()
@@ -235,6 +219,26 @@ struct ProfileDraftTests {
         draft.updateIntroduction("")
 
         #expect(draft.introduction == "")
+    }
+
+    // MARK: - truncate Introduction To Line Limit
+
+    @Test("소개글이 3줄 이하면 그대로 저장된다")
+    func keeps3LinesExactlyOnTruncate() {
+        var draft = makeDraft()
+        draft.updateIntroduction("1줄\n2줄\n3줄")
+        draft.truncateIntroductionToLineLimit()
+
+        #expect(draft.introduction == "1줄\n2줄\n3줄")
+    }
+
+    @Test("소개글이 3줄을 초과하면 3줄까지만 저장된다")
+    func clipsIntroductionTo3LinesOnTruncate() {
+        var draft = makeDraft()
+        draft.updateIntroduction("1줄\n2줄\n3줄\n4줄")
+        draft.truncateIntroductionToLineLimit()
+
+        #expect(draft.introduction == "1줄\n2줄\n3줄")
     }
 
     // MARK: - Genre Preference

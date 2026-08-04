@@ -84,18 +84,16 @@ public struct ProfileDraft {
 
     public static let maxIntroductionLength: Int = 50
     public static let maxLineCount: Int = 3
-    
+
     public mutating func updateIntroduction(_ newValue: String) {
-        var lines = newValue.components(separatedBy: "\n")
-        
-        if lines.count > Self.maxLineCount {
-            lines = Array(lines.prefix(Self.maxLineCount))
-        }
-        
-        var text = lines.joined(separator: "\n")
-        text = String(text.prefix(Self.maxIntroductionLength))
-        
-        self.introduction = text
+        self.introduction = String(newValue.prefix(Self.maxIntroductionLength))
+    }
+
+    /// 저장 직전에만 줄 수를 제한한다(입력 중엔 자유롭게 타이핑하게 두고, 제출 시점에 앞 `maxLineCount`줄만 남긴다).
+    public mutating func truncateIntroductionToLineLimit() {
+        let lines = introduction.components(separatedBy: "\n")
+        guard lines.count > Self.maxLineCount else { return }
+        introduction = lines.prefix(Self.maxLineCount).joined(separator: "\n")
     }
     
     // - genre preferences
