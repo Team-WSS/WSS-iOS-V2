@@ -1,13 +1,14 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # OnboardingFeature
 
-앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계). **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 4단계(약관 동의·닉네임·성별출생년도·장르선택)** 전부를 다룬다. 성별/출생년도·장르 선택은 이어서 구현한다. 구성요소는 `Sources/`를 직접 보면 된다.
+앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계). **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 4단계(약관 동의·닉네임·성별출생년도·장르선택)** 전부를 다룬다. **성별/출생년도(2단계, `#178` 잔여 항목)는 아직 미구현** — 닉네임 다음 화면은 현재 Demo에서 장르 선택으로 바로 건너뛰며, `gender`/`birthYear`는 임시 고정값(`Gender.female`/`BirthYear(2000)`)을 쓴다(`OnboardingFeatureDemoApp.placeholderGender`/`placeholderBirthYear`). 그 화면이 생기면 이 임시값을 실제 입력으로 교체할 것. 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임 — 전용 `OnboardingDomain`은 없다).
+- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임·장르 선택 — 전용 `OnboardingDomain`은 없다).
 - 진입점(전부 `OnboardingFactory`):
   - `makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 1단계.
   - `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)` — 2단계(시트).
-  - `makeNicknameView(validateNicknameUseCase:logger:onConfirmed:onAuthenticationRequired:)` — 3단계. 저장 UseCase 없이 로컬 검증만 통과시켜 값을 넘긴다(실제 등록은 후속 이슈의 마지막 단계에서 한 번에).
+  - `makeNicknameView(validateNicknameUseCase:logger:onConfirmed:onAuthenticationRequired:)` — 3단계. 저장 UseCase 없이 로컬 검증만 통과시켜 값을 넘긴다(실제 등록은 마지막 단계에서 한 번에).
+  - `makeGenreSelectionView(nickname:gender:birthYear:registerProfileUseCase:logger:onCompleted:onAuthenticationRequired:)` — 마지막 단계. 앞 단계에서 확정된 값을 값으로 받아 `ProfileRegistration`을 완성하고 `RegisterProfileUseCase`로 실제 등록까지 이 화면이 담당한다.
 - **비로그인(게스트) 진입 경로는 없다** — 제품 결정으로 "회원가입 없이 둘러보기" 버튼과 `onContinueWithoutSignIn` 콜백을 제거했다(2026-08). 소셜 로그인(Apple/Kakao)만 남는다. 되살리지 말 것.
 
 ## 화면 동작 계약
@@ -27,9 +28,17 @@
 
 - **필수 온보딩 단계** — Figma에 back chevron이 없다. 뒤로가기·건너뛰기 둘 다 없음(약관 동의와 동일한 "필수 단계" 취급).
 - **필드 정책·구조는 `MypageFeature`의 `MyPageEditView` 닉네임 섹션(#147)을 그대로 따른다** — 같은 `ProfileDomain.NicknameDraft`를 쓰는 두 화면이 서로 다른 판단 기준을 보이지 않도록. 캡션을 보이는 조건(공백/형식오류/중복/사용가능 4종 + `notStarted`·`needDuplicatedCheck`·`notChanged`는 숨김), 필드 테두리 색(에러=`wssSecondary100`, 사용가능=`wssPrimary100`, 그 외 없음), 중복확인 버튼 활성 조건(`validationState == .needDuplicatedCheck`)과 배경/글자색(활성 `primary50`/`primary100`, 비활성 `gray70`/`gray200`)은 동일. **단, 캡션 문구 자체(한글 카피)는 이 화면만의 워딩으로 갈렸다** — 온보딩 톤에 맞춰 별도 조정한 결과라 `MyPageEditView`와 1:1로 동기화할 필요 없음(구조·조건만 맞추면 됨).
-- **"다음으로" 활성화 조건은 `validationState == .available`** — 로컬 검증만 통과시키고 저장 UseCase는 없다. 실제 서버 등록은 저장하지 않고 값(`String`)만 `onConfirmed`로 호출자에 넘긴다 — 최종 등록은 마지막 단계(장르 선택, 후속 이슈)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
+- **"다음으로" 활성화 조건은 `validationState == .available`** — 로컬 검증만 통과시키고 저장 UseCase는 없다. 실제 서버 등록은 저장하지 않고 값(`String`)만 `onConfirmed`로 호출자에 넘긴다 — 최종 등록은 마지막 단계(장르 선택)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
 - **중복확인은 수동 탭 1회성**(자동 디바운스 없음) — 텍스트가 바뀌면 `NicknameDraft.setText`가 내부적으로 확인 상태를 `.notYet`으로 되돌려 재확인을 요구한다(도메인 정책, Feature는 관여 안 함).
 - `validateNickname(_:)`의 `Bool` 반환 의미(`true`=사용 가능)는 `ProfileDomain/CLAUDE.md`에 명시해 둠 — 헷갈리기 쉬우니(도메인 테스트 변수명이 `isDuplicated`로 잘못 붙어 있어 더 헷갈린다) 그쪽을 먼저 볼 것.
+
+### 장르 선택 (`GenreSelectionView`, #178, 마지막 단계)
+
+- **유일하게 필수가 아닌 단계** — Figma에 실제로 back chevron(이전 단계로 pop)과 "건너뛰기"가 있다. 커스텀 헤더(`.toolbar(.hidden, for: .navigationBar)`)라 `.enableSwipeBack()`으로 스와이프 뒤로가기를 별도 복원했다(다른 온보딩 화면과 반대 — 그 화면들은 의도적으로 뒤로가기를 막아 `.enableSwipeBack()`을 쓰지 않는다).
+- **다중 선택** — `Set<NovelGenre>` 토글. "완료"는 **하나 이상 선택했을 때만 활성화**, "건너뛰기"는 **현재 선택과 무관하게 항상 빈 장르 목록으로 등록**(선택된 걸 무시하고 "장르 없이 시작"으로 취급 — 선택하다 만 상태를 애매하게 반영하지 않기 위한 설계).
+- **이 화면이 곧 온보딩 완료 처리다** — "완료"/"건너뛰기" 둘 다 `ProfileRegistration(nickname:gender:birthYear:genrePreferences:)`을 구성해 `RegisterProfileUseCase.execute(_:)`를 호출한다. 성공 시 `onCompleted`(Home 진입은 App 책임).
+- **선택 배지는 아이콘을 통째로 체크마크로 교체**(오버레이 아님) — 미선택: `wssGray50` 배경 + `NovelGenre.iconImage`. 선택: `wssPrimary50` 배경 + `wssPrimary100` 2pt 테두리 + `WSSImage.icCheckMark`(장르 아이콘은 사라짐). Figma엔 이 체크 전용 에셋(`icOnboardingCheck`)이 있었지만 기존 `icCheckMark`(같은 `#6A5DFD` 스트로크 체크마크, `WSSBirthYearWheel`/`LibrarySortSheet` 등에서 이미 쓰는 자산)과 시각적으로 동일해 새 에셋을 추가하지 않고 재사용했다.
+- **그리드 순서는 `NovelGenre.onboardingGenre`**(WSSComponent `DomainPresentation`, 신규) — `myFeedFilter`/`searchGenre`와 다른 세 번째 순서(로맨스·로판·현판·판타지·무협·BL·라노벨·드라마·미스터리). 화면별 순서는 의도적으로 갈라져 있으니 다른 화면 순서에 맞추지 말 것.
 
 ## 핵심 시나리오
 

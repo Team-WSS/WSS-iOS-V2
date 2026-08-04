@@ -95,4 +95,9 @@ public extension NovelGenre {
     static let profileEditGenre: [NovelGenre] = [
         .romance, .romanceFantasy, .fantasy, .modernFantasy, .wuxia, .BL, .lightNovel, .mystery, .drama
     ]
+
+    /// 온보딩 장르 선택 화면(3x3 배지 그리드) 전용 순서 — `myFeedFilter`/`searchGenre`와 의도적으로 다른 별개 목록.
+    static let onboardingGenre: [NovelGenre] = [
+        .romance, .romanceFantasy, .modernFantasy, .fantasy, .wuxia, .BL, .lightNovel, .drama, .mystery
+    ]
 }

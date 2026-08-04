@@ -84,4 +84,33 @@ public enum OnboardingFactory {
             onConfirmed: onConfirmed
         )
     }
+
+    /// 온보딩 마지막 단계 — 선호 장르 선택(뒤로가기 가능·"건너뛰기" 있음, 앞 두 단계와 달리 필수 아님).
+    /// 이 화면이 `ProfileRegistration`을 완성해 등록까지 마친다 — 그래서 앞 단계에서 이미 확정된
+    /// `nickname`/`gender`/`birthYear`를 값으로 받는다(호출자가 온보딩 진행 중 누적해 온 값).
+    /// - Parameters:
+    ///   - onCompleted: 등록 성공 시 발화. 온보딩 종료 후 어디로 갈지(Home 등)는 호출자가 결정한다.
+    ///   - onAuthenticationRequired: 인증 만료 시 로그인 유도 콜백(등록 호출 공통).
+    @MainActor
+    public static func makeGenreSelectionView(
+        nickname: String,
+        gender: Gender,
+        birthYear: BirthYear,
+        registerProfileUseCase: RegisterProfileUseCase,
+        logger: Logger? = nil,
+        onCompleted: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        GenreSelectionView(
+            viewModel: GenreSelectionViewModel(
+                nickname: nickname,
+                gender: gender,
+                birthYear: birthYear,
+                registerProfileUseCase: registerProfileUseCase,
+                logger: logger
+            ),
+            onAuthenticationRequired: onAuthenticationRequired,
+            onCompleted: onCompleted
+        )
+    }
 }
