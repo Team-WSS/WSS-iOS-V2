@@ -140,6 +140,9 @@ private struct DemoRootView: View {
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
         )
+        // 닉네임은 서버가 아니라 로컬 캐시에서 온다 — 실제 앱은 로그인·프로필 조회가 채우지만
+        // Demo는 그 경로를 안 거치므로 직접 심어야 추천글 제목의 "{닉네임}님을" 이 확인된다.
+        UserDefaultsStorage().set(.nickname, "웹소소")
         let recommendationRepository = RecommendationDataFactory.makeRepository(
             network: client,
             logger: DataLogger(moduleName: "RecommendationData", underlying: consoleLogger)
