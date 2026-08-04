@@ -11,11 +11,11 @@ import SwiftUI
 
 import MypageFeature
 import BaseDomain
-import ProfileDomain
 import NovelDomain
+import ProfileDomain
 import BaseData
-import ProfileData
 import NovelData
+import ProfileData
 import Logger
 import Networking
 import DesignSystem
