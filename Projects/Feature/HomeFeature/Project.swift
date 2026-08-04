@@ -15,9 +15,11 @@ let project = Project.createFeatureModule(
     targets: [.sources, .demo, .tests],
     // 홈의 Domain 코드(LoadHomeDataUseCase·HomeData·TodayDiscovery 등)는 별도 HomeDomain이 아니라
     // RecommendationDomain에 있다 → 같은이름 규칙 대신 RecommendationDomain을 의존한다.
+    // NotificationDomain은 헤더 알림 벨의 안 읽은 알림 배지(UnreadNotificationStatus) 때문에 함께 쓴다.
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.recommendation)),
+        .module(.domain(.notification)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -26,6 +28,7 @@ let project = Project.createFeatureModule(
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
         .module(.data(.recommendation)),
+        .module(.data(.notification)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]
