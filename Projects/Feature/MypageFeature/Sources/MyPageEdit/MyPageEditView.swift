@@ -8,11 +8,11 @@
 
 import SwiftUI
 
-import DesignSystem
-import WSSComponent
 import BaseDomain
 import ProfileDomain
 import Logger
+import DesignSystem
+import WSSComponent
 
 struct MyPageEditView: View {
 
@@ -62,16 +62,14 @@ struct MyPageEditView: View {
                 viewModel.handle(.load)
             }
             .sheet(isPresented: $showCharacterEditSheet) {
-                MypageCharacterEditSheet(
-                    viewModel: MypageCharacterEditSheetViewModel(
-                        selectedCharacterID: viewModel.state.draft.characterID,
-                        loadProfileCharacterUseCase: loadProfileCharacterUseCase,
-                        logger: logger
-                    ),
+                MypageFactory.makeCharacterEditSheet(
+                    selectedCharacterID: viewModel.state.draft.characterID,
                     nickname: viewModel.state.draft.nickname.text,
+                    loadProfileCharacterUseCase: loadProfileCharacterUseCase,
                     onApply: { characterID in
                         viewModel.handle(.selectCharacter(characterID))
-                    }
+                    },
+                    logger: logger
                 )
             }
             .showWSSToast(isPresented: toastBinding, type: .unknownError)
@@ -260,7 +258,7 @@ struct MyPageEditView: View {
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 16)
-            .frame(height: 75)
+            .frame(minHeight: 75, alignment: .top)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture {
