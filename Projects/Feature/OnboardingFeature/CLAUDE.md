@@ -1,11 +1,24 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # OnboardingFeature
 
-앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계)이지만, **이번 이슈(#176)는 1단계(인트로+소셜로그인)만** — 나머지는 후속 이슈에서 이어간다. 구성요소는 `Sources/`를 직접 보면 된다.
+앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계). **이슈 #176이 1단계(인트로+소셜로그인), #178이 2단계(가입약관 동의 시트)** — 나머지(닉네임·성별/출생년도·장르 선택)는 후속 이슈에서 이어간다. 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(전용 `OnboardingDomain`은 없다). `ProfileDomain`은 후속 이슈에서 추가 예정.
-- 진입점: `OnboardingFactory.makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 인트로 화면(1단계)만. 후속 이슈에서 화면이 늘어나면 `makeXxxView`가 더 생긴다(그래서 이름이 `makeView`가 아니라 `makeIntroView`).
+- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의 — 전용 `OnboardingDomain`은 없다). `ProfileDomain`은 후속 이슈(닉네임 등)에서 추가 예정.
+- 진입점: `OnboardingFactory.makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)`(1단계) / `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)`(2단계). 후속 이슈에서 화면이 늘어나면 `makeXxxView`가 더 생긴다(그래서 이름이 `makeView`가 아니라 `makeXxxView`).
 - **비로그인(게스트) 진입 경로는 없다** — 제품 결정으로 "회원가입 없이 둘러보기" 버튼과 `onContinueWithoutSignIn` 콜백을 제거했다(2026-08). 소셜 로그인(Apple/Kakao)만 남는다. 되살리지 말 것.
+
+## 화면 동작 계약
+
+### 가입약관 동의 시트 (`TermsAgreementView`, #178)
+
+- **필수 온보딩 단계** — `.interactiveDismissDisabled()`로 스와이프/바깥 탭 닫기를 막는다. 사용자 확정(설계 질문 결과).
+- **"전체 동의" 행은 토글형**이다 — `TermsType.allCases`가 이미 전부(필수+선택) 동의 상태면 탭 시 전부 해제, 아니면 전부 동의로 설정(`TermsAgreementViewModel.toggleAgreeAll`). 도메인의 `agreeToAll()`은 단방향(전부 true)만 제공하므로 해제는 각 타입에 `setAgreed(false, for:)`를 개별 호출.
+- **"다음으로" 활성화 조건은 `TermsAgreementDraft.isSubmittable`**(필수 항목만 전부 동의) 그대로 — 마케팅(선택) 동의 여부는 무관. Figma의 Cta `default`/`activated` 2-variant가 이 값과 정확히 대응.
+- **밑줄 텍스트(서비스 이용약관·개인정보 항목)는 탭하면 `openURL`로 외부 Safari를 연다.** 마케팅(선택) 항목은 상세 약관이 없어 밑줄·탭 대상이 아니다(라벨만). `TermsType.detailURL`(View 로컬 확장)은 `BaseDomain.AppURL.serviceAgreement`/`.privacyPolicy`를 그대로 연결(노션 페이지).
+- **저장은 "다음으로" 탭 시 1회**(입력 폼 패턴, `NovelReviewFeature` 정본) — 개별 토글은 로컬 상태만 바꾸고 서버 호출 없음(낙관 업데이트 개념 없음).
+- **로드 실패 = 전면 `NetworkErrorView`+재시도**(`NovelReviewViewModel.loadDraft` 정본과 동일 분화). 저장 실패는 토스트(`.unknownError`).
+- 체크 아이콘 눌림 애니메이션은 `CreateFeedConnectNovelRow`(같은 `icSelectNovelDefault`/`icSelectNovelSelected` 아이콘 쌍)와 동일한 크로스페이드+스케일 스프링(`.spring(response: 0.32, dampingFraction: 0.6)`)으로 통일(사용자 요청).
+- 시트 높이는 Figma 실측대로 `.presentationDetents([.height(670)])` 고정, `.presentationDragIndicator(.hidden)`(어차피 닫기 막혀 있어 그래버 노출 의미 없음).
 
 ## 핵심 시나리오
 
