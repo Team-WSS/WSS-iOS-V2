@@ -1,10 +1,13 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # OnboardingFeature
 
-앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계). **이슈 #176이 1단계(인트로+소셜로그인), #178이 2단계(가입약관 동의 시트)** — 나머지(닉네임·성별/출생년도·장르 선택)는 후속 이슈에서 이어간다. 구성요소는 `Sources/`를 직접 보면 된다.
+앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → 닉네임 → 성별/출생년도 → 장르 선택**(5단계). **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 4단계(약관 동의·닉네임·성별출생년도·장르선택)** 전부를 다룬다. 성별/출생년도·장르 선택은 이어서 구현한다. 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의 — 전용 `OnboardingDomain`은 없다). `ProfileDomain`은 후속 이슈(닉네임 등)에서 추가 예정.
-- 진입점: `OnboardingFactory.makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)`(1단계) / `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)`(2단계). 후속 이슈에서 화면이 늘어나면 `makeXxxView`가 더 생긴다(그래서 이름이 `makeView`가 아니라 `makeXxxView`).
+- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임 — 전용 `OnboardingDomain`은 없다).
+- 진입점(전부 `OnboardingFactory`):
+  - `makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 1단계.
+  - `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)` — 2단계(시트).
+  - `makeNicknameView(validateNicknameUseCase:logger:onConfirmed:onAuthenticationRequired:)` — 3단계. 저장 UseCase 없이 로컬 검증만 통과시켜 값을 넘긴다(실제 등록은 후속 이슈의 마지막 단계에서 한 번에).
 - **비로그인(게스트) 진입 경로는 없다** — 제품 결정으로 "회원가입 없이 둘러보기" 버튼과 `onContinueWithoutSignIn` 콜백을 제거했다(2026-08). 소셜 로그인(Apple/Kakao)만 남는다. 되살리지 말 것.
 
 ## 화면 동작 계약
@@ -19,6 +22,14 @@
 - **로드 실패 = 전면 `NetworkErrorView`+재시도**(`NovelReviewViewModel.loadDraft` 정본과 동일 분화). 저장 실패는 토스트(`.unknownError`).
 - 체크 아이콘 눌림 애니메이션은 `CreateFeedConnectNovelRow`(같은 `icSelectNovelDefault`/`icSelectNovelSelected` 아이콘 쌍)와 동일한 크로스페이드+스케일 스프링(`.spring(response: 0.32, dampingFraction: 0.6)`)으로 통일(사용자 요청).
 - 시트 높이는 Figma 실측대로 `.presentationDetents([.height(670)])` 고정, `.presentationDragIndicator(.hidden)`(어차피 닫기 막혀 있어 그래버 노출 의미 없음).
+
+### 닉네임 입력 (`NicknameView`, #178)
+
+- **필수 온보딩 단계** — Figma에 back chevron이 없다. 뒤로가기·건너뛰기 둘 다 없음(약관 동의와 동일한 "필수 단계" 취급).
+- **필드 정책·구조는 `MypageFeature`의 `MyPageEditView` 닉네임 섹션(#147)을 그대로 따른다** — 같은 `ProfileDomain.NicknameDraft`를 쓰는 두 화면이 서로 다른 판단 기준을 보이지 않도록. 캡션을 보이는 조건(공백/형식오류/중복/사용가능 4종 + `notStarted`·`needDuplicatedCheck`·`notChanged`는 숨김), 필드 테두리 색(에러=`wssSecondary100`, 사용가능=`wssPrimary100`, 그 외 없음), 중복확인 버튼 활성 조건(`validationState == .needDuplicatedCheck`)과 배경/글자색(활성 `primary50`/`primary100`, 비활성 `gray70`/`gray200`)은 동일. **단, 캡션 문구 자체(한글 카피)는 이 화면만의 워딩으로 갈렸다** — 온보딩 톤에 맞춰 별도 조정한 결과라 `MyPageEditView`와 1:1로 동기화할 필요 없음(구조·조건만 맞추면 됨).
+- **"다음으로" 활성화 조건은 `validationState == .available`** — 로컬 검증만 통과시키고 저장 UseCase는 없다. 실제 서버 등록은 저장하지 않고 값(`String`)만 `onConfirmed`로 호출자에 넘긴다 — 최종 등록은 마지막 단계(장르 선택, 후속 이슈)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
+- **중복확인은 수동 탭 1회성**(자동 디바운스 없음) — 텍스트가 바뀌면 `NicknameDraft.setText`가 내부적으로 확인 상태를 `.notYet`으로 되돌려 재확인을 요구한다(도메인 정책, Feature는 관여 안 함).
+- `validateNickname(_:)`의 `Bool` 반환 의미(`true`=사용 가능)는 `ProfileDomain/CLAUDE.md`에 명시해 둠 — 헷갈리기 쉬우니(도메인 테스트 변수명이 `isDuplicated`로 잘못 붙어 있어 더 헷갈린다) 그쪽을 먼저 볼 것.
 
 ## 핵심 시나리오
 

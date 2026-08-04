@@ -13,10 +13,12 @@ import KakaoSDKCommon
 import OnboardingFeature
 import AuthDomain
 import SettingDomain
+import ProfileDomain
 import BaseDomain
 import BaseData
 import AuthData
 import SettingData
+import ProfileData
 import Logger
 import Networking
 import DesignSystem
@@ -57,6 +59,8 @@ private struct DemoRootView: View {
     @State private var dataSource: DataSource = .mock
     /// 로그인 성공 시 `NeedOnboarding.value == true`(신규 유저)면 세운다 — 가입약관 시트 표시 트리거.
     @State private var isTermsAgreementPresented = false
+    /// 약관 동의 완료 시 세운다 — 닉네임 화면(3단계) push 트리거.
+    @State private var isNicknamePresented = false
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -69,6 +73,9 @@ private struct DemoRootView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $isTermsAgreementPresented) {
                     termsAgreementView
+                }
+                .navigationDestination(isPresented: $isNicknamePresented) {
+                    nicknameView
                 }
         }
     }
@@ -157,12 +164,54 @@ private struct DemoRootView: View {
     }
 
     private func handleTermsAgreed() {
-        consoleLogger.info("약관 동의 완료 → 다음 단계(닉네임, 후속 이슈)")
+        consoleLogger.info("약관 동의 완료 → 다음 단계(닉네임)")
         isTermsAgreementPresented = false
+        isNicknamePresented = true
     }
 
     private func handleAuthenticationRequired() {
         consoleLogger.info("인증 만료 → 로그인 화면 진입(App 라우팅 미구현)")
+    }
+
+    // MARK: - 닉네임 입력
+
+    @ViewBuilder
+    private var nicknameView: some View {
+        switch dataSource {
+        case .mock:
+            OnboardingFactory.makeNicknameView(
+                validateNicknameUseCase: DemoValidateNicknameUseCase(),
+                logger: consoleLogger,
+                onConfirmed: handleNicknameConfirmed,
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveNicknameView()
+        }
+    }
+
+    // 로그인으로 Keychain(DefaultTokenStore)에 저장된 토큰을 그대로 태워 인증 호출한다(중복확인도 인증 필요 엔드포인트).
+    @MainActor
+    private func makeLiveNicknameView() -> some View {
+        let client = NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DefaultTokenStore()
+        )
+        let repository = ProfileDataFactory.makeProfileRepository(
+            client: client,
+            localStorage: UserDefaultsStorage(),
+            logger: DataLogger(moduleName: "ProfileData", underlying: consoleLogger)
+        )
+        return OnboardingFactory.makeNicknameView(
+            validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: repository),
+            logger: consoleLogger,
+            onConfirmed: handleNicknameConfirmed,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    private func handleNicknameConfirmed(_ nickname: String) {
+        consoleLogger.info("닉네임 확정: \(nickname) → 다음 단계(성별/출생년도, 후속 이슈)")
     }
 }
 
@@ -186,5 +235,13 @@ private struct DemoLoadTermsAgreementDraftUseCase: LoadTermsAgreementDraftUseCas
 private struct DemoSaveTermsAgreementDraftUseCase: SaveTermsAgreementDraftUseCase {
     func execute(draft: TermsAgreementDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+/// "1"로 시작하는 닉네임만 중복(다른 값은 전부 사용 가능)으로 취급해 흐름을 시연한다.
+private struct DemoValidateNicknameUseCase: ValidateNicknameUseCase {
+    func execute(_ nickname: String) async throws(RepositoryError) -> Bool {
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        return !nickname.hasPrefix("1")
     }
 }

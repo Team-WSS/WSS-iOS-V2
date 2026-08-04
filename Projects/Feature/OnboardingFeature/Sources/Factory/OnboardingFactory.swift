@@ -10,6 +10,7 @@ import SwiftUI
 
 import AuthDomain
 import SettingDomain
+import ProfileDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
@@ -59,6 +60,28 @@ public enum OnboardingFactory {
             ),
             onAuthenticationRequired: onAuthenticationRequired,
             onAgreed: onAgreed
+        )
+    }
+
+    /// 온보딩 3단계 — 닉네임 입력. 저장 UseCase가 없다: 로컬 검증만 통과시켜 `onConfirmed`로 값을 넘기고,
+    /// 실제 서버 등록은 온보딩 마지막 단계(장르 선택)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
+    /// - Parameters:
+    ///   - onConfirmed: "다음으로" 탭(사용 가능한 닉네임 확정) 시 그 닉네임과 함께 발화.
+    ///   - onAuthenticationRequired: 인증 만료 시 로그인 유도 콜백(중복확인 등 서버 호출 공통).
+    @MainActor
+    public static func makeNicknameView(
+        validateNicknameUseCase: ValidateNicknameUseCase,
+        logger: Logger? = nil,
+        onConfirmed: @escaping (String) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        NicknameView(
+            viewModel: NicknameViewModel(
+                validateNicknameUseCase: validateNicknameUseCase,
+                logger: logger
+            ),
+            onAuthenticationRequired: onAuthenticationRequired,
+            onConfirmed: onConfirmed
         )
     }
 }
