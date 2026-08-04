@@ -195,9 +195,10 @@ private extension MyPageEditViewModel {
     func saveProfile() async {
         state.isSaving = true
         defer { state.isSaving = false }
-        state.draft.truncateIntroductionToLineLimit()
+        var submittedDraft = state.draft
+        submittedDraft.truncateIntroductionToLineLimit()
         do {
-            try await updateProfileUseCase.execute(state.draft)
+            try await updateProfileUseCase.execute(submittedDraft)
             state.shouldDismiss = true
         } catch {
             presentError(error)
