@@ -16,32 +16,6 @@ import BaseDomain
 @Suite
 struct TodayDiscoveryTests {
 
-    // MARK: - Helpers
-
-    private func makeAuthor() -> Author {
-        Author(
-            userId: UserID(1),
-            nickname: "테스트유저",
-            profileImage: URL(string: "")
-        )
-    }
-
-    private func makeTodayDiscovery(
-        novelID: NovelID = NovelID(1),
-        novelTitle: String = "오늘의 발견 소설",
-        novelThumbnailImage: URL? = nil,
-        content: TodayDiscovery.Content = .novel,
-        contentDescription: String = "소설 설명"
-    ) -> TodayDiscovery {
-        TodayDiscovery(
-            novelID: novelID,
-            novelTitle: novelTitle,
-            novelThumbnailImage: novelThumbnailImage,
-            content: content,
-            contentDescription: contentDescription
-        )
-    }
-
     // MARK: - Content 타입
 
     @Test("novel 타입으로 오늘의 발견을 생성할 수 있다")
@@ -88,41 +62,67 @@ struct TodayDiscoveryTests {
         #expect(discovery.contentDescription == "본문 내용")
     }
 
-    // MARK: - title / description
+    // MARK: - 작품 정보
 
-    @Test("novel 타입의 title은 작품 소개이다")
-    func novelTypeTitleIsNovelIntroduction() {
-        let discovery = makeTodayDiscovery(content: .novel)
-
-        #expect(discovery.title == "작품 소개")
-    }
-
-    @Test("userComment 타입의 title은 닉네임의 한마디이다")
-    func userCommentTypeTitleIncludesNickname() {
+    @Test("작품의 작가·장르·연재상태를 함께 담는다")
+    func carriesNovelMetadata() {
         let discovery = makeTodayDiscovery(
-            content: .userComment(user: makeAuthor())
+            novelAuthor: "캐슈",
+            novelGenre: .BL,
+            publicationStatus: .completed
         )
 
-        #expect(discovery.title == "테스트유저의 한마디")
+        #expect(discovery.novelAuthor == "캐슈")
+        #expect(discovery.novelGenre == .BL)
+        #expect(discovery.publicationStatus == .completed)
     }
 
-    @Test("novel 타입의 description은 작품 소개글이다")
-    func novelTypeDescriptionIsNovelDescription() {
-        let discovery = makeTodayDiscovery(
-            content: .novel,
-            contentDescription: "흥미로운 소설입니다"
-        )
+    @Test("작품 키워드를 순서 그대로 담는다")
+    func carriesKeywordsInOrder() {
+        let discovery = makeTodayDiscovery(keywords: ["사랑꾼", "짝사랑"])
 
-        #expect(discovery.description == "흥미로운 소설입니다")
+        #expect(discovery.keywords == ["사랑꾼", "짝사랑"])
     }
 
-    @Test("userComment 타입의 description은 유저의 피드 내용이다")
-    func userCommentTypeDescriptionIsUserComment() {
-        let discovery = makeTodayDiscovery(
-            content: .userComment(user: makeAuthor()),
-            contentDescription: "강추합니다!"
-        )
+    @Test("키워드가 없는 작품은 빈 배열을 담는다")
+    func carriesEmptyKeywordsWhenNone() {
+        let discovery = makeTodayDiscovery(keywords: [])
 
-        #expect(discovery.description == "강추합니다!")
+        #expect(discovery.keywords.isEmpty)
+    }
+}
+
+extension TodayDiscoveryTests {
+
+    private func makeAuthor() -> Author {
+        Author(
+            userId: UserID(1),
+            nickname: "테스트유저",
+            profileImage: URL(string: "")
+        )
+    }
+
+    private func makeTodayDiscovery(
+        novelID: NovelID = NovelID(1),
+        novelTitle: String = "오늘의 발견 소설",
+        novelThumbnailImage: URL? = nil,
+        novelAuthor: String = "테스트작가",
+        novelGenre: NovelGenre = .romance,
+        publicationStatus: NovelPublicationStatus = .onGoing,
+        keywords: [String] = ["빙의"],
+        content: TodayDiscovery.Content = .novel,
+        contentDescription: String = "소설 설명"
+    ) -> TodayDiscovery {
+        TodayDiscovery(
+            novelID: novelID,
+            novelTitle: novelTitle,
+            novelThumbnailImage: novelThumbnailImage,
+            novelAuthor: novelAuthor,
+            novelGenre: novelGenre,
+            publicationStatus: publicationStatus,
+            keywords: keywords,
+            content: content,
+            contentDescription: contentDescription
+        )
     }
 }

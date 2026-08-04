@@ -16,42 +16,54 @@ public enum RecommendationMapper {
     
     //MARK: - 오늘의 발견
     
-    public static func todayDiscoveryNovels(from dto: TodayDiscoveryNovelsResponse) -> [TodayDiscovery] {
-        return dto.popularNovels.map { todayDiscoveryNovel(from: $0) }
+    public static func todayDiscoveryNovels(from dto: TodayDiscoveryNovelsResponse) throws -> [TodayDiscovery] {
+        return try dto.popularNovels.map { try todayDiscoveryNovel(from: $0) }
     }
-    
-    static func todayDiscoveryNovel(from dto: TodayDiscoveryNovelResponse) -> TodayDiscovery {
+
+    static func todayDiscoveryNovel(from dto: TodayDiscoveryNovelResponse) throws -> TodayDiscovery {
         let novelImageURL = ImageURLResolver.resolve(from: dto.novelImage)
         let isNovelIntroduction = (dto.nickname == nil || dto.avatarImage == nil)
-        
+
+        // 카드 본문의 출처가 형태마다 다르다 — 작품 소개 카드는 novelDescription을,
+        // 유저 한마디 카드는 그 유저가 쓴 feedContent를 본문으로 쓴다.
         let content: TodayDiscovery.Content
+        let contentDescription: String
         if isNovelIntroduction {
             content = .novel
+            contentDescription = dto.novelDescription
         } else {
             let profileImageURL = ImageURLResolver.resolve(from: dto.avatarImage ?? "")
             let author = Author(nickname: dto.nickname ?? "웹소소",
                                 profileImage: profileImageURL)
             content = .userComment(user: author)
+            contentDescription = dto.feedContent ?? ""
         }
-        
+
         return TodayDiscovery(
             novelID: NovelID(dto.novelId),
             novelTitle: dto.title,
             novelThumbnailImage: novelImageURL,
+            novelAuthor: dto.author,
+            novelGenre: try novelGenre(from: dto.genreName),
+            publicationStatus: dto.isNovelCompleted ? .completed : .onGoing,
+            keywords: dto.keywords,
             content: content,
-            contentDescription: dto.feedContent
+            contentDescription: contentDescription
         )
     }
-    
+
     //MARK: - 지금 뜨는 글
-    
-    public static func trendingFeeds(from dto: TrendingFeedsResponse) -> [TrendingFeed] {
-        return dto.popularFeeds.map { trendingFeed(from: $0) }
+
+    public static func trendingFeeds(from dto: TrendingFeedsResponse) throws -> [TrendingFeed] {
+        return try dto.popularFeeds.map { try trendingFeed(from: $0) }
     }
-    
-    static func trendingFeed(from dto: TrendingFeedResponse) -> TrendingFeed {
+
+    static func trendingFeed(from dto: TrendingFeedResponse) throws -> TrendingFeed {
         return TrendingFeed(
             feedID: FeedID(dto.feedId),
+            novelTitle: dto.novelTitle,
+            novelThumbnailImage: ImageURLResolver.resolve(from: dto.novelImage),
+            novelGenre: try novelGenre(from: dto.novelGenre),
             description: dto.feedContent,
             isSpoiler: dto.isSpoiler,
             likeCount: dto.likeCount,
@@ -120,11 +132,31 @@ public enum RecommendationMapper {
     
     static func sosopickNovel(from dto: SosopickNovelResponse) -> SosoPick {
         let imageURL = ImageURLResolver.resolve(from: dto.novelImage)
-        
+
         return SosoPick(
             novelID: NovelID(dto.novelId),
             novelTitle: dto.title,
             novelThumbnailimage: imageURL
         )
+    }
+
+    //MARK: - 공통
+
+    /// 홈 응답의 장르는 한글이 아니라 **영문 케이스명**으로 온다(`romanceFantasy`·`BL` 등).
+    /// 한글로 오는 작품 상세(`NovelMapper`)와 값이 달라 그쪽 매핑을 재사용할 수 없다.
+    static func novelGenre(from text: String) throws -> NovelGenre {
+        switch text {
+        case "lightNovel":      return .lightNovel
+        case "wuxia":           return .wuxia
+        case "fantasy":         return .fantasy
+        case "romance":         return .romance
+        case "BL":              return .BL
+        case "romanceFantasy":  return .romanceFantasy
+        case "modernFantasy":   return .modernFantasy
+        case "drama":           return .drama
+        case "mystery":         return .mystery
+        default:
+            throw MappingError.invalidConversion(type: "NovelGenre", value: text)
+        }
     }
 }

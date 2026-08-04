@@ -81,8 +81,14 @@ extension RecommendationDataDemoView {
             let result = try await repository.fetchTodayDiscoveries()
             log = "✅ 오늘의 발견 (\(result.count)건)\n\n"
             for item in result {
-                log += "[\(item.title)] \(item.novelTitle)\n"
-                log += "  → \(item.description)\n\n"
+                let source = switch item.content {
+                case .novel: "작품 소개"
+                case .userComment(let user): "\(user.nickname)의 한마디"
+                }
+                log += "[\(source)] \(item.novelTitle)\n"
+                log += "  \(item.novelAuthor) · \(item.novelGenre) · \(item.publicationStatus.rawValue)\n"
+                log += "  #\(item.keywords.joined(separator: " #"))\n"
+                log += "  → \(item.contentDescription)\n\n"
             }
         } catch {
             log = "❌ 오늘의 발견 실패\n\(error)"
@@ -98,7 +104,8 @@ extension RecommendationDataDemoView {
             log = "✅ 지금 뜨는 글 (\(result.count)건)\n\n"
             for feed in result {
                 log += "Feed #\(feed.feedID)\n"
-                log += "  \(feed.displayDescription)\n"
+                log += "  \(feed.novelTitle) · \(feed.novelGenre)\n"
+                log += "  \(feed.isSpoiler ? "(스포일러) " : "")\(feed.description)\n"
                 log += "  ❤️ \(feed.likeCount)  💬 \(feed.commentCount)\n\n"
             }
         } catch {

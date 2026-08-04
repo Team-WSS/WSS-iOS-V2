@@ -21,4 +21,9 @@ public struct TrendingFeedResponse: Decodable {
     public let commentCount: Int
     public let isSpoiler: Bool
     public let isPublic: Bool
+
+    /// 글이 달린 작품. 홈 목록이 작품 제목·표지·장르 마크를 함께 그린다.
+    public let novelTitle: String
+    public let novelImage: String
+    public let novelGenre: String
 }
