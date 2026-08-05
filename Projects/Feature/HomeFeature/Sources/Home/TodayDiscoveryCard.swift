@@ -113,7 +113,7 @@ private extension TodayDiscoveryCard {
             .frame(width: Metric.coverWidth, height: Metric.coverHeight)
             .overlay { WSSNovelCoverImage(url: discovery.novelThumbnailImage) }
             .clipShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
-            .shadow(color: .black.opacity(0.1), radius: 5.3, y: 1.4)
+            .shadow(color: Color.wssBlack.opacity(0.1), radius: 5.3, y: 1.4)
             .overlay(alignment: .bottomTrailing) { genreMark }
             .offset(x: Metric.coverLeading, y: Metric.coverTop)
     }
@@ -169,8 +169,14 @@ private extension TodayDiscoveryCard {
                 ForEach(discovery.keywords.prefix(Metric.maxKeywordCount), id: \.self) { keyword in
                     Text(keyword)
                         .applyWSSFont(.label2, color: .wssPrimary100)
+                        // 키워드는 서버가 주는 자유 문자열이라 길이 보장이 없다 — 제한이 없으면
+                        // 칩이 옆(x=153)의 표지 위까지 자라거나 두 줄로 늘어나 아래 칩·패널을 민다.
+                        // 왼쪽 정보 컬럼과 같은 폭까지만 허용하고 넘치면 말줄임한다.
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
+                        .frame(maxWidth: Metric.infoWidth, alignment: .leading)
                         .background(Color.wssPrimary20)
                         .clipShape(Capsule())
                 }

@@ -93,8 +93,8 @@ struct LoadHomeDataUseCaseTests {
         }
     }
 
-    @Test("특정 API 실패 시 전체를 실패로 반환한다")
-    func throwsWhenAnyApiFails() async {
+    @Test("trendingFeeds 실패 시 전체를 실패로 반환한다")
+    func throwsWhenTrendingFeedsFails() async {
         let mock = MockRecommendationRepository()
         mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
         mock.fetchTrendingFeedsResult = .failure(RepositoryError.unknown)
@@ -105,6 +105,36 @@ struct LoadHomeDataUseCaseTests {
         await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute()
         }
+    }
+
+    /// 마지막 호출까지 같은 규칙임을 못 박는다 — 여기만 `try?`로 눙치면 서버 오류가
+    /// "선호 장르 미설정"으로 둔갑해 설정 유도 CTA가 뜬다.
+    @Test("preferenceGenreNovels 실패 시 전체를 실패로 반환한다")
+    func throwsWhenPreferenceGenreNovelsFails() async {
+        let mock = MockRecommendationRepository()
+        mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
+        mock.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
+        mock.fetchRecommendedNovelsResult = .failure(RepositoryError.serverUnavailable)
+
+        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
+
+        await #expect(throws: RepositoryError.serverUnavailable) {
+            try await usecase.execute()
+        }
+    }
+
+    /// 순차 호출이라는 사실 자체가 명세다 — 병렬로 바꾸면 실패한 뒤에도 나머지 요청이 나간다.
+    @Test("앞선 호출이 실패하면 뒤따르는 호출과 닉네임 조회를 하지 않는다")
+    func stopsRemainingCallsAfterFailure() async {
+        let mock = MockRecommendationRepository()
+        mock.fetchTodayDiscoveriesResult = .failure(RepositoryError.networkUnavailable)
+
+        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
+        _ = try? await usecase.execute()
+
+        #expect(mock.fetchTrendingFeedsCallCount == 0)
+        #expect(mock.fetchRecommendedNovelsCallCount == 0)
+        #expect(mock.fetchCachedNicknameCallCount == 0)
     }
 }
 

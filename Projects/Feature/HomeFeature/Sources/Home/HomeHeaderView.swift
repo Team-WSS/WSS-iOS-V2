@@ -25,6 +25,7 @@ struct HomeHeaderView: View {
         static let bellSize: CGFloat = 28
         /// ⚠️ **10을 넘기지 말 것** — 벨 히트영역(28 + inset×2)이 헤더 50pt 박스를 넘어가면
         /// 아래 ScrollView를 침범해 검색바 위쪽 탭을 조용히 훔친다.
+        /// (가로로도 이 값만큼 헤더 트레일링 패딩에서 빼 쓰므로 `horizontalPadding` 미만이어야 한다.)
         static let bellHitInset: CGFloat = 8
     }
 
@@ -45,11 +46,10 @@ struct HomeHeaderView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: Metric.bellSize, height: Metric.bellSize)
-                    // 28pt 아이콘 하나뿐이라 그대로는 탭 타깃이 작고 비투명 픽셀만 눌린다 → 넓혀준다.
-                    // ⚠️ **트레일링에는 주지 않는다** — 헤더 패딩 20이 이미 여백이라, 주면 그만큼 벨이
-                    // 왼쪽으로 밀린다. 헤더 패딩을 깎아 상쇄하려 들면 반대쪽 **로고까지 함께 밀린다**
-                    // (`.padding(.horizontal,)`은 양쪽에 걸린다 — #179 리뷰에서 실제로 그랬다).
-                    .padding(.leading, Metric.bellHitInset)
+                    // 28pt 아이콘 하나뿐이라 그대로는 탭 타깃이 작고 비투명 픽셀만 눌린다 →
+                    // 사방으로 넓혀 44×44(28+8×2)를 만든다. 늘어난 트레일링 몫은 아래에서 헤더
+                    // 트레일링 패딩을 같은 값만큼 깎아 상쇄한다(벨은 시안 자리에 그대로 있다).
+                    .padding(.horizontal, Metric.bellHitInset)
                     .padding(.vertical, Metric.bellHitInset)
                     .contentShape(Rectangle())
             }
@@ -57,7 +57,11 @@ struct HomeHeaderView: View {
         // ⚠️ 벨의 세로 히트영역(28+16=44)이 헤더 높이를 밀지 못하게 **로고 높이로 고정**한다.
         // 없으면 헤더가 50 → 64로 커지면서 검색바부터 아래 전부가 내려간다(LibraryView와 같은 처리).
         .frame(height: Metric.logoHeight)
-        .padding(.horizontal, Metric.horizontalPadding)
+        // ⚠️ **좌우를 따로 준다** — `.padding(.horizontal,)`로 한 번에 주면 벨의 히트영역 확장을
+        // 상쇄하려고 값을 깎는 순간 반대쪽 **로고까지 함께 밀린다**(#179 리뷰에서 실제로 그랬다).
+        // 트레일링만 벨이 먹은 인셋만큼 깎으면 로고는 20에, 벨은 시안 자리에 그대로 남는다.
+        .padding(.leading, Metric.horizontalPadding)
+        .padding(.trailing, Metric.horizontalPadding - Metric.bellHitInset)
         .padding(.vertical, Metric.verticalPadding)
         .background(Color.wssWhite)
     }

@@ -25,7 +25,6 @@ struct TrendingFeedSection: View {
 
     private enum Metric {
         static let horizontalPadding: CGFloat = 20
-        static let cardWidth: CGFloat = 335
         static let sectionSpacing: CGFloat = 14
 
         static let rowHeight: CGFloat = 122
@@ -87,13 +86,16 @@ private extension TrendingFeedSection {
 
     var pagedCards: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            // ⚠️ 페이지 간 간격이 0이면 카드 폭(335)+좌우 여백(20)이 화면 폭과 같아져
-            // **다음 페이지가 20pt 삐져나와** 보인다. 여백만큼 띄워야 한 장만 보인다.
+            // ⚠️ 페이지 간 간격이 0이면 카드와 좌우 여백의 합이 화면 폭과 같아져
+            // **다음 페이지가 여백만큼 삐져나와** 보인다. 간격을 줘야 한 장만 보인다.
             // 마지막 페이지가 1건(홀수)이면 기본 `.center` 정렬에서 반쪽 카드가 세로 가운데로 뜬다.
             LazyHStack(alignment: .top, spacing: Metric.horizontalPadding) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                     pageCard(page)
-                        .frame(width: Metric.cardWidth)
+                        // ⚠️ 시안 폭(375 기준 335)을 **상수로 박지 말 것** — 393·430pt 기기에서
+                        // 그만큼 다음 페이지가 옆에 딸려 보인다("한 장만 보인다" 계약 위반).
+                        // `contentMargins`를 뺀 실제 콘텐츠 폭을 받아 기기 폭을 따라가게 한다.
+                        .containerRelativeFrame(.horizontal)
                         .id(index)
                 }
             }

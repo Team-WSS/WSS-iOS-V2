@@ -126,34 +126,33 @@ struct RecommendationMapperTests {
 
     // MARK: - 오늘의 발견
 
-    @Test("nickname이 nil이면 novel 타입으로 매핑된다")
-    func mapsToNovelTypeWhenNicknameIsNil() throws {
+    // 닉네임·아바타는 유저 한마디 카드에서 함께 채워지거나 함께 null이다 — 한쪽만 온 응답은
+    // 서버 이상이므로 작품 소개 카드로 눙치지 않고 실패시킨다(한마디를 조용히 잃지 않기 위해).
+
+    @Test("nickname 없이 avatarImage만 오면 매핑에 실패한다")
+    func throwsWhenOnlyAvatarImageIsPresent() {
         let dto = TodayDiscoveryNovelsResponse(
             popularNovels: [
                 makeTodayDiscoveryNovelResponse(avatarImage: "https://example.com/avatar.jpg", nickname: nil)
             ]
         )
 
-        let result = try RecommendationMapper.todayDiscoveryNovels(from: dto)
-
-        var isMatch = false
-        if case .novel = result.first?.content { isMatch = true }
-        #expect(isMatch)
+        #expect(throws: MappingError.self) {
+            try RecommendationMapper.todayDiscoveryNovels(from: dto)
+        }
     }
 
-    @Test("avatarImage가 nil이면 novel 타입으로 매핑된다")
-    func mapsToNovelTypeWhenAvatarImageIsNil() throws {
+    @Test("avatarImage 없이 nickname만 오면 매핑에 실패한다")
+    func throwsWhenOnlyNicknameIsPresent() {
         let dto = TodayDiscoveryNovelsResponse(
             popularNovels: [
                 makeTodayDiscoveryNovelResponse(avatarImage: nil, nickname: "유저닉네임")
             ]
         )
 
-        let result = try RecommendationMapper.todayDiscoveryNovels(from: dto)
-
-        var isMatch = false
-        if case .novel = result.first?.content { isMatch = true }
-        #expect(isMatch)
+        #expect(throws: MappingError.self) {
+            try RecommendationMapper.todayDiscoveryNovels(from: dto)
+        }
     }
 
     @Test("nickname과 avatarImage가 모두 nil이면 novel 타입으로 매핑된다")
@@ -227,8 +226,8 @@ struct RecommendationMapperTests {
         #expect(result.first?.contentDescription == "강추합니다!")
     }
 
-    @Test("유저 한마디 카드의 feedContent가 없으면 빈 본문으로 매핑된다")
-    func usesEmptyDescriptionWhenUserCommentHasNoContent() throws {
+    @Test("유저 한마디 카드에 본문이 없으면 매핑에 실패한다")
+    func throwsWhenUserCommentHasNoContent() {
         let dto = TodayDiscoveryNovelsResponse(
             popularNovels: [
                 makeTodayDiscoveryNovelResponse(
@@ -239,9 +238,34 @@ struct RecommendationMapperTests {
             ]
         )
 
+        // 빈 본문으로 눙치면 내용 없는 말풍선 카드가 홈에 그대로 그려진다 — 서버 계약 위반을
+        // 매핑 실패로 드러낸다(Repository가 `.invalidData`로 변환).
+        #expect(throws: MappingError.self) {
+            try RecommendationMapper.todayDiscoveryNovels(from: dto)
+        }
+    }
+
+    @Test("작품 소개 카드는 feedContent가 채워져 와도 작품 소개로 남는다")
+    func staysNovelTypeEvenWhenFeedContentIsPresent() throws {
+        // 서버가 소개 카드의 feedContent에도 같은 소개글을 넣어 보내는 경우가 있다(#179 실측).
+        // 형태 판정에 feedContent를 끌어들이면 이런 카드가 유저 한마디로 뒤집힌다.
+        let dto = TodayDiscoveryNovelsResponse(
+            popularNovels: [
+                makeTodayDiscoveryNovelResponse(
+                    novelDescription: "흥미로운 작품 소개",
+                    avatarImage: nil,
+                    nickname: nil,
+                    feedContent: "흥미로운 작품 소개"
+                )
+            ]
+        )
+
         let result = try RecommendationMapper.todayDiscoveryNovels(from: dto)
 
-        #expect(result.first?.contentDescription == "")
+        var isMatch = false
+        if case .novel = result.first?.content { isMatch = true }
+        #expect(isMatch)
+        #expect(result.first?.contentDescription == "흥미로운 작품 소개")
     }
 
     @Test("작가·키워드와 영문 장르가 도메인 값으로 매핑된다")
