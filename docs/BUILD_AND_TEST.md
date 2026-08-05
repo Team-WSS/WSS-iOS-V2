@@ -8,7 +8,7 @@
 | 작업 | 도구 | 비고 |
 |---|---|---|
 | 프로젝트 생성/의존성 | `tuist install` → `tuist generate` | 모든 빌드/테스트의 선행 |
-| Domain 단위 테스트 | XcodeBuildMCP `test_sim` (scheme `XxxDomainTests`) | CI는 `xcodebuild test`(아래) |
+| Domain 단위 테스트 | XcodeBuildMCP `test_sim` (scheme **`XxxDomain`**) | CI는 `xcodebuild test`(아래) |
 | 모듈/앱 빌드 | XcodeBuildMCP `build_sim` / `build_run_sim` | 에러를 file:line으로 압축 반환 |
 | **Feature 화면 띄우기** | `build_run_sim` (scheme **`XxxFeature`**) | 전체 App 조립 불필요, Demo 앱 단독 실행 |
 | 시각 검증 | `screenshot` / `record_sim_video` | 스크린샷을 에이전트가 직접 봄 |
@@ -37,5 +37,6 @@
 5. **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 6. **`SNAPSHOT_EXPIRED`는 흔하다** — `tap`/`type_text` 직전에 `snapshot_ui`로 fresh `elementRef`를 다시 확보한다.
 7. **`build_run_sim`은 Feature 스킴에서 install이 framework를 잡아 실패**할 수 있다("installable app 없음" / "did not contain any installable apps"). 컴파일은 되지만 설치 대상을 `XxxFeature.framework`로 고르기 때문. → `build_sim`(컴파일)으로 빌드한 뒤 `install_app_sim`+`launch_app_sim`(bundleId `...XxxFeatureDemo`)으로 띄운다.
-8. ⚠️ **`gesture(preset: "swipe-from-left-edge")`로는 화면 가장자리 스와이프 뒤로가기(pop)를 검증할 수 없다**(실측 — delta·duration을 바꿔도 화면이 안 바뀜). **시스템 네비바가 살아 있어 스와이프백이 기본 동작해야 하는 대조군에서도 pop이 안 일어난다** → 도구 한계지 코드 문제가 아니다. 커스텀 헤더 화면(`toolbar(.hidden)` + `SwipeBackEnabler`)을 만들면 **스와이프백은 사람이 손으로 확인**해야 한다. 자동화로 안 된다고 코드를 고치러 들어가지 말 것(원인 오진으로 시간 낭비).
-9. ⚠️ **`build_sim`은 호출 인자로 준 `scheme`보다 세션 기본 스킴(`session_show_defaults`의 scheme)을 우선한다**(실측). 기본이 `WSS-iOS`인데 `build_sim(scheme: "XxxFeature")`를 줘도 **`WSS-iOS`(Websoso.app)를 빌드**하고 성공(SUCCEEDED)까지 반환한다 → Feature framework는 **낡은 채로 남아** 코드 변경이 반영 안 된 Demo를 검증하게 된다(무증상, 빌드 3초 내외로 빨리 끝나면 의심). **Feature Demo를 검증할 땐 먼저 `session_set_defaults(scheme: "XxxFeature")`로 기본 스킴을 바꾼 뒤 빌드**할 것. 실제 리빌드는 프레임워크 바이너리 mtime(`.../Build/Products/Debug-iphonesimulator/XxxFeature.framework/XxxFeature`)이 갱신됐는지로 확인 가능.
+8. ⚠️ **`XxxDomainTests`라는 스킴은 없다** — 테스트 타깃 이름일 뿐이라 `test_sim`에 넘기면 "workspace does not contain a scheme" 로 튕긴다(#179 실측). 테스트도 모듈 스킴(`RecommendationDomain`)으로 돌리면 그 안의 Tests 타깃이 함께 실행된다. `tuist test <모듈>`도 되지만 요약 출력이 XCTest 기준(`Executed 0 tests`)이라 **Swift Testing 결과가 안 보이므로**, 통과 건수를 확인하려면 `test_sim`을 쓴다.
+9. ⚠️ **`gesture(preset: "swipe-from-left-edge")`로는 화면 가장자리 스와이프 뒤로가기(pop)를 검증할 수 없다**(실측 — delta·duration을 바꿔도 화면이 안 바뀜). **시스템 네비바가 살아 있어 스와이프백이 기본 동작해야 하는 대조군에서도 pop이 안 일어난다** → 도구 한계지 코드 문제가 아니다. 커스텀 헤더 화면(`toolbar(.hidden)` + `SwipeBackEnabler`)을 만들면 **스와이프백은 사람이 손으로 확인**해야 한다. 자동화로 안 된다고 코드를 고치러 들어가지 말 것(원인 오진으로 시간 낭비).
+10. ⚠️ **`build_sim`은 호출 인자로 준 `scheme`보다 세션 기본 스킴(`session_show_defaults`의 scheme)을 우선한다**(실측). 기본이 `WSS-iOS`인데 `build_sim(scheme: "XxxFeature")`를 줘도 **`WSS-iOS`(Websoso.app)를 빌드**하고 성공(SUCCEEDED)까지 반환한다 → Feature framework는 **낡은 채로 남아** 코드 변경이 반영 안 된 Demo를 검증하게 된다(무증상, 빌드 3초 내외로 빨리 끝나면 의심). **Feature Demo를 검증할 땐 먼저 `session_set_defaults(scheme: "XxxFeature")`로 기본 스킴을 바꾼 뒤 빌드**할 것. 실제 리빌드는 프레임워크 바이너리 mtime(`.../Build/Products/Debug-iphonesimulator/XxxFeature.framework/XxxFeature`)이 갱신됐는지로 확인 가능.

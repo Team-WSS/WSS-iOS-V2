@@ -72,6 +72,11 @@
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
 - **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨).
+  - ⚠️ **히트영역을 넓히려 준 패딩을 `.offset`으로 상쇄하지 말 것** — `offset`은 그리기·히트 테스트만 옮기고
+    **레이아웃·접근성 프레임에는 반영되지 않아**, 아이콘이 밀린 자리에 그대로 남는다(홈 알림 벨에서 실측 —
+    `snapshot_ui` 탭 좌표가 되민 값이 아니라 원래 값으로 나와 발각됐다). 가장자리 아이콘이면
+    **`.padding(.horizontal,)` 대신 컨테이너의 leading/trailing을 따로 주고 그중 한쪽만 인셋만큼 깎는다**
+    (`.padding(.horizontal,)`은 양쪽에 걸려 반대편 요소까지 밀기 때문). 애플 권장 탭 타깃은 44×44.
   - ⚠️ **`.buttonStyle(.plain)`은 기본 눌림 피드백(누를 때 흐려짐)까지 없앤다** — "버튼인데 눌러도 반응이 없다"의 원인. 이 스타일이 필요한 건 label의 `Text`가 accent 색으로 물드는 걸 막을 때뿐이고, **아이콘·커스텀 뷰만 있는 버튼은 빼야** 눌린 게 보인다(서재 헤더 등록 버튼에서 제거). 습관적으로 `.contentShape`와 세트로 붙이지 말 것.
 - **상태 기반 색·에셋 전환(토글·선택)엔 짧은 명시 애니메이션을 걸 것** — `.animation(.easeInOut(duration: 0.1), value: 상태)`. 미설정 시 기본 크로스페이드가 **느리게 번진다**(NovelReview 읽기 상태, NovelDetail 관심 버튼에서 재발 확인 — "토글이 굼뜨다"로 체감됨).
   - ⚠️ **단, 그 선택이 레이아웃까지 바꾸는 화면에선 이 규칙을 접는다** — 선택 즉시 다른 요소가 생겨(선택 칩 행 등장 등) 아래가 밀리면, 형제들은 즉시 새 자리로 가는데 **방금 누른 버튼 하나만 뒤늦게 미끄러져 내려온다**. 어디까지나 **그런 화면 한정 예외**이지 기본값을 뒤집는 게 아니다 — 레이아웃이 안 바뀌는 토글엔 위 규칙대로 애니메이션을 건다. 끄는 방법과 실측 근거는 [LibraryFeature](LibraryFeature/CLAUDE.md)의 필터 시트 항목이 정본.
