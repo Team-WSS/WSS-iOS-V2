@@ -79,9 +79,21 @@
   조합**이다 — 추천글 목록이 쓰는 `markImage`(GenreMark)를 여기 쓰면 큰 삼각형이 표지를 덮는다.
   NovelDetail 표지 뱃지와 같은 구성이고(배경 71 / 아이콘 32 / 인셋 4·5), 여기선 시안 프레임이 56이라
   **같은 비율로 축소**했다(배경 56 / 아이콘 25 / 인셋 3·4).
-- ⚠️ **카드 배경 블러는 시안의 `backdrop-blur: 6px`(CSS)를 그대로 쓰면 안 된다** — SwiftUI `blur`와
-  강도 단위가 달라 표지가 배경에 선명히 비쳐 앞의 진짜 표지와 구분되지 않는다. NovelDetail 헤더와 같은
-  **12**를 쓰고 `opaque: true`를 함께 준다(없으면 가장자리가 투명하게 번진다).
+- ⚠️ **오늘의 발견 카드 배경은 "표지를 흐리게 깔고 `imgNovelBg`를 덮는" 2층**이다
+  (구 WSSiOS `HomeTodayPopularCollectionViewCell`의 `backgroundNovelImageView` + `gradation` 정본).
+  - ⚠️ **구 WSSiOS의 `imgTodayPopularBackground`를 가져오지 말 것 — V2엔 일부러 안 넣었다.**
+    홈/오늘의 인기 전용처럼 보이지만 **알파 255의 불투명** 이미지라 표지를 통째로 가려 배경이 카드마다
+    똑같은 그라데이션이 된다(#179에서 실제로 그렇게 만들었다가, 표지가 다른 두 카드의 배경이 픽셀 단위로
+    동일함을 실측하고 되돌렸다). **구 WSSiOS에서도 어디에도 안 쓰이는 잔재**다. 필요한 건 알파 217~255의
+    **`imgNovelBg`**(292×432, 시안 노드 크기와 일치).
+  - ⚠️ **표지는 상단 기준으로 자른다**(`frame(..., alignment: .top)` + `clipped()`) — 시안도 표지를
+    `292×433.29`로 `top: 1`에 놓아 아래를 잘랐고, 구 레포도 `alignment = .top`이다. 기본 가운데
+    정렬이면 표지의 인상(제목·인물)이 위아래로 잘려 사라진다.
+  - 블러는 **코드로 건다**(구 레포도 `asBlurredBannerImage` = `CIGaussianBlur` radius 8 + `CIAffineClamp`).
+    ⚠️ 시안의 `backdrop-blur: 6px`(CSS)를 그대로 옮기지 말 것 — SwiftUI `blur`와 단위가 다르다.
+    `opaque: true`가 구 레포의 `CIAffineClamp` 역할(없으면 가장자리가 투명하게 번진다).
+    ⚠️ 구 레포의 8은 **원본 이미지 픽셀**에 건 값이라 표지 해상도에 따라 세기가 달라진다 — SwiftUI는
+    렌더 크기(pt)에 걸리므로 **같은 숫자라도 같은 세기가 아니다.**
 - ⚠️ **그리드 표지는 `Color.clear.aspectRatio(...).overlay { 이미지 }`** 로 그린다(LibraryGridCell 정본).
   `scaledToFill`인 `WSSNovelCoverImage`에 **직접 `aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다.**
 - ⚠️ **시안의 텍스트 프레임 폭을 그대로 옮기지 말 것** — Figma에서 고정 폭으로 보이는 건 **샘플 문구가

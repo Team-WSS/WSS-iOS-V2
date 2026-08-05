@@ -26,6 +26,10 @@ struct TodayDiscoveryCard: View {
         static let width: CGFloat = 292
         static let height: CGFloat = 362
         static let cornerRadius: CGFloat = 14
+        /// 배경 표지 흐림. 구 WSSiOS는 원본 이미지에 `CIGaussianBlur` radius 8을 구웠는데, 그건
+        /// **원본 픽셀 기준**이라 표지 해상도에 따라 세기가 달라진다 — SwiftUI는 렌더 크기에 걸리므로
+        /// 시안과 대조해 맞춘 값이다.
+        static let backdropBlurRadius: CGFloat = 8
 
         static let coverWidth: CGFloat = 117
         static let coverHeight: CGFloat = 171
@@ -79,22 +83,28 @@ struct TodayDiscoveryCard: View {
 
 private extension TodayDiscoveryCard {
 
-    /// 표지를 크게 깔고 블러 → 그 위에 그라데이션 에셋(NovelDetail 헤더와 같은 배관).
-    /// ⚠️ `opaque: true`가 없으면 블러가 가장자리에서 투명하게 번진다.
-    /// ⚠️ 블러 반경은 시안의 `backdrop-blur: 6px`(CSS)을 그대로 쓰면 **한참 모자라** 표지가 배경에
-    /// 선명히 비쳐 앞의 진짜 표지와 구분되지 않는다 — NovelDetail 헤더와 같은 12를 쓴다.
+    /// 표지를 카드 크기로 크게 깔아 흐리고, 그 위에 **반투명 그라데이션 에셋 `imgNovelBg`** 를 덮는다
+    /// (구 WSSiOS `HomeTodayPopularCollectionViewCell`의 `backgroundNovelImageView` + `gradation` 그대로).
+    ///
+    /// ⚠️ **구 WSSiOS의 `imgTodayPopularBackground`를 가져오지 말 것**(V2엔 일부러 없다) — 이름이 이
+    /// 화면 것처럼 보이지만 **알파 255의 불투명** 이미지라 표지를 통째로 가린다. 구 WSSiOS에서도 어디에도
+    /// 안 쓰이는 잔재다. 여기 필요한 건 알파 217~255의 `imgNovelBg`다.
+    /// ⚠️ 표지는 **상단 기준으로 자른다** — 세로가 길어 카드에 채우면 넘치는데, 기본 가운데 정렬이면
+    /// 위아래가 같이 잘려 표지의 인상(제목·인물)이 사라진다(구 레포도 `alignment = .top`).
     var backdrop: some View {
         ZStack {
             WSSNovelCoverImage(url: discovery.novelThumbnailImage)
-                .frame(width: Metric.width, height: Metric.height)
+                .frame(width: Metric.width, height: Metric.height, alignment: .top)
                 .clipped()
-                .blur(radius: 12, opaque: true)
+                // 구 레포는 `CIGaussianBlur`(radius 8) + `CIAffineClamp`를 원본 이미지에 구웠다 —
+                // `opaque: true`가 그 clamp 역할(없으면 가장자리가 투명하게 번진다).
+                .blur(radius: Metric.backdropBlurRadius, opaque: true)
 
-            WSSImage.imgDetailBackgroundGradation.swiftUIImage
+            // 에셋 원본이 292×432(시안 노드와 동일)로 카드보다 길다. 구 레포도 `scaleToFill`로 프레임에
+            // 맞췄고, 그라데이션이라 비율이 눌려도 티가 나지 않는다.
+            WSSImage.imgNovelBg.swiftUIImage
                 .resizable()
-                .scaledToFill()
                 .frame(width: Metric.width, height: Metric.height)
-                .clipped()
         }
     }
 
