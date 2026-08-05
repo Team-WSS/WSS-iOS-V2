@@ -86,7 +86,8 @@ private extension TrendingFeedSection {
         ScrollView(.horizontal, showsIndicators: false) {
             // ⚠️ 페이지 간 간격이 0이면 카드 폭(335)+좌우 여백(20)이 화면 폭과 같아져
             // **다음 페이지가 20pt 삐져나와** 보인다. 여백만큼 띄워야 한 장만 보인다.
-            LazyHStack(spacing: Metric.horizontalPadding) {
+            // 마지막 페이지가 1건(홀수)이면 기본 `.center` 정렬에서 반쪽 카드가 세로 가운데로 뜬다.
+            LazyHStack(alignment: .top, spacing: Metric.horizontalPadding) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                     pageCard(page)
                         .frame(width: Metric.cardWidth)

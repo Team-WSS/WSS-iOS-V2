@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import RecommendationDomain
+import NotificationDomain
 import DesignSystem
 import WSSComponent
 
@@ -76,17 +77,21 @@ struct HomeView: View {
                 onNotificationTapped: onNotificationTapped
             )
 
-            body(for: viewModel.state)
+            content(for: viewModel.state)
         }
         .background(Color.wssWhite)
     }
 
+    /// ⚠️ **로딩보다 콘텐츠가 우선**이다 — 홈은 탭 복귀마다 다시 로드하므로, 이미 받아둔 화면까지
+    /// 매번 로딩 뷰로 갈아치우면 돌아올 때마다 홈이 통째로 깜빡이고 `ScrollView` 정체성이 바뀌어
+    /// 스크롤 위치·추천글 페이지가 초기화된다. 전면 로딩은 **아직 보여줄 게 없을 때만**
+    /// (`isInitialLoading`) 띄운다. NovelDetail도 같은 이유로 데이터 우선 분기다.
     @ViewBuilder
-    private func body(for state: HomeViewModel.State) -> some View {
+    private func content(for state: HomeViewModel.State) -> some View {
         if state.loadFailed {
             NetworkErrorView { viewModel.handle(.load) }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if state.isLoading {
+        } else if viewModel.isInitialLoading {
             LoadingView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -171,5 +176,87 @@ private extension HomeView {
     func isEmptyNovels(_ state: PreferenceGenreNovelState) -> Bool {
         if case .novels(let novels) = state { return novels.isEmpty }
         return false
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    // VM을 직접 만든다(정본 5개 View의 Preview와 동일) — 로딩/실패 등 초기 상태를 손보기 쉽다.
+    HomeView(
+        viewModel: HomeViewModel(
+            loadHomeDataUseCase: PreviewLoadHomeDataUseCase(),
+            loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase()
+        ),
+        onNovelSelected: { _ in },
+        onFeedSelected: { _ in },
+        onSearchTapped: {},
+        onDetailSearchTapped: {},
+        onNotificationTapped: {},
+        onPreferenceGenreSettingTapped: {},
+        onAuthenticationRequired: {}
+    )
+}
+
+private struct PreviewLoadHomeDataUseCase: LoadHomeDataUseCase {
+    func execute() async throws(RepositoryError) -> HomeData {
+        HomeData(
+            nickname: "웹소소",
+            todayDiscoveries: [
+                TodayDiscovery(
+                    novelID: NovelID(1),
+                    novelTitle: "우리 집 고양이가 날 노린다",
+                    novelThumbnailImage: nil,
+                    novelAuthor: "캐슈",
+                    novelGenre: .BL,
+                    publicationStatus: .completed,
+                    keywords: ["사랑꾼", "짝사랑"],
+                    content: .novel,
+                    contentDescription: "며칠째 아파트 주차장을 서성이는 작은 고양이가 설국화의 눈에 밟힌다."
+                ),
+                TodayDiscovery(
+                    novelID: NovelID(2),
+                    novelTitle: "괴담에 떨어져도 출근을 해야 하는구나",
+                    novelThumbnailImage: nil,
+                    novelAuthor: "백덕수",
+                    novelGenre: .modernFantasy,
+                    publicationStatus: .onGoing,
+                    keywords: [],
+                    content: .userComment(
+                        user: Author(userId: UserID(1), nickname: "천마", profileImage: nil)
+                    ),
+                    contentDescription: "필독서 ㅇㅈ"
+                )
+            ],
+            trendingFeeds: (1...4).map { index in
+                TrendingFeed(
+                    feedID: FeedID(index),
+                    novelTitle: "우아한 오브리 \(index)",
+                    novelThumbnailImage: nil,
+                    novelGenre: .romanceFantasy,
+                    description: "역대급임",
+                    isSpoiler: index.isMultiple(of: 2),
+                    likeCount: index * 3,
+                    commentCount: index
+                )
+            },
+            preferenceGenreNovelState: .novels((1...4).map { index in
+                PreferenceGenreNovel(
+                    novelID: NovelID(index),
+                    novelTitle: "신데렐라는 이 멧밭쥐가 데려갑니다",
+                    novelThumbnailImage: nil,
+                    novelAuthors: ["이보라"],
+                    interestCount: 23,
+                    ratingCount: 2,
+                    rating: 4.0
+                )
+            })
+        )
+    }
+}
+
+private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase {
+    func execute() async throws(RepositoryError) -> UnreadNotificationStatus {
+        UnreadNotificationStatus(hasUnreadNotifications: true)
     }
 }

@@ -106,4 +106,5 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum 중 `home`만 아직 미구현(`HomeFeature` 폴더는 있어도 `Project.swift` 없음). 나머지는 전부 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- `ModuleType.feature` enum의 **9개 모듈이 모두 실재**한다: `HomeFeature`, `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- **같은 "탭 콘텐츠"라도 재로드 정책은 화면마다 다르다** — 서재는 진입 1회(`hasLoaded` 가드), 홈은 **탭 복귀마다 갱신**(밖에서 바뀐 추천·알림을 다시 비춰야 해서). 홈처럼 매번 갱신하는 화면은 **로딩 뷰가 이미 그린 콘텐츠를 덮지 않게** 해야 한다(`isInitialLoading` — 안 그러면 돌아올 때마다 화면이 깜빡이고 스크롤이 초기화된다). 새 탭 화면을 만들 때 어느 쪽인지 먼저 정할 것 → [HomeFeature](HomeFeature/CLAUDE.md).

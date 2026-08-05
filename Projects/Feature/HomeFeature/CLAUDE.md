@@ -1,7 +1,8 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # HomeFeature
 
-앱의 홈(탭) 화면 — 오늘의 발견 / 트렌딩 피드 / 관심 피드 / 선호 장르 작품을 한 화면에 모아 보여준다.
+앱의 홈(탭) 화면 — 오늘의 발견 / 추천글(지금 뜨는 글) / 선호 장르 작품을 한 화면에 모아 보여준다.
+(`RecommendationDomain`엔 관심 피드도 있지만 **홈엔 그 섹션이 없다** — 아래 주의사항 참고.)
 
 - 식별자: `ModuleType.feature(.home)` / 의존: `BaseDomain`, **`RecommendationDomain`**(홈의 Domain 코드가
   별도 `HomeDomain`이 아니라 여기 있음 — `LoadHomeDataUseCase`·`HomeData`·`TodayDiscovery`·`TrendingFeed`·
@@ -28,6 +29,10 @@
   scrollView 밖에 두고 `scrollView.top == headerView.bottom`으로 붙인 구조 그대로).
 - **로딩·전면 실패는 헤더만 남기고 그 아래를 통째로 대체**한다(검색바·배너도 함께 사라진다).
   고정 영역과 스크롤 영역의 경계와 일치시킨 것 — `LibraryFeature`가 헤더만 남기는 것과 같은 규칙.
+  - ⚠️ **실패는 "갱신(탭 복귀) 실패"에도 적용된다** — 보고 있던 홈이 실패 뷰로 대체된다.
+    로딩은 콘텐츠 우선(`isInitialLoading`)이라 **두 분기의 기준이 일부러 다르다**(#179에서 확인).
+    실패는 사용자가 알고 재시도할 수 있어야 해서 첫 로드와 같게 다룬다 — "로딩과 맞춰야 일관된다"며
+    콘텐츠 우선으로 바꾸지 말 것.
 - **섹션이 0건이면 제목까지 통째로 숨긴다**(빈 문구 ❌). 추천 콘텐츠라 "없음"을 굳이 말할 이유가 없다.
   구 WSSiOS도 섹션별 `isHidden`으로 처리했다. 단 선호장르 **미설정**은 빈 상태가 아니라 설정 유도
   CTA(시안 있음)라서 이 규칙과 별개다.
@@ -62,6 +67,11 @@
   그 대가로 콜백이 여러 번 발화할 수 있으니 **`onAuthenticationRequired`는 idempotent해야 한다.**
 - `state.preferenceGenreNovelState`는 **옵셔널**이다 — nil(아직 로드 전)과 `.noGenreSettings`(미설정)를
   섞으면 로딩 중에 "선호장르 설정하기" CTA가 번쩍인다.
+- ⚠️ **View는 `state.isLoading`이 아니라 `viewModel.isInitialLoading`을 본다.** 위 두 계약("탭 복귀마다
+  갱신" + "로딩은 헤더 아래를 전면 대체")을 각각 읽으면 안 보이지만, 둘이 만나면 **홈에 돌아올 때마다
+  이미 그린 화면이 로딩 뷰로 갈아치워진다** — `ScrollView` 정체성까지 바뀌어 스크롤 위치와 추천글
+  페이지가 초기화된다. 그래서 전면 로딩은 **보여줄 게 아직 없을 때만**(`isLoading && !hasContent`) 띄운다.
+  `isLoading`을 직접 보도록 되돌리지 말 것(#179 리뷰에서 잡힘, NovelDetail도 같은 이유로 데이터 우선 분기).
 
 #### UI 구현에서 실제로 걸린 것들 (#179 시뮬레이터 실측)
 

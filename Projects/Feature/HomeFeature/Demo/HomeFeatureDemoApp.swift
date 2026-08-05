@@ -25,6 +25,11 @@ struct HomeFeatureDemoApp: App {
         // 커스텀 폰트(Pretendard) 등록. 없으면 applyWSSFont의 UIFont(name:)! 가 nil → 크래시.
         // 프리뷰는 이 Demo 앱을 호스트로 띄우므로 여기서 등록하면 프리뷰도 함께 해결된다.
         DesignSystemFontFamily.registerAllCustomFonts()
+
+        // 닉네임은 서버가 아니라 로컬 캐시에서 온다 — 실제 앱은 로그인·프로필 조회가 채우지만
+        // Demo는 그 경로를 안 거치므로 직접 심어야 추천글 제목의 "{닉네임}님을" 이 확인된다.
+        // (body 평가 중 부수효과가 되지 않도록 앱 시작 시점에 한 번만 쓴다.)
+        UserDefaultsStorage().set(.nickname, "웹소소")
     }
 
     var body: some Scene {
@@ -140,9 +145,6 @@ private struct DemoRootView: View {
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
         )
-        // 닉네임은 서버가 아니라 로컬 캐시에서 온다 — 실제 앱은 로그인·프로필 조회가 채우지만
-        // Demo는 그 경로를 안 거치므로 직접 심어야 추천글 제목의 "{닉네임}님을" 이 확인된다.
-        UserDefaultsStorage().set(.nickname, "웹소소")
         let recommendationRepository = RecommendationDataFactory.makeRepository(
             network: client,
             logger: DataLogger(moduleName: "RecommendationData", underlying: consoleLogger)
