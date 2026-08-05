@@ -84,9 +84,14 @@
   **12**를 쓰고 `opaque: true`를 함께 준다(없으면 가장자리가 투명하게 번진다).
 - ⚠️ **그리드 표지는 `Color.clear.aspectRatio(...).overlay { 이미지 }`** 로 그린다(LibraryGridCell 정본).
   `scaledToFill`인 `WSSNovelCoverImage`에 **직접 `aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다.**
-- ⚠️ **그리드 제목에 고정 `width`를 주지 말 것** — 셀의 이상적 폭까지 그 값으로 끌어당겨 **표지까지 함께
-  좁아진다.** 시안 폭(140)은 `maxWidth`로 제한하고 `fixedSize(horizontal: false, vertical: true)`를 함께
-  걸어야 말줄임 대신 실제로 두 줄로 꺾인다.
+- ⚠️ **시안의 텍스트 프레임 폭을 그대로 옮기지 말 것** — Figma에서 고정 폭으로 보이는 건 **샘플 문구가
+  마침 그 폭을 꽉 채운 결과**인 경우가 많다. 실데이터에서 짧은 값이 오면 빈 자리가 남아 레이아웃이 어긋난다.
+  이 화면에서 두 번 걸렸다:
+  - **발견 카드의 작가 이름**에 폭 72(시안 프레임)를 줬더니 짧은 작가명일 때 `· 완결작`이 저 멀리
+    떨어졌다 → 폭 제한을 빼고 **연재상태를 `fixedSize` + `layoutPriority(1)`로 지킨 뒤 이름만 말줄임**.
+  - **그리드 제목**은 반대로 폭 제한이 필요한데(안 주면 두 줄로 안 꺾인다) **고정 `width`는 셀의 이상적
+    폭까지 끌어당겨 표지를 좁힌다** → 시안 폭(140)을 `maxWidth`로 주고
+    `fixedSize(horizontal: false, vertical: true)`를 함께 건다.
 - ⚠️ **`icStarFilled`는 원색이 고정**이라 그대로 쓰면 시안 색이 안 나온다 — `renderingMode(.template)` +
   `foregroundStyle(Color.wssSecondary100)`을 입힌다(DesignSystem의 "아이콘 SVG는 원색 고정" 항목).
 - **추천글 페이지 사이에 여백(20)을 넣어야 한 장만 보인다** — 카드 폭(335)+좌우 여백(20)이 화면 폭과

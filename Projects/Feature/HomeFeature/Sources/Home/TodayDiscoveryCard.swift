@@ -41,7 +41,6 @@ struct TodayDiscoveryCard: View {
         static let infoLeading: CGFloat = 19
         static let infoTop: CGFloat = 33
         static let infoWidth: CGFloat = 120
-        static let authorWidth: CGFloat = 72
 
         static let chipTop: CGFloat = 156
         static let chipSpacing: CGFloat = 4
@@ -133,15 +132,19 @@ private extension TodayDiscoveryCard {
 
             Spacer().frame(height: 4)
 
+            // ⚠️ 작가 이름에 **고정·최대 폭을 주지 말 것** — 이름이 짧아도 그 폭을 차지해
+            // `· 연재작`이 저 멀리 떨어진다(시안의 작가 프레임 72는 샘플 이름이 길어 꽉 찼던 것뿐).
+            // 연재상태를 `fixedSize` + 우선순위로 지키고, 남는 폭에서 이름만 말줄임되게 한다.
             HStack(spacing: 0) {
                 Text(discovery.novelAuthor)
                     .applyWSSFont(.body3, color: .wssGray200, alignment: .leading)
                     .lineLimit(1)
-                    .frame(maxWidth: Metric.authorWidth, alignment: .leading)
+                    .truncationMode(.tail)
 
                 Text(" · \(publicationStatusText)")
                     .applyWSSFont(.body3, color: .wssGray200, alignment: .leading)
                     .fixedSize()
+                    .layoutPriority(1)
             }
         }
         .frame(width: Metric.infoWidth, alignment: .leading)
