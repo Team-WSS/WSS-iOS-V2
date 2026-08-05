@@ -105,7 +105,7 @@ struct HomeView: View {
 private extension HomeView {
 
     func recommendationScroll(_ state: HomeViewModel.State) -> some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 HomeSearchSection(
                     onSearchTapped: onSearchTapped,

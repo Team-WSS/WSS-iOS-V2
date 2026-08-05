@@ -30,7 +30,10 @@ struct TrendingFeedSection: View {
 
         static let rowHeight: CGFloat = 122
         static let rowHorizontalPadding: CGFloat = 28
-        static let rowVerticalPadding: CGFloat = 16
+        /// 제목 줄이 **행 상단에서 늘 이 자리**여야 한다(본문 줄 수와 무관하게).
+        static let textTopPadding: CGFloat = 23
+        /// 썸네일은 위아래 16으로 행을 꽉 채운다(16 + 90 + 16 = 122).
+        static let thumbnailTopPadding: CGFloat = 16
         static let textWidth: CGFloat = 195
         static let textSpacing: CGFloat = 4
         static let rowSpacing: CGFloat = 20
@@ -125,7 +128,10 @@ private extension TrendingFeedSection {
         Button {
             onFeedSelected(feed.feedID)
         } label: {
-            HStack(spacing: Metric.rowSpacing) {
+            // ⚠️ **세로 가운데 정렬로 두지 말 것** — 본문 줄 수가 1줄(스포일러 안내)~3줄로 갈려서,
+            // 가운데 정렬이면 행마다·페이지마다 제목 줄의 높이가 들쭉날쭉해진다.
+            // 제목은 행 상단에서 23, 본문은 제목에서 4 — **위에서부터 고정**으로 쌓는다.
+            HStack(alignment: .top, spacing: Metric.rowSpacing) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(feed.novelTitle)
                         .applyWSSFont(.title3, color: .wssBlack, alignment: .leading)
@@ -141,6 +147,7 @@ private extension TrendingFeedSection {
                         .lineLimit(feed.isSpoiler ? 1 : 3)
                 }
                 .frame(width: Metric.textWidth, alignment: .leading)
+                .padding(.top, Metric.textTopPadding)
 
                 WSSNovelCoverImage(url: feed.novelThumbnailImage)
                     .frame(width: Metric.thumbnailWidth, height: Metric.thumbnailHeight)
@@ -151,10 +158,10 @@ private extension TrendingFeedSection {
                             .scaledToFit()
                             .frame(width: Metric.genreMarkSize, height: Metric.genreMarkSize)
                     }
+                    .padding(.top, Metric.thumbnailTopPadding)
             }
             .padding(.horizontal, Metric.rowHorizontalPadding)
-            .padding(.vertical, Metric.rowVerticalPadding)
-            .frame(height: Metric.rowHeight)
+            .frame(height: Metric.rowHeight, alignment: .top)
             .contentShape(Rectangle())
         }
     }
