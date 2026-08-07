@@ -13,6 +13,18 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`WSSNovelGridCell`(작품 그리드 셀)의 계약 — "폭은 부모가, 높이는 컴포넌트가"**:
+  - ⚠️ **표지 아래 정보 스택은 고정 높이(72)** 다. 제목이 1~2줄로 갈려 자연 높이로 두면 **`LazyVGrid` 행이
+    어긋나** 목록이 삐뚤빼뚤해진다(홈·서재 양쪽에서 실제로 겪음). 스택 **안은 자연스럽게 흐르게** 두고
+    (1줄 제목이면 작가가 바로 따라옴 — 디자인 의도) 스택 **자체만** 고정한다. 빈 자리를 채우거나 제목을
+    2줄로 강제하지 말 것. **높이를 파라미터로 열지 않은 것도 의도** — 폰트·줄 수가 고정이라 값이 흔들리면
+    행 정렬이라는 존재 이유가 깨진다.
+  - **표지·제목·작가가 같은 폭을 공유한다**(모두 셀 폭). 홈 시안엔 제목만 140(셀 163)이었으나 표지와
+    오른쪽 끝이 어긋나 걷어냈다 — **시안 값을 근거로 제목 폭을 다시 좁히지 말 것**.
+  - ⚠️ 표지 비율은 **투명 뷰가 잡고 이미지는 overlay로 채운다** — `scaledToFill`인 `WSSNovelCoverImage`에
+    직접 `aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다(실측. `LibraryGridCell`도 같은 형태).
+  - 기본 비율 상수가 `public`인 건 스타일이 아니라 **문법 제약**이다 — public `init`의 기본값 표현식은
+    private 상수(`Metric`)를 참조할 수 없다.
 - 컴포넌트가 아는 도메인은 **`BaseDomain`의 공통 값 타입까지**(`ReadingStatus`, `AttractivePoint`, `NovelGenre`, `SortType`, `KeywordCategory` 등). 이들의 라벨·색·아이콘 매핑을 `Sources/DomainPresentation/`(`+Presentation` 확장, public)에 한곳으로 모아 Feature가 중복 매핑하지 않게 한다. → 그 외 도메인 Entity·Repository나 상위 Feature 모델은 모른다(표시 데이터/콜백만 값으로 받음).
 - 특정 화면 전용 **필터용 값 목록**(예: `NovelGenre.myFeedFilter`, 검색 화면 장르 그리드용 `NovelGenre.searchGenre`)도 라벨·색 매핑과 동일하게 `DomainPresentation` 확장에 둔다 — `BaseDomain`은 순수 enum만 갖고 화면별 부분집합/순서는 여기서 정의. `myFeedFilter`와 `searchGenre`는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - `KeywordCategory+Presentation`의 아이콘(`icCategoryWorld` 등)은 `AttractivePoint`의 `icAttractiveXxx`와 **다른 에셋**이다 — 이름이 비슷한 "세계관/소재/캐릭터/관계/분위기" 라벨을 공유하지만(매력포인트엔 "필력"이 하나 더 있음) 서로 다른 제품 개념이라 아이콘을 섞어 쓰지 말 것.

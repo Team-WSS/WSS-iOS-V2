@@ -28,13 +28,6 @@ struct PreferenceGenreSection: View {
 
         static let columnSpacing: CGFloat = 9
         static let rowSpacing: CGFloat = 18
-        static let coverAspectRatio: CGFloat = 163.0 / 241.0
-        static let coverCornerRadius: CGFloat = 14
-        static let coverToInfoSpacing: CGFloat = 6
-        /// ⚠️ 제목이 1~2줄로 달라져 자연 높이로 두면 그리드 행이 어긋난다(LibraryFeature와 같은 함정).
-        static let infoHeight: CGFloat = 72
-        static let titleWidth: CGFloat = 140
-        static let iconSize: CGFloat = 12
 
         static let emptyCardCornerRadius: CGFloat = 14
         static let emptyCardHorizontalPadding: CGFloat = 24
@@ -80,86 +73,24 @@ private extension PreferenceGenreSection {
         .padding(.horizontal, Metric.horizontalPadding)
     }
 
+    /// 셀 자체는 공용 컴포넌트(`WSSNovelGridCell`)다 — 표지 비율·정보 스택 고정 높이(72)는 거기 산다.
+    /// 여기선 열 개수·좌우 여백만 정한다(셀 폭 = 열 너비 = 표지·텍스트 공통 폭).
     func novelGrid(_ novels: [PreferenceGenreNovel]) -> some View {
         LazyVGrid(columns: columns, spacing: Metric.rowSpacing) {
             ForEach(novels, id: \.novelID) { novel in
-                novelCell(novel)
+                WSSNovelGridCell(
+                    thumbnailImage: novel.novelThumbnailImage,
+                    title: novel.novelTitle,
+                    author: novel.novelAuthors.joined(separator: ", "),
+                    interestCount: novel.interestCount,
+                    rating: novel.rating,
+                    ratingCount: novel.ratingCount
+                ) {
+                    onNovelSelected(novel.novelID)
+                }
             }
         }
         .padding(.horizontal, Metric.horizontalPadding)
-    }
-
-    func novelCell(_ novel: PreferenceGenreNovel) -> some View {
-        Button {
-            onNovelSelected(novel.novelID)
-        } label: {
-            VStack(spacing: 0) {
-                // ⚠️ 비율은 **투명 뷰가 잡고 이미지는 overlay로 채운다**(LibraryGridCell 정본) —
-                // `scaledToFill`인 이미지에 직접 `aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다(실측).
-                Color.clear
-                    .aspectRatio(Metric.coverAspectRatio, contentMode: .fit)
-                    .overlay { WSSNovelCoverImage(url: novel.novelThumbnailImage) }
-                    .clipShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
-                    .contentShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
-
-                Spacer().frame(height: Metric.coverToInfoSpacing)
-
-                // 스택 안은 자연스럽게 흐르게 두고 스택 자체만 고정한다(제목 1줄이면 작가가 바로 따라온다).
-                VStack(alignment: .leading, spacing: 0) {
-                    countRow(novel)
-
-                    // 제목 폭은 셀(163)이 아니라 **140**이라 두 줄로 꺾인다.
-                    // ⚠️ 고정 `width`는 셀의 이상적 폭까지 끌어당겨 표지를 좁히므로 `maxWidth`로 제한하고,
-                    // `fixedSize(vertical:)`로 세로 확장을 허용해야 말줄임 대신 실제로 꺾인다(실측).
-                    Text(novel.novelTitle)
-                        .applyWSSFont(.body4, color: .wssBlack, alignment: .leading)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: Metric.titleWidth, alignment: .leading)
-
-                    Text(novel.novelAuthors.joined(separator: ", "))
-                        .applyWSSFont(.body5, color: .wssGray200, alignment: .leading)
-                        .lineLimit(1)
-
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // 셀 전체 높이를 시안대로 **319**(표지 241 + 간격 6 + 정보 72)로 맞추는 마지막 조각.
-                // 표지는 비율(163:241)이라 폭을 따라가고, 정보만 고정이라 행 높이가 어긋나지 않는다.
-                .frame(height: Metric.infoHeight, alignment: .top)
-            }
-            .contentShape(Rectangle())
-        }
-    }
-
-    func countRow(_ novel: PreferenceGenreNovel) -> some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 3) {
-                WSSImage.icHeartFilled.swiftUIImage
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: Metric.iconSize, height: Metric.iconSize)
-
-                Text("\(novel.interestCount)")
-                    .applyWSSFont(.body5, color: .wssGray200)
-            }
-
-            HStack(spacing: 3) {
-                // ⚠️ `icStarFilled`는 원색이 고정이라 그대로 쓰면 시안 색이 안 나온다 —
-                // template으로 바꿔 secondary100을 입힌다(DesignSystem 규약).
-                WSSImage.icStarFilled.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: Metric.iconSize, height: Metric.iconSize)
-                    .foregroundStyle(Color.wssSecondary100)
-
-                Text("\(String(format: "%.1f", novel.rating)) (\(novel.ratingCount))")
-                    .applyWSSFont(.body5, color: .wssGray200)
-            }
-
-            Spacer(minLength: 0)
-        }
     }
 
     /// 선호장르 미설정 — 목록이 없는 게 아니라 "아직 고르지 않았다"라서 설정 화면으로 유도한다.
