@@ -33,8 +33,8 @@ struct TrendingFeedSection: View {
         static let textTopPadding: CGFloat = 23
         /// 썸네일은 위아래 16으로 행을 꽉 채운다(16 + 90 + 16 = 122).
         static let thumbnailTopPadding: CGFloat = 16
-        static let textWidth: CGFloat = 195
         static let textSpacing: CGFloat = 4
+        /// 제목·본문과 표지 사이 간격. 텍스트가 **남는 폭을 전부** 먹으므로 이 값이 곧 둘 사이 여백이다.
         static let rowSpacing: CGFloat = 20
 
         static let thumbnailWidth: CGFloat = 64
@@ -133,7 +133,7 @@ private extension TrendingFeedSection {
             // ⚠️ **세로 가운데 정렬로 두지 말 것** — 본문 줄 수가 1줄(스포일러 안내)~3줄로 갈려서,
             // 가운데 정렬이면 행마다·페이지마다 제목 줄의 높이가 들쭉날쭉해진다.
             // 제목은 행 상단에서 23, 본문은 제목에서 4 — **위에서부터 고정**으로 쌓는다.
-            HStack(alignment: .top, spacing: Metric.rowSpacing) {
+            HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(feed.novelTitle)
                         .applyWSSFont(.title3, color: .wssBlack, alignment: .leading)
@@ -148,18 +148,24 @@ private extension TrendingFeedSection {
                                       alignment: .leading)
                         .lineLimit(feed.isSpoiler ? 1 : 3)
                 }
-                .frame(width: Metric.textWidth, alignment: .leading)
+                // ⚠️ 시안 폭(375 기준 195 = 335 - 28*2 - 64 - 20)을 **상수로 박지 말 것** —
+                // 393·430pt 기기에서 남는 폭이 그대로 텍스트 오른쪽에 빈 자리로 남아
+                // 표지와의 간격이 20보다 벌어진다. 남는 폭을 텍스트가 전부 먹게 두면
+                // 표지와의 간격은 아래 고정 간격(20)으로 기기 폭과 무관하게 유지된다.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, Metric.textTopPadding)
+
+                Spacer().frame(width: Metric.rowSpacing)
 
                 WSSNovelCoverImage(url: feed.novelThumbnailImage)
                     .frame(width: Metric.thumbnailWidth, height: Metric.thumbnailHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: Metric.thumbnailCornerRadius))
                     .overlay(alignment: .bottomTrailing) {
                         feed.novelGenre.markImage
                             .resizable()
                             .scaledToFit()
                             .frame(width: Metric.genreMarkSize, height: Metric.genreMarkSize)
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: Metric.thumbnailCornerRadius))
                     .padding(.top, Metric.thumbnailTopPadding)
             }
             .padding(.horizontal, Metric.rowHorizontalPadding)

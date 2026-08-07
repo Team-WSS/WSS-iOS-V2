@@ -169,18 +169,20 @@ private extension TodayDiscoveryCard {
                 ForEach(discovery.keywords.prefix(Metric.maxKeywordCount), id: \.self) { keyword in
                     Text(keyword)
                         .applyWSSFont(.label2, color: .wssPrimary100)
-                        // 키워드는 서버가 주는 자유 문자열이라 길이 보장이 없다 — 제한이 없으면
-                        // 칩이 옆(x=153)의 표지 위까지 자라거나 두 줄로 늘어나 아래 칩·패널을 민다.
-                        // 왼쪽 정보 컬럼과 같은 폭까지만 허용하고 넘치면 말줄임한다.
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .frame(maxWidth: Metric.infoWidth, alignment: .leading)
                         .background(Color.wssPrimary20)
                         .clipShape(Capsule())
                 }
             }
+            // 키워드는 서버가 주는 자유 문자열이라 길이 보장이 없다 — 제한이 없으면 칩이
+            // 옆(x=153)의 표지 위까지 자란다. 왼쪽 정보 컬럼과 같은 폭까지만 허용하고 넘치면 말줄임.
+            // ⚠️ 이 상한은 **칩(Text)이 아니라 컨테이너에** 건다 — `maxWidth`는 상한이 아니라
+            // "제안된 폭까지 늘어나라"라서, 칩에 직접 걸면 짧은 키워드도 120짜리 캡슐로 부푼다.
+            // 컨테이너에 걸면 칩은 폭 제안만 받고 제 이상적 크기(=글자 폭)를 그대로 쓴다.
+            .frame(maxWidth: Metric.infoWidth, alignment: .leading)
             .offset(x: Metric.infoLeading, y: Metric.chipTop)
         }
     }

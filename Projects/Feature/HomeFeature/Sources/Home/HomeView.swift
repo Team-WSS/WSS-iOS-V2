@@ -222,8 +222,11 @@ private struct PreviewLoadHomeDataUseCase: LoadHomeDataUseCase {
                     novelGenre: .modernFantasy,
                     publicationStatus: .onGoing,
                     keywords: [],
+                    // 유저 한마디 카드면 서버가 아바타를 반드시 준다(Demo mock 주석 참고).
                     content: .userComment(
-                        user: Author(userId: UserID(1), nickname: "천마", profileImage: nil)
+                        user: Author(userId: UserID(1),
+                                     nickname: "천마",
+                                     profileImage: URL(string: "https://picsum.photos/seed/wssuser1/96/96"))
                     ),
                     contentDescription: "필독서 ㅇㅈ"
                 )

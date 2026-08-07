@@ -237,8 +237,13 @@ private enum DemoHomeData {
             novelGenre: .modernFantasy,
             publicationStatus: .completed,
             keywords: ["동양풍/사극", "학원/아카데미"],
+            // ⚠️ 아바타를 nil로 두지 말 것 — 유저 한마디 카드면 서버가 `avatarImage`를 **반드시** 준다
+            // (`RecommendationMapper`가 닉네임·아바타 중 한쪽만 오면 매핑을 실패시킨다).
+            // nil로 두면 실서버엔 없는 "회색 네모 + 닉네임" 상태를 Demo가 그린다.
             content: .userComment(
-                user: Author(userId: UserID(1), nickname: "천마", profileImage: nil)
+                user: Author(userId: UserID(1),
+                             nickname: "천마",
+                             profileImage: URL(string: "https://picsum.photos/seed/wssuser1/96/96"))
             ),
             contentDescription: "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보내기로 한다."
         ),
