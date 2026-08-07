@@ -109,9 +109,9 @@ private extension TodayDiscoveryCard {
     }
 
     var cover: some View {
-        Color.clear
+        WSSNovelCoverImage(url: discovery.novelThumbnailImage)
+            // 크기가 고정인 자리라 비율(`aspectRatio:`)이 아니라 프레임으로 잡는다. 넘친 그림은 아래 clip이 자른다.
             .frame(width: Metric.coverWidth, height: Metric.coverHeight)
-            .overlay { WSSNovelCoverImage(url: discovery.novelThumbnailImage) }
             .clipShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
             .shadow(color: Color.wssBlack.opacity(0.1), radius: 5.3, y: 1.4)
             .overlay(alignment: .bottomTrailing) { genreMark }

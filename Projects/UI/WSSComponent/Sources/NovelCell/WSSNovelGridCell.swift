@@ -86,12 +86,10 @@ private extension WSSNovelGridCell {
         .contentShape(Rectangle())
     }
 
-    /// ⚠️ 비율은 **투명 뷰가 잡고 이미지는 overlay로 채운다** — `scaledToFill`인 `WSSNovelCoverImage`에
-    /// 직접 `aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다(실측).
+    /// 비율은 표지 컴포넌트에 **파라미터로** 넘긴다 — 밖에서 `.aspectRatio`를 걸면 `scaledToFill`과
+    /// 충돌해 표지가 좁아진다(그래서 `WSSNovelCoverImage`가 비율을 직접 받는다).
     var cover: some View {
-        Color.clear
-            .aspectRatio(coverAspectRatio, contentMode: .fit)
-            .overlay { WSSNovelCoverImage(url: thumbnailImage) }
+        WSSNovelCoverImage(url: thumbnailImage, aspectRatio: coverAspectRatio)
             .clipShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
             // 잘린 그림 밖 원본 크기로 hit-test 영역이 남지 않게 명시(스크롤·셀 탭 간섭 예방).
             .contentShape(RoundedRectangle(cornerRadius: Metric.coverCornerRadius))
