@@ -70,6 +70,15 @@
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
+  - ⚠️ **컴포넌트가 안 맞으면 호출부에서 우회하지 말고 컴포넌트 수정을 제안한다.** 화면 쪽에
+    **설명이 필요한 우회**(투명 뷰 트릭, modifier 순서 의존, 값 재계산)가 생기면 그건 그 화면의
+    문제가 아니라 **컴포넌트 API가 부족하다는 신호**다. 우회는 그 자리에선 동작해도 같은 함정을
+    쓰는 화면마다 반복되고, 매번 "왜 이렇게 쓰는지"를 주석으로 설명하게 된다.
+    - 실제 사례: `WSSNovelCoverImage`는 표지가 `scaledToFill`이라 밖에서 `.aspectRatio`를 걸면
+      충돌해 좁아진다 → 호출부 3곳이 `Color.clear.aspectRatio(...).overlay { 표지 }`로 우회하고
+      있었다. 컴포넌트가 `aspectRatio:`를 받게 고치자 우회가 한 번에 사라지고 함정 설명도 한곳으로 모였다.
+    - 고칠 땐 **기존 호출부가 안 깨지게 기본값을 두어 하위 호환**을 지키고, 같은 우회를 쓰던 **다른
+      화면도 함께 옮길지** 물어본다. 한쪽만 새 API로 가면 같은 패턴이 두 벌로 갈린다.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
 - **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨).
   - ⚠️ **히트영역을 넓히려 준 패딩을 `.offset`으로 상쇄하지 말 것** — `offset`은 그리기·히트 테스트만 옮기고
