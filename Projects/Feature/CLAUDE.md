@@ -70,6 +70,11 @@
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
+  - ⚠️ **`applyWSSFont(_:color:)`의 `alignment` 기본값은 `.center`다** — 여러 줄 텍스트를 왼쪽 정렬하려면
+    **`alignment: .leading`을 인자로 넘겨야** 한다. 밖에서 `.multilineTextAlignment(.leading)`을 덧붙이는 건
+    **먹지 않는다**(정렬은 환경값이라 Text에 더 가까운 안쪽 값이 이긴다). `VStack(alignment: .leading)` 안에
+    있어도 마찬가지 — 스택 정렬은 뷰의 배치를, 이건 뷰 *안의* 줄 정렬을 정한다. 한 줄짜리 텍스트에선 차이가
+    안 보이다가 **실데이터에서 두 줄이 되는 순간 둘째 줄만 가운데로 몰려** 드러난다(#181 알림 목록에서 실측).
   - ⚠️ **컴포넌트가 안 맞으면 호출부에서 우회하지 말고 컴포넌트 수정을 제안한다.** 화면 쪽에
     **설명이 필요한 우회**(투명 뷰 트릭, modifier 순서 의존, 값 재계산)가 생기면 그건 그 화면의
     문제가 아니라 **컴포넌트 API가 부족하다는 신호**다. 우회는 그 자리에선 동작해도 같은 함정을

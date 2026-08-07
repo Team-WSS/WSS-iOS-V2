@@ -52,6 +52,7 @@ private enum DemoNotificationScenario: String, CaseIterable, Identifiable {
 private enum DemoRoute: Hashable {
     case notificationDetail(NotificationID)
     case feedDetail(FeedID)
+    case novelDetail(NovelID)
 }
 
 // MARK: - Root: Mock ↔ 실서버 토글
@@ -142,6 +143,9 @@ private struct DemoRootView: View {
         case .feedDetail(let id):
             // 피드 상세는 다른 모듈(FeedFeature) 화면이라 Demo에선 진입 사실만 보여준다.
             Text("피드 상세 진입 요청: \(id.value)")
+        case .novelDetail(let id):
+            // 작품 상세도 다른 모듈(NovelDetailFeature) 화면 — 실서버에선 아직 이 경로가 열리지 않는다.
+            Text("작품 상세 진입 요청: \(id.value)")
         }
     }
 
@@ -156,6 +160,7 @@ private struct DemoRootView: View {
             logger: consoleLogger,
             onNotificationSelected: { path.append(.notificationDetail($0)) },
             onFeedSelected: { path.append(.feedDetail($0)) },
+            onNovelSelected: { path.append(.novelDetail($0)) },
             onAuthenticationRequired: { consoleLogger.info("인증 만료 → 로그인 진입 요청") }
         )
     }
@@ -286,11 +291,23 @@ private enum DemoNotificationData {
         NotificationItem(
             id: NotificationID(103),
             iconURL: nil,
-            title: "일이삼사오육칠팔구십일이삼사오육칠팔구십",
-            body: "아이콘이 없는 알림 — 폴백 자리가 비어 보이지 않는지 확인하는 축이다.",
+            title: "‘여주가 세계를 구함 이 구역의 최강자다’ 라는 아주 긴 제목",
+            body: "아이콘이 없고 제목이 아주 긴 알림 — 아이콘 폴백 자리와 제목 1줄 말줄임을 함께 확인하는 축이다."
+                + " 본문도 길어서 두 줄에서 잘린다.",
             createdAtText: "어제",
             isRead: true,
             deeplink: .unknown
+        ),
+        NotificationItem(
+            id: NotificationID(105),
+            iconURL: URL(string: "https://picsum.photos/seed/noti5/96/96"),
+            title: "완결 알림",
+            body: "<당신의 이해를 돕기 위하여> 작품이 완결났어요.",
+            // ⚠️ 실서버에선 이 알림이 `.unknown`으로 온다(응답에 novelId가 없음).
+            // Demo에서만 `.novelDetail`을 넣어 서버 보강 후의 전환 경로를 미리 확인한다.
+            createdAtText: "2026.07.31",
+            isRead: false,
+            deeplink: .novelDetail(id: NovelID(4217))
         ),
         NotificationItem(
             id: NotificationID(104),

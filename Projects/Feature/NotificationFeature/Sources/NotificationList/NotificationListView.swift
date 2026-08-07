@@ -17,13 +17,37 @@ import WSSComponent
 // "얇은 VM": 카피·포맷·색은 전부 View가 결정한다.
 struct NotificationListView: View {
 
+    private enum Metric {
+        /// 커스텀 네비게이션 바 높이 — 시스템 네비바(inline)와 같은 44.
+        static let navigationBarHeight: CGFloat = 44
+        static let backButtonSize: CGFloat = 44
+        static let backIconSize: CGFloat = 24
+        static let backButtonLeading: CGFloat = 6
+        static let cellPadding: CGFloat = 20
+        static let iconSize: CGFloat = 36
+        static let iconCornerRadius: CGFloat = 12
+        /// 배경 캡슐(36) 안에 놓이는 서버 아이콘 이미지 크기 — 시안의 인셋 4.5.
+        static let iconImageSize: CGFloat = 27
+        /// 아이콘 ↔ 텍스트 사이.
+        static let iconTextSpacing: CGFloat = 14
+        /// 제목 ↔ 본문 사이.
+        static let titleBodySpacing: CGFloat = 2
+        /// 본문 ↔ 작성시각 사이.
+        static let bodyDateSpacing: CGFloat = 14
+        static let separatorHeight: CGFloat = 1
+    }
+
     // 선언 순서: VM → View 전용 상태 → @Environment → 주입 let
     @State private var viewModel: NotificationListViewModel
+    @Environment(\.dismiss) private var dismiss
 
     /// 알림 상세 딥링크 → 상세 화면 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
     private let onNotificationSelected: (NotificationID) -> Void
     /// 피드 딥링크 → 피드 상세 진입 콜백.
     private let onFeedSelected: (FeedID) -> Void
+    /// 작품 딥링크 → 작품 상세 진입 콜백.
+    /// ⚠️ 서버가 아직 `novelId`를 주지 않아 **현재는 발화하지 않는다**(매퍼가 `.unknown`으로 떨군다).
+    private let onNovelSelected: (NovelID) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통.
     private let onAuthenticationRequired: () -> Void
 
@@ -31,17 +55,22 @@ struct NotificationListView: View {
         viewModel: NotificationListViewModel,
         onNotificationSelected: @escaping (NotificationID) -> Void,
         onFeedSelected: @escaping (FeedID) -> Void,
+        onNovelSelected: @escaping (NovelID) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNotificationSelected = onNotificationSelected
         self.onFeedSelected = onFeedSelected
+        self.onNovelSelected = onNovelSelected
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
-    // body = 조립 + 화면 modifier만. 실제 레이아웃은 content로 분리.
+    // body = 조립 + 화면 modifier만. 디자인 폰트·뒤로가기 아이콘을 맞추려고 시스템 네비바를 숨기고 커스텀 헤더를 쓴다.
     var body: some View {
         content
+            .toolbar(.hidden, for: .navigationBar)
+            // 네비바를 숨기면 스와이프 뒤로가기까지 함께 꺼진다 → 제스처만 따로 되살린다.
+            .enableSwipeBack()
             .onAppear { viewModel.handle(.load) }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.requiresAuthentication) { _, required in
@@ -51,7 +80,9 @@ struct NotificationListView: View {
     }
 
     private var content: some View {
-        Group {
+        VStack(spacing: 0) {
+            navigationBar
+            // 로딩·실패는 네비게이션 바만 남기고 그 아래를 통째로 대체한다(Library와 같은 규칙).
             if viewModel.state.isLoading {
                 LoadingView()
             } else if viewModel.state.loadFailed {
@@ -62,6 +93,7 @@ struct NotificationListView: View {
                 listSection
             }
         }
+        .background(Color.wssWhite)
     }
 }
 
@@ -69,34 +101,137 @@ struct NotificationListView: View {
 
 private extension NotificationListView {
 
-    /// 알림이 하나도 없을 때. (문구·CTA는 디자인 확인 후 확정)
+    /// 커스텀 네비게이션 바 — 뒤로가기 + 중앙 "알림" 타이틀.
+    /// 타이틀을 `ZStack` 중앙에 두는 건 의도다 — `HStack`에 넣으면 뒤로가기 버튼 폭만큼 오른쪽으로 밀린다.
+    var navigationBar: some View {
+        ZStack {
+            Text("알림")
+                .applyWSSFont(.title2, color: .wssBlack)
+            HStack(spacing: 0) {
+                Button {
+                    dismiss()
+                } label: {
+                    WSSImage.icNavigateLeft.swiftUIImage
+                        // ⚠️ 이 에셋의 원색은 연회색(#C7C7D0)이라 그대로 쓰면 디자인의 검정 화살표보다 훨씬 흐리다
+                        // (DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목) → template으로 색을 입힌다.
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(Color.wssBlack)
+                        .frame(width: Metric.backIconSize, height: Metric.backIconSize)
+                        // 아이콘 24를 44 히트 영역 가운데 둔다(디자인의 44 탭 타겟).
+                        .frame(width: Metric.backButtonSize, height: Metric.backButtonSize)
+                        .contentShape(Rectangle())
+                }
+                Spacer()
+            }
+            // 디자인의 뒤로가기 버튼은 화면 왼쪽 끝이 아니라 6pt 안쪽에서 시작한다.
+            .padding(.leading, Metric.backButtonLeading)
+        }
+        .frame(height: Metric.navigationBarHeight)
+    }
+
+    /// 알림이 하나도 없을 때. 이미지 + 문구만 두고 **CTA는 두지 않는다** —
+    /// 알림은 사용자가 직접 만들 수 있는 게 아니라 유도할 행동이 마땅치 않다(#181에서 확정).
     var emptySection: some View {
-        Color.wssWhite
+        VStack(spacing: 0) {
+            WSSImage.imgEmpty.swiftUIImage
+
+            Spacer().frame(height: 8)
+
+            Text("아직 도착한 알림이 없어요")
+                .applyWSSFont(.body1, color: .wssGray200)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// 알림 목록 — 마지막 셀이 보이면 다음 페이지를 요청한다.
     var listSection: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(viewModel.state.items, id: \.id) { item in
+                ForEach(Array(viewModel.state.items.enumerated()), id: \.element.id) { index, item in
+                    // 구분선은 셀 사이에만 둔다(첫 셀 위엔 없음 — 네비게이션 바와 붙어버린다).
+                    if index > 0 {
+                        separator
+                    }
                     notificationCell(item)
                         .onAppear { loadMoreIfLast(item) }
                 }
 
                 if viewModel.state.isLoadingMore {
                     ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                 }
             }
         }
     }
 
-    /// 알림 한 건. (셀 레이아웃은 디자인 확인 후 구현)
+    var separator: some View {
+        Rectangle()
+            .fill(Color.wssGray50)
+            .frame(height: Metric.separatorHeight)
+    }
+
+    /// 알림 한 건 — 아이콘 + (제목 / 본문 / 작성시각).
+    /// 미읽음은 셀 배경을 `wssPrimary20`으로 칠해 구분한다(읽으면 흰색).
     func notificationCell(_ item: NotificationItem) -> some View {
         Button {
             select(item)
         } label: {
-            Text(item.title)
+            HStack(alignment: .top, spacing: 0) {
+                notificationIcon(item)
+
+                Spacer().frame(width: Metric.iconTextSpacing)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(item.title)
+                        // ⚠️ alignment를 인자로 넘겨야 한다 — 기본값이 .center라 밖에서 .multilineTextAlignment를
+                        // 걸어도 Text에 더 가까운 안쪽 값이 이겨 무시된다.
+                        .applyWSSFont(.title2, color: .wssBlack, alignment: .leading)
+                        .lineLimit(1)
+
+                    Spacer().frame(height: Metric.titleBodySpacing)
+
+                    Text(item.body)
+                        .applyWSSFont(.body5, color: .wssGray200, alignment: .leading)
+                        .lineLimit(2)
+
+                    Spacer().frame(height: Metric.bodyDateSpacing)
+
+                    Text(item.createdAtText)
+                        .applyWSSFont(.body5, color: .wssGray200, alignment: .leading)
+                }
+                // 시안의 텍스트 프레임 폭(270)은 샘플 문구 기준이라 옮기지 않는다 — 남는 폭을 전부 쓰게 두면
+                // 기기 폭이 달라져도 아이콘과의 간격(14)이 그대로 유지된다(HomeFeature 교훈).
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(Metric.cellPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(item.isRead ? Color.wssWhite : Color.wssPrimary20)
+            .contentShape(Rectangle())
         }
+        // 읽음 처리로 배경색이 바뀌므로 짧은 명시 애니메이션을 건다(미설정 시 기본 크로스페이드가 느리게 번진다).
+        .animation(.easeInOut(duration: 0.1), value: item.isRead)
+    }
+
+    /// 알림 아이콘 — 배경 캡슐만 로컬로 그리고 그 위에 **서버가 준 이미지**를 얹는다.
+    /// 알림 종류별 아이콘은 DesignSystem에 없다(`NotificationItem.iconURL`이 유일한 출처).
+    func notificationIcon(_ item: NotificationItem) -> some View {
+        WSSAsyncImage(url: item.iconURL) { image in
+            image
+                .resizable()
+                .scaledToFit()
+        } placeholder: {
+            // 이미지가 없으면 배경 캡슐만 남는다 — 자리를 지켜야 텍스트가 밀리지 않는다.
+            Color.clear
+        }
+        // 아이콘 이미지는 배경보다 작다(시안: 배경 36 안에 27) — 배경 캡슐이 이미지에 가려지지 않게 한다.
+        .frame(width: Metric.iconImageSize, height: Metric.iconImageSize)
+        .frame(width: Metric.iconSize, height: Metric.iconSize)
+        .background(Color.wssPrimary20)
+        .clipShape(RoundedRectangle(cornerRadius: Metric.iconCornerRadius))
     }
 }
 
@@ -117,6 +252,7 @@ private extension NotificationListView {
     }
 
     /// 셀 탭 — 읽음 처리는 VM에, 화면 전환은 딥링크에 따라 상위 콜백에 위임한다.
+    /// `.unknown`(작품 알림 등 갈 곳이 없는 경우)도 **읽음 처리는 한다** — 전환만 없다(#181에서 확정).
     func select(_ item: NotificationItem) {
         viewModel.handle(.selectNotification(item))
         switch item.deeplink {
@@ -124,6 +260,8 @@ private extension NotificationListView {
             onNotificationSelected(id)
         case .feedDetail(let id):
             onFeedSelected(id)
+        case .novelDetail(let id):
+            onNovelSelected(id)
         case .unknown, .none:
             break
         }
