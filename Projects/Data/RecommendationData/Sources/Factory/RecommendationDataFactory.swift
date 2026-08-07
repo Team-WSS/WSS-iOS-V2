@@ -15,11 +15,13 @@ import BaseData
 public enum RecommendationDataFactory {
     public static func makeRepository(
         network: NetworkingRequestable,
+        appStorage: AppStorage = UserDefaultsStorage(),
         logger: DataLogger? = nil
     ) -> RecommendationRepository {
         let service = DefaultRecommendationService(network: network)
         return DefaultRecommendationRepository(
             service: service,
+            appStorage: appStorage,
             logger: logger
         )
     }

@@ -16,20 +16,23 @@ import BaseData
 public struct DefaultRecommendationRepository: RecommendationRepository {
     
     private let service: RecommendationService
+    private let appStorage: AppStorage
     private let logger: DataLogger?
-    
+
     public init(service: RecommendationService,
+                appStorage: AppStorage,
                 logger: DataLogger?) {
         self.service = service
+        self.appStorage = appStorage
         self.logger = logger
     }
-    
+
     public func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery] {
         let action = RecommendationAction.fetchTodayDiscoveries
-        
+
         do {
             let response = try await service.getTodayDiscovery()
-            return RecommendationMapper.todayDiscoveryNovels(from: response)
+            return try RecommendationMapper.todayDiscoveryNovels(from: response)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -47,7 +50,7 @@ public struct DefaultRecommendationRepository: RecommendationRepository {
         
         do {
             let response = try await service.getTrendingFeeds()
-            return RecommendationMapper.trendingFeeds(from: response)
+            return try RecommendationMapper.trendingFeeds(from: response)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
@@ -112,5 +115,10 @@ public struct DefaultRecommendationRepository: RecommendationRepository {
             logger?.logUnknownError(action: action.name, error: error)
             throw .unknown
         }
+    }
+
+    /// 로그인·프로필 저장 시 남겨둔 로컬 값을 그대로 읽는다(네트워크 없음).
+    public func fetchCachedNickname() -> String? {
+        appStorage.get(.nickname)
     }
 }

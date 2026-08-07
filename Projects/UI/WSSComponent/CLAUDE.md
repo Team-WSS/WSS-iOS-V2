@@ -13,6 +13,17 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`WSSNovelGridCell`(작품 그리드 셀)의 계약 — "폭은 부모가, 높이는 컴포넌트가"**:
+  - ⚠️ **표지 아래 정보 스택은 고정 높이(72)** 다. 제목이 1~2줄로 갈려 자연 높이로 두면 **`LazyVGrid` 행이
+    어긋나** 목록이 삐뚤빼뚤해진다(홈·서재 양쪽에서 실제로 겪음). 스택 **안은 자연스럽게 흐르게** 두고
+    (1줄 제목이면 작가가 바로 따라옴 — 디자인 의도) 스택 **자체만** 고정한다. 빈 자리를 채우거나 제목을
+    2줄로 강제하지 말 것. **높이를 파라미터로 열지 않은 것도 의도** — 폰트·줄 수가 고정이라 값이 흔들리면
+    행 정렬이라는 존재 이유가 깨진다.
+  - **표지·제목·작가가 같은 폭을 공유한다**(모두 셀 폭). 홈 시안엔 제목만 140(셀 163)이었으나 표지와
+    오른쪽 끝이 어긋나 걷어냈다 — **시안 값을 근거로 제목 폭을 다시 좁히지 말 것**.
+  - 표지 비율은 `WSSNovelCoverImage(url:aspectRatio:)`에 **파라미터로 넘긴다**(아래 표지 항목 참고).
+  - 기본 비율 상수가 `public`인 건 스타일이 아니라 **문법 제약**이다 — public `init`의 기본값 표현식은
+    private 상수(`Metric`)를 참조할 수 없다.
 - 컴포넌트가 아는 도메인은 **`BaseDomain`의 공통 값 타입까지**(`ReadingStatus`, `AttractivePoint`, `NovelGenre`, `SortType`, `KeywordCategory` 등). 이들의 라벨·색·아이콘 매핑을 `Sources/DomainPresentation/`(`+Presentation` 확장, public)에 한곳으로 모아 Feature가 중복 매핑하지 않게 한다. → 그 외 도메인 Entity·Repository나 상위 Feature 모델은 모른다(표시 데이터/콜백만 값으로 받음).
 - 특정 화면 전용 **필터용 값 목록**(예: `NovelGenre.myFeedFilter`, 검색 화면 장르 그리드용 `NovelGenre.searchGenre`)도 라벨·색 매핑과 동일하게 `DomainPresentation` 확장에 둔다 — `BaseDomain`은 순수 enum만 갖고 화면별 부분집합/순서는 여기서 정의. `myFeedFilter`와 `searchGenre`는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - `KeywordCategory+Presentation`의 아이콘(`icCategoryWorld` 등)은 `AttractivePoint`의 `icAttractiveXxx`와 **다른 에셋**이다 — 이름이 비슷한 "세계관/소재/캐릭터/관계/분위기" 라벨을 공유하지만(매력포인트엔 "필력"이 하나 더 있음) 서로 다른 제품 개념이라 아이콘을 섞어 쓰지 말 것.
@@ -23,6 +34,12 @@
 - **이미지 + `onTapGesture` 패턴은 접근성 트리에 안 잡힌다**(VoiceOver·UI 자동화 모두) — 탭 가능한 이미지에는 `.accessibilityLabel` + `.accessibilityAddTraits(.isButton)`을 같이 달거나 `Button`을 쓸 것(WSSFeadHeaderView의 프로필·threedots에서 발견).
 - **`scaledToFill().frame(...).clipShape(...)`는 그리기만 자르고 hit-test 영역은 스케일된 원본 크기로 남는다** — 프레임보다 세로로 긴 이미지(정사각 이상)면 보이지 않는 터치 영역이 위아래로 넘쳐 **형제 뷰의 버튼 탭을 가로챈다**(WSSFeedImageView가 WSSFeadView 헤더의 프로필·threedots를 죽이던 버그, #154에서 수정). 장식 이미지는 `.allowsHitTesting(false)`, 탭이 필요한 이미지는 clip 뒤 `.contentShape`로 hit 영역을 명시할 것.
 - `WSSSearchBar`는 `isFocused: FocusState<Bool>.Binding? = nil`로 외부 포커스 제어를 선택적으로 받는다(기본 nil이면 내부 `@FocusState` 사용). 호출부가 포커스를 직접 제어하려면(자동 포커스, 바깥 탭 시 dismiss 등) 일반 `@State`가 아니라 **자체 `@FocusState` 프로퍼티**를 선언해 그 `$binding`을 넘겨야 한다 — 타입이 `FocusState<Bool>.Binding`이라 `Binding<Bool>`과 호환되지 않는다.
+- ⚠️ **`WSSNovelCoverImage`에 `.aspectRatio`를 밖에서 걸지 말 것 — 비율은 `aspectRatio:` 파라미터로 넘긴다.**
+  표지는 `scaledToFill`(= `aspectRatio(.fill)`)이라 밖에서 `.fit` 비율을 또 걸면 **둘이 충돌해 표지가 좁아진다**(실측).
+  파라미터를 주면 컴포넌트가 내부에서 "투명 뷰가 비율을 잡고 그림은 overlay로 채운 뒤 `clipped()`" 구조로 처리한다
+  — 호출부에서 `Color.clear.aspectRatio(...).overlay { ... }` 트릭을 다시 쓰지 말 것(그 트릭이 불편해서 컴포넌트로 넣었다).
+  크기가 고정인 자리(추천글 행 썸네일 등)는 파라미터 없이 밖에서 `.frame(width:height:)`를 쓰면 된다.
+  - `clipped()`는 **그리기만 자르고 hit-test 영역은 남긴다** → 탭이 필요한 표지는 호출부가 `.contentShape`를 얹어야 한다.
 - **목록 표지·프로필처럼 반복 렌더되는 원격 이미지엔 `AsyncImage`를 직접 쓰지 말고 `WSSAsyncImage`(또는 표지 편의 래퍼 `WSSNovelCoverImage`)를 쓴다** — `AsyncImage`는 뷰 정체성이 바뀔 때마다 `.empty` phase부터 다시 시작해 **캐시 히트여도** placeholder가 한 프레임 번쩍인다(목록 셀 모드 전환·스크롤 재활용에서 매번 도짐). URLCache는 **응답 데이터**만 갖고 있어 재디코딩 틈이 남는다. `WSSAsyncImage`는 **디코딩된 `UIImage`를 인메모리 캐시(`WSSImageCache`, 화면 간 공유)에 두고 렌더 경로(`displayedImage`)에서 동기 조회** → 히트면 첫 프레임부터 실제 이미지(placeholder 프레임 자체가 안 생김). NovelDetail 대형 표지가 같은 함정을 prefetch로 풀었던 것을 컴포넌트로 일반화(#166).
   - ⚠️ **캐시 동기 조회는 `init`이 아니라 렌더 경로(`displayedImage`)에 있어야 한다.** `@State`는 저장소가 처음 만들어질 때만 초기값이 적용되고 `.task`는 **첫 렌더 뒤에** 도므로, 뷰 정체성이 유지된 채 url만 바뀌면(프로필 사진 교체 등) 첫 프레임에 **옛 이미지/placeholder가 한 번 스친다.** 그래서 `image`와 짝으로 `loadedURL`을 들고, `loadedURL != url`이면 렌더 시점에 캐시를 직접 조회한다 — 이 짝이 없으면 "캐시 히트면 첫 프레임부터 실제 이미지" 보장이 url 변경 케이스에서 깨진다(#166 2라운드 리뷰에서 발견).
   - ⚠️ "캐시 히트면 네트워크 안 감"을 `guard image == nil` 조기 리턴으로 구현하면 **새 url이 영영 로드되지 않는다** — 히트 판정은 `image`가 아니라 반드시 **`WSSImageCache` 조회 결과**로 할 것. 또한 취소 검사(`!Task.isCancelled`)를 `await` **재개 뒤에** 둬야 취소된 옛 요청이 새 url의 그림을 덮지 않는다.

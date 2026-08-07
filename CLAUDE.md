@@ -72,6 +72,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
+| [docs/TODO.md](docs/TODO.md) | **범위 밖이라 미룬 것**을 적거나 꺼낼 때 (그 PR에서 못 고친 결함·부활 대기 코드) |
 
 ### 레이어 가이드 위치
 | 레이어 | 가이드 |

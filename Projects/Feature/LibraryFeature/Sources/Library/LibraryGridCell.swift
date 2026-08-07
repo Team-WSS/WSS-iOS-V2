@@ -64,12 +64,10 @@ struct LibraryGridCell: View {
 
     /// 표지 — 열 너비에 맞춰 비율(108:160)대로 커지고, 좌하단 읽기 상태 뱃지·우하단 관심 하트를 얹는다.
     /// 표지 로드·캐시·빈 표지 폴백은 `WSSNovelCoverImage`가 담당(토글·재활용 시 번쩍임 방지).
+    /// ⚠️ 비율은 **파라미터로 넘긴다** — 밖에서 `.aspectRatio`를 걸면 `scaledToFill`과 충돌해 표지가 좁아진다.
     private var thumbnail: some View {
-        Color.clear
-            .aspectRatio(Metric.thumbnailAspectRatio, contentMode: .fit)
-            .overlay {
-                WSSNovelCoverImage(url: novel.thumbnailImage)
-            }
+        WSSNovelCoverImage(url: novel.thumbnailImage,
+                           aspectRatio: Metric.thumbnailAspectRatio)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         // 잘린 그림 밖 원본 크기로 hit-test 영역이 남지 않게 명시(스크롤·셀 탭 간섭 예방).
         .contentShape(RoundedRectangle(cornerRadius: 8))

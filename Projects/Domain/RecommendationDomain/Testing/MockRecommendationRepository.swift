@@ -18,6 +18,9 @@ public final class MockRecommendationRepository: RecommendationRepository {
     public var fetchInterestFeedsCallCount = 0
     public var fetchRecommendedNovelsCallCount = 0
     public var fetchSosoPickCallCount = 0
+    public var fetchCachedNicknameCallCount = 0
+
+    public var cachedNickname: String?
 
     public var fetchTodayDiscoveriesResult: Result<[TodayDiscovery], RepositoryError> = .success([])
     public var fetchTrendingFeedsResult: Result<[TrendingFeed], RepositoryError> = .success([])
@@ -65,5 +68,10 @@ public final class MockRecommendationRepository: RecommendationRepository {
         case .success(let value): return value
         case .failure(let error): throw error
         }
+    }
+
+    public func fetchCachedNickname() -> String? {
+        fetchCachedNicknameCallCount += 1
+        return cachedNickname
     }
 }

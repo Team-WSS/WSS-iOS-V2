@@ -70,8 +70,22 @@
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
+  - ⚠️ **컴포넌트가 안 맞으면 호출부에서 우회하지 말고 컴포넌트 수정을 제안한다.** 화면 쪽에
+    **설명이 필요한 우회**(투명 뷰 트릭, modifier 순서 의존, 값 재계산)가 생기면 그건 그 화면의
+    문제가 아니라 **컴포넌트 API가 부족하다는 신호**다. 우회는 그 자리에선 동작해도 같은 함정을
+    쓰는 화면마다 반복되고, 매번 "왜 이렇게 쓰는지"를 주석으로 설명하게 된다.
+    - 실제 사례: `WSSNovelCoverImage`는 표지가 `scaledToFill`이라 밖에서 `.aspectRatio`를 걸면
+      충돌해 좁아진다 → 호출부 3곳이 `Color.clear.aspectRatio(...).overlay { 표지 }`로 우회하고
+      있었다. 컴포넌트가 `aspectRatio:`를 받게 고치자 우회가 한 번에 사라지고 함정 설명도 한곳으로 모였다.
+    - 고칠 땐 **기존 호출부가 안 깨지게 기본값을 두어 하위 호환**을 지키고, 같은 우회를 쓰던 **다른
+      화면도 함께 옮길지** 물어본다. 한쪽만 새 API로 가면 같은 패턴이 두 벌로 갈린다.
 - **도메인 라벨·아이콘·색은 WSSComponent `DomainPresentation` 확장 재사용**(`status.statusName`, `point.iconImage`). Feature 중복 매핑 ❌.
 - **커스텀 탭 영역은 `.contentShape(Rectangle())`** — 없으면 라벨의 비투명 픽셀만 탭된다(빈 영역·패딩 탭 안 됨).
+  - ⚠️ **히트영역을 넓히려 준 패딩을 `.offset`으로 상쇄하지 말 것** — `offset`은 그리기·히트 테스트만 옮기고
+    **레이아웃·접근성 프레임에는 반영되지 않아**, 아이콘이 밀린 자리에 그대로 남는다(홈 알림 벨에서 실측 —
+    `snapshot_ui` 탭 좌표가 되민 값이 아니라 원래 값으로 나와 발각됐다). 가장자리 아이콘이면
+    **`.padding(.horizontal,)` 대신 컨테이너의 leading/trailing을 따로 주고 그중 한쪽만 인셋만큼 깎는다**
+    (`.padding(.horizontal,)`은 양쪽에 걸려 반대편 요소까지 밀기 때문). 애플 권장 탭 타깃은 44×44.
   - ⚠️ **`.buttonStyle(.plain)`은 기본 눌림 피드백(누를 때 흐려짐)까지 없앤다** — "버튼인데 눌러도 반응이 없다"의 원인. 이 스타일이 필요한 건 label의 `Text`가 accent 색으로 물드는 걸 막을 때뿐이고, **아이콘·커스텀 뷰만 있는 버튼은 빼야** 눌린 게 보인다(서재 헤더 등록 버튼에서 제거). 습관적으로 `.contentShape`와 세트로 붙이지 말 것.
 - **상태 기반 색·에셋 전환(토글·선택)엔 짧은 명시 애니메이션을 걸 것** — `.animation(.easeInOut(duration: 0.1), value: 상태)`. 미설정 시 기본 크로스페이드가 **느리게 번진다**(NovelReview 읽기 상태, NovelDetail 관심 버튼에서 재발 확인 — "토글이 굼뜨다"로 체감됨).
   - ⚠️ **단, 그 선택이 레이아웃까지 바꾸는 화면에선 이 규칙을 접는다** — 선택 즉시 다른 요소가 생겨(선택 칩 행 등장 등) 아래가 밀리면, 형제들은 즉시 새 자리로 가는데 **방금 누른 버튼 하나만 뒤늦게 미끄러져 내려온다**. 어디까지나 **그런 화면 한정 예외**이지 기본값을 뒤집는 게 아니다 — 레이아웃이 안 바뀌는 토글엔 위 규칙대로 애니메이션을 건다. 끄는 방법과 실측 근거는 [LibraryFeature](LibraryFeature/CLAUDE.md)의 필터 시트 항목이 정본.
@@ -106,4 +120,5 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum 중 `home`만 아직 미구현(`HomeFeature` 폴더는 있어도 `Project.swift` 없음). 나머지는 전부 실제 모듈: `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- `ModuleType.feature` enum의 **9개 모듈이 모두 실재**한다: `HomeFeature`, `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- **같은 "탭 콘텐츠"라도 재로드 정책은 화면마다 다르다** — 서재는 진입 1회(`hasLoaded` 가드), 홈은 **탭 복귀마다 갱신**(밖에서 바뀐 추천·알림을 다시 비춰야 해서). 홈처럼 매번 갱신하는 화면은 **로딩 뷰가 이미 그린 콘텐츠를 덮지 않게** 해야 한다(`isInitialLoading` — 안 그러면 돌아올 때마다 화면이 깜빡이고 스크롤이 초기화된다). 새 탭 화면을 만들 때 어느 쪽인지 먼저 정할 것 → [HomeFeature](HomeFeature/CLAUDE.md).
