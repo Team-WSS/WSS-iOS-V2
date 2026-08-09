@@ -326,7 +326,9 @@ private enum DemoNotificationData {
         size: Int
     ) -> (items: [NotificationItem], isLoadable: Bool) {
         let totalCount = 50
-        let startIndex = lastNotificationID.map { totalCount - $0.value } ?? 0
+        // 커서는 **exclusive**다 — "마지막으로 받은 ID"의 *다음*부터 준다. `+1`을 빼먹으면 그 항목이 다음 페이지에
+        // 다시 실려 `ForEach(id:)`가 중복 ID를 만나고, 목록에 셀 하나 크기의 빈 공간이 뚫린다(#181에서 실측).
+        let startIndex = lastNotificationID.map { totalCount - $0.value + 1 } ?? 0
         let endIndex = min(startIndex + size, totalCount)
         guard startIndex < endIndex else { return ([], false) }
 
