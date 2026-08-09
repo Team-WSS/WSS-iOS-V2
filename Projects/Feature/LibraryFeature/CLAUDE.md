@@ -16,7 +16,7 @@
 
 ## 핵심 시나리오
 
-- **로드**: 첫 페이지(`hasLoaded` 가드, 성공 시만 소진) → 커서 무한 스크롤(마지막 셀 onAppear → `.loadMore`, 서버 발급 `nextCursor` 왕복). 필터/정렬 변경은 `reloadFromScratch()` — **세대(generation) 카운터**로 진행 중이던 이전 로드의 늦은 결과·defer가 새 목록을 덮지 않게 가드한다.
+- **로드**: 첫 페이지(`hasLoaded` 가드, 성공 시만 소진) → 커서 무한 스크롤(마지막 셀 onAppear → `.loadMore`, 서버 발급 `nextCursor` 왕복). 필터/정렬 변경은 `reloadFromScratch()` — 진행 중이던 로드는 **취소만** 하면 되고, 늦게 도착해도 새 목록을 덮지 않는다(아래 주의사항).
 - **필터**: 메인 칩 행 = 관심(즉시 토글) + 시트 필터 6종(탭 시 해당 탭으로 필터 시트 진입). 시트는 순수 입력 VM(`LibraryFilterSheetViewModel`)이 필터 **복사본**을 편집하고, "작품 찾기"에서 View가 `onApply`로 부모에 올린다(ReadingPeriodSheet 패턴). 등록 키워드 목록은 **부모 VM이 로드**해 시트에 값으로 내려준다.
 - **에러 3분화**: 첫 페이지 실패=**헤더(타이틀·등록 버튼)만 남기고** 그 아래를 실패 뷰(`NetworkErrorView`+재시도)로 대체(컨트롤·카운트·목록은 함께 숨김 — 실패 상태에서 조작할 게 없음), 더보기·키워드 실패=토스트, 인증 만료=`requiresAuthentication` 신호 → `onAuthenticationRequired` 콜백(NovelDetail 배관과 동일).
 - **빈 상태 2분화**: 서재 자체가 빔=`emptySection`("서재가 비어있어요" + 웹소설 찾기 CTA), 필터로 걸러져 0건=`noMatchSection`("해당하는 작품이 없어요" 2줄, CTA 없음). 가르는 기준은 `filter.hasActiveSheetFilter || filter.isInterest`(정렬은 개수를 안 바꾸니 제외).
@@ -36,6 +36,14 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **로드 정리(`loadTask = nil`·로딩 플래그 내리기)를 `defer`에 두지 말 것 — `finishLoading()`을 성공·실패 경로에서만 부른다.**
+  `defer`는 **취소 여부와 무관하게** 실행되므로, 필터·정렬을 연달아 바꿔 이전 로드가 취소된 뒤 뒤늦게 깨어나면
+  **새 로드의 `loadTask`를 지우고(중복 요청 가드가 풀린다) 스피너를 꺼버린다.** 정리를 성공·실패 경로로 옮기면
+  취소된 로드는 자연히 아무것도 하지 않으므로 **"지금 유효한 로드인가"를 추적할 필요 자체가 사라진다.**
+  - 원래 이 자리엔 **세대(generation) 카운터**가 있었다(#166). 늦은 결과를 *판별해서 버리는* 방식이었는데, 근본 원인이
+    `defer`였음을 알고 #181에서 걷어냈다 — 정수 1개 + 가드 3곳이 사라졌고 동작은 같다. **되살리지 말 것.**
+  - RxSwift의 `flatMapLatest`에 대응하는 자리다. Swift Concurrency의 취소는 **협력적**이라 `cancel()`만으로는
+    실행이 멈추지 않는다는 게 함정의 출발점이다 — 취소된 흐름이 **상태를 건드리지 않게** 만드는 것이 핵심.
 - **커스텀 헤더는 공용 `WSSNavigationBar(title:onBack:)`을 쓴다**(#181에 승격) — 알림 목록·상세와 같은 컴포넌트다. `icNavigateLeft`의 원색이 연회색(#C7C7D0)이라 template으로 검정을 입혀야 하는 함정, 44 히트 영역, 6pt 인셋은 **전부 컴포넌트 안에 있다**. 이 화면에 다시 손으로 그리지 말 것. → [WSSComponent](../../UI/WSSComponent/CLAUDE.md)
 - ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → WSSComponent의 **`.enableSwipeBack()`** 을 걸어 되살린다. 화면 안에 자체 구현을 두지 말 것 — 이 모듈에도 `Support/SwipeBackEnabler.swift`로 복제돼 있었으나 `NovelDetailFeature` 복제본과 갈라져 사고가 나 #166에서 공용으로 통합했다. **delegate 수명·반납이 왜 함정인지는 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 같은 항목이 정본.**
 - **`reloadFromScratch()`에서 `totalCount`를 비우는지는 두 화면이 다르다** — 타유저 서재는 **정렬만** 바꿀 수 있어 개수가 불변이라 보존하고(비우면 로딩 동안 "n개"가 "0개"로 깜빡인다), 내 서재는 필터로 개수가 실제로 바뀌므로 비운다. 한쪽에 맞춰 통일하지 말 것.

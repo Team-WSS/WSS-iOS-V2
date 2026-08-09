@@ -76,8 +76,6 @@ final class LibraryViewModel {
     /// 서버 발급 커서 — 다음 페이지 요청에 그대로 왕복한다. View가 볼 값이 아니라 State 밖.
     @ObservationIgnored private var nextCursor: String?
     @ObservationIgnored private var hasNext = true
-    /// 필터/정렬 변경으로 목록을 갈아엎을 때 증가 — 이전 로드의 늦은 결과·defer가 새 로드를 덮지 않게 가드한다.
-    @ObservationIgnored private var loadGeneration = 0
 
     // MARK: - Dependency
 
@@ -150,8 +148,7 @@ private extension LibraryViewModel {
               !state.isLoading,
               let cursor = nextCursor else { return }
         state.isLoadingMore = true
-        let generation = loadGeneration
-        loadTask = Task { await loadPage(cursor: cursor, generation: generation) }
+        loadTask = Task { await loadPage(cursor: cursor) }
     }
 
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
@@ -181,9 +178,9 @@ private extension LibraryViewModel {
     }
 
     /// 목록을 처음부터 다시 로드한다(첫 로드·재시도·필터/정렬 변경 공통).
-    /// 진행 중이던 로드는 세대(generation)를 올려 무효화한다 — 늦게 도착한 이전 결과가 새 목록을 덮지 않는다.
+    /// 진행 중이던 로드는 **취소만** 하면 된다 — 취소된 로드는 상태를 일절 건드리지 않으므로
+    /// 늦게 도착해도 새 목록을 덮지 않는다(`loadPage` 주석 참고).
     func reloadFromScratch() {
-        loadGeneration += 1
         loadTask?.cancel()
         nextCursor = nil
         hasNext = true
@@ -192,8 +189,7 @@ private extension LibraryViewModel {
         state.isLoading = true
         state.isLoadingMore = false
         state.loadFailed = false
-        let generation = loadGeneration
-        loadTask = Task { await loadPage(cursor: nil, generation: generation) }
+        loadTask = Task { await loadPage(cursor: nil) }
     }
 }
 
@@ -202,17 +198,16 @@ private extension LibraryViewModel {
 private extension LibraryViewModel {
 
     /// 서재 페이지 로드. `cursor == nil`이면 첫 페이지(목록 교체), 아니면 다음 페이지(append).
-    func loadPage(cursor: String?, generation: Int) async {
-        defer {
-            if generation == loadGeneration {
-                loadTask = nil
-                state.isLoading = false
-                state.isLoadingMore = false
-            }
-        }
+    ///
+    /// ⚠️ **취소된 로드는 상태를 일절 건드리지 않는다 — 그래서 `defer`를 쓰지 않는다.**
+    /// `defer`는 취소 여부와 무관하게 실행되므로, 필터를 연달아 바꿔 이전 로드가 취소된 뒤 뒤늦게 깨어나면
+    /// **새 로드의 `loadTask`를 지우고 로딩 플래그를 꺼버린다**(중복 요청 가드가 풀리고 스피너가 사라진다).
+    /// 정리를 성공·실패 경로로 옮기면 취소된 로드는 자연히 아무것도 안 하므로,
+    /// "지금 유효한 로드인가"를 따로 추적할 필요가 없다(세대 카운터를 걷어낸 이유).
+    func loadPage(cursor: String?) async {
         do {
             let (page, totalCount) = try await loadMyLibraryUseCase.execute(filter: state.filter, cursor: cursor)
-            guard generation == loadGeneration, !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             if cursor == nil {
                 state.novels = page.items
                 hasLoaded = true
@@ -223,10 +218,14 @@ private extension LibraryViewModel {
             nextCursor = page.nextCursor
             hasNext = page.hasNext
             state.loadFailed = false
+            finishLoading()
         } catch {
-            guard generation == loadGeneration, !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
-            if routeToLoginIfAuthenticationRequired(error) { return }
+            if routeToLoginIfAuthenticationRequired(error) {
+                finishLoading()
+                return
+            }
             if cursor == nil {
                 // 첫 페이지 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
                 state.loadFailed = true
@@ -234,7 +233,15 @@ private extension LibraryViewModel {
             } else {
                 presentError(error, as: .loadMoreFailed)
             }
+            finishLoading()
         }
+    }
+
+    /// 로딩 종료 — **취소되지 않은 로드만** 호출한다(취소된 로드가 부르면 위 주석의 사고가 난다).
+    func finishLoading() {
+        loadTask = nil
+        state.isLoading = false
+        state.isLoadingMore = false
     }
 
     /// 서재 등록 키워드 로드(필터 시트 키워드 탭).
