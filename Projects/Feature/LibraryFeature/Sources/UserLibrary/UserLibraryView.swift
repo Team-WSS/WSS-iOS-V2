@@ -19,11 +19,6 @@ import WSSComponent
 struct UserLibraryView: View {
 
     private enum Metric {
-        /// 커스텀 네비게이션 바 높이 — 시스템 네비바(inline)와 같은 44.
-        static let navigationBarHeight: CGFloat = 44
-        static let backButtonSize: CGFloat = 44
-        static let backIconSize: CGFloat = 24
-        static let backButtonLeading: CGFloat = 6
         static let countRowHeight: CGFloat = 40
         static let horizontalPadding: CGFloat = 20
         /// 헤더(카운트 행) 아래 목록이 시작되기까지의 간격.
@@ -84,7 +79,8 @@ struct UserLibraryView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            navigationBar
+            // 타이틀은 대상 유저의 닉네임이 아니라 "서재" 고정이다(디자인).
+            WSSNavigationBar(title: "서재") { dismiss() }
             // 첫 페이지 실패는 네비게이션 바만 남기고 그 아래를 전면 실패 뷰로 대체한다 —
             // 카운트·정렬·모드 토글은 실패 상태에서 조작할 게 없어 함께 숨긴다.
             if viewModel.state.loadFailed {
@@ -104,36 +100,6 @@ struct UserLibraryView: View {
 // MARK: - Sections
 
 private extension UserLibraryView {
-
-    /// 커스텀 네비게이션 바 — 뒤로가기 + 중앙 "서재" 타이틀.
-    /// 타이틀을 `ZStack` 중앙에 두는 건 의도다 — `HStack`에 넣으면 뒤로가기 버튼 폭만큼 오른쪽으로 밀린다.
-    var navigationBar: some View {
-        ZStack {
-            Text("서재")
-                .applyWSSFont(.title2, color: .wssBlack)
-            HStack(spacing: 0) {
-                Button {
-                    dismiss()
-                } label: {
-                    WSSImage.icNavigateLeft.swiftUIImage
-                        // ⚠️ 이 에셋의 원색은 연회색(#C7C7D0)이라 그대로 쓰면 디자인의 검정 화살표보다 훨씬 흐리다
-                        // (DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목) → template으로 색을 입힌다.
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color.wssBlack)
-                        .frame(width: Metric.backIconSize, height: Metric.backIconSize)
-                        // 아이콘 24를 44 히트 영역 가운데 둔다(디자인의 44 탭 타겟).
-                        .frame(width: Metric.backButtonSize, height: Metric.backButtonSize)
-                        .contentShape(Rectangle())
-                }
-                Spacer()
-            }
-            // 디자인의 뒤로가기 버튼은 화면 왼쪽 끝이 아니라 6pt 안쪽에서 시작한다(아이콘 중심 x=28).
-            .padding(.leading, Metric.backButtonLeading)
-        }
-        .frame(height: Metric.navigationBarHeight)
-    }
 
     /// 카운트 + 정렬 + 그리드/리스트 모드 토글.
     var countSortSection: some View {

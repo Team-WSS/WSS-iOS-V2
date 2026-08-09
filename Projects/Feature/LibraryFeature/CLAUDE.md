@@ -36,7 +36,7 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- ⚠️ **`icNavigateLeft`를 그냥 쓰면 디자인보다 훨씬 흐리다** — 이 에셋의 원색은 연회색(#C7C7D0)인데 시안의 뒤로가기 화살표는 검정이다. `renderingMode(.template)` + `foregroundStyle(Color.wssBlack)`으로 색을 입혀야 한다(DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목이 이 화면에서 실제로 걸렸다). 위치도 화면 왼쪽 끝이 아니라 **6pt 안쪽**에서 시작한다.
+- **커스텀 헤더는 공용 `WSSNavigationBar(title:onBack:)`을 쓴다**(#181에 승격) — 알림 목록·상세와 같은 컴포넌트다. `icNavigateLeft`의 원색이 연회색(#C7C7D0)이라 template으로 검정을 입혀야 하는 함정, 44 히트 영역, 6pt 인셋은 **전부 컴포넌트 안에 있다**. 이 화면에 다시 손으로 그리지 말 것. → [WSSComponent](../../UI/WSSComponent/CLAUDE.md)
 - ⚠️ **커스텀 헤더를 쓰면(`toolbar(.hidden, for: .navigationBar)`) 스와이프 뒤로가기가 함께 죽는다** → WSSComponent의 **`.enableSwipeBack()`** 을 걸어 되살린다. 화면 안에 자체 구현을 두지 말 것 — 이 모듈에도 `Support/SwipeBackEnabler.swift`로 복제돼 있었으나 `NovelDetailFeature` 복제본과 갈라져 사고가 나 #166에서 공용으로 통합했다. **delegate 수명·반납이 왜 함정인지는 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 같은 항목이 정본.**
 - **`reloadFromScratch()`에서 `totalCount`를 비우는지는 두 화면이 다르다** — 타유저 서재는 **정렬만** 바꿀 수 있어 개수가 불변이라 보존하고(비우면 로딩 동안 "n개"가 "0개"로 깜빡인다), 내 서재는 필터로 개수가 실제로 바뀌므로 비운다. 한쪽에 맞춰 통일하지 말 것.
 - ⚠️ **Demo 실서버 모드는 키워드 캐시가 준비된 뒤에 화면을 세워야 한다**(내 서재·타유저 서재 **둘 다**) — 캐시가 비어 있어도 UseCase가 `try?` + `?? []`로 폴백해 **에러 없이 키워드 칩만 통째로 빈 채** 그려진다. "키워드가 안 나온다"를 화면 버그로 오진하기 딱 좋으니, Demo는 준비 플래그로 가드하고 그동안 `ProgressView`를 띄운다.
