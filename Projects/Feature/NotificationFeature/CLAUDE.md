@@ -5,7 +5,7 @@
 
 - 식별자: `ModuleType.feature(.notification)` / 의존: `BaseDomain`, `NotificationDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점(둘 다 `NotificationFactory` — 대등한 화면이라 양쪽 다 `makeXxxView`):
-  - `makeNotificationListView(loadPagedNotificationsUseCase:markNotificationAsReadUseCase:logger:onNotificationSelected:onFeedSelected:onAuthenticationRequired:)` — 홈 알림 벨에서 **push**
+  - `makeNotificationListView(loadPagedNotificationsUseCase:markNotificationAsReadUseCase:logger:onNotificationSelected:onFeedSelected:onNovelSelected:onAuthenticationRequired:)` — 홈 알림 벨에서 **push**
   - `makeNotificationDetailView(notificationID:loadNotificationDetailUseCase:logger:onAuthenticationRequired:)` — 목록에서 **push**
 - **모듈 안에 `navigationDestination`은 없다** — 목록 → 상세 전환도 콜백으로 올리고 배선은 호출자(App/Demo)가 한다.
 
@@ -49,9 +49,11 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- ⚠️ **`NotificationID`와 `FeedID`는 둘 다 `IDWrapper<Int>`의 typealias라 컴파일러에겐 같은 타입이다** —
-  딥링크 두 갈래를 라우팅할 때 `navigationDestination(for: NotificationID.self)`와 `FeedID.self`를 나란히 두면
-  **먼저 등록된 쪽이 양쪽을 다 삼킨다**. 호출자는 반드시 자체 Route enum으로 감싸야 한다(Demo가 `DemoRoute`로 그렇게 한다).
+- ⚠️ **`NotificationID`·`FeedID`·`NovelID`는 셋 다 `IDWrapper<Int>`의 typealias라 컴파일러에겐 같은 타입이다** —
+  딥링크 세 갈래를 라우팅할 때 `navigationDestination(for: NotificationID.self)`·`FeedID.self`·`NovelID.self`를
+  나란히 두면 **먼저 등록된 쪽이 나머지를 다 삼켜** 엉뚱한 화면으로 간다. 호출자는 반드시 **세 경로 모두**
+  자체 Route enum으로 감싸야 한다(Demo가 `DemoRoute`로 그렇게 한다).
+  ⚠️ `.novelDetail`은 서버 보강 전이라 지금은 발화하지 않지만, **열리는 순간 이 함정이 세 갈래로 늘어난다.**
 - ⚠️ **목록 로드에 취소·무효화 장치가 일부러 없다** — `reloadFromScratch`가 `loadTask?.cancel()`도, 세대(generation)
   카운터도 쓰지 않는다. 두 호출자(`load`·`retry`)가 모두 `loadTask == nil`을 선행 확인해 **인플라이트 요청이 있는 채로
   재로드가 걸리는 경로 자체가 없기** 때문이다(재시도 버튼은 전면 실패 뷰에서만 보이고 그때 목록은 비어 있다).

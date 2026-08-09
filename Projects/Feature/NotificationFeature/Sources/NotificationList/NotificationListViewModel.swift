@@ -168,8 +168,12 @@ private extension NotificationListViewModel {
 
     /// 목록을 처음부터 다시 로드한다(첫 로드·재시도 공통).
     /// **진행 중인 로드를 취소하지 않는다** — 두 호출자(`load`·`retry`)가 모두 `loadTask == nil`을 선행 확인하므로
-    /// 이 함수가 불릴 때 인플라이트 요청이 없다. 재로드 경로가 늘면 그때 취소·무효화를 함께 도입할 것
-    /// (`cancel()`만 두면 늦게 도착한 옛 결과가 새 목록을 덮는다 — 서재는 필터·정렬 때문에 그 경로가 있어 세대 카운터를 쓴다).
+    /// 이 함수가 불릴 때 인플라이트 요청이 없다.
+    /// 재로드 경로가 늘면(당겨서 새로고침·"전체 읽음" 등) `loadTask?.cancel()`을 넣는 **동시에 `loadPage`의 `defer`를
+    /// 걷어내고 정리를 성공·실패 경로로 옮겨야 한다** — `defer`는 취소 여부와 무관하게 실행돼, 취소된 옛 로드가
+    /// 새 로드의 `loadTask`를 지우고 로딩 플래그를 꺼버린다. 그 형태는 서재(`LibraryViewModel`)가 정본이다.
+    /// (그래서 `loadPage`의 `guard !Task.isCancelled`는 **지금은 발동하지 않는다** — 취소하는 곳이 없어서다.
+    /// 위 경로가 생길 때 필요한 자리라 남겨둔 것이니 "죽은 코드"로 지우지 말 것.)
     func reloadFromScratch() {
         lastNotificationID = nil
         isLoadable = true
