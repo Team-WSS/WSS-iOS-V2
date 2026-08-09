@@ -18,11 +18,6 @@ import WSSComponent
 struct NotificationListView: View {
 
     private enum Metric {
-        /// 커스텀 네비게이션 바 높이 — 시스템 네비바(inline)와 같은 44.
-        static let navigationBarHeight: CGFloat = 44
-        static let backButtonSize: CGFloat = 44
-        static let backIconSize: CGFloat = 24
-        static let backButtonLeading: CGFloat = 6
         static let cellPadding: CGFloat = 20
         static let iconSize: CGFloat = 36
         static let iconCornerRadius: CGFloat = 12
@@ -81,14 +76,15 @@ struct NotificationListView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            navigationBar
+            WSSNavigationBar(title: "알림") { dismiss() }
             // 로딩·실패는 네비게이션 바만 남기고 그 아래를 통째로 대체한다(Library와 같은 규칙).
             if viewModel.state.isLoading {
                 LoadingView()
             } else if viewModel.state.loadFailed {
                 NetworkErrorView { viewModel.handle(.retry) }
             } else if viewModel.state.items.isEmpty {
-                emptySection
+                // CTA 없는 빈 상태 — 알림은 유도할 행동이 마땅치 않다(#181에서 확정).
+                WSSEmptyView(type: .notification)
             } else {
                 listSection
             }
@@ -100,51 +96,6 @@ struct NotificationListView: View {
 // MARK: - Sections
 
 private extension NotificationListView {
-
-    /// 커스텀 네비게이션 바 — 뒤로가기 + 중앙 "알림" 타이틀.
-    /// 타이틀을 `ZStack` 중앙에 두는 건 의도다 — `HStack`에 넣으면 뒤로가기 버튼 폭만큼 오른쪽으로 밀린다.
-    var navigationBar: some View {
-        ZStack {
-            Text("알림")
-                .applyWSSFont(.title2, color: .wssBlack)
-            HStack(spacing: 0) {
-                Button {
-                    dismiss()
-                } label: {
-                    WSSImage.icNavigateLeft.swiftUIImage
-                        // ⚠️ 이 에셋의 원색은 연회색(#C7C7D0)이라 그대로 쓰면 디자인의 검정 화살표보다 훨씬 흐리다
-                        // (DesignSystem CLAUDE.md의 "아이콘 SVG는 원색 고정" 항목) → template으로 색을 입힌다.
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color.wssBlack)
-                        .frame(width: Metric.backIconSize, height: Metric.backIconSize)
-                        // 아이콘 24를 44 히트 영역 가운데 둔다(디자인의 44 탭 타겟).
-                        .frame(width: Metric.backButtonSize, height: Metric.backButtonSize)
-                        .contentShape(Rectangle())
-                }
-                Spacer()
-            }
-            // 디자인의 뒤로가기 버튼은 화면 왼쪽 끝이 아니라 6pt 안쪽에서 시작한다.
-            .padding(.leading, Metric.backButtonLeading)
-        }
-        .frame(height: Metric.navigationBarHeight)
-    }
-
-    /// 알림이 하나도 없을 때. 이미지 + 문구만 두고 **CTA는 두지 않는다** —
-    /// 알림은 사용자가 직접 만들 수 있는 게 아니라 유도할 행동이 마땅치 않다(#181에서 확정).
-    var emptySection: some View {
-        VStack(spacing: 0) {
-            WSSImage.imgEmpty.swiftUIImage
-
-            Spacer().frame(height: 8)
-
-            Text("아직 도착한 알림이 없어요")
-                .applyWSSFont(.body1, color: .wssGray200)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 
     /// 알림 목록 — 마지막 셀이 보이면 다음 페이지를 요청한다.
     var listSection: some View {
@@ -247,8 +198,11 @@ private extension NotificationListView {
     }
 
     var toastType: WSSToastType {
+        // 상수로 두지 않고 switch로 받는다 — 토스트 케이스가 늘면 컴파일러가 여기를 짚어준다.
+        switch viewModel.state.presentedToast {
         // 더보기 실패는 네트워크 실패 계열 — 정본(Library·NovelDetail)과 동일하게 unknownError로 표현.
-        .unknownError
+        case .loadMoreFailed, .none: .unknownError
+        }
     }
 
     /// 셀 탭 — 읽음 처리는 VM에, 화면 전환은 딥링크에 따라 상위 콜백에 위임한다.
@@ -272,4 +226,61 @@ private extension NotificationListView {
             viewModel.handle(.loadMore)
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        NotificationListView(
+            viewModel: NotificationListViewModel(
+                loadPagedNotificationsUseCase: PreviewLoadPagedNotificationsUseCase(),
+                markNotificationAsReadUseCase: PreviewMarkNotificationAsReadUseCase()
+            ),
+            onNotificationSelected: { print("알림 상세: \($0)") },
+            onFeedSelected: { print("피드 상세: \($0)") },
+            onNovelSelected: { print("작품 상세: \($0)") },
+            onAuthenticationRequired: { print("로그인 유도") }
+        )
+    }
+}
+
+private struct PreviewLoadPagedNotificationsUseCase: LoadPagedNotificationsUseCase {
+    func execute(lastNotificationID: NotificationID?, size: Int) async throws(RepositoryError) -> PagedNotifications {
+        // 읽음·미읽음과 딥링크 3종을 섞어 셀 배경 구분과 말줄임을 함께 본다.
+        let items = [
+            NotificationItem(
+                id: NotificationID(1),
+                iconURL: nil,
+                title: "웹소소 이용약관 개정 안내",
+                body: "서비스 이용약관이 개정되어 안내드립니다. 개정된 약관은 2026년 8월 20일부터 적용됩니다.",
+                createdAtText: "방금 전",
+                isRead: false,
+                deeplink: .notificationDetail(id: NotificationID(1))
+            ),
+            NotificationItem(
+                id: NotificationID(2),
+                iconURL: nil,
+                title: "‘여주가 세계를 구함 이 구역의 최강자다’ 라는 아주 긴 제목",
+                body: "내가 댓글 단 수다글에 또 다른 댓글이 달렸어요.",
+                createdAtText: "3시간 전",
+                isRead: false,
+                deeplink: .feedDetail(id: FeedID(7))
+            ),
+            NotificationItem(
+                id: NotificationID(3),
+                iconURL: nil,
+                title: "완결 알림",
+                body: "<당신의 이해를 돕기 위하여> 작품이 완결났어요.",
+                createdAtText: "2026.07.31",
+                isRead: true,
+                deeplink: .unknown
+            )
+        ]
+        return PagedNotifications(items: items, isLoadable: false)
+    }
+}
+
+private struct PreviewMarkNotificationAsReadUseCase: MarkNotificationAsReadUseCase {
+    func execute(id: NotificationID) async throws(RepositoryError) {}
 }

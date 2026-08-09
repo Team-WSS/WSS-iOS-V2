@@ -18,11 +18,6 @@ import WSSComponent
 struct NotificationDetailView: View {
 
     private enum Metric {
-        /// 커스텀 네비게이션 바 높이 — 시스템 네비바(inline)와 같은 44.
-        static let navigationBarHeight: CGFloat = 44
-        static let backButtonSize: CGFloat = 44
-        static let backIconSize: CGFloat = 24
-        static let backButtonLeading: CGFloat = 6
         static let horizontalPadding: CGFloat = 20
         static let headerVerticalPadding: CGFloat = 20
         /// 제목 ↔ 작성시각 사이.
@@ -64,7 +59,7 @@ struct NotificationDetailView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            navigationBar
+            WSSNavigationBar(title: "알림") { dismiss() }
             // 로딩·실패는 네비게이션 바만 남기고 그 아래를 통째로 대체한다(목록과 같은 규칙).
             if viewModel.state.isLoading {
                 LoadingView()
@@ -84,65 +79,66 @@ struct NotificationDetailView: View {
 
 private extension NotificationDetailView {
 
-    /// 커스텀 네비게이션 바 — 뒤로가기 + 중앙 "알림" 타이틀(목록과 동일).
-    /// 타이틀을 `ZStack` 중앙에 두는 건 의도다 — `HStack`에 넣으면 뒤로가기 버튼 폭만큼 오른쪽으로 밀린다.
-    var navigationBar: some View {
-        ZStack {
-            Text("알림")
-                .applyWSSFont(.title2, color: .wssBlack)
-            HStack(spacing: 0) {
-                Button {
-                    dismiss()
-                } label: {
-                    WSSImage.icNavigateLeft.swiftUIImage
-                        // ⚠️ 이 에셋의 원색은 연회색(#C7C7D0)이라 template으로 검정을 입혀야 시안과 맞는다.
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color.wssBlack)
-                        .frame(width: Metric.backIconSize, height: Metric.backIconSize)
-                        // 아이콘 24를 44 히트 영역 가운데 둔다(디자인의 44 탭 타겟).
-                        .frame(width: Metric.backButtonSize, height: Metric.backButtonSize)
-                        .contentShape(Rectangle())
-                }
-                Spacer()
-            }
-            .padding(.leading, Metric.backButtonLeading)
-        }
-        .frame(height: Metric.navigationBarHeight)
-    }
-
     /// 제목·작성시각 헤더 → 구분선 → 본문.
     /// 구분선만 화면 폭을 꽉 채우고(좌우 여백 없음) 나머지는 20씩 들여쓴다 — 시안 그대로.
     func detailSection(_ detail: NotificationDetail) -> some View {
         ScrollView {
+            // ⚠️ ScrollView 자식을 VStack(spacing: 0)으로 감싸지 않으면 암시적 스택이 **기본 spacing**(8pt)을
+            // 깔아 틈마다 8씩 더해진다(여기선 4곳 = 32pt). 간격을 Spacer().frame으로 명시해도 소용없다.
             VStack(alignment: .leading, spacing: 0) {
-                Text(detail.title)
-                    // ⚠️ alignment를 인자로 넘겨야 한다 — 기본값이 .center라 밖에서 .multilineTextAlignment를
-                    // 걸어도 Text에 더 가까운 안쪽 값이 이겨 무시된다.
-                    .applyWSSFont(.headline1, color: .wssBlack, alignment: .leading)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(detail.title)
+                        // ⚠️ alignment를 인자로 넘겨야 한다 — 기본값이 .center라 밖에서 .multilineTextAlignment를
+                        // 걸어도 Text에 더 가까운 안쪽 값이 이겨 무시된다.
+                        .applyWSSFont(.headline1, color: .wssBlack, alignment: .leading)
 
-                Spacer().frame(height: Metric.titleDateSpacing)
+                    Spacer().frame(height: Metric.titleDateSpacing)
 
-                Text(detail.createdAtText)
-                    .applyWSSFont(.body5, color: .wssGray200, alignment: .leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Metric.horizontalPadding)
-            .padding(.vertical, Metric.headerVerticalPadding)
-
-            Rectangle()
-                .fill(Color.wssGray50)
-                .frame(height: Metric.separatorHeight)
-
-            Spacer().frame(height: Metric.separatorBodySpacing)
-
-            Text(detail.body)
-                .applyWSSFont(.body2, color: .wssBlack, alignment: .leading)
+                    Text(detail.createdAtText)
+                        .applyWSSFont(.body5, color: .wssGray200, alignment: .leading)
+                }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Metric.horizontalPadding)
+                .padding(.vertical, Metric.headerVerticalPadding)
 
-            Spacer().frame(height: Metric.bottomSpacing)
+                Rectangle()
+                    .fill(Color.wssGray50)
+                    .frame(height: Metric.separatorHeight)
+
+                Spacer().frame(height: Metric.separatorBodySpacing)
+
+                Text(detail.body)
+                    .applyWSSFont(.body2, color: .wssBlack, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Metric.horizontalPadding)
+
+                Spacer().frame(height: Metric.bottomSpacing)
+            }
         }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        NotificationDetailView(
+            viewModel: NotificationDetailViewModel(
+                notificationID: NotificationID(1),
+                loadNotificationDetailUseCase: PreviewLoadNotificationDetailUseCase()
+            ),
+            onAuthenticationRequired: { print("로그인 유도") }
+        )
+    }
+}
+
+private struct PreviewLoadNotificationDetailUseCase: LoadNotificationDetailUseCase {
+    func execute(id: NotificationID) async throws(RepositoryError) -> NotificationDetail {
+        NotificationDetail(
+            title: "[공지] 웹소소 v1.3.3 업데이트",
+            createdAtText: "2026.08.05",
+            body: "스포일러가 포함된 글일 경우,\n이미지가 보이지 않도록 개선했습니다.\n\n최신버전으로 업데이트 부탁드립니다."
+                + "\n\n문의주셔서 감사합니다 :)\n\n웹소소 드림"
+        )
     }
 }

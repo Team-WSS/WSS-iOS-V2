@@ -141,11 +141,41 @@ private extension NotificationListViewModel {
         markAsRead(id: item.id)
     }
 
+    /// 읽음 처리. 목록을 즉시 갱신(낙관)하고 서버 호출은 뒤따른다.
+    /// 실패해도 롤백하지 않는다 — 이유는 모듈 CLAUDE.md의 화면 동작 계약 참고.
+    func markAsRead(id: NotificationID) {
+        guard !markedAsReadIDs.contains(id) else { return }
+        markedAsReadIDs.insert(id)
+        applyReadState(id: id)
+        Task { await sendMarkAsRead(id: id) }
+    }
+
+    /// 해당 알림을 읽음으로 교체한다. `NotificationItem`은 전 프로퍼티가 let이라 새 값으로 갈아 끼운다.
+    func applyReadState(id: NotificationID) {
+        guard let index = state.items.firstIndex(where: { $0.id == id }),
+              !state.items[index].isRead else { return }
+        let item = state.items[index]
+        state.items[index] = NotificationItem(
+            id: item.id,
+            iconURL: item.iconURL,
+            title: item.title,
+            body: item.body,
+            createdAtText: item.createdAtText,
+            isRead: true,
+            deeplink: item.deeplink
+        )
+    }
+
     /// 목록을 처음부터 다시 로드한다(첫 로드·재시도 공통).
+    /// **진행 중인 로드를 취소하지 않는다** — 두 호출자(`load`·`retry`)가 모두 `loadTask == nil`을 선행 확인하므로
+    /// 이 함수가 불릴 때 인플라이트 요청이 없다. 재로드 경로가 늘면 그때 취소·무효화를 함께 도입할 것
+    /// (`cancel()`만 두면 늦게 도착한 옛 결과가 새 목록을 덮는다 — 서재는 필터·정렬 때문에 그 경로가 있어 세대 카운터를 쓴다).
     func reloadFromScratch() {
-        loadTask?.cancel()
         lastNotificationID = nil
         isLoadable = true
+        // 읽음 처리 기록도 함께 비운다 — 목록을 새로 받으면 읽음 여부는 서버 값이 정본이라,
+        // 남겨두면 이전에 실패했던 알림을 다시 탭해도 재요청이 스킵된다.
+        markedAsReadIDs = []
         state.items = []
         state.isLoading = true
         state.isLoadingMore = false
@@ -194,14 +224,7 @@ private extension NotificationListViewModel {
         }
     }
 
-    /// 읽음 처리. 목록을 즉시 갱신(낙관)하고 서버 호출은 뒤따른다.
-    func markAsRead(id: NotificationID) {
-        guard !markedAsReadIDs.contains(id) else { return }
-        markedAsReadIDs.insert(id)
-        applyReadState(id: id)
-        Task { await sendMarkAsRead(id: id) }
-    }
-
+    /// 읽음 처리를 서버에 알린다. 실패해도 화면은 읽음인 채로 둔다(모듈 CLAUDE.md의 화면 동작 계약).
     func sendMarkAsRead(id: NotificationID) async {
         do {
             try await markNotificationAsReadUseCase.execute(id: id)
@@ -209,22 +232,6 @@ private extension NotificationListViewModel {
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("NotificationList 실패(markAsRead): \(String(describing: error))")
         }
-    }
-
-    /// 해당 알림을 읽음으로 교체한다. `NotificationItem`은 전 프로퍼티가 let이라 새 값으로 갈아 끼운다.
-    func applyReadState(id: NotificationID) {
-        guard let index = state.items.firstIndex(where: { $0.id == id }),
-              !state.items[index].isRead else { return }
-        let item = state.items[index]
-        state.items[index] = NotificationItem(
-            id: item.id,
-            iconURL: item.iconURL,
-            title: item.title,
-            body: item.body,
-            createdAtText: item.createdAtText,
-            isRead: true,
-            deeplink: item.deeplink
-        )
     }
 }
 
