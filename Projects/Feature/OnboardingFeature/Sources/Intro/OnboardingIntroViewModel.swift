@@ -38,6 +38,12 @@ final class OnboardingIntroViewModel {
 
     private(set) var state = State()
 
+    // MARK: - Property
+
+    /// `login(with:)` 재진입 가드용 — `state.isLoggingIn`은 `.loginStarted`가 SDK 호출 직전에
+    /// 이미 true로 세워두므로 그 값으로는 "이 Task가 이미 떠 있는지"를 구분할 수 없다.
+    private var loginTask: Task<Void, Never>?
+
     // MARK: - Dependency
 
     private let logger: Logger?
@@ -69,9 +75,15 @@ final class OnboardingIntroViewModel {
 private extension OnboardingIntroViewModel {
     /// `.loginStarted`가 SDK 호출 직전에 이미 `isLoggingIn`을 세워두므로 여기선 다시 세팅할 필요는 없지만,
     /// `.loginStarted` 없이 바로 `.login`이 들어와도(테스트 등) 안전하도록 재확인 차 그대로 둔다.
+    /// `loginTask`가 이미 떠 있으면(중복 콜백 등) 새 Task를 띄우지 않는다 — View의 `.disabled(isLoggingIn)`에만
+    /// 기대지 않고 VM 스스로 재진입을 막는다(`NovelReviewViewModel.save()`의 `guard !state.isSaving` 관례와 동일).
     func login(with credential: SocialLoginCredential) {
+        guard loginTask == nil else { return }
         state.isLoggingIn = true
-        Task { await performLogin(credential) }
+        loginTask = Task {
+            await performLogin(credential)
+            loginTask = nil
+        }
     }
 
     /// Apple/Kakao SDK 자체 실패(사용자 취소 포함) — credential을 못 받아 UseCase까지 못 간 경우.
