@@ -13,9 +13,10 @@ import ProfileDomain
 import DesignSystem
 import WSSComponent
 
-/// 온보딩 3단계 — 닉네임 입력. 진행바 1/3 단계.
+/// 온보딩 3단계(콘텐츠만) — 닉네임 입력. 공통 헤더·진행바는 컨테이너 `OnboardingStepFlowView`가
+/// 소유·렌더링한다(이 화면은 뒤로가기 자체가 없다 — 첫 단계라 컨테이너가 뒤로가기 버튼을 숨긴다).
 /// 닉네임 필드 자체의 정책·UI(캡션·테두리·중복확인 버튼 상태)는 `MyPageEditView`의 닉네임 섹션(#147)과 동일하게 맞춘다 —
-/// 같은 `NicknameDraft`를 쓰는 두 화면이 서로 다른 표현을 하지 않도록.
+/// 같은 `NicknameDraft`를 쓰는 두 화면이 서로 다른 표현을 하지 않도록(캡션 문구 자체는 온보딩 톤으로 갈림).
 struct NicknameView: View {
 
     @State private var viewModel: NicknameViewModel
@@ -38,8 +39,6 @@ struct NicknameView: View {
 
     var body: some View {
         content
-            // 뒤로가기 없는 순차 온보딩 단계 — Figma에 back chevron이 없다(TermsAgreement와 동일한 "필수 단계" 취급).
-            .toolbar(.hidden, for: .navigationBar)
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.confirmedNickname) { _, nickname in
                 if let nickname { onConfirmed(nickname) }
@@ -51,8 +50,6 @@ struct NicknameView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            OnboardingStepProgressBar(currentStep: 1)
-
             VStack(alignment: .leading, spacing: 0) {
                 headerSection
                 Spacer().frame(height: 61)

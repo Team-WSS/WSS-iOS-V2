@@ -63,52 +63,26 @@ public enum OnboardingFactory {
         )
     }
 
-    /// 온보딩 3단계 — 닉네임 입력. 저장 UseCase가 없다: 로컬 검증만 통과시켜 `onConfirmed`로 값을 넘기고,
-    /// 실제 서버 등록은 온보딩 마지막 단계(장르 선택)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
-    /// - Parameters:
-    ///   - onConfirmed: "다음으로" 탭(사용 가능한 닉네임 확정) 시 그 닉네임과 함께 발화.
-    ///   - onAuthenticationRequired: 인증 만료 시 로그인 유도 콜백(중복확인 등 서버 호출 공통).
-    @MainActor
-    public static func makeNicknameView(
-        validateNicknameUseCase: ValidateNicknameUseCase,
-        logger: Logger? = nil,
-        onConfirmed: @escaping (String) -> Void,
-        onAuthenticationRequired: @escaping () -> Void
-    ) -> some View {
-        NicknameView(
-            viewModel: NicknameViewModel(
-                validateNicknameUseCase: validateNicknameUseCase,
-                logger: logger
-            ),
-            onAuthenticationRequired: onAuthenticationRequired,
-            onConfirmed: onConfirmed
-        )
-    }
-
-    /// 온보딩 마지막 단계 — 선호 장르 선택(뒤로가기 가능·"건너뛰기" 있음, 앞 두 단계와 달리 필수 아님).
-    /// 이 화면이 `ProfileRegistration`을 완성해 등록까지 마친다 — 그래서 앞 단계에서 이미 확정된
-    /// `nickname`/`gender`/`birthYear`를 값으로 받는다(호출자가 온보딩 진행 중 누적해 온 값).
+    /// 온보딩 나머지 3단계(닉네임→성별/출생년도→장르선택)를 한 화면(컨테이너) 안에서 진행한다 —
+    /// 공통 진행바가 단계 전환 내내 같은 인스턴스로 유지돼야 부드럽게 애니메이션되기 때문에, 단계별로
+    /// 화면을 나눠 push하지 않는다(자세한 이유는 `OnboardingStepFlowView` 문서 참고).
+    /// 닉네임·성별/출생년도는 저장 UseCase가 없다 — 로컬 상태만 누적하다가, 마지막(장르 선택)에서
+    /// `RegisterProfileUseCase`로 한 번에 등록한다.
     /// - Parameters:
     ///   - onCompleted: 등록 성공 시 발화. 온보딩 종료 후 어디로 갈지(Home 등)는 호출자가 결정한다.
-    ///   - onAuthenticationRequired: 인증 만료 시 로그인 유도 콜백(등록 호출 공통).
+    ///   - onAuthenticationRequired: 인증 만료 시 로그인 유도 콜백(중복확인·등록 등 서버 호출 공통).
     @MainActor
-    public static func makeGenreSelectionView(
-        nickname: String,
-        gender: Gender,
-        birthYear: BirthYear,
+    public static func makeStepFlowView(
+        validateNicknameUseCase: ValidateNicknameUseCase,
         registerProfileUseCase: RegisterProfileUseCase,
         logger: Logger? = nil,
         onCompleted: @escaping () -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
-        GenreSelectionView(
-            viewModel: GenreSelectionViewModel(
-                nickname: nickname,
-                gender: gender,
-                birthYear: birthYear,
-                registerProfileUseCase: registerProfileUseCase,
-                logger: logger
-            ),
+        OnboardingStepFlowView(
+            validateNicknameUseCase: validateNicknameUseCase,
+            registerProfileUseCase: registerProfileUseCase,
+            logger: logger,
             onAuthenticationRequired: onAuthenticationRequired,
             onCompleted: onCompleted
         )

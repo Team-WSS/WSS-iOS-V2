@@ -13,12 +13,14 @@ import ProfileDomain
 import DesignSystem
 import WSSComponent
 
-/// 온보딩 3단계(마지막) — 선호 장르 선택. 진행바 3/3. 뒤로가기 가능 + "건너뛰기"로 장르 없이도 완료 가능
-/// (닉네임/약관 동의와 달리 이 화면만 필수 단계가 아니다 — Figma에 back chevron·skip이 실제로 있다).
+/// 온보딩 3단계(마지막, 콘텐츠만) — 선호 장르 선택. "건너뛰기"로 장르 없이도 완료 가능(닉네임/약관 동의와
+/// 달리 이 화면만 필수 단계가 아니다). 공통 헤더(뒤로가기+건너뛰기)·진행바는 컨테이너
+/// `OnboardingStepFlowView`가 소유·렌더링한다 — 컨테이너가 이 화면의 VM을 직접 들고 있어 "건너뛰기"도
+/// 컨테이너가 `viewModel.handle(.skip)`으로 곧장 호출한다(이 화면에 별도 콜백 불필요). 이 화면은
+/// 장르 그리드+하단 CTA만 담당한다.
 struct GenreSelectionView: View {
 
     @State private var viewModel: GenreSelectionViewModel
-    @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료(등록 호출 중 세션 죽음) 시 로그인 화면 진입 콜백.
     private let onAuthenticationRequired: () -> Void
@@ -37,8 +39,6 @@ struct GenreSelectionView: View {
 
     var body: some View {
         content
-            .toolbar(.hidden, for: .navigationBar)
-            .enableSwipeBack()
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.isCompleted) { _, isCompleted in
                 if isCompleted { onCompleted() }
@@ -50,11 +50,6 @@ struct GenreSelectionView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                headerRow
-                OnboardingStepProgressBar(currentStep: 3)
-            }
-
             VStack(alignment: .leading, spacing: 0) {
                 titleSection
                 Spacer().frame(height: 61)
@@ -81,41 +76,6 @@ struct GenreSelectionView: View {
 // MARK: - Sections
 
 private extension GenreSelectionView {
-
-    /// Figma "고정 영역"의 back chevron + 건너뛰기 텍스트 행 — 시스템 네비바가 아니라 화면 자체 콘텐츠(스와이프 뒤로가기는 `.enableSwipeBack()`로 별도 복원).
-    var headerRow: some View {
-        HStack(spacing: 0) {
-            Spacer().frame(width: 6)
-            
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(Color.wssBlack)
-                    .frame(width: 24, height: 24)
-            }
-            .frame(width: 44, height: 44)
-            .padding(.leading, 6)
-
-            Spacer()
-
-            Button {
-                viewModel.handle(.skip)
-            } label: {
-                Text("건너뛰기")
-                    .applyWSSFont(.body2)
-                    .foregroundStyle(Color.wssGray300)
-            }
-            .padding(10)
-            
-            Spacer().frame(width: 12)
-        }
-        .frame(height: 44)
-        .padding(.top, 27)
-        .padding(.bottom, 17)
-    }
 
     var titleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
