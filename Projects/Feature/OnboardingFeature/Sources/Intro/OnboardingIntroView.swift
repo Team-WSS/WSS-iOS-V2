@@ -16,9 +16,9 @@ import AuthDomain
 import DesignSystem
 import WSSComponent
 
-/// 온보딩 플로우의 첫 화면 — 4장짜리 서비스 소개 배너(스와이프) + 소셜 로그인(Apple/Kakao) + 비로그인 둘러보기.
+/// 온보딩 플로우의 첫 화면 — 4장짜리 서비스 소개 배너(스와이프) + 소셜 로그인(Apple/Kakao).
 /// 로그인 성공(`NeedOnboarding` 확정) 시점에 `onLoginSucceeded`를 발화하고 그 이후(가입약관 시트 등)는
-/// 관여하지 않는다(후속 이슈 범위). `onContinueWithoutSignIn`도 동일하게 콜백만 노출 — 화면 전환은 App 책임.
+/// 관여하지 않는다(후속 이슈 범위).
 struct OnboardingIntroView: View {
 
     private static let bannerCount = 4
@@ -45,16 +45,13 @@ struct OnboardingIntroView: View {
     @State private var appleSignInHandler = AppleSignInHandler()
 
     private let onLoginSucceeded: (NeedOnboarding) -> Void
-    private let onContinueWithoutSignIn: () -> Void
 
     init(
         viewModel: OnboardingIntroViewModel,
-        onLoginSucceeded: @escaping (NeedOnboarding) -> Void,
-        onContinueWithoutSignIn: @escaping () -> Void
+        onLoginSucceeded: @escaping (NeedOnboarding) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onLoginSucceeded = onLoginSucceeded
-        self.onContinueWithoutSignIn = onContinueWithoutSignIn
     }
 
     var body: some View {
@@ -84,15 +81,13 @@ struct OnboardingIntroView: View {
     }
 
     private var content: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             WSSImage.imgLoginBackground.swiftUIImage
                 .resizable()
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 bannerCarousel
-
-                Spacer()
 
                 bottomSection
                     .padding(.horizontal, 16)
@@ -129,11 +124,9 @@ private extension OnboardingIntroView {
 
             Spacer().frame(height: 30)
 
-            VStack(spacing: 0) {
-                socialLoginButtons
-                Spacer().frame(height: 24)
-                continueWithoutSignInButton
-            }
+            socialLoginButtons
+            
+            Spacer().frame(height: 70)
         }
     }
 
@@ -179,25 +172,6 @@ private extension OnboardingIntroView {
             }
             .buttonStyle(.plain)
         }
-    }
-
-    var continueWithoutSignInButton: some View {
-        Button {
-            onContinueWithoutSignIn()
-        } label: {
-            Text("회원가입 없이 둘러보기")
-                .applyWSSFont(.title1)
-                .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
-                .frame(maxWidth: .infinity)
-                .frame(height: 53)
-                .contentShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(WSSColor.wssPrimary100.swiftUIColor, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 10)
     }
 }
 
@@ -320,8 +294,7 @@ extension AppleSignInHandler: ASAuthorizationControllerPresentationContextProvid
 #Preview {
     OnboardingIntroView(
         viewModel: OnboardingIntroViewModel(socialLoginUseCase: PreviewSocialLoginUseCase()),
-        onLoginSucceeded: { _ in },
-        onContinueWithoutSignIn: {}
+        onLoginSucceeded: { _ in }
     )
 }
 

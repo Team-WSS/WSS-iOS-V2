@@ -5,6 +5,7 @@
 
 - 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(전용 `OnboardingDomain`은 없다). `ProfileDomain`은 후속 이슈에서 추가 예정.
 - 진입점: `OnboardingFactory.makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 인트로 화면(1단계)만. 후속 이슈에서 화면이 늘어나면 `makeXxxView`가 더 생긴다(그래서 이름이 `makeView`가 아니라 `makeIntroView`).
+- **비로그인(게스트) 진입 경로는 없다** — 제품 결정으로 "회원가입 없이 둘러보기" 버튼과 `onContinueWithoutSignIn` 콜백을 제거했다(2026-08). 소셜 로그인(Apple/Kakao)만 남는다. 되살리지 말 것.
 
 ## 핵심 시나리오
 

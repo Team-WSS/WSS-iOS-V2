@@ -22,22 +22,18 @@ public enum OnboardingFactory {
     /// - Parameters:
     ///   - onLoginSucceeded: 소셜 로그인 성공 시 발화(`NeedOnboarding`으로 신규/기존 유저 분기).
     ///     화면 전환(다음 온보딩 단계로 진행할지, 바로 홈으로 보낼지)은 호출자(App 조정 계층)가 결정한다.
-    ///   - onContinueWithoutSignIn: "회원가입 없이 둘러보기" 탭 시 발화. 도메인 로직 없는 순수 네비게이션 신호라
-    ///     `onLoginSucceeded`와 동일하게 화면 전환 판단은 호출자에게 위임한다.
     @MainActor
     public static func makeIntroView(
         socialLoginUseCase: SocialLoginUseCase,
         logger: Logger? = nil,
-        onLoginSucceeded: @escaping (NeedOnboarding) -> Void,
-        onContinueWithoutSignIn: @escaping () -> Void
+        onLoginSucceeded: @escaping (NeedOnboarding) -> Void
     ) -> some View {
         OnboardingIntroView(
             viewModel: OnboardingIntroViewModel(
                 socialLoginUseCase: socialLoginUseCase,
                 logger: logger
             ),
-            onLoginSucceeded: onLoginSucceeded,
-            onContinueWithoutSignIn: onContinueWithoutSignIn
+            onLoginSucceeded: onLoginSucceeded
         )
     }
 }

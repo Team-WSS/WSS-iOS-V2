@@ -72,8 +72,7 @@ private struct DemoRootView: View {
             OnboardingFactory.makeIntroView(
                 socialLoginUseCase: DemoSocialLoginUseCase(),
                 logger: consoleLogger,
-                onLoginSucceeded: handleLoginSucceeded,
-                onContinueWithoutSignIn: handleContinueWithoutSignIn
+                onLoginSucceeded: handleLoginSucceeded
             )
         case .live:
             makeLiveView()
@@ -99,17 +98,12 @@ private struct DemoRootView: View {
         return OnboardingFactory.makeIntroView(
             socialLoginUseCase: DefaultSocialLoginUseCase(authRepository: repository),
             logger: consoleLogger,
-            onLoginSucceeded: handleLoginSucceeded,
-            onContinueWithoutSignIn: handleContinueWithoutSignIn
+            onLoginSucceeded: handleLoginSucceeded
         )
     }
 
     private func handleLoginSucceeded(_ needOnboarding: NeedOnboarding) {
         consoleLogger.info("로그인 성공 → NeedOnboarding: \(needOnboarding.value)")
-    }
-
-    private func handleContinueWithoutSignIn() {
-        consoleLogger.info("회원가입 없이 둘러보기 탭됨")
     }
 }
 
