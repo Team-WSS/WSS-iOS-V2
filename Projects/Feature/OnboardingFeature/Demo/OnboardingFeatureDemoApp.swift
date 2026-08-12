@@ -86,6 +86,11 @@ private struct DemoRootView: View {
                 .navigationDestination(item: $pendingGenreSelection) { pending in
                     genreSelectionView(nickname: pending.nickname)
                 }
+                // 시뮬레이터는 실제 Apple/Kakao 계정으로 로그인할 수 없어 인트로 버튼으로는 다음 단계에
+                // 못 간다 — 나머지 단계(약관 동의→닉네임→장르 선택)를 손으로 눌러보기 위한 디버그 전용 우회.
+                .overlay(alignment: .topTrailing) {
+                    debugSkipLoginButton
+                }
         }
     }
 
@@ -131,6 +136,25 @@ private struct DemoRootView: View {
         if needOnboarding.value {
             isTermsAgreementPresented = true
         }
+    }
+
+    /// 실제 SDK 로그인(Apple/Kakao) 없이 신규 유저 로그인 성공을 흉내내 다음 단계로 넘어간다.
+    /// 인트로 화면 위에만 뜨고(다음 단계로 넘어가면 이 뷰 자체가 가려짐), 안전한 디버그용이라
+    /// dataSource와 무관하게 항상 노출한다(실서버 로그인도 시뮬레이터에서 계정이 없긴 마찬가지).
+    private var debugSkipLoginButton: some View {
+        Button {
+            consoleLogger.info("[디버그] SDK 로그인 우회 → 신규 유저로 간주")
+            handleLoginSucceeded(NeedOnboarding(value: true))
+        } label: {
+            Text("디버그: 로그인 건너뛰기")
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.7))
+                .foregroundStyle(Color.white)
+                .clipShape(Capsule())
+        }
+        .padding()
     }
 
     // MARK: - 가입약관 동의 시트
