@@ -41,7 +41,10 @@ struct NicknameView: View {
         content
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.confirmedNickname) { _, nickname in
-                if let nickname { onConfirmed(nickname) }
+                if let nickname {
+                    onConfirmed(nickname)
+                    viewModel.handle(.consumeConfirmation)
+                }
             }
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }

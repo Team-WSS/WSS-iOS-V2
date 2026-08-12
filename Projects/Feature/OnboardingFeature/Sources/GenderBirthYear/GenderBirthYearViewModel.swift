@@ -24,7 +24,10 @@ final class GenderBirthYearViewModel {
         /// 성별과 마찬가지로 처음엔 미선택(사용자 결정) — 출생년도 피커 시트에서 "완료"를 눌러야 채워진다.
         /// 피커 자체의 시작 위치(2000)는 값이 없는 동안의 표시일 뿐 이 상태를 미리 채우지 않는다(View 담당).
         var birthYear: BirthYear?
-        /// "다음으로" 탭 시점의 확정 값. View는 이 값이 채워지면 다음 단계 진행 콜백을 발화한다.
+        /// "다음으로" 탭 시점의 확정 값. View는 이 값이 채워지면 다음 단계 진행 콜백을 발화하고, 곧바로
+        /// `.consumeConfirmation`으로 다시 `nil`로 되돌린다 — `NicknameViewModel.confirmedNickname`과
+        /// 같은 이유(뒤로 갔다 **같은 선택으로** 재확정하면 값이 안 바뀌어 `onChange`가 발동하지 않는
+        /// 문제, 실측)로 소비 즉시 리셋하는 소진 패턴을 쓴다.
         var confirmedSelection: Selection?
     }
 
@@ -39,6 +42,7 @@ final class GenderBirthYearViewModel {
         case selectGender(Gender)
         case selectBirthYear(Int)
         case proceed
+        case consumeConfirmation
     }
 
     // MARK: - Output
@@ -56,6 +60,8 @@ final class GenderBirthYearViewModel {
             state.birthYear = birthYear
         case .proceed:
             proceed()
+        case .consumeConfirmation:
+            state.confirmedSelection = nil
         }
     }
 }

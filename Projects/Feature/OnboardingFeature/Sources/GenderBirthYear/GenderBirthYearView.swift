@@ -38,7 +38,10 @@ struct GenderBirthYearView: View {
                 birthYearPickerSheet
             }
             .onChange(of: viewModel.state.confirmedSelection) { _, selection in
-                if let selection { onConfirmed(selection.gender, selection.birthYear) }
+                if let selection {
+                    onConfirmed(selection.gender, selection.birthYear)
+                    viewModel.handle(.consumeConfirmation)
+                }
             }
     }
 

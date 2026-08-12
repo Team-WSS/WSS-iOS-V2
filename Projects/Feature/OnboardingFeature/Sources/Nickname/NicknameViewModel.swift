@@ -22,7 +22,11 @@ final class NicknameViewModel {
     struct State {
         var draft = NicknameDraft("")
         var isCheckingDuplication = false
-        /// "다음으로" 탭 시점의 확정 닉네임. View는 이 값이 채워지면 다음 단계 진행 콜백을 발화한다.
+        /// "다음으로" 탭 시점의 확정 닉네임. View는 이 값이 채워지면 다음 단계 진행 콜백을 발화하고,
+        /// 곧바로 `.consumeConfirmation`으로 다시 `nil`로 되돌린다 — 컨테이너에서 뒤로 갔다가 **같은
+        /// 닉네임으로 재확정**하면 `nil`로 안 돌아온 이 값이 이전과 동일해 `onChange`가 발동하지 않고
+        /// 다음 단계로 못 넘어가는 문제가 있었다(실측). "탭할 때마다 매번 nil→값 전이가 새로 일어나야
+        /// 신호가 재사용 가능"이라 소비 즉시 리셋한다(`presentedError`/`dismissError`와 같은 소진 패턴).
         var confirmedNickname: String?
         var requiresAuthentication = false
         var presentedError: NicknameError?
@@ -38,6 +42,7 @@ final class NicknameViewModel {
         case updateText(String)
         case checkDuplication
         case proceed
+        case consumeConfirmation
         case dismissError
     }
 
@@ -72,6 +77,8 @@ final class NicknameViewModel {
             checkDuplication()
         case .proceed:
             proceed()
+        case .consumeConfirmation:
+            state.confirmedNickname = nil
         case .dismissError:
             state.presentedError = nil
         }
