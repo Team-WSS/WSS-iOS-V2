@@ -25,7 +25,7 @@
   - 기본 비율 상수가 `public`인 건 스타일이 아니라 **문법 제약**이다 — public `init`의 기본값 표현식은
     private 상수(`Metric`)를 참조할 수 없다.
 - 컴포넌트가 아는 도메인은 **`BaseDomain`의 공통 값 타입까지**(`ReadingStatus`, `AttractivePoint`, `NovelGenre`, `SortType`, `KeywordCategory` 등). 이들의 라벨·색·아이콘 매핑을 `Sources/DomainPresentation/`(`+Presentation` 확장, public)에 한곳으로 모아 Feature가 중복 매핑하지 않게 한다. → 그 외 도메인 Entity·Repository나 상위 Feature 모델은 모른다(표시 데이터/콜백만 값으로 받음).
-- 특정 화면 전용 **필터용 값 목록**(예: `NovelGenre.myFeedFilter`, 검색 화면 장르 그리드용 `NovelGenre.searchGenre`)도 라벨·색 매핑과 동일하게 `DomainPresentation` 확장에 둔다 — `BaseDomain`은 순수 enum만 갖고 화면별 부분집합/순서는 여기서 정의. `myFeedFilter`와 `searchGenre`는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
+- 특정 화면 전용 **필터용 값 목록**(예: `NovelGenre.myFeedFilter`, 검색 화면 장르 그리드용 `NovelGenre.searchGenre`, 온보딩 3x3 그리드용 `.onboardingGenre`, 프로필 편집용 `.profileEditGenre`)도 라벨·색 매핑과 동일하게 `DomainPresentation` 확장에 둔다 — `BaseDomain`은 순수 enum만 갖고 화면별 부분집합/순서는 여기서 정의. 이 목록들은 각각 **의도적으로 다른 순서**의 별개 목록 — 하나를 고친다고 나머지까지 맞추지 말 것.
 - `KeywordCategory+Presentation`의 아이콘(`icCategoryWorld` 등)은 `AttractivePoint`의 `icAttractiveXxx`와 **다른 에셋**이다 — 이름이 비슷한 "세계관/소재/캐릭터/관계/분위기" 라벨을 공유하지만(매력포인트엔 "필력"이 하나 더 있음) 서로 다른 제품 개념이라 아이콘을 섞어 쓰지 말 것.
 - ⚠️ **테두리는 `.stroke`가 아니라 `.strokeBorder`로 그린다.** `.stroke`는 선을 shape 경로의 **중앙**에 그려 `lineWidth 1`이면 0.5pt가 뷰 프레임 **밖**으로 나간다 → 컴포넌트를 `ScrollView`(또는 클립하는 컨테이너) 안에 넣는 순간 그 바깥 절반이 클립돼 **테두리가 한쪽만 얇아지거나 잘려 보인다**(서재 필터 칩·필터 시트 키워드 칩에서 실제 발생, #166). `.strokeBorder`는 `InsettableShape`를 lineWidth만큼 안으로 inset한 뒤 그려 선 전체가 프레임 안에 들어온다 — 컴포넌트는 어디에 놓일지 모르니 **공용 컴포넌트일수록 기본값이 `strokeBorder`**여야 한다. `Capsule`/`RoundedRectangle` 모두 `InsettableShape`라 그대로 바꿔 쓸 수 있다.
 - Alert 버튼은 인덱스 기반 `buttonActions` 배열 ↔ 버튼 개수 매칭에 주의.
