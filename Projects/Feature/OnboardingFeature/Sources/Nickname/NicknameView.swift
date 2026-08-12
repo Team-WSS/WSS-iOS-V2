@@ -15,8 +15,8 @@ import WSSComponent
 
 /// 온보딩 3단계(콘텐츠만) — 닉네임 입력. 공통 헤더·진행바는 컨테이너 `OnboardingStepFlowView`가
 /// 소유·렌더링한다(이 화면은 뒤로가기 자체가 없다 — 첫 단계라 컨테이너가 뒤로가기 버튼을 숨긴다).
-/// 닉네임 필드 자체의 정책·UI(캡션·테두리·중복확인 버튼 상태)는 `MyPageEditView`의 닉네임 섹션(#147)과 동일하게 맞춘다 —
-/// 같은 `NicknameDraft`를 쓰는 두 화면이 서로 다른 표현을 하지 않도록(캡션 문구 자체는 온보딩 톤으로 갈림).
+/// 닉네임 필드 UI는 `WSSComponent`의 `WSSNicknameField` 공용 컴포넌트를 쓴다 — `MyPageEditView`의 닉네임
+/// 섹션(#147)과 필드 정책이 같아야 해서(#178에서 승격), 캡션 문구(한글 카피)만 온보딩 톤으로 갈린다.
 struct NicknameView: View {
 
     @State private var viewModel: NicknameViewModel
@@ -88,75 +88,20 @@ private extension NicknameView {
         }
     }
 
-    /// `MyPageEditView.nicknameSection`과 동일한 구성(필드+중복확인 버튼, 캡션+글자수 카운터) — 섹션 타이틀만 없다.
+    /// `MyPageEditView.nicknameSection`과 같은 `WSSNicknameField` 공용 컴포넌트를 쓴다(#178에서 승격) —
+    /// 섹션 타이틀·글자수 카운터만 온보딩엔 없다.
     var nicknameSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 7) {
-                nicknameTextField
-                duplicateCheckButton
-            }
-
-            Spacer().frame(height: 12)
-
-            HStack(spacing: 0) {
-                if let caption = nicknameValidationCaption {
-                    Text(caption.text)
-                        .applyWSSFont(.body4)
-                        .foregroundStyle(caption.color)
-                }
-
-                Spacer()
-            }
-            .applyWSSFont(.body4)
-        }
-    }
-
-    var nicknameTextField: some View {
-        HStack(spacing: 0) {
-            TextField("닉네임", text: nicknameTextBinding)
-                .padding(.vertical, 10.5)
-                .padding(.leading, 12)
-                .applyWSSFont(.body2)
-                .foregroundStyle(Color.wssBlack)
-                .tint(Color.wssBlack)
-                .focused($isKeyboardFocused)
-
-            if !viewModel.state.draft.text.isEmpty {
-                Button {
-                    viewModel.handle(.updateText(""))
-                } label: {
-                    WSSImage.icCancel.swiftUIImage
-                        .frame(width: 44, height: 44)
-                }
-            }
-        }
-        .background(Color.wssGray50)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(nicknameBorderColor ?? .clear, lineWidth: 1)
+        WSSNicknameField(
+            text: nicknameTextBinding,
+            isFocused: $isKeyboardFocused,
+            maxLength: NicknameDraft.maxLength,
+            isError: isNicknameError,
+            isSuccess: viewModel.state.draft.validationState == .available,
+            caption: nicknameValidationCaption.map { WSSNicknameField.Caption(text: $0.text, color: $0.color) },
+            isDuplicationCheckEnabled: isDuplicationCheckEnabled,
+            isCheckingDuplication: viewModel.state.isCheckingDuplication,
+            onCheckDuplication: { viewModel.handle(.checkDuplication) }
         )
-    }
-
-    /// 실제로 서버 확인이 필요한 상태(`needDuplicatedCheck`)에서만 primary로 활성화된다.
-    var duplicateCheckButton: some View {
-        Button {
-            viewModel.handle(.checkDuplication)
-        } label: {
-            Group {
-                if viewModel.state.isCheckingDuplication {
-                    ProgressView()
-                } else {
-                    Text("중복확인")
-                        .applyWSSFont(.body2)
-                        .foregroundStyle(isDuplicationCheckEnabled ? Color.wssPrimary100 : Color.wssGray200)
-                }
-            }
-            .frame(width: 88, height: 44)
-            .background(isDuplicationCheckEnabled ? Color.wssPrimary50 : Color.wssGray70)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .disabled(!isDuplicationCheckEnabled)
     }
 
     var ctaButton: some View {
@@ -203,6 +148,9 @@ private extension NicknameView {
     }
 
     /// 형식 오류·공백·중복 등 사용자가 고쳐야 하는 상태만 에러로 취급한다("변경 없음"은 에러가 아니다).
+    /// 서버 중복확인 결과뿐 아니라 **입력 중 실시간 형식 검증(공백·패턴)도 포함** — `NicknameDraft.validationState`가
+    /// 순수 계산 프로퍼티라 타이핑마다 즉시 갱신되고, 그 값을 그대로 반영해 `WSSNicknameField`의 실패 아이콘도
+    /// 같은 프레임에 바뀐다(중복확인 버튼을 누르지 않아도 됨).
     var isNicknameError: Bool {
         switch viewModel.state.draft.validationState {
         case .notAvailable(.whiteSpaceIncluded), .notAvailable(.invalidCharacterOrLimitExceeded), .notAvailable(.duplicated):
@@ -210,13 +158,6 @@ private extension NicknameView {
         default:
             return false
         }
-    }
-
-    /// 닉네임 필드 테두리 색 — 에러=secondary100, 사용 가능=primary100, 그 외(입력 전·미변경·확인 대기)엔 테두리 없음.
-    var nicknameBorderColor: Color? {
-        if isNicknameError { return Color.wssSecondary100 }
-        if viewModel.state.draft.validationState == .available { return Color.wssPrimary100 }
-        return nil
     }
 
     var toastBinding: Binding<Bool> {

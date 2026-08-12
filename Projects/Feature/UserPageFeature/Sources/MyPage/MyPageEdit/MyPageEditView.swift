@@ -19,11 +19,11 @@ struct MyPageEditView: View {
     @State private var viewModel: MyPageEditViewModel
     @State private var characterEditContext: CharacterEditSheetContext?
 
-    /// 닉네임/소개 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 상태를 거친다 — VM에 물리면
+    /// 소개 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 상태를 거친다 — VM에 물리면
     /// clamp 후 `get`이 SwiftUI가 방금 그 필드에 써준 값과 같아져 "변화 없음"으로 판단되고,
     /// 네이티브 텍스트필드는 사용자가 입력한 초과분을 그대로 들고 있게 된다(글자수 제한이 시각적으로
     /// 안 먹힘). 로컬 상태 → clamp 후 재대입(진짜 변경으로 인식돼 강제 되돌림) → VM 전달의 2단계로 처리.
-    @State private var nicknameFieldText: String = ""
+    /// (닉네임 필드는 같은 함정을 `WSSNicknameField` 공용 컴포넌트가 내부에서 처리한다 — 로컬 완충 불필요.)
     @State private var introductionFieldText: String = ""
 
     @FocusState private var isKeyboardFocused: Bool
@@ -157,6 +157,9 @@ struct MyPageEditView: View {
         }
     }
 
+    /// 필드 UI는 `WSSComponent`의 `WSSNicknameField` 공용 컴포넌트를 쓴다(#178에서 `OnboardingFeature`의
+    /// 닉네임 화면과 함께 승격) — 판단(도메인 검증 상태 → `isError`/`isSuccess`/캡션)은 여전히 이 화면이
+    /// 하고, 컴포넌트는 표시·글자수 제한 트랩 처리만 맡는다.
     private var nicknameSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("닉네임")
@@ -165,86 +168,18 @@ struct MyPageEditView: View {
 
             Spacer().frame(height: 7)
 
-            HStack(spacing: 7) {
-                HStack(spacing: 0) {
-                    TextField("", text: $nicknameFieldText)
-                        .padding(.vertical, 10.5)
-                        .padding(.leading, 12)
-                        .applyWSSFont(.body2)
-                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                        .tint(WSSColor.wssBlack.swiftUIColor)
-                        .focused($isKeyboardFocused)
-                        .onChange(of: nicknameFieldText) { _, newValue in
-                            let clamped = String(newValue.prefix(NicknameDraft.maxLength))
-                            if clamped != newValue {
-                                nicknameFieldText = clamped
-                                return
-                            }
-                            viewModel.handle(.updateNickname(clamped))
-                        }
-                        .onChange(of: viewModel.state.draft.nickname.text) { _, newValue in
-                            guard nicknameFieldText != newValue else { return }
-                            nicknameFieldText = newValue
-                        }
-
-                    if !viewModel.state.draft.nickname.text.isEmpty {
-                        Button(action: { viewModel.handle(.updateNickname("")) }) {
-                            WSSImage.icCancel.swiftUIImage
-                                .frame(width: 44, height: 44)
-                        }
-                    }
-                }
-                .background(WSSColor.wssGray50.swiftUIColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(nicknameBorderColor ?? .clear, lineWidth: 1)
-                )
-
-                Button {
-                    viewModel.handle(.checkNicknameDuplication)
-                } label: {
-                    Group {
-                        if viewModel.state.isCheckingNickname {
-                            ProgressView()
-                        } else {
-                            Text("중복확인")
-                                .applyWSSFont(.body2)
-                                .foregroundStyle(
-                                    isDuplicationCheckEnabled
-                                        ? WSSColor.wssPrimary100.swiftUIColor
-                                        : WSSColor.wssGray200.swiftUIColor
-                                )
-                        }
-                    }
-                    .frame(width: 88, height: 44)
-                    .background(
-                        isDuplicationCheckEnabled
-                            ? WSSColor.wssPrimary50.swiftUIColor
-                            : WSSColor.wssGray70.swiftUIColor
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(!isDuplicationCheckEnabled)
-            }
-
-            Spacer().frame(height: 4)
-
-            HStack(spacing: 0) {
-                if let caption = nicknameValidationCaption {
-                    Text(caption.text)
-                        .applyWSSFont(.body4)
-                        .foregroundStyle(caption.color)
-                }
-                
-                Spacer()
-                
-                Text("\(viewModel.state.draft.nickname.text.count)")
-                    .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                Text(" / \(NicknameDraft.maxLength)")
-                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-            }
-            .applyWSSFont(.body4)
+            WSSNicknameField(
+                text: nicknameTextBinding,
+                isFocused: $isKeyboardFocused,
+                maxLength: NicknameDraft.maxLength,
+                isError: isNicknameError,
+                isSuccess: viewModel.state.draft.nickname.validationState == .available,
+                caption: nicknameValidationCaption.map { WSSNicknameField.Caption(text: $0.text, color: $0.color) },
+                showsCharacterCount: true,
+                isDuplicationCheckEnabled: isDuplicationCheckEnabled,
+                isCheckingDuplication: viewModel.state.isCheckingNickname,
+                onCheckDuplication: { viewModel.handle(.checkNicknameDuplication) }
+            )
         }
         .padding(.horizontal, 20)
     }
@@ -440,15 +375,11 @@ private extension MyPageEditView {
         }
     }
 
-    /// 닉네임 필드 테두리 색 — 에러=secondary100, 사용 가능=primary100, 그 외(입력 전·미변경·확인 대기)엔 테두리 없음.
-    var nicknameBorderColor: Color? {
-        if isNicknameError {
-            return WSSColor.wssSecondary100.swiftUIColor
-        }
-        if viewModel.state.draft.nickname.validationState == .available {
-            return WSSColor.wssPrimary100.swiftUIColor
-        }
-        return nil
+    var nicknameTextBinding: Binding<String> {
+        Binding(
+            get: { viewModel.state.draft.nickname.text },
+            set: { viewModel.handle(.updateNickname($0)) }
+        )
     }
 
     /// 중복확인 버튼은 "새 닉네임을 입력했고, 아직 에러 없이 확인이 필요한" 상태에서만 primary로 활성화된다.
