@@ -90,4 +90,9 @@ public extension NovelGenre {
     static let searchGenre: [NovelGenre] = [
         .fantasy, .modernFantasy, .romanceFantasy, .romance, .wuxia, .BL, .lightNovel, .drama, .mystery
     ]
+
+    /// 프로필 편집 화면(마이페이지) 장르 선택 전용 순서 — 다른 목록들과 의도적으로 다른 별개 목록.
+    static let profileEditGenre: [NovelGenre] = [
+        .romance, .romanceFantasy, .fantasy, .modernFantasy, .wuxia, .BL, .lightNovel, .mystery, .drama
+    ]
 }

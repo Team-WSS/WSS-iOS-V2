@@ -20,3 +20,5 @@
 - `GenrePreference.genre`는 자유 문자열이 아니라 `BaseDomain.NovelGenre`(9개 케이스) 타입이다 — 서버가 그 9개 밖의 장르 토큰을 내려주면 Data의 `novelGenre(from:)` 매핑이 실패해 `RepositoryError.invalidData`로 전파된다(예전엔 임의 문자열을 그대로 통과시켰음). 표시용 한글 라벨/아이콘은 `WSSComponent`의 `NovelGenre+Presentation`(`displayName`/`iconImage`) 재사용.
 - `NovelPreference.keywords`는 `[KeywordPreference]` **배열**이라 서버 응답 순서를 그대로 보존한다. 과거엔 `[Keyword: Int]` Dictionary라 매핑(`ProfileMapper.novelPreference`) 단계에서 순서가 소실됐었다 — Dictionary로 되돌리면 같은 문제가 재발하니 주의.
 - `fetchGenrePreferences`가 반환하는 `[GenrePreference]`는 **서버가 이미 개수 내림차순으로 정렬해 내려준다** — 클라이언트(Feature)에서 재정렬하지 않는다. 매핑(`ProfileMapper.genrePreferences`)도 배열 `.map`이라 순서를 그대로 보존한다.
+- `validateNickname(_:)`의 `Bool` 반환은 **`true` = 사용 가능(중복 아님)** 이다("검증 통과"가 아니라 "가용"으로 읽을 것). `ProfileData`의 `NicknameValidationResponse.isValid`를 그대로 전달한다.
+- `ProfileDraft.removeGenrePreference(_:)`는 `GenrePreference`의 **완전 일치(Equatable: genre+count)** 비교로 제거한다 — `GenrePreference(genre: someGenre, count: 0)`처럼 count를 임의로 채운 새 값으로는 지워지지 않고 조용히 실패한다. 토글 등에서 제거하려면 `genrePreferences.first(where: { $0.genre == genre })`로 draft에 실제 들어있는 인스턴스를 찾아 그대로 넘겨야 한다.

@@ -81,9 +81,9 @@ public struct ProfileDraft {
     }
     
     // - introduction
-    
-    private static let maxIntroductionLength: Int = 50
-    private static let maxLineCount: Int = 3
+
+    public static let maxIntroductionLength: Int = 50
+    public static let maxLineCount: Int = 3
     
     public mutating func updateIntroduction(_ newValue: String) {
         var lines = newValue.components(separatedBy: "\n")
