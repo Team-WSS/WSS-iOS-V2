@@ -25,13 +25,14 @@ struct LoadUserFeedsUseCaseTests {
         let usecase = DefaultLoadUserFeedsUseCase(feedRepository: mock)
 
         let userID = UserID(100)
+        let nickname = "구리스"
         let lastFeedID = FeedID(10)
 
-        let result = try await usecase.execute(userID: userID, lastFeedID: lastFeedID)
+        let result = try await usecase.execute(userID: userID, nickname: nickname, profileImage: nil, lastFeedID: lastFeedID)
 
         #expect(result.items == expected.items)
         #expect(mock.fetchedUserFeeds.contains { element in
-            element.id == userID && element.lastFeedID == lastFeedID
+            element.id == userID && element.nickname == nickname && element.lastFeedID == lastFeedID
         })
     }
 
@@ -43,7 +44,7 @@ struct LoadUserFeedsUseCaseTests {
         let usecase = DefaultLoadUserFeedsUseCase(feedRepository: mock)
 
         await #expect(throws: RepositoryError.serverUnavailable) {
-            try await usecase.execute(userID: UserID(100), lastFeedID: FeedID(0))
+            try await usecase.execute(userID: UserID(100), nickname: "구리스", profileImage: nil, lastFeedID: FeedID(0))
         }
     }
 }

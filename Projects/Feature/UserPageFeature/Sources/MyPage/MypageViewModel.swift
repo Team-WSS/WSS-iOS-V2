@@ -1,6 +1,6 @@
 //
 //  MypageViewModel.swift
-//  MypageFeature
+//  UserPageFeature
 //
 //  Created by Seoyeon Choi on 7/8/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -30,20 +30,6 @@ final class MypageViewModel {
     }
 
     // MARK: - Derived
-
-    /// 서버가 이미 뱃지 개수 내림차순으로 내려준다(클라이언트에서 재정렬하지 않음).
-    /// 대표 3개/펼침 목록 분리에만 쓴다.
-    var topGenrePreferences: [GenrePreference] {
-        Array(state.genrePreferences.prefix(3))
-    }
-
-    var remainingGenrePreferences: [GenrePreference] {
-        Array(state.genrePreferences.dropFirst(3))
-    }
-
-    var totalGenreBadgeCount: Int {
-        state.genrePreferences.reduce(0) { $0 + $1.count }
-    }
 
     var keywordPreferences: [KeywordPreference] {
         state.novelPreference?.keywords ?? []

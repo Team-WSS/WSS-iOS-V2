@@ -20,6 +20,7 @@ public final class MockNovelRepository: NovelRepository {
     public var fetchUserLibraryResult: Result<(CursorPaginated<LibraryNovel>, Int), RepositoryError>!
     public var fetchMyLibraryKeywordsResult: Result<[Keyword], RepositoryError>!
     public var fetchRegisteredNovelStatsResult: Result<RegisteredNovelStats, RepositoryError>!
+    public var fetchUserRegisteredNovelStatsResult: Result<RegisteredNovelStats, RepositoryError>!
 
     public private(set) var fetchedNovelIDs: [NovelID] = []
     public private(set) var lastCachedKeywords: [Keyword]?
@@ -34,6 +35,7 @@ public final class MockNovelRepository: NovelRepository {
     public private(set) var lastUserLibraryCachedKeywords: [Keyword]?
     public private(set) var fetchMyLibraryKeywordsCallCount = 0
     public private(set) var fetchRegisteredNovelStatsCallCount = 0
+    public private(set) var fetchedUserRegisteredNovelStatsIDs: [UserID] = []
 
     public init() {}
 
@@ -85,5 +87,10 @@ public final class MockNovelRepository: NovelRepository {
     public func fetchRegisteredNovelStats() async throws(RepositoryError) -> RegisteredNovelStats {
         fetchRegisteredNovelStatsCallCount += 1
         return try fetchRegisteredNovelStatsResult.get()
+    }
+
+    public func fetchUserRegisteredNovelStats(id: UserID) async throws(RepositoryError) -> RegisteredNovelStats {
+        fetchedUserRegisteredNovelStatsIDs.append(id)
+        return try fetchUserRegisteredNovelStatsResult.get()
     }
 }

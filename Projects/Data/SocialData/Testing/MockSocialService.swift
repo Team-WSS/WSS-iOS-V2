@@ -43,7 +43,7 @@ final class MockSocialService: SocialService {
 
     func postBlockUser(_ query: BlockUserQuery) async throws {
         postBlockUserCallCount += 1
-        blockedUserIDs.append(query.userID)
+        blockedUserIDs.append(query.userId)
         try postBlockUserResult.get()
     }
 

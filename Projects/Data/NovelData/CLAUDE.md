@@ -11,7 +11,7 @@
 ## 핵심 시나리오
 
 - **상세 조회(`fetchNovel`)**: basic + detail **네트워크 2회** 호출 후 `NovelMapper.novelInformation(...)`로 합성.
-- **서재/통계**: `appStorage.get(.userID)`로 로그인 사용자 ID를 읽어 쿼리에 사용.
+- **서재/통계**: "내" 버전(`fetchMyLibraryNovels`/`fetchRegisteredNovelStats`)은 `appStorage.get(.userID)`로 로그인 사용자 ID를 읽고, "유저" 버전(`fetchUserLibraryNovels(id:_:)`/`fetchUserRegisteredNovelStats(id:)`)은 인자로 받은 id를 그대로 쓴다 — 같은 `getUserLibraryNovels`/`getUserRegisteredNovelStats` 서비스 호출을 userID 출처만 바꿔 공유한다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -33,4 +33,5 @@
 - **`userReview`의 매력포인트·키워드는 `[]`로 둔다** — 유저 본인 선택값이 이 응답에 없어서다. `detailDTO.attractivePoints`(독자 전체 집계값)를 채워 넣지 말 것 — 과거에 그렇게 돼 있었고(미소비 필드라 실동작 영향은 없었음) #154에서 `[]`로 정리했다. 본인 선택값이 필요해지면 유저별 API에서 받아야 한다.
 - `fetchNovel`은 2회 호출 → **하나라도 실패하면 전체 실패**.
 - userID 부재 시 `?? 0` fallback — 비로그인 흐름 동작 확인 필요.
+- **서비스 메서드(`getUserRegisteredNovelStats(userID:)` 등)는 이미 임의 userID를 받도록 돼 있었다** — 타 유저 조회가 막혀 있던 지점은 Repository/UseCase 시그니처(파라미터 없음)였지, 네트워크 계층이 아니었다. "유저" 버전 Repository 메서드를 새로 추가할 때 서비스 변경이 필요 없을 수 있으니 먼저 기존 서비스 메서드 시그니처부터 확인할 것.
 - 에러 변환은 레이어 고정 규칙을 따름 (`NetworkingError`→`toRepositoryError()`, `MappingError`→`.invalidData`, 그 외 `.unknown`, 전 분기 로깅).

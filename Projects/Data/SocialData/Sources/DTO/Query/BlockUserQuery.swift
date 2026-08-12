@@ -10,5 +10,5 @@ import Foundation
 import Networking
 
 struct BlockUserQuery: QueryItemConvertible {
-    let userID: Int
+    let userId: Int
 }

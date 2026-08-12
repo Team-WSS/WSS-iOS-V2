@@ -23,7 +23,7 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- `fetchMyLibraryNovels`/통계는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:cursor:cachedKeywords:)` 별도 — 시그니처는 userID 인자를 빼면 내 서재와 같다.
+- `fetchMyLibraryNovels`/`fetchRegisteredNovelStats`는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` / `fetchUserRegisteredNovelStats(id:)` 별도 — Repository에 "내" 버전과 "유저" 버전이 쌍으로 존재하는 게 이 모듈의 고정 패턴이니, 서재 관련 조회를 새로 추가할 땐 이 쌍을 먼저 따라간다.
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
 - ⚠️ **`KeywordRepository.fetchKeywords()`는 네트워크를 타지 않고 로컬 캐시만 읽는다** — 캐시를 채우는 건 `syncKeywords()` 뿐이다. 즉 **App 조립에서 `syncKeywords()`를 선행하지 않으면 서재·작품 상세의 키워드가 화면상 아무 오류 없이 통째로 빈다**(UseCase의 `try?` + `?? []` 폴백이 실패를 삼킨다 — 목록 자체를 막지 않으려는 의도된 설계. 단, Data 레이어에는 `logger?.logCacheError`가 남으므로 **원인 추적은 로그로** 한다). `LoadNovelUseCase`·`LoadMyLibraryUseCase` 둘 다 해당하며, 서재는 목록 전체가 영향받아 체감이 크다. Demo 앱들이 화면을 띄우기 전에 `await ...syncKeywords()`를 부르는 게 이 때문이다.
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).

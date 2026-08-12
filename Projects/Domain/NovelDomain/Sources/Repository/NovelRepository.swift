@@ -56,4 +56,5 @@ public protocol NovelRepository {
     func fetchMyLibraryKeywords() async throws(RepositoryError) -> [Keyword]
     
     func fetchRegisteredNovelStats() async throws(RepositoryError) -> RegisteredNovelStats
+    func fetchUserRegisteredNovelStats(id: UserID) async throws(RepositoryError) -> RegisteredNovelStats
 }

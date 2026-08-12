@@ -131,7 +131,7 @@ public struct DefaultFeedRepository: FeedRepository {
         }
     }
 
-    public func fetchUserFeeds(id: UserID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+    public func fetchUserFeeds(id: UserID, nickname: String, profileImage: URL?, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchUserFeeds
         let query = GetUserFeedsQuery(
             lastFeedId: lastFeedID.value,
@@ -143,15 +143,19 @@ public struct DefaultFeedRepository: FeedRepository {
         )
         do {
             let response = try await service.getUserFeeds(userID: id.value, query: query)
-            // 응답에 isMyFeed가 없어 여기서 판단한다 — 조회 대상이 로그인 사용자 자신이면 내 피드.
+            // "내 피드"는 fetchMyFeeds로 별도 조회하므로 여기서는 항상 타 유저 피드다.
             let result = try FeedMapper.userFeeds(
-                userID: id,
-                isMyFeed: storage.get(.userID) == id.value,
+                author: Author(userId: id, nickname: nickname, profileImage: profileImage),
+                isMyFeed: false,
                 from: response
             )
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
+            // 상대가 프로필을 비공개로 설정한 경우 — HTTP 상태 코드보다 서버 비즈니스 코드로 식별한다.
+            if case .responseFailure(_, let body) = error, body?.code == "USER-015" {
+                throw .privateProfile
+            }
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {
@@ -182,7 +186,11 @@ public struct DefaultFeedRepository: FeedRepository {
                 sortType: sortType,
                 lastFeedID: lastFeedID.value
             )
-            let result = try FeedMapper.userFeeds(userID: UserID(userID), isMyFeed: true, from: response)
+            let result = try FeedMapper.userFeeds(
+                author: Author(userId: UserID(userID), nickname: "", profileImage: nil),
+                isMyFeed: true,
+                from: response
+            )
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
