@@ -131,9 +131,9 @@ private extension MyPageEditViewModel {
         }
     }
 
-    /// 실제로 서버 확인이 필요한 상태(`needDuplicatedCheck`)일 때만 호출을 보낸다.
+    /// 실제로 서버 확인이 필요한 상태(`needDuplicatedCheck`)일 때만, 그리고 이미 확인 중이 아닐 때만 호출을 보낸다.
     func checkNicknameDuplication() {
-        guard state.draft.nickname.validationState == .needDuplicatedCheck else { return }
+        guard state.draft.nickname.validationState == .needDuplicatedCheck, !state.isCheckingNickname else { return }
         let text = state.draft.nickname.text
         Task { await validateNickname(text) }
     }

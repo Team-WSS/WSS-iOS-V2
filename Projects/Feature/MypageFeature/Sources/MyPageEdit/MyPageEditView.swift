@@ -17,7 +17,7 @@ import WSSComponent
 struct MyPageEditView: View {
 
     @State private var viewModel: MyPageEditViewModel
-    @State private var showCharacterEditSheet: Bool = false
+    @State private var characterEditContext: CharacterEditSheetContext?
 
     @FocusState private var isKeyboardFocused: Bool
 
@@ -61,10 +61,10 @@ struct MyPageEditView: View {
             .onAppear {
                 viewModel.handle(.load)
             }
-            .sheet(isPresented: $showCharacterEditSheet) {
+            .sheet(item: $characterEditContext) { context in
                 MypageFactory.makeCharacterEditSheet(
-                    selectedCharacterID: viewModel.state.draft.characterID,
-                    nickname: viewModel.state.draft.nickname.text,
+                    selectedCharacterID: context.characterID,
+                    nickname: context.nickname,
                     loadProfileCharacterUseCase: loadProfileCharacterUseCase,
                     onApply: { characterID in
                         viewModel.handle(.selectCharacter(characterID))
@@ -137,7 +137,10 @@ struct MyPageEditView: View {
             .frame(width: 94, height: 94)
             .overlay(alignment: .bottomTrailing) {
                 Button {
-                    showCharacterEditSheet.toggle()
+                    characterEditContext = CharacterEditSheetContext(
+                        characterID: viewModel.state.draft.characterID,
+                        nickname: viewModel.state.draft.nickname.text
+                    )
                 } label: {
                     WSSImage.icPlusMyPage.swiftUIImage
                         .resizable()
@@ -315,6 +318,8 @@ struct MyPageEditView: View {
     }
 }
 
+// MARK: - Sections
+
 extension MyPageEditView {
     private var divider: some View {
         Rectangle()
@@ -322,6 +327,8 @@ extension MyPageEditView {
             .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
     }
 }
+
+// MARK: - Toolbar
 
 extension MyPageEditView {
     @ToolbarContentBuilder
@@ -428,9 +435,16 @@ private extension MyPageEditView {
     }
 
     /// 중복확인 버튼은 "새 닉네임을 입력했고, 아직 에러 없이 확인이 필요한" 상태에서만 primary로 활성화된다.
+    /// 확인이 이미 진행 중이면(스피너 표시 중) 연타로 중복 호출되지 않도록 함께 비활성화한다.
     var isDuplicationCheckEnabled: Bool {
-        viewModel.state.draft.nickname.validationState == .needDuplicatedCheck
+        viewModel.state.draft.nickname.validationState == .needDuplicatedCheck && !viewModel.state.isCheckingNickname
     }
+}
+
+private struct CharacterEditSheetContext: Identifiable {
+    let id = UUID()
+    let characterID: Int
+    let nickname: String
 }
 
 #Preview {

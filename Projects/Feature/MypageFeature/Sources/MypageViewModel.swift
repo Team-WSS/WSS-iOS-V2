@@ -62,6 +62,13 @@ final class MypageViewModel {
         return hasNoNovelPreference || hasNoGenrePreferenceData
     }
 
+    /// 로딩 뷰로 화면을 덮어도 되는 순간 — **아직 보여줄 게 없을 때뿐**이다.
+    /// 마이페이지는 탭 복귀마다 다시 로드하므로, 이미 그린 콘텐츠까지 매번 걷어내면
+    /// 프로필 편집에서 저장하고 돌아올 때마다 화면이 통째로 깜빡인다.
+    var isInitialLoading: Bool {
+        state.isLoading && !hasLoadedContent
+    }
+
     // MARK: - Action
 
     enum Action {
@@ -75,6 +82,11 @@ final class MypageViewModel {
     // MARK: - Property
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+
+    /// 지금 화면에 그릴 콘텐츠가 서 있는지. `state`의 옵셔널 필드로 판단하지 않는다 — 갱신이 실패해도
+    /// 필드엔 직전 성공 데이터가 그대로 남아 있어, 그걸로 보면 실패 뷰에서 재시도할 때 로딩 대신
+    /// 옛 화면이 잠깐 되살아났다가 다시 실패 뷰로 튄다.
+    @ObservationIgnored private var hasLoadedContent = false
 
     // MARK: - Dependency
 
@@ -144,10 +156,19 @@ private extension MypageViewModel {
             async let novelPreference = loadNovelPreferencesUseCase.execute(.me)
             async let registeredNovelStats = loadRegisteredNovelStatsUseCase.execute()
 
-            state.profile = try await profile
-            state.genrePreferences = try await genrePreferences
-            state.novelPreference = try await novelPreference
-            state.registeredNovelStats = try await registeredNovelStats
+            let loadedProfile = try await profile
+            let loadedGenrePreferences = try await genrePreferences
+            let loadedNovelPreference = try await novelPreference
+            let loadedRegisteredNovelStats = try await registeredNovelStats
+
+            // 플래그를 state보다 먼저 올린다 — 관찰 대상이 아니라 갱신을 스스로 트리거하지 않으므로,
+            // 뷰를 깨우는 state 대입 시점에 이미 최신값이어야 한다.
+            hasLoadedContent = true
+
+            state.profile = loadedProfile
+            state.genrePreferences = loadedGenrePreferences
+            state.novelPreference = loadedNovelPreference
+            state.registeredNovelStats = loadedRegisteredNovelStats
         } catch {
             presentError(error)
         }
@@ -159,6 +180,9 @@ private extension MypageViewModel {
 private extension MypageViewModel {
     func presentError(_ error: Error) {
         logger?.error("Mypage 로드 실패: \(String(describing: error))")
+        // 실패 뷰가 화면을 덮으므로 "보이는 콘텐츠"는 없어진다 — 이걸 내려야 재시도 때 옛 화면이
+        // 되살아나지 않고 로딩부터 다시 시작한다.
+        hasLoadedContent = false
         state.hasLoadError = true
     }
 }

@@ -74,7 +74,7 @@ struct MypageView: View {
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
                 .overlay {
-                    if viewModel.state.isLoading {
+                    if viewModel.isInitialLoading {
                         LoadingView()
                     }
                 }
