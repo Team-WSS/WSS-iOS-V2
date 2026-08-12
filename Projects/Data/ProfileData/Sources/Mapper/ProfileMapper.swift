@@ -114,7 +114,7 @@ enum ProfileMapper {
 
     static func attractivePoint(from text: String) throws -> AttractivePoint {
         switch text {
-        case "worldView":       return .worldview
+        case "worldview":       return .worldview
         case "material":        return .material
         case "character":       return .character
         case "relationship":    return .relationship

@@ -23,7 +23,7 @@ public struct NicknameDraft {
     
     private let lastNickname: String
     private var duplicationCheckState: DuplicationCheckState = .notYet
-    private static let maxLength: Int = 10
+    public static let maxLength: Int = 10
     private static let nicknamePattern = "^[a-zA-Z0-9가-힣]{2,10}$"
  
     

@@ -11,11 +11,11 @@ import SwiftUI
 
 import MypageFeature
 import BaseDomain
-import ProfileDomain
 import NovelDomain
+import ProfileDomain
 import BaseData
-import ProfileData
 import NovelData
+import ProfileData
 import Logger
 import Networking
 import DesignSystem
@@ -47,9 +47,13 @@ private struct DemoRootView: View {
     }
 
     @State private var dataSource: DataSource = .mock
+    @State private var isCharacterSheetPresented = false
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
+    /// Mock 데이터 소스의 "서버" 역할 — 편집 화면에서 저장한 값을 마이페이지 조회가 그대로 돌려받도록
+    /// 인메모리로 들고 있는다. 없으면 Mock 모드에서 완료를 눌러도 항상 하드코딩된 초기값만 보인다.
+    private let demoProfileStore = DemoProfileStore()
 
     var body: some View {
         NavigationStack {
@@ -60,11 +64,67 @@ private struct DemoRootView: View {
                 .pickerStyle(.segmented)
                 .padding()
 
+                Button("캐릭터 선택 시트 열기") {
+                    isCharacterSheetPresented = true
+                }
+                .padding(.bottom, 12)
+
+                Text("프로필 편집은 아래 마이페이지의 연필 아이콘으로 진입")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 12)
+
                 mypageView
                     // 데이터 소스를 바꾸면 새 정체성(= 새 ViewModel)으로 깨끗하게 다시 로드한다.
                     .id(dataSource)
             }
+            .sheet(isPresented: $isCharacterSheetPresented) {
+                characterEditSheet
+            }
         }
+    }
+
+    @ViewBuilder
+    private var characterEditSheet: some View {
+        switch dataSource {
+        case .mock:
+            MypageFactory.makeCharacterEditSheet(
+                selectedCharacterID: 3,
+                nickname: "구리구리스",
+                loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
+                onApply: { characterID in
+                    consoleLogger.info("선택된 캐릭터 ID: \(characterID)")
+                    demoProfileStore.characterID = characterID
+                },
+                logger: consoleLogger
+            )
+        case .live:
+            makeLiveCharacterEditSheet()
+        }
+    }
+
+    @MainActor
+    private func makeLiveCharacterEditSheet() -> some View {
+        let client = NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DemoSessionTokenStore()
+        )
+        let localStorage = UserDefaultsStorage()
+        localStorage.set(.userID, 10045)
+        let profileRepository = ProfileDataFactory.makeProfileRepository(
+            client: client,
+            localStorage: localStorage,
+            logger: DataLogger(moduleName: "ProfileData", underlying: consoleLogger)
+        )
+        return MypageFactory.makeCharacterEditSheet(
+            selectedCharacterID: 3,
+            nickname: "구리구리스",
+            loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
+            onApply: { characterID in
+                consoleLogger.info("선택된 캐릭터 ID: \(characterID)")
+            },
+            logger: consoleLogger
+        )
     }
 
     @ViewBuilder
@@ -72,10 +132,14 @@ private struct DemoRootView: View {
         switch dataSource {
         case .mock:
             MypageFactory.makeView(
-                loadProfileUseCase: DemoLoadProfileUseCase(),
+                loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
+                loadInitialProfileUseCase: DemoLoadInitialProfileUseCase(store: demoProfileStore),
+                loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
+                validateNicknameUseCase: DemoValidateNicknameUseCase(),
+                updateProfileUseCase: DemoUpdateProfileUseCase(store: demoProfileStore),
                 logger: consoleLogger
             )
         case .live:
@@ -95,7 +159,7 @@ private struct DemoRootView: View {
         )
         
         let localStorage = UserDefaultsStorage()
-        localStorage.set(.userID, 10043)
+        localStorage.set(.userID, 10045)
         
         let profileRepository = ProfileDataFactory.makeProfileRepository(
             client: client,
@@ -122,7 +186,36 @@ private struct DemoRootView: View {
                 keywordRepository: keywordRepository
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: profileRepository),
+            loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
+            validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: profileRepository),
+            updateProfileUseCase: DefaultUpdateProfileUseCase(profileRepository: profileRepository),
             logger: consoleLogger
+        )
+    }
+}
+
+// MARK: - Demo In-Memory "서버" (Mock)
+
+/// Mock 데이터 소스의 상태를 화면 간에 공유하는 인메모리 저장소.
+/// 이게 없으면 편집 화면에서 완료를 눌러도 마이페이지 조회 Mock은 항상 하드코딩된 초기값만 돌려준다.
+private final class DemoProfileStore {
+    var characterID = 1
+    var nickname = "구리구리스"
+    var introduction = "백덕수 작가입니다. 반갑습니다."
+    var genrePreferences: [GenrePreference] = [
+        GenrePreference(genre: .romance, count: 2),
+        GenrePreference(genre: .BL, count: 1003)
+    ]
+
+    static let characters: [ProfileCharacter] = (1...20).map { index in
+        ProfileCharacter(
+            id: index,
+            name: "팬텀 \(index)",
+            line: "만나서 반가워요, %s",
+            representativeImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
+            thumbnailImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
+            isRepresentative: index == 1
         )
     }
 }
@@ -131,15 +224,57 @@ private struct DemoRootView: View {
 // 인메모리 Mock으로 흐름만 시연한다(서버 불필요).
 
 private struct DemoLoadProfileUseCase: LoadProfileUseCase {
+    let store: DemoProfileStore
+
     func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         try? await Task.sleep(nanoseconds: 500_000_000)
         return Profile(
-            nickname: "구리구리스",
-            introduction: "백덕수 작가입니다. 반갑습니다.백덕수 작가입니다. 반갑습니다.",
-            characterImage: URL(string: "https://i.pinimg.com/736x/d7/18/03/d71803d12d1a305bd0626733ddbacd92.jpg"),
+            nickname: store.nickname,
+            introduction: store.introduction,
+            characterImage: DemoProfileStore.characters.first { $0.id == store.characterID }?.representativeImage,
             isPublic: true,
             genrePreferences: []
         )
+    }
+}
+
+private struct DemoLoadProfileCharacterUseCase: LoadProfileCharacterUseCase {
+    func execute() async throws(RepositoryError) -> [ProfileCharacter] {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return DemoProfileStore.characters
+    }
+}
+
+private struct DemoLoadInitialProfileUseCase: LoadInitialProfileUseCase {
+    let store: DemoProfileStore
+
+    func execute() async throws(RepositoryError) -> ProfileDraft {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return ProfileDraft(
+            characterID: store.characterID,
+            nickname: store.nickname,
+            introduction: store.introduction,
+            genrePreferences: store.genrePreferences
+        )
+    }
+}
+
+private struct DemoValidateNicknameUseCase: ValidateNicknameUseCase {
+    func execute(_ nickname: String) async throws(RepositoryError) -> Bool {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return nickname != "중복닉네임"
+    }
+}
+
+private struct DemoUpdateProfileUseCase: UpdateProfileUseCase {
+    let store: DemoProfileStore
+
+    func execute(_ draft: ProfileDraft) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        store.characterID = draft.characterID
+        store.nickname = draft.nickname.text
+        store.introduction = draft.introduction
+        store.genrePreferences = draft.genrePreferences
     }
 }
 

@@ -23,6 +23,10 @@ public enum MypageFactory {
         loadGenrePreferencesUseCase: LoadGenrePreferencesUseCase,
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        loadInitialProfileUseCase: LoadInitialProfileUseCase,
+        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
+        validateNicknameUseCase: ValidateNicknameUseCase,
+        updateProfileUseCase: UpdateProfileUseCase,
         logger: Logger? = nil
     ) -> some View {
         let viewModel = MypageViewModel(
@@ -32,6 +36,53 @@ public enum MypageFactory {
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger
         )
-        return MypageView(viewModel: viewModel)
+        return MypageView(
+            viewModel: viewModel,
+            loadInitialProfileUseCase: loadInitialProfileUseCase,
+            loadProfileCharacterUseCase: loadProfileCharacterUseCase,
+            validateNicknameUseCase: validateNicknameUseCase,
+            updateProfileUseCase: updateProfileUseCase,
+            logger: logger
+        )
+    }
+
+    @MainActor
+    public static func makeCharacterEditSheet(
+        selectedCharacterID: Int?,
+        nickname: String,
+        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
+        onApply: @escaping (Int) -> Void,
+        logger: Logger? = nil
+    ) -> some View {
+        let viewModel = MypageCharacterEditSheetViewModel(
+            selectedCharacterID: selectedCharacterID,
+            loadProfileCharacterUseCase: loadProfileCharacterUseCase,
+            logger: logger
+        )
+        return MypageCharacterEditSheet(viewModel: viewModel, nickname: nickname, onApply: onApply)
+    }
+
+    @MainActor
+    public static func makeEditView(
+        loadInitialProfileUseCase: LoadInitialProfileUseCase,
+        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
+        validateNicknameUseCase: ValidateNicknameUseCase,
+        updateProfileUseCase: UpdateProfileUseCase,
+        onSaved: @escaping () -> Void,
+        logger: Logger? = nil
+    ) -> some View {
+        let viewModel = MyPageEditViewModel(
+            loadInitialProfileUseCase: loadInitialProfileUseCase,
+            loadProfileCharacterUseCase: loadProfileCharacterUseCase,
+            validateNicknameUseCase: validateNicknameUseCase,
+            updateProfileUseCase: updateProfileUseCase,
+            logger: logger
+        )
+        return MyPageEditView(
+            viewModel: viewModel,
+            loadProfileCharacterUseCase: loadProfileCharacterUseCase,
+            logger: logger,
+            onSaved: onSaved
+        )
     }
 }

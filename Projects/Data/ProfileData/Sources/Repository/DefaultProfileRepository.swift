@@ -317,13 +317,19 @@ public struct DefaultProfileRepository: ProfileRepository {
         localStorage.set(.nickname, profile.nickname.text)
         localStorage.set(.characterID, profile.characterID)
 
-        guard profile.isIntroductionChanged || profile.isGenrePreferencesChanged else { return }
+        guard profile.isNicknameChanged
+                || profile.isIntroductionChanged
+                || profile.isCharacterChanged
+                || profile.isGenrePreferencesChanged
+        else { return }
 
         do {
+            // PATCH라 바뀐 필드만 값을 보내고 나머지는 nil로 둔다(서버가 nil을 "변경 없음"으로 해석).
+            // genrePreferences만 예외 — 서버가 null을 허용하지 않아, 바뀌지 않았어도 현재 전체 목록을 그대로 보낸다.
             let request = UpdateProfileRequest(
-                avatarId: profile.characterID,
-                nickname: profile.nickname.text,
-                intro: profile.introduction,
+                avatarId: profile.isCharacterChanged ? profile.characterID : nil,
+                nickname: profile.isNicknameChanged ? profile.nickname.text : nil,
+                intro: profile.isIntroductionChanged ? profile.introduction : nil,
                 genrePreferences: profile.genrePreferences.map { ProfileMapper.novelGenreRawValue(from: $0.genre) }
             )
             try await service.putProfile(request)
