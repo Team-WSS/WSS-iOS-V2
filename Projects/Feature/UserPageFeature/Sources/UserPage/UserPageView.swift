@@ -404,15 +404,17 @@ struct UserPageView: View {
         Group {
             if viewModel.state.feeds.isEmpty {
                 if viewModel.state.isLoadingFeeds {
-                    ProgressView()
+                    LoadingView()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 90)
+                } else if viewModel.state.feedsLoadFailed {
+                    NetworkErrorView {
+                        viewModel.handle(.loadFeeds)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 90)
                 } else {
-                    Text(viewModel.state.feedsLoadFailed ? "피드를 불러오지 못했어요" : "아직 활동이 없어요")
-                        .applyWSSFont(.body2)
-                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 90)
+                    emptyFeedsView
                 }
             } else {
                 VStack(spacing: 0) {
@@ -451,11 +453,28 @@ struct UserPageView: View {
                                 }
                         }
                         .padding(.horizontal, 20)
+                        Spacer().frame(height: 20)
                     }
                 }
             }
         }
         .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    /// "활동" 탭 미리보기가 0개(로드 성공, 실패 아님)일 때 — `privateProfileView`와 같은 톤(이미지+안내문).
+    private var emptyFeedsView: some View {
+        VStack(spacing: 20) {
+            WSSImage.imgEmptyCatEyes.swiftUIImage
+                .resizable()
+                .scaledToFit()
+                .frame(width: 166, height: 160)
+
+            Text("작성한 글이 없어요")
+                .applyWSSFont(.body2)
+                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 
     /// 도메인 `TotalFeed` → 공용 피드 셀 입력값 매핑(`NovelDetailFeedTab`과 동일 매핑).
