@@ -19,6 +19,13 @@ struct MyPageEditView: View {
     @State private var viewModel: MyPageEditViewModel
     @State private var characterEditContext: CharacterEditSheetContext?
 
+    /// 닉네임/소개 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 상태를 거친다 — VM에 물리면
+    /// clamp 후 `get`이 SwiftUI가 방금 그 필드에 써준 값과 같아져 "변화 없음"으로 판단되고,
+    /// 네이티브 텍스트필드는 사용자가 입력한 초과분을 그대로 들고 있게 된다(글자수 제한이 시각적으로
+    /// 안 먹힘). 로컬 상태 → clamp 후 재대입(진짜 변경으로 인식돼 강제 되돌림) → VM 전달의 2단계로 처리.
+    @State private var nicknameFieldText: String = ""
+    @State private var introductionFieldText: String = ""
+
     @FocusState private var isKeyboardFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -160,13 +167,25 @@ struct MyPageEditView: View {
 
             HStack(spacing: 7) {
                 HStack(spacing: 0) {
-                    TextField("", text: nicknameTextBinding)
+                    TextField("", text: $nicknameFieldText)
                         .padding(.vertical, 10.5)
                         .padding(.leading, 12)
                         .applyWSSFont(.body2)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         .tint(WSSColor.wssBlack.swiftUIColor)
                         .focused($isKeyboardFocused)
+                        .onChange(of: nicknameFieldText) { _, newValue in
+                            let clamped = String(newValue.prefix(NicknameDraft.maxLength))
+                            if clamped != newValue {
+                                nicknameFieldText = clamped
+                                return
+                            }
+                            viewModel.handle(.updateNickname(clamped))
+                        }
+                        .onChange(of: viewModel.state.draft.nickname.text) { _, newValue in
+                            guard nicknameFieldText != newValue else { return }
+                            nicknameFieldText = newValue
+                        }
 
                     if !viewModel.state.draft.nickname.text.isEmpty {
                         Button(action: { viewModel.handle(.updateNickname("")) }) {
@@ -251,11 +270,23 @@ struct MyPageEditView: View {
                         }
                     }
 
-                    TextField("", text: introductionTextBinding, axis: .vertical)
+                    TextField("", text: $introductionFieldText, axis: .vertical)
                         .applyWSSFont(.body2)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         .tint(WSSColor.wssBlack.swiftUIColor)
                         .focused($isKeyboardFocused)
+                        .onChange(of: introductionFieldText) { _, newValue in
+                            let clamped = String(newValue.prefix(ProfileDraft.maxIntroductionLength))
+                            if clamped != newValue {
+                                introductionFieldText = clamped
+                                return
+                            }
+                            viewModel.handle(.updateIntroduction(clamped))
+                        }
+                        .onChange(of: viewModel.state.draft.introduction) { _, newValue in
+                            guard introductionFieldText != newValue else { return }
+                            introductionFieldText = newValue
+                        }
                 }
                 Spacer()
             }
@@ -375,20 +406,6 @@ extension MyPageEditView {
 // MARK: - Presentation
 
 private extension MyPageEditView {
-    var nicknameTextBinding: Binding<String> {
-        Binding(
-            get: { viewModel.state.draft.nickname.text },
-            set: { viewModel.handle(.updateNickname($0)) }
-        )
-    }
-
-    var introductionTextBinding: Binding<String> {
-        Binding(
-            get: { viewModel.state.draft.introduction },
-            set: { viewModel.handle(.updateIntroduction($0)) }
-        )
-    }
-
     var toastBinding: Binding<Bool> {
         Binding(
             get: { viewModel.state.presentedError },
