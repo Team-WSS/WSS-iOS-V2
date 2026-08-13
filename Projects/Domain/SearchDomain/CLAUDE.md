@@ -16,3 +16,5 @@
 
 - `RecentSearchWord.id`는 서버 발급 `SearchWordID`(`IDWrapper<Int>`, `BaseDomain.WSSIdentifiers`에 등록됨) — 클라이언트가 임의로 생성하지 않는다.
 - 구현체는 `SearchData`의 `DefaultSearchRepository` 하나가 `RecentSearchRepository`/`SearchAutoCompletionRepository`/`SearchNovelRepository` **세 프로토콜 전부**를 구현한다(`SearchDataFactory.makeRepository`가 세 타입의 교집합을 반환). 실서버 확인 완료 — 세부 응답 형태는 `SearchData/CLAUDE.md` 참고.
+- **`NovelPlatform`/`NovelRatingRange`(#185)는 이 모듈 전용 신규 타입**이다. `NovelPlatform`은 `NovelDomain.NovelPlatform`(name+image+url, 작품 상세용)과 동명이지만 별개 — 이쪽은 상세탐색 필터 선택지로 쓸 고정 5종 enum이다. `NovelRatingRange`도 `BaseDomain.NovelRatingThreshold`(단일 최소값 4단계)를 대체하지 않는 별도 개념(`SearchFilter`가 둘 다 갖는다) — 한쪽을 보고 다른 쪽을 지우지 말 것.
+- **상세탐색 필터 화면(정보 탭)의 장르 그리드 순서는 `WSSComponent.NovelGenre.myFeedFilter`와 동일**(`searchGenre`가 아니다) — Figma 실측으로 확인됐다. 새 순서 목록을 만들지 말고 재사용할 것.
