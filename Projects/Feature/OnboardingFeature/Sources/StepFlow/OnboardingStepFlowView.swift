@@ -37,12 +37,22 @@ import Logger
 ///
 /// **콘텐츠 전환은 `switch`로 갈아치우지 않고 슬라이드 애니메이션으로 한다** — 세 단계를 `HStack`에
 /// 나란히 두고 `offset`을 단계 수만큼 밀어 보여주는 방식(자세한 이유는 `slidingStepContent` 참고).
+///
+/// **장르 선택(3단계) 등록이 성공하면 진행바·헤더가 있는 위 구조 전체를 "계약 완료" 화면
+/// (`OnboardingCompleteView`, #178)으로 교체한다** — 그 화면은 진행바·뒤로가기가 없는 완전히 다른
+/// 레이아웃이라 슬라이드 단계에 4번째 슬롯으로 끼워 넣지 않고 `isRegistrationCompleted` 플래그로
+/// `body` 최상위를 통째로 분기한다. 이 화면의 CTA를 눌러야 비로소 컨테이너의 진짜 `onCompleted`
+/// (Home 진입은 App 책임)가 발화한다 — `GenreSelectionView`의 등록 성공은 더 이상 `onCompleted`를
+/// 곧장 호출하지 않는다.
 struct OnboardingStepFlowView: View {
 
     @State private var viewModel = OnboardingStepFlowViewModel()
     @State private var nicknameViewModel: NicknameViewModel
     @State private var genderBirthYearViewModel = GenderBirthYearViewModel()
     @State private var genreSelectionViewModel: GenreSelectionViewModel?
+    /// 장르 선택(마지막 단계)의 프로필 등록이 성공하면 세운다 — 진행바·뒤로가기가 없는 "계약 완료"
+    /// 화면(`OnboardingCompleteView`, #178)으로 컨테이너 콘텐츠 전체를 교체하는 순수 표시 플래그.
+    @State private var isRegistrationCompleted = false
 
     private let registerProfileUseCase: RegisterProfileUseCase
     private let logger: Logger?
@@ -67,11 +77,17 @@ struct OnboardingStepFlowView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerRow
-            OnboardingStepProgressBar(currentStep: viewModel.state.currentStep.rawValue)
+        Group {
+            if isRegistrationCompleted {
+                OnboardingCompleteView(nickname: viewModel.state.nickname, onStart: onCompleted)
+            } else {
+                VStack(spacing: 0) {
+                    headerRow
+                    OnboardingStepProgressBar(currentStep: viewModel.state.currentStep.rawValue)
 
-            slidingStepContent
+                    slidingStepContent
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.wssWhite)
@@ -166,13 +182,17 @@ private extension OnboardingStepFlowView {
     /// 성별/출생년도가 아직 확정 전이면(장르 선택 슬롯에 아직 못 들어가 있는 동안) 빈 자리만 차지한다 —
     /// 어차피 `offset`상 그 자리까지 밀려야 보이는데, 그 시점엔 이미 `genreSelectionViewModel`이
     /// 존재한다(`handleGenderBirthYearConfirmed`가 단계 전환과 같은 탭 핸들러에서 함께 만들기 때문).
+    ///
+    /// 등록 성공(`onCompleted` 원래 콜백) 시 곧장 호출자에게 넘기지 않고 `isRegistrationCompleted`부터
+    /// 세운다 — "계약 완료" 화면(`OnboardingCompleteView`)을 먼저 보여주고, 그 화면의 "웹소소 시작하기"
+    /// 버튼이 눌렸을 때 비로소 진짜 `onCompleted`(Home 진입은 App 책임)를 발화한다.
     @ViewBuilder
     var genreSelectionSlot: some View {
         if let genreSelectionViewModel {
             GenreSelectionView(
                 viewModel: genreSelectionViewModel,
                 onAuthenticationRequired: onAuthenticationRequired,
-                onCompleted: onCompleted
+                onCompleted: { isRegistrationCompleted = true }
             )
         } else {
             Color.clear

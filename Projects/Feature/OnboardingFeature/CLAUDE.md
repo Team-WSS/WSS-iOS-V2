@@ -1,7 +1,7 @@
 <!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
 # OnboardingFeature
 
-앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → (닉네임 → 성별/출생년도 → 장르 선택, 한 컨테이너)**. **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 4단계(약관 동의·닉네임·성별출생년도·장르선택)** 전부를 다룬다. 구성요소는 `Sources/`를 직접 보면 된다.
+앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → (닉네임 → 성별/출생년도 → 장르 선택 → 계약 완료, 한 컨테이너)**. **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 5단계(약관 동의·닉네임·성별출생년도·장르선택·계약 완료)** 전부를 다룬다. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임·성별/출생년도·장르 선택 — 전용 `OnboardingDomain`은 없다).
 - 진입점(전부 `OnboardingFactory`):
@@ -19,6 +19,7 @@
 - **콘텐츠 전환은 `switch`로 갈아치우지 않고 슬라이드 애니메이션**이다 — 세 단계 View를 `HStack`에 나란히 두고(`GeometryReader`로 각각 화면 폭만큼) `offset(x: -CGFloat(currentStep-1) * width)` + `.animation`으로 민다. `.clipped()` 필수(안 그러면 화면 밖 콘텐츠가 레이아웃상 계속 존재).
 - **뒤로가기는 `NavigationStack` pop이 아니라 컨테이너 내부 `currentStep`을 되돌리는 것**이다(`.enableSwipeBack()`은 의도적으로 안 걺 — 전체 이탈과 헷갈리면 안 됨). 그래서 닉네임/성별·출생년도 ViewModel은 **컨테이너가 소유·재사용**한다(단계 전환마다 재생성 ❌) — 슬라이드 HStack에 세 단계가 항상 동시에 살아있어, 뒤로 갔다 와도 입력값(닉네임 텍스트, 중복확인 상태, 성별/출생년도 선택)이 그대로 보존된다(실측 확인).
 - **장르 선택 ViewModel만 예외** — `nickname`/`gender`/`birthYear`가 앞 두 단계 완료 전엔 없어 미리 못 만든다. 성별/출생년도 확정 핸들러 안에서 단계 전환과 같이 만든다(그래서 `currentStep == .genreSelection`인데 VM이 nil인 프레임이 안 생김). 뒤로 갔다 재확정하면 다시 만들어져 이전 장르 선택은 초기화된다(허용된 트레이드오프) — 반대로 닉네임/성별·출생년도는 재확정 없이 그냥 되돌아가므로 초기화 안 됨.
+- **등록 성공(장르 선택의 "완료"/"건너뛰기" 둘 다) 시 컨테이너는 `onCompleted`를 곧장 호출하지 않는다** — `isRegistrationCompleted` 플래그를 세워 `body` 최상위를 "계약 완료" 화면(`OnboardingCompleteView`, Figma 노드 `28689-82739`, #178)으로 통째로 교체하고, 그 화면의 CTA를 눌러야 비로소 컨테이너의 진짜 `onCompleted`가 발화한다. `GenreSelectionViewModel`은 `.complete`/`.skip` 둘 다 성공 시 같은 `state.isCompleted`를 세워 `GenreSelectionView`가 구분 없이 같은 콜백을 호출하므로, 컨테이너 쪽도 별도 분기 없이 하나의 콜백 재배선만으로 두 경로 다 처리된다. 이 화면은 진행바·뒤로가기가 없어(Figma에도 없음) 슬라이드 단계(`slidingStepContent`)의 4번째 슬롯으로 넣지 않았다 — UseCase도 VM도 없는 순수 표시 화면(닉네임 문자열 + 콜백만).
 
 ### 가입약관 동의 시트 (`TermsAgreementView`, #178)
 
