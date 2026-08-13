@@ -28,7 +28,22 @@ HTTP 클라이언트 + 요청/응답 추상화. Data 레이어가 이걸로 통�
 
 → 1·2번째 줄이 중복 재발급이 세션을 끊는 **직접 원인**이다.
 → 5번째 줄 때문에 아래 2층은 정확성이 아니라 **최적화**(불필요한 왕복·회전 제거)다.
-→ ⚠️ 위는 전부 **dev 서버** 측정값이다. prod 정책이 같은지는 확인되지 않았다.
+→ 위 수치는 **dev 서버** 실측이고, **prod도 같은 정책**임을 확인받았다(2026-08-13). prod에서 직접 재본 건 아니다.
+
+### 실앱 경로 검증 (#184에서 1회 수행, 재현 레시피)
+
+목이 아니라 **실물 전 계층**(키체인 `DefaultTokenStore` → `AuthSessionRefresher` → `SessionRefreshCoordinator` → 실서버)으로
+"동시 401 4건 → 재발급 1회"를 확인했다. 결과: 재발급 1회, 4건 전부 200, `AUTH-001` 0건, 로그인 라우팅 0회.
+
+의심될 때 **다시 만드는 방법** — 이 시나리오는 유효한 refresh token을 소스에 박아야 해서 레포에 남길 수 없다:
+1. `HomeFeature/Project.swift`의 `demoDependencies`에 `.module(.data(.auth))` 추가
+2. Demo에 시나리오 하나 추가 — `DefaultTokenStore()`에 **만료된 access token + 유효한 refresh token**을 심고,
+   `AuthDataFactory.makeSessionRefresher(client:)`에는 **refresher 없는 client**를 주입(무한 재귀 방지)
+3. `xcrun simctl launch --console-pty`로 콘솔을 잡아 `POST /reissue` 횟수를 센다
+   (`ConsoleLogger`가 `print`라 stdout으로 나온다. macOS엔 `timeout`이 없으니 `perl -e 'alarm N; exec @ARGV'`)
+
+⚠️ **홈이어야 하는 이유**: 앱에서 동시 요청이 나가는 화면이라야 재현된다. 순차 호출 화면에서는 첫 요청이 갱신을
+끝낸 뒤 다음 요청이 새 토큰을 읽어 **401 자체가 한 번만 난다.**
 
 ## 401 재인증 흐름
 
