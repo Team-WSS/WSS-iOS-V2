@@ -357,9 +357,13 @@ private extension DetailSearchFilterView {
     }
 
     /// 안내 아이콘 — 탭하면 베타 기능 툴팁이 뜨고(다시 탭하면 닫힘), 상시 노출 배지가 아니다(사용자 확정).
+    /// 트리거 아이콘 쪽(`.leading`)을 기준점 삼아 그 자리에서 살짝 커지며 나타나고 줄어들며 사라지도록
+    /// `scale`+`opacity`를 함께 건다 — 툴팁 없이 `if`만 쓰면 트랜지션이 없어 즉시 나타났다 사라진다.
     var platformBetaInfoButton: some View {
         Button {
-            isPlatformBetaTooltipPresented.toggle()
+            withAnimation(.easeOut(duration: 0.15)) {
+                isPlatformBetaTooltipPresented.toggle()
+            }
         } label: {
             WSSImage.icToolTip.swiftUIImage
                 .resizable()
@@ -372,6 +376,7 @@ private extension DetailSearchFilterView {
                 platformBetaTooltip
                     .fixedSize()
                     .offset(x: 18)
+                    .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
             }
         }
     }
