@@ -36,7 +36,8 @@ final class DetailSearchFilterViewModel {
         case togglePublicationStatus(NovelPublicationStatus)
         case changeRatingRange(min: Float, max: Float)
         case setKeywords([Keyword])
-        case clearAll
+        case clearInfoFilters
+        case clearKeywords
     }
 
     // MARK: - Output
@@ -69,8 +70,10 @@ final class DetailSearchFilterViewModel {
             changeRatingRange(min: min, max: max)
         case .setKeywords(let keywords):
             state.filter.setKeywords(keywords)
-        case .clearAll:
-            clearAll()
+        case .clearInfoFilters:
+            clearInfoFilters()
+        case .clearKeywords:
+            state.filter.clearKeywords()
         }
     }
 }
@@ -109,10 +112,10 @@ private extension DetailSearchFilterViewModel {
         state.filter.setRatingRange(min: min, max: max)
     }
 
-    /// "초기화" — 정보 탭 4종(장르·플랫폼·연재상태·별점) + 키워드 탭(외부 콘텐츠에서 반영된 선택)까지 전체
-    /// 리셋. `SearchFilter`는 `MyLibraryFilter`와 달리 "시트 밖" 상태 구분이 없어 `clearAll()`이 전체를 초기화한다.
-    func clearAll() {
-        state.filter.clearAll()
+    /// "초기화"(정보 탭) — 이 탭이 소유한 4종(장르·플랫폼·연재상태·별점 범위)만 리셋한다. 키워드 탭은
+    /// 보고 있는 탭만 각자 초기화되도록 `.clearKeywords`로 독립적으로 처리한다(사용자 확정, #185).
+    func clearInfoFilters() {
+        state.filter.clearInfoFilters()
         state.ratingMin = NovelRatingRange.bounds.lowerBound
         state.ratingMax = NovelRatingRange.bounds.upperBound
     }

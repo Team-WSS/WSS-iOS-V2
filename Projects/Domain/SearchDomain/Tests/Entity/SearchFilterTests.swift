@@ -246,6 +246,36 @@ struct SearchFilterTests {
         #expect(filter.keywords == Array(overLimitKeywords.prefix(20)))
     }
 
+    @Test("키워드만 초기화할 수 있다")
+    func clearKeywords() throws {
+        var filter = makeFilter()
+        try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
+
+        filter.clearKeywords()
+
+        #expect(filter.keywords.isEmpty)
+    }
+
+    // MARK: - Clear (탭별)
+
+    @Test("정보 탭 필터(장르·플랫폼·연재상태·별점범위)만 초기화하고 키워드·별점기준은 남는다")
+    func clearInfoFilters() throws {
+        var filter = makeFilter(genres: [.fantasy, .romance], platforms: [.kakaoPage])
+        filter.setPublicationStatus(.completed)
+        filter.setRatingThreshold(.over4_0)
+        filter.setRatingRange(min: 3.5, max: 4.0)
+        try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
+
+        filter.clearInfoFilters()
+
+        #expect(filter.genres.isEmpty)
+        #expect(filter.platforms.isEmpty)
+        #expect(filter.publicationStatus == nil)
+        #expect(filter.ratingRange == nil)
+        #expect(filter.ratingThreshold == .over4_0)
+        #expect(filter.keywords.count == 1)
+    }
+
     // MARK: - Clear All
 
     @Test("전체 필터를 초기화할 수 있다")

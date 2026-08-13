@@ -16,7 +16,8 @@ import WSSComponent
 /// 상세탐색 필터 화면 — "정보"/"키워드" 두 탭이 같은 화면 안에서 콘텐츠만 바뀌는 탭바다.
 /// `DetailSearchResultView`의 필터 요약 pill에서 push되고, "작품 찾기" 확정 시 `onSearch`로 편집한 필터를
 /// 부모에 올리고 스스로 pop한다(`LibraryFilterSheet`의 `onApply` 패턴과 동일하되, 시트가 아니라 push라
-/// dismiss로 되돌아간다). 하단 초기화/작품 찾기 CTA는 **두 탭 공용**이라 탭 전환과 무관하게 항상 보인다.
+/// dismiss로 되돌아간다). 하단 초기화/작품 찾기 CTA는 **버튼 자체는 두 탭 공용**이라 탭 전환과 무관하게 항상
+/// 보이지만, "초기화"가 지우는 대상은 **현재 보고 있는 탭의 데이터만**이다(사용자 확정 — 탭별 독립 초기화).
 ///
 /// "키워드" 탭 콘텐츠는 `KeywordFeature`의 키워드 선택 화면을 재사용하지만, `SearchFeature`는 `KeywordFeature`를
 /// **모른다**(Feature 간 직접 의존 금지) — 그 콘텐츠는 `keywordTabContent`(`KeywordTabContentBuilder`)로
@@ -277,14 +278,19 @@ private extension DetailSearchFilterView {
         }
     }
 
-    /// 초기화(화면 필터 전체 리셋) + 작품 찾기(확정 → `onSearch` 콜백 → pop).
+    /// 초기화(**보고 있는 탭의 데이터만** 각자 리셋 — 사용자 확정) + 작품 찾기(확정 → `onSearch` 콜백 → pop).
     var ctaSection: some View {
         HStack(spacing: 0) {
             Button {
-                viewModel.handle(.clearAll)
-                // 키워드 탭 콘텐츠는 외부(KeywordFeature) 상태라 filter.keywords를 지운 것만으론 화면에
-                // 반영 안 된다 — 정체성을 바꿔 강제로 다시 시딩한다(위 keywordContentResetToken 주석 참고).
-                keywordContentResetToken = UUID()
+                switch selectedTab {
+                case .info:
+                    viewModel.handle(.clearInfoFilters)
+                case .keyword:
+                    viewModel.handle(.clearKeywords)
+                    // 키워드 탭 콘텐츠는 외부(KeywordFeature) 상태라 filter.keywords를 지운 것만으론 화면에
+                    // 반영 안 된다 — 정체성을 바꿔 강제로 다시 시딩한다(위 keywordContentResetToken 주석 참고).
+                    keywordContentResetToken = UUID()
+                }
             } label: {
                 HStack(spacing: 4) {
                     WSSImage.icReset.swiftUIImage
