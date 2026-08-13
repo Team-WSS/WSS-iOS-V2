@@ -116,7 +116,7 @@ struct SearchKeywordView: View {
         .onChange(of: viewModel.state.selectedKeywords) { _, newKeywords in
             onSelectionChanged?(newKeywords)
         }
-        .showWSSToast(isPresented: toastBinding, type: .unknownError)
+        .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
     private var bottomActionBar: some View {
@@ -301,6 +301,15 @@ private extension SearchKeywordView {
     var toastBinding: Binding<Bool> {
         Binding(get: { viewModel.state.presentedError != nil },
                 set: { if !$0 { viewModel.handle(.dismissError) } })
+    }
+
+    var toastType: WSSToastType {
+        switch viewModel.state.presentedError {
+        case .selectionOverLimit(let max):
+            .selectionOverLimit(count: max)
+        case .unknown, .none:
+            .unknownError
+        }
     }
 }
 
