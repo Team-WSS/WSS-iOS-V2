@@ -504,6 +504,74 @@ struct NetworkingClientTests {
         #expect(tokenStore.clearTokensCallCount == 0)
     }
 
+    @Test("refresh가 401로 거절되면 세션을 종료하고 토큰을 지운다")
+    func clearsTokensWhenRefreshIsRejectedWithUnauthorized() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(
+            behavior: .failure(NetworkingError.responseFailure(
+                code: 401,
+                body: ErrorResponse(code: "AUTH-001", message: "유효하지 않은 토큰입니다.")
+            ))
+        )
+        let tokenStore = MockTokenStore(accessToken: "access-token")
+        let client = makeClient(
+            tokenStore: tokenStore,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
+            Issue.record("requiresReauthentication expected")
+        } catch let error as NetworkingError {
+            guard case .requiresReauthentication = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(refresher.refreshCallCount == 1)
+        #expect(tokenStore.clearTokensCallCount == 1)
+    }
+
+    @Test("refresh가 404로 실패하면 세션 종료로 보지 않고 토큰을 보존한다")
+    func keepsTokensWhenRefreshFailsWithNonAuthStatus() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(
+            behavior: .failure(NetworkingError.responseFailure(code: 404, body: nil))
+        )
+        let tokenStore = MockTokenStore(accessToken: "access-token")
+        let client = makeClient(
+            tokenStore: tokenStore,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
+            Issue.record("responseFailure expected")
+        } catch let error as NetworkingError {
+            guard case .responseFailure(let code, _) = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
+
+            #expect(code == 404)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(tokenStore.clearTokensCallCount == 0)
+    }
+
     @Test("동시에 401을 받아도 토큰 재발급은 한 번만 실행된다")
     func refreshesOnlyOnceForConcurrentUnauthorizedResponses() async throws {
         MockURLProtocol.requestHandler = nil

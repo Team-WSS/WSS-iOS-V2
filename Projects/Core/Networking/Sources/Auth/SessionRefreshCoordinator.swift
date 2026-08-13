@@ -101,9 +101,11 @@ private extension SessionRefreshCoordinator {
 
 private extension NetworkingError {
 
-    /// 4xx = 서버가 이 세션을 거절 / 그 외 = 일시적 실패
+    /// 서버가 refresh token 자체를 거절한 경우(401)만 세션 종료로 본다.
+    /// 400·404 같은 요청·배포 문제나 통신 실패는 세션 상태를 알려주지 않으므로,
+    /// 토큰을 지우지 말고 에러를 그대로 전파해야 한다.
     var indicatesExpiredSession: Bool {
         guard case .responseFailure(let code, _) = self else { return false }
-        return (400..<500).contains(code)
+        return code == 401
     }
 }

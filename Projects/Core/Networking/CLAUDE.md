@@ -13,9 +13,26 @@ HTTP 클라이언트 + 요청/응답 추상화. Data 레이어가 이걸로 통�
 - `AuthSessionRefreshing.refreshSession() async throws -> Bool` — 401 재인증 훅 (구현체는 AuthData의 `AuthSessionRefresher`).
 - `SessionRefreshCoordinator`(actor) — 401 재인증을 직렬화한다. `NetworkingClient`가 refresher를 받으면 내부에서 생성해 소유한다.
 
+## 서버의 토큰 정책 (2026-08-13 dev 서버 실측)
+
+코드만 봐선 알 수 없고, 재인증 설계 전체가 여기 기댄다.
+
+| 사실 | 확인 방법 |
+|---|---|
+| **refresh token은 1회용** — 이미 쓴 것으로 재발급하면 `401 AUTH-001` | 같은 refresh token으로 `POST /reissue` 두 번 |
+| ⚠️ **무효화가 원자적이지 않다** — 완전 동시(같은 배치)로 5건을 쏘면 **전부 200**이지만, **0.1초만 벌어져도 뒤엣것은 401**이다 | 간격 0.1s / 0.5s / 2s 로 2건씩 |
+| **재발급된 refresh token끼리는 서로 독립적으로 유효**하다 (family 일괄 폐기 없음) | 동시 발급된 5개를 각각 사용 → 전부 200 |
+| 재발급은 **access token 만료 여부와 무관** — refresh만 유효하면 새로 발급 | 만료 전 토큰으로 `POST /reissue` → 200 |
+| **이전 access token은 무효화되지 않는다** — 자체 `exp`까지 그대로 유효 | 재발급 후 옛 access token으로 API 호출 → 200 |
+| 수명: access **30분**, refresh **14일** | JWT `iat`/`exp` |
+
+→ 1·2번째 줄이 중복 재발급이 세션을 끊는 **직접 원인**이다.
+→ 5번째 줄 때문에 아래 2층은 정확성이 아니라 **최적화**(불필요한 왕복·회전 제거)다.
+→ ⚠️ 위는 전부 **dev 서버** 측정값이다. prod 정책이 같은지는 확인되지 않았다.
+
 ## 401 재인증 흐름
 
-서버가 refresh token을 **회전**시키므로 재발급이 동시에 두 번 나가면 나중 것이 폐기된 토큰을 써서 세션 전체가 끊긴다. 이를 세 겹으로 막는다.
+refresh token이 1회용이라, 재발급이 동시에 두 번 나가면 나중 것이 반드시 실패하고 세션이 끊긴다. 이를 세 겹으로 막는다.
 
 1. **coalescing** — 진행 중인 재발급 Task를 공유한다(동시 401 N건 → 재발급 1회).
 2. **토큰 세대 비교** — 요청이 쓴 access token이 저장소의 것과 다르면 이미 남이 갱신한 것이므로 **재발급 없이** 새 토큰으로 재시도한다. coalescing만으로는 "갱신 직후 도착한 401"을 못 잡는다.
