@@ -14,7 +14,9 @@
 ## 핵심 시나리오
 
 - **로드**: `onAppear`마다 `.load` → `LoadHomeDataUseCase`(추천 3종)와 `LoadUnreadNotificationStatusUseCase`
-  (알림 배지)를 **한 흐름**으로 부른다. 하나라도 실패하면 홈 전체가 실패다.
+  (알림 배지)를 **`async let`으로 동시에** 부른다. 하나라도 실패하면 홈 전체가 실패다.
+  추천 3종도 UseCase 안에서 동시 호출이라, 홈 진입 시 **총 4건이 한꺼번에 나간다**(순차로 펴지 말 것 →
+  [RecommendationDomain](../../Domain/RecommendationDomain/CLAUDE.md)에 퇴행 이력과 컴파일 함정이 있다).
 - **섹션 4개**: 검색바·상세검색 배너 / 오늘의 발견(가로 캐러셀) / {닉네임}님을 위한 추천글(2개씩 3페이지) /
   이 웹소설은 어때요?(2열 그리드, 선호장르 미설정이면 설정 유도 CTA).
 - 선택 결과는 전부 콜백으로 상위에 위임한다 — 이 화면은 스스로 화면을 전환하지 않는다.
@@ -58,6 +60,9 @@
 
 - 홈 Domain을 찾을 때 `HomeDomain`을 만들지 말 것 — 정본은 `RecommendationDomain/Sources/`다
   (`LibraryFeature`↔`NovelDomain`과 같은 형태의 이름 불일치).
+- **홈은 앱에서 손꼽히는 "동시 요청 4건" 지점**이다 → access token이 만료된 채 진입하면 **401도 4건이 동시에**
+  난다. 이걸 안전하게 만드는 건 `Networking`의 재발급 직렬화(`SessionRefreshCoordinator`)다 — 그게 없으면
+  재발급이 4번 나가 refresh token 회전 때문에 3건이 실패하고 로그아웃된다(#184).
 - ⚠️ **`.load`에 "최초 1회" 가드를 넣지 말 것** — 홈은 밖(피드 작성·선호장르 설정·알림 확인)에서 바뀐 값을
   다시 비춰야 해서 **탭 복귀마다 갱신**하기로 정했다(구 WSSiOS도 `viewWillAppear`마다 전체를 다시 불렀다).
   중복 요청은 `loadTask` 가드가 막는다. `LibraryFeature`의 `hasLoaded` 패턴을 그대로 옮겨오지 말 것.
