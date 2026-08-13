@@ -35,6 +35,7 @@ final class DetailSearchFilterViewModel {
         case togglePlatform(NovelPlatform)
         case togglePublicationStatus(NovelPublicationStatus)
         case changeRatingRange(min: Float, max: Float)
+        case setKeywords([Keyword])
         case clearAll
     }
 
@@ -66,6 +67,8 @@ final class DetailSearchFilterViewModel {
             togglePublicationStatus(status)
         case .changeRatingRange(let min, let max):
             changeRatingRange(min: min, max: max)
+        case .setKeywords(let keywords):
+            state.filter.setKeywords(keywords)
         case .clearAll:
             clearAll()
         }
@@ -106,8 +109,8 @@ private extension DetailSearchFilterViewModel {
         state.filter.setRatingRange(min: min, max: max)
     }
 
-    /// "초기화" — 정보 탭 4종(장르·플랫폼·연재상태·별점) 전체 리셋. `SearchFilter`는 `MyLibraryFilter`와 달리
-    /// "시트 밖" 상태 구분이 없어 `clearAll()`이 전체를 초기화한다.
+    /// "초기화" — 정보 탭 4종(장르·플랫폼·연재상태·별점) + 키워드 탭(외부 콘텐츠에서 반영된 선택)까지 전체
+    /// 리셋. `SearchFilter`는 `MyLibraryFilter`와 달리 "시트 밖" 상태 구분이 없어 `clearAll()`이 전체를 초기화한다.
     func clearAll() {
         state.filter.clearAll()
         state.ratingMin = NovelRatingRange.bounds.lowerBound

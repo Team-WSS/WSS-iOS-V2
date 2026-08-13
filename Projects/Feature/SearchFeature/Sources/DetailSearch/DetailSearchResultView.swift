@@ -34,8 +34,12 @@ struct DetailSearchResultView: View {
     /// 필터 요약 pill 탭 → 상세탐색 필터 화면(정보 탭) push. 그 화면의 "작품 찾기"가 `updateFilter`로 돌아온다.
     @State private var filterEditorNavigation: FilterEditorNavigation?
 
-    init(viewModel: DetailSearchResultViewModel) {
+    /// `DetailSearchFilterView`의 "키워드" 탭까지 그대로 흘려보낸다(`KeywordTabContentBuilder` 문서 참고).
+    private let keywordTabContent: KeywordTabContentBuilder
+
+    init(viewModel: DetailSearchResultViewModel, keywordTabContent: @escaping KeywordTabContentBuilder) {
         self._viewModel = State(initialValue: viewModel)
+        self.keywordTabContent = keywordTabContent
     }
 
     var body: some View {
@@ -44,7 +48,7 @@ struct DetailSearchResultView: View {
             .background(WSSColor.wssWhite.swiftUIColor)
             .onAppear { viewModel.handle(.load) }
             .navigationDestination(item: $filterEditorNavigation) { navigation in
-                DetailSearchFilterView(filter: navigation.filter) { newFilter in
+                DetailSearchFilterView(filter: navigation.filter, keywordTabContent: keywordTabContent) { newFilter in
                     viewModel.handle(.updateFilter(newFilter))
                 }
             }
@@ -209,7 +213,8 @@ private extension DetailSearchResultView {
             viewModel: DetailSearchResultViewModel(
                 filter: SearchFilter(genres: [.romance], keywords: [Keyword(id: KeywordID(1), name: "환생")]),
                 searchNovelUseCase: PreviewSearchNovelUseCase()
-            )
+            ),
+            keywordTabContent: { _, _ in AnyView(Text("키워드 탭 콘텐츠 자리(프리뷰 스텁)")) }
         )
     }
 }

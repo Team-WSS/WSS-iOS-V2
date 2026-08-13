@@ -19,6 +19,9 @@ import Logger
 /// 단독으로 열어 검증할 수 있도록 여기도 노출한다.
 public enum SearchFactory {
 
+    /// `keywordTabContent` — 상세탐색 필터 화면(#185)의 "키워드" 탭 콘텐츠를 조립하는 빌더. `SearchFeature`는
+    /// `KeywordFeature`를 모르므로 App/Demo가 `KeywordFeatureFactory.makeSearchKeywordView(...)`를
+    /// 감싸 건네준다 — 계약은 `KeywordTabContentBuilder` 문서 참고.
     @MainActor
     public static func makeNormalSearchView(
         loadSosoPickUseCase: LoadSosoPickUseCase,
@@ -28,6 +31,7 @@ public enum SearchFactory {
         searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
+        keywordTabContent: @escaping KeywordTabContentBuilder,
         logger: Logger? = nil
     ) -> some View {
         NormalSearchView(
@@ -40,16 +44,39 @@ public enum SearchFactory {
                 searchNovelUseCase: searchNovelUseCase,
                 loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
                 logger: logger
-            )
+            ),
+            keywordTabContent: keywordTabContent
         )
     }
 
     /// 상세탐색 필터 화면 단독 진입 — UseCase가 없는 순수 입력 화면이라 필터 값과 콜백만 받는다.
+    /// `keywordTabContent`는 위 `makeNormalSearchView`와 동일한 계약.
     @MainActor
     public static func makeDetailSearchFilterView(
         filter: SearchFilter = SearchFilter(),
+        keywordTabContent: @escaping KeywordTabContentBuilder,
         onSearch: @escaping (SearchFilter) -> Void
     ) -> some View {
-        DetailSearchFilterView(filter: filter, onSearch: onSearch)
+        DetailSearchFilterView(filter: filter, keywordTabContent: keywordTabContent, onSearch: onSearch)
+    }
+
+    /// 상세탐색 결과 화면 단독 진입 — 실제 앱 흐름에서는 `NormalSearchView`가 내부에서 조립해 쓰지만
+    /// (장르/키워드 탭 진입), `makeDetailSearchFilterView`의 "작품 찾기"를 실제 검색으로 이어 Demo에서
+    /// 검증할 수 있도록 여기도 노출한다. `keywordTabContent`는 위 `makeNormalSearchView`와 동일한 계약.
+    @MainActor
+    public static func makeDetailSearchResultView(
+        filter: SearchFilter,
+        searchNovelUseCase: SearchNovelUseCase,
+        keywordTabContent: @escaping KeywordTabContentBuilder,
+        logger: Logger? = nil
+    ) -> some View {
+        DetailSearchResultView(
+            viewModel: DetailSearchResultViewModel(
+                filter: filter,
+                searchNovelUseCase: searchNovelUseCase,
+                logger: logger
+            ),
+            keywordTabContent: keywordTabContent
+        )
     }
 }

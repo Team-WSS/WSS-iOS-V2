@@ -18,8 +18,9 @@ import WSSComponent
 /// 부모에 올리고 스스로 pop한다(`LibraryFilterSheet`의 `onApply` 패턴과 동일하되, 시트가 아니라 push라
 /// dismiss로 되돌아간다). 하단 초기화/작품 찾기 CTA는 **두 탭 공용**이라 탭 전환과 무관하게 항상 보인다.
 ///
-/// ⚠️ "키워드" 탭은 현재 **빈 콘텐츠**다(#185) — 탭 전환 골격만 있고 실제 키워드 선택 UI는 아직 없다.
-/// 나중에 채울 것.
+/// "키워드" 탭 콘텐츠는 `KeywordFeature`의 키워드 선택 화면을 재사용하지만, `SearchFeature`는 `KeywordFeature`를
+/// **모른다**(Feature 간 직접 의존 금지) — 그 콘텐츠는 `keywordTabContent`(`KeywordTabContentBuilder`)로
+/// App/Demo가 조립해 값으로 건네받는다. 자세한 계약은 `Navigation/KeywordTabContentBuilder.swift` 참고.
 struct DetailSearchFilterView: View {
 
     private enum Tab {
@@ -35,7 +36,13 @@ struct DetailSearchFilterView: View {
     /// 탭 밑줄이 슬라이드하며 이동하는 애니메이션용 — `FeedFeature`의 `SosoFeedView` 탭바와 동일 패턴
     /// (`matchedGeometryEffect` + 공용 `Namespace`).
     @Namespace private var tabAnimation
+    /// "초기화"를 누르면 새 값으로 바꿔 키워드 탭 콘텐츠에 `.id()`로 건다 — `keywordTabContent`가 매번 새
+    /// `initialKeywords`로 호출돼도, 그 콘텐츠 내부 `@State`(선택 목록)는 뷰 정체성이 같으면 최초 1회만
+    /// 시딩되고 이후 갱신되지 않는 SwiftUI 함정이 있다(Feature CLAUDE.md "표시 상태 소유 구분" 참고) —
+    /// 정체성 자체를 바꿔 강제로 다시 시딩한다.
+    @State private var keywordContentResetToken = UUID()
 
+    private let keywordTabContent: KeywordTabContentBuilder
     private let onSearch: (SearchFilter) -> Void
 
     /// Figma 실측 — `WSSComponent.NovelGenre.myFeedFilter`와 노출 순서가 같다(`SearchDomain/CLAUDE.md` 참고).
@@ -43,8 +50,13 @@ struct DetailSearchFilterView: View {
     private static let platformOrder = NovelPlatform.allCases
     private static let publicationStatusOrder: [NovelPublicationStatus] = [.onGoing, .completed]
 
-    init(filter: SearchFilter, onSearch: @escaping (SearchFilter) -> Void) {
+    init(
+        filter: SearchFilter,
+        keywordTabContent: @escaping KeywordTabContentBuilder,
+        onSearch: @escaping (SearchFilter) -> Void
+    ) {
         self._viewModel = State(initialValue: DetailSearchFilterViewModel(filter: filter))
+        self.keywordTabContent = keywordTabContent
         self.onSearch = onSearch
     }
 
@@ -83,7 +95,11 @@ private extension DetailSearchFilterView {
             }
             .scrollBounceBehavior(.basedOnSize)
         case .keyword:
-            Spacer()
+            // 콘텐츠 자체가 자기 스크롤을 갖고 있어(KeywordFeature 화면) 여기서 또 ScrollView로 감싸지 않는다.
+            keywordTabContent(viewModel.state.filter.keywords) { newKeywords in
+                viewModel.handle(.setKeywords(newKeywords))
+            }
+            .id(keywordContentResetToken)
         }
     }
 }
@@ -105,10 +121,12 @@ private extension DetailSearchFilterView {
                     .frame(width: 24, height: 24)
             }
             .frame(width: 44, height: 44)
+            
+            Spacer().frame(width: 18)
 
             tabItem("정보", tab: .info, hasActiveFilter: hasActiveInfoFilter)
 
-            Spacer().frame(width: 16)
+            Spacer().frame(width: 22)
 
             tabItem("키워드", tab: .keyword, hasActiveFilter: hasActiveKeywordFilter)
 
@@ -264,6 +282,9 @@ private extension DetailSearchFilterView {
         HStack(spacing: 0) {
             Button {
                 viewModel.handle(.clearAll)
+                // 키워드 탭 콘텐츠는 외부(KeywordFeature) 상태라 filter.keywords를 지운 것만으론 화면에
+                // 반영 안 된다 — 정체성을 바꿔 강제로 다시 시딩한다(위 keywordContentResetToken 주석 참고).
+                keywordContentResetToken = UUID()
             } label: {
                 HStack(spacing: 4) {
                     WSSImage.icReset.swiftUIImage
@@ -310,8 +331,8 @@ private extension DetailSearchFilterView {
             || filter.ratingRange != nil
     }
 
-    /// "키워드" 탭에 선택된 항목이 있는지 — 탭 콘텐츠는 아직 비어있지만(#185) 점 표시는 도메인 값
-    /// (`SearchFilter.keywords`) 기준으로 미리 만들어둔다. 나중에 키워드 탭을 채우면 그대로 맞아떨어진다.
+    /// "키워드" 탭에 선택된 항목이 있는지 — `keywordTabContent`의 `onSelectionChanged`로 갱신되는
+    /// `SearchFilter.keywords` 기준으로 판단한다.
     var hasActiveKeywordFilter: Bool {
         !viewModel.state.filter.keywords.isEmpty
     }
@@ -371,6 +392,14 @@ private extension DetailSearchFilterView {
     NavigationStack {
         DetailSearchFilterView(
             filter: SearchFilter(genres: [.romance, .drama], platforms: [.kakaoPage, .ridibooks]),
+            keywordTabContent: { initialKeywords, _ in
+                AnyView(
+                    VStack {
+                        Text("키워드 탭 콘텐츠 자리(프리뷰 스텁)")
+                        Text("초기 선택: \(initialKeywords.map(\.name).joined(separator: ", "))")
+                    }
+                )
+            },
             onSearch: { print("검색 필터: \($0)") }
         )
     }

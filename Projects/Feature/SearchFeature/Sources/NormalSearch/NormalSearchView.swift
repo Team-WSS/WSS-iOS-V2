@@ -33,8 +33,13 @@ struct NormalSearchView: View {
 
     @FocusState var isFocused: Bool
 
-    init(viewModel: NormalSearchViewModel) {
+    /// `DetailSearchResultView` → `DetailSearchFilterView`의 "키워드" 탭까지 그대로 흘려보낸다
+    /// (`KeywordTabContentBuilder` 문서 참고 — `SearchFeature`는 `KeywordFeature`를 모른다).
+    private let keywordTabContent: KeywordTabContentBuilder
+
+    init(viewModel: NormalSearchViewModel, keywordTabContent: @escaping KeywordTabContentBuilder) {
         self._viewModel = State(initialValue: viewModel)
+        self.keywordTabContent = keywordTabContent
     }
     
     /// 검색어는 VM이 소유(입력마다 자동완성 조회를 트리거)하므로 View는 Binding으로 중계만 한다.
@@ -114,7 +119,8 @@ struct NormalSearchView: View {
             DetailSearchResultView(
                 viewModel: viewModel.makeDetailSearchResultViewModel(
                     filter: navigation.filter
-                )
+                ),
+                keywordTabContent: keywordTabContent
             )
         }
     }
@@ -363,7 +369,8 @@ struct NormalSearchView: View {
                 searchAutoCompletionWordsUseCase: PreviewSearchAutoCompletionWordsUseCase(),
                 searchNovelUseCase: PreviewSearchNovelUseCase(),
                 loadPopularKeywordsUseCase: PreviewLoadPopularKeywordsUseCase()
-            )
+            ),
+            keywordTabContent: { _, _ in AnyView(Text("키워드 탭 콘텐츠 자리(프리뷰 스텁)")) }
         )
     }
 }
