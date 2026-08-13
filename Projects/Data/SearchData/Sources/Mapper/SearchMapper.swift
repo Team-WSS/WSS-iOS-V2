@@ -59,8 +59,11 @@ public enum SearchMapper {
     static func detailSearchQuery(from filter: SearchFilter, page: Int) -> DetailSearchQuery {
         DetailSearchQuery(
             genres: filter.genres.map { mapNovelGenreString(from: $0) },
+            platformNames: filter.platforms.map { mapNovelPlatformString(from: $0) },
             isCompleted: filter.publicationStatus == .completed,
             novelRating: filter.ratingThreshold?.rawValue ?? 0,
+            novelRatingStart: filter.ratingRange?.min ?? NovelRatingRange.bounds.lowerBound,
+            novelRatingEnd: filter.ratingRange?.max ?? NovelRatingRange.bounds.upperBound,
             keywordIds: filter.keywords.map { $0.id.value },
             page: page,
             size: 20
@@ -78,6 +81,17 @@ public enum SearchMapper {
         case .modernFantasy:   return "modernFantasy"
         case .drama:           return "drama"
         case .mystery:         return "mystery"
+        }
+    }
+
+    // UI 라벨은 "리디"지만 서버로는 "리디북스"를 보낸다 — 표기 불일치는 의도된 것(#185, 사용자 확정).
+    private static func mapNovelPlatformString(from platform: NovelPlatform) -> String {
+        switch platform {
+        case .kakaoPage:    return "카카오페이지"
+        case .naverSeries:  return "네이버시리즈"
+        case .ridibooks:    return "리디북스"
+        case .munpia:       return "문피아"
+        case .novelpia:     return "노벨피아"
         }
     }
 }
