@@ -224,6 +224,28 @@ struct SearchFilterTests {
         #expect(filter.keywords.first?.name == "현대")
     }
 
+    @Test("키워드 선택 결과를 일괄 반영할 수 있다")
+    func setKeywords() throws {
+        var filter = makeFilter()
+        try filter.addKeyword(Keyword(id: KeywordID(99), name: "이전선택"))
+        let newKeywords = [Keyword(id: KeywordID(1), name: "이세계"), Keyword(id: KeywordID(2), name: "현대")]
+
+        filter.setKeywords(newKeywords)
+
+        #expect(filter.keywords == newKeywords)
+    }
+
+    @Test("일괄 반영 시 최대 개수를 초과하면 나머지는 잘려나간다")
+    func setKeywordsClampsToMax() {
+        var filter = makeFilter()
+        let overLimitKeywords = (1...25).map { Keyword(id: KeywordID($0), name: "키워드\($0)") }
+
+        filter.setKeywords(overLimitKeywords)
+
+        #expect(filter.keywords.count == 20)
+        #expect(filter.keywords == Array(overLimitKeywords.prefix(20)))
+    }
+
     // MARK: - Clear All
 
     @Test("전체 필터를 초기화할 수 있다")

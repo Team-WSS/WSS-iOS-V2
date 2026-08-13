@@ -125,6 +125,13 @@ public struct SearchFilter {
         keywords.append(newKeyword)
     }
     
+    /// 키워드 선택 결과를 일괄 반영한다(키워드 탭에서 선택이 바뀔 때마다 등). 개별 `addKeyword`와 달리
+    /// 에러를 던지지 않고 최대 개수를 넘는 나머지는 조용히 잘라낸다 — 호출부 UI가 이미 선택을 허용한
+    /// 값이라 여기서 다시 막을 이유가 없다.
+    public mutating func setKeywords(_ newKeywords: [Keyword]) {
+        keywords = Array(newKeywords.prefix(Self.maxKeywordCount))
+    }
+
     public mutating func removeKeyword(_ keyword: Keyword) {
         keywords.removeAll { $0 == keyword }
     }
