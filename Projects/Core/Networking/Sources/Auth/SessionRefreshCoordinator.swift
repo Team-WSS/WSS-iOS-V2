@@ -70,8 +70,10 @@ private extension SessionRefreshCoordinator {
     /// unstructured라 대기자 하나가 취소돼도 공유 갱신이 죽지 않는다 (의도적 선택).
     func startRefresh() -> Task<SessionRefreshResult, Error> {
         let task = Task { () async throws -> SessionRefreshResult in
-            // `inFlight`는 여기서만 비워지므로 남의 Task를 지울 수 없다.
-            // 정리를 대기자 쪽으로 옮기면 세대 비교 가드가 필요해진다.
+            // ⚠️ `inFlight` 정리는 **이 defer가 전담한다 — 대기자 쪽으로 옮기지 말 것.**
+            // 여기서만 비워지므로 "남의 Task를 지우는" 경우가 원천적으로 없다. 대기자는 여럿이라
+            // 늦게 깬 쪽이 그 사이 시작된 새 Task를 지울 수 있고, 그걸 막으려면 세대 비교 같은
+            // 곁가지 상태가 붙는다. 정리 위치를 지키는 것이 그 복잡도를 통째로 없애는 조건이다.
             defer { self.inFlight = nil }
 
             do {

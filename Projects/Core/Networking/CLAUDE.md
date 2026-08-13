@@ -60,5 +60,5 @@ refresh token이 1회용이라, 재발급이 동시에 두 번 나가면 나중 
 - ⚠️ **토큰 갱신 요청 자체의 Endpoint는 `authorization = .withoutToken`** 이어야 한다 (프로토콜 주석). 안 그러면 갱신→401→갱신 무한 루프.
 - ⚠️ **`SessionRefreshCoordinator.refresh()`의 "검사 → `inFlight` 저장" 구간에 `await`를 넣지 말 것.** actor는 함수 전체를 잠그지 않고 `await`마다 양보하므로, 그 사이에 suspend가 끼면 두 호출이 모두 "진행 중 없음"을 보고 각자 재발급을 시작한다 — 고친 버그가 그대로 부활한다.
 - ⚠️ **인증이 필요한 `NetworkingClient`는 앱 전체에서 하나를 공유**해야 한다. coordinator가 client마다 하나씩 생기므로, client를 화면·모듈마다 새로 만들면 재발급 직렬화가 무의미해진다. (조립부를 만들 때 반드시 지킬 것 — 현재 Demo들은 각자 client를 만든다.)
-- `inFlight` 정리는 재발급 Task 자신의 `defer`가 전담한다 — 그래서 "남의 Task를 지우는" 경우가 없어 세대 가드가 필요 없다. **정리를 대기자 쪽으로 옮기면 즉시 필요해진다.**
+- ⚠️ **`inFlight` 정리는 재발급 Task 자신의 `defer`가 전담한다 — 대기자 쪽(`await task.value` 뒤)으로 옮기지 말 것.** 거기서만 비워지므로 "남의 Task를 지우는" 경우가 원천적으로 없다. 대기자는 여럿이라 늦게 깬 쪽이 그 사이 시작된 새 Task를 지울 수 있고, 그걸 막으려면 세대 카운터 같은 곁가지 상태가 붙는다. **정리 위치를 지키는 것이 그 복잡도를 통째로 없애는 조건**이므로, 옮기고 가드를 더하는 방향으로 가지 않는다.
 - 도메인을 모른다 — `NetworkingError`를 `RepositoryError`로 바꾸는 건 BaseData(`toRepositoryError()`) 책임. 여기서 하지 말 것.
