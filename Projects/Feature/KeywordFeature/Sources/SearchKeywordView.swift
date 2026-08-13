@@ -21,8 +21,25 @@ struct SearchKeywordView: View {
 
     @Environment(\.openURL) private var openURL
 
-    init(viewModel: SearchKeywordViewModel) {
+    /// 다른 화면(#185, `SearchFeature`의 상세탐색 필터 "키워드" 탭 등)에 콘텐츠로 얹힐 때는 이 화면 자신의
+    /// 하단 액션바를 감춘다 — 호출부가 자기 CTA를 따로 갖고 있어서다. 그 경우 `onComplete` 대신
+    /// `onSelectionChanged`가 선택이 바뀔 때마다(확정 버튼 없이) 실시간으로 호출된다.
+    private let showsBottomActionBar: Bool
+    private let onSelectionChanged: (([Keyword]) -> Void)?
+    /// 선택 완료("N개 선택") 확정 시 호출 — 화면을 닫는 건 호출부 책임(`LibraryFilterSheet`의 `onApply` 패턴과 동일).
+    /// `showsBottomActionBar`가 false면 이 화면엔 그 버튼 자체가 없어 호출되지 않는다.
+    private let onComplete: ([Keyword]) -> Void
+
+    init(
+        viewModel: SearchKeywordViewModel,
+        showsBottomActionBar: Bool = true,
+        onSelectionChanged: (([Keyword]) -> Void)? = nil,
+        onComplete: @escaping ([Keyword]) -> Void = { _ in }
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.showsBottomActionBar = showsBottomActionBar
+        self.onSelectionChanged = onSelectionChanged
+        self.onComplete = onComplete
     }
     
     /// 실시간 검색이 아니라 제출(엔터·서치바 버튼) 시에만 갱신되는 `state.query` 기준으로 모드를 가른다.
@@ -89,11 +106,16 @@ struct SearchKeywordView: View {
             }
             .background(showsWhiteBackground ? WSSColor.wssWhite.swiftUIColor : WSSColor.wssGray50.swiftUIColor)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                bottomActionBar
+                if showsBottomActionBar {
+                    bottomActionBar
+                }
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear { viewModel.handle(.load) }
+        .onChange(of: viewModel.state.selectedKeywords) { _, newKeywords in
+            onSelectionChanged?(newKeywords)
+        }
         .showWSSToast(isPresented: toastBinding, type: .unknownError)
     }
 
@@ -123,10 +145,8 @@ struct SearchKeywordView: View {
             }
             .buttonStyle(.plain)
 
-            // TODO: - 키워드 선택 완료 로직 추가
-
             Button {
-
+                onComplete(viewModel.state.selectedKeywords)
             } label: {
                 Text("\(viewModel.state.selectedKeywords.count)개 선택")
                     .applyWSSFont(.title2)

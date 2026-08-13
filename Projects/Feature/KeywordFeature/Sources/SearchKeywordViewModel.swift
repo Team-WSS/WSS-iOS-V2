@@ -42,7 +42,7 @@ final class SearchKeywordViewModel {
 
     // MARK: - Output
 
-    private(set) var state = State()
+    private(set) var state: State
 
     // MARK: - Dependency
 
@@ -54,14 +54,18 @@ final class SearchKeywordViewModel {
 
     // MARK: - Init
 
+    /// `initialSelectedKeywords` — 다른 화면에서 이미 선택된 키워드를 들고 진입할 때 시딩한다
+    /// (#185, `SearchFeature`의 상세탐색 필터 "키워드" 탭 재진입 등). 기본은 빈 선택.
     init(
         loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase,
         searchKeywordsUseCase: SearchKeywordsUseCase,
+        initialSelectedKeywords: [Keyword] = [],
         logger: Logger? = nil
     ) {
         self.loadTotalKeywordsUseCase = loadTotalKeywordsUseCase
         self.searchKeywordsUseCase = searchKeywordsUseCase
         self.logger = logger
+        self.state = State(selectedKeywords: initialSelectedKeywords)
     }
 
     // MARK: - handle
