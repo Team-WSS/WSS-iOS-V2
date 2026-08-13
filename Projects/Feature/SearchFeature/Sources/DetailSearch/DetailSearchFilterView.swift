@@ -49,8 +49,6 @@ struct DetailSearchFilterView: View {
     private static let genreOrder = NovelGenre.myFeedFilter
     private static let platformOrder = NovelPlatform.allCases
     private static let publicationStatusOrder: [NovelPublicationStatus] = [.onGoing, .completed]
-    /// 플랫폼 베타 안내 말풍선의 포인터(삼각형) 크기 — `TooltipBalloonShape` 참고.
-    private static let tooltipPointerSize = CGSize(width: 6, height: 8)
 
     init(
         filter: SearchFilter,
@@ -208,7 +206,7 @@ private extension DetailSearchFilterView {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
 
-            Spacer().frame(height: 12)
+            Spacer().frame(height: 13)
 
             WSSFlowLayout(horizontalSpacing: 6, verticalSpacing: 14) {
                 ForEach(Self.platformOrder, id: \.self) { platform in
@@ -230,7 +228,7 @@ private extension DetailSearchFilterView {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
 
-            Spacer().frame(height: 12)
+            Spacer().frame(height: 16)
 
             HStack(spacing: 0) {
                 ForEach(Array(Self.publicationStatusOrder.enumerated()), id: \.element) { index, status in
@@ -258,7 +256,7 @@ private extension DetailSearchFilterView {
                 Text(ratingRangeText)
                     .applyWSSFont(.body2, color: .wssPrimary100)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
 
             Spacer().frame(height: 12)
 
@@ -381,48 +379,17 @@ private extension DetailSearchFilterView {
         }
     }
 
-    /// "아직 개발 중인 베타 기능이에요." 툴팁 본문 — Figma의 말풍선(`Union` 에셋, 고정 180×28)과 달리
-    /// `TooltipBalloonShape`로 그려 텍스트 길이에 맞춰 유동적으로 늘어난다. 왼쪽 포인터 자리(`pointerSize.width`)
-    /// 만큼 leading padding을 더 줘야 텍스트가 포인터 자리를 침범하지 않는다.
+    /// "아직 개발 중인 베타 기능이에요." 툴팁 본문 — 텍스트가 항상 고정 문구라 화면 크기와 무관하게 폭이
+    /// 일정하므로, 텍스트 길이에 맞춰 늘어나는 커스텀 Shape 대신 Figma 원본 말풍선 에셋
+    /// (`WSSImage.icPlatformTooltip`, 왼쪽 포인터 포함 180×28 고정)을 그대로 쓴다.
     var platformBetaTooltip: some View {
         Text("아직 개발 중인 베타 기능이에요.")
             .applyWSSFont(.body5, color: .wssPrimary100)
-            .padding(.leading, 10 + Self.tooltipPointerSize.width)
-            .padding(.trailing, 10)
-            .padding(.vertical, 5)
+            .frame(width: 180, height: 28)
             .background {
-                TooltipBalloonShape(cornerRadius: 14, pointerSize: Self.tooltipPointerSize)
-                    .fill(Color.wssPrimary50)
+                WSSImage.icPlatformTooltip.swiftUIImage
+                    .resizable()
             }
-    }
-}
-
-/// 말풍선 모양 툴팁 배경 — 오른쪽은 둥근 사각형 본체, 왼쪽엔 트리거 아이콘을 가리키는 작은 삼각형 포인터가
-/// 튀어나와 있다. `path(in:)`이 받는 rect의 왼쪽 `pointerSize.width`만큼은 포인터 전용으로 비워두고 그
-/// 뒤부터 본체를 그린다 — 그래서 호출부(텍스트)의 leading padding에도 `pointerSize.width`를 더해야
-/// 본체 폭이 그만큼 넓어지며 텍스트가 포인터 자리와 안 겹친다. `.background`가 전경(텍스트+패딩)과 같은
-/// 크기를 이 Shape에 그대로 넘겨주므로 텍스트 길이가 늘어나면 이 말풍선도 자동으로 넓어진다.
-private struct TooltipBalloonShape: Shape {
-    let cornerRadius: CGFloat
-    let pointerSize: CGSize
-
-    func path(in rect: CGRect) -> Path {
-        let bodyRect = CGRect(
-            x: rect.minX + pointerSize.width,
-            y: rect.minY,
-            width: rect.width - pointerSize.width,
-            height: rect.height
-        )
-
-        var path = Path(roundedRect: bodyRect, cornerRadius: cornerRadius)
-
-        let pointerMidY = rect.midY
-        path.move(to: CGPoint(x: bodyRect.minX, y: pointerMidY - pointerSize.height / 2))
-        path.addLine(to: CGPoint(x: rect.minX, y: pointerMidY))
-        path.addLine(to: CGPoint(x: bodyRect.minX, y: pointerMidY + pointerSize.height / 2))
-        path.closeSubpath()
-
-        return path
     }
 }
 
