@@ -49,13 +49,21 @@ private struct DemoRootView: View {
             VStack(spacing: 16) {
                 NavigationLink("Mock으로 보기") { mockView }
                 NavigationLink("실서버로 보기") { makeLiveView() }
+                NavigationLink("상세탐색 필터 화면 단독 보기") { detailSearchFilterView }
             }
             .padding()
         }
     }
 
+    /// 상세탐색 필터 화면(정보 탭) 단독 진입 — UseCase가 없어 Mock/실서버 구분 없이 바로 열 수 있다.
+    private var detailSearchFilterView: some View {
+        SearchFactory.makeDetailSearchFilterView { filter in
+            consoleLogger.info("상세탐색 필터 확정: \(filter)")
+        }
+    }
+
     private var mockView: some View {
-        SearchFactory.makeView(
+        SearchFactory.makeNormalSearchView(
             loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
             loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
             removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
@@ -90,7 +98,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
-        return SearchFactory.makeView(
+        return SearchFactory.makeNormalSearchView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
