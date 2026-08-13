@@ -43,7 +43,6 @@ final class SearchKeywordViewModel {
         case load
         case search(text: String)
         case toggleKeyword(Keyword)
-        case resetSelectedKeywords
         case dismissError
     }
 
@@ -85,8 +84,6 @@ final class SearchKeywordViewModel {
             search(text: text)
         case .toggleKeyword(let keyword):
             toggleKeyword(keyword)
-        case .resetSelectedKeywords:
-            state.selectedKeywords.removeAll()
         case .dismissError:
             state.presentedError = nil
         }

@@ -21,25 +21,17 @@ struct SearchKeywordView: View {
 
     @Environment(\.openURL) private var openURL
 
-    /// 다른 화면(#185, `SearchFeature`의 상세탐색 필터 "키워드" 탭 등)에 콘텐츠로 얹힐 때는 이 화면 자신의
-    /// 하단 액션바를 감춘다 — 호출부가 자기 CTA를 따로 갖고 있어서다. 그 경우 `onComplete` 대신
-    /// `onSelectionChanged`가 선택이 바뀔 때마다(확정 버튼 없이) 실시간으로 호출된다.
-    private let showsBottomActionBar: Bool
+    /// 이 화면은 자체 액션바(초기화/선택 완료 버튼)를 갖지 않는다 — 선택이 바뀔 때마다(확정 버튼 없이)
+    /// 실시간으로 호출부에 알리기만 한다. 초기화·완료 같은 CTA는 호출부(#185, `SearchFeature`의 상세탐색
+    /// 필터 "키워드" 탭 등)가 자신의 것을 쓴다.
     private let onSelectionChanged: (([Keyword]) -> Void)?
-    /// 선택 완료("N개 선택") 확정 시 호출 — 화면을 닫는 건 호출부 책임(`LibraryFilterSheet`의 `onApply` 패턴과 동일).
-    /// `showsBottomActionBar`가 false면 이 화면엔 그 버튼 자체가 없어 호출되지 않는다.
-    private let onComplete: ([Keyword]) -> Void
 
     init(
         viewModel: SearchKeywordViewModel,
-        showsBottomActionBar: Bool = true,
-        onSelectionChanged: (([Keyword]) -> Void)? = nil,
-        onComplete: @escaping ([Keyword]) -> Void = { _ in }
+        onSelectionChanged: (([Keyword]) -> Void)? = nil
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.showsBottomActionBar = showsBottomActionBar
         self.onSelectionChanged = onSelectionChanged
-        self.onComplete = onComplete
     }
     
     /// 실시간 검색이 아니라 제출(엔터·서치바 버튼) 시에만 갱신되는 `state.query` 기준으로 모드를 가른다.
@@ -105,11 +97,6 @@ struct SearchKeywordView: View {
                 }
             }
             .background(showsWhiteBackground ? WSSColor.wssWhite.swiftUIColor : WSSColor.wssGray50.swiftUIColor)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if showsBottomActionBar {
-                    bottomActionBar
-                }
-            }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear { viewModel.handle(.load) }
@@ -119,50 +106,6 @@ struct SearchKeywordView: View {
         .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
-    private var bottomActionBar: some View {
-        HStack(spacing: 10) {
-            Button {
-                viewModel.handle(.resetSelectedKeywords)
-            } label: {
-                HStack(spacing: 4) {
-                    WSSImage.icReset.swiftUIImage
-                        .resizable()
-                        .renderingMode(.template)
-                        .frame(width: 14, height: 14)
-
-                    Text("초기화")
-                        .applyWSSFont(.title2)
-                }
-                .padding(.horizontal, 18)
-                .frame(height: 53)
-                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                .background(WSSColor.wssWhite.swiftUIColor)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(WSSColor.wssGray200.swiftUIColor, lineWidth: 1)
-                }
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                onComplete(viewModel.state.selectedKeywords)
-            } label: {
-                Text("\(viewModel.state.selectedKeywords.count)개 선택")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(WSSColor.wssWhite.swiftUIColor)
-                    .frame(height: 53)
-                    .frame(maxWidth: .infinity)
-                    .background(WSSColor.wssPrimary100.swiftUIColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(WSSColor.wssWhite.swiftUIColor)
-    }
-    
     private var selectedKeywordTray: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal) {

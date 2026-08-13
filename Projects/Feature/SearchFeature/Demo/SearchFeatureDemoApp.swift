@@ -91,8 +91,8 @@ private struct DemoRootView: View {
         }
     }
 
-    /// "키워드" 탭 콘텐츠 조립 — `KeywordFeatureFactory.makeSearchKeywordView`를 하단바 없이(`showsBottomActionBar:
-    /// false`) 감싼다. 어떤 UseCase(Mock/실서버)를 쓸지는 호출부가 결정 — Mock/실서버 흐름에 맞춰 카탈로그
+    /// "키워드" 탭 콘텐츠 조립 — `KeywordFeatureFactory.makeSearchKeywordView`는 자체 액션바가 없어 그대로
+    /// 감싸면 된다. 어떤 UseCase(Mock/실서버)를 쓸지는 호출부가 결정 — Mock/실서버 흐름에 맞춰 카탈로그
     /// 출처도 함께 바뀌도록(#185) 여기서 고정하지 않는다.
     private func keywordTabContentBuilder(
         loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase,
@@ -104,7 +104,6 @@ private struct DemoRootView: View {
                     loadTotalKeywordsUseCase: loadTotalKeywordsUseCase,
                     searchKeywordsUseCase: searchKeywordsUseCase,
                     initialSelectedKeywords: initialKeywords,
-                    showsBottomActionBar: false,
                     onSelectionChanged: onSelectionChanged,
                     logger: consoleLogger
                 )
