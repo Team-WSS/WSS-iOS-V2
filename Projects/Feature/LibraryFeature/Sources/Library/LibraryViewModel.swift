@@ -69,6 +69,10 @@ final class LibraryViewModel {
 
     // MARK: - Property
 
+    /// 무한 스크롤 한 페이지 크기. **재진입 갱신은 이 값이 아니라 "보고 있던 개수"를 넘긴다** —
+    /// 그래서 페이지 크기를 Data가 아니라 화면이 쥔다(`LoadMyLibraryUseCase.execute(size:)`).
+    @ObservationIgnored private let pageSize = 20
+
     // 1회 가드 플래그는 실패 고착을 막기 위해 **성공 시에만** 소진한다(NovelReview 교훈).
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
@@ -206,7 +210,11 @@ private extension LibraryViewModel {
     /// "지금 유효한 로드인가"를 따로 추적할 필요가 없다(세대 카운터를 걷어낸 이유).
     func loadPage(cursor: String?) async {
         do {
-            let (page, totalCount) = try await loadMyLibraryUseCase.execute(filter: state.filter, cursor: cursor)
+            let (page, totalCount) = try await loadMyLibraryUseCase.execute(
+                filter: state.filter,
+                cursor: cursor,
+                size: pageSize
+            )
             guard !Task.isCancelled else { return }
             if cursor == nil {
                 state.novels = page.items

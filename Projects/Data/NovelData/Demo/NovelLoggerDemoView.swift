@@ -193,6 +193,7 @@ struct NovelLoggerDemoView: View {
             let (paginated, totalCount) = try await repository.fetchMyLibraryNovels(
                 MyLibraryFilter(),
                 cursor: nil,
+                size: 20,
                 cachedKeywords: cachedKeywords
             )
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")

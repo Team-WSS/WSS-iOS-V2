@@ -539,7 +539,11 @@ private extension LibraryView {
 }
 
 private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    func execute(
+        filter: MyLibraryFilter,
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         let novels = (1...6).map { index in
             LibraryNovel(
                 id: NovelID(index),

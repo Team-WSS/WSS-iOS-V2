@@ -22,6 +22,7 @@
     - **`isInterest`는 true일 때만 전송** — false를 보내면 "비관심 작품만" 필터가 되어버린다(관심 토글 OFF ≠ 비관심 필터).
     - **`genres`는 영문 라벨**(`mapNovelGenreString` — 서버 DB `genreName`이 영문), **`keywords`는 한글 `keywordName`** — 검색 API의 `keywordIds`(ID 배열)와 다르다.
     - 정렬 문자열은 `created_desc/created_asc/title/read_date/rating_desc/rating_asc` (서버 `UserNovelSortType`). 타유저 서재도 같은 문자열을 쓴다(`userLibraryV2Query`가 정렬만 싣고 나머지는 nil).
+  - ⚠️ **`size`는 두 조회가 서로 다르다** — 내 서재는 **호출자(화면)가 넘긴 값을 그대로 싣고**, 타유저 서재만 상수(`userLibraryPageSize` 20)다. 내 서재는 재진입 갱신이 "보고 있던 개수만큼" 한 번에 받아야 해서 페이지 크기가 고정이 아니다(이유는 [NovelDomain](../../Domain/NovelDomain/CLAUDE.md)). **통일한다고 내 서재를 상수로 되돌리지 말 것** — 갱신 경로가 조용히 한 페이지로 잘린다.
 - 서재 커서는 서버 발급 opaque 문자열(`nextCursor`)을 그대로 왕복 — 클라에서 해석·조립하지 말 것.
 
 - **작품 상세 응답의 `novelGenres`는 배열이 아니라 `/`로 이은 한 문자열**(`"로맨스/로판"`)이다 — `author`가 콤마 문자열인 것과 **구분자가 다르다**. DTO를 `[String]`으로 두면 디코딩이 통째로 실패해 화면이 "네트워크 연결 실패"로 뜬다(실제 원인은 `.invalidData`라 원인 찾기 어렵다). Mapper가 `/`로 쪼개 `NovelGenre`로 매핑하고, UI는 반대로 `displayName`을 `/`로 이어 되돌린다.

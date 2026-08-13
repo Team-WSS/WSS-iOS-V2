@@ -248,13 +248,17 @@ private struct DemoRootView: View {
 }
 
 // MARK: - Demo UseCases (Mock)
-// 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 페이지 크기 20, 총 25개 → 2페이지.
+// 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 총 25개라 기본 페이지 크기 20이면 2페이지.
 
 private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
-    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    func execute(
+        filter: MyLibraryFilter,
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
-        return DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
+        return DemoLibraryNovels.page(cursor: cursor, size: size, sortType: filter.sortType)
     }
 }
 
@@ -286,15 +290,21 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
 
 private enum DemoLibraryNovels {
 
-    /// 페이지 크기 20, 총 25개 → 2페이지. 커서는 다음 시작 인덱스를 문자열로 왕복한다.
+    /// 총 25개. 커서는 다음 시작 인덱스를 문자열로 왕복한다.
+    ///
+    /// ⚠️ `size`를 **실제로 반영해야** 내 서재의 재진입 갱신(보고 있던 개수만큼 한 번에 다시 받기)을
+    /// Demo에서 확인할 수 있다 — 20으로 고정해두면 그 경로가 늘 한 페이지처럼 보여 검증이 안 된다.
     ///
     /// `sortType`은 **순서가 실제로 바뀌는지 눈으로 보려고만** 쓴다(서버 정렬 규칙을 흉내내지 않는다) —
     /// 정렬을 바꿔도 목록이 그대로면 재로드가 도는지 알 수 없어서다.
-    static func page(cursor: String?, sortType: LibrarySortType = .registeredNewest) -> (CursorPaginated<LibraryNovel>, Int) {
+    static func page(
+        cursor: String?,
+        size: Int = 20,
+        sortType: LibrarySortType = .registeredNewest
+    ) -> (CursorPaginated<LibraryNovel>, Int) {
         let sorted = Self.sorted(by: sortType)
-        let pageSize = 20
         let start = cursor.flatMap(Int.init) ?? 0
-        let end = min(start + pageSize, sorted.count)
+        let end = min(start + size, sorted.count)
         guard start < end else {
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), sorted.count)
         }

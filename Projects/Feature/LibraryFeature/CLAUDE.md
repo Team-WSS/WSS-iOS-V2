@@ -16,6 +16,7 @@
 
 ## 핵심 시나리오
 
+- **페이지 크기는 내 서재 VM이 쥔다**(`LibraryViewModel.pageSize`) — Data가 아니라 화면이 `size`를 UseCase에 넘긴다. 재진입 갱신이 "보고 있던 개수만큼" 한 번에 다시 받아야 해서 고정 상수로 둘 수 없다. 타유저 서재는 push라 그 갱신이 없어 Data 상수를 그대로 쓴다.
 - **로드**: 첫 페이지(`hasLoaded` 가드, 성공 시만 소진) → 커서 무한 스크롤(마지막 셀 onAppear → `.loadMore`, 서버 발급 `nextCursor` 왕복). 필터/정렬 변경은 `reloadFromScratch()` — 진행 중이던 로드는 **취소만** 하면 되고, 늦게 도착해도 새 목록을 덮지 않는다(아래 주의사항).
 - **필터**: 메인 칩 행 = 관심(즉시 토글) + 시트 필터 6종(탭 시 해당 탭으로 필터 시트 진입). 시트는 순수 입력 VM(`LibraryFilterSheetViewModel`)이 필터 **복사본**을 편집하고, "작품 찾기"에서 View가 `onApply`로 부모에 올린다(ReadingPeriodSheet 패턴). 등록 키워드 목록은 **부모 VM이 로드**해 시트에 값으로 내려준다.
 - **에러 3분화**: 첫 페이지 실패=**헤더(타이틀·등록 버튼)만 남기고** 그 아래를 실패 뷰(`NetworkErrorView`+재시도)로 대체(컨트롤·카운트·목록은 함께 숨김 — 실패 상태에서 조작할 게 없음), 더보기·키워드 실패=토스트, 인증 만료=`requiresAuthentication` 신호 → `onAuthenticationRequired` 콜백(NovelDetail 배관과 동일).
