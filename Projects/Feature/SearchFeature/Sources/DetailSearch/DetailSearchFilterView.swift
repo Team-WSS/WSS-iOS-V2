@@ -125,11 +125,11 @@ private extension DetailSearchFilterView {
             
             Spacer().frame(width: 18)
 
-            tabItem("정보", tab: .info, hasActiveFilter: hasActiveInfoFilter)
+            tabItem("정보", tab: .info, hasActiveFilter: viewModel.hasActiveInfoFilter)
 
             Spacer().frame(width: 22)
 
-            tabItem("키워드", tab: .keyword, hasActiveFilter: hasActiveKeywordFilter)
+            tabItem("키워드", tab: .keyword, hasActiveFilter: viewModel.hasActiveKeywordFilter)
 
             Spacer()
         }
@@ -326,22 +326,6 @@ private extension DetailSearchFilterView {
 // MARK: - Presentation
 
 private extension DetailSearchFilterView {
-
-    /// "정보" 탭에 선택된 항목이 하나라도 있는지 — 장르·플랫폼·연재상태·별점 4종만 본다(이 탭이 다루는 필드).
-    /// `ratingThreshold`는 이 화면이 건드리지 않는 값이라 포함하지 않는다.
-    var hasActiveInfoFilter: Bool {
-        let filter = viewModel.state.filter
-        return !filter.genres.isEmpty
-            || !filter.platforms.isEmpty
-            || filter.publicationStatus != nil
-            || filter.ratingRange != nil
-    }
-
-    /// "키워드" 탭에 선택된 항목이 있는지 — `keywordTabContent`의 `onSelectionChanged`로 갱신되는
-    /// `SearchFilter.keywords` 기준으로 판단한다.
-    var hasActiveKeywordFilter: Bool {
-        !viewModel.state.filter.keywords.isEmpty
-    }
 
     func sectionTitle(_ text: String) -> some View {
         Text(text)

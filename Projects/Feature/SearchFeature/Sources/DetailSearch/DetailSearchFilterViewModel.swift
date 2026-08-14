@@ -28,6 +28,23 @@ final class DetailSearchFilterViewModel {
         var ratingMax: Float
     }
 
+    // MARK: - Derived
+
+    /// "정보" 탭에 선택된 항목이 하나라도 있는지 — 장르·플랫폼·연재상태·별점 4종만 본다(이 탭이 다루는 필드).
+    /// `ratingThreshold`는 이 화면이 건드리지 않는 값이라 포함하지 않는다.
+    var hasActiveInfoFilter: Bool {
+        !state.filter.genres.isEmpty
+            || !state.filter.platforms.isEmpty
+            || state.filter.publicationStatus != nil
+            || state.filter.ratingRange != nil
+    }
+
+    /// "키워드" 탭에 선택된 항목이 있는지 — `keywordTabContent`의 `onSelectionChanged`로 갱신되는
+    /// `SearchFilter.keywords` 기준으로 판단한다.
+    var hasActiveKeywordFilter: Bool {
+        !state.filter.keywords.isEmpty
+    }
+
     // MARK: - Action
 
     enum Action {
