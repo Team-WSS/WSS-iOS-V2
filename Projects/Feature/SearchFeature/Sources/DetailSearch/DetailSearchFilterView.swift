@@ -169,6 +169,7 @@ private extension DetailSearchFilterView {
                     .frame(width: 4, height: 4)
                     .opacity(hasActiveFilter ? 1 : 0)
             }
+            .contentShape(Rectangle())
         }
         .animation(.easeInOut(duration: 0.25), value: selectedTab)
         .buttonStyle(.plain)

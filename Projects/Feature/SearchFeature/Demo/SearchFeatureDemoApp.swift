@@ -8,10 +8,10 @@
 
 import SwiftUI
 
-import SearchFeature
 // #185: 상세탐색 필터 화면의 "키워드" 탭 콘텐츠(KeywordTabContentBuilder)를 여기서 실제로 조립한다
 // (App 역할 대행 — Feature 간 직접 의존은 Demo 타깃에서만 허용, SearchFeature Sources는 KeywordFeature를 모른다).
 import KeywordFeature
+import SearchFeature
 import BaseDomain
 import RecommendationDomain
 import SearchDomain
