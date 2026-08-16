@@ -20,12 +20,8 @@ struct DetailSearchResultView: View {
 
     @State private var viewModel: DetailSearchResultViewModel
 
-    /// `DetailSearchFilterView`의 "키워드" 탭까지 그대로 흘려보낸다(`KeywordTabContentBuilder` 문서 참고).
-    private let keywordTabContent: KeywordTabContentBuilder
-
-    init(viewModel: DetailSearchResultViewModel, keywordTabContent: @escaping KeywordTabContentBuilder) {
+    init(viewModel: DetailSearchResultViewModel) {
         self._viewModel = State(initialValue: viewModel)
-        self.keywordTabContent = keywordTabContent
     }
 
     var body: some View {
@@ -202,8 +198,7 @@ private extension DetailSearchResultView {
             viewModel: DetailSearchResultViewModel(
                 filter: SearchFilter(genres: [.romance], keywords: [Keyword(id: KeywordID(1), name: "환생")]),
                 searchNovelUseCase: PreviewSearchNovelUseCase()
-            ),
-            keywordTabContent: { _, _ in AnyView(Text("키워드 탭 콘텐츠 자리(프리뷰 스텁)")) }
+            )
         )
     }
 }

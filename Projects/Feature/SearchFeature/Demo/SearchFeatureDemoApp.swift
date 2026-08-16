@@ -92,10 +92,6 @@ private struct DemoRootView: View {
             searchAutoCompletionWordsUseCase: DemoSearchAutoCompletionWordsUseCase(),
             searchNovelUseCase: DemoSearchNovelUseCase(),
             loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
-            keywordTabContent: keywordTabContentBuilder(
-                loadTotalKeywordsUseCase: DemoLoadTotalKeywordsUseCase(),
-                searchKeywordsUseCase: DemoSearchKeywordsUseCase()
-            ),
             logger: consoleLogger
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -131,12 +127,6 @@ private struct DemoRootView: View {
             searchAutoCompletionWordsUseCase: DefaultSearchAutoCompletionWordsUseCase(searchAutoCompletionRepository: searchRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
-            // 인기 키워드(loadPopularKeywordsUseCase)와 같은 keywordRepository를 재사용 — 카테고리
-            // 카탈로그 조회/검색도 실서버(BaseData.DefaultKeywordRepository)로 붙는다.
-            keywordTabContent: keywordTabContentBuilder(
-                loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: keywordRepository),
-                searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: keywordRepository)
-            ),
             logger: consoleLogger
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -171,17 +161,9 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
         )
-        let keywordRepository = KeywordDataFactory.makeRepository(
-            client: client,
-            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
-        )
         return SearchFactory.makeDetailSearchResultView(
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
-            keywordTabContent: keywordTabContentBuilder(
-                loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: keywordRepository),
-                searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: keywordRepository)
-            ),
             logger: consoleLogger
         )
     }
