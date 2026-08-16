@@ -36,17 +36,6 @@ struct SearchFeatureDemoApp: App {
     }
 }
 
-/// `.navigationDestination(item:)`용 얇은 래퍼 — "상세탐색 필터 화면 단독 보기"에서 "작품 찾기"를 누르면
-/// 실제 검색 결과 화면(`DetailSearchResultView`, 실서버)으로 이어지도록 값을 태운다(`NormalSearchView`의
-/// `DetailSearchNavigation`과 동일 패턴).
-private struct DemoDetailSearchResult: Hashable {
-    let id = UUID()
-    let filter: SearchFilter
-
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
-}
-
 // MARK: - Root: Mock ↔ 실서버 진입점 선택
 
 // Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
@@ -58,36 +47,19 @@ private struct DemoRootView: View {
     /// Mock 모드에서 최근 검색어 삭제가 실제로 반영되어 보이도록 공유하는 인메모리 저장소.
     private let demoRecentSearchStore = DemoRecentSearchStore()
 
-    /// "상세탐색 필터 화면 단독 보기"에서 "작품 찾기"를 누르면 채워진다 — 실제 검색 결과 화면 push.
-    @State private var demoDetailSearchResult: DemoDetailSearchResult?
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
                 NavigationLink("Mock으로 보기") { mockView }
                 NavigationLink("실서버로 보기") { makeLiveView() }
-                NavigationLink("상세탐색 필터 화면 단독 보기(실서버)") { detailSearchFilterView }
+                NavigationLink("상세탐색 진입(실서버)") {
+                    DetailSearchDemoFlow(
+                        keywordTabContent: makeLiveKeywordTabContent(),
+                        makeResultView: makeLiveDetailSearchResultView(filter:)
+                    )
+                }
             }
             .padding()
-            .navigationDestination(item: $demoDetailSearchResult) { result in
-                makeLiveDetailSearchResultView(filter: result.filter)
-            }
-        }
-    }
-
-    /// 상세탐색 필터 화면(정보/키워드 탭) 단독 진입 — 실서버로 연결한다(#185). 키워드 탭 카탈로그도, "작품
-    /// 찾기" 확정 후 이어지는 검색 결과도 전부 실제 서버 호출이다(Mock 버전은 "Mock으로 보기" → 장르/키워드
-    /// 진입으로 이미 커버돼 있어 이 단독 진입점은 실서버 검증 전용으로 단순화했다).
-    private var detailSearchFilterView: some View {
-        SearchFactory.makeDetailSearchFilterView(
-            keywordTabContent: makeLiveKeywordTabContent()
-        ) { filter in
-            // DetailSearchFilterView는 확정 시 스스로도 dismiss()를 호출한다(실제 필터 pill 플로우와
-            // 동일한 계약) — 그 pop과 여기서 새로 미는 push가 같은 런루프 틱에 겹치면 NavigationStack이
-            // 꼬여 빈 화면이 뜬다(실측). pop이 먼저 정리되도록 한 틱 늦춰서 push한다.
-            DispatchQueue.main.async {
-                demoDetailSearchResult = DemoDetailSearchResult(filter: filter)
-            }
         }
     }
 
@@ -188,7 +160,7 @@ private struct DemoRootView: View {
         )
     }
 
-    /// "상세탐색 필터 화면 단독 보기"에서 "작품 찾기" 확정 후 이어지는 실제 검색 결과 화면.
+    /// "상세탐색 진입"에서 "작품 찾기" 확정 후 이어지는 실제 검색 결과 화면(`DetailSearchDemoFlow`가 push).
     @MainActor
     private func makeLiveDetailSearchResultView(filter: SearchFilter) -> some View {
         let client = NetworkingClient(
@@ -212,6 +184,46 @@ private struct DemoRootView: View {
             ),
             logger: consoleLogger
         )
+    }
+}
+
+/// `.navigationDestination(item:)`용 얇은 래퍼 — "상세탐색 진입"에서 "작품 찾기"를 누르면 실제 검색 결과
+/// 화면(`DetailSearchResultView`, 실서버)을 push하도록 값을 태운다(`NormalSearchView`의
+/// `DetailSearchNavigation`과 동일 패턴).
+private struct DemoDetailSearchResult: Hashable {
+    let id = UUID()
+    let filter: SearchFilter
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// "상세탐색" 자체의 진입점(#185) — 필터 화면이 스택의 첫 화면이고, "작품 찾기" 확정 시 결과 화면을 그
+/// **위에 새로 push**한다(뒤로가기 하면 필터로 돌아옴). `DetailSearchResultView`의 필터 pill 경유(기존
+/// 결과 화면으로 되돌아감, `DetailSearchResultView.swift` 참고)와는 확정 후 동작이 정반대라 — 그래서
+/// `DetailSearchFilterView`가 확정 시 스스로 pop하지 않도록 바뀌었고(호출부 책임), 이 화면은 pop 대신
+/// 그냥 `result`를 채워 결과 화면을 앞으로 쌓는다.
+private struct DetailSearchDemoFlow: View {
+    let keywordTabContent: KeywordTabContentBuilder
+    let makeResultView: (SearchFilter) -> AnyView
+
+    @State private var result: DemoDetailSearchResult?
+
+    init(keywordTabContent: @escaping KeywordTabContentBuilder, makeResultView: @escaping (SearchFilter) -> some View) {
+        self.keywordTabContent = keywordTabContent
+        self.makeResultView = { AnyView(makeResultView($0)) }
+    }
+
+    var body: some View {
+        SearchFactory.makeDetailSearchFilterView(
+            filter: SearchFilter(),
+            keywordTabContent: keywordTabContent
+        ) { filter in
+            result = DemoDetailSearchResult(filter: filter)
+        }
+        .navigationDestination(item: $result) { result in
+            makeResultView(result.filter)
+        }
     }
 }
 

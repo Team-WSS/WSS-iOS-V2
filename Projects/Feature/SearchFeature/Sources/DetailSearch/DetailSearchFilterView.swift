@@ -14,9 +14,10 @@ import DesignSystem
 import WSSComponent
 
 /// 상세탐색 필터 화면 — "정보"/"키워드" 두 탭이 같은 화면 안에서 콘텐츠만 바뀌는 탭바다.
-/// `DetailSearchResultView`의 필터 요약 pill에서 push되고, "작품 찾기" 확정 시 `onSearch`로 편집한 필터를
-/// 부모에 올리고 스스로 pop한다(`LibraryFilterSheet`의 `onApply` 패턴과 동일하되, 시트가 아니라 push라
-/// dismiss로 되돌아간다). 하단 초기화/작품 찾기 CTA는 **버튼 자체는 두 탭 공용**이라 탭 전환과 무관하게 항상
+/// "작품 찾기" 확정 시 `onSearch`로 편집한 필터를 호출부에 올릴 뿐, **화면 자신은 pop하지 않는다**(#185) —
+/// 확정 후 pop할지 push할지는 호출부마다 다를 수 있어(현재 유일한 실사용처는 `DetailSearchDemoFlow` — 확정
+/// 시 결과 화면을 앞으로 push) 그 판단을 컴포넌트가 대신하지 않는다(뒤로가기 버튼의 `dismiss()`는 이 화면
+/// 자신 것 그대로 유지). 하단 초기화/작품 찾기 CTA는 **버튼 자체는 두 탭 공용**이라 탭 전환과 무관하게 항상
 /// 보이지만, "초기화"가 지우는 대상은 **현재 보고 있는 탭의 데이터만**이다(사용자 확정 — 탭별 독립 초기화).
 ///
 /// "키워드" 탭 콘텐츠는 `KeywordFeature`의 키워드 선택 화면을 재사용하지만, `SearchFeature`는 `KeywordFeature`를
@@ -279,7 +280,9 @@ private extension DetailSearchFilterView {
         }
     }
 
-    /// 초기화(**보고 있는 탭의 데이터만** 각자 리셋 — 사용자 확정) + 작품 찾기(확정 → `onSearch` 콜백 → pop).
+    /// 초기화(**보고 있는 탭의 데이터만** 각자 리셋 — 사용자 확정) + 작품 찾기(확정 → `onSearch` 콜백만 호출).
+    /// **화면 자신은 pop하지 않는다** — pop·push 여부·시점은 전부 `onSearch` 호출부 책임이다(#185, 위 타입
+    /// 주석 참고).
     var ctaSection: some View {
         HStack(spacing: 0) {
             Button {
@@ -316,7 +319,6 @@ private extension DetailSearchFilterView {
 
             WSSCTAButton(title: "작품 찾기") {
                 onSearch(viewModel.state.filter)
-                dismiss()
             }
         }
         .padding(.horizontal, 16)

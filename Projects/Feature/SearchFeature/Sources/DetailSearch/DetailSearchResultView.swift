@@ -13,26 +13,12 @@ import SearchDomain
 import DesignSystem
 import WSSComponent
 
-/// `.navigationDestination(item:)`용 얇은 래퍼 — `NormalSearchView`의 `DetailSearchNavigation`과 동일 패턴
-/// (탭마다 새 값이라 UUID로 값 동일성을 대신한다). **`isPresented:` + 별도 State 조합은 쓰지 않는다** —
-/// 그 조합은 SwiftUI가 목적지 뷰의 `@State`를 미리 평가해 굳혀 재진입 시 갱신된 필터가 반영되지 않을 수
-/// 있다(Feature CLAUDE.md "표시 상태 소유 구분" 참고, 서재 필터 시트에서 실제 발생했던 함정과 같은 종류).
-private struct FilterEditorNavigation: Hashable {
-    let id = UUID()
-    let filter: SearchFilter
-
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
-}
-
 struct DetailSearchResultView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
     @State private var viewModel: DetailSearchResultViewModel
-    /// 필터 요약 pill 탭 → 상세탐색 필터 화면(정보 탭) push. 그 화면의 "작품 찾기"가 `updateFilter`로 돌아온다.
-    @State private var filterEditorNavigation: FilterEditorNavigation?
 
     /// `DetailSearchFilterView`의 "키워드" 탭까지 그대로 흘려보낸다(`KeywordTabContentBuilder` 문서 참고).
     private let keywordTabContent: KeywordTabContentBuilder
@@ -47,11 +33,6 @@ struct DetailSearchResultView: View {
             .navigationBarBackButtonHidden()
             .background(WSSColor.wssWhite.swiftUIColor)
             .onAppear { viewModel.handle(.load) }
-            .navigationDestination(item: $filterEditorNavigation) { navigation in
-                DetailSearchFilterView(filter: navigation.filter, keywordTabContent: keywordTabContent) { newFilter in
-                    viewModel.handle(.updateFilter(newFilter))
-                }
-            }
     }
 
     private var content: some View {
@@ -102,7 +83,10 @@ struct DetailSearchResultView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .contentShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture {
-                filterEditorNavigation = FilterEditorNavigation(filter: viewModel.state.filter)
+                // 필터를 다시 조정하려면 새 필터 화면을 push하지 않고 뒤로가기(dismiss)로 되돌아간다 —
+                // 이 화면은 항상 DetailSearchFilterView 위에 push되어 있으므로(진입 경로 무관, #185)
+                // 뒤로가면 그 필터 화면이 그대로 남아있다.
+                dismiss()
             }
         }
     }
