@@ -83,6 +83,7 @@ struct OnboardingStepFlowView: View {
             } else {
                 VStack(spacing: 0) {
                     headerRow
+                    Spacer().frame(height: 5)
                     OnboardingStepProgressBar(currentStep: viewModel.state.currentStep.rawValue)
 
                     slidingStepContent
@@ -137,8 +138,7 @@ private extension OnboardingStepFlowView {
             }
         }
         .frame(height: 44)
-        .padding(.top, 27)
-        .padding(.bottom, 17)
+        .background(Color.wssWhite)
     }
 }
 
