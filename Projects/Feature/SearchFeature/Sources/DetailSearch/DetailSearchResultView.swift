@@ -154,8 +154,13 @@ struct DetailSearchResultView: View {
             Spacer()
         } else {
             ScrollView(.vertical) {
-                VStack(spacing: 16) {
+                VStack(spacing: 0) {
+                    
+                    Spacer().frame(height: 10)
+                    
                     infoSection
+                    
+                    Spacer().frame(height: 14)
 
                     LazyVGrid(
                         columns: [
