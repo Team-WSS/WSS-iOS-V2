@@ -216,7 +216,7 @@ private enum DemoFactory {
         )
 
         let localStorage = UserDefaultsStorage()
-        localStorage.set(.userID, 10045)
+        localStorage.set(.userID, 10049)
 
         let profileRepository = ProfileDataFactory.makeProfileRepository(
             client: client,
