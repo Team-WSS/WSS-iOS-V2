@@ -81,19 +81,11 @@ struct MypageCharacterEditSheet: View {
 
     private var thumbnailSection: some View {
         VStack(spacing: 0) {
-            AsyncImage(url: selectedCharacter?.representativeImage) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                case .failure(_):
-                    WSSImage.imgEmptyCover.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    ProgressView()
-                }
+            WSSAsyncImage(url: selectedCharacter?.representativeImage) { image in
+                image.resizable()
+                    .scaledToFit()
+            } placeholder: {
+                ProgressView()
             }
             .frame(width: 250, height: 250)
 
@@ -228,19 +220,11 @@ private struct CharacterSelectionCell: View {
 
     var body: some View {
         Button(action: action) {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure(_):
-                    WSSImage.imgEmptyCover.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    ProgressView()
-                }
+            WSSAsyncImage(url: imageURL) { image in
+                image.resizable()
+                    .scaledToFill()
+            } placeholder: {
+                ProgressView()
             }
             .frame(width: size, height: size)
             .clipShape(Circle())
