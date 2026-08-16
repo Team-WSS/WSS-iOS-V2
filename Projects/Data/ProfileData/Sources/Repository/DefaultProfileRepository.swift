@@ -322,9 +322,6 @@ public struct DefaultProfileRepository: ProfileRepository {
     public func updateProfile(_ profile: ProfileDraft) async throws(RepositoryError) {
         let action = ProfileAction.updateProfile
 
-        localStorage.set(.nickname, profile.nickname.text)
-        localStorage.set(.characterID, profile.characterID)
-
         guard profile.isNicknameChanged
                 || profile.isIntroductionChanged
                 || profile.isCharacterChanged
@@ -341,6 +338,11 @@ public struct DefaultProfileRepository: ProfileRepository {
                 genrePreferences: profile.genrePreferences.map { ProfileMapper.novelGenreRawValue(from: $0.genre) }
             )
             try await service.putProfile(request)
+            // 로컬 캐시(닉네임/캐릭터ID)는 서버 반영이 확정된 뒤에만 갱신한다 — PATCH보다 먼저 쓰면
+            // 요청이 실패해도 롤백되지 않아 로컬과 서버가 어긋난다(MyPageEditView가 실패한 변경을
+            // "저장된 값"처럼 계속 보여주던 버그의 원인).
+            localStorage.set(.nickname, profile.nickname.text)
+            localStorage.set(.characterID, profile.characterID)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
