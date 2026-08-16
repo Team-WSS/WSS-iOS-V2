@@ -30,7 +30,6 @@ struct DetailSearchFilterView: View {
         case keyword
     }
 
-    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: DetailSearchFilterViewModel
     @State private var selectedTab: Tab = .info
     /// 플랫폼 옆 안내 아이콘 탭으로 열고 닫는 툴팁(항상 떠 있는 배지 아님) — 사용자 확정.
@@ -43,6 +42,8 @@ struct DetailSearchFilterView: View {
     /// 시딩되고 이후 갱신되지 않는 SwiftUI 함정이 있다(Feature CLAUDE.md "표시 상태 소유 구분" 참고) —
     /// 정체성 자체를 바꿔 강제로 다시 시딩한다.
     @State private var keywordContentResetToken = UUID()
+
+    @Environment(\.dismiss) private var dismiss
 
     private let keywordTabContent: KeywordTabContentBuilder
     private let onSearch: (SearchFilter) -> Void
