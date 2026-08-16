@@ -48,6 +48,12 @@
   갖는 로컬 버퍼는 소개글(`introductionFieldText`, `ProfileDraft.maxIntroductionLength`=50)뿐이다. 글자수
   제한이 있는 새 `TextField`를 만들 때(닉네임이 아니면) 이 2단계 패턴을 재사용할 것 — 일반 규칙은
   [상위 CLAUDE.md](../CLAUDE.md) 주의사항 참고.
+- ⚠️ **`MyPageEditView`의 닉네임/소개 필드는 `@FocusState`를 각자 따로 갖는다**(`isNicknameFocused`/
+  `isIntroductionFocused`, #178) — 원래 하나(`isKeyboardFocused`)를 공유했는데, 포커스된 필드만 배경을
+  화이트로·테두리를 `wssGray70`으로 보여주는 처리를 추가하면서 공유로는 **어느 필드가 실제로 포커스인지
+  구분이 안 돼** 한쪽만 눌러도 둘 다 스타일이 바뀌었다. "빈 곳 탭하면 키보드 내리기"(`content`의
+  `onTapGesture`)는 두 `FocusState`를 함께 `false`로 내리면 된다 — 필드별 포커스-구동 스타일이 있는 화면에서
+  여러 텍스트필드가 키보드 내리기 목적으로 상태를 공유하던 걸 그대로 새 필드에 복제하지 말 것.
 
 ## UserPage
 

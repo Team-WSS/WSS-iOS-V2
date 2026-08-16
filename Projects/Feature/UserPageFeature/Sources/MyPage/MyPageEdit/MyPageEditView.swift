@@ -26,7 +26,12 @@ struct MyPageEditView: View {
     /// (닉네임 필드는 같은 함정을 `WSSNicknameField` 공용 컴포넌트가 내부에서 처리한다 — 로컬 완충 불필요.)
     @State private var introductionFieldText: String = ""
 
-    @FocusState private var isKeyboardFocused: Bool
+    /// 닉네임/소개 필드는 각자 독립된 `@FocusState`를 쓴다 — 하나로 공유하면 어느 필드가 포커스인지
+    /// 구분이 안 돼(같은 화면에 두 필드가 동시에 존재) 포커스 중인 필드만 배경을 화이트로 바꾸는
+    /// 처리가 둘 다에 걸리거나 프로그램적 포커스(`isIntroductionFocused = true`)가 어느 필드로
+    /// 갈지 불명확해진다. "빈 곳 탭하면 키보드 내리기"는 둘 다 false로 내리면 된다.
+    @FocusState private var isNicknameFocused: Bool
+    @FocusState private var isIntroductionFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
 
@@ -120,7 +125,8 @@ struct MyPageEditView: View {
         .scrollBounceBehavior(.basedOnSize)
         .contentShape(Rectangle())
         .onTapGesture {
-            isKeyboardFocused = false
+            isNicknameFocused = false
+            isIntroductionFocused = false
         }
     }
 
@@ -170,7 +176,7 @@ struct MyPageEditView: View {
 
             WSSNicknameField(
                 text: nicknameTextBinding,
-                isFocused: $isKeyboardFocused,
+                isFocused: $isNicknameFocused,
                 maxLength: NicknameDraft.maxLength,
                 isError: isNicknameError,
                 isSuccess: viewModel.state.draft.nickname.validationState == .available,
@@ -204,12 +210,11 @@ struct MyPageEditView: View {
                             Spacer()
                         }
                     }
-
                     TextField("", text: $introductionFieldText, axis: .vertical)
                         .applyWSSFont(.body2)
                         .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                         .tint(WSSColor.wssBlack.swiftUIColor)
-                        .focused($isKeyboardFocused)
+                        .focused($isIntroductionFocused)
                         .onChange(of: introductionFieldText) { _, newValue in
                             let clamped = String(newValue.prefix(ProfileDraft.maxIntroductionLength))
                             if clamped != newValue {
@@ -231,10 +236,18 @@ struct MyPageEditView: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture {
-                isKeyboardFocused = true
+                isIntroductionFocused = true
             }
-            .background(WSSColor.wssGray50.swiftUIColor)
+            .background(
+                isIntroductionFocused
+                    ? WSSColor.wssWhite.swiftUIColor
+                    : WSSColor.wssGray50.swiftUIColor
+            )
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isIntroductionFocused ? WSSColor.wssGray70.swiftUIColor : .clear, lineWidth: 1)
+            )
 
             Spacer().frame(height: 4)
 

@@ -135,7 +135,7 @@ private extension WSSNicknameField {
                 }
             }
         }
-        .background(Color.wssGray50)
+        .background(isFocused.wrappedValue ? Color.wssWhite : Color.wssGray50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -170,6 +170,7 @@ private extension WSSNicknameField {
     var borderColor: Color? {
         if isError { return Color.wssSecondary100 }
         if isSuccess { return Color.wssPrimary100 }
+        if isFocused.wrappedValue { return Color.wssGray70 }
         return nil
     }
 
