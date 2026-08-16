@@ -61,7 +61,6 @@ public enum SearchMapper {
             genres: filter.genres.map { mapNovelGenreString(from: $0) },
             platformNames: filter.platforms.map { mapNovelPlatformString(from: $0) },
             isCompleted: filter.publicationStatus == .completed,
-            novelRating: filter.ratingThreshold?.rawValue ?? 0,
             novelRatingStart: filter.ratingRange?.min ?? NovelRatingRange.bounds.lowerBound,
             novelRatingEnd: filter.ratingRange?.max ?? NovelRatingRange.bounds.upperBound,
             keywordIds: filter.keywords.map { $0.id.value },

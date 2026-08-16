@@ -103,37 +103,6 @@ struct SearchFilterTests {
         #expect(filter.publicationStatus == .onGoing)
     }
 
-    // MARK: - Rating Threshold
-
-    @Test("별점 기준을 설정할 수 있다")
-    func setRatingThreshold() {
-        var filter = makeFilter()
-
-        filter.setRatingThreshold(.over4_0)
-
-        #expect(filter.ratingThreshold == .over4_0)
-    }
-
-    @Test("nil을 전달하면 별점 기준이 해제된다")
-    func setRatingThresholdToggle() {
-        var filter = makeFilter()
-
-        filter.setRatingThreshold(.over4_0)
-        filter.setRatingThreshold(nil)
-
-        #expect(filter.ratingThreshold == nil)
-    }
-
-    @Test("다른 별점 기준을 설정하면 변경된다")
-    func setRatingThresholdChange() {
-        var filter = makeFilter()
-
-        filter.setRatingThreshold(.over3_5)
-        filter.setRatingThreshold(.over4_8)
-
-        #expect(filter.ratingThreshold == .over4_8)
-    }
-
     // MARK: - Rating Range
 
     @Test("별점 범위를 설정할 수 있다")
@@ -258,11 +227,10 @@ struct SearchFilterTests {
 
     // MARK: - Clear (탭별)
 
-    @Test("정보 탭 필터(장르·플랫폼·연재상태·별점범위)만 초기화하고 키워드·별점기준은 남는다")
+    @Test("정보 탭 필터(장르·플랫폼·연재상태·별점범위)만 초기화하고 키워드는 남는다")
     func clearInfoFilters() throws {
         var filter = makeFilter(genres: [.fantasy, .romance], platforms: [.kakaoPage])
         filter.setPublicationStatus(.completed)
-        filter.setRatingThreshold(.over4_0)
         filter.setRatingRange(min: 3.5, max: 4.0)
         try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
 
@@ -272,7 +240,6 @@ struct SearchFilterTests {
         #expect(filter.platforms.isEmpty)
         #expect(filter.publicationStatus == nil)
         #expect(filter.ratingRange == nil)
-        #expect(filter.ratingThreshold == .over4_0)
         #expect(filter.keywords.count == 1)
     }
 
@@ -282,7 +249,6 @@ struct SearchFilterTests {
     func clearAll() throws {
         var filter = makeFilter(genres: [.fantasy, .romance], platforms: [.kakaoPage])
         filter.setPublicationStatus(.completed)
-        filter.setRatingThreshold(.over4_0)
         filter.setRatingRange(min: 3.5, max: 4.0)
         try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
 
@@ -291,7 +257,6 @@ struct SearchFilterTests {
         #expect(filter.genres.isEmpty)
         #expect(filter.platforms.isEmpty)
         #expect(filter.publicationStatus == nil)
-        #expect(filter.ratingThreshold == nil)
         #expect(filter.ratingRange == nil)
         #expect(filter.keywords.isEmpty)
     }
@@ -302,14 +267,12 @@ extension SearchFilterTests {
         genres: [NovelGenre] = [],
         platforms: [NovelPlatform] = [],
         publicationStatus: NovelPublicationStatus? = nil,
-        ratingThreshold: NovelRatingThreshold? = nil,
         keywords: [Keyword] = []
     ) -> SearchFilter {
         SearchFilter(
             genres: genres,
             platforms: platforms,
             publicationStatus: publicationStatus,
-            ratingThreshold: ratingThreshold,
             keywords: keywords
         )
     }

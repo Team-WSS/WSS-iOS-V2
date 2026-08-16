@@ -33,9 +33,9 @@
 - ⚠️ **`KeywordRepository.fetchKeywords()`는 네트워크를 타지 않고 로컬 캐시만 읽는다** — 캐시를 채우는 건 `syncKeywords()` 뿐이다. 즉 **App 조립에서 `syncKeywords()`를 선행하지 않으면 서재·작품 상세의 키워드가 화면상 아무 오류 없이 통째로 빈다**(UseCase의 `try?` + `?? []` 폴백이 실패를 삼킨다 — 목록 자체를 막지 않으려는 의도된 설계. 단, Data 레이어에는 `logger?.logCacheError`가 남으므로 **원인 추적은 로그로** 한다). `LoadNovelUseCase`·`LoadMyLibraryUseCase` 둘 다 해당하며, 서재는 목록 전체가 영향받아 체감이 크다. Demo 앱들이 화면을 띄우기 전에 `await ...syncKeywords()`를 부르는 게 이 때문이다.
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
 - 엔티티 시그니처를 바꾸면 **`Testing/` Mock과 `Tests/`도 같이 갱신**할 것 — #135에서 authors/genres/필터 변경이 미반영돼 테스트 타깃이 컴파일 불가로 방치됐었다(#154에서 수리).
-- **`Novel`/`NovelRatingThreshold`/`NovelPublicationStatus`는 이 모듈 소유가 아니라 `BaseDomain`에 있다** — `SearchDomain`도 참조해야 해서 공통 토대로 승격됐다. `NovelInformation`/`MyLibraryFilter` 등은 그대로 `import BaseDomain`으로 쓴다.
+- **`Novel`/`NovelPublicationStatus`는 이 모듈 소유가 아니라 `BaseDomain`에 있다** — `SearchDomain`도 참조해야 해서 공통 토대로 승격됐다. `NovelInformation`/`MyLibraryFilter` 등은 그대로 `import BaseDomain`으로 쓴다.
 - **작품 제목/필터 검색(`SearchNovelUseCase`, `SearchFilter`)은 `SearchDomain` 소유**다 — 예전엔 이 모듈이 갖고 있었으나 계약과 구현(엔드포인트·매퍼) 전부 `SearchDomain`/`SearchData`로 이동했다. 이 모듈의 `NovelRepository`/`NovelData`는 더 이상 검색을 모른다.
-- **서재 별점 필터(`LibraryRatingFilter`)는 검색의 `NovelRatingThreshold`(이상 4단계)와 다른 타입**(범위+별점없음). 혼용 금지.
+- **서재 별점 필터(`LibraryRatingFilter`)는 검색의 `NovelRatingRange`(min~max)와 다른 타입**(범위에 더해 별점없음 모드까지 지원). 혼용 금지.
   전체 범위(0.0~5.0)는 `setRatingRange`가 **nil로 정규화**한다("필터 없음"의 표현을 하나로 유지) — UI는 `rating != nil`로 칩 유무를 판단하면 된다.
 - **`MyLibraryFilter.clearAll()`(시트 "초기화")은 시트 필터 6종만 리셋** — 관심(isInterest)·정렬(sortType)은 시트 소속이 아니라 유지된다.
 - **연재상태(`publicationStatus`)가 단일 선택인 건 의도된 설계** — 서버 쿼리가 `isCompleted: Bool?` **하나뿐**이라 애초에 "연재중+완결작"을 표현할 수단이 없다. 구 WSSiOS는 이걸 배열로 들고 UI에서 둘 다 켤 수 있게 해뒀지만, Repository가 `count == 1`일 때만 파라미터를 실어서 **둘 다 고르면 필터가 통째로 무시**됐다(칩은 2개인데 결과는 전체). V1이 다중이라는 이유로 배열로 되돌리지 말 것.

@@ -176,7 +176,6 @@ extension SearchDataDemoView {
         do {
             let filter = SearchFilter(genres: [.romance],
                                       publicationStatus: nil,
-                                      ratingThreshold: nil,
                                       keywords: [])
             let (paginated, totalCount) = try await repository.searchNovelByFilter(filter, page: 0)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")

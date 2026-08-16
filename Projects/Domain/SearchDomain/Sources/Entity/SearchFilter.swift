@@ -14,7 +14,6 @@ public struct SearchFilter {
     public private(set) var genres: [NovelGenre]
     public private(set) var platforms: [NovelPlatform]
     public private(set) var publicationStatus: NovelPublicationStatus?
-    public private(set) var ratingThreshold: NovelRatingThreshold?
     public private(set) var ratingRange: NovelRatingRange?
     public private(set) var keywords: [Keyword]
 
@@ -22,14 +21,12 @@ public struct SearchFilter {
         genres: [NovelGenre] = [],
         platforms: [NovelPlatform] = [],
         publicationStatus: NovelPublicationStatus? = nil,
-        ratingThreshold: NovelRatingThreshold? = nil,
         ratingRange: NovelRatingRange? = nil,
         keywords: [Keyword] = []
     ) {
         self.genres = genres
         self.platforms = platforms
         self.publicationStatus = publicationStatus
-        self.ratingThreshold = ratingThreshold
         self.ratingRange = ratingRange
         self.keywords = keywords
     }
@@ -80,16 +77,6 @@ public struct SearchFilter {
     
     private mutating func clearPublicationStatus() {
         publicationStatus = nil
-    }
-    
-    // - RatingThreshold (별점)
-    
-    public mutating func setRatingThreshold(_ threshold: NovelRatingThreshold?) {
-        ratingThreshold = threshold
-    }
-    
-    private mutating func clearRatingThreshold() {
-        ratingThreshold = nil
     }
 
     // - RatingRange (별점 범위, 상세탐색 필터 전용)
@@ -142,9 +129,8 @@ public struct SearchFilter {
 
     // - Clear
 
-    /// 상세탐색 필터 화면의 "정보" 탭 4종(장르·플랫폼·연재상태·별점 범위)만 초기화한다. `ratingThreshold`는
-    /// 이 필터가 갖고 있어도 그 화면이 건드리지 않는 값이라 포함하지 않고, 키워드도 별개 탭 소관이라
-    /// 포함하지 않는다 — 탭별로 "초기화"가 각자 독립적으로 동작해야 해서 나뉘었다(#185, 사용자 확정).
+    /// 상세탐색 필터 화면의 "정보" 탭 4종(장르·플랫폼·연재상태·별점 범위)만 초기화한다. 키워드는
+    /// 별개 탭 소관이라 포함하지 않는다 — 탭별로 "초기화"가 각자 독립적으로 동작해야 해서 나뉘었다(#185, 사용자 확정).
     public mutating func clearInfoFilters() {
         clearGenres()
         clearPlatforms()
@@ -156,7 +142,6 @@ public struct SearchFilter {
         clearGenres()
         clearPlatforms()
         clearPublicationStatus()
-        clearRatingThreshold()
         clearRatingRange()
         clearKeywords()
     }

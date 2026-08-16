@@ -200,7 +200,7 @@ private extension DetailSearchResultView {
         if !filter.platforms.isEmpty { appliedCategories.append("플랫폼") }
         if !filter.keywords.isEmpty { appliedCategories.append("키워드") }
         if filter.publicationStatus != nil { appliedCategories.append("연재상태") }
-        if filter.ratingThreshold != nil || filter.ratingRange != nil { appliedCategories.append("별점") }
+        if filter.ratingRange != nil { appliedCategories.append("별점") }
 
         guard !appliedCategories.isEmpty else { return "전체 작품" }
         return appliedCategories.joined(separator: ", ") + " 적용"

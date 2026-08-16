@@ -13,7 +13,6 @@ public struct DetailSearchQuery: QueryItemConvertible {
     let genres: [String]
     let platformNames: [String]
     let isCompleted: Bool
-    let novelRating: Float
     let novelRatingStart: Float
     let novelRatingEnd: Float
     let keywordIds: [Int]
