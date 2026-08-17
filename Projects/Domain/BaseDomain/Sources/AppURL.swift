@@ -17,8 +17,8 @@ public enum AppURL {
     /// 오류 제보 노션 폼.
     public static let errorReport = URL(string: "https://helpwebsoso.notion.site/241a9688d1a381548c20dd314d0a0b0a")
 
-    /// 공식 인스타그램
-    static let instaURL = "https://www.instagram.com/websoso_official/"
+    /// 공식 인스타그램.
+    public static let instaURL = URL(string: "https://www.instagram.com/websoso_official/")
 
     /// 개인정보처리방침 노션 페이지.
     public static let privacyPolicy = URL(string: "https://websoso.notion.site/143600bd746880668556fb005fcef491?pvs=143")
