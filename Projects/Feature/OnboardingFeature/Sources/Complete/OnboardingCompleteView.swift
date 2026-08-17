@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+
 import Lottie
 
 import DesignSystem
@@ -48,9 +49,11 @@ struct OnboardingCompleteView: View {
 
 private extension OnboardingCompleteView {
     var titleSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 0) {
             Text("웹소소와 계약 완료!")
                 .applyWSSFont(.headline1, color: .wssBlack)
+
+            Spacer().frame(height: 10)
 
             Text("\(nickname)님, 만나서 반가워요!")
                 .applyWSSFont(.body2, color: .wssGray300)

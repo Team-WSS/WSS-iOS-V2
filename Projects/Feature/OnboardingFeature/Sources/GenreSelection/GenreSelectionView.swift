@@ -78,10 +78,12 @@ struct GenreSelectionView: View {
 private extension GenreSelectionView {
 
     var titleSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("평소 즐겨보는 장르를 선택하세요")
                 .applyWSSFont(.headline1)
                 .foregroundStyle(Color.wssBlack)
+
+            Spacer().frame(height: 8)
 
             Text("선호 장르를 기반으로 웹소설을 추천해드려요")
                 .applyWSSFont(.body2)
