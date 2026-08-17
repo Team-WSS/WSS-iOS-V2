@@ -81,7 +81,7 @@ struct OnboardingIntroView: View {
     }
 
     private var content: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             WSSImage.imgLoginBackground.swiftUIImage
                 .resizable()
                 .ignoresSafeArea()
@@ -93,7 +93,8 @@ struct OnboardingIntroView: View {
 
                 bottomSection
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
+                
+                Spacer().frame(height: 67)
             }
         }
         .disabled(viewModel.state.isLoggingIn)
@@ -115,16 +116,15 @@ private extension OnboardingIntroView {
             WSSImage.imgLoginBanner4.swiftUIImage.resizable().scaledToFit().tag(4)
             WSSImage.imgLoginBanner1.swiftUIImage.resizable().scaledToFit().tag(5)
         }
+        .frame(height: 567)
         .tabViewStyle(.page(indexDisplayMode: .never))
     }
 
     var bottomSection: some View {
         VStack(spacing: 0) {
-            Spacer().frame(height: 12)
-
             pageIndicator
 
-            Spacer().frame(height: 30)
+            Spacer().frame(height: 60)
 
             socialLoginButtons
         }
