@@ -90,6 +90,8 @@ private struct DemoRootView: View {
     @State private var mockProfileVisibilityStore = DemoProfileVisibilityStore()
     /// Mock 모드 알림 설정의 인메모리 상태.
     @State private var mockPushPreferenceStore = DemoPushPreferenceStore()
+    /// Mock 모드 완결/휴재복귀 알림 구독 목록의 인메모리 상태.
+    @State private var mockNovelNotificationStore = DemoNovelNotificationSubscriptionsStore()
 
     private let consoleLogger = ConsoleLogger()
 
@@ -138,13 +140,16 @@ private struct DemoRootView: View {
                 unblockUserUseCase: DemoUnblockUserUseCase(store: mockBlockedUsersStore),
                 loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
                 updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
+                loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
+                deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 withdrawUseCase: DemoWithdrawUseCase(),
                 logoutUseCase: DemoLogoutUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
                 logger: consoleLogger,
                 onWithdrawSuccess: { isSettingPresented = false },
-                onLogoutSuccess: { isSettingPresented = false }
+                onLogoutSuccess: { isSettingPresented = false },
+                onBrowseNovels: { consoleLogger.info("[디버그] 작품 둘러보기 → 검색 화면 이동(App 라우팅 미구현)") }
             )
         case .live:
             makeLiveSettingView()
@@ -169,6 +174,10 @@ private struct DemoRootView: View {
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
         let pushSettingRepository = NotificationDataFactory.makePushSettingRepository(
+            client: client,
+            logger: DataLogger(moduleName: "NotificationData", underlying: consoleLogger)
+        )
+        let novelNotificationRepository = NotificationDataFactory.makeNovelNotificationRepository(
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: consoleLogger)
         )
@@ -200,13 +209,16 @@ private struct DemoRootView: View {
             unblockUserUseCase: DefaultUnblockUserUseCase(repository: socialRepository),
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: pushSettingRepository),
+            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: novelNotificationRepository),
+            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: novelNotificationRepository),
             withdrawUseCase: DefaultWithdrawUseCase(repository: authRepository),
             logoutUseCase: DefaultLogoutUseCase(authRepository: authRepository),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
             onWithdrawSuccess: { isSettingPresented = false },
-            onLogoutSuccess: { isSettingPresented = false }
+            onLogoutSuccess: { isSettingPresented = false },
+            onBrowseNovels: { consoleLogger.info("[디버그] 작품 둘러보기 → 검색 화면 이동(App 라우팅 미구현)") }
         )
     }
 }
@@ -336,6 +348,73 @@ private struct DemoUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
     func execute(pushPreference: PushPreference) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
         await store.update(pushPreference.isEnabled)
+    }
+}
+
+/// Mock 완결/휴재복귀 알림 구독 목록의 인메모리 상태. 목록이 짧아 커서 페이지네이션 없이 한 번에 다 보여준다.
+@MainActor
+private final class DemoNovelNotificationSubscriptionsStore {
+    private(set) var completionSubscriptions: [NovelNotificationSubscription]
+    private(set) var hiatusReturnSubscriptions: [NovelNotificationSubscription]
+
+    init() {
+        completionSubscriptions = (1...7).map { index in
+            NovelNotificationSubscription(
+                id: SubscriptionID(index),
+                novelID: NovelID(index),
+                novelTitle: "완결 알림 작품 \(index)",
+                novelThumbnailImage: nil,
+                novelAuthor: "작가 \(index)",
+                registeredDateText: String(format: "2026.08.%02d", index)
+            )
+        }
+        hiatusReturnSubscriptions = (1...3).map { index in
+            NovelNotificationSubscription(
+                id: SubscriptionID(100 + index),
+                novelID: NovelID(100 + index),
+                novelTitle: "휴재 복귀 알림 작품 \(index)",
+                novelThumbnailImage: nil,
+                novelAuthor: "작가 \(index)",
+                registeredDateText: String(format: "2026.08.%02d", index)
+            )
+        }
+    }
+
+    func subscriptions(for type: NovelNotificationType) -> [NovelNotificationSubscription] {
+        switch type {
+        case .completion:   completionSubscriptions
+        case .hiatusReturn: hiatusReturnSubscriptions
+        }
+    }
+
+    func delete(type: NovelNotificationType, novelIDs: [NovelID]) {
+        switch type {
+        case .completion:   completionSubscriptions.removeAll { novelIDs.contains($0.novelID) }
+        case .hiatusReturn: hiatusReturnSubscriptions.removeAll { novelIDs.contains($0.novelID) }
+        }
+    }
+}
+
+private struct DemoLoadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase {
+    let store: DemoNovelNotificationSubscriptionsStore
+
+    func execute(
+        type: NovelNotificationType,
+        lastSubscriptionID: SubscriptionID?,
+        size: Int
+    ) async throws(RepositoryError) -> PagedNovelNotificationSubscriptions {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        let subscriptions = await store.subscriptions(for: type)
+        return PagedNovelNotificationSubscriptions(subscriptions: subscriptions, isLoadable: false, nextSubscriptionID: nil)
+    }
+}
+
+private struct DemoDeleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase {
+    let store: DemoNovelNotificationSubscriptionsStore
+
+    func execute(type: NovelNotificationType, novelIDs: [NovelID]) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        await store.delete(type: type, novelIDs: novelIDs)
     }
 }
 

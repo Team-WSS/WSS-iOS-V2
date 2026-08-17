@@ -37,6 +37,8 @@ public enum SettingFeatureFactory {
         // NotificationDomain
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         // AuthDomain
         withdrawUseCase: WithdrawUseCase,
         logoutUseCase: LogoutUseCase,
@@ -46,7 +48,8 @@ public enum SettingFeatureFactory {
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
-        onLogoutSuccess: @escaping () -> Void = {}
+        onLogoutSuccess: @escaping () -> Void = {},
+        onBrowseNovels: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingViewModel(pushAuthorizationChecker: pushAuthorizationChecker, logger: logger)
         return SettingView(
@@ -60,12 +63,15 @@ public enum SettingFeatureFactory {
             unblockUserUseCase: unblockUserUseCase,
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
+            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             withdrawUseCase: withdrawUseCase,
             logoutUseCase: logoutUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
             onWithdrawSuccess: onWithdrawSuccess,
-            onLogoutSuccess: onLogoutSuccess
+            onLogoutSuccess: onLogoutSuccess,
+            onBrowseNovels: onBrowseNovels
         )
     }
 
@@ -194,13 +200,85 @@ public enum SettingFeatureFactory {
     public static func makeNotificationSettingView(
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
-        logger: Logger? = nil
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
+        logger: Logger? = nil,
+        onBrowseNovels: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
             logger: logger
         )
-        return NotificationSettingView(viewModel: viewModel)
+        return NotificationSettingView(
+            viewModel: viewModel,
+            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
+            logger: logger,
+            onBrowseNovels: onBrowseNovels
+        )
+    }
+
+    /// 완결/휴재복귀 알림 목록은 화면 구조가 완전히 같아(#188) `type`만 달리해 같은 `NovelNotificationListView`를 재사용한다.
+    @MainActor
+    public static func makeCompletionNotificationListView(
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
+        logger: Logger? = nil,
+        onBrowseNovels: @escaping () -> Void = {}
+    ) -> some View {
+        makeNovelNotificationListView(
+            type: .completion,
+            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
+            logger: logger,
+            onBrowseNovels: onBrowseNovels
+        )
+    }
+
+    @MainActor
+    public static func makeHiatusReturnNotificationListView(
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
+        logger: Logger? = nil,
+        onBrowseNovels: @escaping () -> Void = {}
+    ) -> some View {
+        makeNovelNotificationListView(
+            type: .hiatusReturn,
+            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
+            logger: logger,
+            onBrowseNovels: onBrowseNovels
+        )
+    }
+
+    @MainActor
+    private static func makeNovelNotificationListView(
+        type: NovelNotificationType,
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
+        logger: Logger?,
+        onBrowseNovels: @escaping () -> Void
+    ) -> some View {
+        let viewModel = NovelNotificationListViewModel(
+            type: type,
+            loadSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+            deleteSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
+            logger: logger
+        )
+        return NovelNotificationListView(title: type.novelNotificationListTitle, viewModel: viewModel, onBrowseNovels: onBrowseNovels)
+    }
+}
+
+// MARK: - Presentation
+
+/// `type`이 이미 화면을 정하므로(`makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView`)
+/// 제목을 별도 인자로 또 받지 않고 여기서 유도한다 — 둘이 어긋날 여지를 없앤다.
+private extension NovelNotificationType {
+    var novelNotificationListTitle: String {
+        switch self {
+        case .completion:   "완결 알림"
+        case .hiatusReturn: "휴재 복귀 알림"
+        }
     }
 }
