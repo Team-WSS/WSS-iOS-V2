@@ -17,3 +17,4 @@ public typealias NotificationID = IDWrapper<Int>
 public typealias BlockID = IDWrapper<Int>
 public typealias SearchWordID = IDWrapper<Int>
 public typealias CollectionID = IDWrapper<Int>
+public typealias SubscriptionID = IDWrapper<Int>
