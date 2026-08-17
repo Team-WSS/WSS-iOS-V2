@@ -283,6 +283,24 @@ public extension WSSAlertType {
                     WSSAlertButton(title: "로그아웃", role: .confirm)
                 ]
             )
+
+        case .deleteNovelNotificationSubscriptions(let summary):
+            WSSAlertContent(
+                iconImage: nil,
+                title: "해당 작품 알림을 삭제할까요?",
+                titleFont: .title1,
+                titleBottomPadding: 10,
+                description: WSSAlertDescription(
+                    title: summary,
+                    font: .body2,
+                    titleColor: WSSColor.wssGray300.swiftUIColor,
+                    bottomPadding: 24
+                ),
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
+            )
         }
     }
 }
