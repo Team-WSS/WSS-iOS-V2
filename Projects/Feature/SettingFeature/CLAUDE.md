@@ -10,6 +10,7 @@
 
 - **성별/나이 변경 화면**은 `ProfileDomain`에 의존한다 — 성별/출생연도는 userDefaults에서 읽고(`LoadLocalGenderAndBirthUseCase`), 저장 시 서버 PUT + userDefaults 갱신을 함께 하는 `SaveAccountInfoDraftUseCase`(`AccountInfoDraft`, ProfileDomain 기존 계약)를 재사용한다.
 - **`SettingChangeBirthYearPickerSheet`는 커밋-온-확인 패턴**: 시트 내부 `draftYear`만 스크롤로 바뀌고, "완료"를 눌러야 부모 `selectedYear`(Binding)에 반영된다. X는 커밋 없이 닫기만.
+<<<<<<< HEAD
 - **"알림 설정" 메뉴 탭 시점에 시스템 푸시 권한 확인(#193)**: 체크·알럿은 `NotificationSettingView`가
   아니라 **`SettingView`가 "알림 설정" 메뉴를 탭한 순간** 한다(`SettingViewModel.notificationMenuTapped`).
   `PushAuthorizationChecker`로 확인해 `notDetermined`(아직 안 물어봄)면 시스템 프롬프트를 바로 띄우고
@@ -35,10 +36,13 @@
   이미 권한을 확정짓기 때문(회원가입 직후 첫 홈이 유저가 이 앱에서 처음 겪는 권한 결정 시점). 여기 오는
   대부분의 유저는 이미 `authorized`/`denied`로 확정된 뒤다.
 - **완결 알림/휴재 복귀 알림 목록(`NovelNotificationListView`, #188)** — `NotificationSettingView`의 두 row에서 push. **화면 구조가 완전히 같아**(사용자 확정) 별도 View 두 개를 만들지 않고 `NovelNotificationType`(`.completion`/`.hiatusReturn`)만 다르게 주입해 같은 View/VM을 재사용한다 — `SettingFeatureFactory`에 `makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView` 두 진입점은 있지만 내부에서 같은 `NovelNotificationListView`(제목만 다름)를 만든다.
+=======
+- **완결 알림/휴재 복귀 알림 목록(`NovelNotificationListView`, #188)** — `NotificationSettingView`의 두 row에서 push. **화면 구조가 완전히 같아**(사용자 확정) 별도 View 두 개를 만들지 않고 `NovelNotificationType`(`.completion`/`.hiatusReturn`)만 다르게 주입해 같은 View/VM을 재사용한다 — `SettingFeatureFactory`에 `makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView` 두 진입점은 있지만 내부에서 같은 `NovelNotificationListView`(제목만 다름)를 만든다.
   - **툴바 우측은 "수정"↔"삭제" 전환 버튼 하나**(`state.isEditing`, 사용자 확정) — 기본은 "수정"(gray300, 항상 탭 가능)이고, 누르면 "삭제"로 바뀌며 그때부터 행 선택이 가능해진다(`NovelNotificationRow`는 행 전체가 탭 영역이지만 `isEditing`이 아니면 `toggleSelection`이 VM에서 no-op). **체크 버튼 자체가 `isEditing`이 아니면 렌더되지 않는다**(숨김이 아니라 조건부 렌더 — "수정"을 눌러야 비로소 나타남). "삭제"는 하나 이상 선택해야 활성(primary100)이고, 선택 없이는 비활성(gray200) — "수정"의 gray300과는 다른 톤이라 섞어 쓰지 말 것. 편집 모드를 취소할 방법은 따로 없다(뒤로가기로 화면을 나가면 초기화). 삭제 성공 시 `isEditing`도 함께 꺼져 다음 진입은 항상 "수정"부터 다시 시작한다.
   - **`NovelNotificationRow`는 `Button`이 아니라 `onTapGesture`**(사용자 확정) — `.disabled`를 얹은 `Button`은 비편집 상태에서 행 전체가 옅게 흐려 보이는 부작용이 있었다(no-op이어야 할 상태가 "비활성화된 것처럼" 보임). 체크 아이콘은 `WSSComponent`의 `WSSSelectionCheckIcon`(#188 — 여러 화면에 흩어져 있던 크로스페이드+스케일 스프링 구현을 공용 컴포넌트로 승격)을 그대로 쓴다 — 새 화면에서 같은 아이콘 쌍이 필요하면 직접 구현하지 말고 이 컴포넌트를 재사용할 것.
   - 삭제는 `WSSAlertType.deleteNovelNotificationSubscriptions(summary:)`(신규, `WSSComponent`) 확인 알럿을 거친다. `summary`는 **목록에 보이는 순서 기준 첫 선택 항목 제목**("{제목} 외 N작품", View의 `Presentation` 확장이 조합 — 알럿 컴포넌트는 문구를 모른다).
   - 페이지네이션은 서버가 명시적으로 내려주는 `nextSubscriptionID` 커서를 쓴다(`NotificationDomain`의 `Notification`처럼 마지막 항목 id로 유추하지 않음).
+<<<<<<< HEAD
   - ⚠️ **현재 로드된 페이지를 통째로 선택 삭제하면 목록은 비지만 다음 페이지가 남아있을 수 있다** — `state.subscriptions.isEmpty`만 보고 빈 상태(`WSSEmptyView`)로 판정하면 서버에 남은 구독이 화면에서 사라진 것처럼 보인다. VM이 삭제 직후 `subscriptions.isEmpty && hasNextPage`면 자동으로 다음 페이지를 이어 로드하고(`loadMore()`), View는 그 과도기를 빈 상태 대신 `LoadingView()`로 가린다. 삭제 로직을 만질 땐 이 자동 이어받기를 빠뜨리지 말 것.
   - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `onBrowseNovels` 콜백으로 `SettingFeatureFactory.makeView(...)`까지 흘려보내고, 실제 이동은 App이 정한다(지금은 미배선, Demo는 로그만 찍음).
   - ⚠️ **이 두 화면(과 `NotificationSettingView`)은 모듈 내 다른 서버 호출 화면과 달리 인증 만료(`RepositoryError.authenticationRequired`) 라우팅이 없다** — `Feature/CLAUDE.md`의 "인증 만료 처리 계약"이 원칙상 전 서버 호출 화면에 요구하지만, `SettingFeature`는 애초에 어느 화면도(`SettingBlockUserListView` 포함) 이걸 구현하지 않은 상태라 새 화면만 예외로 만들지 않고 기존 패턴을 따랐다 — 모듈 전체에 걸친 기존 갭이니 새 화면 추가 시 되풀이하지 말고, 고칠 땐 모듈 전체를 한 번에 볼 것.
