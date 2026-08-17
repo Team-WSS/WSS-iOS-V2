@@ -14,8 +14,8 @@ let project = Project.createFeatureModule(
     name: ModuleType.feature(.onboarding).name,
     targets: [.sources, .demo],
     // 전용 OnboardingDomain은 없다 — 인트로+소셜로그인은 AuthDomain의 SocialLoginUseCase를,
-    // 가입약관 동의는 SettingDomain의 TermsAgreement 관련 UseCase를, 닉네임은 ProfileDomain의
-    // ValidateNicknameUseCase를 그대로 재사용한다. 성별/출생년도·장르 선택은 후속 이슈에서 이어간다.
+    // 가입약관 동의는 SettingDomain의 TermsAgreement 관련 UseCase를, 닉네임·성별/출생년도·장르 선택은
+    // ProfileDomain의 UseCase를 그대로 재사용한다.
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.auth)),
@@ -24,6 +24,7 @@ let project = Project.createFeatureModule(
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger)),
+        .lottie,
         // 인트로 화면의 카카오 로그인 버튼이 UserApi.shared.loginWithKakaoAccount(...)를 직접 호출한다.
         // OAuthToken 타입 때문에 KakaoSDKAuth도 필요.
         .external(name: "KakaoSDKUser"),
