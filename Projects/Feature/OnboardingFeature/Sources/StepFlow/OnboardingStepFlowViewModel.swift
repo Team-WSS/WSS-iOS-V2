@@ -30,8 +30,6 @@ final class OnboardingStepFlowViewModel {
     struct State {
         var currentStep: Step = .nickname
         var nickname = ""
-        var gender: Gender?
-        var birthYear = try! BirthYear(2000)
     }
 
     // MARK: - Action
@@ -53,9 +51,7 @@ final class OnboardingStepFlowViewModel {
         case .nicknameConfirmed(let nickname):
             state.nickname = nickname
             state.currentStep = .genderBirthYear
-        case .genderBirthYearConfirmed(let gender, let birthYear):
-            state.gender = gender
-            state.birthYear = birthYear
+        case .genderBirthYearConfirmed:
             state.currentStep = .genreSelection
         case .goBack:
             goBack()

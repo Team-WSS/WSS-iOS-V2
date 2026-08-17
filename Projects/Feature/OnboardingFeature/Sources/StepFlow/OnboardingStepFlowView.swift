@@ -10,9 +10,9 @@ import SwiftUI
 
 import BaseDomain
 import ProfileDomain
+import Logger
 import DesignSystem
 import WSSComponent
-import Logger
 
 /// 온보딩 나머지 3단계(닉네임→성별/출생년도→장르선택)를 **한 화면 안에서** 진행하는 컨테이너.
 /// 진행바(+헤더 자리)를 여기서 한 번만 그려 단계 전환 내내 같은 인스턴스로 유지한다 — 그래야
@@ -120,6 +120,8 @@ private extension OnboardingStepFlowView {
                 }
                 .frame(width: 44, height: 44)
                 .padding(.leading, 6)
+                .contentShape(Rectangle())
+                .disabled(genreSelectionViewModel?.state.isSubmitting ?? false)
             }
 
             Spacer()
@@ -133,6 +135,8 @@ private extension OnboardingStepFlowView {
                         .foregroundStyle(Color.wssGray300)
                 }
                 .padding(10)
+                .contentShape(Rectangle())
+                .disabled(genreSelectionViewModel?.state.isSubmitting ?? false)
 
                 Spacer().frame(width: 12)
             }
@@ -194,6 +198,11 @@ private extension OnboardingStepFlowView {
                 onAuthenticationRequired: onAuthenticationRequired,
                 onCompleted: { isRegistrationCompleted = true }
             )
+            // 재확정마다 새 인스턴스가 대입돼도(handleGenderBirthYearConfirmed) `if let` 분기 자체는
+            // 안 바뀌어 뷰 정체성이 유지되면 GenreSelectionView의 `@State`가 최초 initialValue만 쓰고
+            // 새 인스턴스를 무시한다(.sheet(isPresented:) 트랩과 동일 메커니즘) — 인스턴스가 바뀔 때마다
+            // 뷰 정체성도 강제로 바꿔 `@State`가 다시 시드되게 한다.
+            .id(ObjectIdentifier(genreSelectionViewModel))
         } else {
             Color.clear
         }
