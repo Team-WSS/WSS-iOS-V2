@@ -203,9 +203,14 @@ private struct BirthYearPickerSheet: View {
                     dismiss()
                 } label: {
                     WSSImage.icCancelModal.swiftUIImage
+                        .resizable()
                         .renderingMode(.template)
                         .foregroundStyle(Color.wssGray300)
+                        .scaledToFit()
+                        .frame(width: 25, height: 25)
+                        // 아이콘이 작아 그대로는 잡기 어렵다 — 정본(LibraryFilterSheet)과 같은 65 히트 영역.
                         .frame(width: 65, height: 65)
+                        .contentShape(Rectangle())
                 }
             }
             .padding(.leading, 25)
