@@ -45,4 +45,15 @@ public enum NotificationDataFactory {
             logger: logger
         )
     }
+
+    public static func makeNovelNotificationSettingRepository(
+        client: NetworkingRequestable,
+        logger: DataLogger? = nil
+    ) -> NovelNotificationSettingRepository {
+        let service = DefaultNovelNotificationSettingService(client: client)
+        return DefaultNovelNotificationSettingRepository(
+            novelNotificationSettingService: service,
+            logger: logger
+        )
+    }
 }
