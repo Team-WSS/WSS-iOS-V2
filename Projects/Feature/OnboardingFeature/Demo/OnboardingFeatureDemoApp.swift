@@ -56,7 +56,7 @@ private struct DemoRootView: View {
         var id: String { rawValue }
     }
 
-    @State private var dataSource: DataSource = .mock
+    @State private var dataSource: DataSource = .live
     /// 로그인 성공 시 `NeedOnboarding.value == true`(신규 유저)면 세운다 — 가입약관 시트 표시 트리거.
     @State private var isTermsAgreementPresented = false
     /// 약관 동의 완료 시 세운다 — 나머지 3단계(닉네임→성별/출생년도→장르선택) 컨테이너 push 트리거.
