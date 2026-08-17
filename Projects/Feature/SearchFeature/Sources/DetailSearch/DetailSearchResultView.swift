@@ -150,13 +150,20 @@ struct DetailSearchResultView: View {
                         spacing: 18
                     ) {
                         ForEach(viewModel.state.novels, id: \.id) { novel in
-                            DetailSearchResultItemRow(novel: novel)
-                                // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
-                                .onAppear {
-                                    if novel.id == viewModel.state.novels.last?.id {
-                                        viewModel.handle(.loadMore)
-                                    }
+                            WSSNovelGridCell(
+                                thumbnailImage: novel.thumbnailImage,
+                                title: novel.title,
+                                author: novel.authors.joined(separator: ", "),
+                                interestCount: novel.interestCount,
+                                rating: novel.rating,
+                                ratingCount: novel.ratingCount
+                            )
+                            // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
+                            .onAppear {
+                                if novel.id == viewModel.state.novels.last?.id {
+                                    viewModel.handle(.loadMore)
                                 }
+                            }
                         }
                     }
 
