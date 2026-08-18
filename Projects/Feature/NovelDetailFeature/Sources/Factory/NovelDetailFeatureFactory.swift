@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import FeedDomain
+import NotificationDomain
 import NovelDomain
 import NovelReviewDomain
 import SocialDomain
@@ -42,6 +43,8 @@ public enum NovelDetailFeatureFactory {
         deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
+        loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
+        updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping () -> Void,
@@ -53,6 +56,7 @@ public enum NovelDetailFeatureFactory {
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         NovelDetailView(
+            novelID: novelID,
             viewModel: NovelDetailViewModel(
                 novelID: novelID,
                 loadNovelUseCase: loadNovelUseCase,
@@ -65,6 +69,9 @@ public enum NovelDetailFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: logger
             ),
+            loadNotificationSettingUseCase: loadNotificationSettingUseCase,
+            updateNotificationSettingUseCase: updateNotificationSettingUseCase,
+            logger: logger,
             onReviewTapped: onReviewTapped,
             onCreateFeedTapped: onCreateFeedTapped,
             onFeedTapped: onFeedTapped,

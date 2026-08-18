@@ -4,7 +4,7 @@
 소설 상세(NovelDetail) 화면 — 몰입형 헤더 + 유저 평가 + 탭(정보/피드). 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고) + `NotificationDomain`(작품 알림 등록 시트, #189)을 쓴다
-- 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 8종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
+- 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 10종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
   - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — 단 **작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)**이라 현재 소비처는 Demo 로그뿐.
