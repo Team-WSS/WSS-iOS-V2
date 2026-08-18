@@ -11,11 +11,13 @@ import SwiftUI
 import NovelDetailFeature
 import BaseDomain
 import FeedDomain
+import NotificationDomain
 import NovelDomain
 import NovelReviewDomain
 import SocialDomain
 import BaseData
 import FeedData
+import NotificationData
 import NovelData
 import NovelReviewData
 import SocialData
@@ -217,6 +219,8 @@ private struct DemoRootView: View {
     @State private var novelIDText = "1"
     /// 진입 시점에 확정된 작품 ID — 화면이 떠 있는 동안 입력값을 바꿔도 흔들리지 않게 캡처해 둔다.
     @State private var liveNovelID = NovelID(1)
+    /// Mock 모드 작품별 알림 설정의 인메모리 상태.
+    @State private var mockNotificationSettingStore = DemoNovelNotificationSettingStore()
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -349,6 +353,8 @@ private struct DemoRootView: View {
                 deleteNovelReviewUseCase: DemoDeleteNovelReviewUseCase(reviewDeletion: reviewDeletion),
                 reportSpoilerFeedUseCase: DemoReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
+                loadNotificationSettingUseCase: DemoLoadNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
+                updateNotificationSettingUseCase: DemoUpdateNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
@@ -405,6 +411,10 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
+        let novelNotificationSettingRepository = NotificationDataFactory.makeNovelNotificationSettingRepository(
+            client: client,
+            logger: DataLogger(moduleName: "NotificationData", underlying: consoleLogger)
+        )
         return NovelDetailFeatureFactory.makeView(
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
@@ -418,6 +428,8 @@ private struct DemoRootView: View {
             deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
+            loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationSettingRepository),
+            updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationSettingRepository),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
@@ -663,5 +675,42 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
                 : nil,
             imageCount: mirrorsRealData ? 5 : 0
         )
+    }
+}
+
+// MARK: - Demo Mock (작품 알림 설정)
+
+/// Mock 작품별 알림 설정의 인메모리 상태. 작품 ID별로 값을 따로 들어 여러 작품을 오가도 섞이지 않는다.
+@MainActor
+private final class DemoNovelNotificationSettingStore {
+    private var settings: [NovelID: NovelNotificationSetting] = [:]
+
+    func setting(for novelID: NovelID) -> NovelNotificationSetting {
+        settings[novelID] ?? NovelNotificationSetting(
+            isCompletionNotificationEnabled: false,
+            isHiatusReturnNotificationEnabled: false
+        )
+    }
+
+    func update(_ setting: NovelNotificationSetting, for novelID: NovelID) {
+        settings[novelID] = setting
+    }
+}
+
+private struct DemoLoadNovelNotificationSettingUseCase: LoadNovelNotificationSettingUseCase {
+    let store: DemoNovelNotificationSettingStore
+
+    func execute(novelID: NovelID) async throws(RepositoryError) -> NovelNotificationSetting {
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        return await store.setting(for: novelID)
+    }
+}
+
+private struct DemoUpdateNovelNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase {
+    let store: DemoNovelNotificationSettingStore
+
+    func execute(novelID: NovelID, setting: NovelNotificationSetting) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        await store.update(setting, for: novelID)
     }
 }
