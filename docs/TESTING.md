@@ -98,3 +98,6 @@ public final class MockNovelRepository: NovelRepository {
 ## 주의사항 (작업 중 발견 시 누적)
 
 - Mock·테스트가 프로토콜/UseCase 시그니처 변경을 못 따라가 컴파일이 깨지는 drift가 있을 수 있다. 시그니처를 바꾸면 **같은 PR에서 Mock·테스트도 갱신**.
+- ⚠️ **`tuist test`의 `Executed 0 tests, with 0 failures`는 테스트가 안 돌았다는 뜻이 아니다.** 그 줄은 XCTest 카운터라
+  Swift Testing(`@Test`)을 세지 않는다. 실제 실패는 `Failing tests:` + `** TEST FAILED **`로, 성공은 `Test Succeeded`로 나온다.
+  의심되면 일부러 실패하는 테스트를 하나 넣어 러너가 잡는지 확인하면 된다(카나리) — `0 tests`만 보고 러너가 죽었다고 판단하지 말 것.

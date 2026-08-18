@@ -29,5 +29,14 @@
   필요해지면 `CollectionCard`에 옵셔널로 얹지 말고 그 화면 전용 타입을 두는 편이 낫다(두 목록이 같은 카드를 공유하는 구조가 깨진다).
 - 작품을 다루지만 `BaseDomain.Novel`을 쓰지 않는다 — 컬렉션 화면은 평점·관심수·장르를 쓰지 않고 서버도 주지 않아서,
   `Novel`을 쓰면 없는 값을 0으로 채우게 된다. 경량 `CollectionNovel`을 쓴다(`LibraryNovel`·`SosoPick`과 같은 패턴).
+- **UseCase는 초안을 검증하지 않는다.** 제출 가능 여부(`CollectionDraft.isSubmittable`)는 완료 버튼을 잠그는 화면 몫이고,
+  UseCase가 다시 막으면 같은 규칙이 두 곳으로 갈린다(`CreateFeedUseCase`와 같은 방침). 글자 수·중복 같은 입력 제한은
+  `CollectionDraft`의 mutating 메서드가 `ValidationError`로 막는다.
+- **`CollectionDraft`의 init은 제한 초과분을 자르고, `updateName`/`updateDescription`은 던진다.** 의도적인 비대칭이다 —
+  init은 저장된 값을 되돌리는 통로라 실패하면 화면을 못 여는 반면, update는 사용자 입력이라 거부하고 이전 값을 지켜야 한다
+  (`FeedDraft`도 같은 구조).
+- **대표 작품을 고르지 않아도 제출된다.** 서버는 `representativeNovelId`를 필수로 받지만 화면에서 미지정일 수 있어,
+  `effectiveRepresentativeNovelID`가 표시 순서 첫 작품으로 대신한다. 제출할 때 이 값을 쓸 것 — `representativeNovelID`를
+  그대로 보내면 nil이 나가 서버가 거부한다.
 - 컬렉션 소유자는 `BaseDomain.Author`를, 상세 정렬은 `BaseDomain.SortType`(`recent`/`old`)을 그대로 쓴다 —
   서버의 `owner`·`sortCriteria`와 필드가 정확히 맞아 새 타입을 만들지 않았다.
