@@ -3,7 +3,7 @@
 
 소설 상세(NovelDetail) 화면 — 몰입형 헤더 + 유저 평가 + 탭(정보/피드). 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고)을 쓴다
+- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고) + `NotificationDomain`(작품 알림 등록 시트, #189)을 쓴다
 - 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 8종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
@@ -16,6 +16,7 @@
 - **관심 토글**: 정책은 엔티티 `Novel.toggleInterest()`에 위임, UI 낙관 반영 후 서버 실패 시 롤백. `isInterested == nil`(비로그인 등)이면 엔티티가 no-op → 서버 호출도 스킵.
 - **정보 탭 조건부 표시**: 매력포인트/키워드/읽기상태그래프는 각각 값 없으면 숨김, 전부 없으면 빈 상태(제목도 "독자들의 평가"로 변경). 그래프 우세 상태·동률 우선순위는 도메인 `dominantReadStatus`가 결정.
   - ⚠️ **"독자들의 감상평" 제목의 소속은 매력포인트·키워드뿐**이다 — 읽기 상태 그래프는 제목을 공유하지 않는 별도 섹션. 그래서 **그래프만 있고 매력포인트·키워드가 다 비면 제목까지 통째로 숨긴다**(`hasReviewContent`). 셋 다 없을 때만 빈 상태(`hasAnyReviewSummary`)라는 점과 헷갈리기 쉽다 — 판정이 **두 단계**인 이유가 이것. 그래프 위 구분선도 감상평이 실제로 있을 때만 그린다(나눌 대상이 없으면 선도 없다).
+- **작품 알림 등록 시트(#189)**: 네비바 threedots 왼쪽에 종 아이콘(`icAnnouncement`, template+틴트)을 추가해 탭하면 `NovelNotificationSettingSheet`가 뜬다. 완결 알림/휴재 복귀 알림 두 줄을 `WSSToggleButton`으로 각각 켜고 끈다 — 서버는 `NovelNotificationSetting(isCompletionNotificationEnabled, isHiatusReturnNotificationEnabled)` 전체를 매번 함께 PUT 받는 **멱등** API라, 토글 하나만 눌러도 VM은 현재 스냅샷 전체를 보낸다. 로드는 시트가 열릴 때(`onAppear → .load`), 토글은 **낙관 반영 후 실패 시 롤백**(전면 실패 뷰 대신 토스트만 — 시트가 작아 재시도는 "닫고 다시 열기"로 충분하다고 판단). `isSyncing` 가드로 두 토글의 PUT이 겹치는 걸 막는다(스냅샷 롤백이 꼬이지 않도록 요청 하나씩만 진행). 시트는 `.presentationDetents([.height(178)])` + `.presentationDragIndicator(.hidden)` 고정 높이(콘텐츠가 두 줄뿐이라 드래그로 늘릴 여지가 없어서).
 
 ## Demo 시나리오 (Mock)
 
