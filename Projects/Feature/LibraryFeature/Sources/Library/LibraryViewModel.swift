@@ -87,6 +87,14 @@ final class LibraryViewModel {
     /// 그래서 페이지 크기를 Data가 아니라 화면이 쥔다(`LoadMyLibraryUseCase.execute(size:)`).
     @ObservationIgnored private let pageSize = 20
 
+    /// 한 요청으로 받을 수 있는 개수의 서버 상한. 갱신은 "보고 있던 개수"를 그대로 넘기므로 여기 걸릴 수 있다.
+    ///
+    /// **100개 넘게 본 뒤 재진입하면 목록이 100개로 줄고 스크롤이 그만큼 위로 오는데, 이건 의도된 절충이다** —
+    /// 잘린 뒤쪽은 커서로 그대로 이어 받을 수 있고(누락 아님), 그 정도로 깊이 본 상태에서 위치를 지키자고
+    /// 매 진입마다 무거운 요청을 낼 이유가 없다. 상한을 없애 `size`를 그대로 보내면 서버 응답이
+    /// **잘림(조용히 delta가 어긋남) 또는 실패(갱신이 통째로 실패)** 중 무엇이 될지 클라가 통제할 수 없다.
+    @ObservationIgnored private let maxPageSize = 100
+
     /// 지금 화면에 그릴 목록이 서 있는지 — 진입 시 "첫 로드냐 갱신이냐"를 가른다.
     /// ⚠️ **`state.novels`로 판단하지 말 것** — 갱신이 실패해도 배열엔 직전 성공 목록이 남아 있어서,
     /// 실패 뷰에서 재시도할 때 로딩 대신 옛 목록이 잠깐 되살아났다 다시 실패 뷰로 튄다(홈 실측).
@@ -293,13 +301,18 @@ private extension LibraryViewModel {
     /// 반영도 2차까지 받아 **합쳐서 한 번에** 한다 — 1차를 먼저 반영하면 목록이 짧아졌다 늘어나는 게 보인다.
     func fetchRefreshedList() async throws -> LoadOutcome {
         let previousTotalCount = state.totalCount
-        let first = try await fetchPage(cursor: nil, size: max(state.novels.count, pageSize))
+        let first = try await fetchPage(
+            cursor: nil,
+            size: min(max(state.novels.count, pageSize), maxPageSize)
+        )
 
         // 삭제로 delta가 0 이하면 목록이 짧아질 이유가 없고, 더 받을 페이지가 없어도 이어붙일 게 없다.
         let delta = first.totalCount - previousTotalCount
         guard delta > 0, first.hasNext, let cursor = first.nextCursor else { return first }
 
-        let second = try await fetchPage(cursor: cursor, size: delta)
+        // 2차도 같은 상한을 받는다 — 자리를 비운 사이 100건 넘게 등록되는 경우는 드물지만,
+        // 상한을 넘긴 요청 하나 때문에 갱신 전체가 실패하는 편이 훨씬 나쁘다.
+        let second = try await fetchPage(cursor: cursor, size: min(delta, maxPageSize))
         return LoadOutcome(
             items: first.items + second.items,
             totalCount: second.totalCount,
