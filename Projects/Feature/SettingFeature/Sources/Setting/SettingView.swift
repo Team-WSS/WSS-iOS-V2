@@ -17,6 +17,7 @@ import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
+import PushAuthorization
 
 struct SettingView: View {
 
@@ -60,6 +61,9 @@ struct SettingView: View {
     // NovelDomain
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
 
+    // PushAuthorization
+    private let pushAuthorizationChecker: PushAuthorizationChecker
+
     init(
         viewModel: SettingViewModel,
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
@@ -74,6 +78,7 @@ struct SettingView: View {
         withdrawUseCase: WithdrawUseCase,
         logoutUseCase: LogoutUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
@@ -91,6 +96,7 @@ struct SettingView: View {
         self.withdrawUseCase = withdrawUseCase
         self.logoutUseCase = logoutUseCase
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
+        self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
         self.onLogoutSuccess = onLogoutSuccess
@@ -138,6 +144,7 @@ struct SettingView: View {
             SettingFactory.makeNotificationSettingView(
                 loadPushPreferenceUseCase: loadPushPreferenceUseCase,
                 updatePushPreferenceUseCase: updatePushPreferenceUseCase,
+                pushAuthorizationChecker: pushAuthorizationChecker,
                 logger: logger
             )
         }
@@ -243,9 +250,15 @@ private extension SettingView {
             updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
             withdrawUseCase: PreviewWithdrawUseCase(),
             logoutUseCase: PreviewLogoutUseCase(),
-            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
+            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase(),
+            pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         )
     }
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
 }
 
 private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {

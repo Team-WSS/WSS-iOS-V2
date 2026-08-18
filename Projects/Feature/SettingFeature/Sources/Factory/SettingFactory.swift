@@ -14,6 +14,7 @@ import NotificationDomain
 import AuthDomain
 import NovelDomain
 import Logger
+import PushAuthorization
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -41,6 +42,8 @@ public enum SettingFactory {
         logoutUseCase: LogoutUseCase,
         // NovelDomain
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        // PushAuthorization
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
@@ -60,6 +63,7 @@ public enum SettingFactory {
             withdrawUseCase: withdrawUseCase,
             logoutUseCase: logoutUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+            pushAuthorizationChecker: pushAuthorizationChecker,
             logger: logger,
             onWithdrawSuccess: onWithdrawSuccess,
             onLogoutSuccess: onLogoutSuccess
@@ -191,11 +195,13 @@ public enum SettingFactory {
     public static func makeNotificationSettingView(
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
+            pushAuthorizationChecker: pushAuthorizationChecker,
             logger: logger
         )
         return NotificationSettingView(viewModel: viewModel)

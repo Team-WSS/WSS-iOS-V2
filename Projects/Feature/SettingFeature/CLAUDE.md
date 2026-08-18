@@ -3,13 +3,18 @@
 
 설정 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.setting)` / 의존: `BaseDomain`, `ProfileDomain`, `NotificationDomain`, `SocialDomain`, `AuthDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger` (`SettingDomain`은 실제로 쓰이는 곳이 없어 `Project.swift`에서 제외했다 — 필요해지면 다시 추가)
+- 식별자: `ModuleType.feature(.setting)` / 의존: `BaseDomain`, `ProfileDomain`, `NotificationDomain`, `SocialDomain`, `AuthDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger`, `PushAuthorization`(#193 — 알림 설정 화면의 시스템 권한 확인용) (`SettingDomain`은 실제로 쓰이는 곳이 없어 `Project.swift`에서 제외했다 — 필요해지면 다시 추가)
 - 진입점: `Factory/SettingFactory.swift` — `makeView(logger:)`(설정 목록), `makeChangeGenderOrAgeView(loadLocalGenderAndBirthUseCase:saveAccountInfoDraftUseCase:logger:)`(성별/나이 변경)
 
 ## 핵심 시나리오
 
 - **성별/나이 변경 화면**은 `ProfileDomain`에 의존한다 — 성별/출생연도는 userDefaults에서 읽고(`LoadLocalGenderAndBirthUseCase`), 저장 시 서버 PUT + userDefaults 갱신을 함께 하는 `SaveAccountInfoDraftUseCase`(`AccountInfoDraft`, ProfileDomain 기존 계약)를 재사용한다.
 - **`SettingChangeBirthYearPickerSheet`는 커밋-온-확인 패턴**: 시트 내부 `draftYear`만 스크롤로 바뀌고, "완료"를 눌러야 부모 `selectedYear`(Binding)에 반영된다. X는 커밋 없이 닫기만.
+- **알림 설정 화면 진입 시 시스템 푸시 권한 확인(#193)**: `NotificationSettingView`가 `onAppear`마다(재진입 포함) `PushAuthorizationChecker`로 iOS 알림 권한을 확인한다 — `notDetermined`(아직 안 물어봄)면 시스템 프롬프트(`requestAuthorization`)를 바로 띄우고, `denied`(거부됨)면 `WSSAlertType.setAppNotification`("앱 알림이 꺼져있어요") 알럿을 띄운다. 이건 앱 안의 알림 on/off 토글(`isNotificationOn`, 서버 저장값)과는 **완전히 별개** — 토글이 켜져 있어도 iOS 자체 권한이 꺼져 있으면 알림이 안 온다. "설정하러 가기" 탭 시 `UIApplication.openSettingsURLString`으로 iOS 설정 앱을 연다(VM은 판단만, 여는 행위는 View).
+  ⚠️ **`notDetermined` 분기는 이 화면에서 사실상 거의 안 탄다** — `HomeFeature`가 첫 홈 진입 시점에
+  이미 권한을 확정짓기 때문(회원가입 직후 첫 홈이 유저가 이 앱에서 처음 겪는 권한 결정 시점). 여기 오는
+  대부분의 유저는 이미 `authorized`/`denied`로 확정된 뒤라, 이 분기는 홈을 거치지 않고 딥링크 등으로
+  바로 이 화면에 들어온 극단적 경로에 대한 방어적 코드에 가깝다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 

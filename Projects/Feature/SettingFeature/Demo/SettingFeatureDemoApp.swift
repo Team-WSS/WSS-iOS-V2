@@ -23,6 +23,7 @@ import AuthData
 import NovelData
 import Logger
 import Networking
+import PushAuthorization
 import DesignSystem
 import WSSComponent
 
@@ -63,7 +64,25 @@ private struct DemoRootView: View {
         var id: String { rawValue }
     }
 
+    /// 시스템 푸시 권한 상태(#193) — 서버 데이터와 무관해 `dataSource`와 별개 축으로 둔다.
+    /// 실기기/시뮬레이터 설정을 직접 바꾸지 않고도 세 상태를 전부 시연하기 위한 Demo 전용 시나리오.
+    private enum PushAuthorizationScenario: String, CaseIterable, Identifiable {
+        case authorized = "허용됨"
+        case notDetermined = "notDetermined"
+        case denied = "denied"
+        var id: String { rawValue }
+
+        var status: PushAuthorizationStatus {
+            switch self {
+            case .authorized:    .authorized
+            case .notDetermined: .notDetermined
+            case .denied:        .denied
+            }
+        }
+    }
+
     @State private var dataSource: DataSource = .mock
+    @State private var pushAuthorizationScenario: PushAuthorizationScenario = .authorized
     @State private var isSettingPresented = false
     /// Mock 모드 차단 목록의 인메모리 상태. 화면을 다시 열어도 차단 해제 결과가 유지되도록 세션 동안 보관한다.
     @State private var mockBlockedUsersStore = DemoBlockedUsersStore()
@@ -79,6 +98,11 @@ private struct DemoRootView: View {
             VStack(spacing: 24) {
                 Picker("데이터 소스", selection: $dataSource) {
                     ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
+                Picker("푸시 권한 시나리오", selection: $pushAuthorizationScenario) {
+                    ForEach(PushAuthorizationScenario.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
 
@@ -117,6 +141,7 @@ private struct DemoRootView: View {
                 withdrawUseCase: DemoWithdrawUseCase(),
                 logoutUseCase: DemoLogoutUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
+                pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
                 logger: consoleLogger,
                 onWithdrawSuccess: { isSettingPresented = false },
                 onLogoutSuccess: { isSettingPresented = false }
@@ -178,6 +203,7 @@ private struct DemoRootView: View {
             withdrawUseCase: DefaultWithdrawUseCase(repository: authRepository),
             logoutUseCase: DefaultLogoutUseCase(authRepository: authRepository),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
             onWithdrawSuccess: { isSettingPresented = false },
             onLogoutSuccess: { isSettingPresented = false }
@@ -187,6 +213,19 @@ private struct DemoRootView: View {
 
 // MARK: - Demo UseCases (Mock)
 // 인메모리 Mock으로 흐름만 시연한다(서버 불필요).
+
+/// 시스템 권한 상태를 실제로 조회하지 않고 Demo 화면에서 고른 시나리오를 그대로 돌려준다(#193).
+/// `dataSource`가 `.mock`이든 `.live`든 공용으로 쓴다 — 이 값은 서버가 아니라 iOS 설정에서 오기 때문.
+private struct DemoPushAuthorizationChecker: PushAuthorizationChecker {
+    let status: PushAuthorizationStatus
+
+    func authorizationStatus() async -> PushAuthorizationStatus { status }
+
+    func requestAuthorization() async -> Bool {
+        // 실제 시스템 프롬프트 대신 "허용함"으로 시연한다(Demo는 알림 권한을 실제로 요청하지 않음).
+        true
+    }
+}
 
 private struct DemoLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {
     func execute() async throws(RepositoryError) -> AccountInfoDraft {
