@@ -39,6 +39,7 @@
   - **`NovelNotificationRow`는 `Button`이 아니라 `onTapGesture`**(사용자 확정) — `.disabled`를 얹은 `Button`은 비편집 상태에서 행 전체가 옅게 흐려 보이는 부작용이 있었다(no-op이어야 할 상태가 "비활성화된 것처럼" 보임). 체크 아이콘은 `WSSComponent`의 `WSSSelectionCheckIcon`(#188 — 여러 화면에 흩어져 있던 크로스페이드+스케일 스프링 구현을 공용 컴포넌트로 승격)을 그대로 쓴다 — 새 화면에서 같은 아이콘 쌍이 필요하면 직접 구현하지 말고 이 컴포넌트를 재사용할 것.
   - 삭제는 `WSSAlertType.deleteNovelNotificationSubscriptions(summary:)`(신규, `WSSComponent`) 확인 알럿을 거친다. `summary`는 **목록에 보이는 순서 기준 첫 선택 항목 제목**("{제목} 외 N작품", View의 `Presentation` 확장이 조합 — 알럿 컴포넌트는 문구를 모른다).
   - 페이지네이션은 서버가 명시적으로 내려주는 `nextSubscriptionID` 커서를 쓴다(`NotificationDomain`의 `Notification`처럼 마지막 항목 id로 유추하지 않음).
+  - ⚠️ **현재 로드된 페이지를 통째로 선택 삭제하면 목록은 비지만 다음 페이지가 남아있을 수 있다** — `state.subscriptions.isEmpty`만 보고 빈 상태(`WSSEmptyView`)로 판정하면 서버에 남은 구독이 화면에서 사라진 것처럼 보인다. VM이 삭제 직후 `subscriptions.isEmpty && hasNextPage`면 자동으로 다음 페이지를 이어 로드하고(`loadMore()`), View는 그 과도기를 빈 상태 대신 `LoadingView()`로 가린다. 삭제 로직을 만질 땐 이 자동 이어받기를 빠뜨리지 말 것.
   - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `onBrowseNovels` 콜백으로 `SettingFeatureFactory.makeView(...)`까지 흘려보내고, 실제 이동은 App이 정한다(지금은 미배선, Demo는 로그만 찍음).
   - ⚠️ **이 두 화면(과 `NotificationSettingView`)은 모듈 내 다른 서버 호출 화면과 달리 인증 만료(`RepositoryError.authenticationRequired`) 라우팅이 없다** — `Feature/CLAUDE.md`의 "인증 만료 처리 계약"이 원칙상 전 서버 호출 화면에 요구하지만, `SettingFeature`는 애초에 어느 화면도(`SettingBlockUserListView` 포함) 이걸 구현하지 않은 상태라 새 화면만 예외로 만들지 않고 기존 패턴을 따랐다 — 모듈 전체에 걸친 기존 갭이니 새 화면 추가 시 되풀이하지 말고, 고칠 땐 모듈 전체를 한 번에 볼 것.
 
