@@ -35,6 +35,7 @@ public enum NotificationDataFactory {
         )
     }
 
+    /// 작품 알림 구독 목록·일괄 해제(#188) + 작품별 완결/휴재복귀 알림 설정 조회·변경(#189) 공용 Repository.
     public static func makeNovelNotificationRepository(
         client: NetworkingRequestable,
         logger: DataLogger? = nil
@@ -42,17 +43,6 @@ public enum NotificationDataFactory {
         let service = DefaultNovelNotificationService(client: client)
         return DefaultNovelNotificationRepository(
             novelNotificationService: service,
-            logger: logger
-        )
-    }
-
-    public static func makeNovelNotificationSettingRepository(
-        client: NetworkingRequestable,
-        logger: DataLogger? = nil
-    ) -> NovelNotificationSettingRepository {
-        let service = DefaultNovelNotificationSettingService(client: client)
-        return DefaultNovelNotificationSettingRepository(
-            novelNotificationSettingService: service,
             logger: logger
         )
     }

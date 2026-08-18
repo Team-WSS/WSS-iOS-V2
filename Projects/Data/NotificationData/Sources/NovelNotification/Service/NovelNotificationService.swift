@@ -11,4 +11,6 @@ import Foundation
 protocol NovelNotificationService: Sendable {
     func getSubscriptions(_ query: NovelNotificationSubscriptionsQuery) async throws -> NovelNotificationSubscriptionsResponse
     func deleteSubscriptions(_ request: NovelNotificationUnsubscribeRequest) async throws
+    func getNotificationSetting(novelID: Int) async throws -> NovelNotificationSettingResponse
+    func putNotificationSetting(novelID: Int, request: NovelNotificationSettingRequest) async throws
 }

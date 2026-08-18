@@ -18,7 +18,7 @@ struct LoadNovelNotificationSettingUseCaseTests {
 
     @Test("작품 ID로 완결·휴재복귀 알림 설정을 조회한다")
     func loadsNotificationSetting() async throws {
-        let repo = MockNovelNotificationSettingRepository()
+        let repo = MockNovelNotificationRepository()
         let expected = NovelNotificationSetting(
             isCompletionNotificationEnabled: true,
             isHiatusReturnNotificationEnabled: false
@@ -37,7 +37,7 @@ struct LoadNovelNotificationSettingUseCaseTests {
 
     @Test("조회 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryError() async {
-        let repo = MockNovelNotificationSettingRepository()
+        let repo = MockNovelNotificationRepository()
         repo.loadNotificationSettingResult = .failure(.networkUnavailable)
 
         let sut = DefaultLoadNovelNotificationSettingUseCase(repository: repo)

@@ -42,4 +42,18 @@ enum NovelNotificationMapper {
         case .hiatusReturn: return "HIATUS_RETURN"
         }
     }
+
+    static func setting(from response: NovelNotificationSettingResponse) -> NovelNotificationSetting {
+        NovelNotificationSetting(
+            isCompletionNotificationEnabled: response.isCompletionNotificationEnabled,
+            isHiatusReturnNotificationEnabled: response.isHiatusReturnNotificationEnabled
+        )
+    }
+
+    static func request(from setting: NovelNotificationSetting) -> NovelNotificationSettingRequest {
+        NovelNotificationSettingRequest(
+            isCompletionNotificationEnabled: setting.isCompletionNotificationEnabled,
+            isHiatusReturnNotificationEnabled: setting.isHiatusReturnNotificationEnabled
+        )
+    }
 }

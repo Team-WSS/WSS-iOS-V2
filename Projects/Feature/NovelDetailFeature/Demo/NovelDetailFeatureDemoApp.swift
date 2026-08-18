@@ -411,7 +411,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
-        let novelNotificationSettingRepository = NotificationDataFactory.makeNovelNotificationSettingRepository(
+        let novelNotificationRepository = NotificationDataFactory.makeNovelNotificationRepository(
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: consoleLogger)
         )
@@ -428,8 +428,8 @@ private struct DemoRootView: View {
             deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
-            loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationSettingRepository),
-            updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationSettingRepository),
+            loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationRepository),
+            updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,

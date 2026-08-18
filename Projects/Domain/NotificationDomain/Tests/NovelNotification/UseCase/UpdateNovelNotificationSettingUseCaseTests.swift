@@ -18,7 +18,7 @@ struct UpdateNovelNotificationSettingUseCaseTests {
 
     @Test("작품 ID와 갱신할 알림 설정을 그대로 레포지토리에 전달한다")
     func updatesNotificationSetting() async throws {
-        let repo = MockNovelNotificationSettingRepository()
+        let repo = MockNovelNotificationRepository()
         repo.updateNotificationSettingResult = .success(())
 
         let sut = DefaultUpdateNovelNotificationSettingUseCase(repository: repo)
@@ -37,7 +37,7 @@ struct UpdateNovelNotificationSettingUseCaseTests {
 
     @Test("갱신 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryError() async {
-        let repo = MockNovelNotificationSettingRepository()
+        let repo = MockNovelNotificationRepository()
         repo.updateNotificationSettingResult = .failure(.networkUnavailable)
 
         let sut = DefaultUpdateNovelNotificationSettingUseCase(repository: repo)

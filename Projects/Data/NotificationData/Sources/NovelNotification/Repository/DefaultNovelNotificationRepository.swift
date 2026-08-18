@@ -70,4 +70,40 @@ struct DefaultNovelNotificationRepository: NovelNotificationRepository {
             throw .unknown
         }
     }
+
+    public func loadNotificationSetting(novelID: NovelID) async throws(RepositoryError) -> NovelNotificationSetting {
+        let action = NovelNotificationAction.loadSetting
+
+        do {
+            let response = try await service.getNotificationSetting(novelID: novelID.value)
+            let result = NovelNotificationMapper.setting(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
+
+    public func updateNotificationSetting(
+        novelID: NovelID,
+        setting: NovelNotificationSetting
+    ) async throws(RepositoryError) {
+        let action = NovelNotificationAction.updateSetting
+
+        do {
+            let request = NovelNotificationMapper.request(from: setting)
+            try await service.putNotificationSetting(novelID: novelID.value, request: request)
+            logger?.logSuccess(action: action.name)
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
 }

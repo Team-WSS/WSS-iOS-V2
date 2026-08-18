@@ -13,9 +13,9 @@ public protocol UpdateNovelNotificationSettingUseCase: Sendable {
 }
 
 public final class DefaultUpdateNovelNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase {
-    private let repository: NovelNotificationSettingRepository
+    private let repository: NovelNotificationRepository
 
-    public init(repository: NovelNotificationSettingRepository) {
+    public init(repository: NovelNotificationRepository) {
         self.repository = repository
     }
 
