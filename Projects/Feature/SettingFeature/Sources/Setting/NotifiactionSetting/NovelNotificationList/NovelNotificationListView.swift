@@ -35,7 +35,26 @@ struct NovelNotificationListView: View {
     }
 
     var body: some View {
+        // 로딩/실패/빈 상태를 if/else 트리 교체가 아니라 overlay로 둔다. 상태 전환 시에도 루트(content)
+        // 정체성이 유지돼야, 로드 완료 순간과 뒤로가기(dismiss)가 겹쳐도 진행 중인 pop이 취소되지 않는다
+        // (NovelReviewView와 동일한 이유).
         content
+            .overlay {
+                if viewModel.state.isLoading {
+                    LoadingView()
+                } else if viewModel.state.loadError != nil {
+                    NetworkErrorView {
+                        viewModel.handle(.load)
+                    }
+                } else if viewModel.state.subscriptions.isEmpty {
+                    if viewModel.state.hasNextPage {
+                        // 현재 페이지를 통째로 삭제해 일시적으로 빈 상태 — VM이 다음 페이지를 자동 로드 중이다.
+                        LoadingView()
+                    } else {
+                        WSSEmptyView(type: .novelNotification, action: onBrowseNovels)
+                    }
+                }
+            }
             .toolbar {
                 toolbarContent
             }
@@ -58,27 +77,17 @@ struct NovelNotificationListView: View {
             .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
-    @ViewBuilder
+    /// 항상 마운트된 상태로 두고(구독이 비어도 `ForEach`는 그냥 아무것도 안 그린다) 로딩/실패/빈 상태는
+    /// `body`의 overlay가 위에서 가린다 — 루트 정체성을 유지하기 위함(위 body 주석 참고).
     private var content: some View {
-        if viewModel.state.isLoading {
-            LoadingView()
-        } else if viewModel.state.loadError != nil {
-            NetworkErrorView {
-                viewModel.handle(.load)
-            }
-        } else if viewModel.state.subscriptions.isEmpty {
-            if viewModel.state.hasNextPage {
-                // 현재 페이지를 통째로 삭제해 일시적으로 빈 상태 — VM이 다음 페이지를 자동 로드 중이다.
-                LoadingView()
-            } else {
-                WSSEmptyView(type: .novelNotification, action: onBrowseNovels)
-            }
-        } else {
-            listSection
-        }
+        listSection
     }
+}
 
-    private var listSection: some View {
+// MARK: - Sections
+
+private extension NovelNotificationListView {
+    var listSection: some View {
         ScrollView {
             LazyVStack(spacing: 6) {
                 ForEach(viewModel.state.subscriptions, id: \.id) { subscription in
