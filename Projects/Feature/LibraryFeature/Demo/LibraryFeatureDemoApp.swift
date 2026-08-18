@@ -152,6 +152,10 @@ private struct DemoRootView: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            Button("다음 요청 실패") { DemoLibraryNovels.failNextRequest() }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.red)
             Text("서버 총 \(25 + addedNovelCount)개")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -313,6 +317,12 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         print("[Demo] 내 서재 요청 — cursor: \(cursor ?? "nil"), size: \(size)")
         try? await Task.sleep(nanoseconds: 500_000_000)
+
+        if await DemoLibraryNovels.consumeInjectedFailure() {
+            print("[Demo] 내 서재 응답 — 주입된 실패(networkUnavailable)")
+            throw .networkUnavailable
+        }
+
         let result = await DemoLibraryNovels.page(cursor: cursor, size: size, sortType: filter.sortType)
         print("[Demo] 내 서재 응답 — \(result.0.items.count)건, 전체 \(result.1), 다음커서 \(result.0.nextCursor ?? "없음")")
         return result
@@ -360,6 +370,17 @@ private enum DemoLibraryNovels {
 
     /// 자리를 비운 사이 서버에 작품이 등록된 상황을 흉내낸다. 등록 최신순이라 **목록 맨 앞**에 붙는다.
     @MainActor static func addNovel() { addedCount += 1 }
+
+    /// **1회성** 실패 주입 — 갱신 실패(전면 실패 뷰)와 그 뒤 복구 경로를 보려면 실패가 한 번만 나야 한다.
+    /// 계속 실패하면 재시도가 무엇을 그리는지(로딩→목록)를 확인할 수 없다.
+    @MainActor private static var shouldFailNextRequest = false
+
+    @MainActor static func failNextRequest() { shouldFailNextRequest = true }
+
+    @MainActor static func consumeInjectedFailure() -> Bool {
+        defer { shouldFailNextRequest = false }
+        return shouldFailNextRequest
+    }
 
     @MainActor static var totalCount: Int { baseNovels.count + addedCount }
 
