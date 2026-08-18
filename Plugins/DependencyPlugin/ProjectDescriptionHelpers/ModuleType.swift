@@ -75,6 +75,7 @@ public enum CoreModule: String, ModuleSpec {
     case keychain
     case networking
     case logger
+    case pushAuthorization
 }
 
 public enum UIModule: String, ModuleSpec {

@@ -12,6 +12,7 @@
 | `Networking` | 네트워크 클라이언트, 요청/응답 추상화, `NetworkingError` |
 | `Keychain` | 보안 저장소, 키체인 접근 래퍼 |
 | `Logger` | 로깅 추상화, 콘솔 로거 |
+| `PushAuthorization` | 시스템 푸시 알림 권한 확인·요청 래퍼(`UserNotifications`) |
 
 ## 의존 규칙
 
