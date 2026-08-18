@@ -12,6 +12,7 @@ import BaseDomain
 import RecommendationDomain
 import NotificationDomain
 import Logger
+import PushAuthorization
 
 /// 홈 화면의 유일한 public 진입점. View/ViewModel은 internal로 감춘다.
 public enum HomeFactory {
@@ -23,6 +24,7 @@ public enum HomeFactory {
     public static func makeView(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onNovelSelected: @escaping (NovelID) -> Void,
         onFeedSelected: @escaping (FeedID) -> Void,
@@ -36,6 +38,7 @@ public enum HomeFactory {
             viewModel: HomeViewModel(
                 loadHomeDataUseCase: loadHomeDataUseCase,
                 loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
+                pushAuthorizationChecker: pushAuthorizationChecker,
                 logger: logger
             ),
             onNovelSelected: onNovelSelected,

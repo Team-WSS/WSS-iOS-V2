@@ -13,6 +13,7 @@ import BaseDomain
 import RecommendationDomain
 import NotificationDomain
 import Logger
+import PushAuthorization
 
 @MainActor
 @Observable
@@ -34,6 +35,13 @@ final class HomeViewModel {
         var isLoading = true
         var loadFailed = false
         var requiresAuthentication = false
+        /// 알림 벨을 눌렀는데 시스템 푸시 권한이 denied라 기기 설정 유도 알럿을 띄워야 하는지(#193).
+        var isPushAuthorizationAlertPresented = false
+        /// 알림 목록 화면으로 이동해도 되는 신호 — 권한이 있으면 벨 탭 즉시, denied면 알럿을 닫은 뒤에
+        /// 오른다. View가 `onChange`로 소비하고 곧바로 `.consumeNotificationNavigation`으로 되돌린다
+        /// (`requiresAuthentication`과 같은 1회성 신호 패턴 — 이 VM은 탭 세션 내내 살아서 소진해야
+        /// 두 번째 벨 탭도 신호가 삼켜지지 않는다).
+        var shouldNavigateToNotifications = false
     }
 
     // MARK: - Derived
@@ -51,6 +59,12 @@ final class HomeViewModel {
         /// 진입·탭 복귀마다 발화한다(홈은 밖에서 바뀐 값을 다시 비춰야 해서 1회 가드를 두지 않는다).
         case load
         case consumeAuthenticationRequired
+        case notificationBellTapped
+        case dismissPushAuthorizationAlert
+        case consumeNotificationNavigation
+        /// 홈 진입마다 발화 — 첫 회원가입 직후 첫 홈 진입이 이 앱에서 유저가 처음 겪는 알림 권한
+        /// 결정 시점이 되도록 한다(#193). `.load`와 짝을 이루지만 홈 데이터 로드와는 무관한 별도 흐름.
+        case checkPushAuthorizationOnEntry
     }
 
     // MARK: - Output
@@ -78,15 +92,20 @@ final class HomeViewModel {
     // NotificationDomain
     private let loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
 
+    // PushAuthorization
+    private let pushAuthorizationChecker: PushAuthorizationChecker
+
     // MARK: - Init
 
     init(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil
     ) {
         self.loadHomeDataUseCase = loadHomeDataUseCase
         self.loadUnreadNotificationStatusUseCase = loadUnreadNotificationStatusUseCase
+        self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.state = State()
     }
@@ -97,6 +116,10 @@ final class HomeViewModel {
         switch action {
         case .load:                          load()
         case .consumeAuthenticationRequired: state.requiresAuthentication = false
+        case .notificationBellTapped:        notificationBellTapped()
+        case .dismissPushAuthorizationAlert: dismissPushAuthorizationAlert()
+        case .consumeNotificationNavigation: state.shouldNavigateToNotifications = false
+        case .checkPushAuthorizationOnEntry: checkPushAuthorizationOnEntry()
         }
     }
 }
@@ -111,6 +134,42 @@ private extension HomeViewModel {
         loadTask = Task { [weak self] in
             await self?.loadHome()
             self?.loadTask = nil
+        }
+    }
+
+    /// 시스템 푸시 권한이 denied면 알럿을 띄우고 이동은 알럿을 닫을 때까지 미룬다. 그 외
+    /// (authorized/notDetermined)엔 알림 목록 이동을 바로 허락한다 — 알럿은 비차단 안내일 뿐이다.
+    func notificationBellTapped() {
+        Task { [weak self] in
+            guard let self else { return }
+            switch await pushAuthorizationChecker.authorizationStatus() {
+            case .authorized:
+                state.shouldNavigateToNotifications = true
+            case .notDetermined:
+                _ = await pushAuthorizationChecker.requestAuthorization()
+                state.shouldNavigateToNotifications = true
+            case .denied:
+                state.isPushAuthorizationAlertPresented = true
+            }
+        }
+    }
+
+    func dismissPushAuthorizationAlert() {
+        state.isPushAuthorizationAlertPresented = false
+        state.shouldNavigateToNotifications = true
+    }
+
+    /// notDetermined면 그 자리에서 시스템 프롬프트를 띄운다 — 온보딩 완료 후 첫 홈 진입이 유저가
+    /// 이 앱에서 처음 만나는 알림 권한 결정 시점이 되도록 하기 위함(#193). authorized/denied는
+    /// 여기서 아무것도 하지 않는다(denied 유도 알럿은 벨 탭 때만 뜬다 — 진입만으로 알럿을 띄우면
+    /// 매번 홈에 올 때마다 거슬린다). 이 진입점이 있으면 이후 벨 탭·알림 설정 화면에서
+    /// notDetermined를 만날 일이 사실상 없다(이미 authorized/denied로 확정된 뒤라서) — 그 두 곳의
+    /// notDetermined 분기는 방어적으로만 남아 있다(예: 진입 체크가 아직 안 끝난 채 빠르게 벨을 누른 경우).
+    func checkPushAuthorizationOnEntry() {
+        Task { [weak self] in
+            guard let self else { return }
+            guard await pushAuthorizationChecker.authorizationStatus() == .notDetermined else { return }
+            _ = await pushAuthorizationChecker.requestAuthorization()
         }
     }
 }

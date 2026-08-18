@@ -6,10 +6,12 @@
 
 - 식별자: `ModuleType.feature(.home)` / 의존: `BaseDomain`, **`RecommendationDomain`**(홈의 Domain 코드가
   별도 `HomeDomain`이 아니라 여기 있음 — `LoadHomeDataUseCase`·`HomeData`·`TodayDiscovery`·`TrendingFeed`·
-  `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점: `HomeFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:logger:
-  onNovelSelected:onFeedSelected:onSearchTapped:onDetailSearchTapped:onNotificationTapped:
-  onPreferenceGenreSettingTapped:onAuthenticationRequired:)` — **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫)
+  `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), `DesignSystem`, `WSSComponent`, `Logger`,
+  `PushAuthorization`(#193 — 알림 벨 탭 시 시스템 권한 확인용)
+- 진입점: `HomeFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:
+  pushAuthorizationChecker:logger:onNovelSelected:onFeedSelected:onSearchTapped:onDetailSearchTapped:
+  onNotificationTapped:onPreferenceGenreSettingTapped:onAuthenticationRequired:)` —
+  **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫)
 
 ## 핵심 시나리오
 
@@ -20,6 +22,20 @@
 - **섹션 4개**: 검색바·상세검색 배너 / 오늘의 발견(가로 캐러셀) / {닉네임}님을 위한 추천글(2개씩 3페이지) /
   이 웹소설은 어때요?(2열 그리드, 선호장르 미설정이면 설정 유도 CTA).
 - 선택 결과는 전부 콜백으로 상위에 위임한다 — 이 화면은 스스로 화면을 전환하지 않는다.
+- **홈 진입마다 시스템 푸시 권한을 확인, notDetermined면 그 자리에서 시스템 프롬프트(#193)**:
+  `onAppear`의 `.load`와 별도로 `.checkPushAuthorizationOnEntry`를 함께 보낸다. 회원가입 직후 첫 홈
+  진입이 유저가 이 앱에서 처음 겪는 알림 권한 결정 시점이 되게 하려는 의도 — **온보딩 별도 단계로
+  권한을 요청할 필요가 없다.** `authorized`/`denied`면 진입 시점엔 아무 것도 안 한다(denied 유도
+  알럿은 아래 벨 탭 때만 — 진입만으로 매번 알럿을 띄우면 홈에 올 때마다 거슬린다).
+- **알림 벨 탭 → 시스템 권한 확인 → 이동(#193)**: 탭 즉시 `onNotificationTapped()`를 부르지 않고, 먼저
+  `PushAuthorizationChecker`로 권한을 확인한다. `denied`면 `WSSAlertType.setAppNotification` 알럿을 띄우고
+  이동은 알럿을 닫을 때(어느 버튼이든)까지 미룬다 — 알럿은 비차단 안내라 결국 이동은 항상 일어난다.
+  `authorized`/`notDetermined`(요청 후)면 즉시 이동. 서버 저장값(설정 화면의 `isNotificationOn`)과는
+  무관한 iOS 자체 권한이라, 이 화면의 알림 배지(`hasUnreadNotifications`)와도 별개다.
+  ⚠️ **위 진입 시점 체크 덕분에, 이 벨 탭 시점엔 이미 `authorized`/`denied`로 확정돼 있는 게 보통이다**
+  — `notDetermined` 분기는 진입 체크가 아직 안 끝난 채 유저가 아주 빠르게 벨을 누르는 등의 방어적
+  경로로만 남는다. 같은 이유로 `SettingFeature`의 알림 설정 화면도 진입 시 `notDetermined`를 만날 일이
+  거의 없다 — 이미 홈에서 authorized/denied로 정리된 뒤이기 때문.
 
 ## 화면 동작 계약 (#179)
 
@@ -69,6 +85,13 @@
 - ⚠️ **홈은 탭 콘텐츠라 VM이 앱 세션 내내 산다** → `requiresAuthentication`을 View가 소비한 뒤
   `.consumeAuthenticationRequired`로 되돌려야 2회차 인증 만료가 삼켜지지 않는다(`LibraryFeature`와 같은 이유).
   그 대가로 콜백이 여러 번 발화할 수 있으니 **`onAuthenticationRequired`는 idempotent해야 한다.**
+  **`shouldNavigateToNotifications`(#193, 알림 벨 탭 후 이동 신호)도 같은 이유로 같은 패턴**이다 —
+  `.consumeNotificationNavigation`으로 소비하지 않으면 두 번째 벨 탭(denied 케이스)에서 신호가
+  다시 안 올라 이동이 안 된다.
+- **`.checkPushAuthorizationOnEntry`도 `.load`처럼 1회 가드가 없다** — 탭 복귀마다 다시 불린다.
+  의도적이다: `authorized`/`denied`로 이미 확정된 뒤엔 매번 조회만 하고 아무 것도 안 하니(로컬 시스템
+  호출이라 비용도 없음) 가드를 넣을 이유가 없고, 혹시 이 체크가 실행되기 전에 화면이 사라진
+  극단적 케이스에서도 다음 재진입이 자연히 다시 시도한다.
 - `state.preferenceGenreNovelState`는 **옵셔널**이다 — nil(아직 로드 전)과 `.noGenreSettings`(미설정)를
   섞으면 로딩 중에 "선호장르 설정하기" CTA가 번쩍인다.
 - ⚠️ **View는 `state.isLoading`이 아니라 `viewModel.isInitialLoading`을 본다.** 위 두 계약("탭 복귀마다
