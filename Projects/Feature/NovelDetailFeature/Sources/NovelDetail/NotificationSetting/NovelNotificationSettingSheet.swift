@@ -20,14 +20,28 @@ struct NovelNotificationSettingSheet: View {
 
     @State private var viewModel: NovelNotificationSettingSheetViewModel
 
-    init(viewModel: NovelNotificationSettingSheetViewModel) {
+    /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 호출자(`NovelDetailView`)가 이미 갖고 있는
+    /// 콜백을 그대로 전달받는다. 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onAuthenticationRequired: () -> Void
+
+    init(
+        viewModel: NovelNotificationSettingSheetViewModel,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
         content
             .onAppear {
                 viewModel.handle(.load)
+            }
+            .onDisappear {
+                viewModel.handle(.disappear)
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
             }
             .presentationDetents([.height(178)])
             .presentationDragIndicator(.hidden)
@@ -119,7 +133,8 @@ private extension NovelNotificationSettingSheet {
                     novelID: NovelID(1),
                     loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
                     updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase()
-                )
+                ),
+                onAuthenticationRequired: { print("로그인 유도") }
             )
         }
 }

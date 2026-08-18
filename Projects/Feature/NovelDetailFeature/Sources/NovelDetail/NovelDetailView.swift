@@ -153,7 +153,8 @@ struct NovelDetailView: View {
                         loadNotificationSettingUseCase: loadNotificationSettingUseCase,
                         updateNotificationSettingUseCase: updateNotificationSettingUseCase,
                         logger: logger
-                    )
+                    ),
+                    onAuthenticationRequired: onAuthenticationRequired
                 )
             }
     }
@@ -329,7 +330,7 @@ private extension NovelDetailView {
 
             HStack(spacing: 0) {
                 Spacer().frame(width: 20)
-                
+
                 Button {
                     isNotificationSettingSheetPresented = true
                 } label: {
@@ -338,10 +339,11 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 24, height: 24)
                         .foregroundStyle(Color.wssBlack)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                
+
                 Spacer().frame(width: 16)
 
                 Button {
@@ -352,21 +354,24 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 20, height: 20)
                         .foregroundStyle(Color.wssBlack)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                
+
                 Spacer().frame(width: 20)
             }
         }
-        // 스크롤 반응형 네비 타이틀 — 좌우 버튼(44pt)과 겹치지 않게 여백 후 말줄임.
+        // 스크롤 반응형 네비 타이틀 — 좌우 버튼과 겹치지 않게 여백 후 말줄임. 좌측은 뒤로가기(44pt),
+        // 우측은 종 아이콘(44pt)+간격(16)+threedots(44pt)+간격(20)*2 = 144pt 클러스터라 좌우 비대칭.
         .overlay {
             Text(novelTitle)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.horizontal, 44)
+                .padding(.leading, 44)
+                .padding(.trailing, 144)
                 .opacity(showNavTitle ? 1 : 0)
                 .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
