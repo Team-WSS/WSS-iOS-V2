@@ -30,6 +30,7 @@ final class NovelNotificationListViewModel {
         var hasNextPage = false
         var isDeleting = false
         var presentedDeleteConfirmation = false
+        var shouldDismiss = false
         /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 삭제 실패와 분리한다.
         var loadError: NovelNotificationListError?
         /// 삭제 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 선택 상태도 유지한다.
@@ -52,6 +53,7 @@ final class NovelNotificationListViewModel {
         case dismissDeleteConfirmation
         case confirmDelete
         case dismissToast
+        case requestClose
     }
 
     // MARK: - Output
@@ -63,7 +65,9 @@ final class NovelNotificationListViewModel {
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var loadMoreTask: Task<Void, Never>?
+    @ObservationIgnored private var deleteTask: Task<Void, Never>?
     @ObservationIgnored private var nextSubscriptionID: SubscriptionID?
+    @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
 
@@ -108,6 +112,8 @@ final class NovelNotificationListViewModel {
             confirmDelete()
         case .dismissToast:
             state.toastError = nil
+        case .requestClose:
+            close()
         }
     }
 }
@@ -116,15 +122,16 @@ final class NovelNotificationListViewModel {
 
 private extension NovelNotificationListViewModel {
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
+        guard !hasLoaded, loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.loadError = nil
         loadTask = Task { await loadSubscriptions() }
     }
 
     /// 목록 마지막 행이 보일 때 View가 호출(무한스크롤). 다음 페이지가 없거나 이미 로딩 중이면 무시.
+    /// 현재 페이지를 통째로 삭제해 목록이 비었을 때(`deleteSelectedSubscriptions`)도 이 경로로 재호출된다.
     func loadMore() {
-        guard hasLoaded, state.hasNextPage, loadTask == nil, loadMoreTask == nil else { return }
+        guard hasLoaded, state.hasNextPage, loadTask == nil, loadMoreTask == nil, !isClosing else { return }
         state.isLoadingMore = true
         loadMoreTask = Task { await loadMoreSubscriptions() }
     }
@@ -139,15 +146,25 @@ private extension NovelNotificationListViewModel {
     }
 
     func presentDeleteConfirmation() {
-        guard !state.selectedNovelIDs.isEmpty else { return }
+        guard !state.selectedNovelIDs.isEmpty, !isClosing else { return }
         state.presentedDeleteConfirmation = true
     }
 
     func confirmDelete() {
-        guard !state.isDeleting else { return }
+        guard !state.isDeleting, !isClosing else { return }
         state.presentedDeleteConfirmation = false
         state.isDeleting = true
-        Task { await deleteSelectedSubscriptions() }
+        deleteTask = Task { await deleteSelectedSubscriptions() }
+    }
+
+    /// 뒤로가기 요청. 진행 중인 로드/삭제를 취소하고 닫기 신호만 View로 발화한다(`NovelDetailViewModel`과 동일 패턴).
+    func close() {
+        guard !isClosing else { return }
+        isClosing = true
+        loadTask?.cancel()
+        loadMoreTask?.cancel()
+        deleteTask?.cancel()
+        state.shouldDismiss = true
     }
 }
 
@@ -192,15 +209,25 @@ private extension NovelNotificationListViewModel {
     }
 
     func deleteSelectedSubscriptions() async {
-        defer { state.isDeleting = false }
+        defer {
+            deleteTask = nil
+            state.isDeleting = false
+        }
 
         let novelIDs = Array(state.selectedNovelIDs)
         do {
             try await deleteSubscriptionsUseCase.execute(type: type, novelIDs: novelIDs)
+            guard !Task.isCancelled else { return }
             state.subscriptions.removeAll { novelIDs.contains($0.novelID) }
             state.selectedNovelIDs.removeAll()
             state.isEditing = false
+            // 현재 로드된 페이지를 통째로 삭제한 경우 — 목록은 비었지만 서버엔 다음 페이지가 남아있을 수 있어
+            // 그대로 두면 빈 상태(WSSEmptyView)로 잘못 보인다. 다음 페이지가 있으면 바로 이어서 불러온다.
+            if state.subscriptions.isEmpty, state.hasNextPage {
+                loadMore()
+            }
         } catch {
+            guard !Task.isCancelled else { return }
             presentToastError(error)
         }
     }

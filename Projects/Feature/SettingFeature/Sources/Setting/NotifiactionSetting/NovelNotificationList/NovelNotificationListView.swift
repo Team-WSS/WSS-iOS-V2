@@ -44,6 +44,9 @@ struct NovelNotificationListView: View {
             .onAppear {
                 viewModel.handle(.load)
             }
+            .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
+                if shouldDismiss { dismiss() }
+            }
             .showWSSAlert(
                 isPresented: deleteConfirmationBinding,
                 type: .deleteNovelNotificationSubscriptions(summary: deleteSummaryText),
@@ -64,7 +67,12 @@ struct NovelNotificationListView: View {
                 viewModel.handle(.load)
             }
         } else if viewModel.state.subscriptions.isEmpty {
-            WSSEmptyView(type: .novelNotification, action: onBrowseNovels)
+            if viewModel.state.hasNextPage {
+                // 현재 페이지를 통째로 삭제해 일시적으로 빈 상태 — VM이 다음 페이지를 자동 로드 중이다.
+                LoadingView()
+            } else {
+                WSSEmptyView(type: .novelNotification, action: onBrowseNovels)
+            }
         } else {
             listSection
         }
@@ -72,7 +80,7 @@ struct NovelNotificationListView: View {
 
     private var listSection: some View {
         ScrollView {
-            VStack(spacing: 6) {
+            LazyVStack(spacing: 6) {
                 ForEach(viewModel.state.subscriptions, id: \.id) { subscription in
                     NovelNotificationRow(
                         subscription: subscription,
@@ -106,7 +114,7 @@ private extension NovelNotificationListView {
     var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                dismiss()
+                viewModel.handle(.requestClose)
             } label: {
                 WSSImage.icNavigateLeft.swiftUIImage
                     .resizable()
@@ -131,11 +139,15 @@ private extension NovelNotificationListView {
                         viewModel.handle(.beginEditing)
                     }
                 } label: {
-                    Text(viewModel.state.isEditing ? "삭제" : "수정")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(trailingButtonColor)
+                    if viewModel.state.isDeleting {
+                        ProgressView()
+                    } else {
+                        Text(viewModel.state.isEditing ? "삭제" : "수정")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(trailingButtonColor)
+                    }
                 }
-                .disabled(viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty)
+                .disabled(viewModel.state.isDeleting || (viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty))
             }
         }
     }
