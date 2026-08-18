@@ -22,3 +22,14 @@
   화면에서만 의미가 다른 코드는 공용 `NetworkingError.toRepositoryError()`에 섞지 말고 이 모듈의 리포지토리 메서드에서 변환한다
   (`RepositoryError.privateProfile` 선례 — `BaseDomain/CLAUDE.md`).
 - 커서는 **서버가 발급한 불투명 문자열**이다. 마지막 아이템 ID로 유도하거나 파싱하지 말고 받은 값을 그대로 되돌려 보낸다.
+- **Query DTO는 `Encodable`이 아니라 `QueryItemConvertible`(Networking)을 준수해야 한다.** `Encodable`만 붙이면
+  `.convertible(query)`에서 "does not conform" 컴파일 에러가 난다. 기본 구현이 nil 값을 쿼리에서 알아서 빼주므로
+  첫 페이지의 `cursor: nil`을 따로 분기할 필요가 없다.
+- **정렬 파라미터는 대소문자가 다르다.** 서버는 `RECENT`/`OLD`를 받는데 `BaseDomain.SortType`의 rawValue는 소문자다
+  → `CollectionDetailQuery`가 `uppercased()`로 맞춘다. 도메인 enum을 서버 표기에 맞추려 고치지 말 것(다른 도메인도 쓴다).
+- **목록 API 하나가 Repository 메서드 셋을 떠받친다.** 미리보기·컬렉션 목록이 같은 `getUserCollections`를 호출하고
+  Mapper만 갈린다(`collectionPreviews` / `collectionCards`). 엔드포인트를 추가하기 전에 Mapper로 해결되는지 먼저 볼 것.
+- **Demo 앱은 `TEST_API_KEY`(`Config_Debug.xcconfig`)로 인증한다.** 만료되면 모든 호출이 `AUTH-000`으로 실패한다 —
+  Demo가 안 될 때 코드부터 의심하지 말고 토큰부터 확인할 것. 갱신 방법은 `/api-spec` 스킬 문서에 있다.
+- 컬렉션 상세만 `usesTokenIfAvailable`이다(공유 링크로 들어온 비로그인 조회자에게도 내려간다). 나머지는 `requireToken` —
+  목록 API의 비로그인 허용 여부는 서버 명세에 명시가 없어 보수적으로 잡아뒀다. 비로그인 진입 경로가 생기면 그때 확인해 바꾼다.
