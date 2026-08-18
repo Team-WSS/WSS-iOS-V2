@@ -115,8 +115,10 @@ private extension NotificationSettingViewModel {
         Task { await updateNotificationStatus(isOn: isOn, previous: previous) }
     }
 
-    /// 화면 진입마다(재진입 포함) 확인한다 — 기기 설정 앱을 다녀오는 동안 권한이 바뀔 수 있어서
-    /// load()의 hasLoaded 가드와 달리 1회로 막지 않는다.
+    /// 화면에 재진입할 때마다(뒤로 갔다 다시 들어옴) 확인한다 — 그 사이 기기 설정 앱을 다녀와 권한이
+    /// 바뀌었을 수 있어서 load()의 hasLoaded 가드와 달리 1회로 막지 않는다. ⚠️ `onAppear`는 뷰
+    /// 생명주기(재-push) 이벤트라, 화면을 나가지 않고 앱 스위처·백 제스처로 설정 앱만 다녀오는
+    /// 경우(포그라운드 복귀)는 재발화하지 않는다 — 그 경로까지 잡으려면 `scenePhase` 기반 재확인이 별도로 필요.
     func checkPushAuthorization() {
         Task { await checkPushAuthorizationStatus() }
     }
