@@ -61,6 +61,10 @@ private struct DemoRootView: View {
     @State private var isLiveKeywordCacheReady = false
     /// push된 타유저 서재 — nil이면 닫힌 상태.
     @State private var presentedUserLibrary: DemoUserLibraryScenario?
+    /// push된 더미 화면 — **재진입 갱신을 재현하는 유일한 경로**(아래 `refreshEntryRow` 주석).
+    @State private var isAwayScreenPresented = false
+    /// "작품 추가"로 늘린 개수(표시용 미러). 실제 저장소는 `DemoLibraryNovels.addedCount`.
+    @State private var addedNovelCount = 0
     /// 소스 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
     private var libraryViewID: String { dataSource.rawValue }
 
@@ -80,12 +84,16 @@ private struct DemoRootView: View {
                 .padding(.horizontal, 20)
 
                 userLibraryEntryRow
+                refreshEntryRow
 
                 libraryView
                     .id(libraryViewID)
             }
             .navigationDestination(item: $presentedUserLibrary) { scenario in
                 userLibraryView(scenario)
+            }
+            .navigationDestination(isPresented: $isAwayScreenPresented) {
+                DemoAwayScreen()
             }
             .task(id: dataSource) {
                 guard dataSource == .live else {
@@ -118,6 +126,35 @@ private struct DemoRootView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
+    }
+
+    /// 재진입 갱신(`.refresh`) 검증용 행.
+    ///
+    /// ⚠️ **내 서재는 인라인이라 "나갔다 오기"가 없으면 갱신 경로가 한 번도 안 돈다** — 실앱에선 탭 전환·
+    /// 작품 상세 pop이 그 역할을 하지만 Demo엔 그게 없었다. 여기서 push했다 돌아오면 ViewModel은 살아 있고
+    /// `onAppear`만 다시 발화해 실앱의 탭 복귀와 같은 조건이 된다(`.id()`를 건드리면 VM이 새로 생겨 무의미).
+    ///
+    /// "작품 추가"는 **delta 경로(2차 요청)** 재현용 — 총 개수가 안 변하면 delta가 늘 0이라 2차가 안 돈다.
+    private var refreshEntryRow: some View {
+        HStack(spacing: 8) {
+            Text("갱신 검증")
+                .font(.caption)
+            Button("나갔다 오기") { isAwayScreenPresented = true }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            Button("작품 추가") {
+                DemoLibraryNovels.addNovel()
+                addedNovelCount += 1
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            Text("서버 총 \(25 + addedNovelCount)개")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -247,18 +284,38 @@ private struct DemoRootView: View {
     }
 }
 
+/// 재진입을 만들기 위한 빈 화면. 내용은 없어도 되고, **떠났다 돌아오는 것 자체**가 목적이다.
+private struct DemoAwayScreen: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("다른 화면")
+                .font(.title2)
+            Text("뒤로가기로 돌아가면 서재가 갱신된다.\n(요청 로그로 1차·2차를 확인)")
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 // MARK: - Demo UseCases (Mock)
 // 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 총 25개라 기본 페이지 크기 20이면 2페이지.
 
 private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
+    /// ⚠️ 요청을 **찍어야** 갱신이 2단계로 도는지(1차 size=보던 개수 → 2차 size=delta) 확인할 수 있다 —
+    /// 화면만 봐서는 요청이 1번인지 2번인지 구분되지 않는다.
     func execute(
         filter: MyLibraryFilter,
         cursor: String?,
         size: Int
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        print("[Demo] 내 서재 요청 — cursor: \(cursor ?? "nil"), size: \(size)")
         try? await Task.sleep(nanoseconds: 500_000_000)
-        return DemoLibraryNovels.page(cursor: cursor, size: size, sortType: filter.sortType)
+        let result = await DemoLibraryNovels.page(cursor: cursor, size: size, sortType: filter.sortType)
+        print("[Demo] 내 서재 응답 — \(result.0.items.count)건, 전체 \(result.1), 다음커서 \(result.0.nextCursor ?? "없음")")
+        return result
     }
 }
 
@@ -277,7 +334,7 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
 
         switch scenario {
         case .filled:
-            return DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
+            return await DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
         case .empty:
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
         case .failure:
@@ -297,7 +354,16 @@ private enum DemoLibraryNovels {
     ///
     /// `sortType`은 **순서가 실제로 바뀌는지 눈으로 보려고만** 쓴다(서버 정렬 규칙을 흉내내지 않는다) —
     /// 정렬을 바꿔도 목록이 그대로면 재로드가 도는지 알 수 없어서다.
-    static func page(
+    /// Demo에서 "작품 추가"로 늘어난 개수. **갱신의 delta 경로(2차 요청)를 재현하려면 총 개수가 변해야 한다** —
+    /// 고정 25개로는 delta가 항상 0이라 2차 요청이 영영 안 돈다.
+    @MainActor private(set) static var addedCount = 0
+
+    /// 자리를 비운 사이 서버에 작품이 등록된 상황을 흉내낸다. 등록 최신순이라 **목록 맨 앞**에 붙는다.
+    @MainActor static func addNovel() { addedCount += 1 }
+
+    @MainActor static var totalCount: Int { baseNovels.count + addedCount }
+
+    @MainActor static func page(
         cursor: String?,
         size: Int = 20,
         sortType: LibrarySortType = .registeredNewest
@@ -319,15 +385,36 @@ private enum DemoLibraryNovels {
     }
 
     /// 정렬마다 **눈에 보이게 다른 순서**를 낸다 — 두 정렬이 같은 결과면 재로드가 도는지 확인할 수 없어서다.
-    private static func sorted(by sortType: LibrarySortType) -> [LibraryNovel] {
+    @MainActor private static func sorted(by sortType: LibrarySortType) -> [LibraryNovel] {
+        let all = currentNovels
         switch sortType {
-        case .registeredNewest: all
-        case .registeredOldest: all.reversed()
-        case .title:            all.sorted { $0.title < $1.title }
-        case .readDate:         all.sorted { $0.title > $1.title }
-        case .ratingHighest:    all.sorted { ($0.userReview?.rating?.value ?? 0) > ($1.userReview?.rating?.value ?? 0) }
-        case .ratingLowest:     all.sorted { ($0.userReview?.rating?.value ?? 0) < ($1.userReview?.rating?.value ?? 0) }
+        case .registeredNewest: return all
+        case .registeredOldest: return all.reversed()
+        case .title:            return all.sorted { $0.title < $1.title }
+        case .readDate:         return all.sorted { $0.title > $1.title }
+        case .ratingHighest:    return all.sorted { ($0.userReview?.rating?.value ?? 0) > ($1.userReview?.rating?.value ?? 0) }
+        case .ratingLowest:     return all.sorted { ($0.userReview?.rating?.value ?? 0) < ($1.userReview?.rating?.value ?? 0) }
         }
+    }
+
+    /// 추가분 + 기본 25개. 추가분이 **앞**이라 등록 최신순에서 새 작품이 기존 목록을 밀어낸다 —
+    /// 갱신이 delta를 보정하지 않으면 그만큼 뒤가 잘려 나가는 게 눈에 보인다.
+    @MainActor private static var currentNovels: [LibraryNovel] {
+        guard addedCount > 0 else { return baseNovels }
+        return (1...addedCount).reversed().map(makeAddedNovel) + baseNovels
+    }
+
+    /// 추가된 작품은 **제목만으로 구분되게** 둔다(스냅샷에서 바로 확인하려고).
+    private static func makeAddedNovel(_ number: Int) -> LibraryNovel {
+        LibraryNovel(
+            id: NovelID(1000 + number),
+            title: "새로 등록한 작품 \(number)",
+            thumbnailImage: nil,
+            rating: 4.2,
+            isInterested: false,
+            userReview: nil,
+            writtenFeeds: []
+        )
     }
 
     private static let demoKeywordNames = ["빙의", "후회", "궁중암투", "웹툰화"]
@@ -335,7 +422,7 @@ private enum DemoLibraryNovels {
     /// 셀이 값 조합에 따라 어떻게 보이는지 한 화면에서 확인하려고 축을 서로 다른 주기로 돌린다 —
     /// 제목 줄 수(2) · 표지 유무(5) · 읽기 상태(3) · 별점 유무(4) · 기간 유무(4) · 매력포인트 수(4) · 키워드 수(5).
     /// 그리드 행이 어긋나거나 특정 조합이 깨지면 여기서 바로 드러난다.
-    private static let all: [LibraryNovel] = (1...25).map { index in
+    private static let baseNovels: [LibraryNovel] = (1...25).map { index in
         let isLongTitle = index.isMultiple(of: 2)
         let hasRating = index % 4 != 0
         let hasPeriod = index % 4 != 1

@@ -26,6 +26,9 @@ final class LibraryViewModel {
         var filter = MyLibraryFilter()
         /// 초기값 true — onAppear의 `.load`보다 첫 body 평가가 먼저라, false로 시작하면
         /// 로드 시작 전 한 프레임 동안 빈 상태/실패 뷰가 스친다. (NovelDetail 교훈)
+        ///
+        /// ⚠️ **재진입 갱신은 이 값을 세우지 않는다** — 세우면 돌아올 때마다 이미 그린 목록이
+        /// 로딩 뷰로 갈아치워져 스크롤 위치가 초기화된다(홈이 `isInitialLoading`으로 겪은 것과 같은 문제).
         var isLoading = true
         /// 다음 페이지 로드 중 (하단 스피너용). 첫 페이지 로드는 `isLoading`.
         var isLoadingMore = false
@@ -47,6 +50,17 @@ final class LibraryViewModel {
     enum LibraryToast: Equatable {
         case loadMoreFailed
         case keywordsLoadFailed
+    }
+
+    /// 목록 로드의 성격. **시작 표시·결과 반영·실패 표현이 전부 여기서 갈린다.**
+    /// `cursor == nil`로 "첫 페이지"를 판단하던 걸 대체한다 — 갱신도 커서가 nil이라 그 기준으론 구분되지 않는다.
+    fileprivate enum LoadKind {
+        /// 첫 진입·재시도·필터/정렬 변경 — 전면 로딩 + 목록 교체.
+        case reload
+        /// 다음 페이지 — 하단 스피너 + append.
+        case more(cursor: String)
+        /// 재진입 갱신 — 표시 변화 없이 목록 교체.
+        case refresh
     }
 
     // MARK: - Action
@@ -73,8 +87,12 @@ final class LibraryViewModel {
     /// 그래서 페이지 크기를 Data가 아니라 화면이 쥔다(`LoadMyLibraryUseCase.execute(size:)`).
     @ObservationIgnored private let pageSize = 20
 
-    // 1회 가드 플래그는 실패 고착을 막기 위해 **성공 시에만** 소진한다(NovelReview 교훈).
-    @ObservationIgnored private var hasLoaded = false
+    /// 지금 화면에 그릴 목록이 서 있는지 — 진입 시 "첫 로드냐 갱신이냐"를 가른다.
+    /// ⚠️ **`state.novels`로 판단하지 말 것** — 갱신이 실패해도 배열엔 직전 성공 목록이 남아 있어서,
+    /// 실패 뷰에서 재시도할 때 로딩 대신 옛 목록이 잠깐 되살아났다 다시 실패 뷰로 튄다(홈 실측).
+    @ObservationIgnored private var hasLoadedContent = false
+    /// 진행 중인 목록 로드. ⚠️ **로드는 항상 이 한 슬롯에만 산다** — "무효해진 로드 == 취소된 로드"라는
+    /// 등식이 여기서 나오고, 그 등식이 세대 카운터를 대신한다(`loadPage` 주석).
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var keywordsTask: Task<Void, Never>?
     /// 서버 발급 커서 — 다음 페이지 요청에 그대로 왕복한다. View가 볼 값이 아니라 State 밖.
@@ -132,11 +150,20 @@ final class LibraryViewModel {
 
 private extension LibraryViewModel {
 
-    /// 진입 시 첫 페이지 로드. onAppear는 재진입마다 불리므로 성공 후에는 다시 로드하지 않되,
-    /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
+    /// 진입·재진입 공통(`onAppear`). 아직 보여줄 목록이 없으면 첫 로드, 있으면 **갱신**이다.
+    ///
+    /// ⚠️ **"최초 1회" 가드를 두지 않는 것이 의도다** — 작품 상세에서 별점·읽기상태를 바꾸고 돌아오거나
+    /// 밖에서 작품을 등록하면 서재가 그 자리에서 최신이어야 한다(구 WSSiOS도 `viewWillAppear`마다 다시 불렀다).
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
-        reloadFromScratch()
+        // 진행 중인 로드가 있으면 아무것도 하지 않는다 — 첫 로드면 중복 요청이고,
+        // 갱신이면 사용자가 방금 시킨 로드(필터 변경 등)를 덮을 이유가 없다.
+        guard loadTask == nil else { return }
+
+        guard hasLoadedContent else {
+            reloadFromScratch()
+            return
+        }
+        loadTask = Task { await loadPage(.refresh) }
     }
 
     /// 전면 실패 뷰의 재시도.
@@ -152,7 +179,7 @@ private extension LibraryViewModel {
               !state.isLoading,
               let cursor = nextCursor else { return }
         state.isLoadingMore = true
-        loadTask = Task { await loadPage(cursor: cursor) }
+        loadTask = Task { await loadPage(.more(cursor: cursor)) }
     }
 
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
@@ -193,7 +220,7 @@ private extension LibraryViewModel {
         state.isLoading = true
         state.isLoadingMore = false
         state.loadFailed = false
-        loadTask = Task { await loadPage(cursor: nil) }
+        loadTask = Task { await loadPage(.reload) }
     }
 }
 
@@ -201,55 +228,111 @@ private extension LibraryViewModel {
 
 private extension LibraryViewModel {
 
-    /// 서재 페이지 로드. `cursor == nil`이면 첫 페이지(목록 교체), 아니면 다음 페이지(append).
+    /// 조회 결과를 상태 반영 전 단계로 들고 있는 값. `CursorPaginated`와 전체 수를 한 덩이로 묶어,
+    /// **갱신처럼 두 응답을 합쳐야 하는 경우**에도 반영 지점이 하나로 유지되게 한다.
+    struct LoadOutcome {
+        let items: [LibraryNovel]
+        let totalCount: Int
+        let nextCursor: String?
+        let hasNext: Bool
+    }
+
+    /// 서재 로드 본체 — 조회는 `kind`가 정하고, 반영은 취소 확인 뒤 **한 곳에서** 한다.
+    /// (시작 표시는 호출자 몫이다: `reloadFromScratch`의 전면 로딩, `loadMore`의 하단 스피너,
+    ///  갱신은 아무것도 세우지 않는다.)
     ///
-    /// ⚠️ **취소된 로드는 상태를 일절 건드리지 않는다 — 그래서 `defer`를 쓰지 않는다.**
-    /// `defer`는 취소 여부와 무관하게 실행되므로, 필터를 연달아 바꿔 이전 로드가 취소된 뒤 뒤늦게 깨어나면
-    /// **새 로드의 `loadTask`를 지우고 로딩 플래그를 꺼버린다**(중복 요청 가드가 풀리고 스피너가 사라진다).
-    /// 정리를 성공·실패 경로로 옮기면 취소된 로드는 자연히 아무것도 안 하므로,
-    /// "지금 유효한 로드인가"를 따로 추적할 필요가 없다(세대 카운터를 걷어낸 이유).
-    func loadPage(cursor: String?) async {
-        do {
-            let (page, totalCount) = try await loadMyLibraryUseCase.execute(
-                filter: state.filter,
-                cursor: cursor,
-                size: pageSize
-            )
-            guard !Task.isCancelled else { return }
-            if cursor == nil {
-                state.novels = page.items
-                hasLoaded = true
-            } else {
-                state.novels.append(contentsOf: page.items)
+    /// **무효해진 로드 == 취소된 로드**다 — 목록을 갈아엎는 경로가 전부 `reloadFromScratch()`를 거치고
+    /// 거기서 이전 로드를 반드시 취소하므로, 세대 카운터 없이 `Task.isCancelled`만으로 "늦게 도착한
+    /// 이전 결과"를 걸러낼 수 있다. `@MainActor`라 가드와 `state` 대입 사이에 suspension이 없어
+    /// 그 구간이 원자적인 것도 전제다.
+    func loadPage(_ kind: LoadKind) async {
+        defer {
+            // 취소된 로드는 **아무것도 정리하지 않는다** — 정리하면 자기를 밀어낸 새 로드의
+            // `loadTask`와 로딩 표시를 지운다. (defer 안에서는 `return`할 수 없어 `if`로 감싼다.)
+            if !Task.isCancelled {
+                loadTask = nil
+                state.isLoading = false
+                state.isLoadingMore = false
             }
-            state.totalCount = totalCount
-            nextCursor = page.nextCursor
-            hasNext = page.hasNext
+        }
+
+        do {
+            let outcome = try await fetch(kind)
+            guard !Task.isCancelled else { return }
+
+            apply(outcome, kind: kind)
+            hasLoadedContent = true
             state.loadFailed = false
-            finishLoading()
         } catch {
             guard !Task.isCancelled else { return }
-            // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
-            if routeToLoginIfAuthenticationRequired(error) {
-                finishLoading()
-                return
-            }
-            if cursor == nil {
-                // 첫 페이지 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
-                state.loadFailed = true
-                logger?.error("Library 실패(load): \(String(describing: error))")
-            } else {
-                presentError(error, as: .loadMoreFailed)
-            }
-            finishLoading()
+            presentLoadFailure(error, kind: kind)
         }
     }
 
-    /// 로딩 종료 — **취소되지 않은 로드만** 호출한다(취소된 로드가 부르면 위 주석의 사고가 난다).
-    func finishLoading() {
-        loadTask = nil
-        state.isLoading = false
-        state.isLoadingMore = false
+    /// 네트워크만 수행하고 **상태는 건드리지 않는다** — 반영은 호출자가 취소를 확인한 뒤 한 번에 한다.
+    func fetch(_ kind: LoadKind) async throws -> LoadOutcome {
+        switch kind {
+        case .reload:
+            return try await fetchPage(cursor: nil, size: pageSize)
+        case .more(let cursor):
+            return try await fetchPage(cursor: cursor, size: pageSize)
+        case .refresh:
+            return try await fetchRefreshedList()
+        }
+    }
+
+    /// 재진입 갱신용 조회 — **보고 있던 개수만큼** 다시 받고, 자리를 비운 사이 늘어난 만큼(delta)을 이어 붙인다.
+    ///
+    /// 1차만 받으면 목록이 delta만큼 **짧아진다** — 등록 최신순이면 새 작품이 앞에 붙어 그만큼 뒤가
+    /// 밀려나기 때문이고, 하단에 있던 사용자는 스크롤이 위로 튄다. delta는 "지금 서버의 전체 수"가
+    /// 있어야 알 수 있고 그건 응답에서만 나오므로 **한 번의 요청으로는 불가능**하다(대부분의 진입은
+    /// delta == 0이라 실제로는 1회 왕복으로 끝난다).
+    ///
+    /// ⚠️ 두 요청은 **같은 Task 안에서 순차로** 돈다 — 갱신을 별도 Task 슬롯으로 빼면
+    /// "무효해진 로드 == 취소된 로드" 전제가 깨져 세대 카운터가 되살아난다(`loadPage` 주석).
+    /// 반영도 2차까지 받아 **합쳐서 한 번에** 한다 — 1차를 먼저 반영하면 목록이 짧아졌다 늘어나는 게 보인다.
+    func fetchRefreshedList() async throws -> LoadOutcome {
+        let previousTotalCount = state.totalCount
+        let first = try await fetchPage(cursor: nil, size: max(state.novels.count, pageSize))
+
+        // 삭제로 delta가 0 이하면 목록이 짧아질 이유가 없고, 더 받을 페이지가 없어도 이어붙일 게 없다.
+        let delta = first.totalCount - previousTotalCount
+        guard delta > 0, first.hasNext, let cursor = first.nextCursor else { return first }
+
+        let second = try await fetchPage(cursor: cursor, size: delta)
+        return LoadOutcome(
+            items: first.items + second.items,
+            totalCount: second.totalCount,
+            nextCursor: second.nextCursor,
+            hasNext: second.hasNext
+        )
+    }
+
+    func fetchPage(cursor: String?, size: Int) async throws -> LoadOutcome {
+        let (page, totalCount) = try await loadMyLibraryUseCase.execute(
+            filter: state.filter,
+            cursor: cursor,
+            size: size
+        )
+        return LoadOutcome(
+            items: page.items,
+            totalCount: totalCount,
+            nextCursor: page.nextCursor,
+            hasNext: page.hasNext
+        )
+    }
+
+    /// 조회 결과를 상태에 반영한다. 목록을 세우는 로드(첫 로드·갱신)는 **교체**, 다음 페이지는 **append**.
+    func apply(_ outcome: LoadOutcome, kind: LoadKind) {
+        switch kind {
+        case .reload, .refresh:
+            state.novels = outcome.items
+        case .more:
+            state.novels.append(contentsOf: outcome.items)
+        }
+        state.totalCount = outcome.totalCount
+        nextCursor = outcome.nextCursor
+        hasNext = outcome.hasNext
     }
 
     /// 서재 등록 키워드 로드(필터 시트 키워드 탭).
@@ -269,6 +352,26 @@ private extension LibraryViewModel {
 // MARK: - Error Mapping
 
 private extension LibraryViewModel {
+
+    /// 목록 로드 실패의 표현은 `kind`로 갈린다.
+    ///
+    /// **갱신 실패를 첫 로드와 같게(전면 실패 뷰) 다루는 건 의도다** — 보고 있던 목록이 실패 뷰로
+    /// 대체된다. 사용자가 갱신이 안 됐다는 걸 알고 재시도할 수 있어야 해서고, 구 WSSiOS·홈과 같은 규칙이다.
+    func presentLoadFailure(_ error: Error, kind: LoadKind) {
+        // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
+        if routeToLoginIfAuthenticationRequired(error) { return }
+
+        switch kind {
+        case .reload, .refresh:
+            // 전면 실패 뷰가 표현하므로 토스트는 띄우지 않는다 — 띄우면 에러 시그널이 이중화된다.
+            // ⚠️ `hasLoadedContent`를 함께 내려야 다음 진입이 '갱신'이 아니라 로딩부터 다시 시작한다.
+            hasLoadedContent = false
+            state.loadFailed = true
+            logger?.error("Library 실패(load): \(String(describing: error))")
+        case .more:
+            presentError(error, as: .loadMoreFailed)
+        }
+    }
 
     /// Repository 에러를 발생 맥락의 의미 토스트로 변환한다. 원인은 로그로 남긴다.
     func presentError(_ error: Error, as presented: LibraryToast) {
