@@ -38,14 +38,22 @@
   `state.isLoading`을 직접 보면, 탭 복귀마다 다시 로드하는 정책과 만나 이미 그린 화면 위로 전체 화면
   `LoadingView`가 매번 깜빡인다(HomeFeature와 같은 이유·같은 해법 — `hasLoadedContent` 플래그로
   "아직 보여줄 게 없을 때만" 로딩을 씌운다).
-- ⚠️ **닉네임(`NicknameDraft.maxLength`=10)·소개글(`ProfileDraft.maxIntroductionLength`=50) `TextField`는
-  VM 상태에 직접 물리지 않는다.** `Binding(get:set:)`의 `set`에서 곧바로 clamp하면, `get`이 SwiftUI가
-  방금 그 필드에 마지막으로 써준 값과 같아져 "변화 없음"으로 판단되고, **네이티브 텍스트필드는 사용자가
-  입력한 초과분을 화면에 그대로 들고 있는다**(카운터는 맞는데 눈에 보이는 글자 수는 안 맞음 — 시뮬레이터
-  실측 확인). `MyPageEditView`는 로컬 `@State` 문자열(`nicknameFieldText`/`introductionFieldText`)에
-  물린 뒤 `.onChange`에서 "clamp → 다르면 로컬에 재대입(진짜 변경으로 인식돼 네이티브 필드가 강제로
-  되돌아감) → 같으면 VM에 전달"의 2단계로 처리한다. 글자수 제한이 있는 새 `TextField`를 만들 때 이
-  패턴을 재사용할 것 — 일반 규칙은 [상위 CLAUDE.md](../CLAUDE.md) 주의사항 참고.
+- ⚠️ **글자수 제한이 있는 `TextField`는 VM 상태에 직접 물리지 않는다.** `Binding(get:set:)`의 `set`에서
+  곧바로 clamp하면, `get`이 SwiftUI가 방금 그 필드에 마지막으로 써준 값과 같아져 "변화 없음"으로 판단되고,
+  **네이티브 텍스트필드는 사용자가 입력한 초과분을 화면에 그대로 들고 있는다**(카운터는 맞는데 눈에 보이는
+  글자 수는 안 맞음 — 시뮬레이터 실측 확인). 로컬 `@State` 문자열에 물린 뒤 `.onChange`에서 "clamp → 다르면
+  로컬에 재대입(진짜 변경으로 인식돼 네이티브 필드가 강제로 되돌아감) → 같으면 VM에 전달"의 2단계로
+  처리한다. **닉네임 필드는 이 처리를 `WSSComponent`의 `WSSNicknameField`가 내부에서 대신 한다**(2026-08
+  승격 — `MyPageEditView`가 로컬 `nicknameFieldText`를 직접 들던 걸 이걸로 교체) — `MyPageEditView`가
+  갖는 로컬 버퍼는 소개글(`introductionFieldText`, `ProfileDraft.maxIntroductionLength`=50)뿐이다. 글자수
+  제한이 있는 새 `TextField`를 만들 때(닉네임이 아니면) 이 2단계 패턴을 재사용할 것 — 일반 규칙은
+  [상위 CLAUDE.md](../CLAUDE.md) 주의사항 참고.
+- ⚠️ **`MyPageEditView`의 닉네임/소개 필드는 `@FocusState`를 각자 따로 갖는다**(`isNicknameFocused`/
+  `isIntroductionFocused`, #178) — 원래 하나(`isKeyboardFocused`)를 공유했는데, 포커스된 필드만 배경을
+  화이트로·테두리를 `wssGray70`으로 보여주는 처리를 추가하면서 공유로는 **어느 필드가 실제로 포커스인지
+  구분이 안 돼** 한쪽만 눌러도 둘 다 스타일이 바뀌었다. "빈 곳 탭하면 키보드 내리기"(`content`의
+  `onTapGesture`)는 두 `FocusState`를 함께 `false`로 내리면 된다 — 필드별 포커스-구동 스타일이 있는 화면에서
+  여러 텍스트필드가 키보드 내리기 목적으로 상태를 공유하던 걸 그대로 새 필드에 복제하지 말 것.
 
 ## UserPage
 

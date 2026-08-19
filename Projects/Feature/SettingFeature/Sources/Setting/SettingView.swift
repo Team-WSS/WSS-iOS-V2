@@ -191,10 +191,10 @@ extension SettingView {
         /// 웹으로 나가는 딥링크. `accountInfo`/`profileVisibility`/`notification`은 앱 내부 화면 전환이라 nil.
         var externalURL: URL? {
             switch self {
-            case .officialAccount:   URL(string: "https://www.instagram.com/websoso_official/")
-            case .inquiry:           URL(string: "https://helpwebsoso.notion.site/241a9688d1a381548c20dd314d0a0b0a")
-            case .privacyPolicy:     URL(string: "https://websoso.notion.site/143600bd746880668556fb005fcef491?pvs=143")
-            case .termsOfService:    URL(string: "https://websoso.notion.site/143600bd74688050be18f4da31d9403e?pvs=4")
+            case .officialAccount:   AppURL.instaURL
+            case .inquiry:           AppURL.errorReport
+            case .privacyPolicy:     AppURL.privacyPolicy
+            case .termsOfService:    AppURL.serviceAgreement
             case .accountInfo, .profileVisibility, .notification: nil
             }
         }
