@@ -329,8 +329,6 @@ private extension NovelDetailView {
             Spacer()
 
             HStack(spacing: 0) {
-                Spacer().frame(width: 20)
-
                 Button {
                     isNotificationSettingSheetPresented = true
                 } label: {
@@ -360,16 +358,19 @@ private extension NovelDetailView {
                 Spacer().frame(width: 20)
             }
         }
-        // 스크롤 반응형 네비 타이틀 — 좌우 버튼과 겹치지 않게 여백 후 말줄임. 좌측은 뒤로가기(44pt),
-        // 우측은 종 아이콘(44pt)+간격(16)+threedots(44pt)+간격(20)*2 = 144pt 클러스터라 좌우 비대칭.
+        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(80pt)으로 맞춘다.
+        // 우측 클러스터(종 24pt+간격 16+threedots 20pt+trailing 간격 20 = 80pt)가 좌측(뒤로가기 44pt
+        // + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어, 좌측 여백도 80으로 맞춰야
+        // 대칭이 된다 — 코드상 44가 아니라 74인 건 이 6pt를 상쇄하기 위해서(74+6=80). 한쪽만
+        // 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
         .overlay {
             Text(novelTitle)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.leading, 44)
-                .padding(.trailing, 144)
+                .padding(.leading, 74)
+                .padding(.trailing, 80)
                 .opacity(showNavTitle ? 1 : 0)
                 .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
