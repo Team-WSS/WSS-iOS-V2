@@ -187,8 +187,19 @@ private extension LibraryViewModel {
             return
         }
 
+        // 이 요청이 대기분을 대신하므로 함께 소비한다 — 안 지우면 이 로드가 끝날 때 defer가
+        // 대기분을 또 이어받아 사용자가 요청하지 않은 페이지를 한 번 더 붙인다.
+        pendingLoadMore = false
         state.isLoadingMore = true
         loadTask = Task { await loadPage(.more(cursor: cursor)) }
+    }
+
+    /// 갱신에 밀려 대기 중이던 다음 페이지 요청을 이어서 실행한다.
+    /// `loadPage`의 `defer`가 슬롯을 비운 **뒤에** 불려야 한다(앞에서 부르면 다시 가드에 막힌다).
+    func resumePendingLoadMoreIfNeeded() {
+        guard pendingLoadMore else { return }
+        pendingLoadMore = false
+        loadMore()
     }
 
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
@@ -266,6 +277,13 @@ private extension LibraryViewModel {
     ///
     /// `@MainActor`라 가드와 `state` 대입 사이에 suspension이 없어 그 구간이 원자적인 것도 전제다.
     func loadPage(_ kind: LoadKind) async {
+        // 시작 전에 이미 취소됐으면 요청조차 내지 않는다 — 낭비도 낭비지만, 그 시점엔
+        // `reloadFromScratch()`가 목록을 비운 뒤라 갱신인데도 `size`가 첫 페이지 크기로 찍혀
+        // 요청 로그로 2단계를 검증할 때 오진하기 쉽다.
+        guard !Task.isCancelled else { return }
+
+        var didSucceed = false
+
         defer {
             // 취소된 로드는 **아무것도 정리하지 않는다** — 정리하면 자기를 밀어낸 새 로드의
             // `loadTask`와 로딩 표시를 지운다. (defer 안에서는 `return`할 수 없어 `if`로 감싼다.)
@@ -273,8 +291,24 @@ private extension LibraryViewModel {
                 loadTask = nil
                 state.isLoading = false
                 state.isLoadingMore = false
-                // 슬롯을 비운 **뒤에** 불러야 대기분이 곧바로 시작될 수 있다.
-                resumePendingLoadMoreIfNeeded()
+                // ⚠️ 대기분을 잇는 건 **갱신이 성공으로 끝났을 때뿐**이다. 조건이 두 겹인 이유:
+                //
+                // 1. **실패한 로드는 잇지 않는다** — 전면 실패 뷰를 세운 직후 대기분이 발사되고 그게
+                //    성공하면 `loadFailed`가 내려가 **사용자가 재시도하지도 않았는데 실패 뷰가 저 혼자
+                //    사라진다**(게다가 낡은 목록에 새 페이지를 붙여 세대가 섞인다). 인증 만료도 같은
+                //    경로라, 세션이 죽은 걸 알면서 요청을 한 번 더 내고 로그인 콜백이 두 번 발화한다.
+                // 2. **`.more`·`.reload` 뒤에는 잇지 않고 버린다** — 예약이 필요한 건 갱신뿐이다(갱신만
+                //    목록을 **같은 ID로** 교체해 셀 `onAppear`가 다시 오지 않는다). 그 둘은 끝나면 목록이
+                //    커지거나 새로 서서 트리거가 자연히 되살아나므로, 이어가면 사용자가 요청하지도 않은
+                //    페이지를 한 장 더 당긴다(그리드·리스트가 동시에 살아 있어 양쪽이 예약할 때 실제로 발생).
+                //
+                // 버려진 대기분은 복구 경로(재시도·필터 변경·재진입)가 전부 목록을 새로 세워 트리거를 되살린다.
+                // 슬롯을 비운 **뒤에** 불러야 대기분이 곧바로 시작될 수 있다(앞으로 옮기면 다시 가드에 막힌다).
+                if didSucceed, case .refresh = kind {
+                    resumePendingLoadMoreIfNeeded()
+                } else {
+                    pendingLoadMore = false
+                }
             }
         }
 
@@ -285,18 +319,11 @@ private extension LibraryViewModel {
             apply(outcome, kind: kind)
             hasLoadedContent = true
             state.loadFailed = false
+            didSucceed = true
         } catch {
             guard !Task.isCancelled else { return }
             presentLoadFailure(error, kind: kind)
         }
-    }
-
-    /// 갱신 등에 밀려 대기 중이던 다음 페이지 요청을 이어서 실행한다.
-    /// `loadPage`의 `defer`가 슬롯을 비운 **뒤에** 불려야 하므로 호출 위치를 옮기지 말 것.
-    func resumePendingLoadMoreIfNeeded() {
-        guard pendingLoadMore else { return }
-        pendingLoadMore = false
-        loadMore()
     }
 
     /// 네트워크만 수행하고 **상태는 건드리지 않는다** — 반영은 호출자가 취소를 확인한 뒤 한 번에 한다.
@@ -408,12 +435,7 @@ private extension LibraryViewModel {
     /// 대체된다. 사용자가 갱신이 안 됐다는 걸 알고 재시도할 수 있어야 해서고, 구 WSSiOS·홈과 같은 규칙이다.
     func presentLoadFailure(_ error: Error, kind: LoadKind) {
         // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
-        if routeToLoginIfAuthenticationRequired(error) {
-            // ⚠️ 실패 뷰는 안 세우지만 `hasLoadedContent`는 **함께 내린다** — 안 내리면 재로그인 뒤 첫 진입이
-            // '갱신'으로 잡혀 **이전 계정의 개수**로 size를 정하고 delta를 이전 `totalCount`와 비교한다.
-            hasLoadedContent = false
-            return
-        }
+        if routeToLoginIfAuthenticationRequired(error) { return }
 
         switch kind {
         case .reload, .refresh:
@@ -439,6 +461,13 @@ private extension LibraryViewModel {
     /// 세션이 죽은 상황이라 개별 실패 토스트 대신 로그인 유도로 일원화한다.
     func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
         guard (error as? RepositoryError) == .authenticationRequired else { return false }
+
+        // ⚠️ 세션이 죽었으므로 지금 목록은 **그 계정 기준으로 무효**다 — `hasLoadedContent`를 내려
+        // 다음 진입을 첫 로드로 돌린다. 안 내리면 재로그인 뒤 첫 진입이 '갱신'으로 잡혀
+        // **이전 계정의 개수**로 size를 정하고 delta를 이전 `totalCount`와 비교한다.
+        // 하강을 여기 두는 이유: 목록 로드(`presentLoadFailure`)뿐 아니라 **더보기·키워드 실패**
+        // (`presentError`)도 이 함수로 만료를 걸러내므로, 여기가 세 경로를 한 번에 덮는 유일한 지점이다.
+        hasLoadedContent = false
         state.requiresAuthentication = true
         return true
     }

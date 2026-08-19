@@ -203,7 +203,9 @@ extension NovelMapper {
 
         return UserLibraryV2Query(
             cursor: cursor,
-            size: size,
+            // 서버와 말하는 마지막 지점에서 상한을 닫는다 — 화면이 정책을 거치는 게 정상 경로지만,
+            // 그 선의에 기대지 않고 여기서도 막아야 새 호출자가 생겨도 상한이 새지 않는다.
+            size: min(size, LibraryPageSizePolicy.maxSize),
             sortType: mapLibrarySortTypeString(from: filter.sortType),
             isInterest: filter.isInterest ? true : nil,
             readStatuses: filter.readingStatus.isEmpty

@@ -26,6 +26,14 @@ struct LibraryPageSizePolicyTests {
         #expect(LibraryPageSizePolicy.refreshSize(loadedCount: 7) == LibraryPageSizePolicy.pageSize)
     }
 
+    @Test("보고 있던 개수가 서버 상한과 같으면 그대로 요청한다")
+    func refreshAtExactMaxSize() {
+        #expect(
+            LibraryPageSizePolicy.refreshSize(loadedCount: LibraryPageSizePolicy.maxSize)
+            == LibraryPageSizePolicy.maxSize
+        )
+    }
+
     @Test("보고 있던 개수가 서버 상한을 넘으면 상한에서 자른다")
     func refreshClampsToMaxSize() {
         #expect(LibraryPageSizePolicy.refreshSize(loadedCount: 140) == LibraryPageSizePolicy.maxSize)

@@ -237,7 +237,7 @@ private extension LibraryView {
     /// 살아 있는 채 겹쳐 있으므로 탭·VoiceOver가 새지 않게 함께 막는다.
     /// ⚠️ 숨은 쪽의 `loadMore`(마지막 셀 onAppear)는 막지 않는다 — 모드로 가드하면 그 셀이 이미
     /// onAppear를 소진해, 나중에 그 모드로 전환했을 때 무한 스크롤이 되살아나지 않는다.
-    /// 중복 요청은 VM의 `loadTask == nil` 가드가 막는다.
+    /// 중복 요청은 VM이 흡수한다 — 진행 중이면 드롭하고, 갱신에 밀린 경우만 예약해 뒤이어 실행한다.
     func novelScroll(for mode: LibraryDisplayMode, @ViewBuilder list: () -> some View) -> some View {
         let isVisible = displayMode == mode
         return ScrollView {
