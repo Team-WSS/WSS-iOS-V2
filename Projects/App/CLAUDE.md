@@ -62,6 +62,12 @@ Sources/
   다시 호출해 복제하지 말 것. 반대로 `onFeedTapped`처럼 그 탭에 대응 `Destination` case가 없으면
   placeholder 로그로 넘기면 된다(`LibraryRootView`가 실제로 그렇게 함 — 서재는 피드 상세로 갈
   이유가 없어서).
+- ⚠️ **`ContentView.body`에 `.preferredColorScheme(.light)`를 걸어 앱 전체를 라이트모드로 고정한다**
+  (사용자 확정, #197) — `DesignSystem`의 색상 에셋(`WSSColor.wssWhite` 등)이 전부 다크 배리언트 없는
+  고정값이라, 시스템이 다크모드면 화면마다 명시적으로 `.background(...)`를 안 건 자리(대부분의
+  화면)만 시스템 기본 배경(검정)으로 비쳐 보인다(설정 화면에서 실측). 화면마다 배경색을 개별로
+  추가하는 대신, 애초에 다크모드로 진입 자체를 막는 쪽을 택했다 — 새 화면을 추가해도 이 문제가
+  재발하지 않는다. `DesignSystem`이 나중에 실제로 다크모드를 지원하게 되면 이 줄부터 지울 것.
 - **원칙: 화면 간 연결 조립은 무조건 App이 한다**(사용자 확정, #196) — Feature 안에 "다른 화면으로
   이동하는 로직"(다른 Feature의 View를 직접 구성해 push/present)이 있으면 안 된다. Feature는 콜백
   (`onNovelSelected`, `onEditProfileTapped` 등)만 밖으로 노출하고, 실제로 그 콜백을 받아 화면을

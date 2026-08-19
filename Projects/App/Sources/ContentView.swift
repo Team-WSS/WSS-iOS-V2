@@ -16,12 +16,18 @@ public struct ContentView: View {
     public init() {}
 
     public var body: some View {
-        switch route {
-        case .onboarding:
-            OnboardingRootView(dependencies: dependencies, onFinished: { route = .main })
-        case .main:
-            MainTabView(dependencies: dependencies, onAuthenticationRequired: { route = .onboarding })
+        Group {
+            switch route {
+            case .onboarding:
+                OnboardingRootView(dependencies: dependencies, onFinished: { route = .main })
+            case .main:
+                MainTabView(dependencies: dependencies, onAuthenticationRequired: { route = .onboarding })
+            }
         }
+        // DesignSystem 색상이 전부 고정값(다크 배리언트 없음, WSSColor.wssWhite 등)이라 시스템이
+        // 다크모드면 배경만 시스템 기본(검정)으로 바뀌어 보인다 — 화면마다 .background(wssWhite)를
+        // 개별로 다는 대신 앱 전체를 라이트모드로 고정해 한 번에 막는다(사용자 확정).
+        .preferredColorScheme(.light)
     }
 }
 
