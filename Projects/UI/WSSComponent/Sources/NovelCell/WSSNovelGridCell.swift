@@ -25,8 +25,11 @@ public struct WSSNovelGridCell: View {
     private enum Metric {
         static let coverCornerRadius: CGFloat = 14
         static let coverToInfoSpacing: CGFloat = 6
-        /// ⚠️ 정보 스택의 **고정 높이**. 제목이 1~2줄로 갈려 자연 높이로 두면 그리드 행이 어긋난다.
-        static let infoHeight: CGFloat = 72
+        /// ⚠️ 정보 스택의 **고정 높이**. 자연 높이로 두면 그리드 행이 어긋난다.
+        /// 제목이 항상 1줄이라 `countRow(17.4) + title 1줄(18.85) + author(17.4) ≈ 54`로 맞춘 값 —
+        /// 제목이 2줄까지 가던 시절의 72(#196 이전)를 그대로 두면 `LazyVGrid`의 `rowSpacing`과 별개로
+        /// 셀 하단에 죽은 여백이 남아 행 간격이 의도보다 훨씬 넓어 보인다.
+        static let infoHeight: CGFloat = 54
         static let iconSize: CGFloat = 12
         static let countSpacing: CGFloat = 8
         static let countIconSpacing: CGFloat = 3
@@ -102,9 +105,8 @@ private extension WSSNovelGridCell {
 
             Text(title)
                 .applyWSSFont(.body4, color: .wssBlack, alignment: .leading)
-                .lineLimit(2)
-                // ⚠️ `fixedSize(vertical:)`로 세로 확장을 허용해야 말줄임 대신 실제로 두 줄로 꺾인다.
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(author)
