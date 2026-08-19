@@ -50,7 +50,34 @@ let targets: [Target] = [
             .module(.data(.profile)),
             .module(.core(.networking)),
             .module(.core(.logger)),
-            .module(.ui(.designSystem))
+            .module(.ui(.designSystem)),
+            // 온보딩 완료 후 진입하는 메인 탭(홈/피드/서재/My) 조립.
+            .module(.feature(.home)),
+            .module(.feature(.feed)),
+            .module(.feature(.library)),
+            .module(.feature(.userPage)),
+            .module(.domain(.recommendation)),
+            .module(.domain(.notification)),
+            .module(.domain(.feed)),
+            .module(.domain(.social)),
+            .module(.domain(.novel)),
+            .module(.data(.recommendation)),
+            .module(.data(.notification)),
+            .module(.data(.feed)),
+            .module(.data(.social)),
+            .module(.data(.novel)),
+            // 홈에서 작품 카드 탭 → 작품 상세 진입.
+            .module(.feature(.novelDetail)),
+            .module(.domain(.novelReview)),
+            .module(.data(.novelReview)),
+            // 홈에서 추천글 탭 → 피드 상세, 서치바 탭 → 일반 검색 진입.
+            .module(.feature(.search)),
+            .module(.domain(.search)),
+            .module(.domain(.comment)),
+            .module(.data(.search)),
+            .module(.data(.comment)),
+            // 서재에서 알림 관리 → 설정의 알림 설정 화면 진입.
+            .module(.feature(.setting))
         ],
         settings: .settings(
             base: env.baseSetting,
