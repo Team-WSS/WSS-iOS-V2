@@ -56,6 +56,10 @@ struct UserPageView: View {
     private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
     private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
+    /// "서재" 블록(제목 옆 화살표 아이콘 + 통계 행) 탭 → 이 유저의 서재 진입 콜백. 실제 화면 전환
+    /// (`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onLibraryTapped: () -> Void
+
     init(
         viewModel: UserPageViewModel,
         userID: UserID,
@@ -63,7 +67,8 @@ struct UserPageView: View {
         feedLikeUseCase: FeedLikeUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onLibraryTapped: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.userID = userID
@@ -72,6 +77,7 @@ struct UserPageView: View {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
+        self.onLibraryTapped = onLibraryTapped
     }
 
     var body: some View {
@@ -351,9 +357,7 @@ struct UserPageView: View {
                 
                 Spacer()
                 
-                Button {
-                    //TODO: - 서재 뷰로 이동
-                } label: {
+                Button(action: onLibraryTapped) {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
                         .renderingMode(.template)
@@ -364,18 +368,16 @@ struct UserPageView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
-            
+
             Spacer().frame(height: 8)
-            
+
             WSSLibrarySection(
                 interest: viewModel.state.registeredNovelStats?.interest ?? 0,
                 watching: viewModel.state.registeredNovelStats?.watching ?? 0,
                 watched: viewModel.state.registeredNovelStats?.watched ?? 0,
-                quit: viewModel.state.registeredNovelStats?.quit ?? 0
-            ) {
-                //TODO: - 서재 뷰로 이동
-                print("서재 뷰로 이동")
-            }
+                quit: viewModel.state.registeredNovelStats?.quit ?? 0,
+                action: onLibraryTapped
+            )
             
             Spacer().frame(height: 30)
         }

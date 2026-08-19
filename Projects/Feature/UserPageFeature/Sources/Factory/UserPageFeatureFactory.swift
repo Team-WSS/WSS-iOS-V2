@@ -21,6 +21,8 @@ import Logger
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
 public enum UserPageFeatureFactory {
 
+    /// - Parameter onLibraryTapped: "서재" 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입 콜백.
+    ///   실제 화면 전환(`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -34,7 +36,8 @@ public enum UserPageFeatureFactory {
         blockUserUseCase: BlockUserUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onLibraryTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = UserPageViewModel(
             userID: userID,
@@ -57,7 +60,8 @@ public enum UserPageFeatureFactory {
             feedLikeUseCase: feedLikeUseCase,
             reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
             reportImproperFeedUseCase: reportImproperFeedUseCase,
-            logger: logger
+            logger: logger,
+            onLibraryTapped: onLibraryTapped
         )
     }
 

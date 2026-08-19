@@ -12,43 +12,37 @@ import BaseDomain
 import NovelDomain
 import ProfileDomain
 import CollectionDomain
-import Logger
 import DesignSystem
 import WSSComponent
 
 struct MypageView: View {
 
     @State private var viewModel: MypageViewModel
-    @State private var showEditView: Bool = false
-    @State private var showProfileSavedToast: Bool = false
 
-    /// 프로필 편집 화면으로의 내부 네비게이션 조립에만 쓴다(VM은 만들지 않음, `MypageFeatureFactory.makeEditView` 재사용).
-    private let loadInitialProfileUseCase: LoadInitialProfileUseCase
-    private let loadProfileCharacterUseCase: LoadProfileCharacterUseCase
-    private let validateNicknameUseCase: ValidateNicknameUseCase
-    private let updateProfileUseCase: UpdateProfileUseCase
-    private let logger: Logger?
     /// 컬렉션 섹션 헤더 행 탭 콜백 — `CollectionFeature`는 서로 import 못 하는 다른 Feature 모듈이라
-    /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫). "서재 뷰로 이동"/"설정 뷰로 이동"과 달리
-    /// 이번 작업 범위라 콜백까지는 실제로 배선한다.
+    /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫).
     private let onCollectionTapped: () -> Void
+    /// 프로필 편집 진입 콜백 — 실제 화면 전환(`MypageFeatureFactory.makeEditView` 조립)은 호출자(App 조정 계층)가
+    /// 수행한다. "저장됨" 토스트도 그 화면 전환을 조립하는 쪽(App)이 `onSaved` 시점에 보여준다.
+    private let onEditProfileTapped: () -> Void
+    /// 우측 상단 톱니바퀴 → 설정 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeView` 조립)은 호출자가 수행한다.
+    private let onSettingTapped: () -> Void
+    /// 서재 블록 탭 → "서재" 탭으로 전환 콜백. 이 화면 자신을 push하는 게 아니라 탭 자체를 바꾸는
+    /// 것이라(`MainTabView`의 `TabView(selection:)`), 화면 전환이 아닌 탭 전환 콜백을 따로 받는다.
+    private let onLibraryTapped: () -> Void
 
     init(
         viewModel: MypageViewModel,
-        loadInitialProfileUseCase: LoadInitialProfileUseCase,
-        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
-        validateNicknameUseCase: ValidateNicknameUseCase,
-        updateProfileUseCase: UpdateProfileUseCase,
         onCollectionTapped: @escaping () -> Void,
-        logger: Logger? = nil
+        onEditProfileTapped: @escaping () -> Void,
+        onSettingTapped: @escaping () -> Void,
+        onLibraryTapped: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.loadInitialProfileUseCase = loadInitialProfileUseCase
-        self.loadProfileCharacterUseCase = loadProfileCharacterUseCase
-        self.validateNicknameUseCase = validateNicknameUseCase
-        self.updateProfileUseCase = updateProfileUseCase
         self.onCollectionTapped = onCollectionTapped
-        self.logger = logger
+        self.onEditProfileTapped = onEditProfileTapped
+        self.onSettingTapped = onSettingTapped
+        self.onLibraryTapped = onLibraryTapped
     }
 
     var body: some View {
@@ -66,11 +60,9 @@ struct MypageView: View {
                             interest: viewModel.state.registeredNovelStats?.interest ?? 0,
                             watching: viewModel.state.registeredNovelStats?.watching ?? 0,
                             watched: viewModel.state.registeredNovelStats?.watched ?? 0,
-                            quit: viewModel.state.registeredNovelStats?.quit ?? 0
-                        ) {
-                            //TODO: - 서재 뷰로 이동
-                            print("서재 뷰로 이동")
-                        }
+                            quit: viewModel.state.registeredNovelStats?.quit ?? 0,
+                            action: onLibraryTapped
+                        )
 
                         divider
 
@@ -106,17 +98,6 @@ struct MypageView: View {
         .onAppear {
             viewModel.handle(.load)
         }
-        .navigationDestination(isPresented: $showEditView) {
-            MypageFeatureFactory.makeEditView(
-                loadInitialProfileUseCase: loadInitialProfileUseCase,
-                loadProfileCharacterUseCase: loadProfileCharacterUseCase,
-                validateNicknameUseCase: validateNicknameUseCase,
-                updateProfileUseCase: updateProfileUseCase,
-                onSaved: { showProfileSavedToast = true },
-                logger: logger
-            )
-        }
-        .showWSSToast(isPresented: $showProfileSavedToast, type: .editProfile)
     }
     
     // MARK: - 프로필
@@ -140,9 +121,7 @@ struct MypageView: View {
             .clipShape(Circle())
             .frame(width: 86, height: 86)
             .overlay(alignment: .bottomTrailing) {
-                Button {
-                    showEditView = true
-                } label: {
+                Button(action: onEditProfileTapped) {
                     WSSImage.icEditProfileMypage.swiftUIImage
                 }
                 .buttonStyle(.plain)
@@ -198,10 +177,7 @@ struct MypageView: View {
     @ToolbarContentBuilder
     private func createMypageViewToolBarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                //TODO: - 설정 뷰로 이동
-                print("설정 뷰로 이동")
-            } label: {
+            Button(action: onSettingTapped) {
                 WSSImage.icSetting.swiftUIImage
             }
         }
@@ -230,11 +206,10 @@ private extension MypageView {
                 loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase(),
                 loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase()
             ),
-            loadInitialProfileUseCase: PreviewLoadInitialProfileUseCase(),
-            loadProfileCharacterUseCase: PreviewLoadProfileCharacterUseCase(),
-            validateNicknameUseCase: PreviewValidateNicknameUseCase(),
-            updateProfileUseCase: PreviewUpdateProfileUseCase(),
-            onCollectionTapped: { print("컬렉션 뷰로 이동") }
+            onCollectionTapped: { print("컬렉션 뷰로 이동") },
+            onEditProfileTapped: { print("프로필 편집 진입") },
+            onSettingTapped: { print("설정 진입") },
+            onLibraryTapped: { print("서재 탭으로 전환") }
         )
     }
 }
@@ -249,40 +224,6 @@ private struct PreviewLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCa
             )
         }
         return (previews, previews.count)
-    }
-}
-
-private struct PreviewLoadInitialProfileUseCase: LoadInitialProfileUseCase {
-    func execute() async throws(RepositoryError) -> ProfileDraft {
-        ProfileDraft(
-            characterID: 1,
-            nickname: "구리구리스",
-            introduction: "백덕수 작가입니다. 반갑습니다.",
-            genrePreferences: [GenrePreference(genre: .romance, count: 12)]
-        )
-    }
-}
-
-private struct PreviewValidateNicknameUseCase: ValidateNicknameUseCase {
-    func execute(_ nickname: String) async throws(RepositoryError) -> Bool { true }
-}
-
-private struct PreviewUpdateProfileUseCase: UpdateProfileUseCase {
-    func execute(_ draft: ProfileDraft) async throws(RepositoryError) {}
-}
-
-private struct PreviewLoadProfileCharacterUseCase: LoadProfileCharacterUseCase {
-    func execute() async throws(RepositoryError) -> [ProfileCharacter] {
-        (1...20).map { index in
-            ProfileCharacter(
-                id: index,
-                name: "팬텀 \(index)",
-                line: "만나서 반가워요, %s",
-                representativeImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
-                thumbnailImage: URL(string: "https://i.pinimg.com/736x/5d/c4/68/5dc46859de623b667c4ed3273c99071e.jpg"),
-                isRepresentative: index == 1
-            )
-        }
     }
 }
 

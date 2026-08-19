@@ -196,6 +196,18 @@
   세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
   다룬다.
 
+### 11. `UserPageFeatureDemoApp`의 마이페이지 Mock 모드가 컴파일 안 된다
+
+- **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의
+  `DemoFactory.makeMypageView(.mock)`이 `MypageFeatureFactory.makeView`의 현재 시그니처
+  (`onCollectionTapped`/`onEditProfileTapped`/`onSettingTapped`/`onLibraryTapped` 콜백 4개, 프로필 편집용
+  UseCase는 더 이상 받지 않음 — #197에서 편집 진입도 App 콜백으로 통일)와 어긋나 있다.
+- **결과**: 이 Demo 스킴을 `.mock` 데이터소스로 실행하면 컴파일이 안 된다(`.live`는 별도 함수라 영향 없음).
+- **어디를 고치나**: 위 파일의 `makeMypageView` — 프로필 편집·설정·서재 전환·컬렉션 이동을 Demo 안에서
+  어떻게 흉내낼지(별도 push? 무시?)부터 다시 설계해야 한다.
+- **왜 지금 안 했나**: #197(메인 탭 조립) 범위에서 Feature 쪽 API를 바꾸다 발견했지만, Demo 화면 흐름
+  재설계는 별개 작업이라 분리했다.
+
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)
