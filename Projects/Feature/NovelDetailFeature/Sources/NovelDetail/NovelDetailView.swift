@@ -339,7 +339,6 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 24, height: 24)
                         .foregroundStyle(Color.wssBlack)
-                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -354,7 +353,6 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 20, height: 20)
                         .foregroundStyle(Color.wssBlack)
-                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
