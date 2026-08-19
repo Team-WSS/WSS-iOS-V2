@@ -20,8 +20,15 @@ struct DetailSearchResultView: View {
 
     @State private var viewModel: DetailSearchResultViewModel
 
-    init(viewModel: DetailSearchResultViewModel) {
+    /// 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onNovelSelected: (NovelID) -> Void
+
+    init(
+        viewModel: DetailSearchResultViewModel,
+        onNovelSelected: @escaping (NovelID) -> Void = { _ in }
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onNovelSelected = onNovelSelected
     }
 
     var body: some View {
@@ -150,14 +157,19 @@ struct DetailSearchResultView: View {
                         spacing: 18
                     ) {
                         ForEach(viewModel.state.novels, id: \.id) { novel in
-                            WSSNovelGridCell(
-                                thumbnailImage: novel.thumbnailImage,
-                                title: novel.title,
-                                author: novel.authors.joined(separator: ", "),
-                                interestCount: novel.interestCount,
-                                rating: novel.rating,
-                                ratingCount: novel.ratingCount
-                            )
+                            Button {
+                                onNovelSelected(novel.id)
+                            } label: {
+                                WSSNovelGridCell(
+                                    thumbnailImage: novel.thumbnailImage,
+                                    title: novel.title,
+                                    author: novel.authors.joined(separator: ", "),
+                                    interestCount: novel.interestCount,
+                                    rating: novel.rating,
+                                    ratingCount: novel.ratingCount
+                                )
+                            }
+                            .buttonStyle(.plain)
                             // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
                             .onAppear {
                                 if novel.id == viewModel.state.novels.last?.id {

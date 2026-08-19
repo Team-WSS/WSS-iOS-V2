@@ -129,14 +129,6 @@ final class NormalSearchViewModel {
         }
     }
 
-    // MARK: - Navigation
-
-    /// 장르 탭·키워드 탭이 누르는 순간 `DetailSearchResultView`로 전환하기 위한 자식 화면 조립.
-    /// App 라우터가 아직 없어(#165 시점 스켈레톤) 같은 모듈 안의 `NormalSearchView`가 직접 push하는데,
-    /// View는 UseCase를 직접 들지 않는 규칙(View→VM만)을 지키려고 이미 보유한 `searchNovelUseCase`로 여기서 조립해 건네준다.
-    func makeDetailSearchResultViewModel(filter: SearchFilter) -> DetailSearchResultViewModel {
-        DetailSearchResultViewModel(filter: filter, searchNovelUseCase: searchNovelUseCase, logger: logger)
-    }
 }
 
 // MARK: - Action Handling
