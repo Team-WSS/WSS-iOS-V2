@@ -43,7 +43,7 @@ struct NovelNotificationSettingSheet: View {
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
             }
-            .presentationDetents([.height(178)])
+            .presentationDetents([.height(174)])
             .presentationDragIndicator(.hidden)
             .presentationBackground(WSSColor.wssWhite.swiftUIColor)
             .showWSSToast(isPresented: toastBinding, type: toastType)
