@@ -63,7 +63,8 @@ private struct DemoRootView: View {
     @State private var presentedUserLibrary: DemoUserLibraryScenario?
     /// push된 더미 화면 — **재진입 갱신을 재현하는 유일한 경로**(아래 `refreshEntryRow` 주석).
     @State private var isAwayScreenPresented = false
-    /// "작품 추가"로 늘린 개수(표시용 미러). 실제 저장소는 `DemoLibraryNovels.addedCount`.
+    /// "작품 추가" 누른 횟수. 값 자체는 안 쓰고 **라벨을 다시 그리게 하는 트리거**로만 쓴다 —
+    /// 실제 개수는 `DemoLibraryNovels.totalCount`(SwiftUI가 관찰하지 않는 static이라 이 신호가 필요하다).
     @State private var addedNovelCount = 0
     /// 소스 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
     private var libraryViewID: String { dataSource.rawValue }
@@ -156,7 +157,7 @@ private struct DemoRootView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .tint(.red)
-            Text("서버 총 \(25 + addedNovelCount)개")
+            Text("서버 총 \(DemoLibraryNovels.totalCount)개")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Spacer()

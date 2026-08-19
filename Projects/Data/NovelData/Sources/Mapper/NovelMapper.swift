@@ -179,9 +179,8 @@ extension NovelMapper {
     
     // MARK: - 서재 조회 Query
 
-    /// 타유저 서재의 고정 페이지 크기.
-    private static let userLibraryPageSize = 20
-
+    /// 타유저 서재의 고정 페이지 크기. 내 서재와 같은 엔드포인트라 값도 같은 곳(Domain 정책)에서 가져온다.
+    private static let userLibraryPageSize = LibraryPageSizePolicy.pageSize
 
     /// 내 서재 V2 쿼리. 미적용 필터는 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
     /// isInterest는 "관심만 보기" 토글이라 true일 때만 전송한다(false를 보내면 비관심만 필터됨).

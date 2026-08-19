@@ -83,17 +83,13 @@ final class LibraryViewModel {
 
     // MARK: - Property
 
-    /// 무한 스크롤 한 페이지 크기. **재진입 갱신은 이 값이 아니라 "보고 있던 개수"를 넘긴다** —
-    /// 그래서 페이지 크기를 Data가 아니라 화면이 쥔다(`LoadMyLibraryUseCase.execute(size:)`).
-    @ObservationIgnored private let pageSize = 20
-
-    /// 한 요청으로 받을 수 있는 개수의 서버 상한. 갱신은 "보고 있던 개수"를 그대로 넘기므로 여기 걸릴 수 있다.
+    /// 갱신 중이라 밀려난 다음 페이지 요청. 진행 중이던 로드가 끝나면 이어서 실행한다.
     ///
-    /// **100개 넘게 본 뒤 재진입하면 목록이 100개로 줄고 스크롤이 그만큼 위로 오는데, 이건 의도된 절충이다** —
-    /// 잘린 뒤쪽은 커서로 그대로 이어 받을 수 있고(누락 아님), 그 정도로 깊이 본 상태에서 위치를 지키자고
-    /// 매 진입마다 무거운 요청을 낼 이유가 없다. 상한을 없애 `size`를 그대로 보내면 서버 응답이
-    /// **잘림(조용히 delta가 어긋남) 또는 실패(갱신이 통째로 실패)** 중 무엇이 될지 클라가 통제할 수 없다.
-    @ObservationIgnored private let maxPageSize = 100
+    /// ⚠️ **이 플래그가 없으면 무한 스크롤이 영구히 멈춘다** — 재진입하면 `.load`(갱신)와 마지막 셀의
+    /// `.loadMore`가 같은 프레임에 발화해 한 슬롯을 다투는데, 진 쪽은 그냥 버려진다. 그런데 갱신은
+    /// 목록을 **같은 ID로** 교체하므로 마지막 셀의 뷰 정체성이 유지돼 `onAppear`가 다시 오지 않는다
+    /// → 하단에 머문 채로는 다음 페이지를 다시 요청할 기회 자체가 사라진다(#195에서 실측).
+    @ObservationIgnored private var pendingLoadMore = false
 
     /// 지금 화면에 그릴 목록이 서 있는지 — 진입 시 "첫 로드냐 갱신이냐"를 가른다.
     /// ⚠️ **`state.novels`로 판단하지 말 것** — 갱신이 실패해도 배열엔 직전 성공 목록이 남아 있어서,
@@ -182,10 +178,15 @@ private extension LibraryViewModel {
 
     /// 다음 페이지 로드. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
     func loadMore() {
-        guard hasNext,
-              loadTask == nil,
-              !state.isLoading,
-              let cursor = nextCursor else { return }
+        guard hasNext, !state.isLoading, let cursor = nextCursor else { return }
+
+        // 다른 로드(대개 재진입 갱신)가 슬롯을 잡고 있으면 **버리지 말고 기억**한다 —
+        // 그냥 return하면 이 요청을 다시 부를 트리거가 없다(`pendingLoadMore` 주석).
+        guard loadTask == nil else {
+            pendingLoadMore = true
+            return
+        }
+
         state.isLoadingMore = true
         loadTask = Task { await loadPage(.more(cursor: cursor)) }
     }
@@ -217,10 +218,14 @@ private extension LibraryViewModel {
     }
 
     /// 목록을 처음부터 다시 로드한다(첫 로드·재시도·필터/정렬 변경 공통).
-    /// 진행 중이던 로드는 **취소만** 하면 된다 — 취소된 로드는 상태를 일절 건드리지 않으므로
-    /// 늦게 도착해도 새 목록을 덮지 않는다(`loadPage` 주석 참고).
+    /// 진행 중이던 로드는 **취소**해 무효화한다 — 늦게 도착한 이전 결과가 새 목록을 덮지 않는다.
+    ///
+    /// ⚠️ **취소는 언제나 재대입과 짝이어야 한다** — 취소만 하고 새 Task를 넣지 않으면 슬롯이 non-nil로
+    /// 굳어 이후 로드가 전부 막힌다. 불변식 전문은 `loadPage` 주석 참고.
     func reloadFromScratch() {
         loadTask?.cancel()
+        // 목록을 통째로 갈아엎으므로 밀려 있던 다음 페이지 요청은 무의미하다(그 커서가 가리키던 목록이 사라진다).
+        pendingLoadMore = false
         nextCursor = nil
         hasNext = true
         state.novels = []
@@ -249,10 +254,17 @@ private extension LibraryViewModel {
     /// (시작 표시는 호출자 몫이다: `reloadFromScratch`의 전면 로딩, `loadMore`의 하단 스피너,
     ///  갱신은 아무것도 세우지 않는다.)
     ///
-    /// **무효해진 로드 == 취소된 로드**다 — 목록을 갈아엎는 경로가 전부 `reloadFromScratch()`를 거치고
-    /// 거기서 이전 로드를 반드시 취소하므로, 세대 카운터 없이 `Task.isCancelled`만으로 "늦게 도착한
-    /// 이전 결과"를 걸러낼 수 있다. `@MainActor`라 가드와 `state` 대입 사이에 suspension이 없어
-    /// 그 구간이 원자적인 것도 전제다.
+    /// **무효해진 로드 == 취소된 로드**다 — 세대 카운터 없이 `Task.isCancelled`만으로 "늦게 도착한 이전
+    /// 결과"를 걸러낼 수 있는 근거는 아래 불변식이다:
+    ///
+    /// > **로드를 시작하는 모든 경로는 `loadTask == nil`을 확인하거나, 이전 로드를 취소하고 곧바로 재대입한다.**
+    ///
+    /// `.refresh`는 `reloadFromScratch()`를 거치지 않고 목록을 교체하는 **유일한 예외**인데, 그게 안전한
+    /// 이유는 `load()`의 `loadTask == nil` 가드가 "무효화할 이전 로드가 없음"을 보장하기 때문이다 —
+    /// **그 가드를 완화하면 세대 카운터가 다시 필요해진다.** 반대로 취소만 하고 재대입하지 않는 경로
+    /// (`onDisappear`에서 `cancel()`만 부르는 류)를 만들면 슬롯이 non-nil로 굳어 `load()`가 영구 차단된다.
+    ///
+    /// `@MainActor`라 가드와 `state` 대입 사이에 suspension이 없어 그 구간이 원자적인 것도 전제다.
     func loadPage(_ kind: LoadKind) async {
         defer {
             // 취소된 로드는 **아무것도 정리하지 않는다** — 정리하면 자기를 밀어낸 새 로드의
@@ -261,6 +273,8 @@ private extension LibraryViewModel {
                 loadTask = nil
                 state.isLoading = false
                 state.isLoadingMore = false
+                // 슬롯을 비운 **뒤에** 불러야 대기분이 곧바로 시작될 수 있다.
+                resumePendingLoadMoreIfNeeded()
             }
         }
 
@@ -277,15 +291,28 @@ private extension LibraryViewModel {
         }
     }
 
+    /// 갱신 등에 밀려 대기 중이던 다음 페이지 요청을 이어서 실행한다.
+    /// `loadPage`의 `defer`가 슬롯을 비운 **뒤에** 불려야 하므로 호출 위치를 옮기지 말 것.
+    func resumePendingLoadMoreIfNeeded() {
+        guard pendingLoadMore else { return }
+        pendingLoadMore = false
+        loadMore()
+    }
+
     /// 네트워크만 수행하고 **상태는 건드리지 않는다** — 반영은 호출자가 취소를 확인한 뒤 한 번에 한다.
-    func fetch(_ kind: LoadKind) async throws -> LoadOutcome {
+    ///
+    /// ⚠️ 필터를 **여기서 한 번만 읽어** 아래로 넘긴다 — `state.filter`를 요청 직전마다 다시 읽으면,
+    /// 갱신 1·2차 사이에 사용자가 필터를 바꿨을 때 2차가 **새 필터 + 옛 커서**라는 뒤섞인 조합으로 나간다.
+    func fetch(_ kind: LoadKind) async throws(RepositoryError) -> LoadOutcome {
+        let filter = state.filter
+
         switch kind {
         case .reload:
-            return try await fetchPage(cursor: nil, size: pageSize)
+            return try await fetchPage(filter: filter, cursor: nil, size: LibraryPageSizePolicy.pageSize)
         case .more(let cursor):
-            return try await fetchPage(cursor: cursor, size: pageSize)
+            return try await fetchPage(filter: filter, cursor: cursor, size: LibraryPageSizePolicy.pageSize)
         case .refresh:
-            return try await fetchRefreshedList()
+            return try await fetchRefreshedList(filter: filter)
         }
     }
 
@@ -299,20 +326,25 @@ private extension LibraryViewModel {
     /// ⚠️ 두 요청은 **같은 Task 안에서 순차로** 돈다 — 갱신을 별도 Task 슬롯으로 빼면
     /// "무효해진 로드 == 취소된 로드" 전제가 깨져 세대 카운터가 되살아난다(`loadPage` 주석).
     /// 반영도 2차까지 받아 **합쳐서 한 번에** 한다 — 1차를 먼저 반영하면 목록이 짧아졌다 늘어나는 게 보인다.
-    func fetchRefreshedList() async throws -> LoadOutcome {
+    func fetchRefreshedList(filter: MyLibraryFilter) async throws(RepositoryError) -> LoadOutcome {
         let previousTotalCount = state.totalCount
         let first = try await fetchPage(
+            filter: filter,
             cursor: nil,
-            size: min(max(state.novels.count, pageSize), maxPageSize)
+            size: LibraryPageSizePolicy.refreshSize(loadedCount: state.novels.count)
         )
 
-        // 삭제로 delta가 0 이하면 목록이 짧아질 이유가 없고, 더 받을 페이지가 없어도 이어붙일 게 없다.
-        let delta = first.totalCount - previousTotalCount
-        guard delta > 0, first.hasNext, let cursor = first.nextCursor else { return first }
+        // ⚠️ 1차 응답을 기다리는 동안 취소됐을 수 있다 — 여기서 안 끊으면 **버려질 게 확정된 2차 요청**이
+        // 그대로 서버로 나간다(필터 변경으로 취소된 경우가 대표적).
+        guard !Task.isCancelled else { return first }
 
-        // 2차도 같은 상한을 받는다 — 자리를 비운 사이 100건 넘게 등록되는 경우는 드물지만,
-        // 상한을 넘긴 요청 하나 때문에 갱신 전체가 실패하는 편이 훨씬 나쁘다.
-        let second = try await fetchPage(cursor: cursor, size: min(delta, maxPageSize))
+        guard let followUpSize = LibraryPageSizePolicy.followUpSize(
+            previousTotalCount: previousTotalCount,
+            newTotalCount: first.totalCount,
+            hasNext: first.hasNext
+        ), let cursor = first.nextCursor else { return first }
+
+        let second = try await fetchPage(filter: filter, cursor: cursor, size: followUpSize)
         return LoadOutcome(
             items: first.items + second.items,
             totalCount: second.totalCount,
@@ -321,9 +353,13 @@ private extension LibraryViewModel {
         )
     }
 
-    func fetchPage(cursor: String?, size: Int) async throws -> LoadOutcome {
+    func fetchPage(
+        filter: MyLibraryFilter,
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> LoadOutcome {
         let (page, totalCount) = try await loadMyLibraryUseCase.execute(
-            filter: state.filter,
+            filter: filter,
             cursor: cursor,
             size: size
         )
@@ -372,7 +408,12 @@ private extension LibraryViewModel {
     /// 대체된다. 사용자가 갱신이 안 됐다는 걸 알고 재시도할 수 있어야 해서고, 구 WSSiOS·홈과 같은 규칙이다.
     func presentLoadFailure(_ error: Error, kind: LoadKind) {
         // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
-        if routeToLoginIfAuthenticationRequired(error) { return }
+        if routeToLoginIfAuthenticationRequired(error) {
+            // ⚠️ 실패 뷰는 안 세우지만 `hasLoadedContent`는 **함께 내린다** — 안 내리면 재로그인 뒤 첫 진입이
+            // '갱신'으로 잡혀 **이전 계정의 개수**로 size를 정하고 delta를 이전 `totalCount`와 비교한다.
+            hasLoadedContent = false
+            return
+        }
 
         switch kind {
         case .reload, .refresh:
