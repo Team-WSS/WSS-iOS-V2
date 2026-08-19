@@ -9,4 +9,8 @@
 // Request Header로 전송해야함.
 struct KakaoLoginRequestHeader {
     let accessToken: String
+
+    var headers: [String: String] {
+        ["Kakao-Access-Token": accessToken]
+    }
 }

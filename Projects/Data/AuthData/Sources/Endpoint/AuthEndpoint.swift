@@ -33,7 +33,6 @@ enum AuthEndpoint: Endpoint {
     }
     
     var baseURL: URL {
-        // TODO: 컨피그 설정 후 baseURL 반영
         URL(string: NetworkingConfig.baseURL)!
     }
     
@@ -50,7 +49,14 @@ enum AuthEndpoint: Endpoint {
 
     var query: QueryParameters { .none }
 
-    var additionalHeaders: [String: String]? { nil }
+    var additionalHeaders: [String: String]? {
+        switch self {
+        case .postKakaoLogin(let requestHeader):
+            return requestHeader.headers
+        default:
+            return nil
+        }
+    }
     
     var body: RequestBody {
         switch self {
