@@ -1,6 +1,7 @@
 import ProjectDescription
 
 import ConfigurationPlugin
+import DependencyPlugin
 import EnvironmentPlugin
 
 //MARK: - Configurations
@@ -36,7 +37,20 @@ let targets: [Target] = [
         // KakaoSDK.initSDK(appKey:) 앱 진입점 초기화 + AuthController.handleOpenUrl용.
         dependencies: [
             .external(name: "KakaoSDKCommon"),
-            .external(name: "KakaoSDKAuth")
+            .external(name: "KakaoSDKAuth"),
+            // 온보딩 플로우 조립(App이 유일한 DI 지점) — Feature + Domain(UseCase 타입) + Data(Factory 구현체) + Core.
+            .module(.feature(.onboarding)),
+            .module(.domain(.base)),
+            .module(.domain(.auth)),
+            .module(.domain(.setting)),
+            .module(.domain(.profile)),
+            .module(.data(.base)),
+            .module(.data(.auth)),
+            .module(.data(.setting)),
+            .module(.data(.profile)),
+            .module(.core(.networking)),
+            .module(.core(.logger)),
+            .module(.ui(.designSystem))
         ],
         settings: .settings(
             base: env.baseSetting,
