@@ -60,3 +60,13 @@
     강제 업데이트는 "닫기 불가 + 앱스토어 이동"이라 이 계약과 정면으로 맞물린다 — 기존 컴포넌트로
     커버되는지 먼저 확인할 것.
 - **디자인**: [Figma — 업데이트 알럿](https://www.figma.com/design/QLYZA00K5EIozTroOTDYAU/%EC%9B%B9%EC%86%8C%EC%86%8C-%EB%94%94%EC%9E%90%EC%9D%B8?node-id=20238-24073&m=dev)
+
+### 3. `Info.plist`의 `KAKAO_API_KEY`(단수)가 정의되지 않은 채 남아있다
+
+- **무엇**: `Projects/App/Support/Info.plist`에 `KAKAO_API_KEY`(단수형) 키가 `$(KAKAO_API_KEY)`로 참조돼 있는데,
+  `Config/*.xcconfig` 어디에도 이 이름으로 정의된 값이 없다. #176에서 실제로 쓰는 건 별도로 추가한
+  `KAKAO_APP_KEY`(복수형, `Config_Shared.xcconfig`에 정의됨)다.
+- **결과**: 지금은 무해(빌드 시 빈 문자열로 치환될 뿐 크래시 없음)하지만, 이름이 비슷해 헷갈리기 쉽다.
+- **어디를 고치나**: `Projects/App/Support/Info.plist`에서 `KAKAO_API_KEY` 항목 제거(또는 실제로 필요한
+  용도가 있었는지 확인 후 `KAKAO_APP_KEY`로 통일).
+- **왜 지금 안 했나**: #176(온보딩 인트로) 범위 밖의 기존 잔재라 diff에 포함시키지 않았다(리뷰 중 발견, 2026-08).

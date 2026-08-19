@@ -17,11 +17,22 @@
     <string>$(BUCKET_URL)</string>
     <key>KAKAO_API_KEY</key>
     <string>$(KAKAO_API_KEY)</string>
+    <key>KAKAO_APP_KEY</key>
+    <string>$(KAKAO_APP_KEY)</string>
     <key>AMPLITUDE_API_KEY</key>
     <string>$(AMPLITUDE_API_KEY)</string>
     <key>APPSTORE_ID</key>
     <string>$(APPSTORE_ID)</string>
     <key>TEST_API_KEY</key>
     <string>$(TEST_API_KEY)</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>kakao$(KAKAO_APP_KEY)</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

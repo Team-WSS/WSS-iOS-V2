@@ -47,11 +47,11 @@ public final class MockAuthRepository: AuthRepository {
     }
     
     // syncAppleCredential
-    public var syncResult: Result<Void, AuthError> = .success(())
+    public var syncResult: Result<Void, RepositoryError> = .success(())
     public private(set) var syncCallCount: Int = 0
     public private(set) var syncReceivedCredential: AppleSyncCredential?
 
-    public func syncAppleCredential(_ credential: AppleSyncCredential) async throws(AuthError) {
+    public func syncAppleCredential(_ credential: AppleSyncCredential) async throws(RepositoryError) {
         syncCallCount += 1
         syncReceivedCredential = credential
         _ = try syncResult.get()

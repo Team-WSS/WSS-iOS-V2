@@ -31,7 +31,13 @@ let targets: [Target] = [
         bundleId: "\(env.organizationName).\(env.targetName)",
         infoPlist: .file(path: "Support/Info.plist"),
         sources: ["Sources/**"],
-        dependencies: [],
+        // Apple 로그인(SignInWithAppleButton) capability. 없으면 인증 시도 시 실패한다.
+        entitlements: .file(path: "Support/WSS-iOS.entitlements"),
+        // KakaoSDK.initSDK(appKey:) 앱 진입점 초기화 + AuthController.handleOpenUrl용.
+        dependencies: [
+            .external(name: "KakaoSDKCommon"),
+            .external(name: "KakaoSDKAuth")
+        ],
         settings: .settings(
             base: env.baseSetting,
             configurations: configurations),

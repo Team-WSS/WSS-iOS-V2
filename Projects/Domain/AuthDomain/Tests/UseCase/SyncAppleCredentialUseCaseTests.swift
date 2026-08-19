@@ -31,11 +31,11 @@ struct SyncAppleCredentialUseCaseTests {
     @Test("애플 인증 정보 동기화 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
     func propagatesRepositoryError() async {
         let repo = MockAuthRepository()
-        repo.syncResult = .failure(.invalidCredential)
+        repo.syncResult = .failure(.invalidData)
 
         let sut = DefaultSyncAppleCredentialUseCase(repository: repo)
 
-        await #expect(throws: AuthError.invalidCredential) {
+        await #expect(throws: RepositoryError.invalidData) {
             try await sut.execute(
                 credential: AppleSyncCredential(authorizationCode: "bad", idToken: "bad")
             )

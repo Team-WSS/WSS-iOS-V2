@@ -27,12 +27,13 @@ extension Project {
         testDependencies: [TargetDependency],
         deploymentTarget: DeploymentTargets?,
         infoPlist: InfoPlist,
-        demoInfoPlist: InfoPlist? = nil
+        demoInfoPlist: InfoPlist? = nil,
+        demoEntitlements: Entitlements? = nil
     ) -> [Target] {
-        
+
         var allTargets: [Target] = []
         let dependencies = internalDependencies + externalDependencies
-        
+
         // Sources
         allTargets.append(
             .target(
@@ -47,12 +48,12 @@ extension Project {
                 dependencies: dependencies
             )
         )
-        
-        // Demo 
+
+        // Demo
         if targets.contains(.demo) {
             var demoDeps = demoDependencies
             demoDeps.append(.target(name: name))
-            
+
             allTargets.append(
                 .target(
                     name: "\(name)Demo",
@@ -63,6 +64,7 @@ extension Project {
                     infoPlist: demoInfoPlist ?? infoPlist,
                     sources: ["Demo/**"],
                     resources: [],
+                    entitlements: demoEntitlements,
                     dependencies: demoDeps
                 )
             )
@@ -118,7 +120,8 @@ extension Project {
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
         externalDependencies: [TargetDependency] = [],
-        demoDependencies: [TargetDependency] = []
+        demoDependencies: [TargetDependency] = [],
+        demoEntitlements: Entitlements? = nil
     ) -> Project {
 
         let allTargets = makeBaseTargets(
@@ -133,7 +136,8 @@ extension Project {
             testDependencies: [],
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.feature.infoPlist,
-            demoInfoPlist: ModuleInfoPlist.featureDemo.infoPlist
+            demoInfoPlist: ModuleInfoPlist.featureDemo.infoPlist,
+            demoEntitlements: demoEntitlements
         )
         
         return Project(
