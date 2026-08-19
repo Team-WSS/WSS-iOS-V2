@@ -360,7 +360,19 @@ private extension NovelDetailViewModel {
             guard !isClosing, !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다(loadNovel/loadDraft와 대칭).
             if routeToLoginIfAuthenticationRequired(error) { return }
-            if lastFeedID == nil { state.feedsLoadFailed = true }
+
+            // 첫 페이지 실패는 **화면이 표현하므로 토스트를 띄우지 않는다**(빈 목록 자리에
+            // "피드를 불러오지 못했어요"가 뜨고, 탭을 다시 누르면 재시도된다 — `hasLoadedFirstFeeds`가
+            // 성공 시에만 서기 때문). 둘 다 띄우면 에러 시그널이 이중화된다(서재와 같은 규칙).
+            guard lastFeedID != nil else {
+                state.feedsLoadFailed = true
+                logger?.error("피드 첫 페이지 로드 실패: \(String(describing: error))")
+                return
+            }
+
+            // ⚠️ 더보기 실패만 토스트로 남는다 — 목록이 이미 있어 **실패를 알릴 자리가 화면에 없기 때문**이다.
+            // 서재는 목록을 걷어내고 재시도 버튼이 달린 실패 뷰로 대체하지만, 이 탭에는 그 UI가 없다
+            // (빈 상태 문구뿐이고 재시도는 탭 재탭이라는 숨은 동작). 통일하려면 UI를 새로 정해야 한다.
             presentError(error, as: .feedsLoadFailed)
         }
     }

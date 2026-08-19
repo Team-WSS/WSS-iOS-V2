@@ -43,6 +43,9 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **피드 첫 페이지 로드 실패는 토스트를 띄우지 않는다**(#195) — 빈 목록 자리에 `"피드를 불러오지 못했어요"`가 뜨고 **탭을 다시 누르면 재시도된다**(`hasLoadedFirstFeeds`가 성공 시에만 서기 때문). 문구와 토스트를 둘 다 띄우면 에러 시그널이 이중화된다. 규칙 정본은 [Feature CLAUDE.md](../CLAUDE.md)의 "로드 실패 표현 계약".
+  - **더보기 실패만 토스트로 남아 있다** — 목록이 이미 있어 실패를 알릴 자리가 화면에 없어서다(이 탭엔 재시도 버튼이 없고 빈 상태 문구뿐). 서재처럼 목록을 걷어내려면 재시도 UI를 먼저 정해야 한다 → `docs/TODO.md`.
+
 - 대응 `NovelDetailDomain`이 없다 — UseCase는 `NovelDomain`/`FeedDomain` 것을 주입받는다. `new-module` 기본 추론(`domain(.<같은이름>)`)과 다른 지점.
 - **`state.novel`을 `state.information.novel`과 분리 보유** — `NovelInformation.novel`이 `let`이라 관심 토글(mutating)을 반영할 수 없어서다. 헤더/관심 버튼은 `state.novel`을 읽는다.
 - **헤더 메타 줄(장르·연재상태·작가)은 작가만 개별 밑줄 버튼이라 단일 `Text`로 못 합치고 `HStack`으로 분해**(`NovelDetailHeaderView.metaRow`) — 앞부분(`nonAuthorMetaText`=장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자(`  ·  `/`, `)는 **비탭 `Text`**. 작가 `Text`엔 `.underline()`을 **raw Text에 먼저** 걸고 `applyWSSFont`를 뒤에 붙여야 밑줄이 렌더된다(순서 반대면 무증상 실패 — [[DesignSystem]] 주의사항 참고). 탭 영역은 작가 글자에만 국한(구분자 제외)됨을 diagnostic 배경으로 실측 확인.
