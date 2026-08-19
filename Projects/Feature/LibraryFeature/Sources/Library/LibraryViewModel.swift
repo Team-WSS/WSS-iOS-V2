@@ -47,8 +47,10 @@ final class LibraryViewModel {
     }
 
     /// 사용자에게 표시할 토스트의 **의미값**. 카피·표현은 View가 결정한다.
+    /// 남은 토스트는 **부수 데이터 실패 하나뿐**이다 — 목록을 세우는 로드(첫 페이지·더보기·갱신)는
+    /// 전부 전면 실패 뷰가 표현한다. 키워드는 필터 시트의 칩 데이터라 주 콘텐츠가 아니고,
+    /// 시트가 떠 있는 동안 뒤 화면을 덮을 수도 없어서 토스트가 맞다.
     enum LibraryToast: Equatable {
-        case loadMoreFailed
         case keywordsLoadFailed
     }
 
@@ -82,14 +84,6 @@ final class LibraryViewModel {
     private(set) var state: State
 
     // MARK: - Property
-
-    /// 갱신 중이라 밀려난 다음 페이지 요청. 진행 중이던 로드가 끝나면 이어서 실행한다.
-    ///
-    /// ⚠️ **이 플래그가 없으면 무한 스크롤이 영구히 멈춘다** — 재진입하면 `.load`(갱신)와 마지막 셀의
-    /// `.loadMore`가 같은 프레임에 발화해 한 슬롯을 다투는데, 진 쪽은 그냥 버려진다. 그런데 갱신은
-    /// 목록을 **같은 ID로** 교체하므로 마지막 셀의 뷰 정체성이 유지돼 `onAppear`가 다시 오지 않는다
-    /// → 하단에 머문 채로는 다음 페이지를 다시 요청할 기회 자체가 사라진다(#195에서 실측).
-    @ObservationIgnored private var pendingLoadMore = false
 
     /// 지금 화면에 그릴 목록이 서 있는지 — 진입 시 "첫 로드냐 갱신이냐"를 가른다.
     /// ⚠️ **`state.novels`로 판단하지 말 것** — 갱신이 실패해도 배열엔 직전 성공 목록이 남아 있어서,
@@ -178,28 +172,9 @@ private extension LibraryViewModel {
 
     /// 다음 페이지 로드. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
     func loadMore() {
-        guard hasNext, !state.isLoading, let cursor = nextCursor else { return }
-
-        // 다른 로드(대개 재진입 갱신)가 슬롯을 잡고 있으면 **버리지 말고 기억**한다 —
-        // 그냥 return하면 이 요청을 다시 부를 트리거가 없다(`pendingLoadMore` 주석).
-        guard loadTask == nil else {
-            pendingLoadMore = true
-            return
-        }
-
-        // 이 요청이 대기분을 대신하므로 함께 소비한다 — 안 지우면 이 로드가 끝날 때 defer가
-        // 대기분을 또 이어받아 사용자가 요청하지 않은 페이지를 한 번 더 붙인다.
-        pendingLoadMore = false
+        guard hasNext, loadTask == nil, !state.isLoading, let cursor = nextCursor else { return }
         state.isLoadingMore = true
         loadTask = Task { await loadPage(.more(cursor: cursor)) }
-    }
-
-    /// 갱신에 밀려 대기 중이던 다음 페이지 요청을 이어서 실행한다.
-    /// `loadPage`의 `defer`가 슬롯을 비운 **뒤에** 불려야 한다(앞에서 부르면 다시 가드에 막힌다).
-    func resumePendingLoadMoreIfNeeded() {
-        guard pendingLoadMore else { return }
-        pendingLoadMore = false
-        loadMore()
     }
 
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
@@ -235,8 +210,6 @@ private extension LibraryViewModel {
     /// 굳어 이후 로드가 전부 막힌다. 불변식 전문은 `loadPage` 주석 참고.
     func reloadFromScratch() {
         loadTask?.cancel()
-        // 목록을 통째로 갈아엎으므로 밀려 있던 다음 페이지 요청은 무의미하다(그 커서가 가리키던 목록이 사라진다).
-        pendingLoadMore = false
         nextCursor = nil
         hasNext = true
         state.novels = []
@@ -282,8 +255,6 @@ private extension LibraryViewModel {
         // 요청 로그로 2단계를 검증할 때 오진하기 쉽다.
         guard !Task.isCancelled else { return }
 
-        var didSucceed = false
-
         defer {
             // 취소된 로드는 **아무것도 정리하지 않는다** — 정리하면 자기를 밀어낸 새 로드의
             // `loadTask`와 로딩 표시를 지운다. (defer 안에서는 `return`할 수 없어 `if`로 감싼다.)
@@ -291,24 +262,6 @@ private extension LibraryViewModel {
                 loadTask = nil
                 state.isLoading = false
                 state.isLoadingMore = false
-                // ⚠️ 대기분을 잇는 건 **갱신이 성공으로 끝났을 때뿐**이다. 조건이 두 겹인 이유:
-                //
-                // 1. **실패한 로드는 잇지 않는다** — 전면 실패 뷰를 세운 직후 대기분이 발사되고 그게
-                //    성공하면 `loadFailed`가 내려가 **사용자가 재시도하지도 않았는데 실패 뷰가 저 혼자
-                //    사라진다**(게다가 낡은 목록에 새 페이지를 붙여 세대가 섞인다). 인증 만료도 같은
-                //    경로라, 세션이 죽은 걸 알면서 요청을 한 번 더 내고 로그인 콜백이 두 번 발화한다.
-                // 2. **`.more`·`.reload` 뒤에는 잇지 않고 버린다** — 예약이 필요한 건 갱신뿐이다(갱신만
-                //    목록을 **같은 ID로** 교체해 셀 `onAppear`가 다시 오지 않는다). 그 둘은 끝나면 목록이
-                //    커지거나 새로 서서 트리거가 자연히 되살아나므로, 이어가면 사용자가 요청하지도 않은
-                //    페이지를 한 장 더 당긴다(그리드·리스트가 동시에 살아 있어 양쪽이 예약할 때 실제로 발생).
-                //
-                // 버려진 대기분은 복구 경로(재시도·필터 변경·재진입)가 전부 목록을 새로 세워 트리거를 되살린다.
-                // 슬롯을 비운 **뒤에** 불러야 대기분이 곧바로 시작될 수 있다(앞으로 옮기면 다시 가드에 막힌다).
-                if didSucceed, case .refresh = kind {
-                    resumePendingLoadMoreIfNeeded()
-                } else {
-                    pendingLoadMore = false
-                }
             }
         }
 
@@ -319,7 +272,6 @@ private extension LibraryViewModel {
             apply(outcome, kind: kind)
             hasLoadedContent = true
             state.loadFailed = false
-            didSucceed = true
         } catch {
             guard !Task.isCancelled else { return }
             presentLoadFailure(error, kind: kind)
@@ -429,24 +381,22 @@ private extension LibraryViewModel {
 
 private extension LibraryViewModel {
 
-    /// 목록 로드 실패의 표현은 `kind`로 갈린다.
+    /// 목록 로드 실패는 **첫 페이지·더보기·갱신을 가리지 않고 전면 실패 뷰**로 표현한다.
     ///
-    /// **갱신 실패를 첫 로드와 같게(전면 실패 뷰) 다루는 건 의도다** — 보고 있던 목록이 실패 뷰로
-    /// 대체된다. 사용자가 갱신이 안 됐다는 걸 알고 재시도할 수 있어야 해서고, 구 WSSiOS·홈과 같은 규칙이다.
+    /// 사용자에겐 셋 다 "목록을 못 불러왔다"는 같은 사건이고, 몇 번째 페이지였는지는 앱 내부 사정이다.
+    /// 더보기 실패를 토스트로 두면 **복구 수단이 없다** — 토스트는 사라지면 끝이라 다시 부를 방법이
+    /// 없고, 실제로 그것 때문에 "하단에서 더보기가 실패하면 그 뒤로 목록이 영영 안 채워지는" 상태가
+    /// 만들어졌다(#195 실측). 전면 실패 뷰는 재시도 버튼을 달고 온다.
+    /// (홈도 같은 이유로 갱신 실패를 첫 로드와 같게 다룬다 — `HomeFeature/CLAUDE.md`.)
     func presentLoadFailure(_ error: Error, kind: LoadKind) {
-        // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
+        // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
+        // (실패 뷰의 재시도가 같은 에러로 되돌아와 탈출구가 되지 못한다.)
         if routeToLoginIfAuthenticationRequired(error) { return }
 
-        switch kind {
-        case .reload, .refresh:
-            // 전면 실패 뷰가 표현하므로 토스트는 띄우지 않는다 — 띄우면 에러 시그널이 이중화된다.
-            // ⚠️ `hasLoadedContent`를 함께 내려야 다음 진입이 '갱신'이 아니라 로딩부터 다시 시작한다.
-            hasLoadedContent = false
-            state.loadFailed = true
-            logger?.error("Library 실패(load): \(String(describing: error))")
-        case .more:
-            presentError(error, as: .loadMoreFailed)
-        }
+        // ⚠️ `hasLoadedContent`를 함께 내려야 다음 진입이 '갱신'이 아니라 로딩부터 다시 시작한다.
+        hasLoadedContent = false
+        state.loadFailed = true
+        logger?.error("Library 실패(\(kind)): \(String(describing: error))")
     }
 
     /// Repository 에러를 발생 맥락의 의미 토스트로 변환한다. 원인은 로그로 남긴다.
