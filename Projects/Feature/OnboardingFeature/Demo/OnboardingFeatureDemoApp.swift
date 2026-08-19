@@ -31,11 +31,8 @@ struct OnboardingFeatureDemoApp: App {
 
         // 카카오 로그인 버튼을 이 Demo 앱 단독으로 테스트하려면 실행 시 한 번 초기화가 필요하다
         // (App은 Demo와 별개 프로세스라 App의 초기화를 못 물려받는다).
-        if let kakaoAppKey = Bundle.main.infoDictionary?["KAKAO_APP_KEY"] as? String, !kakaoAppKey.isEmpty {
-            KakaoSDK.initSDK(appKey: kakaoAppKey)
-        } else {
-            assertionFailure("KAKAO_APP_KEY가 Info.plist에 없습니다.")
-        }
+        let kakaoAppKey = NetworkingConfig.kakaoAppKey
+        KakaoSDK.initSDK(appKey: kakaoAppKey)
     }
 
     var body: some Scene {
