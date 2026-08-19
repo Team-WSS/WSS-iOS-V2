@@ -38,17 +38,22 @@ public struct WSSFeadHeaderView: View {
     let header: FeedHeader
 
     public let profileImageTapped: () -> Void
+    /// 내 글이면 `false` — 내 프로필로 "이동"할 곳이 없어 이 영역을 탭 타겟으로 만들지 않는다
+    /// (`Button` 자체를 안 그려서, 탭이 그대로 아래 컨테이너로 흘러가 일반 셀 탭과 동일하게 동작한다).
+    public let isProfileTappable: Bool
     public let showThreeDotsButton: Bool
     public let threeDotsButtonTapped: () -> Void
 
     public init(
         header: FeedHeader,
         profileImageTapped: @escaping () -> Void,
+        isProfileTappable: Bool = true,
         showThreeDotsButton: Bool = true,
         threeDotsButtonTapped: @escaping () -> Void = { }
     ) {
         self.header = header
         self.profileImageTapped = profileImageTapped
+        self.isProfileTappable = isProfileTappable
         self.showThreeDotsButton = showThreeDotsButton
         self.threeDotsButtonTapped = threeDotsButtonTapped
     }
@@ -56,38 +61,21 @@ public struct WSSFeadHeaderView: View {
     public var body: some View {
         HStack(spacing: 0) {
             // 프로필 진입 영역 = 이미지 + 간격 + 닉네임 전체 — 이미지(32pt)만으론 탭 타겟이 좁다.
-            // 간격의 투명 픽셀까지 탭되도록 contentShape 필수.
-            HStack(spacing: 0) {
-                AsyncImage(url: header.profileImageURL) {
-                    phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable()
-                    case .failure:
-                        WSSColor.wssGray200.swiftUIColor
-                    default:
-                        ProgressView()
-                    }
+            if isProfileTappable {
+                // 실제 `Button`이어야 셀 행 컨테이너의 `onTapGesture`(피드 상세 진입)보다 이 영역이
+                // 우선한다(WSSComponent/CLAUDE.md "Button은 조상의 onTapGesture보다 우선" — 예전엔
+                // 이 영역도 onTapGesture였는데, 행 전체가 simultaneousGesture이던 시절엔 공존했지만
+                // 행을 일반 onTapGesture로 바꾸면서 Button으로 승격해야 눌림이 행 탭에 먹히지 않는다).
+                Button(action: profileImageTapped) {
+                    profileContent
                 }
-                .scaledToFit()
-                .frame(width: 32, height: 32)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                Spacer().frame(width: 10)
-
-                Text(header.nickname)
-                    .applyWSSFont(.body4)
-                    .foregroundStyle(Color.wssBlack)
-                    .lineLimit(1)
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(header.nickname) 프로필")
+            } else {
+                // Button을 아예 안 그려서 탭이 컨테이너(피드 상세 진입)로 그대로 흘러간다 — 여기서
+                // .disabled()로 막으면 Button이 히트테스트를 계속 가로채 아래로 안 흘러간다.
+                profileContent
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                profileImageTapped()
-            }
-            // 순수 이미지·텍스트 + 제스처라 접근성 트리에 안 잡힌다 — VoiceOver·UI 자동화가 버튼 하나로 인식하게 한다.
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(header.nickname) 프로필")
-            .accessibilityAddTraits(.isButton)
 
             Spacer().frame(width: 4)
 
@@ -127,6 +115,35 @@ public struct WSSFeadHeaderView: View {
             }
         }
         .background(Color.wssWhite)
+    }
+
+    private var profileContent: some View {
+        HStack(spacing: 0) {
+            AsyncImage(url: header.profileImageURL) {
+                phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable()
+                case .failure:
+                    WSSColor.wssGray200.swiftUIColor
+                default:
+                    ProgressView()
+                }
+            }
+            .scaledToFit()
+            .frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Spacer().frame(width: 10)
+
+            Text(header.nickname)
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(1)
+        }
+        // 간격의 투명 픽셀까지 탭되도록 contentShape 필수 — isProfileTappable == false일 때도
+        // 이 영역이 컨테이너의 onTapGesture 히트테스트에 포함되게 한다(빈 공간이 죽지 않도록).
+        .contentShape(Rectangle())
     }
 }
 
