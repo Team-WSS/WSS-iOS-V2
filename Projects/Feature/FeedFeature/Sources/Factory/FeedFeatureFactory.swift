@@ -106,8 +106,17 @@ public enum FeedFeatureFactory {
     }
 
     /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
-    /// - Parameter onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
-    ///   실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    /// - Parameters:
+    ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
+    ///     실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onFeedTapped: 피드 셀 탭(좋아요 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백.
+    ///     실제 화면 전환(`makeFeedDetailView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onCreateFeedTapped: 우상단 연필 아이콘 → 피드 작성 진입 콜백.
+    ///     실제 화면 전환(`makeCreateFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onUserProfileTapped: 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백.
+    ///     실제 화면 전환(`UserPageFactory.makeView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onNovelTapped: 연결 작품 배너 탭 → 작품 상세 진입 콜백.
+    ///     실제 화면 전환(`NovelDetailFactory` 조립)은 호출자(App 조정 계층)가 수행한다.
     @MainActor
     public static func makeSosoFeedView(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
@@ -118,7 +127,11 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in }
+        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in },
+        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onCreateFeedTapped: @escaping () -> Void = {},
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
     ) -> some View {
         SosoFeedView(
             viewModel: SosoFeedViewModel(
@@ -131,7 +144,11 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: logger
             ),
-            onEditFeedTapped: onEditFeedTapped
+            onEditFeedTapped: onEditFeedTapped,
+            onFeedTapped: onFeedTapped,
+            onCreateFeedTapped: onCreateFeedTapped,
+            onUserProfileTapped: onUserProfileTapped,
+            onNovelTapped: onNovelTapped
         )
     }
 

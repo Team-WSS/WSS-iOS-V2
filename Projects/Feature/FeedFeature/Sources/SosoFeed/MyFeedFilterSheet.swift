@@ -58,6 +58,7 @@ struct MyFeedFilterSheet: View {
         .onAppear {
             viewModel.handle(.resetMyFeedFilterDraft)
         }
+        .interactiveDismissDisabled()
         .presentationBackgroundInteraction(.disabled)
         .presentationDetents([.height(460)])
         .presentationBackground(WSSColor.wssWhite.swiftUIColor)
