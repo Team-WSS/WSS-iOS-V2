@@ -44,3 +44,9 @@
   로드 기준선(`baselineDraft`, 이 화면은 항상 빈 `CollectionDraft()`) 대비 변경 여부(`hasUnsavedChanges`)를
   판단해 뒤로가기 시 "그만 작성" 확인 알럿을 띄울지 결정하는 데 쓴다(`FeedDraft`/`NovelReviewDraft`와 같은
   이유). 필드가 전부 이미 Equatable이라 자동 합성만으로 충분했다.
+- **작품 리스트는 `addNovel`/`removeNovel`(1개씩) 말고 `setNovels(_:)`(통째 교체)도 있다**(#199) —
+  "작품 추가" 화면은 이미 담긴 작품도 선택된 채로 보여주고 해제도 가능한 **편집 화면**이라, 그 결과를
+  반영할 땐 편도 append 여러 번이 아니라 한 번에 전체를 새 목록으로 바꾸는 게 계약에 맞는다. count
+  상한은 `addNovel`과 같은 `novelOverLimit` throw(선택 화면이 UI에서 이미 100개로 막아두므로 실사용
+  경로는 아니지만, "사용자 입력은 거부"라는 `updateName` 방침과 일관되게 clamp 대신 throw를 골랐다).
+  대표 작품이 새 목록에서 빠지면 `removeNovel`과 동일하게 대표 지정도 함께 풀린다.

@@ -116,6 +116,21 @@ public struct CollectionDraft: Equatable {
         }
     }
 
+    /// 작품 리스트 전체를 새 선택 결과로 교체한다("작품 추가" 화면이 반환하는 편집 결과 전체 반영용 —
+    /// 그 화면은 추가뿐 아니라 기존 선택 해제도 가능해 append가 아니라 통째 교체가 맞는 계약이다).
+    /// count 상한은 `addNovel`과 동일하게 throw — 선택 화면이 UI에서 이미 100개로 막아두므로 실사용에서는
+    /// 도달하지 않지만, "사용자 입력 검증은 거부"(clamp 아님) 방침을 `updateName`과 동일하게 지킨다.
+    /// 대표 작품이 새 목록에 더 이상 없으면 대표 지정도 함께 풀린다(`removeNovel`과 같은 이유).
+    public mutating func setNovels(_ ids: [NovelID]) throws(ValidationError) {
+        guard ids.count <= Self.maxNovelCount else {
+            throw .novelOverLimit(max: Self.maxNovelCount)
+        }
+        novelIDs = ids
+        if let representativeNovelID, !ids.contains(representativeNovelID) {
+            self.representativeNovelID = nil
+        }
+    }
+
     public mutating func setRepresentativeNovel(_ id: NovelID) throws(ValidationError) {
         guard novelIDs.contains(id) else { throw .representativeNovelNotIncluded }
         representativeNovelID = id
