@@ -31,6 +31,7 @@ public enum FeatureModule: String, ModuleSpec {
     case library
     case onboarding
     case notification
+    case collection
 }
 
 public enum DomainModule: String, ModuleSpec {
