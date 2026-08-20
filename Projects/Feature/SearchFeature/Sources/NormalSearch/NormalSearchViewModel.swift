@@ -94,7 +94,8 @@ final class NormalSearchViewModel {
         searchAutoCompletionWordsUseCase: SearchAutoCompletionWordsUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        initialQuery: String? = nil
     ) {
         self.loadSosoPickUseCase = loadSosoPickUseCase
         self.loadRecentSearchWordsUseCase = loadRecentSearchWordsUseCase
@@ -104,6 +105,13 @@ final class NormalSearchViewModel {
         self.searchNovelUseCase = searchNovelUseCase
         self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
+
+        // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — `init`이 이
+        // ViewModel 인스턴스 생애주기에서 정확히 한 번만 실행되므로, `onAppear`처럼 재발화를 막는
+        // 가드가 따로 필요 없다(#197).
+        if let initialQuery, !initialQuery.isEmpty {
+            executeSearch(initialQuery)
+        }
     }
 
     // MARK: - handle

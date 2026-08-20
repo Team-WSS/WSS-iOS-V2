@@ -27,6 +27,8 @@ public enum SearchFeatureFactory {
     ///   - onDetailSearchRequested: 장르 탭·인기 키워드 칩 탭 → 상세탐색 결과(`makeDetailSearchResultView`)
     ///     진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다 — `NavigationPath` 혼용으로 화면이
     ///     안 쌓이는 문제 때문에 App이 직접 push해야 한다(`makeDetailSearchResultView` 참고).
+    ///   - initialQuery: 비어있지 않으면 화면이 뜨자마자 이 텍스트로 검색을 실행해 결과부터 보여준다
+    ///     (예: 작가 이름 탭 → 그 작가로 사전 검색된 결과 화면). `nil`(기본값)이면 평소처럼 빈 검색창.
     @MainActor
     public static func makeNormalSearchView(
         loadSosoPickUseCase: LoadSosoPickUseCase,
@@ -37,6 +39,7 @@ public enum SearchFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil,
+        initialQuery: String? = nil,
         onNovelSelected: @escaping (NovelID) -> Void = { _ in },
         onDetailSearchRequested: @escaping (SearchFilter) -> Void = { _ in }
     ) -> some View {
@@ -49,7 +52,8 @@ public enum SearchFeatureFactory {
                 searchAutoCompletionWordsUseCase: searchAutoCompletionWordsUseCase,
                 searchNovelUseCase: searchNovelUseCase,
                 loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
-                logger: logger
+                logger: logger,
+                initialQuery: initialQuery
             ),
             onNovelSelected: onNovelSelected,
             onDetailSearchRequested: onDetailSearchRequested

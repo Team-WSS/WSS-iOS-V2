@@ -20,8 +20,8 @@ import SearchDomain
 import UserPageFeature
 
 /// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFactory`가 반환하는 화면을 그대로 조립한다.
-/// 작품 상세·피드 상세·일반 검색까지는 실제로 push한다. 그 안에서 다시 열리는 화면(작품 평가·피드
-/// 작성/수정·유저 프로필·작가 검색·알림 목록·선호장르 설정)은 대상 Feature가 아직 App에 안 붙어
+/// 작품 상세·피드 상세·일반 검색·작가 이름 검색까지는 실제로 push한다. 그 안에서 다시 열리는 화면(작품
+/// 평가·피드 작성/수정·유저 프로필·알림 목록·선호장르 설정)은 대상 Feature가 아직 App에 안 붙어
 /// 로그만 남기는 placeholder다.
 struct HomeRootView: View {
 
@@ -32,6 +32,7 @@ struct HomeRootView: View {
         case feed(FeedID)
         case editFeed(FeedID)
         case search
+        case authorSearch(String)
         case detailSearch(SearchFilter)
         /// 선호장르 미설정 유도 CTA → 마이페이지 편집(닉네임/캐릭터/장르 등을 한 화면에서 고치는 화면,
         /// 전용 "장르만" 편집 화면은 없다 — `MypageFactory.makeEditView` 재사용, 사용자 확정).
@@ -73,7 +74,9 @@ struct HomeRootView: View {
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .search:
-                        searchView
+                        searchView()
+                    case .authorSearch(let authorName):
+                        searchView(initialQuery: authorName)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     case .preferenceGenreSetting:
@@ -96,6 +99,7 @@ private extension HomeRootView {
             onFeedTapped: { path.append(Destination.feed($0)) },
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
+            onAuthorTapped: { path.append(Destination.authorSearch($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -117,11 +121,14 @@ private extension HomeRootView {
 // MARK: - 일반 검색
 
 private extension HomeRootView {
-    var searchView: some View {
+    /// `.search`(우상단 검색 아이콘, 빈 검색창)와 `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 둘 다
+    /// 이 화면을 그대로 재사용한다 — 차이는 `initialQuery` 유무뿐.
+    func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) }
+            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            initialQuery: initialQuery
         )
     }
 

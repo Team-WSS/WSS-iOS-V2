@@ -29,6 +29,7 @@ struct LibraryRootView: View {
         case feed(FeedID)
         case editFeed(FeedID)
         case search
+        case authorSearch(String)
         case detailSearch(SearchFilter)
         case notificationSetting
     }
@@ -66,7 +67,9 @@ struct LibraryRootView: View {
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .search:
-                        searchView
+                        searchView()
+                    case .authorSearch(let authorName):
+                        searchView(initialQuery: authorName)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     case .notificationSetting:
@@ -89,6 +92,7 @@ private extension LibraryRootView {
             onFeedTapped: { path.append(Destination.feed($0)) },
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
+            onAuthorTapped: { path.append(Destination.authorSearch($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -110,11 +114,14 @@ private extension LibraryRootView {
 // MARK: - 일반 검색 (웹소설 찾기 / 작품 등록 공용)
 
 private extension LibraryRootView {
-    var searchView: some View {
+    /// `.search`(웹소설 찾기/작품 등록, 빈 검색창)와 `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 둘 다
+    /// 이 화면을 그대로 재사용한다 — 차이는 `initialQuery` 유무뿐.
+    func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) }
+            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            initialQuery: initialQuery
         )
     }
 

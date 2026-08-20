@@ -7,7 +7,7 @@
 - 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 10종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
-  - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — 단 **작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)**이라 현재 소비처는 Demo 로그뿐.
+  - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — App(`NovelDetailAssembly`)이 이 이름을 그대로 `SearchAssembly.makeView(initialQuery:)`에 넘겨, "일반 검색" 화면이 그 작가 이름으로 **이미 검색 실행된 결과**부터 보여준다(#197 — 전용 작가 검색 화면이 따로 있는 게 아니라 `SearchNovelUseCase.searchByText`가 제목/작가 구분 없는 단일 텍스트 검색이라 기존 화면 재사용으로 충분).
   - **`onAuthenticationRequired()`**: 인증 만료(`RepositoryError.authenticationRequired`) 시 로그인 유도 콜백. **화면 내 모든 서버 호출 공통** — VM이 `state.requiresAuthentication` 신호만 세우고(어느 catch에서 발생하든 `presentError`/`loadNovel` 경유 `routeToLoginIfAuthenticationRequired`로 수렴), View가 `onChange`로 소비해 콜백 발화(`shouldDismiss`→`dismiss`와 대칭). 인증 만료면 개별 실패 토스트/실패 뷰 대신 이 신호만 낸다.
 
 ## 핵심 시나리오

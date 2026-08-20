@@ -31,7 +31,8 @@ enum SearchAssembly {
     static func makeView(
         dependencies: AppDependencies,
         onNovelSelected: @escaping (NovelID) -> Void,
-        onDetailSearchRequested: @escaping (SearchFilter) -> Void
+        onDetailSearchRequested: @escaping (SearchFilter) -> Void,
+        initialQuery: String? = nil
     ) -> some View {
         SearchFactory.makeView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: dependencies.recommendationRepository),
@@ -44,6 +45,7 @@ enum SearchAssembly {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
             logger: dependencies.logger,
+            initialQuery: initialQuery,
             onNovelSelected: onNovelSelected,
             onDetailSearchRequested: onDetailSearchRequested
         )
