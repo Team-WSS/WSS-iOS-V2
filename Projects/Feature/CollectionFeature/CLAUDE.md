@@ -23,9 +23,11 @@
 - **뒤로가기(취소)**: 변경 사항이 없으면 바로 닫히고, 있으면 "컬렉션 생성을 그만하시겠어요?" 확인
   알럿(`WSSAlertType.stopWritingCollection`)을 띄운다 — `NovelReviewFeature`/`FeedFeature`의 "그만 작성"
   패턴과 동일(사용자 확정, #199). 기준선은 항상 빈 `CollectionDraft()`(로드가 없어서).
-- **작품 카드(표지 이미지) 자체를 탭해도 이 화면에선 아무 반응이 없다**(사용자 확정, #199) — 탭 가능한
-  건 "대표" 배지뿐. 제거(삭제)는 이 화면 범위가 아니라 후속 "작품 추가/수정" 화면에서만 가능할 예정.
-- **대표 작품 배지를 탭하면 즉시 그 작품이 대표로 전환**된다(`CollectionDraft.setRepresentativeNovel`).
+- **작품 카드(표지 이미지) 셀 전체를 탭하면 그 작품이 대표로 전환**된다(`CollectionDraft.setRepresentativeNovel`)
+  — 처음엔 우상단 "대표" 배지만 탭 대상이었으나, 배지만으론 탭 영역이 좁다는 사용자 피드백으로 **셀
+  전체**로 넓혔다(#199). 배지는 순수 표시용(대표 여부 뱃지)이라 더는 별도 `Button`이 아니다 — 커버
+  이미지를 감싸는 `Button` 하나가 셀 전체 탭을 받는다(중첩 `Button` 금지 — `WSSComponent/CLAUDE.md`).
+  제거(삭제)는 이 화면 범위가 아니라 후속 "작품 추가/수정" 화면에서만 가능할 예정.
   대표를 한 번도 안 골라도 제출은 된다 — `effectiveRepresentativeNovelID`가 표시 순서 첫 작품으로
   대신한다(도메인 계약, `CollectionDomain/CLAUDE.md` 참고).
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
@@ -40,3 +42,8 @@
   작품 리스트 그리드(대표 배지 포함)를 렌더링해 볼 유일한 경로가 Xcode Preview뿐이라(작품 추가 화면이
   없어 실제 앱·Demo 둘 다 도달 불가) 만든 시각 확인용 우회로다. **Factory·프로덕션 코드는 이 init을
   쓰지 않는다** — `CreateCollectionView.swift`의 `#Preview("작품 포함")`에서만 사용.
+- ⚠️ **`addNovelTile`과 `novelGridCell`은 같은 그리드 행을 채우므로 커버 박스 사이즈 산정 방식(`novelCoverAspectRatio`)과
+  "제목 줄" 유무를 반드시 맞춰야 한다** — 처음엔 `addNovelTile`만 고정 `height: 156`을 썼는데, 옆
+  `novelGridCell`은 커버(가변 높이) + 제목 텍스트(최대 2줄)로 총 높이가 더 길어 행이 어긋나 보였다
+  (#199 리뷰 피드백). 지금은 둘 다 같은 `aspectRatio`로 커버를 그리고, `addNovelTile`엔 실제 텍스트
+  없는 투명 `Text(" ")`(같은 폰트)로 제목 줄 자리만 예약한다. 셀 종류를 늘릴 땐 이 짝을 깨지 말 것.

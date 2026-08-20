@@ -255,48 +255,62 @@ private extension CreateCollectionView {
         }
     }
 
+    /// 다른 작품 셀(`novelGridCell`)과 같은 골격(커버 박스 + 제목 줄 자리)을 맞춘다 — 이 타일만 제목이
+    /// 없다고 커버 높이를 고정값(156)으로 박아두면, 제목이 있는 이웃 셀과 총 높이가 달라져 그리드 행이
+    /// 어긋나 보인다(#199 리뷰 피드백). 커버는 `novelGridCell`과 동일하게 `aspectRatio`로 폭에 맞춰
+    /// 늘어나게 하고, 제목 자리는 투명 텍스트로 같은 폭만큼 예약한다.
     var addNovelTile: some View {
         Button(action: onAddNovelTapped) {
-            VStack(spacing: 4) {
-                Text(viewModel.state.draft.novelIDs.isEmpty ? "작품 추가" : "작품 수정")
-                    .applyWSSFont(.title4)
-                    .foregroundStyle(Color.wssGray200)
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(spacing: 4) {
+                    Text(viewModel.state.draft.novelIDs.isEmpty ? "작품 추가" : "작품 수정")
+                        .applyWSSFont(.title4)
+                        .foregroundStyle(Color.wssGray200)
 
-                WSSImage.icBookRegister.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssGray200)
+                    WSSImage.icBookRegister.swiftUIImage
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(Color.wssGray200)
+                }
+                .frame(maxWidth: .infinity)
+                .aspectRatio(novelCoverAspectRatio, contentMode: .fit)
+                .background(Color.wssGray50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                // 실제 텍스트 없이 자리만 — novelGridCell 제목 줄과 폰트를 맞춰야 높이가 맞는다.
+                Text(" ")
+                    .applyWSSFont(.body4)
+                    .opacity(0)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 156)
-            .background(Color.wssGray50)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         // ⚠️ .buttonStyle(.plain)을 걸지 않는다 — 아이콘·텍스트만 있는 버튼에 걸면 기본 눌림 피드백까지
         // 사라진다(WSSComponent/CLAUDE.md·Feature/CLAUDE.md 공통 주의). 색은 이미 명시적이라 accent 틴트
         // 우려도 없다.
     }
 
+    /// 커버 셀 전체가 대표 지정 탭 영역이다(사용자 확정, #199 — 처음엔 우상단 배지만 탭 대상이었으나
+    /// 셀 자체를 탭해도 바뀌도록 넓힘). 배지는 이제 순수 표시용이라 별도 `Button`으로 중첩하지 않는다
+    /// (중첩 Button은 안쪽 제스처가 불안정해진다 — `WSSComponent/CLAUDE.md` 공통 주의).
     func novelGridCell(_ novel: CollectionNovel) -> some View {
         let isRepresentative = novel.id == viewModel.representativeNovelID
 
         return VStack(alignment: .leading, spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: 108.0 / 156.0)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        if isRepresentative {
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color.wssPrimary100, lineWidth: 2)
+            Button {
+                viewModel.handle(.selectRepresentativeNovel(novel.id))
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            if isRepresentative {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.wssPrimary100, lineWidth: 2)
+                            }
                         }
-                    }
-                    .animation(.easeInOut(duration: 0.1), value: isRepresentative)
+                        .animation(.easeInOut(duration: 0.1), value: isRepresentative)
 
-                Button {
-                    viewModel.handle(.selectRepresentativeNovel(novel.id))
-                } label: {
                     Text(isRepresentative ? "✓ 대표" : "대표")
                         .applyWSSFont(.label2)
                         .foregroundStyle(Color.wssWhite)
@@ -306,8 +320,8 @@ private extension CreateCollectionView {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         // 미설정 시 기본 크로스페이드가 느리게 번진다(Feature/CLAUDE.md 공통 주의).
                         .animation(.easeInOut(duration: 0.1), value: isRepresentative)
+                        .padding(8)
                 }
-                .padding(8)
             }
 
             Text(novel.title)
@@ -316,6 +330,10 @@ private extension CreateCollectionView {
                 .lineLimit(2)
         }
     }
+
+    /// 그리드 커버 비율(Figma 108×156) — `addNovelTile`/`novelGridCell` 양쪽이 공유해야 두 셀의
+    /// 커버 높이가 폭 변화(기기별)에도 항상 같이 움직인다.
+    var novelCoverAspectRatio: CGFloat { 108.0 / 156.0 }
 }
 
 // MARK: - Presentation
