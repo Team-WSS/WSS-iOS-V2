@@ -28,6 +28,7 @@ final class CreateCollectionViewModel {
         var isSubmitting = false
         var shouldDismiss = false
         var requiresAuthentication = false
+        var isStopAlertPresented = false
         var presentedError: SubmitError?
     }
 
@@ -49,6 +50,9 @@ final class CreateCollectionViewModel {
         case togglePrivate
         case selectRepresentativeNovel(NovelID)
         case submit
+        case requestClose
+        case confirmStop
+        case keepWriting
         case dismissError
     }
 
@@ -57,7 +61,13 @@ final class CreateCollectionViewModel {
     private(set) var state: State
 
     // MARK: - Property
-    // (없음 — 현재 View가 보지 않는 내부 판단 파생이 없다)
+
+    /// 뒤로가기 시 "그만 작성" 확인 알럿을 띄울지 판단하는 기준선 — 이 화면은 로드가 없는 순수 생성
+    /// 화면이라 항상 빈 `CollectionDraft()`다(`NovelReviewViewModel`의 `baselineDraft`와 같은 역할).
+    @ObservationIgnored private var baselineDraft: CollectionDraft
+
+    /// View가 직접 보지 않는 내부 판단값이라 Derived가 아니라 Property에 둔다.
+    private var hasUnsavedChanges: Bool { state.draft != baselineDraft }
 
     // MARK: - Dependency
 
@@ -74,8 +84,26 @@ final class CreateCollectionViewModel {
     ) {
         self.createCollectionUseCase = createCollectionUseCase
         self.logger = logger
-        self.state = State(draft: CollectionDraft())
+        let initialDraft = CollectionDraft()
+        self.state = State(draft: initialDraft)
+        self.baselineDraft = initialDraft
     }
+
+    #if DEBUG
+    /// Preview 전용 — 작품 리스트 그리드(대표 배지 포함) 렌더링을 확인하기 위한 시드 경로.
+    /// 실제 진입 경로(작품 추가 화면)가 이번 범위 밖이라 그리드가 실제 앱에선 항상 비어있는데, 이
+    /// initializer로 Preview에서만 우회해 시각 확인한다 — Factory·프로덕션 코드는 쓰지 않는다.
+    init(
+        previewDraft: CollectionDraft,
+        previewNovelDisplayInfo: [NovelID: CollectionNovel],
+        createCollectionUseCase: CreateCollectionUseCase
+    ) {
+        self.createCollectionUseCase = createCollectionUseCase
+        self.logger = nil
+        self.state = State(draft: previewDraft, novelDisplayInfo: previewNovelDisplayInfo)
+        self.baselineDraft = previewDraft
+    }
+    #endif
 
     // MARK: - handle
 
@@ -91,6 +119,12 @@ final class CreateCollectionViewModel {
             selectRepresentativeNovel(id)
         case .submit:
             submit()
+        case .requestClose:
+            requestClose()
+        case .confirmStop:
+            confirmStop()
+        case .keepWriting:
+            state.isStopAlertPresented = false
         case .dismissError:
             state.presentedError = nil
         }
@@ -135,6 +169,22 @@ private extension CreateCollectionViewModel {
     func submit() {
         guard canSubmit else { return }
         Task { await createCollection() }
+    }
+
+    /// 뒤로가기 요청. 변경 사항이 없으면 바로 닫고, 있으면 확인 알럿을 띄운다(`NovelReview`/`CreateFeed`와
+    /// 동일 패턴, 사용자 확정 #199).
+    func requestClose() {
+        if hasUnsavedChanges {
+            state.isStopAlertPresented = true
+        } else {
+            state.shouldDismiss = true
+        }
+    }
+
+    /// "그만하기" 확인. 알럿을 내리고 닫기 신호를 발화한다.
+    func confirmStop() {
+        state.isStopAlertPresented = false
+        state.shouldDismiss = true
     }
 }
 

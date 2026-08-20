@@ -14,7 +14,7 @@ import DesignSystem
 import WSSComponent
 
 // 컬렉션 생성 화면. "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View가 결정한다.
-// ⚠️ 골격 단계 — 세부 스타일·간격은 Figma 3단계에서 정밀 구현된다(아직 대략적인 레이아웃).
+// 화면 동작 계약(뒤로가기·대표 배지·완료 활성화 등)은 CollectionFeature/CLAUDE.md 참고.
 struct CreateCollectionView: View {
 
     @State private var viewModel: CreateCollectionViewModel
@@ -46,6 +46,15 @@ struct CreateCollectionView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
             .showWSSToast(isPresented: toastBinding, type: toastType)
+            // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
+            .showWSSAlert(
+                isPresented: stopAlertBinding,
+                type: .stopWritingCollection,
+                buttonActions: [
+                    { viewModel.handle(.confirmStop) },  // "그만하기" → 화면 닫기
+                    { viewModel.handle(.keepWriting) }   // "계속 작성" → 머무름
+                ]
+            )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 guard shouldDismiss else { return }
                 dismiss()
@@ -89,14 +98,14 @@ private extension CreateCollectionView {
     var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button {
-                dismiss()
+                viewModel.handle(.requestClose)
             } label: {
                 WSSImage.icNavigateLeft.swiftUIImage
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssGray200)
+                    .foregroundStyle(Color.wssBlack)
             }
         }
 
@@ -265,7 +274,9 @@ private extension CreateCollectionView {
             .background(Color.wssGray50)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .buttonStyle(.plain)
+        // ⚠️ .buttonStyle(.plain)을 걸지 않는다 — 아이콘·텍스트만 있는 버튼에 걸면 기본 눌림 피드백까지
+        // 사라진다(WSSComponent/CLAUDE.md·Feature/CLAUDE.md 공통 주의). 색은 이미 명시적이라 accent 틴트
+        // 우려도 없다.
     }
 
     func novelGridCell(_ novel: CollectionNovel) -> some View {
@@ -281,6 +292,7 @@ private extension CreateCollectionView {
                                 .strokeBorder(Color.wssPrimary100, lineWidth: 2)
                         }
                     }
+                    .animation(.easeInOut(duration: 0.1), value: isRepresentative)
 
                 Button {
                     viewModel.handle(.selectRepresentativeNovel(novel.id))
@@ -292,6 +304,8 @@ private extension CreateCollectionView {
                         .padding(.vertical, 4)
                         .background(isRepresentative ? Color.wssPrimary100 : Color.wssGray100)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
+                        // 미설정 시 기본 크로스페이드가 느리게 번진다(Feature/CLAUDE.md 공통 주의).
+                        .animation(.easeInOut(duration: 0.1), value: isRepresentative)
                 }
                 .padding(8)
             }
@@ -315,6 +329,14 @@ private extension CreateCollectionView {
         )
     }
 
+    /// 작성 중단 알럿 표시 여부. 실제 닫기 판단은 ViewModel이 하고, View는 표시 상태만 바인딩한다.
+    var stopAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isStopAlertPresented },
+            set: { if !$0 { viewModel.handle(.keepWriting) } }
+        )
+    }
+
     var toastType: WSSToastType {
         switch viewModel.state.presentedError {
         case .unknown, .none:
@@ -329,6 +351,28 @@ private extension CreateCollectionView {
     NavigationStack {
         CreateCollectionView(
             viewModel: CreateCollectionViewModel(
+                createCollectionUseCase: PreviewCreateCollectionUseCase()
+            ),
+            onAddNovelTapped: { print("작품 추가 진입") },
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+        )
+    }
+}
+
+#Preview("작품 포함") {
+    let novels = (1...5).map {
+        CollectionNovel(id: NovelID($0), title: "샘플 작품 제목 \($0) 두 줄까지", author: "작가 \($0)", thumbnailImage: nil)
+    }
+    let draft = CollectionDraft(
+        name: "인생 회귀물 모음집",
+        description: "다시 읽어도 재밌는 회귀물만 모았어요",
+        novelIDs: novels.map(\.id)
+    )
+    return NavigationStack {
+        CreateCollectionView(
+            viewModel: CreateCollectionViewModel(
+                previewDraft: draft,
+                previewNovelDisplayInfo: Dictionary(uniqueKeysWithValues: novels.map { ($0.id, $0) }),
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
             onAddNovelTapped: { print("작품 추가 진입") },
