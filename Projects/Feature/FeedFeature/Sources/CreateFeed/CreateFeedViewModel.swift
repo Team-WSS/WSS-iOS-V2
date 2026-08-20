@@ -56,6 +56,14 @@ final class CreateFeedViewModel {
     public var canSubmit: Bool {
         !state.draft.content.isEmpty
         && !(state.submitState == .submitting)
+        && hasChanges
+    }
+
+    /// 수정 모드 진입 시 불러온(또는 작성 모드의 빈) 초기 draft와 지금 draft가 다른지 — 수정 모드에서
+    /// 아무것도 안 바꾼 채로는 "완료"가 활성화되면 안 된다(사용자 확정). 작성 모드는 `originalDraft`가
+    /// 빈 draft라 내용을 입력하는 순간 자연히 true가 되므로 별도 분기가 필요 없다.
+    private var hasChanges: Bool {
+        state.draft != originalDraft
     }
 
     public var isSubmitting: Bool {
@@ -124,6 +132,10 @@ final class CreateFeedViewModel {
     /// 수정 모드 로드는 한 번만 — `.onAppear`가 재진입마다 불려도 재요청하지 않는다.
     private var hasLoadedForEdit = false
 
+    /// "변경 없음" 판단 기준 — 작성 모드는 빈 draft로 고정, 수정 모드는 `loadForEdit` 완료 시 갱신된다
+    /// (그 전까진 placeholder 빈 draft라 `state.draft`와 항상 같음 → 로드 중엔 자연히 `hasChanges == false`).
+    private var originalDraft: FeedDraft
+
     // MARK: - Init
 
     public init(
@@ -139,6 +151,7 @@ final class CreateFeedViewModel {
         self.editFeedUseCase = editFeedUseCase
         self.searchNovelUseCase = searchNovelUseCase
         self.loadFeedDetailUseCase = loadFeedDetailUseCase
+        self.originalDraft = initialDraft
         self.state = State(draft: initialDraft)
     }
 
@@ -328,6 +341,7 @@ private extension CreateFeedViewModel {
 
         state.draft = draft
         state.attachedImageDatas = attachedImageDatas
+        originalDraft = draft
     }
 
     func fetchSearchedNovels(_ query: String) async {

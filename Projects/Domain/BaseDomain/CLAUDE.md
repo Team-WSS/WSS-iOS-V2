@@ -32,3 +32,4 @@
 - `NovelGenre.myFeedFilter`(피드 필터용, 구 `filterGenre`)·`.searchGenre`(검색 화면 장르 그리드용)·`.onboardingGenre`(온보딩 3x3 배지 그리드용, #178)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.
 - `RepositoryError.privateProfile`: 상대가 프로필을 비공개로 설정해 접근 자체가 거부된 경우 전용(서버 비즈니스 코드 `USER-015`) — `authenticationRequired`(내 세션 문제)와는 원인이 달라 재로그인으로 해결되지 않는다. 매핑은 공용 `NetworkingError.toRepositoryError()`가 아니라 영향받는 개별 Data 리포지토리 메서드가 한다(UserPageFeature #172, 자세한 이유는 `ProfileData`/`FeedData` 주의사항 참고).
+- **`ConnectedNovel`은 `Equatable`을 준수한다**(#197) — `FeedFeature`의 `CreateFeedViewModel`이 `FeedDraft`(이 값을 담음) 전체를 원본과 비교해 "변경 없음"을 판단하는 데 쓴다(수정 모드에서 아무것도 안 바꾸면 "완료" 버튼이 비활성 상태를 유지해야 해서). 필드가 전부 이미 Equatable이라 자동 합성만으로 충분했다.
