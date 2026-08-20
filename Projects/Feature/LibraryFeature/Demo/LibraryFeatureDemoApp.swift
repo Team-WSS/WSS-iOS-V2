@@ -38,6 +38,9 @@ private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
     case filled = "정상"
     case empty = "빈 서재"
     case failure = "실패"
+    /// 첫 페이지는 성공하고 **더보기만** 실패 — root의 "다음 요청 실패" 주입은 push된 이 화면에서 누를 수
+    /// 없어서(첫 요청이 먼저 소비한다) 더보기 실패 경로를 만들려면 전용 시나리오가 필요하다.
+    case loadMoreFailure = "더보기 실패"
     /// 인증 만료 — 로그인 라우팅 콜백이 만료마다 정확히 1회씩 발화하는지 보는 축.
     /// (신호를 소진하는 구조라 재로드하면 다시 발화해야 한다. 인증 만료는 실패 뷰를 세우지 않으므로
     ///  카운트·정렬 행이 살아 있다 → 2회차 발화는 정렬 변경으로 확인한다.)
@@ -343,8 +346,18 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
 
+        // 실패 주입은 내 서재와 **공유**한다 — 타유저 서재도 더보기 실패를 재현할 수단이 필요하다
+        // (시나리오 버튼의 "실패"는 첫 페이지부터 실패시켜서 더보기 경로를 못 만든다).
+        if await DemoLibraryNovels.consumeInjectedFailure() {
+            print("[Demo] 타유저 서재 응답 — 주입된 실패(networkUnavailable)")
+            throw .networkUnavailable
+        }
+
         switch scenario {
         case .filled:
+            return await DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
+        case .loadMoreFailure:
+            guard cursor == nil else { throw .networkUnavailable }
             return await DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
         case .empty:
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)

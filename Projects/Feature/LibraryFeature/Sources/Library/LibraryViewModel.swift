@@ -32,8 +32,9 @@ final class LibraryViewModel {
         var isLoading = true
         /// 다음 페이지 로드 중 (하단 스피너용). 첫 페이지 로드는 `isLoading`.
         var isLoadingMore = false
-        /// 첫 페이지 로드 실패 여부 — View가 "서재 비어있음"과 "로드 실패"를 구분해 그리기 위한 상태.
-        /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
+        /// 목록 로드 실패 여부(첫 페이지·더보기·갱신 **공통**) — 목록 자리를 전면 실패 뷰로 대체할지 가른다.
+        /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없어
+        /// 하단에서 페이지네이션이 멈춘 채 갇힌다(#195 실측). 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
         var loadFailed = false
         /// 필터 시트 키워드 탭에 보여줄, 내가 서재 작품들에 등록한 키워드 목록.
         var registeredKeywords: [Keyword] = []
@@ -63,6 +64,15 @@ final class LibraryViewModel {
         case more(cursor: String)
         /// 재진입 갱신 — 표시 변화 없이 목록 교체.
         case refresh
+
+        /// 로그용 라벨. 연관값(커서)을 빼서 서버 커서 원문이 로그에 남지 않게 한다.
+        var logLabel: String {
+            switch self {
+            case .reload:  "첫 로드"
+            case .more:    "더보기"
+            case .refresh: "갱신"
+            }
+        }
     }
 
     // MARK: - Action
@@ -297,14 +307,15 @@ private extension LibraryViewModel {
 
     /// 재진입 갱신용 조회 — **보고 있던 개수만큼** 다시 받고, 자리를 비운 사이 늘어난 만큼(delta)을 이어 붙인다.
     ///
-    /// 1차만 받으면 목록이 delta만큼 **짧아진다** — 등록 최신순이면 새 작품이 앞에 붙어 그만큼 뒤가
-    /// 밀려나기 때문이고, 하단에 있던 사용자는 스크롤이 위로 튄다. delta는 "지금 서버의 전체 수"가
-    /// 있어야 알 수 있고 그건 응답에서만 나오므로 **한 번의 요청으로는 불가능**하다(대부분의 진입은
-    /// delta == 0이라 실제로는 1회 왕복으로 끝난다).
+    /// 1차만 받아도 **목록 개수는 유지된다**(`size = 보던 개수`라 서버에 그만큼 있으면 그만큼 온다).
+    /// 2차가 막는 건 앞에 새 작품이 끼어든 만큼 **이미 지나쳐 본 항목이 window 끝에서 밀려나는 것**이다 —
+    /// 스크롤 점프 방지가 아니라 **보던 범위 보존**이고, 없어도 스크롤 한 번이면 복구되는 수준이다.
+    /// delta는 "지금 서버의 전체 수"가 있어야 알 수 있고 그건 응답에서만 나오므로 **한 번의 요청으로는
+    /// 불가능**하다(대부분의 진입은 delta == 0이라 실제로는 1회 왕복으로 끝난다).
     ///
     /// ⚠️ 두 요청은 **같은 Task 안에서 순차로** 돈다 — 갱신을 별도 Task 슬롯으로 빼면
     /// "무효해진 로드 == 취소된 로드" 전제가 깨져 세대 카운터가 되살아난다(`loadPage` 주석).
-    /// 반영도 2차까지 받아 **합쳐서 한 번에** 한다 — 1차를 먼저 반영하면 목록이 짧아졌다 늘어나는 게 보인다.
+    /// 반영도 2차까지 받아 **합쳐서 한 번에** 한다 — 1차를 먼저 반영하면 목록이 한 번 갈렸다 늘어나는 게 보인다.
     func fetchRefreshedList(filter: MyLibraryFilter) async throws(RepositoryError) -> LoadOutcome {
         let previousTotalCount = state.totalCount
         let first = try await fetchPage(
@@ -396,7 +407,8 @@ private extension LibraryViewModel {
         // ⚠️ `hasLoadedContent`를 함께 내려야 다음 진입이 '갱신'이 아니라 로딩부터 다시 시작한다.
         hasLoadedContent = false
         state.loadFailed = true
-        logger?.error("Library 실패(\(kind)): \(String(describing: error))")
+        // ⚠️ `kind`를 그대로 보간하면 `more(cursor: "eyJ...")`로 **서버 커서 원문**이 로그에 통째로 찍힌다.
+        logger?.error("Library 목록 로드 실패(\(kind.logLabel)): \(String(describing: error))")
     }
 
     /// Repository 에러를 발생 맥락의 의미 토스트로 변환한다. 원인은 로그로 남긴다.

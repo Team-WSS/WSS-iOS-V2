@@ -30,8 +30,9 @@ final class UserLibraryViewModel {
         var isLoading = true
         /// 다음 페이지 로드 중 (하단 스피너용). 첫 페이지 로드는 `isLoading`.
         var isLoadingMore = false
-        /// 첫 페이지 로드 실패 여부 — View가 "서재 비어있음"과 "로드 실패"를 구분해 그리기 위한 상태.
-        /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
+        /// 목록 로드 실패 여부(첫 페이지·더보기·갱신 **공통**) — 목록 자리를 전면 실패 뷰로 대체할지 가른다.
+        /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없어
+        /// 하단에서 페이지네이션이 멈춘 채 갇힌다(#195 실측). 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
         var loadFailed = false
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         /// View가 `onChange`로 받은 뒤 `.consumeAuthenticationRequired`로 되돌린다 —
@@ -55,7 +56,9 @@ final class UserLibraryViewModel {
 
     // MARK: - Property
 
-    // 1회 가드 플래그는 실패 고착을 막기 위해 **성공 시에만** 소진한다(내 서재와 동일).
+    // 1회 가드 플래그는 실패 고착을 막기 위해 **성공 시에만** 소진한다.
+    // ⚠️ 내 서재는 이 가드를 걷어내고 재진입마다 갱신하지만(`hasLoadedContent`), 이 화면은 **push라
+    // 재진입마다 화면이 새로 서므로 갱신 자체가 없어** 1회 가드가 그대로 맞다. 내 서재를 따라가지 말 것.
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     /// 서버 발급 커서 — 다음 페이지 요청에 그대로 왕복한다. View가 볼 값이 아니라 State 밖.
@@ -204,7 +207,7 @@ private extension UserLibraryViewModel {
             // 하단에서 더보기가 실패하면 페이지네이션이 멈춘 채 갇힌다(내 서재에서 실제로 겪었다).
             // 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
             state.loadFailed = true
-            logger?.error("UserLibrary 실패(load, cursor: \(cursor ?? "첫 페이지")): \(String(describing: error))")
+            logger?.error("UserLibrary 목록 로드 실패(\(cursor == nil ? "첫 페이지" : "더보기")): \(String(describing: error))")
         }
     }
 }
@@ -214,7 +217,7 @@ private extension UserLibraryViewModel {
 private extension UserLibraryViewModel {
 
     /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
-    /// 세션이 죽은 상황이라 개별 실패 토스트 대신 로그인 유도로 일원화한다.
+    /// 세션이 죽은 상황이라 실패 뷰 대신 로그인 유도로 일원화한다(이 화면엔 토스트가 없다).
     func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
         guard (error as? RepositoryError) == .authenticationRequired else { return false }
         state.requiresAuthentication = true

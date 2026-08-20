@@ -80,7 +80,7 @@ struct UserLibraryView: View {
         VStack(spacing: 0) {
             // 타이틀은 대상 유저의 닉네임이 아니라 "서재" 고정이다(디자인).
             WSSNavigationBar(title: "서재") { dismiss() }
-            // 첫 페이지 실패는 네비게이션 바만 남기고 그 아래를 전면 실패 뷰로 대체한다 —
+            // 목록 로드 실패(첫 페이지·더보기 공통)는 네비게이션 바만 남기고 그 아래를 실패 뷰로 대체한다 —
             // 카운트·정렬·모드 토글은 실패 상태에서 조작할 게 없어 함께 숨긴다.
             if viewModel.state.loadFailed {
                 NetworkErrorView { viewModel.handle(.retry) }

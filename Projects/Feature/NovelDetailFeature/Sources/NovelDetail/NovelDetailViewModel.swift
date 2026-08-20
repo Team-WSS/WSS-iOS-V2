@@ -35,8 +35,9 @@ final class NovelDetailViewModel {
         /// 로드 시작 전 한 프레임 동안 실패 뷰(`information == nil && !isLoading`)가 스친다.
         var isLoading = true
         var isLoadingFeeds = false
-        /// 피드 첫 페이지 로드 실패 여부 — View가 "빈 목록"과 "로드 실패"를 구분해 그리기 위한 상태.
-        /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
+        /// 피드 로드 실패 여부(첫 페이지·더보기 **공통**) — 탭 자리를 실패 뷰로 대체할지 가른다.
+        /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없다.
+        /// 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
         var feedsLoadFailed = false
         var shouldDismiss = false
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
@@ -225,6 +226,10 @@ private extension NovelDetailViewModel {
     func selectTab(_ tab: Tab) {
         state.selectedTab = tab
         if tab == .feed, !hasLoadedFirstFeeds, feedsTask == nil, !isClosing {
+            // ⚠️ 실패 플래그를 **함께 내려야** 한다 — `NovelDetailFeedTab`이 실패를 목록보다 먼저 판단하므로,
+            // 안 내리면 요청이 도는 내내 실패 뷰가 그려지고 그 재시도 버튼은 `retryFeeds()`의
+            // `feedsTask == nil` 가드에 막혀 **눌러도 아무 반응이 없다**(느린 망에서 수 초 지속).
+            state.feedsLoadFailed = false
             state.isLoadingFeeds = true
             feedsTask = Task { await loadFeeds(after: nil) }
         }
@@ -383,7 +388,7 @@ private extension NovelDetailViewModel {
             // "피드를 못 불러왔다"는 같은 사건이고, 토스트는 사라지면 다시 부를 방법이 없다.
             // (규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약")
             state.feedsLoadFailed = true
-            logger?.error("피드 로드 실패(cursor: \(lastFeedID.map(String.init(describing:)) ?? "첫 페이지")): \(String(describing: error))")
+            logger?.error("피드 로드 실패(\(lastFeedID == nil ? "첫 페이지" : "더보기")): \(String(describing: error))")
         }
     }
 
