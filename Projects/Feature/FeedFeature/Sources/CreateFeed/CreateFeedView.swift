@@ -68,10 +68,20 @@ struct CreateFeedView: View {
                 .onTapGesture {
                     isKeyboardFocused = false
                 }
-                // 업로드 중엔 draft를 더 이상 바꿀 수 없어야 해서 hit-testing 자체를 막는다.
+                // 업로드 중·수정 모드 로드 중엔 draft를 더 이상 바꿀 수 없어야 해서 hit-testing 자체를 막는다.
                 // 대부분의 행이 Button이 아니라 onTapGesture라 .disabled()만으론 막히지 않는다.
-                .allowsHitTesting(!viewModel.isSubmitting)
-                .opacity(viewModel.isSubmitting ? 0.5 : 1)
+                .allowsHitTesting(!viewModel.isSubmitting && !viewModel.state.isLoadingForEdit)
+                .opacity((viewModel.isSubmitting || viewModel.state.isLoadingForEdit) ? 0.5 : 1)
+                // 수정 모드 진입 직후 대상 피드를 불러오는 동안의 대기 표시 — 화면 전환은 바로 일어나고
+                // (이전 화면에서 미리 준비하지 않음, #197) 이 화면 안에서 로드한다.
+                .overlay {
+                    if viewModel.state.isLoadingForEdit {
+                        LoadingView()
+                    }
+                }
+                .onAppear {
+                    viewModel.handle(.load)
+                }
                 .toolbar {
                     createFeedViewToolBarContent()
                 }
@@ -135,6 +145,13 @@ struct CreateFeedView: View {
                     ),
                     type: toastType
                 )
+                // 작성/수정 제출 성공 → 자동으로 화면을 닫는다(작성/수정 완료 후 사용자가 직접
+                // 뒤로가기를 누를 필요 없이 원래 화면으로 돌아간다).
+                .onChange(of: viewModel.state.submitState) { _, newValue in
+                    if newValue == .submitted {
+                        dismiss()
+                    }
+                }
         }
         .showWSSAlert(
             isPresented: $showDismissAlert,

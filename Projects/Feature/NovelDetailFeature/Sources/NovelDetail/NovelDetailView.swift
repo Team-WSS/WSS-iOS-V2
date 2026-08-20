@@ -68,8 +68,10 @@ struct NovelDetailView: View {
     private let onUserProfileTapped: (UserID) -> Void
     /// 작품 상세 진입 콜백 — 피드 셀 연결 작품 배너 탭.
     private let onNovelTapped: (NovelID) -> Void
-    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기".
-    private let onEditFeedTapped: (TotalFeed) -> Void
+    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 대상 피드 `FeedID`만 넘긴다 — 실제 데이터
+    /// 로드는 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가
+    /// 값만 그대로 받아 하면 된다.
+    private let onEditFeedTapped: (FeedID) -> Void
     /// 작가 검색 진입 콜백 — 헤더 작품 정보의 작가 이름 탭. 전달값은 탭한 작가 한 명의 이름.
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onAuthorTapped: (String) -> Void
@@ -95,7 +97,7 @@ struct NovelDetailView: View {
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void,
+        onEditFeedTapped: @escaping (FeedID) -> Void,
         onAuthorTapped: @escaping (String) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
@@ -635,7 +637,7 @@ private extension NovelDetailView {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
-                    onEditFeedTapped(feed)
+                    onEditFeedTapped(feed.feedId)
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
@@ -780,7 +782,7 @@ private extension UIView {
             onFeedTapped: { print("피드 상세 진입: \($0)") },
             onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") },
+            onEditFeedTapped: { print("피드 수정 진입: \($0)") },
             onAuthorTapped: { print("작가 검색 진입: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )

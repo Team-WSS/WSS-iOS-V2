@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import FeedDomain
+import FeedFeature
 import LibraryFeature
 import NotificationDomain
 import NovelDomain
@@ -26,6 +27,7 @@ struct LibraryRootView: View {
     private enum Destination: Hashable {
         case novel(NovelID)
         case feed(FeedID)
+        case editFeed(FeedID)
         case search
         case detailSearch(SearchFilter)
         case notificationSetting
@@ -61,6 +63,8 @@ struct LibraryRootView: View {
                         novelDetailView(novelID)
                     case .feed(let feedID):
                         feedDetailView(feedID)
+                    case .editFeed(let feedID):
+                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .search:
                         searchView
                     case .detailSearch(let filter):
@@ -84,6 +88,7 @@ private extension LibraryRootView {
             dependencies: dependencies,
             onFeedTapped: { path.append(Destination.feed($0)) },
             onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -96,7 +101,8 @@ private extension LibraryRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) }
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) }
         )
     }
 }

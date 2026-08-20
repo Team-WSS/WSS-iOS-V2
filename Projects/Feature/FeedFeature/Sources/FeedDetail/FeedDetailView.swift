@@ -35,13 +35,19 @@ struct FeedDetailView: View {
     @State private var showCommentDropdown: Bool = false
 
     private let onNovelTapped: (NovelID) -> Void
+    /// 내 글 드롭다운의 "수정" → 수정 화면 진입 콜백. 대상 피드 `FeedID`만 넘긴다 — 실제 데이터 로드는
+    /// 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 값만 그대로
+    /// 받아 하면 된다.
+    private let onEditFeedTapped: (FeedID) -> Void
 
     init(
         viewModel: FeedDetailViewModel,
-        onNovelTapped: @escaping (NovelID) -> Void
+        onNovelTapped: @escaping (NovelID) -> Void,
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelTapped = onNovelTapped
+        self.onEditFeedTapped = onEditFeedTapped
     }
     
     var body: some View {
@@ -299,7 +305,9 @@ struct FeedDetailView: View {
                     title: "수정",
                     action: {
                         showFeedDropdown = false
-                        // TODO: - CreateFeedView 연결
+                        if let feedID = viewModel.state.detail?.id {
+                            onEditFeedTapped(feedID)
+                        }
                     },
                     textColor: WSSColor.wssBlack.swiftUIColor
                 ),

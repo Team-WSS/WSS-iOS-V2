@@ -36,8 +36,10 @@ struct SosoFeedView: View {
 
     @Namespace private var tabAnimation
 
-    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onEditFeedTapped: (TotalFeed) -> Void
+    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 대상 피드 `FeedID`만 넘긴다 — 실제 데이터
+    /// 로드는 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가
+    /// 값만 그대로 받아 하면 된다.
+    private let onEditFeedTapped: (FeedID) -> Void
     /// 피드 셀 탭(좋아요 버튼 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백. 화면 전환은 호출자가 수행한다.
     private let onFeedTapped: (FeedID) -> Void
     /// 우상단 연필 아이콘 → 피드 작성 진입 콜백. 화면 전환은 호출자가 수행한다.
@@ -54,7 +56,7 @@ struct SosoFeedView: View {
 
     init(
         viewModel: SosoFeedViewModel,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in },
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onCreateFeedTapped: @escaping () -> Void = {},
         onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
@@ -411,7 +413,7 @@ struct SosoFeedView: View {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
-                    onEditFeedTapped(feed)
+                    onEditFeedTapped(feed.feedId)
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
@@ -483,7 +485,7 @@ struct SosoFeedView: View {
             reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
             reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
         ),
-        onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
+        onEditFeedTapped: { print("피드 수정 진입: \($0)") }
     )
 }
 

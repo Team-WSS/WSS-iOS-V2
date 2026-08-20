@@ -19,9 +19,9 @@ import SearchDomain
 import SocialDomain
 
 /// "피드" 탭 콘텐츠. `FeedFeatureFactory.makeSosoFeedView`(전체/내 피드)를 붙이고, 셀 탭 시 피드 상세,
-/// 우상단 연필 아이콘 탭 시 피드 작성, 작성자 프로필 탭 시 타유저 프로필(`UserPageAssembly`), 연결 작품
-/// 배너 탭 시 작품 상세, 그 타유저 프로필의 서재 블록 탭 시 타유저 서재(`LibraryFactory.makeUserLibraryView`)
-/// 까지 push한다. 피드 수정(`makeEditFeedView`)은 아직 진입할 방법이 없어 placeholder로 남아있다.
+/// 피드 셀·피드 상세 "수정" 드롭다운 탭 시 피드 수정(`FeedDetailAssembly.makeEditFeedView`), 우상단 연필
+/// 아이콘 탭 시 피드 작성, 작성자 프로필 탭 시 타유저 프로필(`UserPageAssembly`), 연결 작품 배너 탭 시
+/// 작품 상세, 그 타유저 프로필의 서재 블록 탭 시 타유저 서재(`LibraryFactory.makeUserLibraryView`)까지 push한다.
 ///
 /// ⚠️ **`makeSosoFeedView` 자체는 `onAuthenticationRequired`를 안 받는다** — 그 콜백을 아예 몰라서
 /// 소소피드/내 피드 로드가 401로 막혀도 이 화면은 조용히 빈 상태로 남는다(Feature/CLAUDE.md의 "인증
@@ -36,6 +36,7 @@ struct FeedRootView: View {
         case feed(FeedID)
         case novel(NovelID)
         case createFeed
+        case editFeed(FeedID)
         case userPage(UserID)
         case userLibrary(UserID)
     }
@@ -63,6 +64,7 @@ struct FeedRootView: View {
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
+                onEditFeedTapped: { path.append(Destination.editFeed($0)) },
                 onFeedTapped: { path.append(Destination.feed($0)) },
                 onCreateFeedTapped: { path.append(Destination.createFeed) },
                 onUserProfileTapped: {
@@ -85,6 +87,8 @@ struct FeedRootView: View {
                         novelDetailView(novelID)
                     case .createFeed:
                         createFeedView
+                    case .editFeed(let feedID):
+                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .userPage(let userID):
                         UserPageAssembly.makeView(
                             userID: userID,
@@ -108,7 +112,8 @@ private extension FeedRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) }
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) }
         )
     }
 }
@@ -122,6 +127,7 @@ private extension FeedRootView {
             dependencies: dependencies,
             onFeedTapped: { path.append(Destination.feed($0)) },
             onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

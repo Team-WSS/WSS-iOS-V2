@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import FeedDomain
+import FeedFeature
 import HomeFeature
 import NotificationDomain
 import NovelDomain
@@ -29,6 +30,7 @@ struct HomeRootView: View {
     private enum Destination: Hashable {
         case novel(NovelID)
         case feed(FeedID)
+        case editFeed(FeedID)
         case search
         case detailSearch(SearchFilter)
         /// 선호장르 미설정 유도 CTA → 마이페이지 편집(닉네임/캐릭터/장르 등을 한 화면에서 고치는 화면,
@@ -68,6 +70,8 @@ struct HomeRootView: View {
                         novelDetailView(novelID)
                     case .feed(let feedID):
                         feedDetailView(feedID)
+                    case .editFeed(let feedID):
+                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .search:
                         searchView
                     case .detailSearch(let filter):
@@ -91,6 +95,7 @@ private extension HomeRootView {
             dependencies: dependencies,
             onFeedTapped: { path.append(Destination.feed($0)) },
             onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -103,7 +108,8 @@ private extension HomeRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) }
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) }
         )
     }
 }

@@ -16,9 +16,9 @@ import NovelReviewDomain
 import SocialDomain
 
 /// 작품 상세(`NovelDetailFactory`) 조립 — 홈/피드/서재 세 탭이 전부 같은 방식으로 push해서(#196) 공용으로
-/// 뽑았다. `onFeedTapped`/`onNovelTapped`/`onAuthenticationRequired`만 호출자별로 다르다(각 탭 Root가
-/// 자기 `Destination` enum에 맞게 push하거나 자기 인증만료 콜백을 넘겨야 해서) — 나머지(작품 평가·피드
-/// 작성/수정·유저 프로필·작가 검색)는 대상 Feature가 아직 App에 안 붙어 세 탭 모두 동일한 placeholder다.
+/// 뽑았다. `onFeedTapped`/`onNovelTapped`/`onEditFeedTapped`/`onAuthenticationRequired`만 호출자별로
+/// 다르다(각 탭 Root가 자기 `Destination` enum에 맞게 push하거나 자기 인증만료 콜백을 넘겨야 해서) —
+/// 나머지(작품 평가·피드 작성·유저 프로필·작가 검색)는 대상 Feature가 아직 App에 안 붙어 세 탭 모두 동일한 placeholder다.
 @MainActor
 enum NovelDetailAssembly {
     static func makeView(
@@ -26,6 +26,7 @@ enum NovelDetailAssembly {
         dependencies: AppDependencies,
         onFeedTapped: @escaping (FeedID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
+        onEditFeedTapped: @escaping (FeedID) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         NovelDetailFactory.makeView(
@@ -47,7 +48,7 @@ enum NovelDetailAssembly {
             onFeedTapped: onFeedTapped,
             onUserProfileTapped: { dependencies.logger.info("유저 프로필 진입(미구현): \($0)") },
             onNovelTapped: onNovelTapped,
-            onEditFeedTapped: { _ in dependencies.logger.info("피드 수정 진입(미구현)") },
+            onEditFeedTapped: onEditFeedTapped,
             onAuthorTapped: { dependencies.logger.info("작가 검색 진입(미구현): \($0)") },
             onAuthenticationRequired: onAuthenticationRequired
         )

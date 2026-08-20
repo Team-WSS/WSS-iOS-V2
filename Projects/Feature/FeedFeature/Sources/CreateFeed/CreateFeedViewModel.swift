@@ -30,6 +30,9 @@ final class CreateFeedViewModel {
         var attachedImageDatas: [AttachedImageID: Data] = [:]
         var submitState: SubmitState = .idle
         var validationError: FeedDraft.ValidationError?
+        /// 수정 모드 진입 직후, 대상 피드의 내용을 불러오는 중 — 화면은 바로 뜨고(빠른 전환) 이 값이
+        /// true인 동안만 내용이 비어 보인다. 이미지 없는 글은 거의 즉시 사라진다.
+        var isLoadingForEdit: Bool = false
 
         // 토스트
         var showToast: Bool = false
@@ -68,6 +71,10 @@ final class CreateFeedViewModel {
     // MARK: - Action
 
     enum Action {
+        /// 생명주기 액션 — 수정 모드면 대상 피드를 불러와 `draft`/`attachedImageDatas`를 채운다.
+        /// 작성 모드에선 아무 일도 하지 않는다(빈 draft로 시작하는 게 정상).
+        case load
+
         case updateContent(String)
 
         case toggleSpoiler
@@ -111,6 +118,11 @@ final class CreateFeedViewModel {
     private let createFeedUseCase: CreateFeedUseCase?
     private let editFeedUseCase: EditFeedUseCase?
     private let searchNovelUseCase: SearchNovelUseCase
+    /// 수정 모드 진입 시 대상 피드 상세를 불러오는 용도(`.load`) — 작성 모드에선 쓰지 않는다.
+    private let loadFeedDetailUseCase: LoadFeedDetailUseCase?
+
+    /// 수정 모드 로드는 한 번만 — `.onAppear`가 재진입마다 불려도 재요청하지 않는다.
+    private var hasLoadedForEdit = false
 
     // MARK: - Init
 
@@ -119,12 +131,14 @@ final class CreateFeedViewModel {
         createFeedUseCase: CreateFeedUseCase? = nil,
         editFeedUseCase: EditFeedUseCase? = nil,
         searchNovelUseCase: SearchNovelUseCase,
+        loadFeedDetailUseCase: LoadFeedDetailUseCase? = nil,
         initialDraft: FeedDraft
     ) {
         self.mode = mode
         self.createFeedUseCase = createFeedUseCase
         self.editFeedUseCase = editFeedUseCase
         self.searchNovelUseCase = searchNovelUseCase
+        self.loadFeedDetailUseCase = loadFeedDetailUseCase
         self.state = State(draft: initialDraft)
     }
 
@@ -139,6 +153,12 @@ final class CreateFeedViewModel {
         }
 
         switch action {
+
+        case .load:
+            guard case .edit(let feedID) = mode, !hasLoadedForEdit, let loadFeedDetailUseCase else { break }
+            hasLoadedForEdit = true
+            newState.isLoadingForEdit = true
+            Task { await loadForEdit(feedID: feedID, using: loadFeedDetailUseCase) }
 
         case .updateContent(let content):
             mutate(&newState) { try $0.updateContent(content) }
@@ -280,6 +300,36 @@ private extension CreateFeedViewModel {
         }
     }
 
+    /// 수정 모드 진입 직후 대상 피드를 불러와 `draft`/`attachedImageDatas`를 채운다. 첨부 이미지는
+    /// URL만 있어(서버가 바이트를 안 돌려줌) 여기서 URLSession으로 미리 받아둬야 한다 — 그대로 저장해도
+    /// 서버 수정 API(PATCH, 전체 교체 방식)가 보낸 이미지만 반영해 기존 이미지가 사라지는 걸 막기
+    /// 위함(사용자 확정, `FeedDomain/CLAUDE.md`의 `EditFeedUseCase` 항목 참고). `URLSession.shared`가
+    /// URLCache를 공유해 직전 화면이 이미 표시 중이던 이미지면 재다운로드 없이 캐시에서 온다.
+    func loadForEdit(feedID: FeedID, using loadFeedDetailUseCase: LoadFeedDetailUseCase) async {
+        defer { state.isLoadingForEdit = false }
+
+        guard let detail = try? await loadFeedDetailUseCase.execute(feedID: feedID) else { return }
+
+        var draft = FeedDraft(
+            content: detail.feedContent,
+            isSpoiler: detail.isSpoiler,
+            isPrivate: !detail.isPublic,
+            connectedNovel: detail.connectedNovel?.basicInfo,
+            attachedImages: []
+        )
+
+        var attachedImageDatas: [AttachedImageID: Data] = [:]
+        for url in detail.feedImageURLs.compactMap({ $0 }) {
+            guard let (data, _) = try? await URLSession.shared.data(from: url) else { continue }
+            let id = AttachedImageID()
+            attachedImageDatas[id] = data
+            try? draft.addImage(id)
+        }
+
+        state.draft = draft
+        state.attachedImageDatas = attachedImageDatas
+    }
+
     func fetchSearchedNovels(_ query: String) async {
         state.isSearchingNovel = true
         // ⚠️ `searchNovelTask`를 여기서 반드시 nil로 되돌려야 한다 — 안 그러면 `loadMoreSearchedNovels`의
@@ -290,8 +340,14 @@ private extension CreateFeedViewModel {
             state.isSearchingNovel = false
         }
 
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            state.searchedNovels = []
+            return
+        }
+
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: 0)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0)
             guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
             state.hasSearchedNovel = true

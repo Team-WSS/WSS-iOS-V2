@@ -35,21 +35,23 @@ public enum FeedFeatureFactory {
         )
     }
 
-    /// 기존 피드를 수정하는 CreateFeedView를 생성한다.
-    /// `initialDraft`에 기존 피드 내용을 채워 prefill한다.
+    /// 기존 피드를 수정하는 CreateFeedView를 생성한다. `feedID`만 받고, 화면이 뜨자마자 자기 스스로
+    /// 대상 피드를 불러와(`.load`) `draft`/첨부 이미지를 채운다 — 호출자가 미리 데이터를 준비해 넘길
+    /// 필요가 없다(수정 진입이 빠르게 화면 전환부터 되고, 로드 중임을 이 화면 안에서 보여준다, #197).
     @MainActor
     public static func makeEditFeedView(
         feedID: FeedID,
-        initialDraft: FeedDraft,
         editFeedUseCase: EditFeedUseCase,
-        searchNovelUseCase: SearchNovelUseCase
+        searchNovelUseCase: SearchNovelUseCase,
+        loadFeedDetailUseCase: LoadFeedDetailUseCase
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
                 mode: .edit(feedID),
                 editFeedUseCase: editFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
-                initialDraft: initialDraft
+                loadFeedDetailUseCase: loadFeedDetailUseCase,
+                initialDraft: emptyDraft()
             )
         )
     }
@@ -81,7 +83,8 @@ public enum FeedFeatureFactory {
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
         loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil,
-        onNovelTapped: @escaping (NovelID) -> Void
+        onNovelTapped: @escaping (NovelID) -> Void,
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in }
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
@@ -101,13 +104,15 @@ public enum FeedFeatureFactory {
                 loadProfileUseCase: loadProfileUseCase,
                 logger: logger
             ),
-            onNovelTapped: onNovelTapped
+            onNovelTapped: onNovelTapped,
+            onEditFeedTapped: onEditFeedTapped
         )
     }
 
     /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
     /// - Parameters:
-    ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기".
+    ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기". 대상 피드
+    ///     `FeedID`만 넘긴다 — 실제 데이터 로드는 수정 화면 자신이 한다(`makeEditFeedView` 참고).
     ///     실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
     ///   - onFeedTapped: 피드 셀 탭(좋아요 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백.
     ///     실제 화면 전환(`makeFeedDetailView` 조립)은 호출자(App 조정 계층)가 수행한다.
@@ -127,7 +132,7 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in },
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onCreateFeedTapped: @escaping () -> Void = {},
         onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
