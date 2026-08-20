@@ -43,7 +43,7 @@ final class LibraryViewModel {
         /// 서재는 탭 콘텐츠라 VM이 앱 세션 내내 살아서, true로 굳으면 2회차 만료가 조용히 삼켜진다.
         var requiresAuthentication = false
         /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
-        /// 첫 페이지 로드 실패는 전면 실패 뷰(`loadFailed`)가 표현하므로 여기 없다.
+        /// 목록 로드 실패(첫 페이지·더보기·갱신)는 전면 실패 뷰(`loadFailed`)가 표현하므로 여기 없다.
         var presentedToast: LibraryToast?
     }
 

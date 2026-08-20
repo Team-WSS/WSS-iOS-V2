@@ -346,13 +346,6 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
 
-        // 실패 주입은 내 서재와 **공유**한다 — 타유저 서재도 더보기 실패를 재현할 수단이 필요하다
-        // (시나리오 버튼의 "실패"는 첫 페이지부터 실패시켜서 더보기 경로를 못 만든다).
-        if await DemoLibraryNovels.consumeInjectedFailure() {
-            print("[Demo] 타유저 서재 응답 — 주입된 실패(networkUnavailable)")
-            throw .networkUnavailable
-        }
-
         switch scenario {
         case .filled:
             return await DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
@@ -387,6 +380,10 @@ private enum DemoLibraryNovels {
 
     /// **1회성** 실패 주입 — 갱신 실패(전면 실패 뷰)와 그 뒤 복구 경로를 보려면 실패가 한 번만 나야 한다.
     /// 계속 실패하면 재시도가 무엇을 그리는지(로딩→목록)를 확인할 수 없다.
+    ///
+    /// ⚠️ **내 서재 전용이다.** 한때 타유저 서재 Mock도 이걸 소비하게 했다가 걷어냈다 — 주입해두고
+    /// 타유저 서재에 들어가면 **그 화면 첫 요청이 먹어버려** 정작 보려던 내 서재 갱신 실패가 안 난다
+    /// (순서 의존이라 "왜 실패가 안 나지"로 오진하기 쉽다). 타유저 서재는 `loadMoreFailure` 시나리오를 쓴다.
     @MainActor private static var shouldFailNextRequest = false
 
     @MainActor static func failNextRequest() { shouldFailNextRequest = true }
