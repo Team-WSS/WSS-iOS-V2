@@ -208,6 +208,34 @@
 - **왜 지금 안 했나**: #197(메인 탭 조립) 범위에서 Feature 쪽 API를 바꾸다 발견했지만, Demo 화면 흐름
   재설계는 별개 작업이라 분리했다.
 
+### 12. 작품 평가 화면의 키워드 선택이 draft에 반영되지 않는다
+
+- **무엇**: `NovelReviewFeature`의 키워드 서치바를 탭하면 `KeywordFeature`의 `SearchKeywordView`가
+  시트로 뜨긴 하지만(#197, `NovelReviewFactory.makeView(keywordSearchSheet:)`), 그 시트에서 키워드를
+  골라도 **결과가 평가 화면(`NovelReviewDraft`)으로 돌아오지 않는다.** 선택된 키워드 칩을
+  `NovelReviewView`에 표시하는 UI도 아직 없다.
+- **결과**: 사용자가 키워드를 골라도(시트 안 `state.selectedKeywords`엔 남음) "완료"로 평가를 저장하면
+  키워드 없이 저장된다 — 시트가 눈속임처럼 보인다.
+- **어디를 고치나**:
+  - `Projects/Feature/KeywordFeature/Sources/SearchKeywordView.swift`의 하단 액션바 "N개 선택" 버튼
+    (지금 빈 액션, `// TODO: - 키워드 선택 완료 로직 추가`)에 **선택 완료를 밖으로 알리는 콜백**을 추가해야
+    한다. `KeywordFeatureFactory.makeSearchKeywordView`도 그 콜백을 받아 전달하도록 시그니처 확장 필요.
+  - `Projects/Feature/NovelReviewFeature/Sources/NovelReview/NovelReviewView.swift`의
+    `keywordSearchSheet: () -> some View` 자리는 **콘텐츠만** 받고 결과를 받을 통로가 없다 — 시트 dismiss
+    + 선택 키워드 배열을 같이 받는 형태로 `NovelReviewFactory.makeView`의 파라미터 설계를 다시 해야 한다
+    (예: `keywordSearchSheet: (@escaping ([Keyword]) -> Void) -> some View`처럼 완료 콜백을 시트
+    빌더에 넘기는 방식, 또는 다른 형태 — 설계는 착수 시 다시 검토).
+  - `NovelReviewDraft`에 키워드 필드 자체가 있는지도 확인 필요(`NovelReviewDomain`).
+- **왜 지금 안 했나**: #197 범위(키워드 서치바를 시트로 띄우는 것)를 사용자가 먼저 좁혀 요청 —
+  선택 결과 반영은 후속 작업으로 명시적으로 미룸(2026-08-20).
+- **놓치기 쉬운 것**: `KeywordFeature`는 이 화면 하나만을 위해 만들어진 게 아니라 범용 키워드 선택기라,
+  콜백 시그니처를 바꾸면 다른 잠재 소비처에도 영향(현재는 `NovelReviewFeature`가 유일한 소비처).
+- **추가 메모(2026-08-20)**: 위에서 언급한 `keywordSearchSheet:` 시트 연결 자체를 사용자가 일단 코드에서
+  전부 되돌렸다(제네릭 `@ViewBuilder` 파라미터 방식이 맞는 설계인지, `AnyView` 타입소거가 나은지 결론을
+  못 내려서) — **제네릭 vs `AnyView` 설계도 아직 미정, 다음 착수 시 처음부터 다시 정할 것.** 그러니 이
+  항목 착수 시엔 위 "어디를 고치나"의 `keywordSearchSheet` 관련 서술은 더 이상 코드에 존재하지 않는
+  상태에서 다시 설계해야 한다(시트 연결 자체부터 재구현).
+
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)
