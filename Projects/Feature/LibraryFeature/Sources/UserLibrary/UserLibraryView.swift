@@ -67,7 +67,6 @@ struct UserLibraryView: View {
                     viewModel.handle(.selectSortType(sortType))
                 }
             }
-            .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.requiresAuthentication) { _, required in
                 guard required else { return }
                 onAuthenticationRequired()
@@ -256,18 +255,6 @@ private extension UserLibraryView {
 // MARK: - Presentation
 
 private extension UserLibraryView {
-
-    var toastBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.presentedToast != nil },
-            set: { if !$0 { viewModel.handle(.dismissToast) } }
-        )
-    }
-
-    var toastType: WSSToastType {
-        // 더보기 실패는 네트워크 실패 계열 — 내 서재·정본(NovelDetail)과 동일하게 unknownError로 표현(의도).
-        .unknownError
-    }
 
     func loadMoreIfLast(_ novel: LibraryNovel) {
         if novel.id == viewModel.state.novels.last?.id {
