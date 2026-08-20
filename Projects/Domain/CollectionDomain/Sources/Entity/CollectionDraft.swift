@@ -14,7 +14,7 @@ import BaseDomain
 ///
 /// 제한값은 서버가 검증해 에러로 돌려주지만(`COLLECTION-002`·`COLLECTION-004`, 이름 공백 등),
 /// 화면은 그 전에 완료 버튼을 잠가야 하므로 같은 규칙을 여기서도 판단한다 → `isSubmittable`.
-public struct CollectionDraft {
+public struct CollectionDraft: Equatable {
 
     public private(set) var name: String
     public private(set) var description: String

@@ -40,3 +40,7 @@
   그대로 보내면 nil이 나가 서버가 거부한다.
 - 컬렉션 소유자는 `BaseDomain.Author`를, 상세 정렬은 `BaseDomain.SortType`(`recent`/`old`)을 그대로 쓴다 —
   서버의 `owner`·`sortCriteria`와 필드가 정확히 맞아 새 타입을 만들지 않았다.
+- **`CollectionDraft`는 `Equatable`을 준수한다**(#199) — `CollectionFeature`의 `CreateCollectionViewModel`이
+  로드 기준선(`baselineDraft`, 이 화면은 항상 빈 `CollectionDraft()`) 대비 변경 여부(`hasUnsavedChanges`)를
+  판단해 뒤로가기 시 "그만 작성" 확인 알럿을 띄울지 결정하는 데 쓴다(`FeedDraft`/`NovelReviewDraft`와 같은
+  이유). 필드가 전부 이미 Equatable이라 자동 합성만으로 충분했다.
