@@ -60,8 +60,9 @@ struct NovelDetailView: View {
     /// 작품 평가(NovelReviewFeature) 진입 콜백. Feature 간 직접 의존 금지 —
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다. status는 평가 초안에 seed할 읽기 상태.
     private let onReviewTapped: (NovelInformation, ReadingStatus) -> Void
-    /// 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디" 버튼·피드 탭 플로팅 버튼 공용.
-    private let onCreateFeedTapped: () -> Void
+    /// 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디" 버튼·피드 탭 플로팅 버튼 공용. 지금 보고 있는
+    /// 작품을 `ConnectedNovel`로 넘겨, 작성 화면이 그 작품을 미리 연결된 상태로 열 수 있게 한다(#197).
+    private let onCreateFeedTapped: (ConnectedNovel) -> Void
     /// 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
     private let onFeedTapped: (FeedID) -> Void
     /// 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글 제외).
@@ -93,7 +94,7 @@ struct NovelDetailView: View {
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
-        onCreateFeedTapped: @escaping () -> Void,
+        onCreateFeedTapped: @escaping (ConnectedNovel) -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
         onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
@@ -219,7 +220,7 @@ struct NovelDetailView: View {
                         novel: viewModel.state.novel ?? information.novel,
                         onSelectStatus: { onReviewTapped(information, $0) },
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
-                        onCreateFeedTapped: onCreateFeedTapped
+                        onCreateFeedTapped: { onCreateFeedTapped(connectedNovel(from: information.novel)) }
                     )
                     // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
                     // 네비바 하단에 닿는 순간부터는 상단 오버레이의 탭바가 이 자리를 그대로 덮는다.
@@ -545,7 +546,8 @@ private extension NovelDetailView {
     /// 피드 탭 전용 플로팅 작성 버튼.
     var floatingWriteButton: some View {
         Button {
-            onCreateFeedTapped()
+            guard let novel = viewModel.state.information?.novel else { return }
+            onCreateFeedTapped(connectedNovel(from: novel))
         } label: {
             UnevenRoundedRectangle(
                 topLeadingRadius: 54.75,
@@ -582,6 +584,12 @@ private extension NovelDetailView {
     /// 네비 타이틀에 쓸 작품 제목. 관심 토글이 반영되는 state.novel 우선(제목은 불변이라 어느 쪽이든 동일).
     var novelTitle: String {
         viewModel.state.novel?.title ?? viewModel.state.information?.novel.title ?? ""
+    }
+
+    /// 피드 작성 화면에 "연결 작품"으로 미리 채워 넘길 값 — `Novel.genres`는 배열이라 첫 번째만 쓴다
+    /// (`CreateFeedViewModel.confirmSelectedNovel`의 검색 결과 연결과 같은 변환 규칙).
+    func connectedNovel(from novel: Novel) -> ConnectedNovel {
+        ConnectedNovel(id: novel.id, title: novel.title, genre: novel.genres.first, rating: novel.rating)
     }
 
     /// 대형 표지 오버레이에 쓸 표지 URL(표지는 불변이라 novel/information 어느 쪽이든 동일).
@@ -778,7 +786,7 @@ private extension UIView {
             loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
             updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
-            onCreateFeedTapped: { print("피드 작성 진입") },
+            onCreateFeedTapped: { print("피드 작성 진입: \($0.title) 연결") },
             onFeedTapped: { print("피드 상세 진입: \($0)") },
             onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },

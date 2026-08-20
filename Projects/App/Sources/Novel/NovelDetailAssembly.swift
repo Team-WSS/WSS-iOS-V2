@@ -16,15 +16,18 @@ import NovelReviewDomain
 import SocialDomain
 
 /// 작품 상세(`NovelDetailFactory`) 조립 — 홈/피드/서재 세 탭이 전부 같은 방식으로 push해서(#196) 공용으로
-/// 뽑았다. `onFeedTapped`/`onNovelTapped`/`onEditFeedTapped`/`onAuthorTapped`/`onAuthenticationRequired`만
-/// 호출자별로 다르다(각 탭 Root가 자기 `Destination` enum에 맞게 push하거나 자기 인증만료 콜백을 넘겨야
-/// 해서) — 나머지(작품 평가·피드 작성·유저 프로필)는 대상 Feature가 아직 App에 안 붙어 세 탭 모두 동일한 placeholder다.
+/// 뽑았다. 모든 화면 전환 콜백(`onFeedTapped`/`onNovelTapped`/`onEditFeedTapped`/`onAuthorTapped`/
+/// `onReviewTapped`/`onCreateFeedTapped`/`onUserProfileTapped`)과 `onAuthenticationRequired`는 호출자별로
+/// 다르다(각 탭 Root가 자기 `Destination` enum에 맞게 push하거나 자기 인증만료 콜백을 넘겨야 해서).
 @MainActor
 enum NovelDetailAssembly {
     static func makeView(
         novelID: NovelID,
         dependencies: AppDependencies,
+        onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
+        onCreateFeedTapped: @escaping (ConnectedNovel) -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
+        onUserProfileTapped: @escaping (UserID) -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (FeedID) -> Void,
         onAuthorTapped: @escaping (String) -> Void,
@@ -44,10 +47,10 @@ enum NovelDetailAssembly {
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
             logger: dependencies.logger,
-            onReviewTapped: { _, _ in dependencies.logger.info("작품 평가 진입(미구현)") },
-            onCreateFeedTapped: { dependencies.logger.info("피드 작성 진입(미구현)") },
+            onReviewTapped: onReviewTapped,
+            onCreateFeedTapped: onCreateFeedTapped,
             onFeedTapped: onFeedTapped,
-            onUserProfileTapped: { dependencies.logger.info("유저 프로필 진입(미구현): \($0)") },
+            onUserProfileTapped: onUserProfileTapped,
             onNovelTapped: onNovelTapped,
             onEditFeedTapped: onEditFeedTapped,
             onAuthorTapped: onAuthorTapped,

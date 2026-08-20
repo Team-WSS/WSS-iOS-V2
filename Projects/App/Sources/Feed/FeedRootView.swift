@@ -22,7 +22,11 @@ import SocialDomain
 /// 피드 셀·피드 상세 "수정" 드롭다운 탭 시 피드 수정(`FeedDetailAssembly.makeEditFeedView`), 우상단 연필
 /// 아이콘 탭 시 피드 작성, 작성자 프로필 탭 시 타유저 프로필(`UserPageAssembly`), 연결 작품 배너 탭 시
 /// 작품 상세, 그 타유저 프로필의 서재 블록 탭 시 타유저 서재(`LibraryFactory.makeUserLibraryView`), 작품
-/// 상세 헤더의 작가 이름 탭 시 그 작가로 사전 검색된 결과 화면(`SearchAssembly.makeView(initialQuery:)`)까지 push한다.
+/// 상세 헤더의 작가 이름 탭 시 그 작가로 사전 검색된 결과 화면(`SearchAssembly.makeView(initialQuery:)`),
+/// 작품 상세의 평가 상태바 탭 시 작품 평가(`NovelReviewAssembly`), "나도 한마디"/피드 탭 플로팅 버튼 탭
+/// 시 그 작품이 미리 연결된 피드 작성(`createFeedFromNovel`, 연필 아이콘의 `createFeed`와 화면은 같이
+/// 쓰되 케이스는 분리 — 아래 주의), 작성자 프로필 탭 시 타유저 프로필(이 화면 자신의 기존 케이스
+/// 재사용)까지 push한다.
 ///
 /// ⚠️ **`makeSosoFeedView` 자체는 `onAuthenticationRequired`를 안 받는다** — 그 콜백을 아예 몰라서
 /// 소소피드/내 피드 로드가 401로 막혀도 이 화면은 조용히 빈 상태로 남는다(Feature/CLAUDE.md의 "인증
@@ -37,10 +41,15 @@ struct FeedRootView: View {
         case feed(FeedID)
         case novel(NovelID)
         case createFeed
+        /// "나도 한마디"/피드 탭 플로팅 버튼 전용 — 작품 상세에서만 발생하는 흔치 않은 경로라
+        /// `createFeed`에 옵셔널 파라미터를 얹는 대신 별도 케이스로 분리했다(연필 아이콘 등 나머지
+        /// 진입점은 이 값을 몰라도 되게).
+        case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
         case userLibrary(UserID)
         case authorSearch(String)
+        case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
     }
 
     let dependencies: AppDependencies
@@ -88,7 +97,9 @@ struct FeedRootView: View {
                     case .novel(let novelID):
                         novelDetailView(novelID)
                     case .createFeed:
-                        createFeedView
+                        createFeedView(connectedNovel: nil)
+                    case .createFeedFromNovel(let connectedNovel):
+                        createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .userPage(let userID):
@@ -101,6 +112,14 @@ struct FeedRootView: View {
                         userLibraryView(userID)
                     case .authorSearch(let authorName):
                         authorSearchView(authorName)
+                    case .novelReview(let novelID, let title, let status):
+                        NovelReviewAssembly.makeView(
+                            novelID: novelID,
+                            title: title,
+                            status: status,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired
+                        )
                     }
                 }
                 .toolbar(.hidden, for: .tabBar)
@@ -129,7 +148,16 @@ private extension FeedRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            onReviewTapped: { information, status in
+                path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+            },
+            onCreateFeedTapped: { path.append(Destination.createFeedFromNovel($0)) },
             onFeedTapped: { path.append(Destination.feed($0)) },
+            onUserProfileTapped: {
+                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                guard $0 != currentUserID else { return }
+                path.append(Destination.userPage($0))
+            },
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
@@ -157,10 +185,13 @@ private extension FeedRootView {
 // MARK: - 피드 작성
 
 private extension FeedRootView {
-    var createFeedView: some View {
+    /// `.createFeed`(연필 아이콘)는 `nil`로, `.createFeedFromNovel`(작품 상세)은 그 작품으로 이 헬퍼를
+    /// 공유한다 — `connectedNovel`이 있으면 작성 화면이 그 작품이 미리 연결된 상태로 뜬다.
+    func createFeedView(connectedNovel: ConnectedNovel?) -> some View {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
-            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository)
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            connectedNovel: connectedNovel
         )
     }
 }

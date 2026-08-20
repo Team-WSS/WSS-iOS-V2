@@ -68,6 +68,8 @@ let targets: [Target] = [
             .module(.data(.novel)),
             // 홈에서 작품 카드 탭 → 작품 상세 진입.
             .module(.feature(.novelDetail)),
+            // 작품 상세의 평가 상태바 탭 → 작품 평가 진입.
+            .module(.feature(.novelReview)),
             .module(.domain(.novelReview)),
             .module(.data(.novelReview)),
             // 홈에서 추천글 탭 → 피드 상세, 서치바 탭 → 일반 검색 진입.

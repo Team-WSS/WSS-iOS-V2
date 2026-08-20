@@ -21,16 +21,20 @@ import Logger
 public enum FeedFeatureFactory {
 
     /// 실제 UseCase를 주입해 CreateFeedView를 생성한다.
+    /// - Parameter connectedNovel: 이미 연결된 상태로 화면을 열고 싶을 때(예: 작품 상세의 "나도 한마디" —
+    ///   `NovelDetailFeature/CLAUDE.md`의 `onCreateFeedTapped` 참고) 넘긴다. `nil`(기본값)이면 평소처럼
+    ///   연결 작품 없이 빈 draft로 시작한다.
     @MainActor
     public static func makeCreateFeedView(
         createFeedUseCase: CreateFeedUseCase,
-        searchNovelUseCase: SearchNovelUseCase
+        searchNovelUseCase: SearchNovelUseCase,
+        connectedNovel: ConnectedNovel? = nil
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
-                initialDraft: emptyDraft()
+                initialDraft: emptyDraft(connectedNovel: connectedNovel)
             )
         )
     }
@@ -157,11 +161,12 @@ public enum FeedFeatureFactory {
         )
     }
 
-    private static func emptyDraft() -> FeedDraft {
+    private static func emptyDraft(connectedNovel: ConnectedNovel? = nil) -> FeedDraft {
         FeedDraft(
             content: "",
             isSpoiler: false,
             isPrivate: false,
+            connectedNovel: connectedNovel,
             attachedImages: []
         )
     }

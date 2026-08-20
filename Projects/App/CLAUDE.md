@@ -22,22 +22,28 @@ Sources/
 │   └── MainTabView.swift     # 온보딩 이후 루트 — 홈/피드/서재/My 4탭 TabView. 탭 아이콘은
 │                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등).
 ├── Home/    └── HomeRootView.swift      # "홈" 탭. HomeFactory 조립 + 작품 상세·피드 상세·일반 검색·
-│                                          # 마이페이지 편집(NovelDetailAssembly/FeedFeatureFactory/
-│                                          # SearchAssembly/MypageFactory)까지 실제 push.
+│                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·마이페이지 편집
+│                                          # (NovelDetailAssembly/NovelReviewAssembly/FeedFeatureFactory/
+│                                          # UserPageAssembly/SearchAssembly/MypageFactory)까지 실제 push.
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
-│                                          # 작품 상세·피드 작성·타유저 프로필·그 프로필의 타유저 서재
-│                                          # (makeFeedDetailView/NovelDetailAssembly/makeCreateFeedView/
-│                                          # UserPageAssembly/LibraryFactory.makeUserLibraryView)까지 push.
+│                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 프로필의 타유저
+│                                          # 서재·작가 이름 검색(makeFeedDetailView/NovelDetailAssembly/
+│                                          # NovelReviewAssembly/makeCreateFeedView/UserPageAssembly/
+│                                          # LibraryFactory.makeUserLibraryView/SearchAssembly)까지 push.
 ├── Library/ └── LibraryRootView.swift   # "서재" 탭. LibraryFactory.makeMyLibraryView 조립 + 작품 상세·
-│                                          # 일반 검색·알림 설정(NovelDetailAssembly/SearchAssembly/
-│                                          # SettingFactory.makeNotificationSettingView)까지 push.
+│                                          # 작품 평가·피드 작성·유저 프로필·일반 검색·알림 설정
+│                                          # (NovelDetailAssembly/NovelReviewAssembly/FeedFeatureFactory/
+│                                          # UserPageAssembly/SearchAssembly/SettingFactory.makeNotificationSettingView)까지 push.
 ├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFactory.makeView 조립 +
 │                                          # 프로필 편집·설정(makeEditView/SettingFactory.makeView)까지
 │                                          # push, 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로
 │                                          # 위임(모듈명과 Factory 이름이 다르니 혼동 주의).
-├── Novel/   └── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
-├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/서재가 공유(아래).
-└── UserPage/└── UserPageAssembly.swift     # 타유저 프로필 조립 공용 헬퍼 — 지금은 피드 탭만 소비.
+├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
+│            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
+│                                             # 3탭이 공유(#197).
+├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
+└── UserPage/└── UserPageAssembly.swift     # 타유저 프로필 조립 공용 헬퍼 — 홈/피드/서재 3탭의 작품 상세와
+                                             # 피드 탭 자체가 공유(#197).
 ```
 
 4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있다. 그 안에서 열리는 2차
@@ -53,9 +59,9 @@ Sources/
   `FeedDetailAssembly.currentUserID`와 같은 출처(`UserDefaultsStorage().get(.userID)`, 로그인 직후
   캐시)를 쓴다. 다른 탭에 유저 프로필 진입을 추가할 때도 이 가드를 같이 걸 것.
 - ⚠️ **탭 Root의 `NavigationPath`(`path`)와 그 아래 Feature가 로컬 `@State` + `.navigationDestination(item:)`로 직접 push한 화면을 섞으면, 그 로컬 화면이 스택에서 사라진다.** `SearchAssembly`의 상세탐색 결과 화면(`makeDetailSearchResultView`)이 실제로 이 버그였다(#196) — 자세한 증상·원인·고친 방법은 `SearchFeature/CLAUDE.md`의 동일 항목 참고. 교훈: **App이 소유한 `path` 아래에서 "또 다른(특히 다른 모듈) 화면으로 더 나아가야 하는" 중간 화면은, 그 화면 자신의 push까지도 처음부터 App의 `path`를 타야 한다** — Assembly 패턴을 늘릴 때(새 공용 헬퍼를 뽑을 때) 그 화면이 "막다른 끝"인지 "또 뻗어나가는 중간 지점"인지 먼저 판단할 것.
-- **작품 상세·일반 검색·타유저 프로필 조립은 `NovelDetailAssembly`/`SearchAssembly`/`UserPageAssembly`
-  (전부 `@MainActor enum`)로 공용화돼 있다**(#196, 3번째 탭이 같은 목적지를 필요로 한 시점에 뽑는
-  패턴 — `UserPageAssembly`는 아직 소비자가 피드 탭 하나뿐이지만 같은 이유로 미리 뽑아둠) — 각 탭 Root는 자기
+- **작품 상세·작품 평가·일반 검색·타유저 프로필 조립은 `NovelDetailAssembly`/`NovelReviewAssembly`/
+  `SearchAssembly`/`UserPageAssembly`(전부 `@MainActor enum`)로 공용화돼 있다**(#196~#197, 2번째
+  이상의 탭이 같은 목적지를 필요로 한 시점에 뽑는 패턴) — 각 탭 Root는 자기
   `Destination` enum에 맞는 push 클로저(`onNovelTapped`/`onFeedTapped`/`onNovelSelected`)와
   `onAuthenticationRequired`만 넘기면 된다. **새 탭 Root가 작품 상세나 일반 검색을 push해야 하면
   이 공용 헬퍼부터 재사용할 것** — `NovelDetailFactory.makeView`/`SearchFactory.makeView`를 직접
@@ -146,6 +152,15 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   - **탭에서 push된 화면은 탭바를 가린다**(`.toolbar(.hidden, for: .tabBar)`, 사용자 확정) — `.navigationDestination(for:)`
     클로저 안, `switch` 결과를 감싸는 자리 한 곳에 걸어둬서 `Destination` case가 늘어나도 매번 개별
     목적지 뷰에 반복해서 붙일 필요가 없다. 다른 탭 Root에 push 네비게이션을 추가할 때 이 자리도 같이 만들 것.
+  - **같은 화면이라도 "흔한 진입 경로"와 "흔치 않은 부가 정보를 들고 들어오는 경로"는 옵셔널 파라미터
+    하나로 합치지 말고 별도 `Destination` case로 분리한다**(사용자 확정, #197 — 예:
+    `createFeed`(연필 아이콘, 파라미터 없음) vs `createFeedFromNovel(ConnectedNovel)`(작품 상세 "나도
+    한마디")). `case createFeed(ConnectedNovel?)` 하나로 합쳤다면 그 값이 필요 없는 나머지 모든
+    진입점(연필 아이콘 등)도 매번 `nil`을 끼워 넣어야 해서, 정작 그 파라미터를 쓰는 곳은 한 곳뿐인데
+    나머지 다수가 그 존재를 알아야 하는 부담이 생긴다. 목적지 View/헬퍼 함수(`createFeedView(connectedNovel:)`)는
+    공유하되, `Destination` case만 나눠서 각 진입점이 자기와 무관한 파라미터를 모르게 한다 — 그 탭에
+    "흔한" 진입점 자체가 없으면(Home/Library의 피드 작성처럼) 옵셔널 없이 `case createFeedFromNovel(ConnectedNovel)`
+    하나만 두면 된다.
 - ⚠️ **My(`MypageRootView`)는 `onAuthenticationRequired`를 받지만, 다른 탭과 발화 경로가 다르다.**
   `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 그 콜백을 모른다 — 즉 마이페이지 로드(프로필·
   장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠 수 있는 게 아니라

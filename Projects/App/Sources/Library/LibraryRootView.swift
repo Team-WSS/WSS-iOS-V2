@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseData
 import BaseDomain
 import FeedDomain
 import FeedFeature
@@ -21,16 +22,22 @@ import SettingFeature
 /// 유저 프로필 화면에서 push되는 용도라 여기서 조립할 대상이 아니다. 작품 상세(`NovelDetailAssembly`)·
 /// 일반 검색(`SearchAssembly`, "웹소설 찾기"·"작품 등록" 버튼 공용 — 서재는 별도 작품 등록 화면이 없고
 /// 검색해서 작품을 찾아 상세에서 등록하는 흐름, 사용자 확정)·알림 설정(`SettingFactory.makeNotificationSettingView`,
-/// 서재 알림 관리는 설정 목록 전체가 아니라 이 화면으로 바로 진입한다)까지 push한다.
+/// 서재 알림 관리는 설정 목록 전체가 아니라 이 화면으로 바로 진입한다), 그리고 작품 상세에서 열리는
+/// 작품 평가·피드 작성·유저 프로필까지 push한다.
 struct LibraryRootView: View {
 
     private enum Destination: Hashable {
         case novel(NovelID)
         case feed(FeedID)
+        /// 서재 탭엔 피드 작성 진입점(연필 아이콘 등)이 따로 없어 작품 상세發("나도 한마디") 경로 하나뿐 —
+        /// `FeedRootView`처럼 옵션 없는 `createFeed` 케이스를 따로 둘 필요가 없다(`HomeRootView`와 동일).
+        case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
+        case userPage(UserID)
         case search
         case authorSearch(String)
         case detailSearch(SearchFilter)
+        case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case notificationSetting
     }
 
@@ -38,6 +45,12 @@ struct LibraryRootView: View {
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+
+    /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
+    /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
+    private var currentUserID: UserID? {
+        UserDefaultsStorage().get(.userID).map(UserID.init)
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -64,14 +77,26 @@ struct LibraryRootView: View {
                         novelDetailView(novelID)
                     case .feed(let feedID):
                         feedDetailView(feedID)
+                    case .createFeedFromNovel(let connectedNovel):
+                        createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                    case .userPage(let userID):
+                        UserPageAssembly.makeView(userID: userID, dependencies: dependencies)
                     case .search:
                         searchView()
                     case .authorSearch(let authorName):
                         searchView(initialQuery: authorName)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
+                    case .novelReview(let novelID, let title, let status):
+                        NovelReviewAssembly.makeView(
+                            novelID: novelID,
+                            title: title,
+                            status: status,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired
+                        )
                     case .notificationSetting:
                         notificationSettingView
                     }
@@ -89,7 +114,16 @@ private extension LibraryRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            onReviewTapped: { information, status in
+                path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+            },
+            onCreateFeedTapped: { path.append(Destination.createFeedFromNovel($0)) },
             onFeedTapped: { path.append(Destination.feed($0)) },
+            onUserProfileTapped: {
+                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                guard $0 != currentUserID else { return }
+                path.append(Destination.userPage($0))
+            },
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
@@ -107,6 +141,19 @@ private extension LibraryRootView {
             dependencies: dependencies,
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) }
+        )
+    }
+}
+
+// MARK: - 피드 작성 (작품 상세 "나도 한마디")
+
+private extension LibraryRootView {
+    /// 이 탭엔 `.createFeedFromNovel` 하나뿐이라 `connectedNovel`은 항상 값이 있다.
+    func createFeedView(connectedNovel: ConnectedNovel) -> some View {
+        FeedFeatureFactory.makeCreateFeedView(
+            createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            connectedNovel: connectedNovel
         )
     }
 }
