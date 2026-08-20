@@ -166,7 +166,20 @@ public extension WSSAlertType {
                     WSSAlertButton(title: "계속 작성", role: .confirm)
                 ]
             )
-            
+
+        case .stopWritingCollection:
+            WSSAlertContent(
+                iconImage: WSSImage.icModalWarning.swiftUIImage,
+                title: "컬렉션 생성을 그만하시겠어요?",
+                titleFont: .title2,
+                titleBottomPadding: 18,
+                description: nil,
+                buttons: [
+                    WSSAlertButton(title: "그만하기", role: .cancel),
+                    WSSAlertButton(title: "계속 작성", role: .confirm)
+                ]
+            )
+
         case .reportImproperContent:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,

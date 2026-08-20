@@ -23,7 +23,10 @@ public enum WSSAlertType: CaseIterable, Hashable {
     case deleteMyComment
     case alreadyDeletedFeed
     case stopWritingFeed
-    
+
+    // 컬렉션
+    case stopWritingCollection
+
     // 신고
     case reportImproperContent
     case receivedReportImproperContent
