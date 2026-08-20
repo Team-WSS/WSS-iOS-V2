@@ -47,3 +47,9 @@
   `novelGridCell`은 커버(가변 높이) + 제목 텍스트(최대 2줄)로 총 높이가 더 길어 행이 어긋나 보였다
   (#199 리뷰 피드백). 지금은 둘 다 같은 `aspectRatio`로 커버를 그리고, `addNovelTile`엔 실제 텍스트
   없는 투명 `Text(" ")`(같은 폰트)로 제목 줄 자리만 예약한다. 셀 종류를 늘릴 땐 이 짝을 깨지 말 것.
+  - ⚠️ **`.aspectRatio(_, contentMode:)`를 `VStack`(텍스트·아이콘만 있는, `Spacer` 없는) 같은 "내용물이
+    작은 뷰"에 직접 걸면 그 뷰가 그리드 칸을 안 채우고 내용물의 자연 크기(이 경우 ~41pt)로 쪼그라든다**
+    (실측 — `addNovelTile`을 처음 이 방식으로 고쳤다가 타일이 왼쪽 위에 작게 뜨는 걸 발견, #199). `.frame(maxWidth: .infinity)`를
+    앞에 끼워도 높이 방향은 안 채워진다. **`WSSNovelCoverImage`가 쓰는 것과 같은 해법**: `Color.clear`가
+    `.aspectRatio`로 비율·크기를 잡고, 실제 콘텐츠는 `.overlay { ... }`로 그 위에 얹는다 — `Color.clear`는
+    어떤 제안 크기든 그대로 받아들이므로 aspectRatio가 계산한 박스 전체가 항상 채워진다.

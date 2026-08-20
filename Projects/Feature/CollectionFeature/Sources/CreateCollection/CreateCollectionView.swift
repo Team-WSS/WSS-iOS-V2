@@ -262,22 +262,29 @@ private extension CreateCollectionView {
     var addNovelTile: some View {
         Button(action: onAddNovelTapped) {
             VStack(alignment: .leading, spacing: 6) {
-                VStack(spacing: 4) {
-                    Text(viewModel.state.draft.novelIDs.isEmpty ? "작품 추가" : "작품 수정")
-                        .applyWSSFont(.title4)
-                        .foregroundStyle(Color.wssGray200)
+                // ⚠️ `.aspectRatio`를 VStack에 직접 걸면 VStack이 제 내용물(텍스트+아이콘, ~41pt)의
+                // 자연 크기로 쪼그라든다 — 그 결과로 채워지지 않는다(실측: 그리드 칸을 안 채우고
+                // 왼쪽 위에 작게 뜸). `WSSNovelCoverImage`가 쓰는 것과 같은 방식으로 `Color.clear`가
+                // 비율만 잡고 실제 콘텐츠는 `.overlay`로 그 위에 얹어야 박스 전체가 채워진다
+                // (`WSSComponent/CLAUDE.md`의 표지 비율 항목 참고).
+                Color.clear
+                    .aspectRatio(novelCoverAspectRatio, contentMode: .fit)
+                    .overlay {
+                        VStack(spacing: 4) {
+                            Text(viewModel.state.draft.novelIDs.isEmpty ? "작품 추가" : "작품 수정")
+                                .applyWSSFont(.title4)
+                                .foregroundStyle(Color.wssGray200)
 
-                    WSSImage.icBookRegister.swiftUIImage
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.wssGray200)
-                }
-                .frame(maxWidth: .infinity)
-                .aspectRatio(novelCoverAspectRatio, contentMode: .fit)
-                .background(Color.wssGray50)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            WSSImage.icBookRegister.swiftUIImage
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundStyle(Color.wssGray200)
+                        }
+                    }
+                    .background(Color.wssGray50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 // 실제 텍스트 없이 자리만 — novelGridCell 제목 줄과 폰트를 맞춰야 높이가 맞는다.
                 Text(" ")
