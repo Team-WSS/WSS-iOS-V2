@@ -18,11 +18,13 @@ struct NovelDetailFeedTab: View {
 
     let feeds: [TotalFeed]
     let isLoading: Bool
-    /// 첫 페이지 로드 실패 — "진짜 빈 목록"과 구분해 거짓 빈 상태를 보여주지 않기 위한 값.
+    /// 피드 로드 실패(첫 페이지·더보기 공통) — 탭 자리를 실패 뷰로 대체할지 가르는 값.
     let hasLoadFailed: Bool
     /// 셀 y 실측에 쓸 ScrollView 좌표공간 이름(threedots 드롭다운 앵커 계산용).
     let scrollSpaceName: String
     let onReachEnd: () -> Void
+    /// 실패 뷰의 재시도 → 첫 페이지부터 다시 로드 요청.
+    let onRetry: () -> Void
     /// 셀 탭 → 피드 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
     let onFeedTapped: (FeedID) -> Void
     /// 프로필 영역(이미지+닉네임) 탭 → 유저 프로필 진입. 내 글이면 호출하지 않는다(셀 매핑에서 차단).
@@ -42,7 +44,12 @@ struct NovelDetailFeedTab: View {
     private let threeDotsBottomOffset: CGFloat = 52
 
     var body: some View {
-        if feeds.isEmpty {
+        // ⚠️ 실패는 목록보다 **먼저** 판단한다 — 더보기가 실패하면 목록이 남아 있는데, 그대로 두면
+        // 실패를 알릴 자리가 없어 사용자가 "왜 안 늘어나지"로 갇힌다(서재에서 실제로 겪은 문제).
+        // 재시도 버튼이 달린 실패 뷰로 탭 자리를 대체해 복구 경로를 준다.
+        if hasLoadFailed {
+            NetworkErrorView { onRetry() }
+        } else if feeds.isEmpty {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity)
@@ -50,12 +57,7 @@ struct NovelDetailFeedTab: View {
             } else {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 70)
-                    // 재시도는 피드 탭 재탭 시 VM이 다시 첫 페이지를 요청한다.
-                    NovelDetailEmptyView(
-                        message: hasLoadFailed
-                            ? "피드를 불러오지 못했어요"
-                            : "아직 글이 없어요\n최초로 남겨보세요!"
-                    )
+                    NovelDetailEmptyView(message: "아직 글이 없어요\n최초로 남겨보세요!")
                     Spacer().frame(height: 70)
                 }
             }

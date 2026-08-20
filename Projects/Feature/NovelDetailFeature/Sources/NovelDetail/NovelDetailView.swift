@@ -222,6 +222,7 @@ struct NovelDetailView: View {
                                 hasLoadFailed: viewModel.state.feedsLoadFailed,
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
+                                onRetry: { viewModel.handle(.retryFeeds) },
                                 onFeedTapped: onFeedTapped,
                                 onUserProfileTapped: onUserProfileTapped,
                                 onNovelTapped: onNovelTapped,
