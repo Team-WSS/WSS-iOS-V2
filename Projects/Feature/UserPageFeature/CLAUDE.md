@@ -4,9 +4,9 @@
 내 화면(MyPage)/남의 화면(UserPage) + 전체 피드 목록(UserFeedList) 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.userPage)` / 의존: `BaseDomain`, `ProfileDomain`, `NovelDomain`, `FeedDomain`,
-  `SocialDomain`, `CollectionDomain`(#200, 마이페이지 컬렉션 섹션 — 다른 Feature 모듈이 아니라 이 화면이
-  직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관), `DesignSystem`,
-  `WSSComponent`, `Logger`
+  `SocialDomain`, `CollectionDomain`(#200, MyPage·UserPage 둘 다의 컬렉션 섹션 — 다른 Feature 모듈이
+  아니라 이 화면들이 직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관),
+  `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점:
   - `MypageFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:loadInitialProfileUseCase:loadProfileCharacterUseCase:validateNicknameUseCase:updateProfileUseCase:onCollectionTapped:logger:)`
     (내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집), `.makeCharacterEditSheet(...)`(캐릭터 선택 시트)
@@ -36,13 +36,18 @@
 
 ### 주의사항 (작업 중 발견 시 누적)
 
-- **`CollectionSection`의 미리보기 카드 렌더는 `MypageView.swift`에 미사용 상태로 있던 죽은 코드
-  (`collectionItem`)를 되살린 것이다**(#200) — 대표 표지 1장 + 뒤에 오프셋된 회색 사각형 2장(쌓인
-  카드 장식)이 `CollectionPreview.representativeNovel` 요구사항과 정확히 일치해 그대로 재활용했다.
-  단, 원래 코드는 raw `AsyncImage`를 썼는데 **URL이 nil이면 `.empty` phase에서 영영 못 벗어나
-  `ProgressView()`가 멈추지 않고 계속 돈다**(죽은 코드라 아무도 이 버그를 못 봤다 — 되살리며 실측으로
-  발견) → `WSSNovelCoverImage(url:)`로 교체해 고쳤다(WSS 빈 표지 폴백으로 대체됨, `WSSComponent/CLAUDE.md`
-  정본). 이 화면의 다른 표지 자리에서 raw `AsyncImage`를 새로 쓰지 말 것.
+- **미리보기 카드 렌더(`CollectionPreviewRow`, `Sources/Component/`)는 `MypageView.swift`에 미사용
+  상태로 있던 죽은 코드(`collectionItem`)를 되살린 것이다**(#200) — 대표 표지 1장 + 뒤에 오프셋된 회색
+  사각형 2장(쌓인 카드 장식)이 `CollectionPreview.representativeNovel` 요구사항과 정확히 일치해 그대로
+  재활용했다. 단, 원래 코드는 raw `AsyncImage`를 썼는데 **URL이 nil이면 `.empty` phase에서 영영 못
+  벗어나 `ProgressView()`가 멈추지 않고 계속 돈다**(죽은 코드라 아무도 이 버그를 못 봤다 — 되살리며
+  실측으로 발견) → `WSSNovelCoverImage(url:)`로 교체해 고쳤다(WSS 빈 표지 폴백으로 대체됨,
+  `WSSComponent/CLAUDE.md` 정본). 이 화면의 다른 표지 자리에서 raw `AsyncImage`를 새로 쓰지 말 것.
+  - **`CollectionSection`(MyPage, "컬렉션 N개" 카운트-인라인 헤더)과 `UserPageView.userPageCollectionSection`
+    (UserPage, "컬렉션" 플레인 타이틀+화살표, "서재"/"장르취향"과 동일 헤더 스타일)은 헤더만 각자 로컬로
+    짓고 미리보기 항목 렌더는 `CollectionPreviewRow`로 공유한다** — `LibrarySection`/`GenreSection`이
+    "콘텐츠만" 공용이고 타이틀 행은 화면마다 로컬인 것과 동일 분리(#200 후속). 두 화면의 헤더를
+    억지로 하나로 통일하려 하지 말 것 — Figma가 화면마다 다르게 그렸다.
   - **미리보기 3개 행의 항목 사이 간격은 고정 30, 묶음 전체는 화면 가운데 정렬**한다(사용자 확정,
     2026-08-21) — 좌우 여백을 얼마로 맞출지 신경 쓰는 대신 `HStack`(내용물 크기만큼만 차지)을
     `.frame(maxWidth: .infinity)`(기본 정렬 `.center`)로 감싸 가운데로 밀어낸다. 헤더 행의 좌측 정렬
@@ -100,6 +105,7 @@
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
 - **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 push. **`SettingFeature`의 내부 네비게이션과 동일 패턴** — `UserPageView`가 VM이 아니라 View 자신의 `init`으로 필요한 UseCase(`loadUserFeedsUseCase` 등)를 직접 받아뒀다가 `.navigationDestination`에서 `UserPageFeatureFactory.makeFeedListView(...)`를 직접 호출(콜백을 App까지 올리지 않음).
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
+- **컬렉션 섹션(#200)은 "타유저의 컬렉션이 존재할 경우에만" 통째로 노출된다**(`viewModel.state.collectionCount > 0`, 사용자 확정) — MyPage의 `CollectionSection`이 0개여도 헤더 행을 항상 보여주는 것과 다르다. 장르 취향 섹션이 `hasNoGenrePreferenceData`면 통째로 숨는 것과 같은 패턴을 그대로 따랐다. `LoadCollectionPreviewsUseCase.execute(userID:size:)`는 대상 사용자 userID를 명시로 받는 계약이라(`CollectionDomain/CLAUDE.md`) 이 화면의 `userID`(프로필 대상, `.me`가 아님)를 그대로 넘긴다.
 - **스크롤 반응형 네비 타이틀**: 프로필 섹션이 화면 밖으로 스크롤되면(`minY < -1`) 툴바 principal에 닉네임이 페이드인한다 — `PreferenceKey` 대신 `GeometryReader` 안에서 `onChange`로 `@State`를 직접 갱신(`NovelDetailFeature`와 동일 패턴/동일 이유, 이 SDK는 `onPreferenceChange`→`@State` 갱신이 먹지 않는다).
 - **툴바 배경은 스크롤 여부와 무관하게 항상 `wssPrimary20`** — `.toolbarBackground(color, for: .navigationBar)`만으로는 기본이 "스크롤 전엔 투명, 후엔 표시"라 `.toolbarBackground(.visible, for: .navigationBar)`를 명시로 강제해야 한다.
 - **프로필 헤더 배경(`wssPrimary20`)은 위로만 오버슈트한 사각형으로 확장**해 위로 당겨 바운싱해도 흰 배경이 안 비치게 한다(`profileSection`의 두 번째 `.background(alignment: .top)`, height 1000 + offset -1000).
@@ -111,3 +117,4 @@
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).
 - **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
+- **컬렉션 섹션의 화살표 버튼(`userPageCollectionSection`)은 아직 `//TODO: - 컬렉션 뷰로 이동`뿐이다** — "서재" 섹션의 화살표(`//TODO: - 서재 뷰로 이동`)와 동일하게 실제 네비게이션이 없다. 이 화면에서 다른 유저의 컬렉션 "목록"(전체보기) 화면으로 갈 수 있는 곳 자체가 아직 없다 — `CollectionFeature.CollectionListView`는 "내 컬렉션"/"좋아요한 컬렉션" 2탭이라 **로그인 사용자 자신 기준**으로만 동작해 타유저 프로필에 그대로 재사용할 수 없다(좋아요한 탭이 세션 토큰 기준). 타유저의 컬렉션 전체 목록 화면이 별도로 필요해지면 그때 설계할 것 — 지금은 마이페이지처럼 미리보기(최대 3개)만 보여주는 게 이번 범위(Figma 노드 31756:94603)다.

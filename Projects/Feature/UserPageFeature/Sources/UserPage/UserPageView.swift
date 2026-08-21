@@ -16,6 +16,7 @@ import ProfileDomain
 import NovelDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import Logger
 
 struct UserPageView: View {
@@ -103,6 +104,16 @@ struct UserPageView: View {
                                     userPageLibrarySection
 
                                     divider
+
+                                    // "타유저의 컬렉션이 존재할 경우에만" 노출한다(사용자 확정) —
+                                    // 마이페이지의 `CollectionSection`은 0개여도 헤더는 항상 보이는
+                                    // 것과 다르다(장르 취향 섹션이 데이터 없으면 통째로 숨는 것과
+                                    // 동일한 패턴).
+                                    if viewModel.hasCollections {
+                                        userPageCollectionSection
+
+                                        divider
+                                    }
 
                                     if !viewModel.hasNoGenrePreferenceData {
                                         userPageGenreSection
@@ -360,7 +371,43 @@ struct UserPageView: View {
         }
         .background(WSSColor.wssWhite.swiftUIColor)
     }
-    
+
+    /// 타이틀 행 스타일은 "서재"/"장르취향"과 동일(플레인 텍스트 + 우측 화살표 44×44) — 마이페이지
+    /// `CollectionSection`의 "컬렉션 N개" 카운트-인라인 헤더와는 다르다(Figma가 이 화면에서만 카운트를
+    /// 안 보여줌). 미리보기 항목 자체는 `CollectionPreviewRow`로 공유.
+    private var userPageCollectionSection: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 16)
+
+            HStack(alignment: .center, spacing: 0) {
+                Text("컬렉션")
+                    .applyWSSFont(.title1)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+
+                Spacer()
+
+                Button {
+                    //TODO: - 컬렉션 뷰로 이동
+                } label: {
+                    WSSImage.icNavigateRight.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                        .frame(width: 24, height: 24)
+                }
+                .frame(width: 44, height: 44)
+            }
+            .padding(.horizontal, 20)
+
+            Spacer().frame(height: 8)
+
+            CollectionPreviewRow(previews: viewModel.state.collectionPreviews)
+
+            Spacer().frame(height: 30)
+        }
+        .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
     private var userPageGenreSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 29)
@@ -693,6 +740,7 @@ private extension UserPageView {
                 loadGenrePreferencesUseCase: PreviewLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: PreviewLoadNovelPreferencesUseCase(),
                 loadUserRegisteredNovelStatsUseCase: PreviewLoadUserRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase(),
                 loadUserFeedsUseCase: PreviewLoadUserFeedsUseCase(),
                 feedLikeUseCase: PreviewFeedLikeUseCase(),
                 blockUserUseCase: PreviewBlockUserUseCase(),
@@ -747,6 +795,19 @@ private struct PreviewLoadNovelPreferencesUseCase: LoadNovelPreferencesUseCase {
 private struct PreviewLoadUserRegisteredNovelStatsUseCase: LoadUserRegisteredNovelStatsUseCase {
     func execute(id: UserID) async throws(RepositoryError) -> RegisteredNovelStats {
         RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
+}
+
+private struct PreviewLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
+        let previews = (1...size).map { index in
+            CollectionPreview(
+                id: CollectionID(index),
+                name: "미리보기 컬렉션 \(index)",
+                representativeNovel: CollectionNovel(id: NovelID(index), title: "작품 \(index)", author: "작가 \(index)", thumbnailImage: nil)
+            )
+        }
+        return (previews, previews.count)
     }
 }
 

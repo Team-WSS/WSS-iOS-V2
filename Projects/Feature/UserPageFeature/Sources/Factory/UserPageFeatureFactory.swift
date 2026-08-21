@@ -13,6 +13,7 @@ import ProfileDomain
 import NovelDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
@@ -27,6 +28,7 @@ public enum UserPageFeatureFactory {
         loadGenrePreferencesUseCase: LoadGenrePreferencesUseCase,
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadUserRegisteredNovelStatsUseCase: LoadUserRegisteredNovelStatsUseCase,
+        loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         loadUserFeedsUseCase: LoadUserFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         blockUserUseCase: BlockUserUseCase,
@@ -40,6 +42,7 @@ public enum UserPageFeatureFactory {
             loadGenrePreferencesUseCase: loadGenrePreferencesUseCase,
             loadNovelPreferencesUseCase: loadNovelPreferencesUseCase,
             loadUserRegisteredNovelStatsUseCase: loadUserRegisteredNovelStatsUseCase,
+            loadCollectionPreviewsUseCase: loadCollectionPreviewsUseCase,
             loadUserFeedsUseCase: loadUserFeedsUseCase,
             feedLikeUseCase: feedLikeUseCase,
             blockUserUseCase: blockUserUseCase,

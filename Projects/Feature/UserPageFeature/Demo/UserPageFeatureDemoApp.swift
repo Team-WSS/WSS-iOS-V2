@@ -156,6 +156,7 @@ private enum DemoFactory {
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadUserRegisteredNovelStatsUseCase: DemoLoadUserRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 loadUserFeedsUseCase: DemoLoadUserFeedsUseCase(),
                 feedLikeUseCase: DemoFeedLikeUseCase(),
                 blockUserUseCase: DemoBlockUserUseCase(),
@@ -209,7 +210,14 @@ private enum DemoFactory {
             ),
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
-        return UserPageFeatureFactory.makeView(
+        let collectionRepository = CollectionDataFactory.makeRepository(
+            network: NetworkingClient(
+                logger: DefaultNetworkLogger(base: consoleLogger),
+                tokenStore: DemoSessionTokenStore()
+            ),
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        return UserPageFactory.makeView(
             userID: userID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
@@ -218,6 +226,7 @@ private enum DemoFactory {
                 keywordRepository: keywordRepository
             ),
             loadUserRegisteredNovelStatsUseCase: DefaultLoadUserRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             loadUserFeedsUseCase: DefaultLoadUserFeedsUseCase(feedRepository: feedRepository),
             feedLikeUseCase: DefaultLikeUseCase(feedRepository: feedRepository),
             blockUserUseCase: DefaultBlockUserUseCase(repository: socialRepository),
