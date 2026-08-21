@@ -26,6 +26,9 @@ struct CreateCollectionView: View {
     /// "작품 추가" 화면 push 여부 — `ReadingPeriodSheet`류 로컬 값 선택기와 같은 위상이라(다만 sheet가
     /// 아니라 push) 이 화면이 직접 소유한다. App/Factory는 몰라도 된다.
     @State private var isAddNovelPresented = false
+    /// 이름·설명 필드는 각자 독립된 `@FocusState`를 쓴다 — 하나로 공유하면 빈 곳 탭으로 둘 다 내릴 때
+    /// 어느 필드가 포커스인지 구분이 안 된다(`UserPageFeature`의 `MyPageEditView` 동일 패턴).
+    @FocusState private var isNameFieldFocused: Bool
     /// "컬렉션 설명" 박스는 padding·배경까지 포함한 전체 영역이 탭 타깃이다(아래 `descriptionSection`).
     @FocusState private var isDescriptionFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
@@ -105,6 +108,15 @@ struct CreateCollectionView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.immediately)
+        // 필드 자체(nameSection·descriptionSection)의 onTapGesture가 각자 포커스를 켜고, 그 바깥
+        // 빈 공간을 탭하면 여기로 흘러와 둘 다 내린다 — 안쪽 제스처가 먼저 소비하므로 서로 충돌하지
+        // 않는다(`FeedFeature`의 `CreateFeedView` 동일 패턴).
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isNameFieldFocused = false
+            isDescriptionFieldFocused = false
+        }
     }
 }
 
@@ -181,6 +193,7 @@ private extension CreateCollectionView {
             HStack(spacing: 0) {
                 TextField("컬렉션 이름을 입력해주세요", text: $nameFieldText)
                     .applyWSSFont(.body2)
+                    .focused($isNameFieldFocused)
 
                 Text("(\(nameFieldText.count)/\(CollectionDraft.maxNameCount))")
                     .applyWSSFont(.body2)
