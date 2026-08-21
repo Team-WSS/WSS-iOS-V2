@@ -1,5 +1,5 @@
 //
-//  AddNovelView.swift
+//  CollectionSearchNovelView.swift
 //  CollectionFeature
 //
 //  Created by Guryss on 8/20/26.
@@ -11,28 +11,42 @@ import SwiftUI
 import BaseDomain
 import CollectionDomain
 import SearchDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 
 // 컬렉션 "작품 추가" 화면 — 검색해서 다중선택한 결과를 확정하면 CreateCollectionView의 작품 리스트
 // 전체를 교체한다. CreateCollectionView 내부에서만 push되는 로컬 화면(별도 Factory 진입점 없음).
-struct AddNovelView: View {
+struct CollectionSearchNovelView: View {
 
-    @State private var viewModel: AddNovelViewModel
+    @State private var viewModel: CollectionSearchNovelViewModel
+    /// "서재에서 추가" 화면 push 여부 — `isAddNovelPresented`(CreateCollectionView)와 같은 위상으로
+    /// 이 화면이 직접 소유한다. 확정 시 이 화면 자신을 dismiss해 CreateCollectionView까지 2단계
+    /// pop한다(아래 `.navigationDestination`/`.onChange(of: isMyLibrarySelectPresented)` 참고).
+    @State private var isMyLibrarySelectPresented = false
+    /// "서재에서 추가"가 확정을 알려온 뒤, 자기 자신(`CollectionMyLibrarySelectView`)의 pop이 실제로
+    /// 완료될 때까지(=`isMyLibrarySelectPresented`가 자연스레 false로 돌아올 때까지) 이 화면의
+    /// `dismiss()`를 미뤄두는 플래그 — 실측 필요(아래 주석 참고).
+    @State private var isPendingDismissAfterMyLibrarySelect = false
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isSearchBarFocused: Bool
 
+    /// "서재에서 추가" 화면이 서재 조회에 쓸 UseCase — `searchNovelUseCase`와 같은 위상으로 이 화면이
+    /// 직접 받아 들고 있다가 자식 VM 생성에 쓴다.
+    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
     /// 확정 콜백 — 최종 선택 결과 전체를 상위(`CreateCollectionView`)로 발화한다. 콜백은 VM이 아니라
-    /// View가 소유한다(프로젝트 관례).
+    /// View가 소유한다(프로젝트 관례). "서재에서 추가" 화면의 확정도 같은 콜백을 그대로 재사용한다.
     private let onConfirm: ([CollectionNovel]) -> Void
     private let onAuthenticationRequired: () -> Void
 
     init(
-        viewModel: AddNovelViewModel,
+        viewModel: CollectionSearchNovelViewModel,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
+        self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.onConfirm = onConfirm
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -53,6 +67,33 @@ struct AddNovelView: View {
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
+            }
+            // "서재에서 추가" 확정 → CreateCollectionView가 넘긴 바로 그 onConfirm을 재사용해 최종
+            // novels(검색+서재 병합본)를 전달한다. 이 화면 자신의 dismiss()는 여기서 곧바로 부르지
+            // 않는다 — ⚠️ **실측 결과, 같은 프레임에서 자식(CollectionMyLibrarySelectView)의 자체
+            // dismiss()와 이 화면의 dismiss()가 동시에 겹치면 이 화면은 pop되지 않고 자식만 pop된다**
+            // (계층적 Bool이라 이론상 한 번의 dismiss()로 둘 다 사라져야 할 것 같지만 실제로는 아니었다
+            // — 처음엔 그렇게 짰다가 시뮬레이터 실측에서 발견). 대신 자식이 **자기 자신의**
+            // `.onChange(of: isConfirmed)`에서 스스로 dismiss()해 `isMyLibrarySelectPresented`가
+            // 자연스럽게 false로 돌아오는 걸 아래 `.onChange`로 기다렸다가, 그 다음에야 이 화면도
+            // dismiss()한다(계단식 2단계 pop). `CollectionFeature/CLAUDE.md` 참고.
+            .navigationDestination(isPresented: $isMyLibrarySelectPresented) {
+                CollectionMyLibrarySelectView(
+                    viewModel: CollectionMyLibrarySelectViewModel(
+                        initialSelection: viewModel.state.selectedNovels,
+                        loadMyLibraryUseCase: loadMyLibraryUseCase
+                    ),
+                    onConfirm: { novels in
+                        onConfirm(novels)
+                        isPendingDismissAfterMyLibrarySelect = true
+                    },
+                    onAuthenticationRequired: onAuthenticationRequired
+                )
+            }
+            .onChange(of: isMyLibrarySelectPresented) { _, isPresented in
+                guard !isPresented, isPendingDismissAfterMyLibrarySelect else { return }
+                isPendingDismissAfterMyLibrarySelect = false
+                dismiss()
             }
     }
 
@@ -79,7 +120,7 @@ struct AddNovelView: View {
 
 // MARK: - Toolbar
 
-private extension AddNovelView {
+private extension CollectionSearchNovelView {
 
     @ToolbarContentBuilder
     var toolbarContent: some ToolbarContent {
@@ -116,7 +157,7 @@ private extension AddNovelView {
 
 // MARK: - Sections
 
-private extension AddNovelView {
+private extension CollectionSearchNovelView {
 
     var searchBar: some View {
         WSSSearchBar(
@@ -142,8 +183,8 @@ private extension AddNovelView {
 
             Spacer()
 
-            // TODO: 서재에서 작품을 골라 추가하는 흐름은 이번 범위 밖(#199 후속) — 문구만 배치.
             Button {
+                isMyLibrarySelectPresented = true
             } label: {
                 Text("서재에서 추가")
                     .underline()
@@ -250,7 +291,7 @@ private extension AddNovelView {
 
 // MARK: - Presentation
 
-private extension AddNovelView {
+private extension CollectionSearchNovelView {
 
     var toastBinding: Binding<Bool> {
         Binding(
@@ -264,11 +305,12 @@ private extension AddNovelView {
 
 #Preview {
     NavigationStack {
-        AddNovelView(
-            viewModel: AddNovelViewModel(
+        CollectionSearchNovelView(
+            viewModel: CollectionSearchNovelViewModel(
                 initialSelection: [],
                 searchNovelUseCase: PreviewSearchNovelUseCase()
             ),
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
             onConfirm: { novels in print("확정: \(novels.count)개") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
@@ -281,5 +323,11 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
     }
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         (Paginated(items: [], hasNext: false), 0)
+    }
+}
+
+private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
     }
 }

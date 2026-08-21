@@ -150,6 +150,20 @@
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
 
+### 8. "서재에서 추가" 확정 후 pop 단계 수 — 디자인팀 답변 대기
+
+- **무엇**: `CollectionFeature`의 "서재에서 추가"(`CollectionMyLibrarySelectView`) 화면에서 "추가"를
+  눌러 확정했을 때, `CollectionSearchNovelView`(작품 검색 화면)로 1단계만 pop할지 `CreateCollectionView`
+  (컬렉션 생성 화면)까지 2단계 pop할지가 아직 정해지지 않았다 — 디자인팀에 문의해둔 상태(사용자 확정,
+  2026-08-21).
+- **결과**: 지금은 임시로 2단계 pop(컬렉션 생성 화면까지)으로 구현·검증해뒀다. 답변이 오면 반대로
+  바뀔 수 있다.
+- **어디를 고치나**: `Projects/Feature/CollectionFeature/Sources/SearchNovel/CollectionSearchNovelView.swift`의
+  `onConfirm` 클로저(`isPendingDismissAfterMyLibrarySelect` + `.onChange` 계단식 pop 배선) — 1단계로
+  바뀌면 이 지연 dismiss 자체가 불필요해질 수 있다. 계약 서술은
+  `CollectionFeature/CLAUDE.md`의 "화면 동작 계약" 절.
+- **왜 지금 안 했나**: 디자인팀 답변이 아직 오지 않아 착수 시점이 아니라 결론 자체를 못 낸다.
+
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)

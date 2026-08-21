@@ -12,9 +12,11 @@ import CollectionFeature
 import BaseDomain
 import CollectionDomain
 import SearchDomain
+import NovelDomain
 import BaseData
 import CollectionData
 import SearchData
+import NovelData
 import Logger
 import Networking
 import DesignSystem
@@ -86,6 +88,7 @@ private struct DemoRootView: View {
             CollectionFeatureFactory.makeCreateCollectionView(
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
                 searchNovelUseCase: DemoSearchNovelUseCase(),
+                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
@@ -112,9 +115,27 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
         )
+        // 서재 조회 — LibraryFeatureDemoApp의 실서버 배관과 동일(내 서재는 저장된 userID를 쓰므로
+        // Demo가 직접 세팅). NovelData의 KeywordRepository도 함께 필요하다(DefaultLoadMyLibraryUseCase
+        // 시그니처 참고).
+        let userDefaults = UserDefaultsStorage()
+        userDefaults.set(.userID, 10041)
+        let novelRepository = NovelDataFactory.makeNovelRepository(
+            client: client,
+            appStorage: userDefaults,
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
+        )
+        let keywordRepository = KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
         return CollectionFeatureFactory.makeCreateCollectionView(
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
+                novelRepository: novelRepository,
+                keywordRepository: keywordRepository
+            ),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired
         )
@@ -165,5 +186,45 @@ private struct DemoSearchNovelUseCase: SearchNovelUseCase {
 
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         (Paginated(items: [], hasNext: false), 0)
+    }
+}
+
+private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    /// 무한스크롤을 시연할 수 있도록 3페이지까지는 채워서 반환하고 그 뒤로는 hasNext를 끈다
+    /// (`DemoSearchNovelUseCase`와 동일 관례 — 다만 정수 page가 아니라 커서 문자열을 왕복한다).
+    private static let demoPageCount = 3
+    private static let pageSize = 9
+
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let pageIndex = cursor.flatMap(Int.init) ?? 0
+        guard pageIndex < Self.demoPageCount else {
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), Self.pageSize * Self.demoPageCount)
+        }
+        let novels = (1...Self.pageSize).map { number -> LibraryNovel in
+            let sequence = pageIndex * Self.pageSize + number
+            return LibraryNovel(
+                id: NovelID(sequence),
+                title: "내 서재 작품 \(sequence)",
+                thumbnailImage: nil,
+                rating: 4.0,
+                isInterested: sequence.isMultiple(of: 3),
+                userReview: sequence.isMultiple(of: 2)
+                    ? UserNovelReview(
+                        readingStatus: ReadingStatus.allCases[sequence % ReadingStatus.allCases.count],
+                        rating: try? Rating(Double(sequence % 9 + 1) * 0.5),
+                        attractivePoint: [],
+                        period: nil,
+                        keywords: []
+                      )
+                    : nil,
+                writtenFeeds: []
+            )
+        }
+        let hasNext = pageIndex < Self.demoPageCount - 1
+        return (
+            CursorPaginated(items: novels, hasNext: hasNext, nextCursor: hasNext ? String(pageIndex + 1) : nil),
+            Self.pageSize * Self.demoPageCount
+        )
     }
 }

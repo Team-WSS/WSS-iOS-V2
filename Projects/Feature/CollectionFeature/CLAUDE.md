@@ -5,23 +5,40 @@
 있었고, 이 모듈은 그 위에 화면을 얹는 첫 착수(#199, 컬렉션 생성 화면부터).
 
 - 식별자: `ModuleType.feature(.collection)` / 의존: `CollectionDomain`, `SearchDomain`(작품 검색 —
-  "작품 추가" 화면), `BaseDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:logger:onAuthenticationRequired:)`
+  "작품 추가" 화면), `NovelDomain`(서재 조회 — "서재에서 추가" 화면, 서재 Domain 코드는 별도 모듈이
+  아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
+  `WSSComponent`, `Logger`
+- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
   (모듈에 화면이 더 늘어날 예정이라 `makeView`가 아니라 화면명을 붙인 이름)
 
 ## 핵심 시나리오
 
 - **컬렉션 생성만** — 수정(edit)은 이번 범위 밖. `CreateCollectionViewModel`은 항상 빈 `CollectionDraft()`로
   시작하고(로드 없음), 완료 시 `CreateCollectionUseCase`로 제출 후 자기완결 dismiss.
-- **작품 추가/제거는 `AddNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** — `CreateCollectionView`의
-  "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·다중선택한 뒤 "완료"를 누르면
-  선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로 교체한다(부분 추가/제거 액션 없음 —
-  화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를 바꿔도 별도 상태
-  (`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더 담기지 않지만
-  아직 별도 피드백(토스트 등)은 없다(3B 미결).
+- **작품 추가/제거는 `CollectionSearchNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** —
+  `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·
+  다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로
+  교체한다(부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은
+  검색어를 바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이
+  차면 더 담기지 않지만 아직 별도 피드백(토스트 등)은 없다(3B 미결).
 - **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
-  `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `AddNovelViewModel`이 `hasNextSearchPage`
-  (서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
+  `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
+  `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
+- **"서재에서 추가"(`CollectionMyLibrarySelectView`, 로컬 push, Factory 미노출)** — `CollectionSearchNovelView`의
+  "서재에서 추가" 버튼이 push. 사용자의 서재를 `LoadMyLibraryUseCase`(필터 없음, `MyLibraryFilter()`
+  기본값)로 3열 그리드 조회하며 다중 선택 → "추가"로 확정한다. 데이터 로드는 정수 `page`가 아니라
+  `LibraryFeature.LibraryViewModel`과 동일한 **커서 + generation 카운터** 패턴(`LoadMyLibraryUseCase`가
+  커서 기반이라서). 선택 상태는 `CollectionSearchNovelView`가 자신의 `selectedNovels`(검색으로 이미
+  고른 것)를 `initialSelection`으로 시드해서 넘기므로, 검색으로 고른 것과 서재로 고른 것이 하나의
+  배열에서 자연스럽게 합쳐진다(확정 시 별도 병합 로직 불필요). 셀은 `WSSComponent.WSSLibraryGridCell`
+  (2026-08 승격, 원본은 `LibraryFeature.LibraryGridCell`) — 처음엔 `LibraryGridCell`이 Feature 로컬
+  `internal`이라 import 불가해 로컬 복제본(`CollectionMyLibraryGridCell`)을 새로 만들었으나, 두 화면의
+  유일한 차이가 표지 우상단 선택 서클(`icSelectNovelDefault`/`icSelectNovelSelected`, `WSSNovelSelectRow`와
+  동일 에셋)뿐임을 확인하고 `isSelected: Bool?`(nil=선택 UI 없음)로 흡수해 공용 컴포넌트로 승격했다 —
+  이 레포의 "두 번째 필요 시점에 승격" 관례(`WSSNovelSelectRow`/`WSSPrivateToggleRow`/`WSSNicknameField`
+  와 동일) 그대로다. 날짜 포맷도 로컬 복제(`CollectionLibraryDateFormatter`) 대신
+  `ReadingPeriod.displayText`(`WSSComponent/Sources/DomainPresentation/`)로 통합됐다 — 자세한 계약은
+  [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSLibraryGridCell` 항목이 정본.
 
 ## 화면 동작 계약
 
@@ -32,8 +49,9 @@
   — 처음엔 우상단 "대표" 배지만 탭 대상이었으나, 배지만으론 탭 영역이 좁다는 사용자 피드백으로 **셀
   전체**로 넓혔다(#199). 배지는 순수 표시용(대표 여부 뱃지)이라 더는 별도 `Button`이 아니다 — 커버
   이미지를 감싸는 `Button` 하나가 셀 전체 탭을 받는다(중첩 `Button` 금지 — `WSSComponent/CLAUDE.md`).
-  제거(삭제)는 이 화면 범위가 아니라 `AddNovelView`("작품 추가/수정" 화면)에서만 가능하다 — 그 화면의
-  작품 행을 다시 탭해 선택 해제하고 "완료"로 확정하면 이 그리드에서도 빠진다.
+  제거(삭제)는 이 화면 범위가 아니라 `CollectionSearchNovelView`("작품 추가/수정" 화면, 그 안의
+  "서재에서 추가"도 포함)에서만 가능하다 — 그 화면의 작품 행을 다시 탭해 선택 해제하고 "완료"/"추가"로
+  확정하면 이 그리드에서도 빠진다.
   대표를 한 번도 안 골라도 제출은 된다 — `effectiveRepresentativeNovelID`가 표시 순서 첫 작품으로
   대신한다(도메인 계약, `CollectionDomain/CLAUDE.md` 참고).
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
@@ -41,29 +59,54 @@
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.
 - "작품 추가" 타일 아이콘은 신규 에셋이 아니라 기존 `WSSImage.icBookRegister`를 재사용한다 — 그 SVG의
   내부 레이어명이 Figma 원본과 동일한 `mdi:book-plus-outline`이라 이미 같은 아이콘이 들어있었다.
+- ⚠️ **"서재에서 추가" 화면("추가" 버튼) 확정 후 어디로 돌아갈지는 아직 최종 결정이 아니다** — 지금은
+  `CreateCollectionView`까지 2단계 pop으로 구현해뒀지만, `CollectionSearchNovelView`(작품 검색 화면)로
+  1단계만 pop할지는 디자인팀에 문의해둔 상태로 **답변 대기 중**이다(사용자 확정, 2026-08-21). 답변이
+  오면 이 계약과 아래 "2단계 pop" 구현을 다시 확인할 것 — 지금 값을 정본으로 굳히지 말 것. 대기 항목은
+  [docs/TODO.md](../../../docs/TODO.md)에도 남겨뒀다. 자세한 구현은 아래 주의사항 "2단계 pop" 항목 참고.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- ⚠️ **`AddNovelViewModel`의 검색 결과 영역은 `searchedNovels`가 아니라 `hasSearched` 플래그로 가른다** —
-  `WSSSearchBar`의 `onSearch`는 제출(엔터/검색 버튼)에만 발화하고, 타이핑 자체는 `updateSearchText`로
-  매 글자마다 바로 반영된다. `searchedNovels`(또는 `searchText`) 유무만으로 "결과 없음" 뷰를 켜면,
-  검색을 실행하기도 전에(타이핑 도중) 또는 이전 검색 결과를 두고 다음 검색어를 입력하는 도중에 잘못된
-  뷰(결과없음/직전 결과)가 보인다(실제 발생 — 사용자 리포트: 타이핑 중엔 흰 배경이어야 함).
-  `updateSearchText`가 매번 `hasSearched = false`로 끄고, `searchNovels(_:)`가 응답을 **실제로 받은
-  뒤에만** `hasSearched = true`로 켠다 — `resultArea`는 `!hasSearched`면 무조건 빈 화면, 그 다음에야
-  `searchedNovels` 유무로 리스트/결과없음을 가른다. **`FeedFeature`의 `CreateFeedConnectNovelSheet`도
-  같은 검색 흐름(같은 `WSSNovelSelectRow` 기반)이라 동일 패턴으로 맞춰졌다** — `hasSearched`가 View의
-  로컬 `@State`가 아니라 `CreateFeedViewModel.state.hasSearchedNovel`로 VM 소유로 옮겨졌고,
-  `updateConnectedNovelSearchText`가 매번 껐다가 검색 응답을 받아야만 켜진다(자세한 내용은
-  `FeedFeature/CLAUDE.md` 참고). **새 검색+무한스크롤 화면을 또 만들 땐 이 두 구현을 정본으로 삼을 것**
-  — `searchTask`(또는 동등한 진행 중 Task 프로퍼티)를 완료 시 `nil`로 되돌리는 걸 빠뜨리면
-  `loadMore()`류 가드가 첫 검색 이후 영원히 막히는 함정도 공유하니 함께 챙길 것(`AddNovelViewModel`도
-  한 번 이 버그를 실제로 냈다가 고쳤다).
+- ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 자식의 `dismiss()`와 부모의
+  `dismiss()`를 같은 프레임에서 함께 부르면 부모가 pop되지 않는다(실측)** — `.navigationDestination(isPresented:)`가
+  계층적 Bool이라 이론상 "부모를 dismiss()하면 그 위에 얹힌 자식도 함께 사라진다"로 보이지만, 실제로
+  `CollectionMyLibrarySelectView`가 `onConfirm` 클로저 안에서 `CollectionSearchNovelView`의 `dismiss()`를
+  호출하고 곧바로 자기 자신의 `.onChange(of: isConfirmed)`에서 자기 자신의 `dismiss()`도 호출하면(같은
+  동기 프레임에서 dismiss 두 번) **자식만 pop되고 부모는 스택에 그대로 남는다**(스크린샷으로 확인 —
+  "추가" 탭 후 `CreateCollectionView`가 아니라 `CollectionSearchNovelView`로 돌아옴, "추가한 작품 0개").
+  해법(`CollectionSearchNovelView.swift` 참고): 자식의 `onConfirm`에서 부모의 `dismiss()`를 바로 부르지
+  않고 `isPendingDismissAfterMyLibrarySelect = true`만 세운 뒤, `.onChange(of: isMyLibrarySelectPresented)`로
+  **자식이 스스로 pop을 끝내 그 Bool이 자연스럽게 false로 돌아오는 걸 기다렸다가** 그제서야 부모가
+  `dismiss()`한다(계단식 2단계 pop). 앞으로 다단계 pop이 필요한 화면을 또 만들 때 "부모 dismiss() 한
+  번으로 계층째 사라진다"를 가정하지 말고 이 패턴을 정본으로 삼을 것.
+- ⚠️ **`WSSLibraryGridCell`은 탭 동작을 갖지 않는 순수 표시 뷰라, 이 화면처럼 `.onTapGesture`로 감싸
+  탭 영역을 만들면 접근성 트리에 안 잡혀 VoiceOver는 물론 UI 자동화(`snapshot_ui`/`tap`)로도 탭할 수
+  없다**(`WSSComponent/CLAUDE.md` 공통 주의) — `.accessibilityLabel(novel.title)` + `.accessibilityAddTraits(.isButton)`을
+  `CollectionMyLibrarySelectView`의 셀 래퍼에 걸어야 자동화 탭 대상으로 잡힌다(2단계 pop 실측 검증에
+  실제로 필요했다). 이 컴포넌트를 새 화면에서 탭 가능하게 감쌀 때 이 트레잇을 빠뜨리지 말 것 — 특히
+  다중선택 화면처럼 탭이 핵심 동작인 셀일수록 VoiceOver 접근성 공백이 치명적이다.
+- ⚠️ **`CollectionSearchNovelViewModel`(구 `AddNovelViewModel`)의 검색 결과 영역은 `searchedNovels`가
+  아니라 `hasSearched` 플래그로 가른다** — `WSSSearchBar`의 `onSearch`는 제출(엔터/검색 버튼)에만
+  발화하고, 타이핑 자체는 `updateSearchText`로 매 글자마다 바로 반영된다. `searchedNovels`(또는
+  `searchText`) 유무만으로 "결과 없음" 뷰를 켜면, 검색을 실행하기도 전에(타이핑 도중) 또는 이전 검색
+  결과를 두고 다음 검색어를 입력하는 도중에 잘못된 뷰(결과없음/직전 결과)가 보인다(실제 발생 — 사용자
+  리포트: 타이핑 중엔 흰 배경이어야 함). `updateSearchText`가 매번 `hasSearched = false`로 끄고,
+  `searchNovels(_:)`가 응답을 **실제로 받은 뒤에만** `hasSearched = true`로 켠다 — `resultArea`는
+  `!hasSearched`면 무조건 빈 화면, 그 다음에야 `searchedNovels` 유무로 리스트/결과없음을 가른다.
+  **`FeedFeature`의 `CreateFeedConnectNovelSheet`도 같은 검색 흐름(같은 `WSSNovelSelectRow` 기반)이라
+  동일 패턴으로 맞춰졌다** — `hasSearched`가 View의 로컬 `@State`가 아니라
+  `CreateFeedViewModel.state.hasSearchedNovel`로 VM 소유로 옮겨졌고, `updateConnectedNovelSearchText`가
+  매번 껐다가 검색 응답을 받아야만 켜진다(자세한 내용은 `FeedFeature/CLAUDE.md` 참고). **새 검색+
+  무한스크롤 화면을 또 만들 땐 이 두 구현을 정본으로 삼을 것** — `searchTask`(또는 동등한 진행 중 Task
+  프로퍼티)를 완료 시 `nil`로 되돌리는 걸 빠뜨리면 `loadMore()`류 가드가 첫 검색 이후 영원히 막히는
+  함정도 공유하니 함께 챙길 것(`CollectionSearchNovelViewModel`도 한 번 이 버그를 실제로 냈다가 고쳤다,
+  `CollectionMyLibrarySelectViewModel`은 처음부터 커서+generation 패턴을 써서 이 특정 함정은 없다).
 - **`CreateCollectionViewModel`에 `#if DEBUG` 전용 `init(previewDraft:previewNovelDisplayInfo:createCollectionUseCase:)`가 있다** —
-  `AddNovelView`가 생기기 전, 작품 리스트 그리드(대표 배지 포함)를 볼 유일한 경로가 Xcode Preview뿐이던
-  시절 만든 시각 확인용 우회로다. 지금은 Demo 앱에서도 "작품 추가" → 검색·선택 → "완료"로 실제 채워볼
-  수 있지만, 이 init은 여전히 **Preview 전용**으로 남겨둔다(다른 셀 배치를 즉시 볼 수 있어 유용) —
-  **Factory·프로덕션 코드는 쓰지 않는다**. `CreateCollectionView.swift`의 `#Preview("작품 포함")`에서만 사용.
+  `CollectionSearchNovelView`가 생기기 전, 작품 리스트 그리드(대표 배지 포함)를 볼 유일한 경로가 Xcode
+  Preview뿐이던 시절 만든 시각 확인용 우회로다. 지금은 Demo 앱에서도 "작품 추가" → 검색·선택/"서재에서
+  추가" → "완료"/"추가"로 실제 채워볼 수 있지만, 이 init은 여전히 **Preview 전용**으로 남겨둔다(다른 셀
+  배치를 즉시 볼 수 있어 유용) — **Factory·프로덕션 코드는 쓰지 않는다**. `CreateCollectionView.swift`의
+  `#Preview("작품 포함")`에서만 사용.
 - ⚠️ **`addNovelTile`과 `novelGridCell`은 같은 그리드 행을 채우므로 커버 박스 사이즈 산정 방식(`novelCoverAspectRatio`)과
   "제목 줄" 유무를 반드시 맞춰야 한다** — 처음엔 `addNovelTile`만 고정 `height: 156`을 썼는데, 옆
   `novelGridCell`은 커버(가변 높이) + 제목 텍스트(최대 2줄)로 총 높이가 더 길어 행이 어긋나 보였다

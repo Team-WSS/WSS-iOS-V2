@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import CollectionDomain
 import SearchDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 
@@ -36,6 +37,9 @@ struct CreateCollectionView: View {
     /// "작품 추가" 화면이 검색에 쓸 UseCase — `FeedFeature`의 연결 작품 검색과 같은 이유로 이 모듈이
     /// `SearchDomain`을 안다.
     private let searchNovelUseCase: SearchNovelUseCase
+    /// "작품 추가" 화면의 "서재에서 추가"가 서재 조회에 쓸 UseCase — 서재 Domain 코드는 별도 모듈이
+    /// 아니라 `NovelDomain`에 있다(`LibraryFeature`와 같은 이유, `LibraryFeature/CLAUDE.md` 참고).
+    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
     /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행. "작품 추가" 화면도 같은
     /// 콜백을 공유한다(둘 다 결국 이 화면의 하위 화면).
     private let onAuthenticationRequired: () -> Void
@@ -43,12 +47,14 @@ struct CreateCollectionView: View {
     init(
         viewModel: CreateCollectionViewModel,
         searchNovelUseCase: SearchNovelUseCase,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self._nameFieldText = State(initialValue: viewModel.state.draft.name)
         self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
         self.searchNovelUseCase = searchNovelUseCase
+        self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -75,11 +81,12 @@ struct CreateCollectionView: View {
                 if needsAuth { onAuthenticationRequired() }
             }
             .navigationDestination(isPresented: $isAddNovelPresented) {
-                AddNovelView(
-                    viewModel: AddNovelViewModel(
+                CollectionSearchNovelView(
+                    viewModel: CollectionSearchNovelViewModel(
                         initialSelection: viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] },
                         searchNovelUseCase: searchNovelUseCase
                     ),
+                    loadMyLibraryUseCase: loadMyLibraryUseCase,
                     onConfirm: { novels in viewModel.handle(.setNovels(novels)) },
                     onAuthenticationRequired: onAuthenticationRequired
                 )
@@ -426,6 +433,7 @@ private extension CreateCollectionView {
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
             searchNovelUseCase: PreviewSearchNovelUseCase(),
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -452,6 +460,7 @@ private extension CreateCollectionView {
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
             searchNovelUseCase: PreviewSearchNovelUseCase(),
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -463,6 +472,12 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
     }
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         (Paginated(items: [], hasNext: false), 0)
+    }
+}
+
+private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
     }
 }
 

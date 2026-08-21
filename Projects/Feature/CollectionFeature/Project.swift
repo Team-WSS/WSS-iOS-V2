@@ -18,6 +18,9 @@ let project = Project.createFeatureModule(
         .module(.domain(.collection)),
         // "작품 추가" 화면(SearchNovelUseCase)용 — FeedFeature의 연결 작품 검색과 같은 이유.
         .module(.domain(.search)),
+        // "서재에서 추가" 화면(LoadMyLibraryUseCase·LibraryNovel·MyLibraryFilter)용 — 서재 Domain
+        // 코드는 별도 모듈이 아니라 NovelDomain에 있다(LibraryFeature와 같은 이유).
+        .module(.domain(.novel)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -27,6 +30,7 @@ let project = Project.createFeatureModule(
     demoDependencies: [
         .module(.data(.collection)),
         .module(.data(.search)),
+        .module(.data(.novel)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]

@@ -1,5 +1,5 @@
 //
-//  AddNovelViewModel.swift
+//  CollectionSearchNovelViewModel.swift
 //  CollectionFeature
 //
 //  Created by Guryss on 8/20/26.
@@ -19,7 +19,7 @@ import Logger
 /// (`CollectionFeature/CLAUDE.md` 참고).
 @MainActor
 @Observable
-final class AddNovelViewModel {
+final class CollectionSearchNovelViewModel {
 
     // MARK: - State
 
@@ -115,7 +115,7 @@ final class AddNovelViewModel {
 
 // MARK: - Action Handling
 
-private extension AddNovelViewModel {
+private extension CollectionSearchNovelViewModel {
 
     func search(_ query: String) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -164,7 +164,7 @@ private extension AddNovelViewModel {
 
 // MARK: - UseCase Handling
 
-private extension AddNovelViewModel {
+private extension CollectionSearchNovelViewModel {
 
     func searchNovels(_ query: String) async {
         state.isSearching = true
@@ -205,18 +205,18 @@ private extension AddNovelViewModel {
             guard !Task.isCancelled else { return }
             // 다음 페이지 실패는 토스트로 전체 검색을 방해하지 않는다(이미 보이는 결과는 그대로 유지) —
             // `SearchFeature.NormalSearchViewModel.loadMoreSearchResultPage`와 동일하게 로깅만 한다.
-            logger?.error("AddNovel 다음 페이지 검색 실패: \(String(describing: error))")
+            logger?.error("CollectionSearchNovel 다음 페이지 검색 실패: \(String(describing: error))")
         }
     }
 }
 
 // MARK: - Error Mapping
 
-private extension AddNovelViewModel {
+private extension CollectionSearchNovelViewModel {
 
     func presentError(_ error: Error) {
         if routeToLoginIfAuthenticationRequired(error) { return }
-        logger?.error("AddNovel 검색 실패: \(String(describing: error))")
+        logger?.error("CollectionSearchNovel 검색 실패: \(String(describing: error))")
         state.presentedError = .unknown
     }
 
