@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import CollectionDomain
+import SearchDomain
 import DesignSystem
 import WSSComponent
 
@@ -22,22 +23,27 @@ struct CreateCollectionView: View {
     /// VM 상태에 TextField를 직접 물리지 않는다.
     @State private var nameFieldText: String
     @State private var descriptionFieldText: String
+    /// "작품 추가" 화면 push 여부 — `ReadingPeriodSheet`류 로컬 값 선택기와 같은 위상이라(다만 sheet가
+    /// 아니라 push) 이 화면이 직접 소유한다. App/Factory는 몰라도 된다.
+    @State private var isAddNovelPresented = false
     @Environment(\.dismiss) private var dismiss
 
-    /// "작품 추가"/"작품 수정" 타일 탭 콜백 — 작품 검색 화면은 이번 범위 밖(#199 후속)이라 placeholder.
-    private let onAddNovelTapped: () -> Void
-    /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행.
+    /// "작품 추가" 화면이 검색에 쓸 UseCase — `FeedFeature`의 연결 작품 검색과 같은 이유로 이 모듈이
+    /// `SearchDomain`을 안다.
+    private let searchNovelUseCase: SearchNovelUseCase
+    /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행. "작품 추가" 화면도 같은
+    /// 콜백을 공유한다(둘 다 결국 이 화면의 하위 화면).
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: CreateCollectionViewModel,
-        onAddNovelTapped: @escaping () -> Void,
+        searchNovelUseCase: SearchNovelUseCase,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self._nameFieldText = State(initialValue: viewModel.state.draft.name)
         self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
-        self.onAddNovelTapped = onAddNovelTapped
+        self.searchNovelUseCase = searchNovelUseCase
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -62,6 +68,16 @@ struct CreateCollectionView: View {
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
+            }
+            .navigationDestination(isPresented: $isAddNovelPresented) {
+                AddNovelView(
+                    viewModel: AddNovelViewModel(
+                        initialSelection: viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] },
+                        searchNovelUseCase: searchNovelUseCase
+                    ),
+                    onConfirm: { novels in viewModel.handle(.setNovels(novels)) },
+                    onAuthenticationRequired: onAuthenticationRequired
+                )
             }
     }
 
@@ -149,7 +165,7 @@ private extension CreateCollectionView {
                     .foregroundStyle(Color.wssPrimary100)
             }
             .applyWSSFont(.title2)
-                
+
             Spacer().frame(height: 10)
 
             HStack(spacing: 0) {
@@ -260,7 +276,9 @@ private extension CreateCollectionView {
     /// 어긋나 보인다(#199 리뷰 피드백). 커버는 `novelGridCell`과 동일하게 `aspectRatio`로 폭에 맞춰
     /// 늘어나게 하고, 제목 자리는 투명 텍스트로 같은 폭만큼 예약한다.
     var addNovelTile: some View {
-        Button(action: onAddNovelTapped) {
+        Button {
+            isAddNovelPresented = true
+        } label: {
             VStack(alignment: .leading, spacing: 6) {
                 // ⚠️ `.aspectRatio`를 VStack에 직접 걸면 VStack이 제 내용물(텍스트+아이콘, ~41pt)의
                 // 자연 크기로 쪼그라든다 — 그 결과로 채워지지 않는다(실측: 그리드 칸을 안 채우고
@@ -330,6 +348,7 @@ private extension CreateCollectionView {
                         .padding(8)
                 }
             }
+            .buttonStyle(.plain)
 
             Text(novel.title)
                 .applyWSSFont(.body4)
@@ -378,7 +397,7 @@ private extension CreateCollectionView {
             viewModel: CreateCollectionViewModel(
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
-            onAddNovelTapped: { print("작품 추가 진입") },
+            searchNovelUseCase: PreviewSearchNovelUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -400,9 +419,18 @@ private extension CreateCollectionView {
                 previewNovelDisplayInfo: Dictionary(uniqueKeysWithValues: novels.map { ($0.id, $0) }),
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
-            onAddNovelTapped: { print("작품 추가 진입") },
+            searchNovelUseCase: PreviewSearchNovelUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
+    }
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
+    }
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
     }
 }
 

@@ -11,8 +11,10 @@ import SwiftUI
 import CollectionFeature
 import BaseDomain
 import CollectionDomain
+import SearchDomain
 import BaseData
 import CollectionData
+import SearchData
 import Logger
 import Networking
 import DesignSystem
@@ -83,8 +85,8 @@ private struct DemoRootView: View {
         case .mock:
             CollectionFeatureFactory.makeCreateCollectionView(
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
+                searchNovelUseCase: DemoSearchNovelUseCase(),
                 logger: consoleLogger,
-                onAddNovelTapped: handleAddNovelTapped,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -106,17 +108,16 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
+        let searchRepository = SearchDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
+        )
         return CollectionFeatureFactory.makeCreateCollectionView(
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             logger: consoleLogger,
-            onAddNovelTapped: handleAddNovelTapped,
             onAuthenticationRequired: handleAuthenticationRequired
         )
-    }
-
-    /// "작품 추가"/"작품 수정" 타일 탭 콜백. 작품 검색 화면은 후속 이슈 — Demo는 로그만.
-    private func handleAddNovelTapped() {
-        consoleLogger.info("작품 추가 화면 진입 요청(미구현)")
     }
 
     /// 인증 만료 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
@@ -132,5 +133,29 @@ private struct DemoCreateCollectionUseCase: CreateCollectionUseCase {
     func execute(_ draft: CollectionDraft) async throws(RepositoryError) -> CollectionID {
         try? await Task.sleep(nanoseconds: 500_000_000)
         return CollectionID(1)
+    }
+}
+
+private struct DemoSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let novels = (1...5).map {
+            Novel(
+                id: NovelID($0),
+                thumbnailImage: nil,
+                title: "\(query) 검색 결과 작품 \($0)",
+                authors: ["작가 \($0)"],
+                genres: [],
+                interestCount: 0,
+                rating: 0,
+                ratingCount: 0,
+                isInterested: nil
+            )
+        }
+        return (Paginated(items: novels, hasNext: false), novels.count)
+    }
+
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
     }
 }

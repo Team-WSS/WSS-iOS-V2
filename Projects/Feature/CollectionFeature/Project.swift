@@ -16,6 +16,8 @@ let project = Project.createFeatureModule(
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.collection)),
+        // "작품 추가" 화면(SearchNovelUseCase)용 — FeedFeature의 연결 작품 검색과 같은 이유.
+        .module(.domain(.search)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -24,6 +26,7 @@ let project = Project.createFeatureModule(
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
         .module(.data(.collection)),
+        .module(.data(.search)),
         .module(.data(.base)),
         .module(.core(.networking))
     ]

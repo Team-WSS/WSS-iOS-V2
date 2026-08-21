@@ -49,6 +49,7 @@ final class CreateCollectionViewModel {
         case updateDescription(String)
         case togglePrivate
         case selectRepresentativeNovel(NovelID)
+        case setNovels([CollectionNovel])
         case submit
         case requestClose
         case confirmStop
@@ -117,6 +118,8 @@ final class CreateCollectionViewModel {
             state.draft.togglePrivate()
         case .selectRepresentativeNovel(let id):
             selectRepresentativeNovel(id)
+        case .setNovels(let novels):
+            setNovels(novels)
         case .submit:
             submit()
         case .requestClose:
@@ -161,6 +164,17 @@ private extension CreateCollectionViewModel {
             try state.draft.setRepresentativeNovel(id)
         } catch {
             logger?.error("CreateCollection 대표 작품 지정 실패(도달하면 안 되는 경로): \(String(describing: error))")
+        }
+    }
+
+    /// "작품 추가" 화면이 돌려준 편집 결과 전체 반영. 그 화면이 이미 100개로 막아두므로 여기서 throw가
+    /// 발생하면 도달하면 안 되는 경로 — 로그만 남긴다.
+    func setNovels(_ novels: [CollectionNovel]) {
+        do {
+            try state.draft.setNovels(novels.map(\.id))
+            state.novelDisplayInfo = Dictionary(uniqueKeysWithValues: novels.map { ($0.id, $0) })
+        } catch {
+            logger?.error("CreateCollection 작품 리스트 갱신 실패(도달하면 안 되는 경로): \(String(describing: error))")
         }
     }
 

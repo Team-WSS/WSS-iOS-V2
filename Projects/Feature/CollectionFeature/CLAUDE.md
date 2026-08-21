@@ -4,19 +4,21 @@
 컬렉션(사용자가 작품을 묶어 만드는 목록) 화면. `CollectionDomain`/`CollectionData`(#191)가 먼저 만들어져
 있었고, 이 모듈은 그 위에 화면을 얹는 첫 착수(#199, 컬렉션 생성 화면부터).
 
-- 식별자: `ModuleType.feature(.collection)` / 의존: `CollectionDomain`, `BaseDomain`, `DesignSystem`,
-  `WSSComponent`, `Logger`
-- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:logger:onAddNovelTapped:onAuthenticationRequired:)`
+- 식별자: `ModuleType.feature(.collection)` / 의존: `CollectionDomain`, `SearchDomain`(작품 검색 —
+  "작품 추가" 화면), `BaseDomain`, `DesignSystem`, `WSSComponent`, `Logger`
+- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:logger:onAuthenticationRequired:)`
   (모듈에 화면이 더 늘어날 예정이라 `makeView`가 아니라 화면명을 붙인 이름)
 
 ## 핵심 시나리오
 
 - **컬렉션 생성만** — 수정(edit)은 이번 범위 밖. `CreateCollectionViewModel`은 항상 빈 `CollectionDraft()`로
   시작하고(로드 없음), 완료 시 `CreateCollectionUseCase`로 제출 후 자기완결 dismiss.
-- **작품은 이 화면에서 추가/제거할 수 없다** — "작품 추가"/"작품 수정" 타일은 `onAddNovelTapped` 콜백만
-  발화한다(실제 작품 검색 화면은 후속 이슈). `draft.novelIDs`를 채우는 유일한 경로가 아직 없어, 실제
-  앱에서는 작품 리스트 그리드가 항상 빈 상태로만 보인다 — 채워진 그리드 UI 자체는 구현·Preview("작품
-  포함")로 검증돼 있다.
+- **작품 추가/제거는 `AddNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** — `CreateCollectionView`의
+  "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·다중선택한 뒤 "완료"를 누르면
+  선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로 교체한다(부분 추가/제거 액션 없음 —
+  화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를 바꿔도 별도 상태
+  (`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더 담기지 않지만
+  아직 별도 피드백(토스트 등)은 없다(3B 미결).
 
 ## 화면 동작 계약
 
@@ -27,7 +29,8 @@
   — 처음엔 우상단 "대표" 배지만 탭 대상이었으나, 배지만으론 탭 영역이 좁다는 사용자 피드백으로 **셀
   전체**로 넓혔다(#199). 배지는 순수 표시용(대표 여부 뱃지)이라 더는 별도 `Button`이 아니다 — 커버
   이미지를 감싸는 `Button` 하나가 셀 전체 탭을 받는다(중첩 `Button` 금지 — `WSSComponent/CLAUDE.md`).
-  제거(삭제)는 이 화면 범위가 아니라 후속 "작품 추가/수정" 화면에서만 가능할 예정.
+  제거(삭제)는 이 화면 범위가 아니라 `AddNovelView`("작품 추가/수정" 화면)에서만 가능하다 — 그 화면의
+  작품 행을 다시 탭해 선택 해제하고 "완료"로 확정하면 이 그리드에서도 빠진다.
   대표를 한 번도 안 골라도 제출은 된다 — `effectiveRepresentativeNovelID`가 표시 순서 첫 작품으로
   대신한다(도메인 계약, `CollectionDomain/CLAUDE.md` 참고).
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
@@ -39,9 +42,10 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **`CreateCollectionViewModel`에 `#if DEBUG` 전용 `init(previewDraft:previewNovelDisplayInfo:createCollectionUseCase:)`가 있다** —
-  작품 리스트 그리드(대표 배지 포함)를 렌더링해 볼 유일한 경로가 Xcode Preview뿐이라(작품 추가 화면이
-  없어 실제 앱·Demo 둘 다 도달 불가) 만든 시각 확인용 우회로다. **Factory·프로덕션 코드는 이 init을
-  쓰지 않는다** — `CreateCollectionView.swift`의 `#Preview("작품 포함")`에서만 사용.
+  `AddNovelView`가 생기기 전, 작품 리스트 그리드(대표 배지 포함)를 볼 유일한 경로가 Xcode Preview뿐이던
+  시절 만든 시각 확인용 우회로다. 지금은 Demo 앱에서도 "작품 추가" → 검색·선택 → "완료"로 실제 채워볼
+  수 있지만, 이 init은 여전히 **Preview 전용**으로 남겨둔다(다른 셀 배치를 즉시 볼 수 있어 유용) —
+  **Factory·프로덕션 코드는 쓰지 않는다**. `CreateCollectionView.swift`의 `#Preview("작품 포함")`에서만 사용.
 - ⚠️ **`addNovelTile`과 `novelGridCell`은 같은 그리드 행을 채우므로 커버 박스 사이즈 산정 방식(`novelCoverAspectRatio`)과
   "제목 줄" 유무를 반드시 맞춰야 한다** — 처음엔 `addNovelTile`만 고정 `height: 156`을 썼는데, 옆
   `novelGridCell`은 커버(가변 높이) + 제목 텍스트(최대 2줄)로 총 높이가 더 길어 행이 어긋나 보였다
