@@ -144,6 +144,14 @@ private extension CreateCollectionView {
 
 // MARK: - Sections
 
+private enum Metric {
+    /// 작품 그리드 제목 영역의 고정 높이(`.body4` 2줄 기준) — `WSSFontViewModifier`의 line-spacing/padding
+    /// 보정 덕에 텍스트 블록 총 높이는 항상 "줄 수 × (fontSize × lineHeight)"와 같다: 2 × (13 × 1.45) = 37.7
+    /// → 반올림 38. `novelGridCell`/`addNovelTile` 둘 다 이 상수로 제목 줄 수와 무관하게 높이를 맞춘다
+    /// (`WSSNovelGridCell`의 `Metric.infoHeight`와 같은 패턴, `WSSComponent/CLAUDE.md` 참고).
+    static let novelTitleHeight: CGFloat = 38
+}
+
 private extension CreateCollectionView {
 
     var privateSection: some View {
@@ -274,7 +282,7 @@ private extension CreateCollectionView {
     /// 다른 작품 셀(`novelGridCell`)과 같은 골격(커버 박스 + 제목 줄 자리)을 맞춘다 — 이 타일만 제목이
     /// 없다고 커버 높이를 고정값(156)으로 박아두면, 제목이 있는 이웃 셀과 총 높이가 달라져 그리드 행이
     /// 어긋나 보인다(#199 리뷰 피드백). 커버는 `novelGridCell`과 동일하게 `aspectRatio`로 폭에 맞춰
-    /// 늘어나게 하고, 제목 자리는 투명 텍스트로 같은 폭만큼 예약한다.
+    /// 늘어나게 하고, 제목 자리는 `Metric.novelTitleHeight`만큼 고정 높이로 예약한다.
     var addNovelTile: some View {
         Button {
             isAddNovelPresented = true
@@ -304,10 +312,9 @@ private extension CreateCollectionView {
                     .background(Color.wssGray50)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                // 실제 텍스트 없이 자리만 — novelGridCell 제목 줄과 폰트를 맞춰야 높이가 맞는다.
-                Text(" ")
-                    .applyWSSFont(.body4)
-                    .opacity(0)
+                // novelGridCell 제목 영역과 같은 고정 높이만 예약 — 제목이 없는 타일이라 폰트를 맞출 필요는 없다.
+                Spacer()
+                    .frame(height: Metric.novelTitleHeight)
             }
         }
         // ⚠️ .buttonStyle(.plain)을 걸지 않는다 — 아이콘·텍스트만 있는 버튼에 걸면 기본 눌림 피드백까지
@@ -354,6 +361,7 @@ private extension CreateCollectionView {
                 .applyWSSFont(.body4)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(2)
+                .frame(height: Metric.novelTitleHeight, alignment: .top)
         }
     }
 
@@ -404,8 +412,12 @@ private extension CreateCollectionView {
 }
 
 #Preview("작품 포함") {
-    let novels = (1...5).map {
-        CollectionNovel(id: NovelID($0), title: "샘플 작품 제목 \($0) 두 줄까지", author: "작가 \($0)", thumbnailImage: nil)
+    // 제목 길이를 일부러 섞는다(1줄로 끝나는 제목 + 2줄까지 차는 제목) — 그리드 셀 높이가 제목 줄
+    // 수와 무관하게 맞는지(Metric.novelTitleHeight) 이 프리뷰만으로 육안 확인할 수 있어야 한다.
+    let titles = ["짧은 제목", "샘플 작품 제목 두 줄까지 길게 늘어지는 경우", "또 다른 짧은 제목",
+                  "이것도 두 줄로 넘어갈 만큼 충분히 긴 작품 제목입니다", "제목"]
+    let novels = titles.enumerated().map { index, title in
+        CollectionNovel(id: NovelID(index + 1), title: title, author: "작가 \(index + 1)", thumbnailImage: nil)
     }
     let draft = CollectionDraft(
         name: "인생 회귀물 모음집",

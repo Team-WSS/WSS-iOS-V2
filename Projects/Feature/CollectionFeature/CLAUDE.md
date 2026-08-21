@@ -49,8 +49,14 @@
 - ⚠️ **`addNovelTile`과 `novelGridCell`은 같은 그리드 행을 채우므로 커버 박스 사이즈 산정 방식(`novelCoverAspectRatio`)과
   "제목 줄" 유무를 반드시 맞춰야 한다** — 처음엔 `addNovelTile`만 고정 `height: 156`을 썼는데, 옆
   `novelGridCell`은 커버(가변 높이) + 제목 텍스트(최대 2줄)로 총 높이가 더 길어 행이 어긋나 보였다
-  (#199 리뷰 피드백). 지금은 둘 다 같은 `aspectRatio`로 커버를 그리고, `addNovelTile`엔 실제 텍스트
-  없는 투명 `Text(" ")`(같은 폰트)로 제목 줄 자리만 예약한다. 셀 종류를 늘릴 땐 이 짝을 깨지 말 것.
+  (#199 리뷰 피드백). 지금은 둘 다 같은 `aspectRatio`로 커버를 그리고, 제목 자리는 `Metric.novelTitleHeight`
+  (고정 38, `.body4` 2줄 기준)로 예약한다. 셀 종류를 늘릴 땐 이 짝을 깨지 말 것.
+  - ⚠️ **제목 자체도 셀마다 1줄/2줄로 갈리면 `novelGridCell`끼리도 행이 어긋난다** — 처음엔 제목
+    `Text`가 `lineLimit(2)`만 걸린 자연 높이였는데, 짧은 제목(1줄)과 긴 제목(2줄)이 같은 그리드에
+    섞이면 셀마다 총 높이가 달라졌다. `WSSNovelGridCell`의 `Metric.infoHeight`와 같은 패턴으로,
+    제목 `Text`에 `.frame(height: Metric.novelTitleHeight, alignment: .top)`을 직접 걸어 줄 수와
+    무관하게 위에서부터 채우고 남는 공간은 비워둔다. `addNovelTile`은 제목이 아예 없어 폰트를 맞춘
+    투명 텍스트 대신 같은 높이의 빈 `Spacer()`면 충분하다.
   - ⚠️ **`.aspectRatio(_, contentMode:)`를 `VStack`(텍스트·아이콘만 있는, `Spacer` 없는) 같은 "내용물이
     작은 뷰"에 직접 걸면 그 뷰가 그리드 칸을 안 채우고 내용물의 자연 크기(이 경우 ~41pt)로 쪼그라든다**
     (실측 — `addNovelTile`을 처음 이 방식으로 고쳤다가 타일이 왼쪽 위에 작게 뜨는 걸 발견, #199). `.frame(maxWidth: .infinity)`를
