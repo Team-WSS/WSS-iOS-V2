@@ -19,6 +19,9 @@
   화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를 바꿔도 별도 상태
   (`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더 담기지 않지만
   아직 별도 피드백(토스트 등)은 없다(3B 미결).
+- **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
+  `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `AddNovelViewModel`이 `hasNextSearchPage`
+  (서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
 
 ## 화면 동작 계약
 

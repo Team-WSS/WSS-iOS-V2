@@ -176,12 +176,35 @@ private extension AddNovelView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.state.searchedNovels, id: \.id) { novel in
                     novelRow(novel)
+                        // 무한스크롤 — 마지막 행이 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
+                        // `LazyVStack`이 아니면 이 onAppear가 전체 행에 한꺼번에 발동하니 반드시 짝지어 유지할 것
+                        // (`SearchFeature/CLAUDE.md` 참고).
+                        .onAppear {
+                            if novel.id == viewModel.state.searchedNovels.last?.id {
+                                viewModel.handle(.loadMore)
+                            }
+                        }
+                }
+
+                if viewModel.state.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                 }
             }
             .padding(.horizontal, 16)
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.immediately)
+        // 배경 탭으로 키보드를 내리는 제스처(`content`)는 `ScrollView` 내부의 빈 공간까지는 안 먹는다 —
+        // `ScrollView`가 그 터치를 자기 것으로 가져가버린다(`SearchFeature/CLAUDE.md`의 자동완성 항목과
+        // 동일 함정). 그래서 이 스크롤뷰 자신에도 같은 제스처를 직접 건다 — 행 위를 탭하면 `novelRow`의
+        // `onTapGesture`(토글)가 먼저 소비하므로 서로 충돌하지 않는다.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchBarFocused = false
+        }
     }
 
     /// 행 전체가 탭 영역이다(`WSSNovelSelectRow`와 같은 이유 — 이 행의 유일한 액션이라 서브 액션과

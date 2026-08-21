@@ -137,14 +137,22 @@ private struct DemoCreateCollectionUseCase: CreateCollectionUseCase {
 }
 
 private struct DemoSearchNovelUseCase: SearchNovelUseCase {
+    /// Mock에서도 무한스크롤을 시연할 수 있도록 3페이지(0~2)까지는 채워서 반환하고 그 뒤로는 hasNext를
+    /// 끈다(`SearchFeatureDemoApp.DemoSearchNovelUseCase`와 동일 관례).
+    private static let demoPageCount = 3
+
     func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
-        let novels = (1...5).map {
-            Novel(
-                id: NovelID($0),
+        guard page < Self.demoPageCount else {
+            return (Paginated(items: [], hasNext: false), 5 * Self.demoPageCount)
+        }
+        let novels = (1...5).map { number -> Novel in
+            let sequence = page * 5 + number
+            return Novel(
+                id: NovelID(sequence),
                 thumbnailImage: nil,
-                title: "\(query) 검색 결과 작품 \($0)",
-                authors: ["작가 \($0)"],
+                title: "\(query) 검색 결과 작품 \(sequence)",
+                authors: ["작가 \(sequence)"],
                 genres: [],
                 interestCount: 0,
                 rating: 0,
@@ -152,7 +160,7 @@ private struct DemoSearchNovelUseCase: SearchNovelUseCase {
                 isInterested: nil
             )
         }
-        return (Paginated(items: novels, hasNext: false), novels.count)
+        return (Paginated(items: novels, hasNext: page < Self.demoPageCount - 1), 5 * Self.demoPageCount)
     }
 
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
