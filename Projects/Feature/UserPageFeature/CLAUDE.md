@@ -43,9 +43,14 @@
   `ProgressView()`가 멈추지 않고 계속 돈다**(죽은 코드라 아무도 이 버그를 못 봤다 — 되살리며 실측으로
   발견) → `WSSNovelCoverImage(url:)`로 교체해 고쳤다(WSS 빈 표지 폴백으로 대체됨, `WSSComponent/CLAUDE.md`
   정본). 이 화면의 다른 표지 자리에서 raw `AsyncImage`를 새로 쓰지 말 것.
-  - ⚠️ **미리보기 3개의 가로 간격은 Figma가 `justify-between`(양끝 정렬)인데 정확한 수치를 확인 못
-    했다** — 각 항목을 `.frame(maxWidth: .infinity, alignment: .leading)`인 동일폭 슬롯에 넣어
-    흉내냈다. 디자인 재확인 시 이 근사치를 우선 의심할 것.
+  - **미리보기 3개 행의 항목 사이 간격은 고정 30, 묶음 전체는 화면 가운데 정렬**한다(사용자 확정,
+    2026-08-21) — 좌우 여백을 얼마로 맞출지 신경 쓰는 대신 `HStack`(내용물 크기만큼만 차지)을
+    `.frame(maxWidth: .infinity)`(기본 정렬 `.center`)로 감싸 가운데로 밀어낸다. 헤더 행의 좌측 정렬
+    20pt 패딩과는 별개 레이아웃이다. 화면 폭에 딱 맞춰 늘어나게 만드는 시도를 두 번(동일폭 슬롯
+    leading 정렬 → `GeometryReader`로 폭을 재 간격 역산) 거쳤다가 전부 되돌렸다 — `GeometryReader`
+    방식은 폭 측정에 한 프레임이 걸려 **처음 그려질 때 항목이 몰려있다가 다음 프레임에 벌어지는 게
+    눈에 띄었다**(실사용자 리포트). 폭 기준 정밀 대칭이 꼭 필요한 자리가 아니면
+    `CollectionCoverStackView`처럼 역산하지 말고 이 화면처럼 고정값+정렬로 단순하게 갈 것.
 - ⚠️ **캐릭터 선택 시트는 반드시 `.sheet(item:)`으로 연다.** 처음엔 `.sheet(isPresented:)` +
   `characterID`/`nickname`을 시트 밖 별도 State로 들고 있었는데, Feature 레이어 공통 함정
   ([상위 CLAUDE.md](../CLAUDE.md) "시트에 진입 파라미터...") 그대로 **세션 첫 오픈에서만** 그 시점의

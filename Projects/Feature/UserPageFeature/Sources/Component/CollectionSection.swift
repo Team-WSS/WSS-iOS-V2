@@ -21,16 +21,21 @@ struct CollectionSection: View {
     let totalCount: Int
     let action: () -> Void
 
+    private enum Metric {
+        /// 미리보기 항목 사이 간격(사용자 확정, 2026-08-21) — 화면 폭 기준 역산 대신 고정값으로 정했다.
+        static let previewItemSpacing: CGFloat = 30
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
+                .padding(.horizontal, 20)
 
             if totalCount > 0 {
                 Spacer().frame(height: 16)
                 previewRow
             }
         }
-        .padding(.horizontal, 20)
     }
 
     private var header: some View {
@@ -55,15 +60,18 @@ struct CollectionSection: View {
         .buttonStyle(.plain)
     }
 
-    // Figma는 justify-between(양끝 정렬, 3개 기준 균등 분배)이라 각 항목을 동일폭 슬롯에 leading
-    // 정렬해 흉내낸다 — 정확한 간격 수치는 확인 필요(`UserPageFeature/CLAUDE.md` 참고).
+    /// 항목 사이 간격은 고정 30 — 화면 폭에 맞춰 정확히 맞추는 시도(역산 간격)를 걷어내고 단순
+    /// 고정값으로 정리했다(사용자 확정, 2026-08-21). 좌우 여백을 신경 쓰는 대신, **묶음 전체를 화면
+    /// 가운데 정렬**한다(사용자 확정) — `HStack`은 내용물(고정폭 항목 3개+간격) 크기만큼만 차지하고,
+    /// 그 바깥 `.frame(maxWidth: .infinity)`가 화면 전체 폭을 차지해 기본 정렬(`.center`)로 가운데
+    /// 놓는다. 헤더 행의 좌측 정렬 20pt 패딩과는 별개 레이아웃이라 이 행에는 적용하지 않는다.
     private var previewRow: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: Metric.previewItemSpacing) {
             ForEach(previews, id: \.id) { preview in
                 collectionItem(imageURL: preview.representativeNovel.thumbnailImage, title: preview.name)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func collectionItem(imageURL: URL?, title: String) -> some View {
