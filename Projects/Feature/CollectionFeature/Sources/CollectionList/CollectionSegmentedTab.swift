@@ -12,10 +12,18 @@ import DesignSystem
 
 /// "내 컬렉션"/"좋아요한 컬렉션" 2탭 세그먼트. `CollectionListView` 전용 — 재사용처가 이 화면 하나뿐이라
 /// `WSSComponent`로 승격하지 않는다(이 레포의 "2번째 필요 시점에 승격" 관례).
+///
+/// 인디케이터 슬라이드는 `SearchFeature.DetailSearchFilterView`(`FeedFeature.SosoFeedView`와 동일 패턴)를
+/// 그대로 따른다 — `matchedGeometryEffect` + 공용 `Namespace`, 선택된 탭에만 조건부로 인디케이터가
+/// 존재해 선택이 바뀔 때 그 자리에서 사라지는 대신 새 위치로 미끄러진다. 인디케이터는 하단 구분선
+/// (`Rectangle().fill(Color.wssGray70)`)과 **같은 `ZStack` bottom 레이어**에 겹쳐 그려 그 선 위를
+/// 타고 움직이는 것처럼 보이게 한다(구분선을 먼저 깔고 탭 버튼을 그 위에 얹는 순서 — 아래에서 위로).
 struct CollectionSegmentedTab: View {
 
     private let selectedTab: CollectionListTab
     private let onSelect: (CollectionListTab) -> Void
+
+    @Namespace private var tabAnimation
 
     init(selectedTab: CollectionListTab, onSelect: @escaping (CollectionListTab) -> Void) {
         self.selectedTab = selectedTab
@@ -23,51 +31,46 @@ struct CollectionSegmentedTab: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            GeometryReader { proxy in
-                let tabWidth = proxy.size.width / CGFloat(CollectionListTab.allCases.count)
-                ZStack(alignment: .bottomLeading) {
-                    HStack(spacing: 0) {
-                        ForEach(CollectionListTab.allCases, id: \.self) { tab in
-                            // `Button`으로 감싼다 — `.onTapGesture`는 접근성 트리에 안 잡혀 VoiceOver·UI
-                            // 자동화 모두로 탭할 수 없다(`WSSComponent/CLAUDE.md` 공통 함정).
-                            Button {
-                                onSelect(tab)
-                            } label: {
-                                tabLabel(tab)
-                                    .frame(maxWidth: .infinity)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    // 인디케이터는 항상 그려두고 offset만 바꾼다 — 선택된 쪽에만 `if`로 그리고
-                    // matchedGeometryEffect로 이으면 이동이 아니라 크로스페이드로 보인다
-                    // (`LibraryFeature/CLAUDE.md`가 실측으로 남긴 함정, 그리드↔리스트 토글에서 재발했었다).
-                    Rectangle()
-                        .fill(Color.wssBlack)
-                        .frame(width: tabWidth, height: 2)
-                        .offset(x: indicatorOffset(tabWidth: tabWidth))
-                        .animation(.spring(response: 0.32, dampingFraction: 0.8), value: selectedTab)
-                }
-            }
-            .frame(height: 46)
-
+        ZStack(alignment: .bottom) {
             Rectangle()
                 .fill(Color.wssGray70)
                 .frame(height: 1)
+
+            HStack(spacing: 0) {
+                ForEach(CollectionListTab.allCases, id: \.self) { tab in
+                    tabButton(tab)
+                }
+            }
         }
     }
 
-    private func indicatorOffset(tabWidth: CGFloat) -> CGFloat {
-        guard let index = CollectionListTab.allCases.firstIndex(of: selectedTab) else { return 0 }
-        return CGFloat(index) * tabWidth
-    }
+    // `Button`으로 감싼다 — `.onTapGesture`는 접근성 트리에 안 잡혀 VoiceOver·UI 자동화 모두 탭할 수
+    // 없다(`WSSComponent/CLAUDE.md` 공통 함정).
+    private func tabButton(_ tab: CollectionListTab) -> some View {
+        let isSelected = tab == selectedTab
+        return Button {
+            onSelect(tab)
+        } label: {
+            VStack(spacing: 0) {
+                Text(title(for: tab))
+                    .applyWSSFont(.title2, color: isSelected ? .wssBlack : .wssGray100)
+                    .padding(.vertical, 12)
 
-    private func tabLabel(_ tab: CollectionListTab) -> some View {
-        Text(title(for: tab))
-            .applyWSSFont(.title2, color: tab == selectedTab ? .wssBlack : .wssGray100)
-            .padding(.top, 12)
+                ZStack {
+                    if isSelected {
+                        Rectangle()
+                            .fill(Color.wssBlack)
+                            .frame(height: 2)
+                            .matchedGeometryEffect(id: "COLLECTION_LIST_TAB_INDICATOR", in: tabAnimation)
+                    }
+                }
+                .frame(height: 2)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.25), value: selectedTab)
     }
 
     private func title(for tab: CollectionListTab) -> String {

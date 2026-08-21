@@ -115,6 +115,15 @@
   탭 텍스트를 `tap` 대상이 아닌 `text`로만 보고했다가 `Button`으로 바꾸자 `tap` 대상으로 잡힘). 새
   탭/세그먼트 컴포넌트를 만들 때 습관적으로 `.contentShape` + `.onTapGesture`를 쓰지 말고 `Button`을
   기본으로 삼을 것.
+- **`CollectionSegmentedTab`의 인디케이터 슬라이드는 `matchedGeometryEffect`(선택된 탭에만 조건부로
+  존재)로 구현한다** — `SearchFeature.DetailSearchFilterView`(`FeedFeature.SosoFeedView`와 동일 패턴)를
+  그대로 따랐다(사용자 지정 레퍼런스). 처음엔 이 방식이 `LibraryFeature`가 남긴 "선택된 쪽에만 `if`로
+  그리고 `matchedGeometryEffect`로 이으면 이동이 아니라 크로스페이드로 보인다"는 함정과 충돌한다고
+  보고 `.offset(x:)` 수동 계산으로 짰지만, 실측(시뮬레이터)해보니 오히려 부자연스러웠다 — **그 함정은
+  `LazyVGrid`로 재활용되는 셀 안의 아이콘**(원본 사례) 얘기였고, 이 탭바처럼 정체성이 고정된 화면
+  최상단 뷰에서는 `matchedGeometryEffect`가 정상적으로 슬라이드한다. 인디케이터는 하단 구분선
+  (`Rectangle().fill(Color.wssGray70)`)과 같은 `ZStack(alignment: .bottom)`에 겹쳐 그 선 위를 타고
+  움직이는 것처럼 배치한다(구분선을 먼저 깔고 탭 버튼을 그 위에 얹는 순서).
 - ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 중간 화면들이 각자
   `dismiss()`를 부르지 않고, 최상위(`CreateCollectionView`)가 소유한 단 하나의 `isAddNovelPresented`를
   확정 콜백(`onConfirm`) 안에서 딱 한 번만 false로 내려 서브트리 전체를 한 번에 걷어낸다(정본,

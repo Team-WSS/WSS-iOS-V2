@@ -120,8 +120,8 @@ private enum DemoFactory {
     /// 돌려받도록 인메모리로 들고 있는다. 없으면 Mock 모드에서 완료를 눌러도 항상 하드코딩된 초기값만 보인다.
     static let demoProfileStore = DemoProfileStore()
     /// 컬렉션 미리보기(`fetchCollections`)가 명시적으로 요구하는 값 — 실서버 조립(`makeLiveRepositories`)의
-    /// `UserDefaultsStorage` userID(10045)와 맞춘다.
-    static let demoUserID = UserID(10045)
+    /// `UserDefaultsStorage` userID(10049)와 맞춘다.
+    static let demoUserID = UserID(10049)
 
     @ViewBuilder
     static func makeMypageView(dataSource: DemoDataSource) -> some View {
