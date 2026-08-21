@@ -49,7 +49,7 @@ struct LibraryListCell: View {
                     .background(status.tagBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            if let dateText = LibraryDateFormatter.text(for: novel.userReview?.period) {
+            if let dateText = novel.userReview?.period?.displayText {
                 Spacer().frame(width: 16)
                 Text(dateText)
                     .applyWSSFont(.body5, color: .wssGray300)

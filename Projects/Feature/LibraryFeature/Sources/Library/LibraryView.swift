@@ -265,8 +265,15 @@ private extension LibraryView {
                 Button {
                     onNovelSelected(novel.id)
                 } label: {
-                    LibraryGridCell(novel: novel)
-                        .contentShape(Rectangle())
+                    WSSLibraryGridCell(
+                        thumbnailImage: novel.thumbnailImage,
+                        title: novel.title,
+                        readingStatus: novel.userReview?.readingStatus,
+                        myRating: novel.userReview?.rating?.value,
+                        dateText: novel.userReview?.period?.displayText,
+                        isInterested: novel.isInterested
+                    )
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onAppear { loadMoreIfLast(novel) }

@@ -89,5 +89,23 @@
   정한다. 승격하며 원본이 쓰던 raw `AsyncImage`를 `WSSNovelCoverImage`로 교체했다(목록 반복 렌더의
   placeholder 번쩍임 방지, 이 문서 상단 `WSSAsyncImage`/`WSSNovelCoverImage` 항목과 동일 이유) — 크기가
   고정(78×105)인 자리라 `aspectRatio` 파라미터 없이 `.frame(width:height:)`로 직접 크기를 준다.
+- **`WSSLibraryGridCell`(`Sources/NovelCell/`)는 `LibraryFeature`의 내 서재/타유저 서재 그리드와
+  `CollectionFeature`의 "서재에서 추가" 화면이 같이 쓰는 서재류 작품 그리드 셀이다**(2026-08, 원본은
+  `LibraryFeature`의 `LibraryGridCell`) — 두 화면의 유일한 차이가 선택 서클 오버레이뿐이라
+  `isSelected: Bool?`로 흡수했다. **`nil`이면 선택 UI 자체를 안 그린다**(서재의 순수 열람 그리드),
+  값이 있으면 그 상태로 서클(`WSSNovelSelectRow`와 동일 에셋)을 그린다 — "선택 가능 여부"와 "선택
+  안 됨" 두 상태를 `Bool` 하나로는 구분 못 해 옵셔널을 썼다. `readingStatus`/`myRating`/`dateText`
+  전부 옵셔널 — 있는 것만 자연스럽게 흐르고(1줄 제목이면 별점이 바로 따라옴), 정보 스택 **자체**는
+  고정 높이(65)라 `LazyVGrid` 행이 안 어긋난다(`WSSNovelGridCell`과 같은 계약). **`LibraryNovel`
+  같은 상위 Entity를 직접 받지 않는다** — `dateText: String?`처럼 이미 포맷된 표시값만 받는다(날짜
+  포맷 로직 자체는 아래 `ReadingPeriod.displayText` 참고, 표기는 호출부 몫이라는 이 문서의 기본
+  원칙과 동일). 탭 동작도 갖지 않는다(순수 표시 뷰) — 서재는 셀 전체를 `Button`으로, 컬렉션은
+  `.onTapGesture`로 감싸는 등 호출부마다 방식이 달라서 강제하지 않는다.
+  - `ReadingPeriod.displayText`(`Sources/DomainPresentation/ReadingPeriod+Presentation.swift`)도
+    같은 이유로 공용화됐다(원본은 `LibraryFeature`의 `LibraryDateFormatter`) — "yy.MM.dd" 또는
+    "yy.MM.dd ~ yy.MM.dd" 표기를 `ReadingPeriod`의 `public` computed property로 노출한다.
+    `LibraryFeature`의 `LibraryListCell`(그리드 셀 승격과 무관하게 리스트 모드 전용, `WSSLibraryGridCell`로
+    승격 안 됨)도 이 확장을 쓴다 — 날짜 포맷을 새로 필요로 하는 화면은 자체 포매터를 새로 만들지
+    말고 이걸 재사용할 것.
 - **`WSSNicknameField`(`Sources/TextField/`)는 `OnboardingFeature`의 닉네임 화면과 `UserPageFeature`의 `MyPageEditView`가 같이 쓰는 닉네임 필드다**(2026-08, 두 화면이 손으로 맞추다 드리프트해서 승격) — 글자수 clamp 트랩(로컬 `fieldText` 버퍼 → `text` 반영 2단계, [상위 CLAUDE.md](../../Feature/CLAUDE.md) 주의사항 참고)을 여기 한 곳에서만 처리한다. `WSSSearchBar`와 같은 이유로 `isFocused: FocusState<Bool>.Binding`을 **필수** 파라미터로 받는다(내부 자체 포커스 없음) — 호출부가 "필드 바깥 탭하면 키보드 내리기"를 계속 제어해야 해서다. **도메인(`ProfileDomain.NicknameDraft.ValidationState`)을 모른다** — `isError`/`isSuccess`·캡션(문구+색)을 값으로만 받고 판단은 호출자(VM)가 한다. **캡션 문구는 컴포넌트가 하드코딩하지 않는다** — 두 화면의 워딩이 의도적으로 다르게 유지돼 왔기 때문(1:1 동기화 요구 아님).
   - ⚠️ **`isFocused`는 이 필드 전용 `@FocusState`여야 한다 — 같은 화면의 다른 텍스트필드와 공유하지 말 것**(#178). 배경(gray50→white)·테두리(`wssGray70`)가 포커스 여부(`isFocused.wrappedValue`)로 바뀌는데, 다른 필드와 공유하면 그 다른 필드가 포커스돼도 이 컴포넌트가 함께 화이트/테두리로 반응한다(`MyPageEditView`가 원래 소개글과 하나의 `isKeyboardFocused`를 공유하다 이 문제로 필드별로 분리한 사례 — `UserPageFeature/CLAUDE.md` 참고). "빈 곳 탭하면 키보드 내리기"처럼 여러 필드를 동시에 내리고 싶으면, 필드마다 별도 `@FocusState`를 두고 탭 핸들러에서 전부 `false`로 내릴 것.
