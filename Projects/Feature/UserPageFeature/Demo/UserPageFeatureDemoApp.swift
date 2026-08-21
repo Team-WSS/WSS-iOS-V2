@@ -15,11 +15,13 @@ import NovelDomain
 import ProfileDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import BaseData
 import NovelData
 import ProfileData
 import FeedData
 import SocialData
+import CollectionData
 import Logger
 import Networking
 import DesignSystem
@@ -117,20 +119,26 @@ private enum DemoFactory {
     /// Mock 데이터 소스의 "서버" 역할(MyPage 전용) — 편집 화면에서 저장한 값을 마이페이지 조회가 그대로
     /// 돌려받도록 인메모리로 들고 있는다. 없으면 Mock 모드에서 완료를 눌러도 항상 하드코딩된 초기값만 보인다.
     static let demoProfileStore = DemoProfileStore()
+    /// 컬렉션 미리보기(`fetchCollections`)가 명시적으로 요구하는 값 — 실서버 조립(`makeLiveRepositories`)의
+    /// `UserDefaultsStorage` userID(10045)와 맞춘다.
+    static let demoUserID = UserID(10045)
 
     @ViewBuilder
     static func makeMypageView(dataSource: DemoDataSource) -> some View {
         switch dataSource {
         case .mock:
-            MypageFeatureFactory.makeView(
+            MypageFactory.makeView(
+                userID: demoUserID,
                 loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 loadInitialProfileUseCase: DemoLoadInitialProfileUseCase(store: demoProfileStore),
                 loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
                 validateNicknameUseCase: DemoValidateNicknameUseCase(),
                 updateProfileUseCase: DemoUpdateProfileUseCase(store: demoProfileStore),
+                onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
                 logger: consoleLogger
             )
         case .live:
@@ -166,7 +174,15 @@ private enum DemoFactory {
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     private static func makeMypageLiveView() -> some View {
         let (profileRepository, novelRepository, keywordRepository, _) = makeLiveRepositories()
-        return MypageFeatureFactory.makeView(
+        let collectionRepository = CollectionDataFactory.makeRepository(
+            network: NetworkingClient(
+                logger: DefaultNetworkLogger(base: consoleLogger),
+                tokenStore: DemoSessionTokenStore()
+            ),
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        return MypageFactory.makeView(
+            userID: demoUserID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
@@ -174,10 +190,12 @@ private enum DemoFactory {
                 keywordRepository: keywordRepository
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: profileRepository),
             loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: profileRepository),
             updateProfileUseCase: DefaultUpdateProfileUseCase(profileRepository: profileRepository),
+            onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
             logger: consoleLogger
         )
     }
@@ -382,6 +400,29 @@ private struct DemoLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseC
     func execute() async throws(RepositoryError) -> RegisteredNovelStats {
         try? await Task.sleep(nanoseconds: 500_000_000)
         return RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
+}
+
+/// 마이페이지 컬렉션 섹션 — "컬렉션 3개"(Figma 31613:89234) 상태를 시연한다. 실제 목록 API를 `size`로
+/// 그대로 흉내낸다(`CollectionDomain/CLAUDE.md`의 "마이페이지 전용 API 없음" 계약과 동일한 모양).
+/// "컬렉션 0개"(31613:89148) 상태는 `CollectionListView` Demo의 빈 탭에서 이미 확인 가능.
+private struct DemoLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        let totalCount = 3
+        let previews = (1...min(size, totalCount)).map { index in
+            CollectionPreview(
+                id: CollectionID(index),
+                name: "마이페이지 컬렉션 \(index)",
+                representativeNovel: CollectionNovel(
+                    id: NovelID(index),
+                    title: "작품 \(index)",
+                    author: "작가 \(index)",
+                    thumbnailImage: nil
+                )
+            )
+        }
+        return (previews, totalCount)
     }
 }
 

@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import ProfileDomain
 import NovelDomain
+import CollectionDomain
 import Logger
 
 @MainActor
@@ -25,6 +26,10 @@ final class MypageViewModel {
         var genrePreferences: [GenrePreference] = []
         var novelPreference: NovelPreference?
         var registeredNovelStats: RegisteredNovelStats?
+        var collectionPreviews: [CollectionPreview] = []
+        /// 컬렉션 섹션의 "N개" — 미리보기 배열 개수(최대 3)가 아니라 전체 개수(서버 응답의
+        /// `collectionsCount`, `CollectionDomain/CLAUDE.md` 참고)다.
+        var collectionCount = 0
         var isLoading = false
         var hasLoadError = false
     }
@@ -74,8 +79,12 @@ final class MypageViewModel {
     /// 옛 화면이 잠깐 되살아났다가 다시 실패 뷰로 튄다.
     @ObservationIgnored private var hasLoadedContent = false
 
+    /// 마이페이지 섹션은 최대 3개만 보여준다(디자인) — 서재 카운트 카드처럼 상수는 화면이 쥔다.
+    private static let collectionPreviewSize = 3
+
     // MARK: - Dependency
 
+    private let userID: UserID
     private let logger: Logger?
 
     // ProfileDomain
@@ -86,19 +95,26 @@ final class MypageViewModel {
     // NovelDomain
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
 
+    // CollectionDomain
+    private let loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase
+
     // MARK: - Init
 
     init(
+        userID: UserID,
         loadProfileUseCase: LoadProfileUseCase,
         loadGenrePreferencesUseCase: LoadGenrePreferencesUseCase,
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         logger: Logger? = nil
     ) {
+        self.userID = userID
         self.loadProfileUseCase = loadProfileUseCase
         self.loadGenrePreferencesUseCase = loadGenrePreferencesUseCase
         self.loadNovelPreferencesUseCase = loadNovelPreferencesUseCase
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
+        self.loadCollectionPreviewsUseCase = loadCollectionPreviewsUseCase
         self.logger = logger
     }
 
@@ -128,9 +144,11 @@ private extension MypageViewModel {
 // MARK: - UseCase Handling
 
 private extension MypageViewModel {
-    /// 프로필/장르 뱃지/작품 취향/서재 통계를 병렬로 로드한다. 프로필·장르·작품 취향은 같은 `ProfileTarget.me`
-    /// 대상이고, 서재 통계는 NovelDomain의 로그인 사용자 기준 조회다. 하나가 실패해도(구조적 동시성으로
-    /// 나머지 자식 태스크는 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
+    /// 프로필/장르 뱃지/작품 취향/서재 통계/컬렉션 미리보기를 병렬로 로드한다. 프로필·장르·작품 취향은
+    /// 같은 `ProfileTarget.me` 대상이고, 서재 통계는 NovelDomain의 로그인 사용자 기준 조회, 컬렉션
+    /// 미리보기는 `LoadCollectionPreviewsUseCase.execute(userID:size:3)`(마이페이지 섹션 전용 API가
+    /// 없어 목록 API를 size=3으로 호출 — `CollectionDomain/CLAUDE.md` 참고). 하나가 실패해도(구조적
+    /// 동시성으로 나머지 자식 태스크는 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
     func loadMypage() async {
         defer { loadTask = nil }
         state.isLoading = true
@@ -141,11 +159,13 @@ private extension MypageViewModel {
             async let genrePreferences = loadGenrePreferencesUseCase.execute(.me)
             async let novelPreference = loadNovelPreferencesUseCase.execute(.me)
             async let registeredNovelStats = loadRegisteredNovelStatsUseCase.execute()
+            async let collectionPreviews = loadCollectionPreviewsUseCase.execute(userID: userID, size: Self.collectionPreviewSize)
 
             let loadedProfile = try await profile
             let loadedGenrePreferences = try await genrePreferences
             let loadedNovelPreference = try await novelPreference
             let loadedRegisteredNovelStats = try await registeredNovelStats
+            let (loadedCollectionPreviews, loadedCollectionCount) = try await collectionPreviews
 
             // 플래그를 state보다 먼저 올린다 — 관찰 대상이 아니라 갱신을 스스로 트리거하지 않으므로,
             // 뷰를 깨우는 state 대입 시점에 이미 최신값이어야 한다.
@@ -155,6 +175,8 @@ private extension MypageViewModel {
             state.genrePreferences = loadedGenrePreferences
             state.novelPreference = loadedNovelPreference
             state.registeredNovelStats = loadedRegisteredNovelStats
+            state.collectionPreviews = loadedCollectionPreviews
+            state.collectionCount = loadedCollectionCount
         } catch {
             presentError(error)
         }

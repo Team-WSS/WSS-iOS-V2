@@ -4,10 +4,13 @@
 내 화면(MyPage)/남의 화면(UserPage) + 전체 피드 목록(UserFeedList) 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.userPage)` / 의존: `BaseDomain`, `ProfileDomain`, `NovelDomain`, `FeedDomain`,
-  `SocialDomain`, `DesignSystem`, `WSSComponent`, `Logger`
+  `SocialDomain`, `CollectionDomain`(#200, 마이페이지 컬렉션 섹션 — 다른 Feature 모듈이 아니라 이 화면이
+  직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관), `DesignSystem`,
+  `WSSComponent`, `Logger`
 - 진입점:
-  - `MypageFeatureFactory.makeView(...)`(내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집), `.makeCharacterEditSheet(...)`(캐릭터 선택 시트)
-  - `UserPageFeatureFactory.makeView(...)`(유저 페이지), `.makeFeedListView(...)`(전체 피드 목록 — `UserPageView`의 "전체보기"가 내부적으로 호출)
+  - `MypageFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:loadInitialProfileUseCase:loadProfileCharacterUseCase:validateNicknameUseCase:updateProfileUseCase:onCollectionTapped:logger:)`
+    (내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집), `.makeCharacterEditSheet(...)`(캐릭터 선택 시트)
+  - `UserPageFactory.makeView(...)`(유저 페이지), `.makeFeedListView(...)`(전체 피드 목록 — `UserPageView`의 "전체보기"가 내부적으로 호출)
 
 ## MyPage
 
@@ -16,10 +19,15 @@
 
 ### 핵심 시나리오
 
-- **마이페이지(`MypageView`)**: `onAppear`마다 프로필·장르 뱃지·작품 취향·서재 통계 4개를 병렬 로드
-  (`MypageViewModel.loadMypage`). **탭 복귀마다 다시 로드**한다(1회 가드 없음) — 프로필 편집에서 저장하고
-  돌아왔을 때 바뀐 값을 반영해야 해서.
-- **프로필 편집(`MyPageEditView`)**: 연필 아이콘 → `navigationDestination` → `MypageFeatureFactory.makeEditView`.
+- **마이페이지(`MypageView`)**: `onAppear`마다 프로필·장르 뱃지·작품 취향·서재 통계·컬렉션 미리보기
+  5개를 병렬 로드(`MypageViewModel.loadMypage`). **탭 복귀마다 다시 로드**한다(1회 가드 없음) — 프로필
+  편집에서 저장하고 돌아왔을 때 바뀐 값을 반영해야 해서.
+- **컬렉션 섹션(`CollectionSection`, #200)**: "컬렉션 N개" 헤더 행(탭 → `onCollectionTapped`, 실제
+  화면 전환은 App 몫 — `CollectionFeature`와 서로 import 못 함) + 개수 1 이상이면 그 아래 대표 표지
+  미리보기 최대 3개(`LoadCollectionPreviewsUseCase.execute(userID:size:3)`, 마이페이지 전용 API가 없어
+  컬렉션 목록 API를 `size=3`으로 호출 — `CollectionDomain/CLAUDE.md` 참고). `N`은 미리보기 배열 개수가
+  아니라 그 UseCase가 함께 돌려주는 **전체** 개수다.
+- **프로필 편집(`MyPageEditView`)**: 연필 아이콘 → `navigationDestination` → `MypageFactory.makeEditView`.
   저장 성공 시 곧바로 `dismiss()`하고, "저장됨" 토스트는 **복귀할 마이페이지가** `onSaved` 콜백을 받아
   띄운다(이 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로).
 - **캐릭터 선택(`MypageCharacterEditSheet`)**: 프로필 편집 화면의 `+` 버튼 → `.sheet(item:)`으로 진입.
@@ -28,6 +36,16 @@
 
 ### 주의사항 (작업 중 발견 시 누적)
 
+- **`CollectionSection`의 미리보기 카드 렌더는 `MypageView.swift`에 미사용 상태로 있던 죽은 코드
+  (`collectionItem`)를 되살린 것이다**(#200) — 대표 표지 1장 + 뒤에 오프셋된 회색 사각형 2장(쌓인
+  카드 장식)이 `CollectionPreview.representativeNovel` 요구사항과 정확히 일치해 그대로 재활용했다.
+  단, 원래 코드는 raw `AsyncImage`를 썼는데 **URL이 nil이면 `.empty` phase에서 영영 못 벗어나
+  `ProgressView()`가 멈추지 않고 계속 돈다**(죽은 코드라 아무도 이 버그를 못 봤다 — 되살리며 실측으로
+  발견) → `WSSNovelCoverImage(url:)`로 교체해 고쳤다(WSS 빈 표지 폴백으로 대체됨, `WSSComponent/CLAUDE.md`
+  정본). 이 화면의 다른 표지 자리에서 raw `AsyncImage`를 새로 쓰지 말 것.
+  - ⚠️ **미리보기 3개의 가로 간격은 Figma가 `justify-between`(양끝 정렬)인데 정확한 수치를 확인 못
+    했다** — 각 항목을 `.frame(maxWidth: .infinity, alignment: .leading)`인 동일폭 슬롯에 넣어
+    흉내냈다. 디자인 재확인 시 이 근사치를 우선 의심할 것.
 - ⚠️ **캐릭터 선택 시트는 반드시 `.sheet(item:)`으로 연다.** 처음엔 `.sheet(isPresented:)` +
   `characterID`/`nickname`을 시트 밖 별도 State로 들고 있었는데, Feature 레이어 공통 함정
   ([상위 CLAUDE.md](../CLAUDE.md) "시트에 진입 파라미터...") 그대로 **세션 첫 오픈에서만** 그 시점의

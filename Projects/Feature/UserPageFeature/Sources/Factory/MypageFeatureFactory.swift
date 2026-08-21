@@ -8,8 +8,10 @@
 
 import SwiftUI
 
+import BaseDomain
 import ProfileDomain
 import NovelDomain
+import CollectionDomain
 import Logger
 
 /// 모듈의 유일한 public 진입점.
@@ -17,23 +19,34 @@ import Logger
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
 public enum MypageFeatureFactory {
 
+    /// - Parameters:
+    ///   - userID: 컬렉션 미리보기(`fetchCollections`)가 명시적으로 요구한다 — `ProfileDomain`의
+    ///     `.me`/`LoadRegisteredNovelStatsUseCase.execute()`처럼 로그인 사용자를 알아서 가리키는
+    ///     계약이 아니다(`CollectionDomain/CLAUDE.md` 참고).
+    ///   - onCollectionTapped: 컬렉션 섹션 헤더 행 탭 콜백. 실제 화면 전환(`CollectionFeature`의
+    ///     목록 화면으로 이동)은 호출자(App 조정 계층)가 수행한다 — 두 Feature는 서로 import 못 한다.
     @MainActor
     public static func makeView(
+        userID: UserID,
         loadProfileUseCase: LoadProfileUseCase,
         loadGenrePreferencesUseCase: LoadGenrePreferencesUseCase,
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         loadInitialProfileUseCase: LoadInitialProfileUseCase,
         loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
         validateNicknameUseCase: ValidateNicknameUseCase,
         updateProfileUseCase: UpdateProfileUseCase,
+        onCollectionTapped: @escaping () -> Void,
         logger: Logger? = nil
     ) -> some View {
         let viewModel = MypageViewModel(
+            userID: userID,
             loadProfileUseCase: loadProfileUseCase,
             loadGenrePreferencesUseCase: loadGenrePreferencesUseCase,
             loadNovelPreferencesUseCase: loadNovelPreferencesUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
+            loadCollectionPreviewsUseCase: loadCollectionPreviewsUseCase,
             logger: logger
         )
         return MypageView(
@@ -42,6 +55,7 @@ public enum MypageFeatureFactory {
             loadProfileCharacterUseCase: loadProfileCharacterUseCase,
             validateNicknameUseCase: validateNicknameUseCase,
             updateProfileUseCase: updateProfileUseCase,
+            onCollectionTapped: onCollectionTapped,
             logger: logger
         )
     }

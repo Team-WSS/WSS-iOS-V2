@@ -20,6 +20,7 @@ let project = Project.createFeatureModule(
         .module(.domain(.novel)),
         .module(.domain(.feed)),
         .module(.domain(.social)),
+        .module(.domain(.collection)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -31,6 +32,7 @@ let project = Project.createFeatureModule(
         .module(.data(.profile)),
         .module(.data(.novel)),
         .module(.data(.feed)),
-        .module(.data(.social))
+        .module(.data(.social)),
+        .module(.data(.collection))
     ]
 )
