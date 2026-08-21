@@ -26,6 +26,8 @@ struct CreateCollectionView: View {
     /// "작품 추가" 화면 push 여부 — `ReadingPeriodSheet`류 로컬 값 선택기와 같은 위상이라(다만 sheet가
     /// 아니라 push) 이 화면이 직접 소유한다. App/Factory는 몰라도 된다.
     @State private var isAddNovelPresented = false
+    /// "컬렉션 설명" 박스는 padding·배경까지 포함한 전체 영역이 탭 타깃이다(아래 `descriptionSection`).
+    @FocusState private var isDescriptionFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     /// "작품 추가" 화면이 검색에 쓸 UseCase — `FeedFeature`의 연결 작품 검색과 같은 이유로 이 모듈이
@@ -219,11 +221,16 @@ private extension CreateCollectionView {
                 TextField("", text: $descriptionFieldText, axis: .vertical)
                     .applyWSSFont(.body2)
                     .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
+                    .focused($isDescriptionFieldFocused)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 18)
             .background(Color.wssGray50)
             .clipShape(RoundedRectangle(cornerRadius: 14))
+            // 박스 안 빈 여백(padding·아래쪽 남는 공간)을 눌러도 포커스되도록 블록 전체를 탭 타깃으로 넓힌다
+            // — 안 그러면 TextField 자신의 프레임 밖은 탭이 안 먹는다(Feature/CLAUDE.md 공통 주의).
+            .contentShape(Rectangle())
+            .onTapGesture { isDescriptionFieldFocused = true }
             .overlay(alignment: .bottomTrailing) {
                 Text("(\(descriptionFieldText.count)/\(CollectionDraft.maxDescriptionCount))")
                     .applyWSSFont(.body2)
