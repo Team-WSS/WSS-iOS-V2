@@ -41,6 +41,17 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`AddNovelViewModel`의 검색 결과 영역은 `searchedNovels`가 아니라 `hasSearched` 플래그로 가른다** —
+  `WSSSearchBar`의 `onSearch`는 제출(엔터/검색 버튼)에만 발화하고, 타이핑 자체는 `updateSearchText`로
+  매 글자마다 바로 반영된다. `searchedNovels`(또는 `searchText`) 유무만으로 "결과 없음" 뷰를 켜면,
+  검색을 실행하기도 전에(타이핑 도중) 또는 이전 검색 결과를 두고 다음 검색어를 입력하는 도중에 잘못된
+  뷰(결과없음/직전 결과)가 보인다(실제 발생 — 사용자 리포트: 타이핑 중엔 흰 배경이어야 함).
+  `updateSearchText`가 매번 `hasSearched = false`로 끄고, `searchNovels(_:)`가 응답을 **실제로 받은
+  뒤에만** `hasSearched = true`로 켠다 — `resultArea`는 `!hasSearched`면 무조건 빈 화면, 그 다음에야
+  `searchedNovels` 유무로 리스트/결과없음을 가른다. `FeedFeature`의 `CreateFeedConnectNovelSheet`도
+  같은 검색 흐름(같은 `WSSNovelSelectRow` 기반)을 쓰는데 거긴 `hasSearched`를 검색 제출 시 켜기만 하고
+  텍스트 편집 시 끄지 않아 — 결과를 받은 뒤 재입력하면 이 화면과 달리 직전 결과가 남을 수 있다(이번
+  변경 범위 밖이라 손대지 않음, 재발 시 여기 패턴 참고).
 - **`CreateCollectionViewModel`에 `#if DEBUG` 전용 `init(previewDraft:previewNovelDisplayInfo:createCollectionUseCase:)`가 있다** —
   `AddNovelView`가 생기기 전, 작품 리스트 그리드(대표 배지 포함)를 볼 유일한 경로가 Xcode Preview뿐이던
   시절 만든 시각 확인용 우회로다. 지금은 Demo 앱에서도 "작품 추가" → 검색·선택 → "완료"로 실제 채워볼

@@ -153,16 +153,19 @@ private extension AddNovelView {
         }
     }
 
+    /// `hasSearched`가 꺼져 있으면(=검색 실행 전, 또는 결과를 받은 뒤 다시 타이핑하는 도중) 무조건
+    /// 빈 화면이다 — `searchedNovels`는 이전 검색 결과를 그대로 들고 있을 수 있어서, 그 배열 자체로
+    /// 판단하면 타이핑 중에 직전 검색 결과(또는 "결과 없음" 뷰)가 잘못 남아있는다(실제 발생 — 사용자
+    /// 리포트: 타이핑 도중엔 아무것도 없이 흰 배경이어야 함). `search()`가 실제로 응답을 받아야만
+    /// `hasSearched`가 켜지고, 그제서야 결과 유무에 따라 리스트/결과없음을 가른다.
     @ViewBuilder
     var resultArea: some View {
         if viewModel.state.isSearching {
             LoadingView()
+        } else if !viewModel.state.hasSearched {
+            Spacer()
         } else if viewModel.state.searchedNovels.isEmpty {
-            if !viewModel.state.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                WSSEmptyView(type: .novel, action: {})
-            } else {
-                Spacer()
-            }
+            WSSEmptyView(type: .novel, action: {})
         } else {
             resultList
         }

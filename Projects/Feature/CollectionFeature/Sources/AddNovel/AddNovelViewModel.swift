@@ -30,6 +30,10 @@ final class AddNovelViewModel {
         /// (`KeywordFeature.selectedKeywords`와 같은 구조). 순서 = 선택 순서.
         var selectedNovels: [CollectionNovel]
         var isSearching = false
+        /// 현재 `searchText`로 검색이 **실제로 완료**됐는지. 타이핑은 `updateSearchText`에서 매 글자마다
+        /// 이 값을 꺼뜨려, 검색 실행 전(또는 결과를 받은 뒤 다시 타이핑하는 도중)엔 결과 없음 뷰가 아니라
+        /// 빈 화면이 보이게 한다 — `search()`가 실제로 응답을 받아야만 다시 켜진다.
+        var hasSearched = false
         var isConfirmed = false
         var requiresAuthentication = false
         var presentedError: SearchError?
@@ -87,6 +91,7 @@ final class AddNovelViewModel {
         switch action {
         case .updateSearchText(let text):
             state.searchText = text
+            state.hasSearched = false
         case .search(let query):
             search(query)
         case .toggleNovel(let novel):
@@ -144,6 +149,7 @@ private extension AddNovelViewModel {
             let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: 0)
             guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
+            state.hasSearched = true
         } catch {
             guard !Task.isCancelled else { return }
             presentError(error)
