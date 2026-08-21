@@ -51,10 +51,14 @@
   뷰(결과없음/직전 결과)가 보인다(실제 발생 — 사용자 리포트: 타이핑 중엔 흰 배경이어야 함).
   `updateSearchText`가 매번 `hasSearched = false`로 끄고, `searchNovels(_:)`가 응답을 **실제로 받은
   뒤에만** `hasSearched = true`로 켠다 — `resultArea`는 `!hasSearched`면 무조건 빈 화면, 그 다음에야
-  `searchedNovels` 유무로 리스트/결과없음을 가른다. `FeedFeature`의 `CreateFeedConnectNovelSheet`도
-  같은 검색 흐름(같은 `WSSNovelSelectRow` 기반)을 쓰는데 거긴 `hasSearched`를 검색 제출 시 켜기만 하고
-  텍스트 편집 시 끄지 않아 — 결과를 받은 뒤 재입력하면 이 화면과 달리 직전 결과가 남을 수 있다(이번
-  변경 범위 밖이라 손대지 않음, 재발 시 여기 패턴 참고).
+  `searchedNovels` 유무로 리스트/결과없음을 가른다. **`FeedFeature`의 `CreateFeedConnectNovelSheet`도
+  같은 검색 흐름(같은 `WSSNovelSelectRow` 기반)이라 동일 패턴으로 맞춰졌다** — `hasSearched`가 View의
+  로컬 `@State`가 아니라 `CreateFeedViewModel.state.hasSearchedNovel`로 VM 소유로 옮겨졌고,
+  `updateConnectedNovelSearchText`가 매번 껐다가 검색 응답을 받아야만 켜진다(자세한 내용은
+  `FeedFeature/CLAUDE.md` 참고). **새 검색+무한스크롤 화면을 또 만들 땐 이 두 구현을 정본으로 삼을 것**
+  — `searchTask`(또는 동등한 진행 중 Task 프로퍼티)를 완료 시 `nil`로 되돌리는 걸 빠뜨리면
+  `loadMore()`류 가드가 첫 검색 이후 영원히 막히는 함정도 공유하니 함께 챙길 것(`AddNovelViewModel`도
+  한 번 이 버그를 실제로 냈다가 고쳤다).
 - **`CreateCollectionViewModel`에 `#if DEBUG` 전용 `init(previewDraft:previewNovelDisplayInfo:createCollectionUseCase:)`가 있다** —
   `AddNovelView`가 생기기 전, 작품 리스트 그리드(대표 배지 포함)를 볼 유일한 경로가 Xcode Preview뿐이던
   시절 만든 시각 확인용 우회로다. 지금은 Demo 앱에서도 "작품 추가" → 검색·선택 → "완료"로 실제 채워볼

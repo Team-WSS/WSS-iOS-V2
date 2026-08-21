@@ -39,6 +39,13 @@ public final class CreateFeedViewModel {
         var searchedNovels: [Novel] = []
         var selectedSearchedNovelID: NovelID?
         var isSearchingNovel: Bool = false
+        /// 현재 `connectedNovelSearchText`로 검색이 **실제로 완료**됐는지. 타이핑마다(`updateConnectedNovelSearchText`)
+        /// 꺼지고, 검색이 응답을 받아야만 켜진다 — 검색 실행 전(타이핑 도중)이거나 결과를 받은 뒤 다시
+        /// 타이핑하는 도중, 또는 x 버튼으로 텍스트를 비웠을 때 결과 영역이 흰 배경만 보이게 한다
+        /// (`CollectionFeature.AddNovelViewModel`과 동일 패턴).
+        var hasSearchedNovel: Bool = false
+        var hasNextNovelPage: Bool = false
+        var isLoadingMoreNovels: Bool = false
     }
 
     // MARK: - Derived
@@ -80,6 +87,7 @@ public final class CreateFeedViewModel {
         // 작품 연결 시트
         case updateConnectedNovelSearchText(String)
         case searchNovel(String)
+        case loadMoreSearchedNovels
         case selectSearchedNovel(NovelID)
         case confirmSelectedNovel
         case dismissLinkNovelSheet
@@ -88,6 +96,14 @@ public final class CreateFeedViewModel {
     // MARK: - Output
 
     public private(set) var state: State
+
+    // MARK: - Property
+
+    @ObservationIgnored private var searchNovelTask: Task<Void, Never>?
+    @ObservationIgnored private var loadMoreNovelsTask: Task<Void, Never>?
+    /// 다음에 요청할 페이지 번호(0부터) — 첫 검색 성공 시 1로, 다음 페이지 성공마다 +1
+    /// (`SearchFeature.NormalSearchViewModel`/`CollectionFeature.AddNovelViewModel`과 동일 관례).
+    @ObservationIgnored private var nextNovelSearchPage = 0
 
     // MARK: - Dependency
 
@@ -160,9 +176,31 @@ public final class CreateFeedViewModel {
 
         case .updateConnectedNovelSearchText(let text):
             newState.connectedNovelSearchText = text
+            newState.hasSearchedNovel = false
 
         case .searchNovel(let query):
-            Task { await searchNovel(query) }
+            let trimmed = query.trimmingCharacters(in: .whitespaces)
+            searchNovelTask?.cancel()
+            loadMoreNovelsTask?.cancel()
+            loadMoreNovelsTask = nil
+            newState.isLoadingMoreNovels = false
+            newState.hasNextNovelPage = false
+            if trimmed.isEmpty {
+                newState.searchedNovels = []
+                newState.hasSearchedNovel = false
+            } else {
+                searchNovelTask = Task { await fetchSearchedNovels(trimmed) }
+            }
+
+        case .loadMoreSearchedNovels:
+            // 다음 페이지가 없거나 이미 검색/로딩 중이면 무시(무한스크롤 중복 요청 방지).
+            guard state.hasSearchedNovel,
+                  state.hasNextNovelPage,
+                  searchNovelTask == nil,
+                  loadMoreNovelsTask == nil else { break }
+            newState.isLoadingMoreNovels = true
+            let query = state.connectedNovelSearchText.trimmingCharacters(in: .whitespaces)
+            loadMoreNovelsTask = Task { await fetchMoreSearchedNovels(query) }
 
         case .selectSearchedNovel(let id):
             newState.selectedSearchedNovelID = id
@@ -178,14 +216,24 @@ public final class CreateFeedViewModel {
                 rating: selected.rating
             )
             mutate(&newState) { try $0.setConnectedNovel(connected) }
+            searchNovelTask?.cancel()
+            loadMoreNovelsTask?.cancel()
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
+            newState.hasSearchedNovel = false
+            newState.hasNextNovelPage = false
+            newState.isLoadingMoreNovels = false
 
         case .dismissLinkNovelSheet:
+            searchNovelTask?.cancel()
+            loadMoreNovelsTask?.cancel()
             newState.selectedSearchedNovelID = nil
             newState.searchedNovels = []
             newState.connectedNovelSearchText = ""
+            newState.hasSearchedNovel = false
+            newState.hasNextNovelPage = false
+            newState.isLoadingMoreNovels = false
         }
     }
 }
@@ -232,21 +280,45 @@ private extension CreateFeedViewModel {
         }
     }
 
-    func searchNovel(_ query: String) async {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else {
-            state.searchedNovels = []
-            return
+    func fetchSearchedNovels(_ query: String) async {
+        state.isSearchingNovel = true
+        // ⚠️ `searchNovelTask`를 여기서 반드시 nil로 되돌려야 한다 — 안 그러면 `loadMoreSearchedNovels`의
+        // `searchNovelTask == nil` 가드가 첫 검색 이후 영원히 막힌다(`CollectionFeature.AddNovelViewModel`에서
+        // 실제로 겪은 버그와 동일).
+        defer {
+            searchNovelTask = nil
+            state.isSearchingNovel = false
         }
 
-        state.isSearchingNovel = true
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: 0)
+            guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
+            state.hasSearchedNovel = true
+            state.hasNextNovelPage = paginated.hasNext
+            nextNovelSearchPage = 1
         } catch {
+            guard !Task.isCancelled else { return }
             state.searchedNovels = []
+            state.hasSearchedNovel = true
         }
-        state.isSearchingNovel = false
+    }
+
+    func fetchMoreSearchedNovels(_ query: String) async {
+        defer {
+            loadMoreNovelsTask = nil
+            state.isLoadingMoreNovels = false
+        }
+
+        do {
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextNovelSearchPage)
+            guard !Task.isCancelled else { return }
+            state.searchedNovels.append(contentsOf: paginated.items)
+            state.hasNextNovelPage = paginated.hasNext
+            nextNovelSearchPage += 1
+        } catch {
+            // 다음 페이지 실패는 이미 보이는 결과를 건드리지 않고 조용히 무시한다(이 VM엔 로거가 없음).
+        }
     }
 }
 

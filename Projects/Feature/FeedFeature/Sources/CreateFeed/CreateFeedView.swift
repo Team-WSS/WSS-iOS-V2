@@ -101,8 +101,13 @@ public struct CreateFeedView: View {
                         novels: viewModel.state.searchedNovels,
                         selectedNovelID: viewModel.state.selectedSearchedNovelID,
                         isLoading: viewModel.state.isSearchingNovel,
+                        hasSearched: viewModel.state.hasSearchedNovel,
+                        isLoadingMore: viewModel.state.isLoadingMoreNovels,
                         onSearch: {
                             viewModel.handle(.searchNovel(viewModel.state.connectedNovelSearchText))
+                        },
+                        onLoadMore: {
+                            viewModel.handle(.loadMoreSearchedNovels)
                         },
                         onSelect: { novel in
                             viewModel.handle(.selectSearchedNovel(novel.id))
