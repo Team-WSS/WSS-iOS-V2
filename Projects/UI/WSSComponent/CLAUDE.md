@@ -82,5 +82,12 @@
   `label: String`만 화면마다 다르게 받고 나머지(아이콘·색·크기)는 고정이다. **바인딩은 `isOn`을 직접 쓰지
   않고 `Binding(get:set:)`으로 감싸 `set`에서 VM의 `togglePrivate()` 액션을 부르는 패턴**(호출부 둘 다
   동일) — 토글 컴포넌트 자체는 값을 몰라도 되고 정책은 VM의 도메인 엔티티가 갖는다.
+- **`WSSNovelSelectRow`(`Sources/NovelCell/`)는 `FeedFeature`의 연결 작품 검색(단일선택)과
+  `CollectionFeature`의 작품 추가(다중선택)가 같이 쓰는 작품 검색 결과 행이다**(2026-08, #199,
+  `FeedFeature`의 `CreateFeedConnectNovelRow`가 원본) — 단일/다중선택 정책은 이 컴포넌트가 모른다.
+  `isSelected`/`action`만 값으로 받고, 그 의미(단일선택은 덮어쓰기·다중선택은 토글)는 호출부(VM)가
+  정한다. 승격하며 원본이 쓰던 raw `AsyncImage`를 `WSSNovelCoverImage`로 교체했다(목록 반복 렌더의
+  placeholder 번쩍임 방지, 이 문서 상단 `WSSAsyncImage`/`WSSNovelCoverImage` 항목과 동일 이유) — 크기가
+  고정(78×105)인 자리라 `aspectRatio` 파라미터 없이 `.frame(width:height:)`로 직접 크기를 준다.
 - **`WSSNicknameField`(`Sources/TextField/`)는 `OnboardingFeature`의 닉네임 화면과 `UserPageFeature`의 `MyPageEditView`가 같이 쓰는 닉네임 필드다**(2026-08, 두 화면이 손으로 맞추다 드리프트해서 승격) — 글자수 clamp 트랩(로컬 `fieldText` 버퍼 → `text` 반영 2단계, [상위 CLAUDE.md](../../Feature/CLAUDE.md) 주의사항 참고)을 여기 한 곳에서만 처리한다. `WSSSearchBar`와 같은 이유로 `isFocused: FocusState<Bool>.Binding`을 **필수** 파라미터로 받는다(내부 자체 포커스 없음) — 호출부가 "필드 바깥 탭하면 키보드 내리기"를 계속 제어해야 해서다. **도메인(`ProfileDomain.NicknameDraft.ValidationState`)을 모른다** — `isError`/`isSuccess`·캡션(문구+색)을 값으로만 받고 판단은 호출자(VM)가 한다. **캡션 문구는 컴포넌트가 하드코딩하지 않는다** — 두 화면의 워딩이 의도적으로 다르게 유지돼 왔기 때문(1:1 동기화 요구 아님).
   - ⚠️ **`isFocused`는 이 필드 전용 `@FocusState`여야 한다 — 같은 화면의 다른 텍스트필드와 공유하지 말 것**(#178). 배경(gray50→white)·테두리(`wssGray70`)가 포커스 여부(`isFocused.wrappedValue`)로 바뀌는데, 다른 필드와 공유하면 그 다른 필드가 포커스돼도 이 컴포넌트가 함께 화이트/테두리로 반응한다(`MyPageEditView`가 원래 소개글과 하나의 `isKeyboardFocused`를 공유하다 이 문제로 필드별로 분리한 사례 — `UserPageFeature/CLAUDE.md` 참고). "빈 곳 탭하면 키보드 내리기"처럼 여러 필드를 동시에 내리고 싶으면, 필드마다 별도 `@FocusState`를 두고 탭 핸들러에서 전부 `false`로 내릴 것.

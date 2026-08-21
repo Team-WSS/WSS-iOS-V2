@@ -22,7 +22,7 @@ struct CreateFeedConnectNovelSheet: View {
     let onConfirm: () -> Void
     let inquiryNovelAction: () -> Void
     let dismissSheet: () -> Void
-    
+
     @State private var hasSearched: Bool = false
     @FocusState private var isSearchFocused: Bool
 
@@ -100,7 +100,7 @@ struct CreateFeedConnectNovelSheet: View {
         ScrollView {
             VStack(spacing: 6) {
                 ForEach(novels, id: \.id) { novel in
-                    CreateFeedConnectNovelRow(
+                    WSSNovelSelectRow(
                         imageURL: novel.thumbnailImage,
                         title: novel.title,
                         author: novel.authors.joined(separator: ", "),

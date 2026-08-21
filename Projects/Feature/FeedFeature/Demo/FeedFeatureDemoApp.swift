@@ -23,8 +23,8 @@ struct FeedFeatureDemoApp: App {
     var body: some Scene {
         WindowGroup {
             // 띄울 데모를 바꾸려면 아래 한 줄만 교체:
-            SosoFeedDemoScene()
-            //CreateFeedDemoScene()
+            //SosoFeedDemoScene()
+            CreateFeedDemoScene()
         }
     }
 }
