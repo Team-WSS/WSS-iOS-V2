@@ -49,8 +49,10 @@ private struct DemoRootView: View {
 
     @State private var dataSource: DataSource = .mock
     @State private var isCreatePresented = false
-    /// 열 때마다 증가. createView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
+    @State private var isListPresented = false
+    /// 열 때마다 증가. createView/listView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
     @State private var createOpenCount = 0
+    @State private var listOpenCount = 0
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -69,6 +71,12 @@ private struct DemoRootView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
+                Button("컬렉션 목록 화면 열기") {
+                    listOpenCount += 1
+                    isListPresented = true
+                }
+                .buttonStyle(.bordered)
+
                 Spacer()
             }
             .padding()
@@ -77,6 +85,10 @@ private struct DemoRootView: View {
             .navigationDestination(isPresented: $isCreatePresented) {
                 createView
                     .id(createOpenCount)
+            }
+            .navigationDestination(isPresented: $isListPresented) {
+                listView
+                    .id(listOpenCount)
             }
         }
     }
@@ -94,6 +106,25 @@ private struct DemoRootView: View {
             )
         case .live:
             makeLiveView()
+        }
+    }
+
+    @ViewBuilder
+    private var listView: some View {
+        switch dataSource {
+        case .mock:
+            CollectionFeatureFactory.makeCollectionListView(
+                userID: UserID(10049),
+                loadCollectionsUseCase: DemoLoadCollectionsUseCase(),
+                loadLikedCollectionsUseCase: DemoLoadLikedCollectionsUseCase(),
+                createCollectionUseCase: DemoCreateCollectionUseCase(),
+                searchNovelUseCase: DemoSearchNovelUseCase(),
+                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
+                logger: consoleLogger,
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveListView()
         }
     }
 
@@ -119,7 +150,7 @@ private struct DemoRootView: View {
         // Demo가 직접 세팅). NovelData의 KeywordRepository도 함께 필요하다(DefaultLoadMyLibraryUseCase
         // 시그니처 참고).
         let userDefaults = UserDefaultsStorage()
-        userDefaults.set(.userID, 10041)
+        userDefaults.set(.userID, 10049)
         let novelRepository = NovelDataFactory.makeNovelRepository(
             client: client,
             appStorage: userDefaults,
@@ -130,6 +161,46 @@ private struct DemoRootView: View {
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeCreateCollectionView(
+            createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
+                novelRepository: novelRepository,
+                keywordRepository: keywordRepository
+            ),
+            logger: consoleLogger,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    @MainActor
+    private func makeLiveListView() -> some View {
+        let client = NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DemoSessionTokenStore()
+        )
+        let repository = CollectionDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        let searchRepository = SearchDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
+        )
+        let userDefaults = UserDefaultsStorage()
+        userDefaults.set(.userID, 10049)
+        let novelRepository = NovelDataFactory.makeNovelRepository(
+            client: client,
+            appStorage: userDefaults,
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
+        )
+        let keywordRepository = KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
+        return CollectionFeatureFactory.makeCollectionListView(
+            userID: UserID(10049),
+            loadCollectionsUseCase: DefaultLoadCollectionsUseCase(collectionRepository: repository),
+            loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(collectionRepository: repository),
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
@@ -225,6 +296,59 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
         return (
             CursorPaginated(items: novels, hasNext: hasNext, nextCursor: hasNext ? String(pageIndex + 1) : nil),
             Self.pageSize * Self.demoPageCount
+        )
+    }
+}
+
+private struct DemoLoadCollectionsUseCase: LoadCollectionsUseCase {
+    func execute(userID: UserID, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "내 컬렉션")
+    }
+}
+
+private struct DemoLoadLikedCollectionsUseCase: LoadLikedCollectionsUseCase {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "좋아요한 컬렉션")
+    }
+}
+
+/// 두 목록 Mock이 공유하는 페이지 생성기 — 무한스크롤(3페이지)·표지 오버플로 배지(recentNovels < novelCount)·
+/// 비공개 태그·설명 없는 카드까지 `CollectionListView`의 주요 분기를 한 번씩 보여준다.
+private enum DemoCollectionCardPage {
+    static let pageSize = 6
+    private static let demoPageCount = 3
+
+    static func page(cursor: String?, namePrefix: String) -> (CursorPaginated<CollectionCard>, Int) {
+        let pageIndex = cursor.flatMap(Int.init) ?? 0
+        guard pageIndex < demoPageCount else {
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), pageSize * demoPageCount)
+        }
+        let cards = (1...pageSize).map { number -> CollectionCard in
+            let sequence = pageIndex * pageSize + number
+            let novelCount = sequence.isMultiple(of: 3) ? 42 : sequence
+            let recentNovels = (1...min(novelCount, 5)).map { index in
+                CollectionNovel(
+                    id: NovelID(sequence * 10 + index),
+                    title: "작품 \(sequence)-\(index)",
+                    author: "작가 \(sequence)",
+                    thumbnailImage: nil
+                )
+            }
+            return CollectionCard(
+                id: CollectionID(sequence),
+                name: "\(namePrefix) \(sequence)",
+                description: sequence.isMultiple(of: 4) ? nil : "존잼 수준이 정도를 넘음",
+                novelCount: novelCount,
+                isPrivate: sequence.isMultiple(of: 2),
+                recentNovels: recentNovels
+            )
+        }
+        let hasNext = pageIndex < demoPageCount - 1
+        return (
+            CursorPaginated(items: cards, hasNext: hasNext, nextCursor: hasNext ? String(pageIndex + 1) : nil),
+            pageSize * demoPageCount
         )
     }
 }

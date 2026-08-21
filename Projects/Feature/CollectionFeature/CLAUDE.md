@@ -8,8 +8,10 @@
   "작품 추가" 화면), `NovelDomain`(서재 조회 — "서재에서 추가" 화면, 서재 Domain 코드는 별도 모듈이
   아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
   `WSSComponent`, `Logger`
-- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
-  (모듈에 화면이 더 늘어날 예정이라 `makeView`가 아니라 화면명을 붙인 이름)
+- 진입점:
+  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
+  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름)
 
 ## 핵심 시나리오
 
@@ -45,6 +47,21 @@
   한 곳뿐이지만(2026-08-23), 설정 화면의 작품 알림 해제(다른 미병합 브랜치)가 곧 두 번째로 쓸 예정이라
   두 번째 필요 시점을 기다리지 않고 미리 승격했다(사용자 명시 요청). 자세한 계약은
   [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSPillBadge` 항목 참고.
+- **컬렉션 목록(`CollectionListView`, Factory 노출)** — "내 컬렉션"/"좋아요한 컬렉션"을 한 화면에서
+  세그먼트 탭(`CollectionSegmentedTab`, 로컬)으로 전환. 마이페이지 "컬렉션 N개" 행에서 진입(#200,
+  `UserPageFeature`가 콜백만 노출 — 두 Feature는 서로 import 못 해 실제 화면 전환은 App 몫).
+  `LoadCollectionsUseCase`(userID 필수)/`LoadLikedCollectionsUseCase`(userID 불필요, 세션 토큰 기준)를
+  탭마다 독립된 커서+generation 부기로 lazy 로드한다 — 처음 그 탭을 볼 때만 첫 페이지를 요청하고, 이미
+  본 탭은 오갈 때마다 재요청하지 않는다(`CollectionListViewModel`, `CollectionMyLibrarySelectViewModel`의
+  패턴을 탭 2개로 확장). "내 컬렉션" 탭에서만 "컬렉션 만들기" 버튼이 보이고, 탭하면 같은 모듈의 기존
+  `CreateCollectionView`로 push한다 — 그 화면은 성공 콜백이 없는 계약이라(자기완결 dismiss만) 복귀 시
+  성공 여부와 무관하게 무조건 `.mine` 탭을 다시 로드한다. 카드 표지 스택은 `CollectionCoverStackView`
+  (로컬) — 마이페이지 미리보기(`UserPageFeature.CollectionSection`, 대표 표지 1장)와는 시각 패턴이
+  달라 별개 컴포넌트다. **표지 슬롯은 실제 작품 수(1~5)와 무관하게 항상 5칸**이다(사용자 확정,
+  2026-08-21) — `recentNovels`가 5개 미만이면 남는 슬롯을 `WSSNovelCoverImage(url: nil)`의 기본 표지
+  폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게 하려는 의도, 작품 수는 카드 부제 `작품 N`으로만
+  알린다). 오버플로 배지("+N")는 없다 — Figma 목업의 숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의
+  잔재였다(사용자 확정).
 
 ## 화면 동작 계약
 
@@ -68,9 +85,36 @@
 - **"서재에서 추가" 화면("추가" 버튼) 확정 후 `CreateCollectionView`까지 2단계 pop이 정본으로 확정됐다**
   (기획팀 확인, 2026-08-23) — `CollectionSearchNovelView`(작품 검색 화면)로 1단계만 pop하는 대안은
   채택되지 않았다. 자세한 구현은 아래 주의사항 "2단계 pop" 항목 참고.
+- ⚠️ **컬렉션 목록(#200) 시각 디테일 중 Figma 확인 없이 기본값으로 구현한 것들** — 실측·디자인 재확인
+  전까지 이 기본값을 정본으로 삼는다:
+  - "좋아요한 컬렉션" 탭 빈 상태 카피("아직 좋아요한 컬렉션이 없어요")는 Figma에 데이터 있는 상태만
+    있어 새로 지었다. CTA 없음(`LibraryFeature`의 "타유저 서재" 빈 상태와 동일 판단).
+  - 탭 라벨은 Figma 원문 "내 컬랙션"(오탈자로 추정) 대신 표준 표기 "내 컬렉션"을 썼다.
+  - 페이지 크기(`size`)는 서버 권장값이 없어 20으로 고정(컬렉션 도메인 공통 — `LoadCollectionsUseCase`/
+    `LoadLikedCollectionsUseCase` 둘 다).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`CollectionListViewModel`은 표준 VM 섹션 순서(`Feature/CLAUDE.md`) 끝에 `// MARK: - Tab Bookkeeping
+  Access`를 추가로 둔다** — 탭 2개(`.mine`/`.liked`)를 동시에 부기해야 하는 첫 사례라, 그 접근자
+  헬퍼(`bookkeeping(for:)`/`content(for:)`/`update...`)가 기존 6개 섹션 어디에도 자연스럽게 안
+  맞는다. 새 화면에서 같은 "여러 하위상태를 키로 나눠 관리" 패턴이 또 필요하면 이 예외를 정본으로
+  삼아도 된다 — 단, 섹션을 늘리는 걸 기본값으로 삼지 말고 정말 기존 섹션에 안 맞을 때만.
+- ⚠️ **`CollectionListView`의 두 탭(내 컬렉션/좋아요한 컬렉션)은 각자 자기 스크롤 뷰를 갖고, 안 보이는
+  쪽도 지우지 않고 opacity로만 숨긴다**(`LibraryFeature`의 그리드↔리스트 토글과 동일 함정·동일 해법,
+  실측으로 재확인) — 하나의 스크롤 뷰 안에서 `if`/`switch`로 탭 콘텐츠만 갈아끼우면 SwiftUI가 그
+  스크롤 뷰의 정체성을 유지해 **contentOffset이 두 탭에 공유된다**(좋아요한 컬렉션에서 스크롤해 두고
+  내 컬렉션으로 돌아오면 이미 스크롤된 채로 보임). 배포 타깃 iOS 17이라 `ScrollPosition`(iOS 18+)을 못
+  써서 "동시에 마운트해두고 숨기기"가 유일한 해법이다. 이 구조 때문에 `.loadMore`/`.retry` 액션은
+  **`state.selectedTab` 암묵 참조 대신 대상 탭을 명시로 받는다** — 안 보이는 탭의 리스트도 화면에
+  계속 존재해 그 셀의 `onAppear`가 fire될 수 있는데, 액션이 "현재 선택된 탭"을 가정하면 안 보이는
+  탭의 이벤트가 엉뚱하게 보이는 탭에 적용된다.
+- ⚠️ **`CollectionSegmentedTab`의 탭 라벨은 `.onTapGesture`가 아니라 `Button`으로 감싼다** —
+  `.onTapGesture`는 접근성 트리에 안 잡혀 VoiceOver·UI 자동화(`snapshot_ui`/`tap`) 모두 탭할 수 없다
+  (`WSSComponent/CLAUDE.md` 공통 함정, `WSSLibraryGridCell` 항목과 동일 재발 — 실측: `snapshot_ui`가
+  탭 텍스트를 `tap` 대상이 아닌 `text`로만 보고했다가 `Button`으로 바꾸자 `tap` 대상으로 잡힘). 새
+  탭/세그먼트 컴포넌트를 만들 때 습관적으로 `.contentShape` + `.onTapGesture`를 쓰지 말고 `Button`을
+  기본으로 삼을 것.
 - ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 중간 화면들이 각자
   `dismiss()`를 부르지 않고, 최상위(`CreateCollectionView`)가 소유한 단 하나의 `isAddNovelPresented`를
   확정 콜백(`onConfirm`) 안에서 딱 한 번만 false로 내려 서브트리 전체를 한 번에 걷어낸다(정본,

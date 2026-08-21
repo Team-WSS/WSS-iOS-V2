@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseDomain
 import CollectionDomain
 import SearchDomain
 import NovelDomain
@@ -43,6 +44,40 @@ public enum CollectionFeatureFactory {
         )
         return CreateCollectionView(
             viewModel: viewModel,
+            searchNovelUseCase: searchNovelUseCase,
+            loadMyLibraryUseCase: loadMyLibraryUseCase,
+            logger: logger,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// - Parameters:
+    ///   - userID: `fetchCollections`(내 목록)가 명시적으로 요구한다 — `ProfileDomain`의 `.me` 타깃처럼
+    ///     로그인 사용자를 알아서 가리키는 계약이 아니다(`CollectionDomain/CLAUDE.md` 참고). 좋아요한
+    ///     목록은 세션 토큰 기준이라 이 값이 필요 없다.
+    ///   - createCollectionUseCase/searchNovelUseCase/loadMyLibraryUseCase: "내 컬렉션" 탭의 "컬렉션
+    ///     만들기"가 로컬 push하는 `CreateCollectionView`(및 그 하위 "작품 추가"/"서재에서 추가")가
+    ///     필요로 하는 UseCase — `makeCreateCollectionView`와 동일하게 그대로 관통시킨다.
+    @MainActor
+    public static func makeCollectionListView(
+        userID: UserID,
+        loadCollectionsUseCase: LoadCollectionsUseCase,
+        loadLikedCollectionsUseCase: LoadLikedCollectionsUseCase,
+        createCollectionUseCase: CreateCollectionUseCase,
+        searchNovelUseCase: SearchNovelUseCase,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        let viewModel = CollectionListViewModel(
+            userID: userID,
+            loadCollectionsUseCase: loadCollectionsUseCase,
+            loadLikedCollectionsUseCase: loadLikedCollectionsUseCase,
+            logger: logger
+        )
+        return CollectionListView(
+            viewModel: viewModel,
+            createCollectionUseCase: createCollectionUseCase,
             searchNovelUseCase: searchNovelUseCase,
             loadMyLibraryUseCase: loadMyLibraryUseCase,
             logger: logger,
