@@ -18,4 +18,6 @@ struct NotificationResponse: Decodable {
     var isRead: Bool
     var isNotice: Bool
     var feedId: Int?
+    /// 작품 알림(완결·휴재 복귀)이 가리키는 작품. 공지·피드 알림에선 null로 온다.
+    var novelId: Int?
 }
