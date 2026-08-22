@@ -47,7 +47,8 @@ final class NotificationListViewModel {
         case load
         case retry
         case loadMore
-        /// 셀 탭 — 읽음 처리를 요청한다. 딥링크에 따른 화면 전환은 View가 상위 콜백으로 위임한다.
+        /// 셀 탭 — 읽음 처리를 요청한다(서버 호출 여부는 딥링크에 따라 갈린다).
+        /// 딥링크에 따른 화면 전환은 View가 상위 콜백으로 위임한다.
         case selectNotification(NotificationItem)
         case dismissToast
     }
@@ -65,7 +66,8 @@ final class NotificationListViewModel {
     @ObservationIgnored private var lastNotificationID: NotificationID?
     /// 서버가 내려주는 `isLoadable` — 더 불러올 페이지가 있는지.
     @ObservationIgnored private var isLoadable = true
-    /// 이미 읽음 처리를 보낸 알림 — 같은 셀을 반복 탭해도 서버 호출을 한 번만 보낸다.
+    /// **서버에** 읽음 처리를 보낸 알림 — 같은 셀을 반복 탭해도 호출을 한 번만 보낸다.
+    /// 상세 딥링크 알림은 서버가 상세 조회로 읽음 처리하므로 여기 들어오지 않는다(낙관 반영만 한다).
     @ObservationIgnored private var markedAsReadIDs: Set<NotificationID> = []
 
     private static let pageSize = 20
@@ -136,17 +138,27 @@ private extension NotificationListViewModel {
         loadTask = Task { await loadPage(lastNotificationID: cursor) }
     }
 
-    /// 셀 탭 — 읽음 상태를 낙관 반영하고 서버에 알린다(화면 전환은 View 몫).
+    /// 셀 탭 — 읽음 상태를 낙관 반영하고, **명시 호출이 필요한 알림만** 서버에 알린다(화면 전환은 View 몫).
+    /// 목록 표시는 딥링크와 무관하게 전부 즉시 읽음으로 바뀐다 — 갈리는 건 서버 호출 여부뿐이다.
     func selectNotification(_ item: NotificationItem) {
-        markAsRead(id: item.id)
+        applyReadState(id: item.id)
+        // 케이스를 전부 나열한다 — 딥링크가 늘면 컴파일러가 여기를 짚어 정책을 다시 정하게 한다.
+        switch item.deeplink {
+        case .notificationDetail:
+            // 알림 상세 조회(GET /notifications/{id})는 **서버가 조회와 동시에 읽음 처리까지** 한다
+            // → read를 또 보내면 같은 일을 두 번 시키는 셈이라 생략한다. (→ NotificationData/CLAUDE.md)
+            break
+        case .feedDetail, .novelDetail, .unknown, .none:
+            // 상세 API를 타지 않는 경로 — 여기서 보내지 않으면 그 알림은 영영 미읽음으로 남는다.
+            markAsReadOnServer(id: item.id)
+        }
     }
 
-    /// 읽음 처리. 목록을 즉시 갱신(낙관)하고 서버 호출은 뒤따른다.
+    /// 읽음 처리를 서버에 알린다(낙관 반영은 호출자가 이미 끝냈다).
     /// 실패해도 롤백하지 않는다 — 이유는 모듈 CLAUDE.md의 화면 동작 계약 참고.
-    func markAsRead(id: NotificationID) {
+    func markAsReadOnServer(id: NotificationID) {
         guard !markedAsReadIDs.contains(id) else { return }
         markedAsReadIDs.insert(id)
-        applyReadState(id: id)
         Task { await sendMarkAsRead(id: id) }
     }
 

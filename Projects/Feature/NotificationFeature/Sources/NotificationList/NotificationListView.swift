@@ -207,6 +207,8 @@ private extension NotificationListView {
 
     /// 셀 탭 — 읽음 처리는 VM에, 화면 전환은 딥링크에 따라 상위 콜백에 위임한다.
     /// `.unknown`(작품 알림 등 갈 곳이 없는 경우)도 **읽음 처리는 한다** — 전환만 없다(#181에서 확정).
+    /// ⚠️ 읽음 표시는 전 케이스 즉시 반영되지만 **read API 호출 여부는 딥링크마다 다르다**
+    /// (상세로 가는 알림은 서버가 상세 조회로 읽음 처리한다) — 그 분기는 VM이 소유하니 여기서 흉내내지 말 것.
     func select(_ item: NotificationItem) {
         viewModel.handle(.selectNotification(item))
         switch item.deeplink {
