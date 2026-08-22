@@ -70,6 +70,11 @@
 - **간격**: stack `spacing: 0` 고정, **모든 고정 간격은 `Spacer().frame(height:/width:)` 빈 뷰로**(ScrollView 안에서도 동작). 예외: `ForEach` + `.frame(maxWidth:.infinity)` 균등 분배 행, 그리고 별점 같은 **leaf 컴포넌트의 고정 간격 행**은 spacing 0만/leaf-local로 둔다.
 - **Toolbar는 `@ToolbarContentBuilder`** 분리 프로퍼티로.
 - **WSSComponent / DesignSystem 우선**: 색=`Color.wssXxx`, 폰트=`.applyWSSFont(.xxx)`, 아이콘=`WSSImage`(raw hex·시스템 폰트 ❌). 오버레이=`showWSSAlert`/`showWSSToast`, CTA=`WSSCTAButton` 등. **없거나 수정이 필요하면 먼저 허락**.
+  - ⚠️ **`applyWSSFont(_:color:)`의 `alignment` 기본값은 `.center`다** — 여러 줄 텍스트를 왼쪽 정렬하려면
+    **`alignment: .leading`을 인자로 넘겨야** 한다. 밖에서 `.multilineTextAlignment(.leading)`을 덧붙이는 건
+    **먹지 않는다**(정렬은 환경값이라 Text에 더 가까운 안쪽 값이 이긴다). `VStack(alignment: .leading)` 안에
+    있어도 마찬가지 — 스택 정렬은 뷰의 배치를, 이건 뷰 *안의* 줄 정렬을 정한다. 한 줄짜리 텍스트에선 차이가
+    안 보이다가 **실데이터에서 두 줄이 되는 순간 둘째 줄만 가운데로 몰려** 드러난다(#181 알림 목록에서 실측).
   - ⚠️ **컴포넌트가 안 맞으면 호출부에서 우회하지 말고 컴포넌트 수정을 제안한다.** 화면 쪽에
     **설명이 필요한 우회**(투명 뷰 트릭, modifier 순서 의존, 값 재계산)가 생기면 그건 그 화면의
     문제가 아니라 **컴포넌트 API가 부족하다는 신호**다. 우회는 그 자리에선 동작해도 같은 함정을
@@ -120,6 +125,6 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 ## 주의사항 (작업 중 발견 시 누적)
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
-- `ModuleType.feature` enum의 **10개 모듈이 모두 실재**한다: `HomeFeature`, `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`, `OnboardingFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
+- `ModuleType.feature` enum의 **11개 모듈이 모두 실재**한다: `HomeFeature`, `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`, `OnboardingFeature`, `NotificationFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
 - **같은 "탭 콘텐츠"라도 재로드 정책은 화면마다 다르다** — 서재는 진입 1회(`hasLoaded` 가드), 홈·마이페이지는 **탭 복귀마다 갱신**(밖에서 바뀐 추천·알림·프로필을 다시 비춰야 해서). 이렇게 매번 갱신하는 화면은 **로딩 뷰가 이미 그린 콘텐츠를 덮지 않게** 해야 한다(`isInitialLoading` — 안 그러면 돌아올 때마다 화면이 깜빡이고 스크롤이 초기화된다). 새 탭 화면을 만들 때 어느 쪽인지 먼저 정할 것 → [HomeFeature](HomeFeature/CLAUDE.md), [MypageFeature](MypageFeature/CLAUDE.md).
 - ⚠️ **글자수 제한이 있는 `TextField`는 VM 상태에 직접 물리지 말 것.** `Binding(get:set:)`의 `set`에서 곧바로 clamp하면, `get`이 SwiftUI가 방금 그 필드에 마지막으로 써준 값과 같아져 "변화 없음"으로 판단되고 **네이티브 텍스트필드는 사용자가 입력한 초과분을 화면에 그대로 들고 있는다**(카운터는 맞는데 눈에 보이는 글자 수는 안 맞음). 로컬 `@State` 문자열에 물린 뒤 `.onChange`에서 "clamp → 다르면 로컬에 재대입(진짜 변경으로 인식돼 네이티브 필드가 강제로 되돌아감) → 같으면 VM에 전달"의 2단계로 처리해야 한다 → [MypageFeature](MypageFeature/CLAUDE.md)의 `MyPageEditView`(닉네임·소개글 필드)가 실측 사례.

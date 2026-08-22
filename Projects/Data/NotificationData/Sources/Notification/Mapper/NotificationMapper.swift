@@ -31,6 +31,10 @@ enum NotificationMapper {
             deepLink = .notificationDetail(id: notificationID)
         } else if let feedId = response.feedId {
             deepLink = .feedDetail(id: FeedID(feedId))
+        } else if let novelId = response.novelId {
+            // 완결·휴재 복귀 알림 → 작품 상세. 작품 알림은 `isNotice: false`로 오므로
+            // 위 공지 분기에 먼저 걸리지 않는다(#181에서 확인).
+            deepLink = .novelDetail(id: NovelID(novelId))
         } else {
             deepLink = .unknown
         }
