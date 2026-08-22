@@ -159,13 +159,16 @@ struct UserPageView: View {
         .toolbar {
             toolbarContent
         }
+        // 스크롤 전엔 프로필 섹션과 이어지는 primary20, 프로필 섹션이 화면 밖으로 스크롤되면(닉네임
+        // 타이틀 페이드인과 동일 트리거인 isScrolledFromTop) 아래 콘텐츠와 이어지는 wssWhite로 전환한다.
         .toolbarBackground(
-            WSSColor.wssPrimary20.swiftUIColor,
+            (isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor,
             for: .navigationBar
         )
         // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 보이는 자동 동작이라
-        // 스크롤 여부와 무관하게 항상 primary20으로 보이도록 강제한다.
+        // 스크롤 여부와 무관하게 항상 배경이 보이도록 강제한다(색 자체는 위에서 스크롤에 따라 전환).
         .toolbarBackground(.visible, for: .navigationBar)
+        .animation(.easeInOut(duration: 0.1), value: isScrolledFromTop)
         // 차단 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
         .showWSSAlert(
             isPresented: blockAlertBinding,
