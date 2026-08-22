@@ -26,7 +26,7 @@ public enum NotificationFactory {
     ///   - onNotificationSelected: 알림 상세 딥링크(`.notificationDetail`) 셀 탭 → 알림 상세 진입 콜백.
     ///   - onFeedSelected: 피드 딥링크(`.feedDetail`) 셀 탭 → 피드 상세 진입 콜백.
     ///   - onNovelSelected: 작품 딥링크(`.novelDetail`) 셀 탭 → 작품 상세 진입 콜백.
-    ///     ⚠️ 알림 응답에 `novelId`가 없어 **서버 보강 전까지는 발화하지 않는다**(매퍼가 `.unknown`으로 떨군다).
+    ///     완결·휴재 복귀 알림이 응답의 `novelId`로 여기 실린다(#181에서 연결).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 서버 호출 공통.
     @MainActor
     public static func makeNotificationListView(

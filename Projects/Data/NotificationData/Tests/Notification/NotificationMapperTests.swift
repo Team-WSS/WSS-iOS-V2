@@ -67,8 +67,10 @@ struct NotificationMapperTests {
         #expect(item.deeplink == .unknown)
     }
 
-    /// 분기 우선순위 고정 — 작품 알림은 `isNotice: false`로 온다는 서버 스펙에 기대고 있다.
-    /// 서버가 작품 알림에도 `isNotice: true`를 주기 시작하면 이 테스트가 그 변화를 먼저 알린다.
+    /// 분기 우선순위를 **의도적으로 고정**한다 — 매퍼 순서를 바꾸면 여기서 깨진다.
+    /// ⚠️ 이 테스트가 지키는 건 순서뿐이고, **서버 스펙 변화는 잡지 못한다**(입력을 여기서 직접 만들기 때문).
+    /// 작품 알림이 `isNotice: true`로 오기 시작하면 이 테스트는 통과한 채 사용자만 엉뚱한 화면으로 간다 —
+    /// 증상은 "완결 알림을 탭했더니 작품이 아니라 알림 상세가 열린다"이고, 그때 봐야 할 곳이 여기다.
     @Test("공지 플래그가 켜져 있으면 novelId가 있어도 알림 상세로 간다")
     func noticeTakesPrecedenceOverNovelID() {
         let item = NotificationMapper.notificationItem(from: makeResponse(isNotice: true, novelId: 4217))

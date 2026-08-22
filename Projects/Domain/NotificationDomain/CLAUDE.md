@@ -16,7 +16,8 @@
 - **Repository가 2개**다. 알림 데이터와 푸시 설정은 별개 계약 — 섞지 말 것. Data 쪽도 `Notification`/`Push` 두 Repository로 구현됨.
 - **`NotificationDeeplink` 네 갈래는 전부 Data가 실제로 만든다** — 매퍼 분기 우선순위는 `isNotice` → `feedId` →
   `novelId` → `.unknown` 순이고, 이 순서는 **작품 알림이 `isNotice: false`로 온다는 서버 스펙에 기대고 있다**.
-  서버가 작품 알림에도 `isNotice: true`를 주기 시작하면 novelId가 채워져 있어도 알림 상세로 새는데,
-  `NotificationMapperTests`의 "공지 플래그가 켜져 있으면…" 테스트가 그 변화를 먼저 알린다.
+  서버가 작품 알림에도 `isNotice: true`를 주기 시작하면 novelId가 채워져 있어도 알림 상세로 샌다.
+  ⚠️ **이 변화는 테스트가 못 잡는다** — `NotificationMapperTests`는 입력을 직접 만들어 순서만 고정하므로
+  그 조합이 와도 통과한다. 증상("완결 알림을 탭했더니 알림 상세가 열린다")으로만 드러나니, 그때 이 분기를 볼 것.
 - `NotificationType`(feed/like/hot/event/notice/unknown)은 **정의만 있고 아무도 쓰지 않는다** — `NotificationItem`은
   타입 대신 서버가 준 `iconURL`을 들고 화면은 그 이미지를 그린다. 아이콘을 타입으로 분기하려 들지 말 것.
