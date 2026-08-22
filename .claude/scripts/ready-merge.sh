@@ -70,13 +70,20 @@ cmd_rebase() {
 
   git fetch origin "$base" || die "git fetch origin '$base' 실패."
 
-  if git rebase "origin/$base"; then
+  # ⚠️ rebase 동안 git 훅을 끈다(`core.hooksPath=/dev/null`).
+  # rebase는 내부적으로 base를 체크아웃하는데, 그걸 브랜치 전환으로 본 `.githooks/post-checkout`이
+  # `tuist generate`를 돌린다. 10초 넘게 걸리는 그 작업이 커밋 적용과 겹치면
+  # "Your local changes would be overwritten by merge"로 rebase가 죽는다(워킹트리는 clean이었는데도).
+  # 프로젝트 재생성은 rebase가 끝난 뒤 한 번 하면 된다.
+  if git -c core.hooksPath=/dev/null rebase "origin/$base"; then
     echo "REBASE=OK"
   else
     echo "REBASE=CONFLICT"
     echo "── 충돌 파일 ──" >&2
     git diff --name-only --diff-filter=U >&2 || true
-    echo "해결 후: git add <파일> && git rebase --continue   /   중단: git rebase --abort" >&2
+    # continue도 훅을 꺼서 이어간다 — 위와 같은 이유(post-checkout의 tuist generate).
+    echo "해결 후: git add <파일> && git -c core.hooksPath=/dev/null rebase --continue" >&2
+    echo "중단: git rebase --abort   /   rebase 후 프로젝트 재생성: tuist generate" >&2
     exit 2
   fi
 }
@@ -98,6 +105,10 @@ cmd_build_all() {
   else
     echo "BUILD_ALL=FAIL"
     echo "위 xcodebuild 출력에서 실패한 scheme/파일을 확인하세요(tuist build는 첫 실패 지점에서 멈춥니다)." >&2
+    # ⚠️ 코드가 멀쩡해도 여기로 온다 — 시뮬레이터 이름이 이 머신에 없으면 첫 스킴에서
+    # "Could not find a suitable device ... Did find ..."로 죽는다(기본값 "iPhone 17"은 머신마다 없을 수 있다).
+    echo "⚠️ 출력이 \"Could not find a suitable device\"면 코드 문제가 아니라 시뮬레이터 이름 문제입니다 —" >&2
+    echo "   그 메시지의 'Did find' 목록에서 골라 인자로 넘기세요: ready-merge.sh build-all \"iPhone 17 Pro\"" >&2
     exit 1
   fi
 }

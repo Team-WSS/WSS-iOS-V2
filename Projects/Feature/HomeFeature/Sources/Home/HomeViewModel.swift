@@ -128,20 +128,29 @@ private extension HomeViewModel {
         defer { state.isLoading = false }
 
         do {
-            let homeData = try await loadHomeDataUseCase.execute()
-            let notificationStatus = try await loadUnreadNotificationStatusUseCase.execute()
+            // 둘은 서로 독립이라 동시에 부른다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
+            // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
+            async let homeData = loadHomeDataUseCase.execute()
+            async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
+
+            let loadedHomeData = try await homeData
+            let loadedNotificationStatus = try await notificationStatus
 
             // 플래그를 state보다 **먼저** 올린다 — 관찰 대상이 아니라 갱신을 스스로 트리거하지 않으므로,
             // 뷰를 깨우는 state 대입 시점에 이미 최신값이어야 한다(아래 실패 경로도 같은 이유로 먼저 내린다).
             hasLoadedContent = true
 
-            state.nickname = homeData.nickname
-            state.todayDiscoveries = homeData.todayDiscoveries
-            state.trendingFeeds = homeData.trendingFeeds
-            state.preferenceGenreNovelState = homeData.preferenceGenreNovelState
-            state.hasUnreadNotifications = notificationStatus.hasUnreadNotifications
-        } catch {
+            state.nickname = loadedHomeData.nickname
+            state.todayDiscoveries = loadedHomeData.todayDiscoveries
+            state.trendingFeeds = loadedHomeData.trendingFeeds
+            state.preferenceGenreNovelState = loadedHomeData.preferenceGenreNovelState
+            state.hasUnreadNotifications = loadedNotificationStatus.hasUnreadNotifications
+        } catch let error as RepositoryError {
             presentLoadFailure(error)
+        } catch {
+            // ⚠️ `async let`이 UseCase의 타입 지정 throw를 `any Error`로 지워서 분기가 필요하다.
+            // 두 UseCase 모두 RepositoryError만 던지므로 여기는 실제로는 도달하지 않는다.
+            presentLoadFailure(.unknown)
         }
     }
 }

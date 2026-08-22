@@ -73,6 +73,11 @@ import WSSComponent       // UI
 root `CLAUDE.md` Non-negotiable #2가 **정본**. 여기선 **throwing 규약만** 다룬다:
 
 - Domain/Data의 throwing은 **typed throws** (`throws(RepositoryError)`, 로그인만 `throws(AuthError)`).
+- ⚠️ **`async let`·`withThrowingTaskGroup`은 typed throws를 `any Error`로 지운다** → `throws(RepositoryError)`
+  함수 안에서 수확하면 컴파일이 깨진다. **병렬성을 포기하고 순차로 펴는 게 아니라** `do/catch`로 되돌린다
+  (`catch let error as RepositoryError { throw error } catch { throw .unknown }`).
+  실제로 이걸 피하려다 홈 로드가 순차로 퇴행한 적이 있다 — 경위·대안 검토는
+  [RecommendationDomain](../Projects/Domain/RecommendationDomain/CLAUDE.md)에 남겼다.
 
 ## 에러 처리 계약
 

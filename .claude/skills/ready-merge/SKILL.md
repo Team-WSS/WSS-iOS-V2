@@ -31,7 +31,12 @@ PR을 올린 뒤, 머지 직전에 작업 브랜치를 **최신 `develop` 위로
 - `bash .claude/scripts/ready-merge.sh rebase develop`
   - **`REBASE=OK`**: 깔끔히 올라갔다 → 3단계로.
   - **`REBASE=CONFLICT`(exit 2)**: 스크립트가 충돌 파일을 출력하고 멈춘다. 충돌을 **사용자와 함께 해결**한다:
-    - 충돌 내용을 확인·해결한다(메인이 도울 수 있음) → `git add <해결한 파일>` → `git rebase --continue`.
+    - 충돌 내용을 확인·해결한다(메인이 도울 수 있음) → `git add <해결한 파일>` →
+      **`git -c core.hooksPath=/dev/null rebase --continue`**.
+      ⚠️ **`--continue`도 훅을 꺼야 한다** — rebase가 base를 체크아웃하는 걸 브랜치 전환으로 본
+      `.githooks/post-checkout`이 `tuist generate`(10초+)를 돌리고, 그게 커밋 적용과 겹치면
+      워킹트리가 clean이었는데도 *"Your local changes would be overwritten by merge"* 로 죽는다.
+      (스크립트의 `rebase`는 이미 훅을 끄고 부른다. **rebase가 끝난 뒤 `tuist generate`를 한 번** 실행할 것.)
     - 커밋이 여럿이면 충돌이 여러 번 날 수 있다 — rebase가 끝날 때까지 반복한다.
     - 중단하려면 `git rebase --abort`(원래 상태로 복귀) 후 종료한다.
   - rebase가 끝나면(`git status`로 rebase 진행 중이 아님을 확인) 3단계로.

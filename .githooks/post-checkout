@@ -7,6 +7,12 @@
 # 또는 매니페스트 변경이 있으면 재생성이 필요하다(단순 내용 수정은 불필요).
 #
 # 활성화: git config core.hooksPath .githooks  (클론 후 1회)
+#
+# ⚠️ rebase 중에는 이 훅을 꺼야 한다. rebase는 base를 체크아웃하는데 그게 브랜치 전환($3=1)으로
+# 잡혀 여기서 tuist generate(10초+)가 돌고, 커밋 적용과 겹치면 워킹트리가 clean이었는데도
+# "Your local changes would be overwritten by merge"로 rebase가 죽는다.
+#   git -c core.hooksPath=/dev/null rebase <base>   (ready-merge.sh가 이렇게 부른다)
+# rebase가 끝난 뒤 tuist generate를 한 번 실행하면 된다.
 set -e
 
 prev="$1"; new="$2"; branch_flag="$3"
