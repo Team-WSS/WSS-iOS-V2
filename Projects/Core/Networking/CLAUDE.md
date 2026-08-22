@@ -51,14 +51,37 @@ refresh token이 1회용이라, 재발급이 동시에 두 번 나가면 나중 
 
 1. **coalescing** — 진행 중인 재발급 Task를 공유한다(동시 401 N건 → 재발급 1회).
 2. **토큰 세대 비교** — 요청이 쓴 access token이 저장소의 것과 다르면 이미 남이 갱신한 것이므로 **재발급 없이** 새 토큰으로 재시도한다. coalescing만으로는 "갱신 직후 도착한 401"을 못 잡는다.
-3. **세션 종료 판정 분리** — refresher가 **4xx로 실패할 때만** 세션 종료로 보고 토큰을 지운다. 통신 실패는 에러를 그대로 전파해 토큰을 보존한다.
+3. **재발급 실패 판정 3분화** — 실패를 셋으로 갈라 처리한다(`SessionRefreshCoordinator`).
+
+| refresher가 실패한 방식 | 토큰 | 상위로 나가는 것 |
+|---|---|---|
+| `responseFailure(401)` — 서버가 refresh token 자체를 거절 | **삭제** | `requiresReauthentication` |
+| `responseFailure(그 밖의 모든 status)` — 응답은 왔으나 갱신 실패 | **보존** | `requiresReauthentication` |
+| `decoding` — 200인데 응답 스키마가 깨짐 | **보존** | `requiresReauthentication` |
+| 그 밖의 전부(통신 실패·타임아웃·클라이언트 버그) | 보존 | 원래 에러 그대로 전파 |
+
+status를 열거하지 않는다 — 코드(`isRefreshRejected`)도 `responseFailure`면 코드값을 보지 않고,
+**토큰 삭제 여부에서만 401을 가른다.** `403`·`429`처럼 표에 없는 응답도 재인증으로 간다.
+
+- **새 토큰을 못 받은 게 확정이면 재인증으로 보낸다** — 갱신이 안 되는 토큰으로 앱을 계속 쓰게 두면 401만 반복된다.
+  `decoding`이 여기 끼는 이유: 200이어도 파싱에 실패하면 **저장된 토큰은 낡은 그대로**라 결과가 같다.
+  ⚠️ 이때 **재발급 쪽 에러를 그대로 던지면 안 된다.** 위로 나가면 원 요청이 실패한 것처럼 보여
+  `toRepositoryError()`가 `/reissue`의 404를 `.notFound`로 바꾸고, 화면이 "없는 리소스"로 오해한다.
+- **토큰 삭제는 401뿐** — 5xx 같은 일시적 장애에서 지우면 서버가 복구돼도 세션을 되살릴 수 없다.
+- **통신 실패는 세션 상태를 증명하지 않는다** — 여기서 로그아웃시키면 지하철에서 잠깐 끊겼다고 튕긴다(#184 이전 버그).
 
 재시도는 요청당 최대 2회(`NetworkingClient.maxAuthRetries`)이며, 카운터를 줄이며 `request`로 재귀해 무한 루프를 막는다.
+⚠️ **1회로 줄이면 안 된다** — 2번(토큰 세대 비교)으로 "남이 갱신해준 토큰으로 재시도"하는 것도 이 카운터를 한 번 쓴다.
+1회면 그 요청이 실제 재발급 기회를 잃고 401로 죽는다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
 - ⚠️ **토큰 갱신 요청 자체의 Endpoint는 `authorization = .withoutToken`** 이어야 한다 (프로토콜 주석). 안 그러면 갱신→401→갱신 무한 루프.
 - ⚠️ **`SessionRefreshCoordinator.refresh()`의 "검사 → `inFlight` 저장" 구간에 `await`를 넣지 말 것.** actor는 함수 전체를 잠그지 않고 `await`마다 양보하므로, 그 사이에 suspend가 끼면 두 호출이 모두 "진행 중 없음"을 보고 각자 재발급을 시작한다 — 고친 버그가 그대로 부활한다.
+- ⚠️ **탈퇴 유저(`404` + `USER-006`)는 위 표를 타지 않는다.** refresher도 `NetworkingClient`로 `/reissue`를 부르므로,
+  그 응답이 USER-006이면 **안쪽 client가 먼저 토큰을 지우고** `requiresReauthentication`을 던진다 → coordinator의
+  catch(`isRefreshRejected`)는 `responseFailure`가 아니라 그냥 통과시킨다. 결과(토큰 삭제 + 로그인)는 의도대로지만,
+  **"404는 토큰 보존"이라는 표만 보고 판단하면 어긋나 보인다.** 토큰을 지우는 자리가 두 곳이라는 걸 알고 볼 것.
 - ⚠️ **인증이 필요한 `NetworkingClient`는 앱 전체에서 하나를 공유**해야 한다. coordinator가 client마다 하나씩 생기므로, client를 화면·모듈마다 새로 만들면 재발급 직렬화가 무의미해진다. (조립부를 만들 때 반드시 지킬 것 — 현재 Demo들은 각자 client를 만든다.)
 - ⚠️ **`inFlight` 정리는 재발급 Task 자신의 `defer`가 전담한다 — 대기자 쪽(`await task.value` 뒤)으로 옮기지 말 것.** 거기서만 비워지므로 "남의 Task를 지우는" 경우가 원천적으로 없다. 대기자는 여럿이라 늦게 깬 쪽이 그 사이 시작된 새 Task를 지울 수 있고, 그걸 막으려면 세대 카운터 같은 곁가지 상태가 붙는다. **정리 위치를 지키는 것이 그 복잡도를 통째로 없애는 조건**이므로, 옮기고 가드를 더하는 방향으로 가지 않는다.
 - 도메인을 모른다 — `NetworkingError`를 `RepositoryError`로 바꾸는 건 BaseData(`toRepositoryError()`) 책임. 여기서 하지 말 것.
