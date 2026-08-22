@@ -23,19 +23,25 @@ struct CollectionPreviewRow: View {
     private enum Metric {
         /// 미리보기 항목 사이 간격(사용자 확정, 2026-08-21) — 화면 폭 기준 역산 대신 고정값으로 정했다.
         static let itemSpacing: CGFloat = 30
+        /// 2개 이하일 때 좌측 정렬 기준점 — 헤더 행의 좌측 패딩(`.padding(.horizontal, 20)`)과 동일해야
+        /// 미리보기 시작 위치가 헤더 타이틀과 맞아떨어진다.
+        static let leadingInset: CGFloat = 20
     }
 
-    /// 항목 사이 간격은 고정 30, 묶음 전체는 화면 가운데 정렬한다(사용자 확정) — `HStack`은 내용물
-    /// 크기만큼만 차지하고, 그 바깥 `.frame(maxWidth: .infinity)`가 화면 전체 폭을 차지해 기본
-    /// 정렬(`.center`)로 가운데 놓는다. 자세한 시행착오는 `UserPageFeature/CLAUDE.md` 참고 — 화면
-    /// 폭 기준 정밀 대칭(간격 역산)을 시도했다가 되돌린 이력이 있다.
+    /// 3개가 꽉 찼을 때는 항목 사이 간격 고정 30 + 묶음 전체를 화면 가운데 정렬한다(사용자 확정,
+    /// 2026-08-21) — `HStack`은 내용물 크기만큼만 차지하고, 그 바깥 `.frame(maxWidth: .infinity)`가
+    /// 화면 전체 폭을 차지해 기본 정렬(`.center`)로 가운데 놓는다. 자세한 시행착오는
+    /// `UserPageFeature/CLAUDE.md` 참고 — 화면 폭 기준 정밀 대칭(간격 역산)을 시도했다가 되돌린 이력이 있다.
+    /// 2개·1개일 땐 가운데 정렬 시 헤더 타이틀과 시작 위치가 어긋나 보여, 헤더와 동일한 좌측 인셋(20)에
+    /// 맞춰 왼쪽 정렬한다(사용자 확정, 2026-08-22).
     var body: some View {
         HStack(spacing: Metric.itemSpacing) {
             ForEach(previews, id: \.id) { preview in
                 collectionItem(imageURL: preview.representativeNovel.thumbnailImage, title: preview.name)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: previews.count < 3 ? .leading : .center)
+        .padding(.leading, previews.count < 3 ? Metric.leadingInset : 0)
     }
 
     private func collectionItem(imageURL: URL?, title: String) -> some View {
