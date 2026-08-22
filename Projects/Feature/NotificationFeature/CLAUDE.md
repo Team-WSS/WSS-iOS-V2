@@ -13,8 +13,9 @@
 
 - **목록 로드**: 진입 1회(`hasLoaded` 가드, 성공 시만 소진) → 커서 무한 스크롤. 커서는 서버 발급 문자열이 아니라
   **마지막으로 받은 `NotificationID`**(`lastNotificationID`)이고, 종료 판단은 응답의 `isLoadable`이다.
-- **셀 탭 = 두 가지 일**: ① VM이 읽음 처리(낙관 반영 + `MarkNotificationAsReadUseCase`), ② View가
-  `NotificationDeeplink`를 분기해 상위 콜백 발화(`.notificationDetail`→상세, `.feedDetail`→피드, `.unknown`/nil→전환 없음).
+- **셀 탭 = 두 가지 일**: ① VM이 읽음 처리 — 목록 표시는 **항상** 낙관 반영하되 `MarkNotificationAsReadUseCase`
+  호출은 딥링크에 따라 갈린다(아래 화면 동작 계약), ② View가 `NotificationDeeplink`를 분기해 상위 콜백
+  발화(`.notificationDetail`→상세, `.feedDetail`→피드, `.unknown`/nil→전환 없음).
 - **에러 분화**: 첫 페이지 실패=전면 `NetworkErrorView`(재시도), 더보기 실패=토스트, 인증 만료=`requiresAuthentication`
   신호 → `onAuthenticationRequired` 콜백(Feature 공통 계약).
 
@@ -32,6 +33,11 @@
 - **제목은 1줄 말줄임, 본문은 최대 2줄**(시안 근거: 제목 프레임 높이 22 고정 + 말줄임 샘플, 본문 최대 34=2줄).
 - **셀 탭은 두 가지를 동시에** 한다 — 읽음 처리(낙관) + 딥링크 전환. **`.unknown`이어도 읽음 처리는 한다**
   (전환만 없음). 갈 곳이 없다고 탭을 죽이면 미읽음 표시를 지울 방법이 사라진다.
+- ⚠️ **읽음 처리 API(`read`)는 상세로 가는 알림엔 보내지 않는다** — 알림 상세 조회(`GET /notifications/{id}`)를
+  **서버가 읽음 처리까지 겸하기** 때문이다(→ [NotificationData](../../Data/NotificationData/CLAUDE.md)).
+  갈리는 건 **서버 호출뿐**이고 목록 셀의 읽음 표시는 딥링크와 무관하게 전부 즉시 바뀐다(서버도 결국 읽음으로
+  만드니 재진입 시 값이 어긋나지 않는다). 반대로 `.feedDetail`·`.novelDetail`·`.unknown`/nil은 상세 API를 타지
+  않으므로 **여기서 `read`를 보내지 않으면 영영 미읽음으로 남는다** — "상세도 부르는데 통일하자"며 되돌리지 말 것.
 - **읽음 처리가 실패해도 롤백하지 않는다** — 화면은 읽음인 채로 두고 로그만 남긴다. 셀 탭은 대개 화면 전환과
   동시에 일어나 사용자가 이미 다음 화면에 있고, 되돌리면 돌아왔을 때 이유 없이 미읽음으로 복귀한 것처럼 보인다.
   읽음 여부는 재진입 시 서버 값으로 다시 맞춰진다. (NovelDetail 관심 토글의 "실패 시 롤백"과 **일부러 다르다**.)
@@ -74,5 +80,7 @@
   증상을 보면 mock인지 실서버인지부터 가른다(ViewModel엔 중복 제거 방어가 없다 — 지금은 일부러 없는 상태).
 - **읽음 처리는 실패해도 롤백하지 않는다** — 같은 셀 재탭은 `markedAsReadIDs`로 막고 로그만 남긴다.
   읽음 여부는 재진입 시 서버 값으로 다시 맞춰지므로, 실패를 토스트로 알리면 화면 전환과 겹쳐 시끄럽다.
+  - `markedAsReadIDs` 가드는 **서버 호출 경로에만** 걸린다(상세 딥링크 알림은 애초에 호출하지 않아 집합에
+    안 들어간다) — 낙관 반영 쪽 중복은 `applyReadState`의 `!isRead` 가드가 따로 막는다.
 - **`NotificationItem`은 전 프로퍼티가 `let`** — 낙관 반영은 `mutating` 정책이 아니라 새 인스턴스 교체로 한다
   (Domain에 `markedAsRead()` 같은 정책 메서드가 없다).
