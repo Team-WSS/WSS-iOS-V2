@@ -11,7 +11,7 @@ enum SessionRefreshResult {
     case refreshed
     /// 내 토큰만 낡았을 뿐 이미 갱신되어 있었다 → 재발급 없이 재시도 가능
     case alreadyRefreshed
-    /// 세션이 종료됐다 → 재인증 필요
+    /// 서버가 갱신을 거절했다 → 재인증 필요
     case sessionExpired
 }
 
@@ -85,11 +85,17 @@ private extension SessionRefreshCoordinator {
                 }
 
                 return .refreshed
-            } catch let error as NetworkingError where error.indicatesExpiredSession {
-                self.clearTokens()
+            } catch let error as NetworkingError where error.isRefreshRejected {
+                // 서버까지 갔는데 새 토큰을 못 받았다 → 이 토큰으로는 더 진행할 수 없으니 재인증으로 보낸다.
+                // 토큰 삭제는 401(refresh token 자체를 거절)일 때만 한다. 500 같은 일시적 장애에서
+                // 지워버리면 서버가 복구돼도 세션을 되살릴 방법이 없다.
+                if error.indicatesExpiredSession {
+                    self.clearTokens()
+                }
+
                 return .sessionExpired
             }
-            // 그 밖의 에러(통신 실패 등)는 그대로 던진다 → 토큰을 보존한다.
+            // 통신 실패(오프라인·타임아웃)는 세션 상태를 알려주지 않는다 → 그대로 던져 토큰을 보존한다.
         }
 
         inFlight = task
@@ -103,9 +109,24 @@ private extension SessionRefreshCoordinator {
 
 private extension NetworkingError {
 
-    /// 서버가 refresh token 자체를 거절한 경우(401)만 세션 종료로 본다.
-    /// 400·404 같은 요청·배포 문제나 통신 실패는 세션 상태를 알려주지 않으므로,
-    /// 토큰을 지우지 말고 에러를 그대로 전파해야 한다.
+    /// 서버까지 갔다가 **새 토큰을 못 받은 게 확정된** 경우. 통신 실패와 구분하는 기준이다.
+    /// 재시도해도 같은 결과이므로 재인증으로 보낸다. 통신 실패는 세션 상태를 증명하지 않으니
+    /// (다음 시도에 성공할 수 있다) 에러를 그대로 전파해 토큰을 보존한다.
+    ///
+    /// ⚠️ `decoding`이 여기 포함되는 이유 — 응답이 200이어도 스키마가 깨져 파싱에 실패하면
+    /// **저장된 토큰은 낡은 그대로다.** 이걸 흘려보내면 화면은 `.invalidData`만 보고
+    /// 로그인 유도를 못 해, 만료된 토큰으로 같은 실패를 반복하게 된다.
+    var isRefreshRejected: Bool {
+        switch self {
+        case .responseFailure, .decoding:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// 서버가 refresh token 자체를 거절한 경우(401). **토큰을 지우는 건 이때뿐이다.**
+    /// 400·404·5xx는 요청·배포·서버 장애라 토큰이 멀쩡할 수 있으므로 남겨 둔다.
     var indicatesExpiredSession: Bool {
         guard case .responseFailure(let code, _) = self else { return false }
         return code == 401

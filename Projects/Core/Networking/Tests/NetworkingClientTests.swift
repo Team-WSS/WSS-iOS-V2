@@ -539,8 +539,11 @@ struct NetworkingClientTests {
         #expect(tokenStore.clearTokensCallCount == 1)
     }
 
-    @Test("refresh가 404로 실패하면 세션 종료로 보지 않고 토큰을 보존한다")
-    func keepsTokensWhenRefreshFailsWithNonAuthStatus() async {
+    /// 404·5xx는 "이 토큰으로는 갱신이 안 된다"까지만 알려준다 → 재인증으로 보내되,
+    /// 토큰까지 지우면 서버가 복구돼도 세션을 되살릴 수 없으므로 남긴다.
+    /// 재발급 실패를 원 요청의 404로 흘려보내면 화면이 "없는 리소스"로 오해한다.
+    @Test("refresh가 404로 실패하면 토큰은 보존한 채 재인증을 요구한다")
+    func requiresReauthenticationButKeepsTokensWhenRefreshFailsWithNonAuthStatus() async {
         MockURLProtocol.requestHandler = nil
         let refresher = MockAuthSessionRefresher(
             behavior: .failure(NetworkingError.responseFailure(code: 404, body: nil))
@@ -557,14 +560,43 @@ struct NetworkingClientTests {
 
         do {
             _ = try await client.request(MockEndpoint(authorization: .requireToken))
-            Issue.record("responseFailure expected")
+            Issue.record("requiresReauthentication expected")
         } catch let error as NetworkingError {
-            guard case .responseFailure(let code, _) = error else {
+            guard case .requiresReauthentication = error else {
                 Issue.record("unexpected error: \(error)")
                 return
             }
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
 
-            #expect(code == 404)
+        #expect(tokenStore.clearTokensCallCount == 0)
+    }
+
+    /// 200을 받아도 스키마가 깨져 파싱에 실패하면 **저장된 토큰은 낡은 그대로**다.
+    /// 이걸 데이터 오류로 흘려보내면 화면이 로그인 유도를 못 해 같은 실패만 반복한다.
+    @Test("refresh 응답 파싱에 실패하면 토큰은 보존한 채 재인증을 요구한다")
+    func requiresReauthenticationButKeepsTokensWhenRefreshResponseCannotBeDecoded() async {
+        MockURLProtocol.requestHandler = nil
+        let refresher = MockAuthSessionRefresher(behavior: .failure(NetworkingError.decoding))
+        let tokenStore = MockTokenStore(accessToken: "access-token")
+        let client = makeClient(
+            tokenStore: tokenStore,
+            authSessionRefresher: refresher
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            try makeResponse(for: request, statusCode: 401)
+        }
+
+        do {
+            _ = try await client.request(MockEndpoint(authorization: .requireToken))
+            Issue.record("requiresReauthentication expected")
+        } catch let error as NetworkingError {
+            guard case .requiresReauthentication = error else {
+                Issue.record("unexpected error: \(error)")
+                return
+            }
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -587,9 +619,16 @@ struct NetworkingClientTests {
             authSessionRefresher: refresher
         )
 
+        let unauthorizedCount = LockedCounter()
+
         // 순번이 아니라 "어떤 토큰으로 왔는가"로 판정한다. 동시 요청에선 순번이 비결정적이다.
         MockURLProtocol.requestHandler = { request in
             let isRenewed = request.value(forHTTPHeaderField: "Authorization") == "Bearer new-token"
+
+            if isRenewed == false {
+                _ = unauthorizedCount.increment()
+            }
+
             return try makeResponse(for: request, statusCode: isRenewed ? 200 : 401)
         }
 
@@ -602,6 +641,16 @@ struct NetworkingClientTests {
             try await group.waitForAll()
         }
 
+        // ⚠️ **겹침이 실제로 일어났는지**를 함께 못 박는다 — 이 단언이 없으면 요청들이 순차로 밀려
+        // 갱신 뒤에 도착해도(=겹치지 않아도) 재발급 1회라 통과해버린다(가짜 green).
+        // `== 5`로 조이지 않는 이유는 그쪽이 스케줄링에 기대는 flaky 조건이 되기 때문 —
+        // 부하로 한 요청만 늦게 출발해도 구현이 멀쩡한데 빨간불이 뜬다.
+        #expect(unauthorizedCount.value >= 2)
+
+        // 여기서 못 박는 건 **결과**다 — "동시 401 N건이 재발급 1회로 합쳐진다". 그걸 막은 게
+        // coalescing인지 토큰 세대 비교인지는 구분하지 않는다(둘 다 있어야 하는 방어이고,
+        // 세대 비교는 바로 아래 테스트가 따로 검증한다). 둘을 완전히 분리하려면 재발급이 토큰을
+        // 갱신하지 않는 더블이 필요한데, 그러면 재시도 상한과 얽혀 다시 타이밍에 기대게 된다.
         #expect(refresher.refreshCallCount == 1)
         #expect(tokenStore.clearTokensCallCount == 0)
     }
