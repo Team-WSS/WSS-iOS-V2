@@ -308,7 +308,7 @@ private struct DemoAwayScreen: View {
 }
 
 // MARK: - Demo UseCases (Mock)
-// 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 총 25개라 기본 페이지 크기 20이면 2페이지.
+// 인메모리 Mock으로 흐름만 시연한다(서버 불필요). 총 25개라 기본 페이지 크기 15면 2페이지.
 
 private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 
@@ -367,7 +367,7 @@ private enum DemoLibraryNovels {
     /// 총 25개. 커서는 다음 시작 인덱스를 문자열로 왕복한다.
     ///
     /// ⚠️ `size`를 **실제로 반영해야** 내 서재의 재진입 갱신(보고 있던 개수만큼 한 번에 다시 받기)을
-    /// Demo에서 확인할 수 있다 — 20으로 고정해두면 그 경로가 늘 한 페이지처럼 보여 검증이 안 된다.
+    /// Demo에서 확인할 수 있다 — 고정값으로 박아두면 그 경로가 늘 한 페이지처럼 보여 검증이 안 된다.
     ///
     /// `sortType`은 **순서가 실제로 바뀌는지 눈으로 보려고만** 쓴다(서버 정렬 규칙을 흉내내지 않는다) —
     /// 정렬을 바꿔도 목록이 그대로면 재로드가 도는지 알 수 없어서다.
@@ -397,7 +397,7 @@ private enum DemoLibraryNovels {
 
     @MainActor static func page(
         cursor: String?,
-        size: Int = 20,
+        size: Int = LibraryPageSizePolicy.pageSize,
         sortType: LibrarySortType = .registeredNewest
     ) -> (CursorPaginated<LibraryNovel>, Int) {
         let sorted = Self.sorted(by: sortType)

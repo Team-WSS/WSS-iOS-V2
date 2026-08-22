@@ -13,6 +13,13 @@ import Testing
 @Suite
 struct LibraryPageSizePolicyTests {
 
+    // MARK: - 기본 페이지 크기
+
+    @Test("서재 기본 요청 개수는 15개다")
+    func pageSizeIsFifteen() {
+        #expect(LibraryPageSizePolicy.pageSize == 15)
+    }
+
     // MARK: - 갱신 1차 크기
 
     @Test("갱신은 보고 있던 개수만큼 요청한다")

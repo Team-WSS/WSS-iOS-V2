@@ -16,7 +16,7 @@ import Foundation
 public enum LibraryPageSizePolicy {
 
     /// 무한 스크롤 한 페이지 크기.
-    public static let pageSize = 20
+    public static let pageSize = 15
 
     /// 한 요청으로 받을 수 있는 개수의 서버 상한.
     ///
