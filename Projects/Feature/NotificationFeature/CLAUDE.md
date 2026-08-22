@@ -49,9 +49,10 @@
   이미지를 27로 얹는다(시안 인셋 4.5).
   - **서버 이미지는 배경 없는 글리프만 온다**(실서버 실측 — #181). 그래서 **배경 캡슐은 반드시 로컬로 그려야**
     하고, 이미지를 배경과 같은 36으로 키우면 캡슐이 가려져 사라진다. 27을 임의로 키우지 말 것.
-- **작품 알림(완결·휴재 복귀)은 현재 갈 곳이 없다** — `.novelDetail` 분기와 `onNovelSelected` 콜백은
-  **미리 열어뒀지만 서버가 `novelId`를 주지 않아 발화하지 않는다**(매퍼가 `.unknown`으로 떨군다).
-  Demo의 "완결 알림" 셀만 `.novelDetail`을 넣어 보강 후의 경로를 미리 확인한다. → [NotificationDomain](../../Domain/NotificationDomain/CLAUDE.md)
+- **작품 알림(완결·휴재 복귀)은 작품 상세로 간다** — 응답의 `novelId`를 매퍼가 `.novelDetail`로 옮기고
+  `onNovelSelected` 콜백이 발화한다(#181에서 연결). 알림 상세 API를 타지 않는 경로라 **`read` 호출도 함께 나간다**.
+  ⚠️ **실서버에서 값이 채워진 샘플을 아직 못 봤다** — 테스트 계정 알림이 전부 공지(`isNotice: true`, `novelId: null`)라
+  매핑은 `NotificationMapperTests`로만 고정돼 있다. 실제 완결 알림이 오는 계정이 생기면 전환을 눈으로 확인할 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -59,7 +60,7 @@
   딥링크 세 갈래를 라우팅할 때 `navigationDestination(for: NotificationID.self)`·`FeedID.self`·`NovelID.self`를
   나란히 두면 **먼저 등록된 쪽이 나머지를 다 삼켜** 엉뚱한 화면으로 간다. 호출자는 반드시 **세 경로 모두**
   자체 Route enum으로 감싸야 한다(Demo가 `DemoRoute`로 그렇게 한다).
-  ⚠️ `.novelDetail`은 서버 보강 전이라 지금은 발화하지 않지만, **열리는 순간 이 함정이 세 갈래로 늘어난다.**
+  ⚠️ `.novelDetail`이 #181에서 열리면서 **이 함정은 이제 실제로 세 갈래다** — 호출자가 셋 다 감싸지 않으면 샌다.
 - ⚠️ **목록 로드에 취소·무효화 장치가 일부러 없다** — `reloadFromScratch`가 `loadTask?.cancel()`도, 세대(generation)
   카운터도 쓰지 않는다. 두 호출자(`load`·`retry`)가 모두 `loadTask == nil`을 선행 확인해 **인플라이트 요청이 있는 채로
   재로드가 걸리는 경로 자체가 없기** 때문이다(재시도 버튼은 전면 실패 뷰에서만 보이고 그때 목록은 비어 있다).

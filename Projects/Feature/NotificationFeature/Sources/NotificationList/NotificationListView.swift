@@ -40,8 +40,7 @@ struct NotificationListView: View {
     private let onNotificationSelected: (NotificationID) -> Void
     /// 피드 딥링크 → 피드 상세 진입 콜백.
     private let onFeedSelected: (FeedID) -> Void
-    /// 작품 딥링크 → 작품 상세 진입 콜백.
-    /// ⚠️ 서버가 아직 `novelId`를 주지 않아 **현재는 발화하지 않는다**(매퍼가 `.unknown`으로 떨군다).
+    /// 작품 딥링크 → 작품 상세 진입 콜백. 완결·휴재 복귀 알림이 응답의 `novelId`로 여기에 실린다.
     private let onNovelSelected: (NovelID) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통.
     private let onAuthenticationRequired: () -> Void

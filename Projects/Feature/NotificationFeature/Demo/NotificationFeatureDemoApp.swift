@@ -303,8 +303,8 @@ private enum DemoNotificationData {
             iconURL: URL(string: "https://picsum.photos/seed/noti5/96/96"),
             title: "완결 알림",
             body: "<당신의 이해를 돕기 위하여> 작품이 완결났어요.",
-            // ⚠️ 실서버에선 이 알림이 `.unknown`으로 온다(응답에 novelId가 없음).
-            // Demo에서만 `.novelDetail`을 넣어 서버 보강 후의 전환 경로를 미리 확인한다.
+            // 실서버에서도 응답의 `novelId`로 같은 딥링크가 만들어진다(#181).
+            // 다만 테스트 계정엔 작품 알림 샘플이 없어, 이 셀이 전환 경로를 확인하는 유일한 자리다.
             createdAtText: "2026.07.31",
             isRead: false,
             deeplink: .novelDetail(id: NovelID(4217))
