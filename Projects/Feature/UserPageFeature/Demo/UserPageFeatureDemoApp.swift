@@ -105,9 +105,55 @@ private struct DemoScreenSelectionView: View {
                 }
                 .transition(.opacity)
             }
+
+            // Mock 전용 — 예약 userID(`DemoCollectionScenario`)로 컬렉션 개수 시나리오를 바로 시연한다.
+            // 실서버는 실제 데이터를 그대로 조회하므로 이 바로가기가 의미가 없다.
+            if dataSource == .mock {
+                Divider().padding(.vertical, 8)
+
+                Text("컬렉션 개수별 데모 (UserPage)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(DemoCollectionScenario.allCases) { scenario in
+                    NavigationLink(scenario.title) {
+                        DemoFactory.makeUserPageView(dataSource: dataSource, userID: scenario.userID)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
         }
         .padding()
         .navigationTitle(dataSource.rawValue)
+    }
+}
+
+/// 타유저 페이지 컬렉션 섹션의 개수별 노출(3개 이상/2개/1개/0개)을 확인하기 위한 예약 userID 시나리오.
+/// `demoPrivateProfileUserID`(999, 비공개 프로필 시나리오)와 동일한 관례 — 특정 userID로 Mock 응답을 분기한다.
+private enum DemoCollectionScenario: CaseIterable, Identifiable {
+    case threeOrMore
+    case two
+    case one
+    case zero
+
+    var id: Self { self }
+
+    var userID: UserID {
+        switch self {
+        case .threeOrMore: UserID(9973)
+        case .two: UserID(9972)
+        case .one: UserID(9971)
+        case .zero: UserID(9970)
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .threeOrMore: "컬렉션 3개 이상"
+        case .two: "컬렉션 2개"
+        case .one: "컬렉션 1개"
+        case .zero: "컬렉션 0개 (섹션 숨김)"
+        }
     }
 }
 
@@ -414,12 +460,23 @@ private struct DemoLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseC
 
 /// 마이페이지 컬렉션 섹션 — "컬렉션 3개"(Figma 31613:89234) 상태를 시연한다. 실제 목록 API를 `size`로
 /// 그대로 흉내낸다(`CollectionDomain/CLAUDE.md`의 "마이페이지 전용 API 없음" 계약과 동일한 모양).
-/// "컬렉션 0개"(31613:89148) 상태는 `CollectionListView` Demo의 빈 탭에서 이미 확인 가능.
+/// `DemoCollectionScenario`(9970~9973)의 예약 userID가 오면 그 개수로 오버라이드한다 — 타유저 페이지의
+/// 3개 이상/2개/1개/0개 시나리오 시연용. 마이페이지는 고정 `demoUserID`(10049)라 매핑에 없어 항상 3개
+/// 그대로다.
 private struct DemoLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    static let scenarioTotalCounts: [UserID: Int] = [
+        UserID(9973): 5, // "3개 이상" — 미리보기는 3개까지만 보이지만 전체 개수는 더 있다
+        UserID(9972): 2,
+        UserID(9971): 1,
+        UserID(9970): 0
+    ]
+
     func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
-        let totalCount = 3
-        let previews = (1...min(size, totalCount)).map { index in
+        let totalCount = Self.scenarioTotalCounts[userID] ?? 3
+        let previewCount = min(size, totalCount)
+        // totalCount 0(빈 시나리오)이면 `1...0`이 유효하지 않은 range라 별도 분기한다.
+        let previews = previewCount > 0 ? (1...previewCount).map { index in
             CollectionPreview(
                 id: CollectionID(index),
                 name: "마이페이지 컬렉션 \(index)",
@@ -430,7 +487,7 @@ private struct DemoLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase 
                     thumbnailImage: nil
                 )
             )
-        }
+        } : []
         return (previews, totalCount)
     }
 }
