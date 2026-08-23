@@ -60,6 +60,8 @@ final class UserLibraryViewModel {
     // ⚠️ 내 서재는 이 가드를 걷어내고 재진입마다 갱신하지만(`hasLoadedContent`), 이 화면은 **push라
     // 재진입마다 화면이 새로 서므로 갱신 자체가 없어** 1회 가드가 그대로 맞다. 내 서재를 따라가지 말 것.
     @ObservationIgnored private var hasLoaded = false
+    /// 진행 중인 목록 로드. ⚠️ **로드는 항상 이 한 슬롯에만 산다** — "무효해진 로드 == 취소된 로드"라는
+    /// 등식이 여기서 나오고, 그 등식이 세대 카운터를 대신한다(`loadPage` 주석, 내 서재와 동일).
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     /// 서버 발급 커서 — 다음 페이지 요청에 그대로 왕복한다. View가 볼 값이 아니라 State 밖.
     @ObservationIgnored private var nextCursor: String?
