@@ -32,7 +32,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 | 독자 평가 — 전부 없음 | 독자 평가 전부 없음 | 감상평 영역 전체가 빈 상태(제목도 "독자들의 평가") |
 | 피드 | 피드 없음 / 1개 / 5개 / 15개 / 45개 | 빈 상태 / 셀 하나뿐인 최소 목록 / 페이지네이션 없음(1페이지) / 2페이지 / 5페이지(페이지 크기 10) |
 | 극단 | 최소 데이터(신규 작품) | 표지·평점·플랫폼·평가·피드 전부 없음 |
-| 실패 | 작품 로드 실패 / 피드 로드 실패 | NetworkErrorView / 빈 상태 대신 실패 문구 |
+| 실패 | 작품 로드 실패 / 피드 로드 실패 | 화면 전체 NetworkErrorView / **피드 탭 자리만** NetworkErrorView |
 
 - 시나리오는 `userReviewParts`(`Set<UserReviewPart>?`) / `readerReviewParts`(`Set<ReaderReviewPart>`) / `feedCount`(`Int` — 0이면 빈 상태, 페이지 크기 10 기준으로 페이지 수가 갈린다) **축**으로 표현하고 Mock UseCase 둘이 그 축만 읽는다 — 새 조건을 넣을 땐 축(또는 집합의 원소)을 늘리지, `if scenario == ...` 분기를 Mock 곳곳에 흩뿌리지 말 것.
 - ⚠️ **`userReviewParts`는 옵셔널 집합** — `nil`(평가 자체가 없음 → 셀렉터)과 `[]`(평가는 있고 **읽기 상태만** 있음 → 칩 없는 상태바)는 **다른 화면**이다. 읽기 상태는 평가가 존재하면 반드시 있으므로 축에 넣지 않는다(그래서 "읽기 상태만" = 빈 집합).
@@ -42,6 +42,12 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - ⚠️ **연재중 케이스는 `.onGoing`** (`.serial` 아님 — `NovelPublicationStatus`).
 
 ## 주의사항 (작업 중 발견 시 누적)
+
+- ⚠️ **피드 로드 실패는 첫 페이지든 더보기든 탭 자리를 `NetworkErrorView`(재시도 버튼)로 대체한다**(#195) — 토스트로 알리지 않는다. 규칙 정본은 [Feature CLAUDE.md](../CLAUDE.md)의 "로드 실패 표현 계약".
+  - ⚠️ **`NovelDetailFeedTab`은 실패를 목록보다 먼저 판단한다**(`if hasLoadFailed` → `else if feeds.isEmpty`). 더보기가 실패하면 목록이 남아 있는데 그대로 두면 **실패를 알릴 자리가 없어** 사용자가 "왜 안 늘어나지"로 갇힌다(서재에서 실제로 겪었다). 순서를 뒤집지 말 것.
+  - ⚠️ **첫 성공 전이면 피드 탭 재진입(`selectTab`)도 첫 페이지 재로드를 시도한다** — 그때 `feedsLoadFailed`를 **함께 내려야** 요청이 도는 동안 실패 뷰 대신 로딩이 보인다. 안 내리면 실패 뷰가 그려진 채 그 재시도 버튼이 `feedsTask == nil` 가드에 막혀 **눌러도 반응이 없다**(#195에서 실제로 그랬다). 단 플래그 하강은 **재로드가 실제로 도는 `if` 블록 안**에 둘 것 — 밖에 두면 더보기 실패 상태에서 탭만 왕복해도 실패 뷰가 사라지고 재시도 수단이 증발한다.
+  - 재시도(`.retryFeeds`)는 **첫 페이지부터 다시 세운다** — `state.feeds`를 비우고 `hasLoadedFirstFeeds`도 내린다. 더보기 실패도 이 경로로 오므로 안 비우면 같은 피드가 두 번 붙는다.
+  - 한때 첫 페이지 실패는 `"피드를 불러오지 못했어요"` 문구(재시도 버튼 없음) + 토스트였고 더보기 실패는 토스트뿐이었다. 재시도 수단이 "탭 재탭"이라는 숨은 동작뿐이라 바꿨다.
 
 - 대응 `NovelDetailDomain`이 없다 — UseCase는 `NovelDomain`/`FeedDomain` 것을 주입받는다. `new-module` 기본 추론(`domain(.<같은이름>)`)과 다른 지점.
 - **`state.novel`을 `state.information.novel`과 분리 보유** — `NovelInformation.novel`이 `let`이라 관심 토글(mutating)을 반영할 수 없어서다. 헤더/관심 버튼은 `state.novel`을 읽는다.

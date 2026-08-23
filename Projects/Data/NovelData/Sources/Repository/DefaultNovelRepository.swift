@@ -92,13 +92,14 @@ public struct DefaultNovelRepository: NovelRepository {
     public func fetchMyLibraryNovels(
         _ filter: MyLibraryFilter,
         cursor: String?,
+        size: Int,
         cachedKeywords: [Keyword]
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         let action = NovelAction.fetchMyLibrary
 
         do {
             let myID = appStorage.get(.userID)
-            let query = NovelMapper.myLibraryV2Query(from: filter, cursor: cursor)
+            let query = NovelMapper.myLibraryV2Query(from: filter, cursor: cursor, size: size)
             let response = try await service.getUserLibraryNovelsV2(userID: myID ?? 0,
                                                                     query: query)
             let result = try NovelMapper.libraryNovelsV2(

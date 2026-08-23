@@ -24,7 +24,7 @@ struct LoadMyLibraryUseCaseTests {
 
         let usecase = makeUseCase(novelRepository: mock)
 
-        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(result.0.items.count == expected.items.count)
         #expect(result.0.hasNext == expected.hasNext)
@@ -37,7 +37,7 @@ struct LoadMyLibraryUseCaseTests {
         mock.fetchMyLibraryResult = .success((makeLibraryPage(), 37))
 
         let usecase = makeUseCase(novelRepository: mock)
-        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(result.1 == 37)
     }
@@ -52,7 +52,7 @@ struct LoadMyLibraryUseCaseTests {
         filter.addReadingStatus(.watching)
         filter.addGenre(.fantasy)
 
-        _ = try await usecase.execute(filter: filter, cursor: nil)
+        _ = try await usecase.execute(filter: filter, cursor: nil, size: 20)
 
         let passedFilter = mock.fetchedMyLibraryFilters.last
         #expect(passedFilter?.readingStatus == [.watching])
@@ -66,9 +66,22 @@ struct LoadMyLibraryUseCaseTests {
 
         let usecase = makeUseCase(novelRepository: mock)
 
-        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: "cursor-42")
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: "cursor-42", size: 20)
 
         #expect(mock.fetchedMyLibraryCursors.last == "cursor-42")
+    }
+
+    @Test("요청 개수(size)가 저장소에 그대로 전달된다")
+    func sizeIsPassedToRepository() async throws {
+        let mock = MockNovelRepository()
+        mock.fetchMyLibraryResult = .success((makeLibraryPage(), 3))
+
+        let usecase = makeUseCase(novelRepository: mock)
+
+        // 재진입 갱신은 "보고 있던 개수만큼" 한 번에 받으므로 페이지 크기가 고정이 아니다.
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 47)
+
+        #expect(mock.fetchedMyLibrarySizes.last == 47)
     }
 
     @Test("첫 페이지 조회는 커서 없이(nil) 저장소에 전달된다")
@@ -78,7 +91,7 @@ struct LoadMyLibraryUseCaseTests {
 
         let usecase = makeUseCase(novelRepository: mock)
 
-        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(mock.fetchedMyLibraryCursors.last == .some(nil))
     }
@@ -97,7 +110,7 @@ struct LoadMyLibraryUseCaseTests {
             keywordRepository: keywordRepository
         )
 
-        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+        _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(novelRepository.lastMyLibraryCachedKeywords == [keyword])
         #expect(keywordRepository.fetchKeywordsCallCount == 1)
@@ -115,7 +128,7 @@ struct LoadMyLibraryUseCaseTests {
             keywordRepository: keywordRepository
         )
 
-        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+        let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(result.0.items.count == expected.items.count)
         #expect(novelRepository.lastMyLibraryCachedKeywords == [])
@@ -130,7 +143,7 @@ struct LoadMyLibraryUseCaseTests {
         let usecase = makeUseCase(novelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute(filter: MyLibraryFilter(), cursor: nil)
+            try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
         }
     }
 }

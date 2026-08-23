@@ -178,10 +178,16 @@ extension NovelMapper {
 extension NovelMapper {
     
     // MARK: - 서재 조회 Query
-    
-    /// 서재 V2 쿼리. 미적용 필터는 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+
+    /// 타유저 서재의 고정 페이지 크기. 내 서재와 같은 엔드포인트라 값도 같은 곳(Domain 정책)에서 가져온다.
+    private static let userLibraryPageSize = LibraryPageSizePolicy.pageSize
+
+    /// 내 서재 V2 쿼리. 미적용 필터는 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
     /// isInterest는 "관심만 보기" 토글이라 true일 때만 전송한다(false를 보내면 비관심만 필터됨).
-    static func myLibraryV2Query(from filter: MyLibraryFilter, cursor: String?) -> UserLibraryV2Query {
+    ///
+    /// `size`는 여기서 정하지 않고 **화면이 넘긴 값을 그대로 싣는다** — 재진입 갱신이 "보고 있던 개수만큼"
+    /// 한 번에 받아야 해서 페이지 크기가 고정이 아니다(타유저 서재는 고정이라 아래에서 상수를 쓴다).
+    static func myLibraryV2Query(from filter: MyLibraryFilter, cursor: String?, size: Int) -> UserLibraryV2Query {
         var ratingMin: Float?
         var ratingMax: Float?
         var unratedOnly: Bool?
@@ -197,7 +203,9 @@ extension NovelMapper {
 
         return UserLibraryV2Query(
             cursor: cursor,
-            size: 20,
+            // 서버와 말하는 마지막 지점에서 상한을 닫는다 — 화면이 정책을 거치는 게 정상 경로지만,
+            // 그 선의에 기대지 않고 여기서도 막아야 새 호출자가 생겨도 상한이 새지 않는다.
+            size: min(size, LibraryPageSizePolicy.maxSize),
             sortType: mapLibrarySortTypeString(from: filter.sortType),
             isInterest: filter.isInterest ? true : nil,
             readStatuses: filter.readingStatus.isEmpty
@@ -217,10 +225,13 @@ extension NovelMapper {
 
     /// 타유저 서재 V2 쿼리. 내 서재와 **같은 엔드포인트**를 쓰지만 필터 UI가 없는 화면이라 정렬만 싣고
     /// 나머지 필터는 전부 nil로 둬 파라미터를 생략한다(빈 배열 전송 금지 — DTO 주석 참조).
+    ///
+    /// `size`가 여기만 상수인 건 의도다 — 이 화면은 push라 재진입마다 새로 서서 "보고 있던 개수만큼
+    /// 다시 받기"가 존재하지 않는다(내 서재는 그래서 화면이 size를 넘긴다).
     static func userLibraryV2Query(from filter: LibraryFilter, cursor: String?) -> UserLibraryV2Query {
         UserLibraryV2Query(
             cursor: cursor,
-            size: 20,
+            size: userLibraryPageSize,
             sortType: mapLibrarySortTypeString(from: filter.sortType),
             isInterest: nil,
             readStatuses: nil,

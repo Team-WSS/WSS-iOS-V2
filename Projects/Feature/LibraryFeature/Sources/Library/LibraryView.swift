@@ -91,7 +91,7 @@ struct LibraryView: View {
     private var content: some View {
         VStack(spacing: 0) {
             headerSection
-            // 첫 페이지 실패는 헤더(타이틀·등록 버튼)만 남기고 그 아래를 전면 실패 뷰로 대체한다 —
+            // 목록 로드 실패(첫 페이지·더보기·갱신 공통)는 헤더(타이틀·등록 버튼)만 남기고 그 아래를 실패 뷰로 대체한다 —
             // 필터/정렬/카운트는 실패 상태에서 조작할 게 없어 함께 숨긴다.
             if viewModel.state.loadFailed {
                 NetworkErrorView { viewModel.handle(.retry) }
@@ -470,7 +470,7 @@ private extension LibraryView {
     }
 
     var toastType: WSSToastType {
-        // 더보기·키워드 실패 모두 네트워크 실패 계열 — 정본(NovelDetail)과 동일하게 unknownError 하나로 표현(의도).
+        // 남은 토스트는 키워드 칩 로드 실패 하나뿐이다(목록 로드 실패는 전면 실패 뷰가 표현한다).
         .unknownError
     }
 
@@ -539,7 +539,11 @@ private extension LibraryView {
 }
 
 private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    func execute(
+        filter: MyLibraryFilter,
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         let novels = (1...6).map { index in
             LibraryNovel(
                 id: NovelID(index),

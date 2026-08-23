@@ -12,9 +12,14 @@
   `NovelRepository.fetchNovel(id:cachedKeywords:)`에 주입한다. → 이 UseCase는 NovelRepository + KeywordRepository **둘 다** 의존.
 - **관심 토글**: 도메인 정책은 Entity `Novel`의 `mutating` 메서드(`markAsInterested`/`toggleInterest`)가 담당. 서버 반영(`addNovelInterest`/`removeNovelInterest`)은 Repository 별도 호출.
 - **서재**: 결과는 `(Paginated<T>, Int)` = (페이지 목록, 총 개수) 튜플.
-- **내 서재(V2, #166)**: `LoadMyLibraryUseCase.execute(filter:cursor:)` → `(CursorPaginated<LibraryNovel>, Int)`.
+- **내 서재(V2, #166)**: `LoadMyLibraryUseCase.execute(filter:cursor:size:)` → `(CursorPaginated<LibraryNovel>, Int)`.
   커서는 **서버 발급 opaque 문자열**(`nextCursor`) — 마지막 아이템 ID로 유도하지 말고 그대로 왕복한다.
   필터 시트 키워드 탭 데이터는 `LoadMyLibraryKeywordsUseCase`(등록 키워드 목록) 별도.
+  - ⚠️ **`size`를 화면이 정하는 건 의도다** — 내 서재는 재진입할 때마다 "보고 있던 개수만큼" 한 번에 다시
+    받아야 목록이 짧아지지 않는다(짧아지면 스크롤 위치가 위로 튄다). 그래서 페이지 크기가 고정이 아니고,
+    Data에 상수로 숨기면 그 경로를 표현할 수 없다. **타유저 서재(`LoadUserLibraryUseCase`)엔 일부러 안 뚫었다** —
+    push라 재진입마다 화면이 새로 서서 그 갱신 자체가 없다. Repository "내"/"유저" 쌍을 맞추려고 따라 넣지 말 것.
+- **서재 요청 개수 정책(`LibraryPageSizePolicy`)**: 페이지 크기(15)·서버 상한(100)과 **재진입 갱신의 1차/2차 요청 크기**를 계산하는 순수 함수. 화면이 `size`를 넘기는 구조라 계산이 Feature에 흩어지기 쉬운데, 보던 개수·delta·상한이 얽혀 가장 틀리기 쉬운 부분이라 여기로 내려 테스트로 고정했다. Data의 타유저 서재 고정 크기도 이 상수를 쓴다(값이 두 벌로 갈리지 않게).
 - **타유저 서재(V2, #166)**: `LoadUserLibraryUseCase.execute(id:filter:cursor:)` → 내 서재와 **같은 반환 타입·같은 엔드포인트**.
   ⚠️ **서버 경로가 `/users/{userId}/novels/v2`라 내 서재와 타유저 서재의 차이는 "어떤 userID를 넣느냐"뿐**이다 —
   내 서재는 Data가 저장된 userID를 채우고, 타유저는 호출자가 `UserID`를 넘긴다. 그래서 커서 페이지네이션·정렬 6종·

@@ -28,11 +28,14 @@ public protocol NovelRepository {
     /// 내부적으로 저장된 userID를 기반으로 필터·정렬을 적용해 조회한다.
     /// - Parameters:
     ///   - cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
+    ///   - size: 이번 요청으로 받을 개수. **호출자가 정한다** — 화면 재진입 갱신이
+    ///     "이미 보고 있던 개수만큼 한 번에" 다시 받아야 해서 페이지 크기가 고정이 아니다.
     ///   - cachedKeywords: 응답의 키워드 이름을 `Keyword`로 복원할 때 사용할 전체 키워드 캐시.
     /// - Returns: (커서 페이지, 필터 적용된 전체 작품 수)
     func fetchMyLibraryNovels(
         _ filter: MyLibraryFilter,
         cursor: String?,
+        size: Int,
         cachedKeywords: [Keyword]
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int)
 
@@ -40,6 +43,10 @@ public protocol NovelRepository {
     ///
     /// 내 서재와 **같은 엔드포인트**(`/users/{userId}/novels/v2`)를 userID만 바꿔 호출한다 →
     /// 커서 페이지네이션·정렬 6종·키워드 복원이 내 서재와 동일하게 동작한다.
+    ///
+    /// ⚠️ 다만 내 서재와 달리 `size`를 받지 않는다(구현체가 고정 페이지 크기를 쓴다) — 이 화면은 push라
+    /// 재진입마다 화면이 새로 서므로 "보고 있던 개수만큼 다시 받는" 갱신이 존재하지 않는다. 쌍을 맞추려고
+    /// 여기에도 `size`를 뚫지 말 것(쓰는 곳이 없는 파라미터가 된다).
     /// - Parameters:
     ///   - id: 조회 대상 사용자.
     ///   - cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.

@@ -42,6 +42,15 @@
 - **인증 만료 뒤 화면을 치우는 건 콜백을 받은 App의 책임이다.** Feature는 신호만 올리고 목록은 빈 채 남으므로 빈 상태("서재가 비어있어요" 등)가 비칠 수 있다 — 이걸 Feature에서 가리려 하면 위의 "갇히는 실패 뷰"로 되돌아간다. `onAuthenticationRequired`는 **화면(또는 루트)을 교체하는 배선**이어야 하고, **idempotent해야 한다**(한 화면에서 로드가 여러 개면 시간차로 2회 발화할 수 있다).
 - 신호를 **소진**할지(`.consumeAuthenticationRequired`)는 VM 수명에 달렸다 — 탭 콘텐츠처럼 VM이 앱 세션 내내 살면 소진해야 2회차 만료가 삼켜지지 않는다(→ [LibraryFeature](LibraryFeature/CLAUDE.md)).
 
+### 로드 실패 표현 계약 (#195에서 정리 — 여기가 정본)
+
+- **화면의 주 콘텐츠를 세우는 로드가 실패하면 화면이 표현한다**(실패 뷰·실패 문구). 첫 페이지든 더보기든 갱신이든 가리지 않는다 — 사용자에겐 셋 다 "못 불러왔다"는 같은 사건이고, 몇 번째 페이지였는지는 앱 내부 사정이다.
+- **화면이 표현했으면 토스트를 겹치지 않는다** — 에러 시그널 이중화. (`NovelDetail`이 첫 페이지 실패에 문구+토스트를 둘 다 띄우고 있었고 #195에서 정리했다.)
+- **토스트로 남기는 건 둘뿐**: **사용자 액션 실패**(좋아요·삭제·신고·등록 — 콘텐츠는 멀쩡하고 그 행동만 실패), **부수 데이터 실패**(필터 시트 키워드 칩처럼 주 콘텐츠가 아닌 것).
+- **인증 만료는 위 규칙 전부의 예외** — 실패 표현 없이 로그인 라우팅으로 일원화한다(위 "인증 만료 처리 계약").
+- ⚠️ **핵심은 복구 수단이다.** 토스트는 알림이지 해결책이 아니다 — 사라지면 다시 부를 방법이 없다. 서재에서 실제로 "하단에서 더보기가 실패하면 그 뒤로 목록이 영영 안 채워지는" 상태를 만들었다(→ [LibraryFeature](LibraryFeature/CLAUDE.md)). 새 화면에서 목록 실패를 토스트로 처리하고 싶으면 **재시도 경로가 무엇인지 먼저 답할 것.**
+- **표현은 `NetworkErrorView`(재시도 버튼 포함)로 통일한다.** 화면 전체를 덮을지 그 영역만 덮을지는 구조를 따른다 — 서재는 헤더 아래 전체, `NovelDetail` 피드는 스티키 탭 아래 탭 콘텐츠 자리. 목록이 남아 있어도(더보기 실패) 걷어내고 실패 뷰를 세운다.
+
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 
 **새 Feature VM은 아래 `// MARK:` 순서·역할을 그대로 따른다.** 순서를 바꾸거나 섹션을 임의로 추가하지 않는다.
@@ -126,5 +135,6 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 
 - 화면 라벨/아이콘 표현은 **WSSComponent의 `DomainPresentation/` 확장**(`public`)을 재사용한다 — Feature에서 중복 매핑하지 말 것.
 - `ModuleType.feature` enum의 **11개 모듈이 모두 실재**한다: `HomeFeature`, `NovelReviewFeature`, `FeedFeature`, `NovelDetailFeature`, `MypageFeature`, `SettingFeature`, `SearchFeature`, `KeywordFeature`, `LibraryFeature`, `OnboardingFeature`, `NotificationFeature`. `SearchFeature`는 소소픽·최근 검색어·키워드 검색(인기 키워드)·자동완성·검색 실행/결과·장르·키워드 탭의 상세 검색 결과 화면까지 UseCase 연동 완료 — 자세한 내용은 `SearchFeature/CLAUDE.md` 참고.
-- **같은 "탭 콘텐츠"라도 재로드 정책은 화면마다 다르다** — 서재는 진입 1회(`hasLoaded` 가드), 홈·마이페이지는 **탭 복귀마다 갱신**(밖에서 바뀐 추천·알림·프로필을 다시 비춰야 해서). 이렇게 매번 갱신하는 화면은 **로딩 뷰가 이미 그린 콘텐츠를 덮지 않게** 해야 한다(`isInitialLoading` — 안 그러면 돌아올 때마다 화면이 깜빡이고 스크롤이 초기화된다). 새 탭 화면을 만들 때 어느 쪽인지 먼저 정할 것 → [HomeFeature](HomeFeature/CLAUDE.md), [MypageFeature](MypageFeature/CLAUDE.md).
+- **탭 콘텐츠는 탭 복귀마다 갱신한다** — 홈·마이페이지·서재 모두 밖에서 바뀐 값(추천·알림·프로필, 작품 상세에서 고친 별점·읽기상태)을 다시 비춰야 해서다. 구 WSSiOS도 `viewWillAppear`마다 다시 불렀다. **`.load`에 "최초 1회" 가드를 넣지 말 것**(서재가 `hasLoaded`로 그렇게 돼 있었으나 걷어냈다) — 중복 요청은 진행 중인 Task 가드가 막는다.
+  - ⚠️ 대신 **갱신이 이미 그린 콘텐츠를 걷어내지 않게** 해야 한다 — 안 그러면 돌아올 때마다 화면이 깜빡이고 스크롤 위치가 초기화된다. 홈은 로딩 분기를 `isInitialLoading`(보여줄 게 없을 때만)으로 좁혔고, 서재는 갱신 경로가 아예 로딩 표시를 세우지 않는다. → [HomeFeature](HomeFeature/CLAUDE.md), [LibraryFeature](LibraryFeature/CLAUDE.md), [UserPageFeature](UserPageFeature/CLAUDE.md).
 - ⚠️ **글자수 제한이 있는 `TextField`는 VM 상태에 직접 물리지 말 것.** `Binding(get:set:)`의 `set`에서 곧바로 clamp하면, `get`이 SwiftUI가 방금 그 필드에 마지막으로 써준 값과 같아져 "변화 없음"으로 판단되고 **네이티브 텍스트필드는 사용자가 입력한 초과분을 화면에 그대로 들고 있는다**(카운터는 맞는데 눈에 보이는 글자 수는 안 맞음). 로컬 `@State` 문자열에 물린 뒤 `.onChange`에서 "clamp → 다르면 로컬에 재대입(진짜 변경으로 인식돼 네이티브 필드가 강제로 되돌아감) → 같으면 VM에 전달"의 2단계로 처리해야 한다 → [MypageFeature](MypageFeature/CLAUDE.md)의 `MyPageEditView`(닉네임·소개글 필드)가 실측 사례.
