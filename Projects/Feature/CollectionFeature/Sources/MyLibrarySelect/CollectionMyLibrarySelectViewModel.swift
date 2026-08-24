@@ -34,6 +34,8 @@ final class CollectionMyLibrarySelectViewModel {
     struct State {
         var novels: [LibraryNovel] = []
         /// 검색(`CollectionSearchNovelView`)에서 이미 고른 것 + 이 화면에서 고른 것이 합쳐진 최종 선택.
+        /// **가장 최근에 고른 작품이 배열 맨 앞**(`CollectionSearchNovelViewModel`과 동일 계약) — 이
+        /// 화면에서 고른 작품은 검색에서 고른 것보다 시간상 나중이므로 항상 그 앞에 꽂힌다.
         var selectedNovels: [CollectionNovel]
         /// 초기값 true — onAppear의 `.load`보다 첫 body 평가가 먼저라, false로 시작하면 로드 시작 전
         /// 한 프레임 동안 빈 상태가 스친다(`LibraryViewModel`과 동일 이유).
@@ -166,8 +168,9 @@ private extension CollectionMyLibrarySelectViewModel {
                 if state.presentedToast == nil { state.presentedToast = .selectionLimitReached }
                 return
             }
-            state.selectedNovels.append(
-                CollectionNovel(id: novel.id, title: novel.title, author: "", thumbnailImage: novel.thumbnailImage)
+            state.selectedNovels.insert(
+                CollectionNovel(id: novel.id, title: novel.title, author: "", thumbnailImage: novel.thumbnailImage),
+                at: 0
             )
         }
     }

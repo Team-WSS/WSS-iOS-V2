@@ -27,7 +27,10 @@ final class CollectionSearchNovelViewModel {
         var searchText: String = ""
         var searchedNovels: [Novel] = []
         /// 검색 결과와 별개로 유지 — 검색어를 바꿔도 이미 고른 작품은 그대로 남아야 한다
-        /// (`KeywordFeature.selectedKeywords`와 같은 구조). 순서 = 선택 순서.
+        /// (`KeywordFeature.selectedKeywords`와 같은 구조). **가장 최근에 고른 작품이 배열 맨 앞**
+        /// (`CollectionDraft.novelIDs`의 "앞쪽이 최신" 계약과 대응, `CollectionDomain` 참고) —
+        /// 그리드에서 최신 작품이 상단에 오고, 대표를 따로 안 골랐으면 그 작품이 대표가 된다
+        /// (`effectiveRepresentativeNovelID`가 `novelIDs.first`로 대체).
         var selectedNovels: [CollectionNovel]
         var isSearching = false
         /// 현재 `searchText`로 검색이 **실제로 완료**됐는지. 타이핑은 `updateSearchText`에서 매 글자마다
@@ -147,6 +150,7 @@ private extension CollectionSearchNovelViewModel {
     }
 
     /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않고 토스트로 알린다.
+    /// 새로 고른 작품은 배열 **맨 앞**에 꽂는다(최근 선택이 그리드 상단·기본 대표가 되도록, State 주석 참고).
     func toggleNovel(_ novel: Novel) {
         if let index = state.selectedNovels.firstIndex(where: { $0.id == novel.id }) {
             state.selectedNovels.remove(at: index)
@@ -155,13 +159,14 @@ private extension CollectionSearchNovelViewModel {
                 state.presentedError = .selectionLimitReached
                 return
             }
-            state.selectedNovels.append(
+            state.selectedNovels.insert(
                 CollectionNovel(
                     id: novel.id,
                     title: novel.title,
                     author: novel.authors.first ?? "",
                     thumbnailImage: novel.thumbnailImage
-                )
+                ),
+                at: 0
             )
         }
     }
