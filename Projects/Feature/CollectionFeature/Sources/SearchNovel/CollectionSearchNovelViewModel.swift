@@ -156,7 +156,7 @@ private extension CollectionSearchNovelViewModel {
             state.selectedNovels.remove(at: index)
         } else {
             guard !isAtCapacity else {
-                state.presentedError = .selectionLimitReached
+                if state.presentedError == nil { state.presentedError = .selectionLimitReached }
                 return
             }
             state.selectedNovels.insert(

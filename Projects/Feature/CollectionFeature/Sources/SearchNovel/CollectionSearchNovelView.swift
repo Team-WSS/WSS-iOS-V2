@@ -28,8 +28,8 @@ struct CollectionSearchNovelView: View {
     /// 완료될 때까지(=`isMyLibrarySelectPresented`가 자연스레 false로 돌아올 때까지) 이 화면의
     /// `dismiss()`를 미뤄두는 플래그 — 실측 필요(아래 주석 참고).
     @State private var isPendingDismissAfterMyLibrarySelect = false
-    @Environment(\.dismiss) private var dismiss
     @FocusState private var isSearchBarFocused: Bool
+    @Environment(\.dismiss) private var dismiss
 
     /// "서재에서 추가" 화면이 서재 조회에 쓸 UseCase — `searchNovelUseCase`와 같은 위상으로 이 화면이
     /// 직접 받아 들고 있다가 자식 VM 생성에 쓴다.
