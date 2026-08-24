@@ -104,6 +104,13 @@
   0%로 정상 동작했다(화면 전환·"서재에서 추가"·대표 배지까지 전부 정상). 이 화면을 시뮬레이터에서
   검증할 땐 **iOS 18.1을 피하고 최신 iOS 런타임 시뮬레이터를 쓸 것** — CPU가 진입 직후 100%에 붙박이면
   코드가 아니라 시뮬레이터 런타임부터 의심할 것.
+- ⚠️ **로컬 push 화면(Factory에 안 뜨는 "작품 추가"/"서재에서 추가")은 `logger`가 자동으로 안 흐른다 —
+  화면마다 파라미터로 직접 받아 다음 화면에 넘겨야 한다(PR #199 리뷰에서 실제로 놓쳤다 발견).**
+  `CollectionFeatureFactory`가 `CreateCollectionViewModel`에는 `logger`를 넘겨도, `CreateCollectionView`
+  자신의 `init`에 `logger` 파라미터가 없으면 그 화면이 만드는 `CollectionSearchNovelViewModel`은
+  기본값 `nil`로 조용히 굳는다 — 컴파일 에러 없이 로그만 사라져서 리뷰 전까진 못 잡았다. 이 모듈처럼
+  화면이 화면을 로컬로 여러 단 push하면, **매 단(View 자신 + 그 View가 만드는 다음 VM/View)마다**
+  `logger: Logger? = nil` 파라미터를 두고 받은 값을 그대로 내려보내야 체인 끝까지 살아있다.
 - ⚠️ **`WSSLibraryGridCell`은 탭 동작을 갖지 않는 순수 표시 뷰라, 이 화면처럼 `.onTapGesture`로 감싸
   탭 영역을 만들면 접근성 트리에 안 잡혀 VoiceOver는 물론 UI 자동화(`snapshot_ui`/`tap`)로도 탭할 수
   없다**(`WSSComponent/CLAUDE.md` 공통 주의) — `.accessibilityLabel(novel.title)` + `.accessibilityAddTraits(.isButton)`을
