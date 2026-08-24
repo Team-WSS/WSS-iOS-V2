@@ -314,8 +314,9 @@ private struct DemoLoadLikedCollectionsUseCase: LoadLikedCollectionsUseCase {
     }
 }
 
-/// 두 목록 Mock이 공유하는 페이지 생성기 — 무한스크롤(3페이지)·표지 오버플로 배지(recentNovels < novelCount)·
-/// 비공개 태그·설명 없는 카드까지 `CollectionListView`의 주요 분기를 한 번씩 보여준다.
+/// 두 목록 Mock이 공유하는 페이지 생성기 — 무한스크롤(3페이지)·표지 5슬롯 중 일부만 채워지는 카드
+/// (recentNovels < novelCount, 오버플로 배지 없이 기본 표지로 폴백)·비공개 태그·설명 없는 카드까지
+/// `CollectionListView`의 주요 분기를 한 번씩 보여준다.
 private enum DemoCollectionCardPage {
     static let pageSize = 6
     private static let demoPageCount = 3
