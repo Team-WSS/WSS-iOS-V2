@@ -65,11 +65,9 @@
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.
 - "작품 추가" 타일 아이콘은 신규 에셋이 아니라 기존 `WSSImage.icBookRegister`를 재사용한다 — 그 SVG의
   내부 레이어명이 Figma 원본과 동일한 `mdi:book-plus-outline`이라 이미 같은 아이콘이 들어있었다.
-- ⚠️ **"서재에서 추가" 화면("추가" 버튼) 확정 후 어디로 돌아갈지는 아직 최종 결정이 아니다** — 지금은
-  `CreateCollectionView`까지 2단계 pop으로 구현해뒀지만, `CollectionSearchNovelView`(작품 검색 화면)로
-  1단계만 pop할지는 디자인팀에 문의해둔 상태로 **답변 대기 중**이다(사용자 확정, 2026-08-21). 답변이
-  오면 이 계약과 아래 "2단계 pop" 구현을 다시 확인할 것 — 지금 값을 정본으로 굳히지 말 것. 대기 항목은
-  [docs/TODO.md](../../../docs/TODO.md)에도 남겨뒀다. 자세한 구현은 아래 주의사항 "2단계 pop" 항목 참고.
+- **"서재에서 추가" 화면("추가" 버튼) 확정 후 `CreateCollectionView`까지 2단계 pop이 정본으로 확정됐다**
+  (기획팀 확인, 2026-08-23) — `CollectionSearchNovelView`(작품 검색 화면)로 1단계만 pop하는 대안은
+  채택되지 않았다. 자세한 구현은 아래 주의사항 "2단계 pop" 항목 참고.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -85,6 +83,21 @@
   **자식이 스스로 pop을 끝내 그 Bool이 자연스럽게 false로 돌아오는 걸 기다렸다가** 그제서야 부모가
   `dismiss()`한다(계단식 2단계 pop). 앞으로 다단계 pop이 필요한 화면을 또 만들 때 "부모 dismiss() 한
   번으로 계층째 사라진다"를 가정하지 말고 이 패턴을 정본으로 삼을 것.
+  ⚠️ **폐기한 대안 둘 다 다른 이유로 깨졌다(2026-08-24 실측)**:
+  1. **형제 Bool 교체** — `CreateCollectionView`가 검색 화면과 서재 화면을 형제 레벨로 각각 직접 push해
+     "서재에서 추가" 진입 시 검색 화면을 아예 pop해버리는 방식. **확정** 경로는 문제없이 동작했지만,
+     **확정 대신 뒤로가기로 서재 화면을 나가면 되돌아갈 검색 화면 자체가 스택에 없어 그 세션에서 고른
+     작품이 조용히 사라졌다**(리뷰에서 `wss-pr-reviewer`/`wss-feature-reviewer` 둘 다 독립적으로 지적).
+  2. **`CreateCollectionView`가 자기 `NavigationStack(path:)`를 새로 열고 `.navigationDestination(for:)` +
+     `path: [AddNovelRoute]` 배열로 두 화면을 push** — 뒤로가기 상태 보존은 되나, **이 화면 안에서
+     호출한 `dismiss()`가 그 내부 스택이 아니라 바깥(진짜) 스택을 pop해버려**, 검색 화면에서 뒤로가기
+     한 번 눌렀더니 `CreateCollectionView`를 지나 데모 루트까지 곧장 튕겨 나갔다(중첩
+     `NavigationStack` 안에서 `@Environment(\.dismiss)`가 어느 스택을 pop할지 모호해지는 것으로 추정).
+     `CreateCollectionView`가 이미 바깥 스택에 push된 상태에서 또 다른 `NavigationStack`을 그 안에
+     여는 패턴은 이 프로젝트에서 쓰지 말 것.
+  다단계 push에서 "확정만 skip, 취소는 정상 pop"이 필요할 땐 **자식이 스스로 pop하고 부모는 그 완료를
+  기다렸다가 뒤따라 pop하는 이 계단식 패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩
+  `NavigationStack`으로 "더 깔끔하게" 다시 풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨).
 - ⚠️ **`WSSLibraryGridCell`은 탭 동작을 갖지 않는 순수 표시 뷰라, 이 화면처럼 `.onTapGesture`로 감싸
   탭 영역을 만들면 접근성 트리에 안 잡혀 VoiceOver는 물론 UI 자동화(`snapshot_ui`/`tap`)로도 탭할 수
   없다**(`WSSComponent/CLAUDE.md` 공통 주의) — `.accessibilityLabel(novel.title)` + `.accessibilityAddTraits(.isButton)`을
