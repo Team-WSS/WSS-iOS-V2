@@ -14,6 +14,7 @@ import SearchDomain
 import NovelDomain
 import DesignSystem
 import WSSComponent
+import Logger
 
 // 컬렉션 생성 화면. "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View가 결정한다.
 // 화면 동작 계약(뒤로가기·대표 배지·완료 활성화 등)은 CollectionFeature/CLAUDE.md 참고.
@@ -40,6 +41,9 @@ struct CreateCollectionView: View {
     /// "작품 추가" 화면의 "서재에서 추가"가 서재 조회에 쓸 UseCase — 서재 Domain 코드는 별도 모듈이
     /// 아니라 `NovelDomain`에 있다(`LibraryFeature`와 같은 이유, `LibraryFeature/CLAUDE.md` 참고).
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
+    /// "작품 추가"/"서재에서 추가" 화면도 각자의 VM에서 실패를 로깅해야 하므로, 이 화면이 Factory에게
+    /// 받은 걸 그대로 들고 있다가 두 화면 생성 시 내려보낸다(`CreateCollectionViewModel`과 같은 인스턴스).
+    private let logger: Logger?
     /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행. "작품 추가" 화면도 같은
     /// 콜백을 공유한다(둘 다 결국 이 화면의 하위 화면).
     private let onAuthenticationRequired: () -> Void
@@ -48,6 +52,7 @@ struct CreateCollectionView: View {
         viewModel: CreateCollectionViewModel,
         searchNovelUseCase: SearchNovelUseCase,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
@@ -55,6 +60,7 @@ struct CreateCollectionView: View {
         self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
         self.searchNovelUseCase = searchNovelUseCase
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
+        self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -84,9 +90,11 @@ struct CreateCollectionView: View {
                 CollectionSearchNovelView(
                     viewModel: CollectionSearchNovelViewModel(
                         initialSelection: viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] },
-                        searchNovelUseCase: searchNovelUseCase
+                        searchNovelUseCase: searchNovelUseCase,
+                        logger: logger
                     ),
                     loadMyLibraryUseCase: loadMyLibraryUseCase,
+                    logger: logger,
                     onConfirm: { novels in viewModel.handle(.setNovels(novels)) },
                     onAuthenticationRequired: onAuthenticationRequired
                 )

@@ -14,6 +14,7 @@ import SearchDomain
 import NovelDomain
 import DesignSystem
 import WSSComponent
+import Logger
 
 // 컬렉션 "작품 추가" 화면 — 검색해서 다중선택한 결과를 확정하면 CreateCollectionView의 작품 리스트
 // 전체를 교체한다. CreateCollectionView 내부에서만 push되는 로컬 화면(별도 Factory 진입점 없음).
@@ -34,6 +35,9 @@ struct CollectionSearchNovelView: View {
     /// "서재에서 추가" 화면이 서재 조회에 쓸 UseCase — `searchNovelUseCase`와 같은 위상으로 이 화면이
     /// 직접 받아 들고 있다가 자식 VM 생성에 쓴다.
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
+    /// "서재에서 추가" 화면도 자기 VM에서 실패를 로깅해야 하므로, `CreateCollectionView`에게 받은 걸
+    /// 그대로 들고 있다가 그 화면 생성 시 내려보낸다.
+    private let logger: Logger?
     /// 확정 콜백 — 최종 선택 결과 전체를 상위(`CreateCollectionView`)로 발화한다. 콜백은 VM이 아니라
     /// View가 소유한다(프로젝트 관례). "서재에서 추가" 화면의 확정도 같은 콜백을 그대로 재사용한다.
     private let onConfirm: ([CollectionNovel]) -> Void
@@ -42,11 +46,13 @@ struct CollectionSearchNovelView: View {
     init(
         viewModel: CollectionSearchNovelViewModel,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
+        self.logger = logger
         self.onConfirm = onConfirm
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -81,7 +87,8 @@ struct CollectionSearchNovelView: View {
                 CollectionMyLibrarySelectView(
                     viewModel: CollectionMyLibrarySelectViewModel(
                         initialSelection: viewModel.state.selectedNovels,
-                        loadMyLibraryUseCase: loadMyLibraryUseCase
+                        loadMyLibraryUseCase: loadMyLibraryUseCase,
+                        logger: logger
                     ),
                     onConfirm: { novels in
                         onConfirm(novels)

@@ -45,6 +45,7 @@ public enum CollectionFeatureFactory {
             viewModel: viewModel,
             searchNovelUseCase: searchNovelUseCase,
             loadMyLibraryUseCase: loadMyLibraryUseCase,
+            logger: logger,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
