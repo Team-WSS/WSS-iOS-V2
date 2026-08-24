@@ -41,7 +41,7 @@ struct CollectionMyLibrarySelectView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
             .onAppear { viewModel.handle(.load) }
-            .showWSSToast(isPresented: toastBinding, type: .unknownError)
+            .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }
                 onConfirm(viewModel.state.selectedNovels)
@@ -164,6 +164,16 @@ private extension CollectionMyLibrarySelectView {
             get: { viewModel.state.presentedToast != nil },
             set: { if !$0 { viewModel.handle(.dismissToast) } }
         )
+    }
+
+    /// `presentedToast`가 `nil`일 때의 값은 쓰이지 않는다(`toastBinding`이 그때 `isPresented: false`).
+    var toastType: WSSToastType {
+        switch viewModel.state.presentedToast {
+        case .selectionLimitReached:
+            .selectionOverLimit(count: CollectionDraft.maxNovelCount)
+        case .loadMoreFailed, .none:
+            .unknownError
+        }
     }
 }
 

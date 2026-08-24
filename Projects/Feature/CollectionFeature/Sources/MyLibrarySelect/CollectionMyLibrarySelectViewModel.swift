@@ -47,6 +47,9 @@ final class CollectionMyLibrarySelectViewModel {
 
     enum MyLibrarySelectToast: Equatable {
         case loadMoreFailed
+        /// 정원(100개) 도달 후 더 담으려 할 때. 토스트 문구는 `WSSToastType.selectionOverLimit`의
+        /// 범용 문구를 임시로 쓴다 — 기획팀 확정 문구 전달 예정(2026-08-24).
+        case selectionLimitReached
     }
 
     // MARK: - Derived
@@ -150,8 +153,8 @@ private extension CollectionMyLibrarySelectViewModel {
         loadTask = Task { await loadPage(cursor: cursor, generation: generation) }
     }
 
-    /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않는다(초과 시도 시
-    /// 별도 피드백은 아직 없음 — `CollectionSearchNovelViewModel`과 동일하게 3B 미결).
+    /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않고 토스트로 알린다
+    /// (`CollectionSearchNovelViewModel`과 동일 패턴).
     ///
     /// `LibraryNovel`엔 author 필드가 아예 없고, `CollectionNovel.author`는 CollectionFeature
     /// 어디서도 실제로 표시되지 않는다(확인 완료) — 빈 문자열로 채우는 게 안전하고 의도적인 결정이다.
@@ -159,7 +162,10 @@ private extension CollectionMyLibrarySelectViewModel {
         if let index = state.selectedNovels.firstIndex(where: { $0.id == novel.id }) {
             state.selectedNovels.remove(at: index)
         } else {
-            guard !isAtCapacity else { return }
+            guard !isAtCapacity else {
+                if state.presentedToast == nil { state.presentedToast = .selectionLimitReached }
+                return
+            }
             state.selectedNovels.append(
                 CollectionNovel(id: novel.id, title: novel.title, author: "", thumbnailImage: novel.thumbnailImage)
             )

@@ -55,7 +55,7 @@ struct CollectionSearchNovelView: View {
         content
             .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
-            .showWSSToast(isPresented: toastBinding, type: .unknownError)
+            .showWSSToast(isPresented: toastBinding, type: toastType)
             .onAppear {
                 isSearchBarFocused = true
             }
@@ -290,6 +290,16 @@ private extension CollectionSearchNovelView {
             get: { viewModel.state.presentedError != nil },
             set: { if !$0 { viewModel.handle(.dismissError) } }
         )
+    }
+
+    /// `presentedError`가 `nil`일 때의 값은 쓰이지 않는다(`toastBinding`이 그때 `isPresented: false`).
+    var toastType: WSSToastType {
+        switch viewModel.state.presentedError {
+        case .selectionLimitReached:
+            .selectionOverLimit(count: CollectionDraft.maxNovelCount)
+        case .unknown, .none:
+            .unknownError
+        }
     }
 }
 

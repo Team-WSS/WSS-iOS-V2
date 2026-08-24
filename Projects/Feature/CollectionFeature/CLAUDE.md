@@ -20,7 +20,9 @@
   다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로
   교체한다(부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은
   검색어를 바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이
-  차면 더 담기지 않지만 아직 별도 피드백(토스트 등)은 없다(3B 미결).
+  차면 더 담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — **문구는 범용 텍스트("100개까지
+  선택 가능해요")를 임시로 쓰는 중**, 기획팀 확정 문구 전달 예정(2026-08-24). 문구가 오면 `WSSToastType`
+  텍스트만 교체하면 된다(구조는 이미 확정).
 - **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
   `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
   `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.

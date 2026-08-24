@@ -44,6 +44,9 @@ final class CollectionSearchNovelViewModel {
 
     enum SearchError: Equatable {
         case unknown
+        /// 정원(100개) 도달 후 더 담으려 할 때. 토스트 문구는 `WSSToastType.selectionOverLimit`의
+        /// 범용 문구를 임시로 쓴다 — 기획팀 확정 문구 전달 예정(2026-08-24).
+        case selectionLimitReached
     }
 
     // MARK: - Derived
@@ -143,13 +146,15 @@ private extension CollectionSearchNovelViewModel {
         loadMoreTask = Task { await loadMoreNovels(query) }
     }
 
-    /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않는다(초과 시도 시
-    /// 별도 피드백은 아직 없음 — 3B 미결, 디자인 확인 후 필요하면 토스트 추가).
+    /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않고 토스트로 알린다.
     func toggleNovel(_ novel: Novel) {
         if let index = state.selectedNovels.firstIndex(where: { $0.id == novel.id }) {
             state.selectedNovels.remove(at: index)
         } else {
-            guard !isAtCapacity else { return }
+            guard !isAtCapacity else {
+                state.presentedError = .selectionLimitReached
+                return
+            }
             state.selectedNovels.append(
                 CollectionNovel(
                     id: novel.id,
