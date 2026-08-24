@@ -109,3 +109,15 @@
     말고 이걸 재사용할 것.
 - **`WSSNicknameField`(`Sources/TextField/`)는 `OnboardingFeature`의 닉네임 화면과 `UserPageFeature`의 `MyPageEditView`가 같이 쓰는 닉네임 필드다**(2026-08, 두 화면이 손으로 맞추다 드리프트해서 승격) — 글자수 clamp 트랩(로컬 `fieldText` 버퍼 → `text` 반영 2단계, [상위 CLAUDE.md](../../Feature/CLAUDE.md) 주의사항 참고)을 여기 한 곳에서만 처리한다. `WSSSearchBar`와 같은 이유로 `isFocused: FocusState<Bool>.Binding`을 **필수** 파라미터로 받는다(내부 자체 포커스 없음) — 호출부가 "필드 바깥 탭하면 키보드 내리기"를 계속 제어해야 해서다. **도메인(`ProfileDomain.NicknameDraft.ValidationState`)을 모른다** — `isError`/`isSuccess`·캡션(문구+색)을 값으로만 받고 판단은 호출자(VM)가 한다. **캡션 문구는 컴포넌트가 하드코딩하지 않는다** — 두 화면의 워딩이 의도적으로 다르게 유지돼 왔기 때문(1:1 동기화 요구 아님).
   - ⚠️ **`isFocused`는 이 필드 전용 `@FocusState`여야 한다 — 같은 화면의 다른 텍스트필드와 공유하지 말 것**(#178). 배경(gray50→white)·테두리(`wssGray70`)가 포커스 여부(`isFocused.wrappedValue`)로 바뀌는데, 다른 필드와 공유하면 그 다른 필드가 포커스돼도 이 컴포넌트가 함께 화이트/테두리로 반응한다(`MyPageEditView`가 원래 소개글과 하나의 `isKeyboardFocused`를 공유하다 이 문제로 필드별로 분리한 사례 — `UserPageFeature/CLAUDE.md` 참고). "빈 곳 탭하면 키보드 내리기"처럼 여러 필드를 동시에 내리고 싶으면, 필드마다 별도 `@FocusState`를 두고 탭 핸들러에서 전부 `false`로 내릴 것.
+- **`WSSPillBadge`(`Sources/Button/`)는 "+ 추가"/"× 삭제" 같은 짧은 필 배지다**(2026-08-23, 원본은
+  `CollectionFeature`의 `CollectionSearchNovelView` 검색 결과 행) — **이례적으로 두 번째 사용처가 이
+  레포에 아직 없는 채로 승격됐다**(사용자 명시 요청, "두 번째 필요 시점에 승격" 관례의 의도적 예외).
+  설정 화면의 작품 알림 해제가 곧 두 번째로 쓸 예정이나 그 작업은 다른 미병합 브랜치에 있다 — 그 브랜치가
+  이 컴포넌트를 실제로 어떻게 쓰는지 확인되면(라벨·스타일이 예상과 다를 수 있음) 이 항목을 갱신할 것.
+  `label: String`/`style: .add | .remove`만 값으로 받고 "추가"/"삭제"라는 도메인 의미는 모른다.
+  `action: (() -> Void)? = nil` — `nil`(기본값)이면 순수 표시용(부모 행의 `onTapGesture`가 탭을 받음),
+  값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다(`WhiteRemovableKeywordChip`의 `onSelect`/`onDelete`
+  분리와 같은 이유 — `nil`일 때 무조건 `onTapGesture`를 걸면 빈 클로저라도 이 뷰가 탭을 소비해버려
+  부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
+  이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
+  확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).

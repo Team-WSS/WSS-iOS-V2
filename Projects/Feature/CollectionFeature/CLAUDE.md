@@ -39,6 +39,10 @@
   와 동일) 그대로다. 날짜 포맷도 로컬 복제(`CollectionLibraryDateFormatter`) 대신
   `ReadingPeriod.displayText`(`WSSComponent/Sources/DomainPresentation/`)로 통합됐다 — 자세한 계약은
   [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSLibraryGridCell` 항목이 정본.
+- **검색 결과 행의 "+ 추가"/"× 삭제" 필 배지는 `WSSComponent.WSSPillBadge`다** — 이번엔 이 화면
+  한 곳뿐이지만(2026-08-23), 설정 화면의 작품 알림 해제(다른 미병합 브랜치)가 곧 두 번째로 쓸 예정이라
+  두 번째 필요 시점을 기다리지 않고 미리 승격했다(사용자 명시 요청). 자세한 계약은
+  [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSPillBadge` 항목 참고.
 
 ## 화면 동작 계약
 

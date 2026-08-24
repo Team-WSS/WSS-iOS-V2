@@ -272,15 +272,7 @@ private extension CollectionSearchNovelView {
 
             Spacer()
 
-            Text(isSelected ? "× 삭제" : "+ 추가")
-                .applyWSSFont(.body5)
-                .foregroundStyle(isSelected ? Color.wssSecondary100 : Color.wssWhite)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(isSelected ? Color.wssSecondary20 : Color.wssPrimary100)
-                .clipShape(Capsule())
-                // 미설정 시 기본 크로스페이드가 느리게 번진다(Feature/CLAUDE.md 공통 주의).
-                .animation(.easeInOut(duration: 0.1), value: isSelected)
+            WSSPillBadge(style: isSelected ? .remove : .add)
         }
         .contentShape(Rectangle())
         .onTapGesture {

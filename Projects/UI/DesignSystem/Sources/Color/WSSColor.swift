@@ -21,7 +21,7 @@ public extension Color {
 
     // MARK: - Secondary
 
-    static let wssSecondary20 = WSSColor.wssSecondary20.swiftUIColor
+    static let wssSecondary10 = WSSColor.wssSecondary10.swiftUIColor
     static let wssSecondary100 = WSSColor.wssSecondary100.swiftUIColor
 
     // MARK: - Gray
