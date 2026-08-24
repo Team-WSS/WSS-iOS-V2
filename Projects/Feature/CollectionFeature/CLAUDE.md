@@ -98,6 +98,12 @@
   다단계 push에서 "확정만 skip, 취소는 정상 pop"이 필요할 땐 **자식이 스스로 pop하고 부모는 그 완료를
   기다렸다가 뒤따라 pop하는 이 계단식 패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩
   `NavigationStack`으로 "더 깔끔하게" 다시 풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨).
+- ⚠️ **iOS 18.1 시뮬레이터 런타임에서 `CollectionSearchNovelView`로 push하면 진입 즉시 CPU 100%
+  무한 리렌더(AttributeGraph 루프)에 빠진다 — 앱·이 화면의 버그가 아니라 그 OS 런타임 한정 SwiftUI
+  회귀로 확인됨.** 같은 빌드 산출물을 iOS 26 시뮬레이터에 설치해 동일 자동화 경로로 재현했을 땐 CPU
+  0%로 정상 동작했다(화면 전환·"서재에서 추가"·대표 배지까지 전부 정상). 이 화면을 시뮬레이터에서
+  검증할 땐 **iOS 18.1을 피하고 최신 iOS 런타임 시뮬레이터를 쓸 것** — CPU가 진입 직후 100%에 붙박이면
+  코드가 아니라 시뮬레이터 런타임부터 의심할 것.
 - ⚠️ **`WSSLibraryGridCell`은 탭 동작을 갖지 않는 순수 표시 뷰라, 이 화면처럼 `.onTapGesture`로 감싸
   탭 영역을 만들면 접근성 트리에 안 잡혀 VoiceOver는 물론 UI 자동화(`snapshot_ui`/`tap`)로도 탭할 수
   없다**(`WSSComponent/CLAUDE.md` 공통 주의) — `.accessibilityLabel(novel.title)` + `.accessibilityAddTraits(.isButton)`을
