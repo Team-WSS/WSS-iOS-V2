@@ -15,7 +15,7 @@
    - Domain은 상위 레이어도, 구현체(Data)도 import 하지 않는다. Data가 Domain 프로토콜을 구현한다.
 2. **비동기·상태 모델은 레이어마다 다르다**
    - Domain / Data: **Swift Concurrency** (`async/await`, `throws(RepositoryError)`)
-   - UI / Feature: **SwiftUI Observation** — ViewModel은 `@Observable`, 상태는 단일 `private(set) var state`로 노출(View는 `@State`로 보유). `ObservableObject`/`@Published`/`@StateObject` ❌.
+   - UI / Feature: **SwiftUI Observation** — ViewModel은 `@Observable`, 상태는 단일 `private(set) var state`로 노출(View는 `@State`로 보유). `ObservableObject`/`@Published`/`@StateObject` ❌ (arch-lint가 CI에서 강제 → `Tooling/ArchLint`).
 3. **모듈 레지스트리의 단일 진실 소스**는 코드다 →
    [`Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift`](Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)
    문서/디스크보다 이 파일이 우선. 새 모듈은 여기 먼저 등록한다.

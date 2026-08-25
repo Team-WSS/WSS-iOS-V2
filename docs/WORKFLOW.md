@@ -36,6 +36,7 @@
 - `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔해 모듈별 병렬 테스트.
 - 유령 폴더(레지스트리에 없는 rename/브랜치 잔재)는 `Project.swift`가 없어 자동 제외된다 — 폴더 잔재가 매트릭스를 깨지 않는다.
 - **머지 게이트**: `All Tests Passed` job이 전체 통과를 판정한다. develop 브랜치 보호에서 이 체크를 필수 통과(required status check)로 지정하면 빨간 PR은 머지가 막힌다(GitHub → Settings → Branches → develop → Require status checks → `All Tests Passed`).
+- **아키텍처 검사**: `Architecture Rules` job이 자체 SwiftSyntax 검사기(`Tooling/ArchLint`)로 VM 계약(`ObservableObject` 계열 금지)을 **error**(막음), Service 분기를 **warning**(리포트만)으로 본다 — ubuntu + 공식 swift 컨테이너라 Xcode 불필요. 이 job(`Architecture Rules`)도 별도 필수 통과 체크로 걸 수 있다(develop이 초록인 걸 확인한 뒤). 규칙 추가·심각도 정책은 `Tooling/ArchLint/README.md`.
 
 ## 새 모듈 추가 절차
 
