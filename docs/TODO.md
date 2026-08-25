@@ -147,3 +147,29 @@
   - ⚠️ **`/reissue`가 5xx일 때 지금은 로그인 화면으로 보낸다**(재인증 갈래 — `Projects/Core/Networking/CLAUDE.md`의 표).
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
+
+### 8. 피드 공개범위(`VisibilityType`) 변환이 Repository와 Service로 이중으로 쪼개져 있다
+
+- **무엇**: `MyFeedOption.visibilityType`(Domain enum, 3-값: `privateOnly`/`publicOnly`/`all`)이 서버 파라미터로 가기까지
+  **두 계층에서 두 번** 변환된다.
+  1. `DefaultFeedRepository.fetchMyFeeds`가 `FeedMapper.visibilityString(from:)`으로 enum → 문자열(`"PUBLIC"`/`"PRIVATE"`/`"ALL"`)
+  2. `DefaultFeedService.getMyFeeds`가 그 문자열을 다시 `isVisible: Bool?` / `isUnVisible: Bool?`로
+     (`visibilityType == "PUBLIC" ? true : nil`)
+  중간의 문자열은 Repository→Service 전달용 임시 표현일 뿐이고, 최종 쿼리 파라미터 매핑이 **Service로 새어나가 있다.**
+- **결과(냄새·잠재 버그)**:
+  - 계층 책임 위반 — 요청 파라미터 매핑은 Repository/`FeedMapper`에 모여야 하는데 유독 이 파생만 Service에 있다(다른 메서드는 통과 계층).
+  - `"ALL"`을 Service가 **명시적으로 다루지 않는다**(둘 다 nil로 떨어져 우연히 맞음). enum→문자열로 낮춰서
+    **`switch` 누락 검사를 컴파일러가 못 한다** — 서버 스펙이 바뀌거나 오타가 나면 조용히 "전체"로 처리된다.
+  - **테스트 사각지대** — Service 단위 테스트가 없고 Repository 테스트는 Service를 mock하니, 이 `문자열→Bool?` 변환은
+    어느 테스트도 지나가지 않는다.
+- **어디를 고치나**: 매핑을 한 곳으로 모은다 — Repository(또는 `FeedMapper`)가 `VisibilityType` enum → 완성된 쿼리 값까지
+  한 번에 만들고, `DefaultFeedService.getMyFeeds`는 **판단 없이 통과**시킨다. `Projects/Data/FeedData/Sources/Service/DefaultFeedService.swift`
+  + `.../Repository/DefaultFeedRepository.swift` + `.../Mapper/FeedMapper.swift`.
+  ⚠️ **다른 Feed Service 메서드도 Query를 Service 안에서 조립**한다(`getNovelFeeds` 등) → "Query 조립은 Repository, Service는 통과"를
+  **컨벤션으로 먼저 정하고** 함께 옮겨야 한다. 한 메서드만 바꾸면 두 벌로 갈린다.
+- **왜 지금 안 했나**: 테스트 체계 정비(지도 이슈) 논의 중 발견한 별건이다. 지금 동작은 정상이라 급하지 않고,
+  컨벤션 결정이 선행돼야 해서 분리한다.
+- **놓치기 쉬운 것**: 이건 **자동 검사의 사각지대 표본**이다 — "매핑은 어느 계층 소관인가"는 의미 판단이라 린터로 못 잡고,
+  지금 리뷰어 눈에도 안 띄어 통과했다. 근본 예방책은 **타입을 좁혀 leak을 문법적으로 불가능하게** 만드는 것
+  (Service가 `String` 대신 완성된 Query를 받으면 변환할 거리가 없어진다). 정적 검사로는 "Service 파일에 분기(`if`/`switch`/`?:`) 금지"가
+  싼 그물이 된다(지도 이슈 A2 후보).
