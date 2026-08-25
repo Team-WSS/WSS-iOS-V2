@@ -60,6 +60,9 @@ final class CollectionListViewModel {
         case retry(CollectionListTab)
         case loadMore(CollectionListTab)
         case reloadMineAfterCreate
+        /// `CollectionDetailView`(로컬 push) 복귀 시 — 좋아요·삭제로 그 탭의 카드가 바뀌었을 수
+        /// 있어 성공/취소 구분 없이 무조건 다시 로드한다(`reloadMineAfterCreate`와 동일 판단).
+        case reloadAfterDetail(CollectionListTab)
         case dismissToast
     }
 
@@ -122,6 +125,8 @@ final class CollectionListViewModel {
             loadMore(tab)
         case .reloadMineAfterCreate:
             reload(.mine)
+        case .reloadAfterDetail(let tab):
+            reload(tab)
         case .dismissToast:
             state.presentedToast = nil
         }

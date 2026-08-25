@@ -25,12 +25,20 @@ struct CollectionListView: View {
     /// "컬렉션 만들기" push 여부 — `CreateCollectionView`는 이 화면이 자기 내부에서만 push하는
     /// 로컬 화면이라(`CreateCollectionView`가 "작품 추가"를 push하는 것과 동일 위상) 이 화면이 직접 소유.
     @State private var isCreatePresented = false
+    /// 탭한 카드의 컬렉션 ID — 진입 파라미터가 있는 push라 `isPresented:` + 별도 State 조합 대신
+    /// `.navigationDestination(item:)`을 쓴다(`Feature/CLAUDE.md` 공통 함정 — 첫 진입에서만 파라미터가
+    /// 무시되는 문제 예방).
+    @State private var selectedCollectionID: CollectionID?
     @Environment(\.dismiss) private var dismiss
 
     /// "컬렉션 만들기" 화면이 필요로 하는 UseCase 3종 — `CreateCollectionView`로 그대로 관통시킨다.
     private let createCollectionUseCase: CreateCollectionUseCase
     private let searchNovelUseCase: SearchNovelUseCase
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
+    /// 카드 탭 → `CollectionDetailView`(로컬 push)가 필요로 하는 UseCase 3종.
+    private let loadCollectionDetailUseCase: LoadCollectionDetailUseCase
+    private let collectionLikeUseCase: CollectionLikeUseCase
+    private let deleteCollectionUseCase: DeleteCollectionUseCase
     private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
 
@@ -39,6 +47,9 @@ struct CollectionListView: View {
         createCollectionUseCase: CreateCollectionUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
+        collectionLikeUseCase: CollectionLikeUseCase,
+        deleteCollectionUseCase: DeleteCollectionUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void
     ) {
@@ -46,6 +57,9 @@ struct CollectionListView: View {
         self.createCollectionUseCase = createCollectionUseCase
         self.searchNovelUseCase = searchNovelUseCase
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
+        self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
+        self.collectionLikeUseCase = collectionLikeUseCase
+        self.deleteCollectionUseCase = deleteCollectionUseCase
         self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -77,6 +91,21 @@ struct CollectionListView: View {
             // (취소해도 한 번 더 불리는 낭비는 있지만 최소 diff — `CollectionFeature/CLAUDE.md` 참고).
             guard wasPresented, !isPresented else { return }
             viewModel.handle(.reloadMineAfterCreate)
+        }
+        .navigationDestination(item: $selectedCollectionID) { id in
+            CollectionFeatureFactory.makeCollectionDetailView(
+                id: id,
+                loadCollectionDetailUseCase: loadCollectionDetailUseCase,
+                collectionLikeUseCase: collectionLikeUseCase,
+                deleteCollectionUseCase: deleteCollectionUseCase,
+                logger: logger
+            )
+        }
+        .onChange(of: selectedCollectionID) { oldValue, newValue in
+            // 상세 화면에서 좋아요·삭제로 카드가 바뀌었을 수 있어, 복귀했다는 사실만으로 그 탭을
+            // 무조건 다시 로드한다(`isCreatePresented`와 동일 판단).
+            guard oldValue != nil, newValue == nil else { return }
+            viewModel.handle(.reloadAfterDetail(viewModel.state.selectedTab))
         }
         // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
         .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
@@ -210,6 +239,15 @@ private extension CollectionListView {
     }
 
     func collectionCard(_ card: CollectionCard) -> some View {
+        Button {
+            selectedCollectionID = card.id
+        } label: {
+            collectionCardContent(card)
+        }
+        .buttonStyle(.plain)
+    }
+
+    func collectionCardContent(_ card: CollectionCard) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
@@ -241,7 +279,6 @@ private extension CollectionListView {
         .background(Color.wssPrimary20)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .contentShape(Rectangle())
-        // TODO: - 컬렉션 상세 화면으로 이동(이번 범위 밖 — 상세 화면은 별도 작업)
     }
 
     func cardSubtitle(_ card: CollectionCard) -> some View {
@@ -325,6 +362,9 @@ private extension CollectionListView {
             createCollectionUseCase: PreviewCreateCollectionUseCase(),
             searchNovelUseCase: PreviewSearchNovelUseCase(),
             loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            loadCollectionDetailUseCase: PreviewLoadCollectionDetailUseCase(),
+            collectionLikeUseCase: PreviewCollectionLikeUseCase(),
+            deleteCollectionUseCase: PreviewDeleteCollectionUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -377,4 +417,30 @@ private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
     func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
     }
+}
+
+private struct PreviewLoadCollectionDetailUseCase: LoadCollectionDetailUseCase {
+    func execute(id: CollectionID, sortType: SortType) async throws(RepositoryError) -> CollectionDetail {
+        CollectionDetail(
+            id: id,
+            name: "미리보기 컬렉션",
+            description: nil,
+            owner: Author(nickname: "판소덕", profileImage: nil),
+            isMine: true,
+            isPrivate: false,
+            representativeNovelID: NovelID(1),
+            novels: [CollectionNovel(id: NovelID(1), title: "작품 1", author: "작가", thumbnailImage: nil)],
+            likeCount: 0,
+            isLiked: false
+        )
+    }
+}
+
+private struct PreviewCollectionLikeUseCase: CollectionLikeUseCase {
+    func like(id: CollectionID) async throws(RepositoryError) {}
+    func unlike(id: CollectionID) async throws(RepositoryError) {}
+}
+
+private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
+    func execute(id: CollectionID) async throws(RepositoryError) {}
 }

@@ -51,10 +51,13 @@ private struct DemoRootView: View {
     @State private var isCreatePresented = false
     @State private var isListPresented = false
     @State private var isEmptyListPresented = false
-    /// 열 때마다 증가. createView/listView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
+    @State private var isDetailPresented = false
+    @State private var detailID = CollectionID(1)
+    /// 열 때마다 증가. createView/listView/detailView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
     @State private var createOpenCount = 0
     @State private var listOpenCount = 0
     @State private var emptyListOpenCount = 0
+    @State private var detailOpenCount = 0
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -90,6 +93,29 @@ private struct DemoRootView: View {
                     .buttonStyle(.bordered)
                 }
 
+                // Mock 전용 — 컬렉션 목록에서 카드를 탭해도 상세로 갈 수 있지만(CollectionListView의
+                // .navigationDestination(item:)), 상세 화면 자체를 바로 확인하려면 목록을 거쳐야 하는
+                // 번거로움이 있었다. DemoLoadCollectionDetailUseCase가 컬렉션 id의 홀짝/4배수로 이미
+                // 3가지 상태(타인 컬렉션/내 컬렉션·공개/내 컬렉션·비공개)를 구분해 반환하므로, 그 id를
+                // 그대로 바로가기로 노출한다. 실서버는 데모가 아는 실제 컬렉션 id가 없어 제외한다
+                // (목록 화면에서 카드를 탭해 진입하는 경로만 유효).
+                if dataSource == .mock {
+                    Divider().padding(.vertical, 8)
+
+                    Text("컬렉션 상세 데모")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(DemoCollectionDetailScenario.allCases) { scenario in
+                        Button(scenario.title) {
+                            detailID = scenario.collectionID
+                            detailOpenCount += 1
+                            isDetailPresented = true
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
                 Spacer()
             }
             .padding()
@@ -106,6 +132,10 @@ private struct DemoRootView: View {
             .navigationDestination(isPresented: $isEmptyListPresented) {
                 listView(isEmpty: true)
                     .id(emptyListOpenCount)
+            }
+            .navigationDestination(isPresented: $isDetailPresented) {
+                detailView(id: detailID)
+                    .id(detailOpenCount)
             }
         }
     }
@@ -137,12 +167,26 @@ private struct DemoRootView: View {
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
                 searchNovelUseCase: DemoSearchNovelUseCase(),
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
+                loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
+                collectionLikeUseCase: DemoCollectionLikeUseCase(),
+                deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
             makeLiveListView()
         }
+    }
+
+    /// Mock 전용(실서버는 목록 화면에서 카드를 탭해 진입하는 경로만 유효 — 위 바로가기 주석 참고).
+    private func detailView(id: CollectionID) -> some View {
+        CollectionFeatureFactory.makeCollectionDetailView(
+            id: id,
+            loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
+            collectionLikeUseCase: DemoCollectionLikeUseCase(),
+            deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
+            logger: consoleLogger
+        )
     }
 
     // MARK: - 실서버 조립
@@ -224,6 +268,9 @@ private struct DemoRootView: View {
                 novelRepository: novelRepository,
                 keywordRepository: keywordRepository
             ),
+            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(collectionRepository: repository),
+            collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: repository),
+            deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: repository),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired
         )
@@ -336,6 +383,85 @@ private struct DemoLoadLikedCollectionsUseCase: LoadLikedCollectionsUseCase {
     func execute(cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
         return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "좋아요한 컬렉션", isEmpty: isEmpty)
+    }
+}
+
+/// 컬렉션 상세 데모 바로가기용 예약 id — `DemoLoadCollectionDetailUseCase`가 이미 짝수/4배수 여부로
+/// 나누는 3가지 상태에 맞춰 대표 id를 하나씩 골랐다(`demoPrivateProfileUserID` 같은 다른 Demo 앱의
+/// "예약 값으로 시나리오 분기" 관례와 동일 발상).
+private enum DemoCollectionDetailScenario: CaseIterable, Identifiable {
+    case others
+    case mine
+    case minePrivate
+
+    var id: Self { self }
+
+    /// `Button`에 넘길 실제 `CollectionID` — case명과 헷갈리지 않도록 별도 프로퍼티로 뺐다
+    /// (`Identifiable.id`는 `ForEach` 식별용).
+    var collectionID: CollectionID {
+        switch self {
+        case .others: CollectionID(1)
+        case .mine: CollectionID(2)
+        case .minePrivate: CollectionID(4)
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .others: "타인 컬렉션"
+        case .mine: "내 컬렉션 (공개)"
+        case .minePrivate: "내 컬렉션 (비공개)"
+        }
+    }
+}
+
+/// 컬렉션 상세 Mock — id의 짝수/4배수 여부로 3가지 화면 상태를 전부 시연한다: 홀수(타인 컬렉션,
+/// 좋아요+공유하기), 4의 배수(내 컬렉션·비공개, 좋아요+"나만 보는 컬렉션"+더보기), 그 외 짝수(내
+/// 컬렉션·공개, 더보기 노출). 목록 카드가 이미 짝수 id에 `isPrivate`를 주는 것과 결이 맞다
+/// (`DemoCollectionCardPage`).
+private struct DemoLoadCollectionDetailUseCase: LoadCollectionDetailUseCase {
+    func execute(id: CollectionID, sortType: SortType) async throws(RepositoryError) -> CollectionDetail {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let isMine = id.value.isMultiple(of: 2)
+        let isPrivate = isMine && id.value.isMultiple(of: 4)
+        // 3의 배수 인덱스는 제목을 길게 줘서 2줄로 꺾이는 케이스도 시연한다 — 짧은 제목만 있으면
+        // 표지 폭이 제목 줄 수에 밀려 좁아지는 회귀(`novelCell`이 한때 표지+제목을 한 `.frame(height:)`
+        // 로 묶어 실제로 겪었던 버그)를 Mock에서 못 잡는다.
+        let novels = (1...9).map { index in
+            let title = index.isMultiple(of: 3)
+                ? "아주 길게 늘어져서 두 줄로 꺾이는 작품 제목 \(id.value)-\(index)"
+                : "작품 \(id.value)-\(index)"
+            return CollectionNovel(id: NovelID(id.value * 10 + index), title: title, author: "작가 \(index)", thumbnailImage: nil)
+        }
+        let sorted = sortType == .recent ? novels : novels.reversed()
+        return CollectionDetail(
+            id: id,
+            name: "컬렉션 \(id.value)",
+            description: id.value.isMultiple(of: 3) ? nil : "존잼 수준이 정도를 넘음",
+            owner: Author(nickname: "판소덕", profileImage: nil),
+            isMine: isMine,
+            isPrivate: isPrivate,
+            representativeNovelID: novels[0].id,
+            novels: Array(sorted),
+            likeCount: 100,
+            isLiked: false
+        )
+    }
+}
+
+private struct DemoCollectionLikeUseCase: CollectionLikeUseCase {
+    func like(id: CollectionID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+
+    func unlike(id: CollectionID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+private struct DemoDeleteCollectionUseCase: DeleteCollectionUseCase {
+    func execute(id: CollectionID) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
     }
 }
 

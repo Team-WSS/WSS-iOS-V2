@@ -26,6 +26,7 @@ public enum WSSAlertType: Hashable {
 
     // 컬렉션
     case stopWritingCollection
+    case deleteCollection
 
     // 신고
     case reportImproperContent

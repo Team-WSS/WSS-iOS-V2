@@ -58,6 +58,8 @@ public enum CollectionFeatureFactory {
     ///   - createCollectionUseCase/searchNovelUseCase/loadMyLibraryUseCase: "내 컬렉션" 탭의 "컬렉션
     ///     만들기"가 로컬 push하는 `CreateCollectionView`(및 그 하위 "작품 추가"/"서재에서 추가")가
     ///     필요로 하는 UseCase — `makeCreateCollectionView`와 동일하게 그대로 관통시킨다.
+    ///   - loadCollectionDetailUseCase/collectionLikeUseCase/deleteCollectionUseCase: 카드 탭이 로컬
+    ///     push하는 `CollectionDetailView`가 필요로 하는 UseCase — 위 3종과 같은 이유로 그대로 관통시킨다.
     @MainActor
     public static func makeCollectionListView(
         userID: UserID,
@@ -66,6 +68,9 @@ public enum CollectionFeatureFactory {
         createCollectionUseCase: CreateCollectionUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
+        collectionLikeUseCase: CollectionLikeUseCase,
+        deleteCollectionUseCase: DeleteCollectionUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -80,8 +85,34 @@ public enum CollectionFeatureFactory {
             createCollectionUseCase: createCollectionUseCase,
             searchNovelUseCase: searchNovelUseCase,
             loadMyLibraryUseCase: loadMyLibraryUseCase,
+            loadCollectionDetailUseCase: loadCollectionDetailUseCase,
+            collectionLikeUseCase: collectionLikeUseCase,
+            deleteCollectionUseCase: deleteCollectionUseCase,
             logger: logger,
             onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// - Parameters:
+    ///   - id: 조회할 컬렉션. `CollectionListView`의 카드 탭에서 넘어온다.
+    ///   - deleteCollectionUseCase: 우상단 더보기(소유자에게만 노출)의 "컬렉션 삭제".
+    @MainActor
+    public static func makeCollectionDetailView(
+        id: CollectionID,
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
+        collectionLikeUseCase: CollectionLikeUseCase,
+        deleteCollectionUseCase: DeleteCollectionUseCase,
+        logger: Logger? = nil
+    ) -> some View {
+        CollectionDetailView(
+            viewModel: CollectionDetailViewModel(
+                id: id,
+                loadCollectionDetailUseCase: loadCollectionDetailUseCase,
+                collectionLikeUseCase: collectionLikeUseCase,
+                deleteCollectionUseCase: deleteCollectionUseCase,
+                logger: logger
+            ),
+            logger: logger
         )
     }
 }

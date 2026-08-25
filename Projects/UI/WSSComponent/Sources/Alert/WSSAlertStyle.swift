@@ -180,6 +180,24 @@ public extension WSSAlertType {
                 ]
             )
 
+        case .deleteCollection:
+            WSSAlertContent(
+                iconImage: WSSImage.icModalWarning.swiftUIImage,
+                title: "컬렉션을 삭제할까요?",
+                titleFont: .title1,
+                titleBottomPadding: 10,
+                description: WSSAlertDescription(
+                    title: "삭제한 컬렉션은 되돌릴 수 없어요",
+                    font: .body2,
+                    titleColor: WSSColor.wssGray300.swiftUIColor,
+                    bottomPadding: 24
+                ),
+                buttons: [
+                    WSSAlertButton(title: "취소", role: .cancel),
+                    WSSAlertButton(title: "삭제", role: .destructive)
+                ]
+            )
+
         case .reportImproperContent:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,

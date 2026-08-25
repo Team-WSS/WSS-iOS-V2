@@ -10,7 +10,8 @@
   `WSSComponent`, `Logger`
 - 진입점:
   - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:)`
+  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:)`(#201, 컬렉션 상세)
   (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름)
 
 ## 핵심 시나리오
@@ -62,6 +63,15 @@
   폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게 하려는 의도, 작품 수는 카드 부제 `작품 N`으로만
   알린다). 오버플로 배지("+N")는 없다 — Figma 목업의 숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의
   잔재였다(사용자 확정).
+- **컬렉션 상세(`CollectionDetailView`, Factory 노출, #201)** — `CollectionListView`의 카드 탭에서 로컬
+  push로 진입한다(`.navigationDestination(item:)`, 진입 파라미터가 있는 push라 `isPresented:` + 별도
+  State 조합 금지 — `Feature/CLAUDE.md` 공통 함정). 히어로 배경은 `representativeNovelID`로 `novels`
+  배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼 블러는
+  없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시 재로드
+  안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다. 좋아요는
+  `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일 패턴).
+  복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(`.reloadAfterDetail`, 좋아요·삭제로 카드가
+  바뀌었을 수 있어서 — `CreateCollectionView` 복귀와 동일 판단).
 
 ## 화면 동작 계약
 
@@ -97,6 +107,20 @@
   - 탭 라벨은 Figma 원문 "내 컬랙션"(오탈자로 추정) 대신 표준 표기 "내 컬렉션"을 썼다.
   - 페이지 크기(`size`)는 서버 권장값이 없어 20으로 고정(컬렉션 도메인 공통 — `LoadCollectionsUseCase`/
     `LoadLikedCollectionsUseCase` 둘 다).
+- **컬렉션 상세(#201) — 사용자 확정 사항**:
+  - 우상단 더보기(`icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
+    삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
+    배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
+    동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
+  - **작품 카드 탭·"공유하기"·"컬렉션 수정"은 전부 TODO 스텁**(이번 범위 밖, 사용자 확정) — 작품 카드는
+    `NovelDetailFeature`로 갈 콜백 배선이, "공유하기"는 앱 전체 공유 URL/딥링크 체계가, "컬렉션 수정"은
+    편집 화면 자체가 아직 없다("서재"/"장르 취향" 섹션의 기존 TODO 스텁과 동일 패턴).
+  - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
+    Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
+    `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수
+    없어 화면에 남아있을 이유가 없음 — `UserPageFeature`의 차단 성공과 동일 판단).
+  - "공유" 아이콘(`icShare`, Figma `humbleicons:share`)은 이 작업에서 `DesignSystem`에 신규 추가한
+    에셋이다(기존엔 없었음, 사용자 승인).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -221,3 +245,62 @@
     앞에 끼워도 높이 방향은 안 채워진다. **`WSSNovelCoverImage`가 쓰는 것과 같은 해법**: `Color.clear`가
     `.aspectRatio`로 비율·크기를 잡고, 실제 콘텐츠는 `.overlay { ... }`로 그 위에 얹는다 — `Color.clear`는
     어떤 제안 크기든 그대로 받아들이므로 aspectRatio가 계산한 박스 전체가 항상 채워진다.
+- ⚠️ **`CollectionDetailView.novelCell`은 표지 크기를 제목/작가와 절대 같은 `.frame(height:)`로 묶지
+  않는다** — 한때 표지+제목+작가 전체를 `.frame(height: 216)` 하나로 묶었는데, 그러면 2줄로 꺾이는
+  제목이 그 고정 예산을 표지와 나눠 쓰게 돼 **표지 실제 렌더 폭이 열 너비보다 좁아지는 버그**가
+  있었다(사용자가 파란 배경 디버그로 실측 발견, 짧은 제목 Mock 데이터로는 재현이 안 됐다 —
+  `DemoLoadCollectionDetailUseCase`가 이제 3의 배수 인덱스에 일부러 긴 제목을 섞어 이 케이스를
+  Mock에서도 잡는다). 표지는 `aspectRatio`만으로 독립적으로 크기를 정해 제목 줄 수의 영향을 아예
+  안 받게 한다 — **셀 전체를 하나의 `.frame(height:)`로 묶는 패턴을 이 모듈의 다른 그리드 셀에도
+  다시 쓰지 말 것.**
+  - ⚠️ **제목 자체도 `addNovelTile`/`novelGridCell`(`CreateCollectionView`)이 쓰는 고정 높이 박스
+    (`Metric.novelTitleHeight`, 2줄 기준 예약)를 따라 하지 않는다** — 처음엔 그 패턴을 그대로
+    옮겨와 `.frame(height: 38, alignment: .top)`을 줬으나, 그러면 제목이 1줄일 때 박스 안 남는
+    공간만큼 작가 텍스트 앞 여백이 쓸데없이 넓어졌다(사용자 확정, 2026-08-25 — 제목 줄 수와 무관하게
+    제목-작가 간격은 항상 `Spacer(2)`만큼만이어야 함). `.fixedSize(horizontal: false, vertical: true)`
+    로 제목이 실제 필요한 높이(1줄/2줄)만 쓰게 하고 그 바로 뒤에 고정 2pt 간격만 둔다 — 그리드 행
+    안에서 제목 줄 수가 다른 셀끼리는 카드 전체 높이가 달라질 수 있지만(짧은 셀 아래 여백), 표지
+    폭·정렬은 위 문제와 이미 분리돼 있어 영향 없다. `CreateCollectionView.novelGridCell`은 여전히
+    고정 높이 박스를 쓴다 — **두 화면의 제목 높이 정책이 이제 의도적으로 다르다**(이 화면은 열람
+    그리드라 카드 아래 여백 차이가 자연스럽고, 그쪽은 편집 그리드라 행 정렬이 더 중요한 것으로 판단),
+    맞추려 하지 말 것.
+  - ⚠️ **위 "제목 줄 수가 다른 셀끼리는 카드 높이가 달라진다"는 이후(2026-08-25) 실제로 문제가 돼
+    카드 높이 216 통일 요구로 이어졌다** — 표지는 여전히 건드리지 않고, "제목+간격(2)+작가"를 감싸는
+    서브스택(`novelCellInfo(_:)`)에만 `.frame(height: novelInfoHeight, alignment: .top)`을 걸어
+    해결했다(`WSSNovelGridCell.Metric.infoHeight`와 동일 원리 — 표지와 정보 스택을 같은 프레임으로
+    묶지 않는 한 위 버그는 재현되지 않는다). 서브스택 끝의 `Spacer(minLength: 0)` + `alignment: .top`
+    덕에 제목이 1줄이라 남는 공간은 항상 작가 텍스트 아래(카드 하단)로 흐른다 — 제목-작가 간격
+    자체는 여전히 고정 `Spacer(2)`라 줄 수와 무관하게 2pt로 유지된다. `novelInfoHeight` 값은 시뮬레이터
+    실측(1줄/2줄 제목이 섞인 그리드에서 바닥선·표지 폭 확인)으로 정했다.
+- ⚠️ **`CollectionDetailView`의 스크롤 반응형 네비 타이틀은 `opacity` 모디파이어가 아니라 `if` 구조적
+  조건으로 넣고 뺀다** — 시스템 `.toolbar { ToolbarItem(.principal) { Text().opacity(조건 ? 1:0) } }`
+  조합은 opacity 값만 바뀌어선 UIKit 브리지(titleView)에 갱신되지 않고 계속 숨어있는다(#201 실측,
+  `Feature/CLAUDE.md` 공통 주의사항에 일반화해 남김 — `UserPageFeature`도 동일 재발).
+- **히어로 표지는 `.frame(height:, alignment: .top)`으로 상단 기준 크롭한다**(기본값 `.center`
+  대신) — `scaledToFill()`로 프레임보다 커진 이미지가 위쪽부터 정렬된 뒤 잘리게 하려는 의도. 가로는
+  이미 화면 폭을 꽉 채운 상태라 세로 정렬만 바뀐다.
+- **히어로 표지는 당겨서 새로고침(오버스크롤) 중에도 흰 배경이 비치지 않고 화면 최상단까지 확대되며
+  늘어나는 "스트레치 줌 헤더"로 구현돼 있다** — `heroSection`의 `GeometryReader`가
+  `scrollCoordinateSpace`(스크롤 반응형 네비 타이틀과 **같은** named coordinate space)에서 읽은
+  `minY`가 양수면(콘텐츠가 아래로 밀린 상태 = 오버스크롤) 그 값(`stretch`)을 두 군데에 쓴다:
+  `scaleEffect(1 + stretch / heroBackgroundHeight, anchor: .top)`로 이미지를 확대하고,
+  `.offset(y: -stretch)`로 같은 양만큼 위로 끌어올린다. **hold 구간(임계값) 없이 당기는 즉시 그
+  값에 비례해 확대된다** — 처음엔 일정 거리(30pt)까진 커버리지만 하고 그 이상 당겨야 확대되는 2단계
+  구조도 시도했으나, 실제로 써보니 "일단 스크롤하면 바로 확대되는 게 낫다"고 확정됐다(2026-08-25).
+  바깥 `GeometryReader` 자체는 여전히 `.frame(height: heroBackgroundHeight)`로 고정돼 있어 정보
+  영역(닉네임·제목 등)의 위치는 전혀 안 밀린다.
+  - ⚠️ **프레임 높이만 키우는 방식(`.frame(height: heroBackgroundHeight + stretch)`)만으로는 확대되는
+    느낌이 안 난다** — 표지가 세로로 긴 작품 썸네일이라 `scaledToFill`이 정지 상태에서 이미 가로 폭
+    기준으로 세로 방향을 넉넉히 넘치게 스케일해둔 상태다. 그 상태에서 프레임 높이만 늘리면 스케일
+    계수가 그대로라(가로 폭이 여전히 지배적이라) 확대 없이 원래 잘려나가 있던 여백만 그대로
+    드러난다(실측 — "이상하다"는 사용자 피드백으로 발견). 그래서 정지 상태 크롭을 먼저
+    `.frame(height: heroBackgroundHeight, alignment: .top).clipped()`로 고정한 뒤, 그 결과물 자체를
+    `scaleEffect`로 키우는 지금 방식으로 바꿨다 — 표지가 세로로 긴 이미지라면 프레임 확장 방식은
+    다시 쓰지 말 것.
+  - ⚠️ **그라디언트(`LinearGradient`)는 반드시 이미지와 같은 변환 체인 안(`heroImageWithGradient`)에
+    넣는다** — 형제 레이어로 따로 두면 이미지만 늘어나고 그라디언트는 `heroBackgroundHeight`에
+    고정된 채로 남아, 오버스크롤 중 이미지 위쪽이 그라디언트 없이 그대로 드러난다(실측 — "그라디언트가
+    잘려 보인다"는 사용자 피드백으로 발견). 이미지+그라디언트를 한 뷰로 묶은 뒤 프레임·스케일·offset을
+    그 묶음 전체에 걸어야 항상 같이 움직인다.
+  - `minY` 신호를 스크롤 감지(`isScrolledFromTop`)와 스트레치 계산 둘 다에 공유해서 쓰는 것도
+    재사용 포인트(별도 `GeometryReader`를 새로 만들 필요 없음).
