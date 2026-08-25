@@ -50,9 +50,11 @@ private struct DemoRootView: View {
     @State private var dataSource: DataSource = .mock
     @State private var isCreatePresented = false
     @State private var isListPresented = false
+    @State private var isEmptyListPresented = false
     /// 열 때마다 증가. createView/listView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
     @State private var createOpenCount = 0
     @State private var listOpenCount = 0
+    @State private var emptyListOpenCount = 0
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -77,6 +79,17 @@ private struct DemoRootView: View {
                 }
                 .buttonStyle(.bordered)
 
+                // Mock 전용 — 실서버는 실제 계정 데이터를 그대로 조회하므로 빈 상태를 강제할 수 없다.
+                // 두 탭(내 컬렉션/좋아요한 컬렉션) 모두 첫 페이지부터 빈 배열을 반환해, 세그먼트를
+                // 오가며 두 탭의 빈 상태(CTA 유무 차이 포함)를 한 화면에서 확인할 수 있다.
+                if dataSource == .mock {
+                    Button("컬렉션 목록 (빈 상태) 열기") {
+                        emptyListOpenCount += 1
+                        isEmptyListPresented = true
+                    }
+                    .buttonStyle(.bordered)
+                }
+
                 Spacer()
             }
             .padding()
@@ -87,8 +100,12 @@ private struct DemoRootView: View {
                     .id(createOpenCount)
             }
             .navigationDestination(isPresented: $isListPresented) {
-                listView
+                listView(isEmpty: false)
                     .id(listOpenCount)
+            }
+            .navigationDestination(isPresented: $isEmptyListPresented) {
+                listView(isEmpty: true)
+                    .id(emptyListOpenCount)
             }
         }
     }
@@ -110,13 +127,13 @@ private struct DemoRootView: View {
     }
 
     @ViewBuilder
-    private var listView: some View {
+    private func listView(isEmpty: Bool) -> some View {
         switch dataSource {
         case .mock:
             CollectionFeatureFactory.makeCollectionListView(
                 userID: UserID(10049),
-                loadCollectionsUseCase: DemoLoadCollectionsUseCase(),
-                loadLikedCollectionsUseCase: DemoLoadLikedCollectionsUseCase(),
+                loadCollectionsUseCase: DemoLoadCollectionsUseCase(isEmpty: isEmpty),
+                loadLikedCollectionsUseCase: DemoLoadLikedCollectionsUseCase(isEmpty: isEmpty),
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
                 searchNovelUseCase: DemoSearchNovelUseCase(),
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
@@ -301,16 +318,24 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
 }
 
 private struct DemoLoadCollectionsUseCase: LoadCollectionsUseCase {
+    /// true면 첫 페이지부터 빈 배열을 돌려준다 — 컬렉션 목록의 빈 상태("아직 만든 컬렉션이 없어요" +
+    /// "내 컬렉션" 탭 전용 CTA) 데모용, `CollectionFeatureDemoApp.listView(isEmpty:)`가 넘긴다.
+    var isEmpty = false
+
     func execute(userID: UserID, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
-        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "내 컬렉션")
+        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "내 컬렉션", isEmpty: isEmpty)
     }
 }
 
 private struct DemoLoadLikedCollectionsUseCase: LoadLikedCollectionsUseCase {
+    /// true면 첫 페이지부터 빈 배열을 돌려준다 — 컬렉션 목록의 빈 상태("아직 좋아요한 컬렉션이
+    /// 없어요", CTA 없음) 데모용, `CollectionFeatureDemoApp.listView(isEmpty:)`가 넘긴다.
+    var isEmpty = false
+
     func execute(cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
-        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "좋아요한 컬렉션")
+        return DemoCollectionCardPage.page(cursor: cursor, namePrefix: "좋아요한 컬렉션", isEmpty: isEmpty)
     }
 }
 
@@ -321,7 +346,11 @@ private enum DemoCollectionCardPage {
     static let pageSize = 6
     private static let demoPageCount = 3
 
-    static func page(cursor: String?, namePrefix: String) -> (CursorPaginated<CollectionCard>, Int) {
+    static func page(cursor: String?, namePrefix: String, isEmpty: Bool = false) -> (CursorPaginated<CollectionCard>, Int) {
+        // 빈 상태 데모는 cursor(페이지) 무관하게 항상 빈 배열 — 첫 진입에서 바로 emptySection이 보여야 한다.
+        guard !isEmpty else {
+            return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
+        }
         let pageIndex = cursor.flatMap(Int.init) ?? 0
         guard pageIndex < demoPageCount else {
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), pageSize * demoPageCount)
