@@ -121,6 +121,7 @@ extension Project {
         internalDependencies: [TargetDependency] = [],
         externalDependencies: [TargetDependency] = [],
         demoDependencies: [TargetDependency] = [],
+        testDependencies: [TargetDependency] = [],
         demoEntitlements: Entitlements? = nil
     ) -> Project {
 
@@ -133,7 +134,7 @@ extension Project {
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
             demoDependencies: demoDependencies,
-            testDependencies: [],
+            testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.feature.infoPlist,
             demoInfoPlist: ModuleInfoPlist.featureDemo.infoPlist,
@@ -193,9 +194,10 @@ extension Project {
         name: String,
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
-        externalDependencies: [TargetDependency] = []
+        externalDependencies: [TargetDependency] = [],
+        testDependencies: [TargetDependency] = []
     ) -> Project {
-        
+
         let allTargets = makeBaseTargets(
             name: name,
             product: .framework,
@@ -205,7 +207,7 @@ extension Project {
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
             demoDependencies: [],
-            testDependencies: [],
+            testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.data.infoPlist
         )
@@ -228,7 +230,8 @@ extension Project {
         name: String,
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
-        externalDependencies: [TargetDependency] = []
+        externalDependencies: [TargetDependency] = [],
+        testDependencies: [TargetDependency] = []
     ) -> Project {
 
         let allTargets = makeBaseTargets(
@@ -240,7 +243,7 @@ extension Project {
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
             demoDependencies: [],
-            testDependencies: [],
+            testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.core.infoPlist
         )
@@ -264,7 +267,8 @@ extension Project {
         targets: Set<TargetType>,
         internalDependencies: [TargetDependency] = [],
         externalDependencies: [TargetDependency] = [],
-        demoDependencies: [TargetDependency] = []
+        demoDependencies: [TargetDependency] = [],
+        testDependencies: [TargetDependency] = []
     ) -> Project {
 
         let allTargets = makeBaseTargets(
@@ -276,7 +280,7 @@ extension Project {
             internalDependencies: internalDependencies,
             externalDependencies: externalDependencies,
             demoDependencies: demoDependencies,
-            testDependencies: [],
+            testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.ui.infoPlist
         )
