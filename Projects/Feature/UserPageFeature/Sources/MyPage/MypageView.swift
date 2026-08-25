@@ -62,7 +62,12 @@ struct MypageView: View {
                     VStack(spacing: 20) {
                         myProfileSection
 
-                        LibrarySection(stats: viewModel.state.registeredNovelStats) {
+                        WSSLibrarySection(
+                            interest: viewModel.state.registeredNovelStats?.interest ?? 0,
+                            watching: viewModel.state.registeredNovelStats?.watching ?? 0,
+                            watched: viewModel.state.registeredNovelStats?.watched ?? 0,
+                            quit: viewModel.state.registeredNovelStats?.quit ?? 0
+                        ) {
                             //TODO: - 서재 뷰로 이동
                             print("서재 뷰로 이동")
                         }

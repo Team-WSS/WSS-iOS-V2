@@ -357,13 +357,17 @@ struct UserPageView: View {
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 44, height: 44)
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             
-            LibrarySection(
-                stats: viewModel.state.registeredNovelStats,
-                backgroundColor: WSSColor.wssGray50.swiftUIColor,
-                countColor: WSSColor.wssBlack.swiftUIColor
+            Spacer().frame(height: 8)
+            
+            WSSLibrarySection(
+                interest: viewModel.state.registeredNovelStats?.interest ?? 0,
+                watching: viewModel.state.registeredNovelStats?.watching ?? 0,
+                watched: viewModel.state.registeredNovelStats?.watched ?? 0,
+                quit: viewModel.state.registeredNovelStats?.quit ?? 0
             ) {
                 //TODO: - 서재 뷰로 이동
                 print("서재 뷰로 이동")
