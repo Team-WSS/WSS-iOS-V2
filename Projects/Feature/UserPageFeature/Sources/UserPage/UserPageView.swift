@@ -414,17 +414,12 @@ struct UserPageView: View {
 
                 Spacer()
 
-                Button {
-                    //TODO: - 컬렉션 리스트 뷰로 이동
-                } label: {
-                    WSSImage.icNavigateRight.swiftUIImage
-                        .resizable()
-                        .renderingMode(.template)
-                        .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                        .frame(width: 24, height: 24)
-                }
-                .frame(width: 44, height: 44)
-                .buttonStyle(.plain)
+                WSSImage.icNavigateRight.swiftUIImage
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                    .frame(width: 24, height: 24)
+                    .frame(width: 44, height: 44)
             }
             .contentShape(Rectangle())
         }
