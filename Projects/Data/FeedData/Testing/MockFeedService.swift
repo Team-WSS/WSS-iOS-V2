@@ -35,14 +35,11 @@ final class MockFeedService: FeedService {
 
     private(set) var getMyFeedsCallCount = 0
     private(set) var fetchedMyUserIDs: [Int] = []
-    private(set) var fetchedMyGenres: [[String]] = []
-    private(set) var fetchedMyVisibilityTypes: [String] = []
-    private(set) var fetchedMySortTypes: [String] = []
+    private(set) var fetchedMyQueries: [GetUserFeedsQuery] = []
 
     private(set) var getNovelFeedsCallCount = 0
     private(set) var fetchedNovelIDs: [Int] = []
-    private(set) var fetchedNovelLastFeedIDs: [Int] = []
-    private(set) var fetchedNovelSizes: [Int] = []
+    private(set) var fetchedNovelQueries: [GetNovelFeedsQuery] = []
 
     private(set) var postLikeCallCount = 0
     private(set) var likedFeedIDs: [Int] = []
@@ -103,20 +100,17 @@ final class MockFeedService: FeedService {
         return try getUserFeedsResult.get()
     }
 
-    func getMyFeeds(userID: Int, genres: [String], visibilityType: String, sortType: String, lastFeedID: Int) async throws -> UserFeedListResponse {
+    func getMyFeeds(userID: Int, query: GetUserFeedsQuery) async throws -> UserFeedListResponse {
         getMyFeedsCallCount += 1
         fetchedMyUserIDs.append(userID)
-        fetchedMyGenres.append(genres)
-        fetchedMyVisibilityTypes.append(visibilityType)
-        fetchedMySortTypes.append(sortType)
+        fetchedMyQueries.append(query)
         return try getMyFeedsResult.get()
     }
 
-    func getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int) async throws -> NovelFeedListResponse {
+    func getNovelFeeds(novelID: Int, query: GetNovelFeedsQuery) async throws -> NovelFeedListResponse {
         getNovelFeedsCallCount += 1
         fetchedNovelIDs.append(novelID)
-        fetchedNovelLastFeedIDs.append(lastFeedID)
-        fetchedNovelSizes.append(size)
+        fetchedNovelQueries.append(query)
         return try getNovelFeedsResult.get()
     }
 

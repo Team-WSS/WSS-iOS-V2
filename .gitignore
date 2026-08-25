@@ -74,3 +74,7 @@ Tuist/.build
 
 ### Claude Code (개인 설정 — 팀 공유 금지)
 .claude/settings.local.json
+
+# ArchLint(A2 아키텍처 검사기) 빌드 산출물 — Package.resolved는 핀 고정 위해 커밋한다.
+Tooling/ArchLint/.build
+Tooling/ArchLint/.swiftpm

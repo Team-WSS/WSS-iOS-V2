@@ -17,6 +17,8 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
     private let service: SearchService
     private let logger: DataLogger?
 
+    private static let autoCompletionSize = 10
+
     init(
         service: SearchService,
         logger: DataLogger?
@@ -79,7 +81,8 @@ public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoComplet
         let action = SearchAction.searchAutoCompletionWords
 
         do {
-            let response = try await service.getAutoCompletionWords(searchText: searchText)
+            let query = SearchAutoCompletionQuery(query: searchText, size: Self.autoCompletionSize)
+            let response = try await service.getAutoCompletionWords(query: query)
             let result = SearchMapper.searchAutoCompletionWords(from: response)
             logger?.logSuccess(action: action.name)
             return result

@@ -277,3 +277,35 @@ jobs:
             exit 1
           fi
           echo "✅ 모든 모듈 테스트 통과"
+
+  # 4) 아키텍처 규칙 검사(A2) — 자체 SwiftSyntax 검사기(Tooling/ArchLint).
+  #    ubuntu + 공식 swift 컨테이너로 Xcode 없이 빠르게 돈다.
+  #    error(규칙① VM 계약)면 실패, warning(규칙⑤ Service 분기)은 리포트만.
+  #    이 job 이름("Architecture Rules")을 develop 보호의 필수 통과 체크로 건다
+  #    (단일 job이라 test 매트릭스의 gate 같은 래퍼가 필요 없다).
+  arch-lint:
+    name: Architecture Rules
+    runs-on: ubuntu-latest
+    container: swift:6.3.3
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache ArchLint build
+        uses: actions/cache@v4
+        with:
+          path: Tooling/ArchLint/.build
+          key: archlint-${{ runner.os }}-${{ hashFiles('Tooling/ArchLint/Package.resolved', 'Tooling/ArchLint/Sources/**') }}
+          restore-keys: |
+            archlint-${{ runner.os }}-
+
+      # 규칙을 돌리기 전에, 규칙 자체가 제대로 작동하는지부터 검증한다(회귀 그물).
+      # 누가 규칙 코드를 건드려 감지가 깨지면 여기서 먼저 빨간불이 뜬다.
+      - name: ArchLint 자체 테스트
+        run: swift test --package-path Tooling/ArchLint
+
+      # GITHUB_ACTIONS 환경변수는 러너가 자동 세팅 → 도구가 ::error/::warning 주석을
+      # emit 해 위반이 PR diff에 인라인으로 붙는다. error가 있으면 종료코드 1로 job 실패.
+      - name: Run ArchLint
+        run: swift run --package-path Tooling/ArchLint ArchLint .

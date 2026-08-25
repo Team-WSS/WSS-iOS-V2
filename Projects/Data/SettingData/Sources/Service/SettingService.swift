@@ -18,5 +18,5 @@ protocol SettingService {
     
     // MARK: - ForceUpdate
     
-    func getAppMinimumVersion(os: String) async throws -> AppMinimumVersionResponse
+    func getAppMinimumVersion(query: AppMinimumVersionQuery) async throws -> AppMinimumVersionResponse
 }
