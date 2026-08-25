@@ -111,6 +111,19 @@ private struct DemoScreenSelectionView: View {
             if dataSource == .mock {
                 Divider().padding(.vertical, 8)
 
+                Text("컬렉션 개수별 데모 (MyPage)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(DemoCollectionScenario.allCases) { scenario in
+                    NavigationLink(scenario.title) {
+                        DemoFactory.makeMypageView(dataSource: dataSource, userID: scenario.userID)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Divider().padding(.vertical, 8)
+
                 Text("컬렉션 개수별 데모 (UserPage)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -128,7 +141,11 @@ private struct DemoScreenSelectionView: View {
     }
 }
 
-/// 타유저 페이지 컬렉션 섹션의 개수별 노출(3개 이상/2개/1개/0개)을 확인하기 위한 예약 userID 시나리오.
+/// 컬렉션 섹션의 개수별 노출(3개 이상/2개/1개/0개)을 확인하기 위한 예약 userID 시나리오.
+/// MyPage·UserPage 둘 다에서 재사용한다 — `loadCollectionPreviewsUseCase.execute(userID:...)`의
+/// `userID`는 두 화면 모두 컬렉션 미리보기에만 쓰이고(MyPage의 프로필·장르·작품취향·서재통계는
+/// `.me` 기준이라 이 값과 무관) 화면별 노출 정책만 다르다 — MyPage는 0개여도 헤더는 항상 보이고
+/// 미리보기 카드만 숨는 반면, UserPage는 0개면 섹션 자체가 통째로 숨는다(`UserPageFeature/CLAUDE.md`).
 /// `demoPrivateProfileUserID`(999, 비공개 프로필 시나리오)와 동일한 관례 — 특정 userID로 Mock 응답을 분기한다.
 private enum DemoCollectionScenario: CaseIterable, Identifiable {
     case threeOrMore
@@ -152,7 +169,7 @@ private enum DemoCollectionScenario: CaseIterable, Identifiable {
         case .threeOrMore: "컬렉션 3개 이상"
         case .two: "컬렉션 2개"
         case .one: "컬렉션 1개"
-        case .zero: "컬렉션 0개 (섹션 숨김)"
+        case .zero: "컬렉션 0개"
         }
     }
 }
@@ -171,10 +188,18 @@ private enum DemoFactory {
 
     @ViewBuilder
     static func makeMypageView(dataSource: DemoDataSource) -> some View {
+        makeMypageView(dataSource: dataSource, userID: demoUserID)
+    }
+
+    /// 컬렉션 개수 시나리오 바로가기 전용 — `userID`만 예약 userID(`DemoCollectionScenario`)로 바꿔
+    /// 컬렉션 미리보기 개수를 오버라이드한다. 다른 데이터(프로필·장르·작품취향·서재통계)는 전부 `.me`
+    /// 기준이라 이 값과 무관하다.
+    @ViewBuilder
+    static func makeMypageView(dataSource: DemoDataSource, userID: UserID) -> some View {
         switch dataSource {
         case .mock:
             MypageFactory.makeView(
-                userID: demoUserID,
+                userID: userID,
                 loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
@@ -458,11 +483,11 @@ private struct DemoLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseC
     }
 }
 
-/// 마이페이지 컬렉션 섹션 — "컬렉션 3개"(Figma 31613:89234) 상태를 시연한다. 실제 목록 API를 `size`로
-/// 그대로 흉내낸다(`CollectionDomain/CLAUDE.md`의 "마이페이지 전용 API 없음" 계약과 동일한 모양).
-/// `DemoCollectionScenario`(9970~9973)의 예약 userID가 오면 그 개수로 오버라이드한다 — 타유저 페이지의
-/// 3개 이상/2개/1개/0개 시나리오 시연용. 마이페이지는 고정 `demoUserID`(10049)라 매핑에 없어 항상 3개
-/// 그대로다.
+/// 마이페이지·타유저 페이지 공통 컬렉션 섹션 — "컬렉션 3개"(Figma 31613:89234) 상태를 기본값으로
+/// 시연한다. 실제 목록 API를 `size`로 그대로 흉내낸다(`CollectionDomain/CLAUDE.md`의 "마이페이지 전용
+/// API 없음" 계약과 동일한 모양). `DemoCollectionScenario`(9970~9973)의 예약 userID가 오면 그 개수로
+/// 오버라이드한다 — 3개 이상/2개/1개/0개 시나리오 시연용(MyPage/UserPage 둘 다의 바로가기가 이 매핑을
+/// 공유). 기본 진입점("내 화면 (MyPage)")은 `demoUserID`(10049)라 매핑에 없어 항상 3개 그대로다.
 private struct DemoLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
     static let scenarioTotalCounts: [UserID: Int] = [
         UserID(9973): 5, // "3개 이상" — 미리보기는 3개까지만 보이지만 전체 개수는 더 있다
