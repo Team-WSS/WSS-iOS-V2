@@ -13,6 +13,7 @@
 
 1. **의존성은 단방향**: `App → Feature → (UI / Domain) ← Data → Core`
    - Domain은 상위 레이어도, 구현체(Data)도 import 하지 않는다. Data가 Domain 프로토콜을 구현한다.
+   - arch-lint `dependency-direction`이 각 `Project.swift`의 의존 선언으로 이 방향을 CI에서 강제한다(→ `Tooling/ArchLint`). 단 `ui→domain`은 허용(WSSComponent가 도메인 타입 렌더).
 2. **비동기·상태 모델은 레이어마다 다르다**
    - Domain / Data: **Swift Concurrency** (`async/await`, `throws(RepositoryError)`)
    - UI / Feature: **SwiftUI Observation** — ViewModel은 `@Observable`, 상태는 단일 `private(set) var state`로 노출(View는 `@State`로 보유). `ObservableObject`/`@Published`/`@StateObject` ❌ (arch-lint가 CI에서 강제 → `Tooling/ArchLint`).
