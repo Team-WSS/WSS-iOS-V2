@@ -166,7 +166,11 @@ struct UserPageView: View {
         // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 보이는 자동 동작이라
         // 스크롤 여부와 무관하게 항상 배경이 보이도록 강제한다(색 자체는 위에서 스크롤에 따라 전환).
         .toolbarBackground(.visible, for: .navigationBar)
-        .animation(.easeInOut(duration: 0.1), value: isScrolledFromTop)
+        // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
+        // 서브트리를 감싸면 툴바 principal의 닉네임 `Text` opacity 갱신이 UIKit 브리지(titleView)로
+        // 전달되지 않아 계속 숨어있는다(실측 확인, `CollectionFeature.CollectionDetailView`에서 먼저
+        // 발견). 배경 색 전환은 애니메이션 없이 즉시 전환되고, 닉네임 페이드는 `toolbarContent`의
+        // 로컬 `.animation`으로만 건다.
         // 차단 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
         .showWSSAlert(
             isPresented: blockAlertBinding,
@@ -615,13 +619,17 @@ extension UserPageView {
             }
         }
 
-        ToolbarItem(placement: .principal) {
-            Text(viewModel.state.profile?.nickname ?? "웹소소")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .lineLimit(1)
-                .opacity(isScrolledFromTop ? 1 : 0)
-                .animation(.easeInOut(duration: 0.1), value: isScrolledFromTop)
+        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
+        // (titleView)에 갱신되지 않고 계속 숨어있는다(실측 확인 — 애니메이션 유무·위치와 무관,
+        // `CollectionFeature.CollectionDetailView`에서 먼저 발견). 대신 `if`로 뷰 자체를 구조적으로
+        // 넣고 뺀다 — `ToolbarContentBuilder`가 진짜 다른 콘텐츠로 인식해야 브리지가 갱신된다.
+        if isScrolledFromTop {
+            ToolbarItem(placement: .principal) {
+                Text(viewModel.state.profile?.nickname ?? "웹소소")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .lineLimit(1)
+            }
         }
     }
 }
