@@ -15,7 +15,8 @@ let isDebug = ProcessInfo.processInfo.environment["ARCHLINT_DEBUG"] == "1"
 
 let rules: [Rule] = [
     VMContractRule(),
-    ServiceBranchRule()
+    ServiceBranchRule(),
+    ServiceNoQueryBuildRule()
 ]
 
 func debugLog(_ message: String) {

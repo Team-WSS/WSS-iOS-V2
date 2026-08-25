@@ -28,6 +28,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 |---|---|---|---|---|
 | ① VM 계약 | `vm-contract` | **error** | `Projects/{Feature,UI}/**/Sources` | `ObservableObject` 채택·`@Published`·`@StateObject`·`@ObservedObject`·`@EnvironmentObject` 금지. 문법==의미라 예외 없음. |
 | ⑤ Service 분기 | `service-no-branch` | warning | `Projects/Data/**/*Service*` (Sources) | `if`/`switch`/삼항(`?:`) 금지(매핑 leak 방지). `guard`·에러 전파는 제외. 분기≠항상 leak이라 프록시. |
+| ⑦ Service 쿼리 조립 | `service-no-query-build` | warning | `Projects/Data/**/*Service*` (Sources) | `XxxQuery(...)` 생성자 호출 금지 — 완성 Query를 Input으로 받게 강제해 매핑 leak을 문법적으로 예방. `*Query` 네이밍 휴리스틱이라 프록시. |
 
 ## 규칙 추가하기
 
