@@ -11,5 +11,5 @@ import DependencyPlugin
 
 let project = Project.createCoreModule(
     name: ModuleType.core(.logger).name,
-    targets: [.sources, .demo]
+    targets: [.sources]
 )
