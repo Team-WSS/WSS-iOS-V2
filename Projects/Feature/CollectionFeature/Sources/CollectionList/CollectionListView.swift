@@ -276,13 +276,22 @@ private extension CollectionListView {
         }
     }
 
+    // "내 컬렉션"/"좋아요한 컬렉션"의 빈 상태는 확정 정도가 달라 분기 자체가 다르다 — 아래 각 케이스
+    // 주석 참고. 나중에 두 탭이 같은 모양으로 확정되어도 이 분기를 성급히 합치지 말 것(사용자 확정,
+    // 2026-08-25).
+    @ViewBuilder
     func emptySection(for tab: CollectionListTab) -> some View {
-        VStack(spacing: 0) {
-            if tab == .mine {
-                createCollectionButton
-                    .padding(16)
-            }
-
+        switch tab {
+        case .mine:
+            // "컬렉션 만들기" 버튼만 보여준다 — 안내 일러스트/문구 없음(사용자 확정, 2026-08-25).
+            // 상단 정렬: 이 자리(ZStack)는 다른 탭의 꽉 찬 높이에 맞춰 늘어나 있어, alignment 없이
+            // 두면 버튼이 화면 중앙으로 밀려 목록 있는 상태(top)와 자리가 달라져 보인다(실측).
+            createCollectionButton
+                .padding(16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        case .liked:
+            // 빈 상태 문구·구성이 아직 기획 확정 전이라 기존 기본값(WSSImage.imgEmpty + 안내 문구,
+            // CTA 없음)을 그대로 둔다 — `CollectionFeature/CLAUDE.md`의 "확정 전 기본값" 목록 참고.
             VStack(spacing: 0) {
                 WSSImage.imgEmpty.swiftUIImage
                     .resizable()
@@ -291,17 +300,10 @@ private extension CollectionListView {
 
                 Spacer().frame(height: 8)
 
-                Text(emptyMessage(for: tab))
+                Text("아직 좋아요한 컬렉션이 없어요")
                     .applyWSSFont(.body1, color: .wssGray200)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    func emptyMessage(for tab: CollectionListTab) -> String {
-        switch tab {
-        case .mine: "아직 만든 컬렉션이 없어요"
-        case .liked: "아직 좋아요한 컬렉션이 없어요"
         }
     }
 }
