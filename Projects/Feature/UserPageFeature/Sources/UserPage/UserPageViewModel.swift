@@ -29,10 +29,13 @@ final class UserPageViewModel {
         var novelPreference: NovelPreference?
         var registeredNovelStats: RegisteredNovelStats?
         var collectionPreviews: [CollectionPreview] = []
-        /// 컬렉션 섹션 노출 조건 겸 표시값 — 미리보기 배열 개수(최대 3)가 아니라 전체 개수
-        /// (`CollectionDomain/CLAUDE.md`의 `collectionsCount`). 0이면 섹션 자체를 숨긴다("컬렉션이
-        /// 존재할 경우에만" 노출 — 사용자 확정, 마이페이지처럼 0개여도 헤더를 항상 보여주는 것과 다르다).
+        /// 컬렉션 섹션의 표시값 겸 타이틀 행 탭 동작 분기 기준 — 미리보기 배열 개수(최대 3)가 아니라
+        /// 전체 개수(`CollectionDomain/CLAUDE.md`의 `collectionsCount`). 0이어도 타이틀 행은 항상
+        /// 보여주고(미리보기만 비움), 그 행을 탭하면 "컬렉션을 등록하지 않은 유저에요" 토스트로 안내한다
+        /// (사용자 확정, 2026-08-25 — 이전엔 섹션 전체를 숨겼다. `hasCollections`/`isNoCollectionsToastPresented` 참고).
         var collectionCount = 0
+        /// 컬렉션 섹션 타이틀 행을 탭했는데 컬렉션이 0개일 때 뜨는 안내 토스트(`WSSToastType.noCollections`).
+        var isNoCollectionsToastPresented = false
         var isLoading = false
         var hasLoadError = false
         /// 상대가 프로필을 비공개로 설정해 접근할 수 없는 경우(`RepositoryError.privateProfile`) —
@@ -78,8 +81,9 @@ final class UserPageViewModel {
         state.genrePreferences.allSatisfy { $0.count == 0 }
     }
 
-    /// 컬렉션 섹션 노출 여부 — 타유저의 컬렉션이 존재할 경우에만 통째로 보여준다(사용자 확정,
-    /// 장르 섹션과 동일한 "데이터 없으면 섹션째 숨김" 판단).
+    /// 컬렉션 데이터 존재 여부 — 미리보기 행 노출 여부, 그리고 타이틀 행을 탭했을 때 목록 이동(TODO)과
+    /// "컬렉션을 등록하지 않은 유저에요" 토스트를 가르는 기준(사용자 확정, 2026-08-25 — 이전엔 섹션
+    /// 전체 노출 여부였다).
     var hasCollections: Bool {
         state.collectionCount > 0
     }
@@ -116,6 +120,8 @@ final class UserPageViewModel {
         case confirmFeedAlert
         case dismissFeedAlert
         case dismissActionErrorToast
+        case collectionSectionTapped
+        case dismissNoCollectionsToast
     }
 
     // MARK: - Output
@@ -217,6 +223,10 @@ final class UserPageViewModel {
             state.presentedFeedAlert = nil
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .collectionSectionTapped:
+            tapCollectionSection()
+        case .dismissNoCollectionsToast:
+            state.isNoCollectionsToastPresented = false
         }
     }
 }
@@ -266,6 +276,13 @@ private extension UserPageViewModel {
     func presentFeedAlert(_ alert: FeedAlert) {
         guard feedActionTask == nil else { return }
         state.presentedFeedAlert = alert
+    }
+
+    /// 컬렉션 섹션 타이틀 행 탭 — 컬렉션이 있으면 목록으로 이동(TODO, `UserPageFeature/CLAUDE.md` 참고),
+    /// 없으면 "컬렉션을 등록하지 않은 유저에요" 토스트로 안내한다(사용자 확정, 2026-08-25).
+    func tapCollectionSection() {
+        guard !hasCollections else { return } // TODO: - 컬렉션 뷰로 이동
+        state.isNoCollectionsToastPresented = true
     }
 
     /// 알럿에서 확정. 접수 완료 알럿(1버튼)의 "확인"은 dismiss로만 들어오므로 여기 오지 않는다.

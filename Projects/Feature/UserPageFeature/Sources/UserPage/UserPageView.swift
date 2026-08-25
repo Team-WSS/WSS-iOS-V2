@@ -105,15 +105,13 @@ struct UserPageView: View {
 
                                     divider
 
-                                    // "타유저의 컬렉션이 존재할 경우에만" 노출한다(사용자 확정) —
-                                    // 마이페이지의 `CollectionSection`은 0개여도 헤더는 항상 보이는
-                                    // 것과 다르다(장르 취향 섹션이 데이터 없으면 통째로 숨는 것과
-                                    // 동일한 패턴).
-                                    if viewModel.hasCollections {
-                                        userPageCollectionSection
+                                    // 타이틀 행은 컬렉션 개수와 무관하게 항상 노출한다(사용자 확정,
+                                    // 2026-08-25) — 0개면 타이틀 행만 보이고, 탭하면 안내 토스트로
+                                    // 응답한다(`userPageCollectionSection` 참고). 이전엔 장르 취향
+                                    // 섹션처럼 데이터가 없으면 섹션째 숨겼다.
+                                    userPageCollectionSection
 
-                                        divider
-                                    }
+                                    divider
 
                                     if !viewModel.hasNoGenrePreferenceData {
                                         userPageGenreSection
@@ -185,6 +183,7 @@ struct UserPageView: View {
             buttonActions: feedAlertActions
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: noCollectionsToastBinding, type: .noCollections)
         .navigationDestination(isPresented: $isFeedListPresented) {
             UserPageFeatureFactory.makeFeedListView(
                 userID: userID,
@@ -375,13 +374,35 @@ struct UserPageView: View {
         .background(WSSColor.wssWhite.swiftUIColor)
     }
 
-    /// 타이틀 행 스타일은 "서재"/"장르취향"과 동일(플레인 텍스트 + 우측 화살표 44×44) — 마이페이지
+    /// 타이틀 행 텍스트 스타일은 "서재"/"장르취향"과 동일(플레인 텍스트 + 우측 화살표) — 마이페이지
     /// `CollectionSection`의 "컬렉션 N개" 카운트-인라인 헤더와는 다르다(Figma가 이 화면에서만 카운트를
-    /// 안 보여줌). 미리보기 항목 자체는 `CollectionPreviewRow`로 공유.
+    /// 안 보여줌). 컬렉션이 0개여도 타이틀 행은 그대로 보이고 미리보기 행만 비운다(사용자 확정,
+    /// 2026-08-25) — 탭 시 안내 토스트로 응답하려면 행이 계속 눈에 보이고 눌러야 하기 때문. 탭 영역은
+    /// 화살표(44×44)가 아니라 마이페이지 `CollectionSection.header`와 동일하게 행 전체로 넓혔다
+    /// (`.contentShape(Rectangle())`, 좁은 화살표만으론 "행을 클릭하면" 요구와 안 맞는다). 미리보기
+    /// 항목 자체는 `CollectionPreviewRow`로 공유.
     private var userPageCollectionSection: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 16)
 
+            collectionSectionHeader
+                .padding(.horizontal, 20)
+
+            if viewModel.hasCollections {
+                Spacer().frame(height: 8)
+
+                CollectionPreviewRow(previews: viewModel.state.collectionPreviews)
+            }
+
+            Spacer().frame(height: viewModel.hasCollections ? 30 : 16)
+        }
+        .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    private var collectionSectionHeader: some View {
+        Button {
+            viewModel.handle(.collectionSectionTapped)
+        } label: {
             HStack(alignment: .center, spacing: 0) {
                 Text("컬렉션")
                     .applyWSSFont(.title1)
@@ -390,7 +411,7 @@ struct UserPageView: View {
                 Spacer()
 
                 Button {
-                    //TODO: - 컬렉션 뷰로 이동
+                    //TODO: - 컬렉션 리스트 뷰로 이동
                 } label: {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
@@ -399,16 +420,11 @@ struct UserPageView: View {
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 44, height: 44)
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 20)
-
-            Spacer().frame(height: 8)
-
-            CollectionPreviewRow(previews: viewModel.state.collectionPreviews)
-
-            Spacer().frame(height: 30)
+            .contentShape(Rectangle())
         }
-        .background(WSSColor.wssWhite.swiftUIColor)
+        .buttonStyle(.plain)
     }
 
     private var userPageGenreSection: some View {
@@ -697,6 +713,13 @@ private extension UserPageView {
         Binding(
             get: { viewModel.state.hasActionError },
             set: { if !$0 { viewModel.handle(.dismissActionErrorToast) } }
+        )
+    }
+
+    var noCollectionsToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isNoCollectionsToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissNoCollectionsToast) } }
         )
     }
 
