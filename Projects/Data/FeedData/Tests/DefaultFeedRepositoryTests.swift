@@ -148,9 +148,11 @@ struct DefaultFeedRepositoryTests {
         _ = try await sut.fetchMyFeeds(option: option, lastFeedID: FeedID(100))
 
         #expect(service.getMyFeedsCallCount == 1)
-        #expect(service.fetchedMyGenres[0] == ["romance"])
-        #expect(service.fetchedMyVisibilityTypes[0] == "PUBLIC")
-        #expect(service.fetchedMySortTypes[0] == "recent")
+        let query = try #require(service.fetchedMyQueries.first)
+        #expect(query.genreNames == ["romance"])
+        #expect(query.isVisible == true)        // publicOnly → isVisible=true
+        #expect(query.isUnVisible == nil)
+        #expect(query.sortCriteria == "recent")
     }
 
     @Test("fetchMyFeeds includesUncategorized가 true면 genreNames에 etc가 함께 실린다")
@@ -161,7 +163,10 @@ struct DefaultFeedRepositoryTests {
 
         _ = try await sut.fetchMyFeeds(option: option, lastFeedID: FeedID(0))
 
-        #expect(service.fetchedMyGenres[0] == ["romance", "etc"])
+        let query = try #require(service.fetchedMyQueries.first)
+        #expect(query.genreNames == ["romance", "etc"])
+        #expect(query.isVisible == nil)         // all → 둘 다 nil(필터 없음)
+        #expect(query.isUnVisible == nil)
     }
 
     // MARK: - fetchNovelFeeds

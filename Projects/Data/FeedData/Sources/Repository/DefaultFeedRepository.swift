@@ -176,16 +176,17 @@ public struct DefaultFeedRepository: FeedRepository {
         if option.includesUncategorized {
             genres.append("etc")
         }
-        let visibilityType = FeedMapper.visibilityString(from: option.visibilityType)
-        let sortType = option.sortType.rawValue
+        let (isVisible, isUnVisible) = FeedMapper.visibilityFlags(from: option.visibilityType)
+        let query = GetUserFeedsQuery(
+            lastFeedId: lastFeedID.value,
+            size: 20,
+            isVisible: isVisible,
+            isUnVisible: isUnVisible,
+            genreNames: genres.isEmpty ? nil : genres,
+            sortCriteria: option.sortType.rawValue
+        )
         do {
-            let response = try await service.getMyFeeds(
-                userID: userID,
-                genres: genres,
-                visibilityType: visibilityType,
-                sortType: sortType,
-                lastFeedID: lastFeedID.value
-            )
+            let response = try await service.getMyFeeds(userID: userID, query: query)
             let result = try FeedMapper.userFeeds(
                 author: Author(userId: UserID(userID), nickname: "", profileImage: nil),
                 isMyFeed: true,

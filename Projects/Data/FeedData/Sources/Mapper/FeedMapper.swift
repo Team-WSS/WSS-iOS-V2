@@ -47,11 +47,15 @@ enum FeedMapper {
 
     // MARK: - VisibilityType
 
-    static func visibilityString(from type: VisibilityType) -> String {
+    /// 내 피드 공개범위 필터를 서버 쿼리 파라미터(isVisible/isUnVisible)로 변환한다.
+    /// all은 둘 다 nil(필터 없음), publicOnly는 isVisible=true, privateOnly는 isUnVisible=true.
+    /// (예전엔 Service가 문자열 "PUBLIC"/"PRIVATE"를 다시 Bool로 바꿨으나, 그 매핑을
+    ///  Service 밖으로 걷어내 매퍼로 모았다 — Service는 순수 passthrough 유지.)
+    static func visibilityFlags(from type: VisibilityType) -> (isVisible: Bool?, isUnVisible: Bool?) {
         switch type {
-        case .privateOnly:  return "PRIVATE"
-        case .publicOnly:   return "PUBLIC"
-        case .all:          return "ALL"
+        case .publicOnly:   return (isVisible: true, isUnVisible: nil)
+        case .privateOnly:  return (isVisible: nil, isUnVisible: true)
+        case .all:          return (isVisible: nil, isUnVisible: nil)
         }
     }
 

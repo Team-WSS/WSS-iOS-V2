@@ -46,17 +46,7 @@ struct DefaultFeedService: FeedService {
         return try await client.request(endpoint, decodeTo: UserFeedListResponse.self)
     }
 
-    func getMyFeeds(userID: Int, genres: [String], visibilityType: String, sortType: String, lastFeedID: Int) async throws -> UserFeedListResponse {
-        let isVisible: Bool? = visibilityType == "PUBLIC" ? true : nil
-        let isUnVisible: Bool? = visibilityType == "PRIVATE" ? true : nil
-        let query = GetUserFeedsQuery(
-            lastFeedId: lastFeedID,
-            size: 20,
-            isVisible: isVisible,
-            isUnVisible: isUnVisible,
-            genreNames: genres.isEmpty ? nil : genres,
-            sortCriteria: sortType
-        )
+    func getMyFeeds(userID: Int, query: GetUserFeedsQuery) async throws -> UserFeedListResponse {
         let endpoint = FeedEndpoint.getMyFeeds(userID: userID, query: query)
         return try await client.request(endpoint, decodeTo: UserFeedListResponse.self)
     }
