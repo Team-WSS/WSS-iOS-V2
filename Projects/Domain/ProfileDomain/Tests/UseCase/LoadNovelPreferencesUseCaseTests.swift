@@ -59,6 +59,7 @@ private final class StubKeywordRepository: KeywordRepository {
     func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] { [] }
     func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] { [] }
     func syncKeywords() async {}
+    func fetchPopularKeywords() async throws(RepositoryError) -> PopularKeywords { PopularKeywords(keywords: []) }
 }
 
 extension LoadNovelPreferencesUseCaseTests {
