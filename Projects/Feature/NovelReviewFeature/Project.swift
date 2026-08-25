@@ -26,5 +26,10 @@ let project = Project.createFeatureModule(
         .module(.data(.novelReview)),
         .module(.data(.base)),
         .module(.core(.networking))
+    ],
+    // ViewModel 테스트가 NovelReviewDomainTesting의 공유 Mock UseCase를 import 하게 한다
+    // (Mock UseCase는 UseCase 프로토콜이 선언된 Domain의 Testing 타깃에 둔다 — Repository Mock과 같은 자리).
+    testDependencies: [
+        .module(.domain(.novelReview), type: .testing)
     ]
 )

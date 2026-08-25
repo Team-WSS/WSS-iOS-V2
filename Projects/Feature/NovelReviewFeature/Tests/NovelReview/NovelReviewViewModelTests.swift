@@ -11,6 +11,7 @@ import Testing
 
 import BaseDomain
 import NovelReviewDomain
+import NovelReviewDomainTesting
 @testable import NovelReviewFeature
 
 @MainActor
@@ -93,13 +94,13 @@ struct NovelReviewViewModelTests {
 private extension NovelReviewViewModelTests {
     func makeViewModel(
         status: ReadingStatus = .watching,
-        loadUseCase: LoadNovelReviewDraftUseCase = ImmediateLoadNovelReviewDraftUseCase(result: nil)
+        loadUseCase: LoadNovelReviewDraftUseCase = MockLoadNovelReviewDraftUseCase()
     ) -> NovelReviewViewModel {
         NovelReviewViewModel(
             novelID: NovelID(1),
             status: status,
             loadUseCase: loadUseCase,
-            saveUseCase: NoopSaveNovelReviewUseCase()
+            saveUseCase: MockSaveNovelReviewUseCase()
         )
     }
 
@@ -120,14 +121,8 @@ private extension NovelReviewViewModelTests {
     }
 }
 
-private struct ImmediateLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
-    let result: NovelReviewDraft?
-
-    func execute(novelID: NovelID) async throws(RepositoryError) -> NovelReviewDraft? {
-        result
-    }
-}
-
+// 비동기 경합 검증 전용 fake — "실행을 멈춰 세운 뒤 원할 때 완료"시키는 특수 동작이라
+// 공유 Mock(MockLoadNovelReviewDraftUseCase)으로는 대체되지 않아 이 파일에 남긴다.
 private final class SuspendedLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
     private var resultContinuation: CheckedContinuation<NovelReviewDraft?, Never>?
     private var startContinuation: CheckedContinuation<Void, Never>?
@@ -152,8 +147,4 @@ private final class SuspendedLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUs
         resultContinuation?.resume(returning: result)
         resultContinuation = nil
     }
-}
-
-private struct NoopSaveNovelReviewUseCase: SaveNovelReviewUseCase {
-    func execute(draft: NovelReviewDraft) async throws(RepositoryError) {}
 }
