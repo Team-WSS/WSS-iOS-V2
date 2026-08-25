@@ -27,14 +27,15 @@
 
 - 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
 - 철학·컨벤션·Mock 패턴은 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
-- 현재 테스트는 **Domain 레이어 한정** (Data/UI/Core/Feature는 미적용).
+- **테스트 없이 머지 금지 의무는 Domain 한정**. 단 Data·Feature에도 테스트가 있으면 CI가 함께 돌려 지킨다.
 
 ## CI
 
-- 워크플로: `.github/workflows/test.yml` (`Run Domain Tests`).
-- 트리거: **PR에 `/domain-test` 댓글** 또는 수동 `workflow_dispatch`.
-- `Projects/Domain` 하위 폴더를 자동 스캔해 도메인별 병렬 테스트.
-- ⚠️ 빈/잔재 폴더는 매트릭스를 깨뜨린다 → 정식 `XxxDomain` 폴더만 유지.
+- 워크플로: `.github/workflows/test.yml` (`Run Tests`).
+- 트리거: **develop 대상 PR을 올리면 자동 실행**. `/domain-test` 댓글·수동 `workflow_dispatch`는 재실행용.
+- `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔해 모듈별 병렬 테스트.
+- 유령 폴더(레지스트리에 없는 rename/브랜치 잔재)는 `Project.swift`가 없어 자동 제외된다 — 폴더 잔재가 매트릭스를 깨지 않는다.
+- **머지 게이트**: `All Tests Passed` job이 전체 통과를 판정한다. develop 브랜치 보호에서 이 체크를 필수 통과(required status check)로 지정하면 빨간 PR은 머지가 막힌다(GitHub → Settings → Branches → develop → Require status checks → `All Tests Passed`).
 
 ## 새 모듈 추가 절차
 
@@ -45,7 +46,7 @@
 3. **`tuist generate`** 로 프로젝트 재생성.
 4. 코드 작성은 해당 레이어 가이드(`Projects/<Layer>/CLAUDE.md`) 준수.
 5. **모듈 가이드 작성**: `docs/MODULE_GUIDE_TEMPLATE.md`를 복사해 `Projects/<Layer>/<Module>/CLAUDE.md` 생성 (함정·시나리오 중심).
-6. Domain이면 테스트 작성 (CI는 폴더만 있으면 자동 인식).
+6. 테스트 작성 (Domain은 필수). `Project.swift`에 `.tests`를 선언하면 CI가 자동 인식한다.
 
 ## 자주 쓰는 명령
 

@@ -90,9 +90,10 @@ public final class MockNovelRepository: NovelRepository {
 
 ## CI
 
-- 트리거: PR에 **`/domain-test` 댓글** (또는 수동 `workflow_dispatch`). `.github/workflows/test.yml`.
-- `Projects/Domain` 하위 폴더 자동 스캔 → 새 Domain 모듈은 폴더만 있으면 자동 포함.
-- ⚠️ 빈/잔재 폴더는 매트릭스를 깨뜨린다 → 정식 `XxxDomain` 폴더만 유지.
+- 트리거: **develop 대상 PR을 올리면 자동 실행**. `/domain-test` 댓글·수동 `workflow_dispatch`는 재실행용. `.github/workflows/test.yml`.
+- `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔 → 선언만 하면 자동 포함.
+- 유령 폴더는 `Project.swift`가 없어 자동 제외된다(폴더 잔재가 매트릭스를 깨지 않는다).
+- `All Tests Passed` job이 전체 통과를 판정 → develop 브랜치 보호의 필수 통과 체크로 걸 수 있다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
