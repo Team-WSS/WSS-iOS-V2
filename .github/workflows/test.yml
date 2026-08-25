@@ -300,6 +300,11 @@ jobs:
           restore-keys: |
             archlint-${{ runner.os }}-
 
+      # 규칙을 돌리기 전에, 규칙 자체가 제대로 작동하는지부터 검증한다(회귀 그물).
+      # 누가 규칙 코드를 건드려 감지가 깨지면 여기서 먼저 빨간불이 뜬다.
+      - name: ArchLint 자체 테스트
+        run: swift test --package-path Tooling/ArchLint
+
       # GITHUB_ACTIONS 환경변수는 러너가 자동 세팅 → 도구가 ::error/::warning 주석을
       # emit 해 위반이 PR diff에 인라인으로 붙는다. error가 있으면 종료코드 1로 job 실패.
       - name: Run ArchLint

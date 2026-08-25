@@ -19,7 +19,7 @@ struct Violation {
 
 /// 아키텍처 규칙. 각 규칙은 자신이 적용될 파일을 스스로 판정하고(applies),
 /// 파싱된 구문 트리에서 위반을 찾는다(check).
-protocol Rule {
+protocol Rule: Sendable {
     var id: String { get }
     var severity: Severity { get }
     /// 이 규칙이 해당 파일에 적용되는가(경로 기반 스코프).

@@ -7,11 +7,20 @@
 > "외부 의존성 없음" 원칙(앱 런타임)과 무관하다. Tuist 그래프 밖의 독립 SwiftPM 패키지라
 > 에디터(Xcode 인덱서)가 `No such module` 가짜 경고를 낼 수 있으나 `swift build`는 정상이다.
 
+## 구조
+
+- `Sources/ArchLintCore/` — 규칙 5개 + 스캔/파싱 로직(라이브러리)
+- `Sources/ArchLint/` — 얇은 실행 파일(`main.swift` → `runArchLint(...)` 호출)
+- `Tests/ArchLintCoreTests/` — 규칙 자체 테스트
+
+로직을 라이브러리로 뺀 이유: SwiftPM에서 **실행 타깃은 테스트가 import 못 하기** 때문(규칙을 테스트하려면 필수).
+
 ## 실행
 
 ```bash
-swift run --package-path Tooling/ArchLint ArchLint .   # 인자: 레포 루트(기본 ".")
-ARCHLINT_DEBUG=1 ...                                    # 스캔·매칭 진단을 stderr로
+swift run  --package-path Tooling/ArchLint ArchLint .   # 검사 실행 (인자: 레포 루트, 기본 ".")
+swift test --package-path Tooling/ArchLint              # 규칙 자체 테스트 (회귀 그물)
+ARCHLINT_DEBUG=1 swift run ...                          # 스캔·매칭 진단을 stderr로
 ```
 
 `<root>/Projects` 아래 모든 `.swift`를 파싱해 규칙을 적용한다.
@@ -34,18 +43,20 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 
 ## 규칙 추가하기
 
-1. `Sources/ArchLint/`에 `Rule` 채택 struct + `SyntaxVisitor` 서브클래스를 만든다
+1. `Sources/ArchLintCore/`에 `Rule` 채택 struct + `SyntaxVisitor` 서브클래스를 만든다
    (`VMContractRule.swift` 참고). `applies(to:)`로 경로 스코프를, `check(...)`로 위반을 낸다.
-2. `main.swift`의 `rules` 배열에 등록한다.
+2. `Linter.swift`의 `allRules` 배열에 등록한다.
 3. **함정 — 삼항은 `TernaryExprSyntax`가 아니다**: 연산자 폴딩 전 raw 트리에선 삼항이
    `SequenceExpr` 안의 **`UnresolvedTernaryExprSyntax`** 로 나타난다. 폴딩을 돌리지 않으므로
    `visit(UnresolvedTernaryExprSyntax)`를 잡아야 한다(`if`/`switch`는 구문 단위라 정상). `ServiceBranchRule` 참고.
-4. 새 규칙엔 반드시 **fixture로 error/warning 경로를 실측**한다(레포가 이미 초록이라 위반 경로가
-   자동 검증되지 않는다) — 임시 `Projects/.../Sources/*.swift`를 만들어 종료코드까지 확인.
+4. **`Tests/ArchLintCoreTests`에 테스트를 추가한다** — 소스 문자열에 규칙을 돌려 위반을 단언한다
+   (error/warning 경로 + 오탐 없음 둘 다). 레포가 이미 초록이라 **위반 경로는 이 테스트로만 검증된다** →
+   규칙을 나중에 건드려 감지가 깨지면 `swift test`가 잡는다(회귀 그물).
 
 ## CI
 
 `.github/workflows/test.yml`의 `arch-lint` job(`name: Architecture Rules`)이 PR마다 ubuntu +
-공식 `swift:6.3.3` 컨테이너에서 돈다(Xcode 불필요). 이 **job 이름을 develop 보호의 필수 통과 체크**로
-건다 — 단일 job이라 test 매트릭스의 `All Tests Passed` 같은 gate 래퍼가 필요 없다.
+공식 `swift:6.3.3` 컨테이너에서 돈다(Xcode 불필요). job은 **먼저 `swift test`로 규칙 자체를 검증**한 뒤
+`swift run`으로 레포를 검사한다(규칙이 깨졌으면 레포 검사 전에 먼저 빨간불). 이 **job 이름을 develop
+보호의 필수 통과 체크**로 건다 — 단일 job이라 test 매트릭스의 `All Tests Passed` 같은 gate 래퍼가 필요 없다.
 단, 필수 체크로 켜는 건 **develop이 초록인 걸 확인한 뒤**(그전엔 모든 PR이 막힌다).
