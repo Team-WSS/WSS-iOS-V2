@@ -39,8 +39,7 @@ final class MockFeedService: FeedService {
 
     private(set) var getNovelFeedsCallCount = 0
     private(set) var fetchedNovelIDs: [Int] = []
-    private(set) var fetchedNovelLastFeedIDs: [Int] = []
-    private(set) var fetchedNovelSizes: [Int] = []
+    private(set) var fetchedNovelQueries: [GetNovelFeedsQuery] = []
 
     private(set) var postLikeCallCount = 0
     private(set) var likedFeedIDs: [Int] = []
@@ -108,11 +107,10 @@ final class MockFeedService: FeedService {
         return try getMyFeedsResult.get()
     }
 
-    func getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int) async throws -> NovelFeedListResponse {
+    func getNovelFeeds(novelID: Int, query: GetNovelFeedsQuery) async throws -> NovelFeedListResponse {
         getNovelFeedsCallCount += 1
         fetchedNovelIDs.append(novelID)
-        fetchedNovelLastFeedIDs.append(lastFeedID)
-        fetchedNovelSizes.append(size)
+        fetchedNovelQueries.append(query)
         return try getNovelFeedsResult.get()
     }
 

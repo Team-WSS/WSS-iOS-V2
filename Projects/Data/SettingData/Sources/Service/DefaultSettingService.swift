@@ -31,8 +31,7 @@ struct DefaultSettingService: SettingService {
     
     // MARK: - ForceUpdate
     
-    func getAppMinimumVersion(os: String) async throws -> AppMinimumVersionResponse {
-        let query = AppMinimumVersionQuery(os: os)
+    func getAppMinimumVersion(query: AppMinimumVersionQuery) async throws -> AppMinimumVersionResponse {
         let endpoint = SettingEndpoint.getAppMinimumVersion(query)
         return try await client.request(endpoint, decodeTo: AppMinimumVersionResponse.self)
     }

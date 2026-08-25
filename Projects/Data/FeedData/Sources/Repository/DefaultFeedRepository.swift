@@ -209,7 +209,8 @@ public struct DefaultFeedRepository: FeedRepository {
     public func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         let action = FeedAction.fetchNovelFeeds
         do {
-            let response = try await service.getNovelFeeds(novelID: id.value, lastFeedID: lastFeedID.value, size: pageSize)
+            let query = GetNovelFeedsQuery(lastFeedId: lastFeedID.value, size: pageSize)
+            let response = try await service.getNovelFeeds(novelID: id.value, query: query)
             let result = try FeedMapper.novelFeeds(from: response)
             logger?.logSuccess(action: action.name)
             return result

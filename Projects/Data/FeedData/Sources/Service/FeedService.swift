@@ -16,7 +16,7 @@ protocol FeedService {
     func getSosoFeeds(query: GetSosoFeedsQuery) async throws -> FeedListResponse
     func getUserFeeds(userID: Int, query: GetUserFeedsQuery) async throws -> UserFeedListResponse
     func getMyFeeds(userID: Int, query: GetUserFeedsQuery) async throws -> UserFeedListResponse
-    func getNovelFeeds(novelID: Int, lastFeedID: Int, size: Int) async throws -> NovelFeedListResponse
+    func getNovelFeeds(novelID: Int, query: GetNovelFeedsQuery) async throws -> NovelFeedListResponse
     func postLike(feedID: Int) async throws
     func deleteLike(feedID: Int) async throws
 }
