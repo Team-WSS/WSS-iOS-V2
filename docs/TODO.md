@@ -150,7 +150,7 @@
 
 ### 8. PR CI가 매번 전체 모듈을 돌린다 — 변경 영향권만 도는 선택적 테스트(Tuist)로 최적화
 
-- **무엇**: A1(#208)에서 `.github/workflows/test.yml`이 PR마다 `.tests`를 선언한 정식 모듈 30개 **전부**를
+- **무엇**: A1(#208)에서 `.github/workflows/test.yml`이 PR마다 `.tests`를 선언한 정식 모듈 **전부**를
   `xcodebuild test`로 병렬 실행한다. 이번 변경과 무관한 모듈도 매번 돈다.
 - **결과**: 문서·한 모듈만 바꾼 PR도 macOS 러너 30대를 쓴다 — 첫 실행 20~40분+, 비용·동시성 부담.
   Tuist/DerivedData 캐시로 완화되지만 근본적으로 낭비다.
@@ -169,3 +169,9 @@
   (2026-08-25, 지도 이슈 #205 축 A 후속).
 - **놓치기 쉬운 것**: 선택적 테스트의 목적은 "빠르다"가 아니라 **"정확히 영향권만"** 이다. 영향권 계산이 틀리면
   빠른 대신 거짓 초록을 낸다 — 속도보다 의존성 전파 정확도가 우선이다.
+
+### 9. SettingFeature에 VM 테스트가 없다 (`.tests` 선언을 되돌림)
+
+- **무엇**: SettingFeature는 `.tests`를 선언했으나 `Tests/`가 비어(`.gitkeep`만) 있어 빈 xctest 번들이 "실행 파일 없음"으로 로드 실패했다 → #210에서 `.tests`를 제거해 CI에서 뺐다. 즉 지금 SettingFeature는 **테스트 0개**.
+- **왜 지금 안 했나**: VM 테스트 작성은 별건(지도 이슈 #205 축 B-B2 "Feature VM TDD"). 여러 `SettingViewModel`의 계약을 파악해 써야 해서 #210(기존 실패 청소) 범위 밖.
+- **어디를 고치나(할 때)**: `Projects/Feature/SettingFeature/Tests/`에 VM 테스트 추가 + `Project.swift` targets에 `.tests` 재선언(필요 시 `testDependencies`도). `NovelReviewFeature`가 선례.
