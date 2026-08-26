@@ -27,11 +27,19 @@
   진입이 유저가 이 앱에서 처음 겪는 알림 권한 결정 시점이 되게 하려는 의도 — **온보딩 별도 단계로
   권한을 요청할 필요가 없다.** `authorized`/`denied`면 진입 시점엔 아무 것도 안 한다(denied 유도
   알럿은 아래 벨 탭 때만 — 진입만으로 매번 알럿을 띄우면 홈에 올 때마다 거슬린다).
-- **알림 벨 탭 → 시스템 권한 확인 → 이동(#193)**: 탭 즉시 `onNotificationTapped()`를 부르지 않고, 먼저
-  `PushAuthorizationChecker`로 권한을 확인한다. `denied`면 `WSSAlertType.setAppNotification` 알럿을 띄우고
-  이동은 알럿을 닫을 때(어느 버튼이든)까지 미룬다 — 알럿은 비차단 안내라 결국 이동은 항상 일어난다.
-  `authorized`/`notDetermined`(요청 후)면 즉시 이동. 서버 저장값(설정 화면의 `isNotificationOn`)과는
-  무관한 iOS 자체 권한이라, 이 화면의 알림 배지(`hasUnreadNotifications`)와도 별개다.
+- **알림 벨 탭 → 이동과 권한 확인이 동시에(#193)**: 탭 즉시 이동 신호(`shouldNavigateToNotifications`)를
+  올려 `onNotificationTapped()`가 바로 발화하고, 그와 **동시에** `PushAuthorizationChecker`로 권한을
+  확인한다. `denied`면 이동을 막지 않은 채 `WSSAlertType.setAppNotification` 알럿을 함께 띄운다(비차단
+  안내). `notDetermined`면 이동과 별개로 시스템 프롬프트(`requestAuthorization`)를 띄운다. 서버
+  저장값(설정 화면의 `isNotificationOn`)과는 무관한 iOS 자체 권한이라, 이 화면의 알림
+  배지(`hasUnreadNotifications`)와도 별개다.
+  ⚠️ **`SettingFeature`의 알림 설정 메뉴는 denied에 한해 정반대다** — 그쪽은 목적지 화면
+  (`NotificationSettingView`)이 이미 실재해서, `showWSSAlert`가 `.overlay` 기반이라 push 전환과 함께
+  밀려 사라지는 걸 피하려고 **먼저 알럿을 보여주고**, `denied`면 **아예 이동시키지 않는다**(사용자 확정
+  — 권한 없이 그 화면에 들어갈 이유가 없다는 판단, Home처럼 "결국 이동은 항상 일어난다"가 아니다).
+  `notDetermined`는 Home과 마찬가지로 시스템 프롬프트를 띄운 뒤 이동한다 — 둘 다 갈리는 건 `denied`
+  뿐이다. 여기(Home)는 이동 콜백의 목적지 화면이 아직 없어(App 스켈레톤) 이 문제가 없다 — 두 화면의
+  패턴이 다른 이유이지, 어느 한쪽이 틀린 게 아니다.
   ⚠️ **위 진입 시점 체크 덕분에, 이 벨 탭 시점엔 이미 `authorized`/`denied`로 확정돼 있는 게 보통이다**
   — `notDetermined` 분기는 진입 체크가 아직 안 끝난 채 유저가 아주 빠르게 벨을 누르는 등의 방어적
   경로로만 남는다. 같은 이유로 `SettingFeature`의 알림 설정 화면도 진입 시 `notDetermined`를 만날 일이

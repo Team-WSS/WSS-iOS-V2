@@ -20,8 +20,9 @@ import WSSComponent
 struct HomeView: View {
 
     @State private var viewModel: HomeViewModel
-    /// "설정하러 가기" 탭 시 iOS 설정 앱을 여는 데 쓴다 — VM은 "권한이 denied라 알럿을 띄워야
-    /// 한다"는 판단만 갖고, 시스템 앱을 여는 행위 자체는 View가 수행한다(NotificationSettingView와 동일).
+    /// "설정하러 가기" 탭 시 iOS 설정 앱의 **이 앱 알림 설정 페이지**로 바로 여는 데 쓴다 — VM은
+    /// "권한이 denied라 알럿을 띄워야 한다"는 판단만 갖고, 시스템 앱을 여는 행위 자체는 View가 수행한다
+    /// (SettingFeature와 동일).
     @Environment(\.openURL) private var openURL
     private let onNovelSelected: (NovelID) -> Void
     private let onFeedSelected: (FeedID) -> Void
@@ -86,7 +87,7 @@ struct HomeView: View {
                     { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
                     {
                         viewModel.handle(.dismissPushAuthorizationAlert)
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             openURL(url)
                         }
                     }  // "설정하러 가기"

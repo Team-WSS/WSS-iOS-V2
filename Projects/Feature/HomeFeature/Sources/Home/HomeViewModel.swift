@@ -37,10 +37,10 @@ final class HomeViewModel {
         var requiresAuthentication = false
         /// 알림 벨을 눌렀는데 시스템 푸시 권한이 denied라 기기 설정 유도 알럿을 띄워야 하는지(#193).
         var isPushAuthorizationAlertPresented = false
-        /// 알림 목록 화면으로 이동해도 되는 신호 — 권한이 있으면 벨 탭 즉시, denied면 알럿을 닫은 뒤에
-        /// 오른다. View가 `onChange`로 소비하고 곧바로 `.consumeNotificationNavigation`으로 되돌린다
-        /// (`requiresAuthentication`과 같은 1회성 신호 패턴 — 이 VM은 탭 세션 내내 살아서 소진해야
-        /// 두 번째 벨 탭도 신호가 삼켜지지 않는다).
+        /// 알림 목록 화면으로 이동해도 되는 신호 — denied 여부와 무관하게 **벨 탭 즉시** 오른다(알럿은
+        /// 비차단 안내라 이동을 막지 않는다). View가 `onChange`로 소비하고 곧바로
+        /// `.consumeNotificationNavigation`으로 되돌린다(`requiresAuthentication`과 같은 1회성 신호
+        /// 패턴 — 이 VM은 탭 세션 내내 살아서 소진해야 두 번째 벨 탭도 신호가 삼켜지지 않는다).
         var shouldNavigateToNotifications = false
     }
 
@@ -137,17 +137,18 @@ private extension HomeViewModel {
         }
     }
 
-    /// 시스템 푸시 권한이 denied면 알럿을 띄우고 이동은 알럿을 닫을 때까지 미룬다. 그 외
-    /// (authorized/notDetermined)엔 알림 목록 이동을 바로 허락한다 — 알럿은 비차단 안내일 뿐이다.
+    /// denied여도 이동은 막지 않는다 — 알림 목록 이동 신호는 권한 상태와 무관하게 탭 즉시 올리고,
+    /// denied면 그와 **동시에** 기기 설정 유도 알럿도 띄운다(알럿은 비차단 안내일 뿐이라 화면 전환을
+    /// 가로막을 이유가 없다). notDetermined면 그 자리에서 시스템 프롬프트를 띄운다(알럿은 안 띄움).
     func notificationBellTapped() {
         Task { [weak self] in
             guard let self else { return }
+            state.shouldNavigateToNotifications = true
             switch await pushAuthorizationChecker.authorizationStatus() {
             case .authorized:
-                state.shouldNavigateToNotifications = true
+                break
             case .notDetermined:
                 _ = await pushAuthorizationChecker.requestAuthorization()
-                state.shouldNavigateToNotifications = true
             case .denied:
                 state.isPushAuthorizationAlertPresented = true
             }
@@ -156,7 +157,6 @@ private extension HomeViewModel {
 
     func dismissPushAuthorizationAlert() {
         state.isPushAuthorizationAlertPresented = false
-        state.shouldNavigateToNotifications = true
     }
 
     /// notDetermined면 그 자리에서 시스템 프롬프트를 띄운다 — 온보딩 완료 후 첫 홈 진입이 유저가
