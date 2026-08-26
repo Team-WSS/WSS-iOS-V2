@@ -205,7 +205,11 @@ private extension CollectionMyLibrarySelectViewModel {
             }
         }
         do {
-            let (page, _) = try await loadMyLibraryUseCase.execute(filter: MyLibraryFilter(), cursor: cursor)
+            let (page, _) = try await loadMyLibraryUseCase.execute(
+                filter: MyLibraryFilter(),
+                cursor: cursor,
+                size: LibraryPageSizePolicy.pageSize
+            )
             guard generation == loadGeneration, !Task.isCancelled else { return }
             if cursor == nil {
                 state.novels = page.items

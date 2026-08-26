@@ -195,7 +195,7 @@ private struct DemoLoadMyLibraryUseCase: LoadMyLibraryUseCase {
     private static let demoPageCount = 3
     private static let pageSize = 9
 
-    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
         let pageIndex = cursor.flatMap(Int.init) ?? 0
         guard pageIndex < Self.demoPageCount else {
