@@ -47,7 +47,7 @@ public enum SearchFactory {
 
     /// 상세탐색 필터 화면 단독 진입 — UseCase가 없는 순수 입력 화면이라 필터 값과 콜백만 받는다.
     /// `keywordTabContent` — "키워드" 탭 콘텐츠를 조립하는 빌더. `SearchFeature`는 `KeywordFeature`를
-    /// 모르므로 App/Demo가 `KeywordFeatureFactory.makeSearchKeywordView(...)`를 감싸 건네준다 — 계약은
+    /// 모르므로 App/Demo가 `KeywordFactory.makeSearchKeywordView(...)`를 감싸 건네준다 — 계약은
     /// `KeywordTabContentBuilder` 문서 참고.
     @MainActor
     public static func makeDetailSearchFilterView(

@@ -41,7 +41,7 @@ private struct DemoRootView: View {
             ),
             logger: DataLogger(moduleName: "KeywordFeatureDemo", underlying: consoleLogger)
         )
-        KeywordFeatureFactory.makeSearchKeywordView(
+        KeywordFactory.makeSearchKeywordView(
             loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: repository),
             searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: repository),
             logger: consoleLogger

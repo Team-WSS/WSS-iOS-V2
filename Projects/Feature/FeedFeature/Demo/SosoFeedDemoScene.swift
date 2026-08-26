@@ -61,7 +61,7 @@ struct SosoFeedDemoScene: View {
 
     var body: some View {
         NavigationStack {
-            FeedFeatureFactory.makeSosoFeedView(
+            FeedFactory.makeSosoFeedView(
                 loadMyFeedsUseCase: loadMyFeedsUseCase,
                 loadSosoFeedsUseCase: loadSosoFeedsUseCase,
                 feedLikeUseCase: feedLikeUseCase,
