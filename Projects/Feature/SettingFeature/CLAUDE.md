@@ -3,18 +3,37 @@
 
 설정 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.setting)` / 의존: `BaseDomain`, `ProfileDomain`, `NotificationDomain`, `SocialDomain`, `AuthDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger`, `PushAuthorization`(#193 — 알림 설정 화면의 시스템 권한 확인용) (`SettingDomain`은 실제로 쓰이는 곳이 없어 `Project.swift`에서 제외했다 — 필요해지면 다시 추가)
+- 식별자: `ModuleType.feature(.setting)` / 의존: `BaseDomain`, `ProfileDomain`, `NotificationDomain`, `SocialDomain`, `AuthDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger`, `PushAuthorization`(#193 — "알림 설정" 메뉴 탭 시 시스템 권한 확인용) (`SettingDomain`은 실제로 쓰이는 곳이 없어 `Project.swift`에서 제외했다 — 필요해지면 다시 추가)
 - 진입점: `Factory/SettingFactory.swift` — `makeView(logger:)`(설정 목록), `makeChangeGenderOrAgeView(loadLocalGenderAndBirthUseCase:saveAccountInfoDraftUseCase:logger:)`(성별/나이 변경)
 
 ## 핵심 시나리오
 
 - **성별/나이 변경 화면**은 `ProfileDomain`에 의존한다 — 성별/출생연도는 userDefaults에서 읽고(`LoadLocalGenderAndBirthUseCase`), 저장 시 서버 PUT + userDefaults 갱신을 함께 하는 `SaveAccountInfoDraftUseCase`(`AccountInfoDraft`, ProfileDomain 기존 계약)를 재사용한다.
 - **`SettingChangeBirthYearPickerSheet`는 커밋-온-확인 패턴**: 시트 내부 `draftYear`만 스크롤로 바뀌고, "완료"를 눌러야 부모 `selectedYear`(Binding)에 반영된다. X는 커밋 없이 닫기만.
-- **알림 설정 화면 진입 시 시스템 푸시 권한 확인(#193)**: `NotificationSettingView`가 `onAppear`마다(재진입 포함) `PushAuthorizationChecker`로 iOS 알림 권한을 확인한다 — `notDetermined`(아직 안 물어봄)면 시스템 프롬프트(`requestAuthorization`)를 바로 띄우고, `denied`(거부됨)면 `WSSAlertType.setAppNotification`("앱 알림이 꺼져있어요") 알럿을 띄운다. 이건 앱 안의 알림 on/off 토글(`isNotificationOn`, 서버 저장값)과는 **완전히 별개** — 토글이 켜져 있어도 iOS 자체 권한이 꺼져 있으면 알림이 안 온다. "설정하러 가기" 탭 시 `UIApplication.openSettingsURLString`으로 iOS 설정 앱을 연다(VM은 판단만, 여는 행위는 View).
-  ⚠️ **`notDetermined` 분기는 이 화면에서 사실상 거의 안 탄다** — `HomeFeature`가 첫 홈 진입 시점에
+- **"알림 설정" 메뉴 탭 시점에 시스템 푸시 권한 확인(#193)**: 체크·알럿은 `NotificationSettingView`가
+  아니라 **`SettingView`가 "알림 설정" 메뉴를 탭한 순간** 한다(`SettingViewModel.notificationMenuTapped`).
+  `PushAuthorizationChecker`로 확인해 `notDetermined`(아직 안 물어봄)면 시스템 프롬프트를 바로 띄우고
+  이동 신호(`shouldNavigateToNotificationSetting`)를 올린다. **`denied`(거부됨)면 이동하지 않고**
+  `WSSAlertType.setAppNotification`("앱 알림이 꺼져있어요") 알럿만 띄운다 — "다음에 하기"·"설정하러
+  가기" 어느 버튼이든 **알럿을 닫기만 할 뿐 알림 설정 화면으로 이동시키지 않는다**(사용자 확정 — 권한이
+  없는 채로 그 화면에 들어갈 이유가 없다는 판단). 권한을 실제로 켜고 왔으면 "알림 설정" 메뉴를 다시
+  눌러야 한다(그때는 `authorized`라 바로 이동). `showWSSAlert`가 `.overlay` 기반이라 push 전환과 동시에
+  띄우면 화면 전환에 밀려 사라지기 때문에, `HomeFeature`의 알림 벨(이동과 알럿을 동시에 올림)과 정반대
+  순서를 쓴다(자세한 이유는
+  [HomeFeature](../HomeFeature/CLAUDE.md) 참고). 이건 앱 안의 알림 on/off 토글(`isNotificationOn`,
+  서버 저장값)과는 **완전히 별개** — 토글이 켜져 있어도 iOS 자체 권한이 꺼져 있으면 알림이 안 온다.
+  "설정하러 가기" 탭 시 `UIApplication.openNotificationSettingsURLString`(iOS 15.4+, 배포 타깃
+  17.0이라 안전)으로 iOS 설정 앱의 **이 앱 알림 설정 하위 페이지로 바로** 연다(VM은 판단만, 여는
+  행위는 View).
+  ⚠️ **`NotificationSettingView`는 더 이상 자체적으로 권한을 재확인하지 않는다**(과거엔
+  `onAppear`마다 재확인해 자체 알럿을 띄웠으나 제거함) — `SettingView`에서 이미 denied 알럿을 보고 닫은
+  직후 도착 화면에서 같은 알럿이 한 번 더 뜨는 중복을 피하기 위해서다. 이 때문에 **딥링크 등으로
+  `NotificationSettingView`에 직접 진입하는 경로는 이 권한 안내를 받지 못한다** — 현재 App 레이어에
+  딥링크 라우팅 자체가 없어(스켈레톤 단계) 당장은 실질적 공백이 아니지만, 나중에 딥링크가 생기면 이
+  화면 진입 지점에서 별도로 처리해야 한다.
+  ⚠️ **`notDetermined` 분기는 이 메뉴에서 사실상 거의 안 탄다** — `HomeFeature`가 첫 홈 진입 시점에
   이미 권한을 확정짓기 때문(회원가입 직후 첫 홈이 유저가 이 앱에서 처음 겪는 권한 결정 시점). 여기 오는
-  대부분의 유저는 이미 `authorized`/`denied`로 확정된 뒤라, 이 분기는 홈을 거치지 않고 딥링크 등으로
-  바로 이 화면에 들어온 극단적 경로에 대한 방어적 코드에 가깝다.
+  대부분의 유저는 이미 `authorized`/`denied`로 확정된 뒤다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 

@@ -10,7 +10,6 @@ import SwiftUI
 
 import NotificationDomain
 import BaseDomain
-import PushAuthorization
 
 import DesignSystem
 import WSSComponent
@@ -19,9 +18,6 @@ struct NotificationSettingView: View {
 
     @State private var viewModel: NotificationSettingViewModel
     @Environment(\.dismiss) private var dismiss
-    /// "설정하러 가기" 탭 시 iOS 설정 앱을 여는 데 쓴다(오류 제보 링크와 동일하게 시스템 브라우저/앱 오픈은
-    /// View가 직접 수행 — VM은 "권한이 denied라 알럿을 띄워야 한다"는 판단만 갖는다).
-    @Environment(\.openURL) private var openURL
 
     init(viewModel: NotificationSettingViewModel) {
         self._viewModel = State(initialValue: viewModel)
@@ -36,22 +32,8 @@ struct NotificationSettingView: View {
             .navigationBarBackButtonHidden()
             .onAppear {
                 viewModel.handle(.load)
-                viewModel.handle(.checkPushAuthorization)
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
-            .showWSSAlert(
-                isPresented: pushAuthorizationAlertBinding,
-                type: .setAppNotification,
-                buttonActions: [
-                    { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
-                    {
-                        viewModel.handle(.dismissPushAuthorizationAlert)
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            openURL(url)
-                        }
-                    }  // "설정하러 가기"
-                ]
-            )
     }
 
     @ViewBuilder
@@ -173,13 +155,6 @@ private extension NotificationSettingView {
         )
     }
 
-    var pushAuthorizationAlertBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.isPushAuthorizationAlertPresented },
-            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
-        )
-    }
-
     var toastType: WSSToastType {
         switch viewModel.state.toastError {
         case .unknown, .none: .unknownError
@@ -192,8 +167,7 @@ private extension NotificationSettingView {
         NotificationSettingView(
             viewModel: NotificationSettingViewModel(
                 loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
-                updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
-                pushAuthorizationChecker: PreviewPushAuthorizationChecker()
+                updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase()
             )
         )
     }
@@ -207,9 +181,4 @@ private struct PreviewLoadPushPreferenceUseCase: LoadPushPreferenceUseCase {
 
 private struct PreviewUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
     func execute(pushPreference: PushPreference) async throws(RepositoryError) {}
-}
-
-private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
-    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
-    func requestAuthorization() async -> Bool { true }
 }

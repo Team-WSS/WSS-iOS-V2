@@ -61,9 +61,6 @@ struct SettingView: View {
     // NovelDomain
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
 
-    // PushAuthorization
-    private let pushAuthorizationChecker: PushAuthorizationChecker
-
     init(
         viewModel: SettingViewModel,
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
@@ -78,7 +75,6 @@ struct SettingView: View {
         withdrawUseCase: WithdrawUseCase,
         logoutUseCase: LogoutUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
-        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
@@ -96,7 +92,6 @@ struct SettingView: View {
         self.withdrawUseCase = withdrawUseCase
         self.logoutUseCase = logoutUseCase
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
-        self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
         self.onLogoutSuccess = onLogoutSuccess
@@ -144,11 +139,28 @@ struct SettingView: View {
             SettingFactory.makeNotificationSettingView(
                 loadPushPreferenceUseCase: loadPushPreferenceUseCase,
                 updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-                pushAuthorizationChecker: pushAuthorizationChecker,
                 logger: logger
             )
         }
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
+        .onChange(of: viewModel.state.shouldNavigateToNotificationSetting) { _, shouldNavigate in
+            guard shouldNavigate else { return }
+            viewModel.handle(.consumeNotificationSettingNavigation)
+            isNotificationSettingPresented = true
+        }
+        .showWSSAlert(
+            isPresented: pushAuthorizationAlertBinding,
+            type: .setAppNotification,
+            buttonActions: [
+                { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
+                {
+                    viewModel.handle(.dismissPushAuthorizationAlert)
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }  // "설정하러 가기"
+            ]
+        )
     }
 
     private func select(_ menu: SettingMenu) {
@@ -158,7 +170,7 @@ struct SettingView: View {
         case .profileVisibility:
             isProfilePublicPresented = true
         case .notification:
-            isNotificationSettingPresented = true
+            viewModel.handle(.notificationMenuTapped)
         case .officialAccount, .inquiry, .privacyPolicy, .termsOfService:
             if let url = menu.externalURL { openURL(url) }
         }
@@ -167,6 +179,13 @@ struct SettingView: View {
     private func showVisibilityChangedToast(isPublic: Bool) {
         visibilityChangedToastType = isPublic ? .changePublic : .changePrivate
         isVisibilityChangedToastPresented = true
+    }
+
+    private var pushAuthorizationAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isPushAuthorizationAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
+        )
     }
 }
 
@@ -238,7 +257,7 @@ private extension SettingView {
 #Preview {
     NavigationStack {
         SettingView(
-            viewModel: SettingViewModel(),
+            viewModel: SettingViewModel(pushAuthorizationChecker: PreviewPushAuthorizationChecker()),
             loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
             loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
@@ -250,8 +269,7 @@ private extension SettingView {
             updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
             withdrawUseCase: PreviewWithdrawUseCase(),
             logoutUseCase: PreviewLogoutUseCase(),
-            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase(),
-            pushAuthorizationChecker: PreviewPushAuthorizationChecker()
+            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
 }

@@ -48,7 +48,7 @@ public enum SettingFactory {
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
     ) -> some View {
-        let viewModel = SettingViewModel(logger: logger)
+        let viewModel = SettingViewModel(pushAuthorizationChecker: pushAuthorizationChecker, logger: logger)
         return SettingView(
             viewModel: viewModel,
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
@@ -63,7 +63,6 @@ public enum SettingFactory {
             withdrawUseCase: withdrawUseCase,
             logoutUseCase: logoutUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-            pushAuthorizationChecker: pushAuthorizationChecker,
             logger: logger,
             onWithdrawSuccess: onWithdrawSuccess,
             onLogoutSuccess: onLogoutSuccess
@@ -195,13 +194,11 @@ public enum SettingFactory {
     public static func makeNotificationSettingView(
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
-        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-            pushAuthorizationChecker: pushAuthorizationChecker,
             logger: logger
         )
         return NotificationSettingView(viewModel: viewModel)
