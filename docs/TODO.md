@@ -18,7 +18,9 @@
 
 ---
 
-## 열린 항목
+## 열린 항목: 기능·제품
+
+기능 작업(화면·기능 PR)에서 발견했으나 그 범위를 벗어나 미룬 제품/기능 결함·배선.
 
 ### 1. 로그인 세션이 끝나도 로컬 프로필 캐시가 남는다
 
@@ -148,7 +150,11 @@
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
 
-### 8. PR CI가 매번 전체 모듈을 돌린다 — 변경 영향권만 도는 선택적 테스트(Tuist)로 최적화
+## 열린 항목: AI 검증 체계(#205 축) 후속
+
+AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)
+
+### 1. PR CI가 매번 전체 모듈을 돌린다 — 변경 영향권만 도는 선택적 테스트(Tuist)로 최적화
 
 - **무엇**: A1(#208)에서 `.github/workflows/test.yml`이 PR마다 `.tests`를 선언한 정식 모듈 **전부**를
   `xcodebuild test`로 병렬 실행한다. 이번 변경과 무관한 모듈도 매번 돈다.
@@ -170,8 +176,47 @@
 - **놓치기 쉬운 것**: 선택적 테스트의 목적은 "빠르다"가 아니라 **"정확히 영향권만"** 이다. 영향권 계산이 틀리면
   빠른 대신 거짓 초록을 낸다 — 속도보다 의존성 전파 정확도가 우선이다.
 
-### 9. SettingFeature에 VM 테스트가 없다 (`.tests` 선언을 되돌림)
+### 2. SettingFeature에 VM 테스트가 없다 (`.tests` 선언을 되돌림)
 
 - **무엇**: SettingFeature는 `.tests`를 선언했으나 `Tests/`가 비어(`.gitkeep`만) 있어 빈 xctest 번들이 "실행 파일 없음"으로 로드 실패했다 → #210에서 `.tests`를 제거해 CI에서 뺐다. 즉 지금 SettingFeature는 **테스트 0개**.
 - **왜 지금 안 했나**: VM 테스트 작성은 별건(지도 이슈 #205 축 B-B2 "Feature VM TDD"). 여러 `SettingViewModel`의 계약을 파악해 써야 해서 #210(기존 실패 청소) 범위 밖.
 - **어디를 고치나(할 때)**: `Projects/Feature/SettingFeature/Tests/`에 VM 테스트 추가 + `Project.swift` targets에 `.tests` 재선언(필요 시 `testDependencies`도). `NovelReviewFeature`가 선례.
+
+### 3. swift-format 게이트를 "변경 파일만 report-only" → "레포 전체 --strict"로 격상 (전체 1회 리포맷)
+
+- **무엇**: A3(#215)에서 swift-format 게이트를 **"변경 파일만·report-only"** 로 착지시켰다. 레포 전체(886파일)를
+  swift-format 스타일로 정렬한 적이 없어, 튜닝 설정(`.swift-format`)으로도 ~8,500 findings(대부분 **끌 수 없는
+  레이아웃** — 줄끝공백·들여쓰기·spacing)이 남아 있다. 이걸 `swift format format -i`로 일괄 정렬해 **warning 0**으로
+  만들면 게이트를 **레포 전체 `--strict`** 로 격상하고 `Swift Format`을 required check로 걸 수 있다(더 강함).
+- **규모(실측 2026-08-26)**: `format -i`가 **441/886 파일·~7,250줄**(3,967+/3,290−) 변경. 자동수정 후 **남는 수동
+  경고는 14곳뿐**: `AlwaysUseLowerCamelCase` 10(식별자 개명은 자동 불가)·`NoBlockComments` 2·
+  `ReplaceForEachWithForLoop` 1·`AvoidRetroactiveConformances` 1.
+- **왜 지금 안 했나**:
+  1. **열린 PR 5개**(#200·#199·#193·#189·#188, 전부 Feature)가 **전부 리베이스 충돌 대상** → 대공사(리포맷)와
+     게이트 도입을 분리한다. A3 자체가 "변경 파일만"인 이유가 이것(리포맷 없이 새 코드부터 보호).
+  2. 441파일엔 `forEach→for`·중복 init 삭제·세미콜론 줄분리 같은 **AST 변형**이 섞여 있어 **빌드+테스트 전수
+     검증**이 필수. 게이트 착지와 한 PR에 섞으면 문제 원인 규명이 어렵다.
+- **어디를 고치나(할 때)**: 별도 PR로 ① `swift format format -i` 전체 적용 + 수동 14곳 처리 + **전체 빌드·테스트
+  검증** → ② `test.yml`의 `format-lint`를 `lint-changed.sh --strict`(또는 whole-repo `swift format lint --strict`)로
+  바꾸고 ③ develop 초록 확인 후 `Swift Format`을 required로 승격. **열린 PR이 정리된/저트래픽 창에 팀 공지 후 일괄**로.
+- **놓치기 쉬운 것**: 규칙 allowlist(OrderedImports off 등)의 정본은 루트 **`.swift-format`** 이다 — 리포맷도 반드시
+  이 설정으로 해야 문서화된 규약(레이어 기반 import 순서)을 안 깨뜨린다. 기본 설정으로 돌리면 알파벳 정렬로 규약 파괴.
+
+### 4. A2 ArchLint 확장 — 네이밍·구조 앵커 규칙 (VM·UseCase·Repository·DTO·Factory)
+
+- **무엇**: A2 검사기(`Tooling/ArchLint`)에 "타입이 그 역할이면 이름·구조가 규약을 따라야" 규칙을 추가한다.
+  후보: Feature VM=`*ViewModel` / Domain UseCase=`*UseCase` / Repository 프로토콜=`*Repository` /
+  Data DTO=`*Response`·`*Request` / **각 Data 모듈은 public `*Factory`로만 외부 노출**.
+- **왜(가치)**: 네이밍은 장식이 아니라 **기존 의미 규칙의 앵커**다. 예로 `vm-observable-state`는 `*ViewModel`
+  이름으로 VM을 식별하므로, VM을 `HomeModel`로 잘못 지으면 계약 검사를 **조용히 빠져나간다**. 앵커 규칙이
+  이 탈출 구멍을 막는다. Factory 노출 규칙은 모듈 경계 캡슐화를 강제한다.
+- **현재 준수(실측 2026-08-26)**: 이미 거의 완벽 → 청소 비용 ~0의 "미래 드리프트 방지"용(swift-format 🟢 성격).
+  @Observable 전부 *ViewModel / UseCase **76·76** / Repository **17·17** / 정식 Data 모듈 전부 Factory 보유 /
+  DTO는 대부분(예외 3: `BlockdUser`·`GenrePreferences`·`ProfileAvatar` = 응답 내 중첩 필드 타입).
+- **어디를 고치나(할 때)**: `Tooling/ArchLint`에 규칙 추가(선례: `vm-observable-state`·`dependency-direction`) +
+  자체 파괴 테스트. CI `Architecture Rules` job이 이미 돌리므로 배선 불필요.
+- **놓치기 쉬운 것 = 식별 신호**: "이름이 X여야" 규칙은 "이게 X임"을 이름과 **독립적으로** 알아야 오탐이 안 난다.
+  VM(=@Observable+`state`인데 *ViewModel 아님)·Repository(=Data가 구현)·Factory(=모듈 단위 존재)는 식별 명확.
+  **UseCase·DTO가 까다로움** — UseCase는 "무엇이 UseCase인가"를 폴더/프로토콜 형태로, DTO는 "최상위 DTO vs
+  중첩 필드 타입"을 폴더 한정 등으로 구분해야 위 3개 예외 같은 오탐을 막는다.
+- **왜 지금 안 했나**: A3(swift-format)와 도구가 달라(A2 ArchLint) 한 PR에 섞으면 엉킨다. 새 이슈로 분리(2026-08-26).
