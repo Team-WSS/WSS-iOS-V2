@@ -16,8 +16,10 @@ import WSSComponent
 
 /// "서재에서 추가" 화면 — 내 서재를 3열 그리드로 조회하며 다중 선택 후 "추가"로 확정한다.
 /// `CollectionSearchNovelView`의 "서재에서 추가" 버튼으로 진입하는 로컬 push 화면(별도 Factory
-/// 진입점 없음). 확정 시 `CollectionSearchNovelView`가 받은 그 콜백을 재사용해 `CreateCollectionView`
-/// 까지 2단계 pop한다 — 배선은 `CollectionSearchNovelView.swift` 참고.
+/// 진입점 없음). 확정해도 이 화면은 스스로 dismiss()하지 않는다 — `CollectionSearchNovelView`가 받은
+/// 그 `onConfirm`을 그대로 재사용해 `CreateCollectionView`까지 올라가고, 그쪽이 소유한
+/// `isAddNovelPresented` 하나가 이 화면까지 포함한 서브트리 전체를 한 번에 pop한다 — 배선은
+/// `CollectionSearchNovelView.swift`/`CreateCollectionView.swift` 참고.
 struct CollectionMyLibrarySelectView: View {
 
     @State private var viewModel: CollectionMyLibrarySelectViewModel
@@ -44,8 +46,9 @@ struct CollectionMyLibrarySelectView: View {
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }
+                // 이 화면 자신은 dismiss()하지 않는다 — `onConfirm`이 `CollectionSearchNovelView`를
+                // 거쳐 최상위 `isAddNovelPresented`까지 올라가 이 화면을 포함한 서브트리 전체를 닫아준다.
                 onConfirm(viewModel.state.selectedNovels)
-                dismiss()
             }
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in

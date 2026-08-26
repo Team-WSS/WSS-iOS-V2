@@ -22,13 +22,10 @@ struct CollectionSearchNovelView: View {
 
     @State private var viewModel: CollectionSearchNovelViewModel
     /// "서재에서 추가" 화면 push 여부 — `isAddNovelPresented`(CreateCollectionView)와 같은 위상으로
-    /// 이 화면이 직접 소유한다. 확정 시 이 화면 자신을 dismiss해 CreateCollectionView까지 2단계
-    /// pop한다(아래 `.navigationDestination`/`.onChange(of: isMyLibrarySelectPresented)` 참고).
+    /// 이 화면이 직접 소유한다. 확정 시 이 화면은 스스로 dismiss()하지 않는다 — `CreateCollectionView`가
+    /// 넘긴 `onConfirm`이 최상위 `isAddNovelPresented`를 내려 이 화면까지 통째로 닫는다(아래
+    /// `.navigationDestination`/`onConfirm` 배선 참고, `CollectionFeature/CLAUDE.md`에 배경 기록).
     @State private var isMyLibrarySelectPresented = false
-    /// "서재에서 추가"가 확정을 알려온 뒤, 자기 자신(`CollectionMyLibrarySelectView`)의 pop이 실제로
-    /// 완료될 때까지(=`isMyLibrarySelectPresented`가 자연스레 false로 돌아올 때까지) 이 화면의
-    /// `dismiss()`를 미뤄두는 플래그 — 실측 필요(아래 주석 참고).
-    @State private var isPendingDismissAfterMyLibrarySelect = false
     @FocusState private var isSearchBarFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -67,22 +64,22 @@ struct CollectionSearchNovelView: View {
             }
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }
+                // 이 화면 자신은 dismiss()하지 않는다 — `onConfirm`이 최상위(`CreateCollectionView`)의
+                // `isAddNovelPresented`를 내려 이 화면을 닫아준다.
                 onConfirm(viewModel.state.selectedNovels)
-                dismiss()
             }
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
             }
-            // "서재에서 추가" 확정 → CreateCollectionView가 넘긴 바로 그 onConfirm을 재사용해 최종
-            // novels(검색+서재 병합본)를 전달한다. 이 화면 자신의 dismiss()는 여기서 곧바로 부르지
-            // 않는다 — ⚠️ **실측 결과, 같은 프레임에서 자식(CollectionMyLibrarySelectView)의 자체
-            // dismiss()와 이 화면의 dismiss()가 동시에 겹치면 이 화면은 pop되지 않고 자식만 pop된다**
-            // (계층적 Bool이라 이론상 한 번의 dismiss()로 둘 다 사라져야 할 것 같지만 실제로는 아니었다
-            // — 처음엔 그렇게 짰다가 시뮬레이터 실측에서 발견). 대신 자식이 **자기 자신의**
-            // `.onChange(of: isConfirmed)`에서 스스로 dismiss()해 `isMyLibrarySelectPresented`가
-            // 자연스럽게 false로 돌아오는 걸 아래 `.onChange`로 기다렸다가, 그 다음에야 이 화면도
-            // dismiss()한다(계단식 2단계 pop). `CollectionFeature/CLAUDE.md` 참고.
+            // "서재에서 추가" 확정 → CreateCollectionView가 넘긴 바로 그 onConfirm을 그대로 위로
+            // 전달만 한다(novels 가공 없음). 이 화면도, 자식(CollectionMyLibrarySelectView)도 각자
+            // dismiss()를 부르지 않는다 — `onConfirm`을 타고 최상위(`CreateCollectionView`)까지 올라가
+            // 그쪽이 소유한 `isAddNovelPresented` 하나만 false로 내려 이 서브트리 전체(이 화면 +
+            // CollectionMyLibrarySelectView)를 한 번의 pop 애니메이션으로 같이 걷어낸다. 예전엔 각
+            // 화면이 스스로 pop한 뒤 위가 그 완료를 감지해 뒤이어 pop하는 계단식 방식이었는데, 두
+            // pop이 거의 같은 프레임에 겹쳐 전환 애니메이션이 두 번 보였다(실측) — `CollectionFeature/CLAUDE.md`
+            // 참고.
             .navigationDestination(isPresented: $isMyLibrarySelectPresented) {
                 CollectionMyLibrarySelectView(
                     viewModel: CollectionMyLibrarySelectViewModel(
@@ -90,17 +87,9 @@ struct CollectionSearchNovelView: View {
                         loadMyLibraryUseCase: loadMyLibraryUseCase,
                         logger: logger
                     ),
-                    onConfirm: { novels in
-                        onConfirm(novels)
-                        isPendingDismissAfterMyLibrarySelect = true
-                    },
+                    onConfirm: onConfirm,
                     onAuthenticationRequired: onAuthenticationRequired
                 )
-            }
-            .onChange(of: isMyLibrarySelectPresented) { _, isPresented in
-                guard !isPresented, isPendingDismissAfterMyLibrarySelect else { return }
-                isPendingDismissAfterMyLibrarySelect = false
-                dismiss()
             }
     }
 

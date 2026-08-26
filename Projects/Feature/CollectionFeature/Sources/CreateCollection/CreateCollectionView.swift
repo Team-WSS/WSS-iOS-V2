@@ -95,7 +95,16 @@ struct CreateCollectionView: View {
                     ),
                     loadMyLibraryUseCase: loadMyLibraryUseCase,
                     logger: logger,
-                    onConfirm: { novels in viewModel.handle(.setNovels(novels)) },
+                    // 확정은 몇 단계를 push해 들어갔든(작품 검색만이든, "서재에서 추가"까지 더
+                    // 들어갔든) 이 화면이 소유한 `isAddNovelPresented` 하나를 여기서 딱 한 번만
+                    // false로 내린다 — 그 서브트리 전체가 한 번의 네이티브 pop 애니메이션으로 걷힌다.
+                    // 중간 화면들은 스스로 dismiss()하지 않고 이 콜백을 그대로 위로 전달만 한다
+                    // (`CollectionSearchNovelView.swift`/`CollectionMyLibrarySelectView.swift` 참고,
+                    // `CollectionFeature/CLAUDE.md`에 배경 기록).
+                    onConfirm: { novels in
+                        viewModel.handle(.setNovels(novels))
+                        isAddNovelPresented = false
+                    },
                     onAuthenticationRequired: onAuthenticationRequired
                 )
             }

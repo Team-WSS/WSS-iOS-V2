@@ -71,19 +71,25 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 자식의 `dismiss()`와 부모의
-  `dismiss()`를 같은 프레임에서 함께 부르면 부모가 pop되지 않는다(실측)** — `.navigationDestination(isPresented:)`가
-  계층적 Bool이라 이론상 "부모를 dismiss()하면 그 위에 얹힌 자식도 함께 사라진다"로 보이지만, 실제로
-  `CollectionMyLibrarySelectView`가 `onConfirm` 클로저 안에서 `CollectionSearchNovelView`의 `dismiss()`를
-  호출하고 곧바로 자기 자신의 `.onChange(of: isConfirmed)`에서 자기 자신의 `dismiss()`도 호출하면(같은
-  동기 프레임에서 dismiss 두 번) **자식만 pop되고 부모는 스택에 그대로 남는다**(스크린샷으로 확인 —
-  "추가" 탭 후 `CreateCollectionView`가 아니라 `CollectionSearchNovelView`로 돌아옴, "추가한 작품 0개").
-  해법(`CollectionSearchNovelView.swift` 참고): 자식의 `onConfirm`에서 부모의 `dismiss()`를 바로 부르지
-  않고 `isPendingDismissAfterMyLibrarySelect = true`만 세운 뒤, `.onChange(of: isMyLibrarySelectPresented)`로
-  **자식이 스스로 pop을 끝내 그 Bool이 자연스럽게 false로 돌아오는 걸 기다렸다가** 그제서야 부모가
-  `dismiss()`한다(계단식 2단계 pop). 앞으로 다단계 pop이 필요한 화면을 또 만들 때 "부모 dismiss() 한
-  번으로 계층째 사라진다"를 가정하지 말고 이 패턴을 정본으로 삼을 것.
-  ⚠️ **폐기한 대안 둘 다 다른 이유로 깨졌다(2026-08-24 실측)**:
+- ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 중간 화면들이 각자
+  `dismiss()`를 부르지 않고, 최상위(`CreateCollectionView`)가 소유한 단 하나의 `isAddNovelPresented`를
+  확정 콜백(`onConfirm`) 안에서 딱 한 번만 false로 내려 서브트리 전체를 한 번에 걷어낸다(정본,
+  `CreateCollectionView.swift`/`CollectionSearchNovelView.swift`/`CollectionMyLibrarySelectView.swift`
+  참고)** — `onConfirm`을 `CreateCollectionView → CollectionSearchNovelView → CollectionMyLibrarySelectView`
+  까지 그대로 재사용해 내려보내고, 확정 시 그 콜백이 novels를 `.setNovels`로 반영함과 동시에
+  `isAddNovelPresented = false`도 함께 실행한다. 중간 화면(`CollectionSearchNovelView`/
+  `CollectionMyLibrarySelectView`)의 확정 핸들러는 `onConfirm(...)` 호출만 하고 자기 자신의
+  `dismiss()`는 부르지 않는다 — `isAddNovelPresented`가 그 화면들을 포함한 서브트리를 통째로 pop해준다.
+  ⚠️ **이전엔 "자식이 스스로 pop → 부모가 `onChange`로 그 완료를 감지해 뒤이어 pop"하는 계단식
+  2회 `dismiss()` 방식(`isPendingDismissAfterMyLibrarySelect` 플래그)을 썼었다** — 그건 "자식의
+  `dismiss()`와 부모의 `dismiss()`를 같은 프레임에서 함께 부르면 부모가 pop되지 않는다"는 실측 버그를
+  피하려는 것이었는데, 정작 그 계단식 2회 pop 자체가 **두 전환 애니메이션이 거의 같은 프레임에 겹쳐
+  보여 "추가" 탭 후 화면이 이중으로 dismiss되는 것처럼 보이는** 새 문제를 냈다(사용자 리포트). 지금의
+  "최상위 boolean 한 번만 내리기" 방식은 애초에 pop이 한 번만 발생하므로 이 겹침 문제 자체가 생기지
+  않는다 — 계단식 방식으로 되돌리지 말 것.
+  ⚠️ **폐기한 대안 둘 다 다른 이유로 깨졌다(2026-08-24 실측)** — 지금 방식과 달리 **둘 다 화면 간
+  구조 자체를 바꾸려던 시도**였다는 점에 유의(지금 방식은 구조는 그대로 두고 "누가 dismiss를 부르는지"만
+  최상위로 모은 것):
   1. **형제 Bool 교체** — `CreateCollectionView`가 검색 화면과 서재 화면을 형제 레벨로 각각 직접 push해
      "서재에서 추가" 진입 시 검색 화면을 아예 pop해버리는 방식. **확정** 경로는 문제없이 동작했지만,
      **확정 대신 뒤로가기로 서재 화면을 나가면 되돌아갈 검색 화면 자체가 스택에 없어 그 세션에서 고른
@@ -95,9 +101,10 @@
      `NavigationStack` 안에서 `@Environment(\.dismiss)`가 어느 스택을 pop할지 모호해지는 것으로 추정).
      `CreateCollectionView`가 이미 바깥 스택에 push된 상태에서 또 다른 `NavigationStack`을 그 안에
      여는 패턴은 이 프로젝트에서 쓰지 말 것.
-  다단계 push에서 "확정만 skip, 취소는 정상 pop"이 필요할 땐 **자식이 스스로 pop하고 부모는 그 완료를
-  기다렸다가 뒤따라 pop하는 이 계단식 패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩
-  `NavigationStack`으로 "더 깔끔하게" 다시 풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨).
+  다단계 push에서 "확정만 skip, 취소는 정상 pop"이 필요할 땐 **뒤로가기는 각 화면이 그대로 개별
+  `dismiss()`를 유지하고, 확정만 콜백을 타고 최상위까지 올라가 그쪽의 단일 boolean을 내리는 지금
+  패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩 `NavigationStack`으로 "더 깔끔하게" 다시
+  풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨).
 - ⚠️ **iOS 18.1 시뮬레이터 런타임에서 `CollectionSearchNovelView`로 push하면 진입 즉시 CPU 100%
   무한 리렌더(AttributeGraph 루프)에 빠진다 — 앱·이 화면의 버그가 아니라 그 OS 런타임 한정 SwiftUI
   회귀로 확인됨.** 같은 빌드 산출물을 iOS 26 시뮬레이터에 설치해 동일 자동화 경로로 재현했을 땐 CPU
