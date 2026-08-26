@@ -45,6 +45,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | ⑩ Repository 네이밍 | `repository-naming` | **error** | `Projects/Domain/**/Sources/Repository` | 폴더의 **protocol**은 이름이 `*Repository`. 곁 enum(`AuthError`·`ProfileTarget`)은 대상이 아니라 protocol만 본다. |
 | ⑪ Factory 존재성 | `factory-existence` | **error** | `Projects/Data/<Module>` (모듈 단위) | 각 Data 모듈은 조립 진입점 `public *DataFactory`를 노출한다. BaseData(공용 토대)는 제외. 파일이 아니라 모듈 전체를 봐야 해 `ModuleRule`로 둔다. |
 | ⑫ Factory 배타성 | `factory-exclusivity` | **error** | `Projects/Data/<Module>` (모듈 단위) | ⑪의 짝 — Data 모듈의 top-level public은 `*DataFactory` **하나뿐**이어야 한다(Repository·Service·Mapper·DTO·Logger 등 나머지는 internal). "상위 레이어는 Factory만 안다"를 조인다. 타입 내부 멤버 public은 바깥이 internal이면 무해라 top-level만 본다. BaseData 제외. |
+| ⑬ Feature Factory 배타성 | `feature-exclusivity` | **error** | `Projects/Feature/<Module>` (모듈 단위) | ⑫를 Feature로 옮김 — Feature 모듈의 top-level public은 `*Factory`만(View·VM·상태는 internal, Factory는 `some View` 반환). Data와 달리 **조립 seam 예외**: `Sources/Navigation/`의 public(App이 Feature 간 직접 의존 없이 콘텐츠 주입)은 허용. 판정 로직은 ⑫와 `publicTopLevelOffense` 공유(접미사만 `Factory`). |
 
 ## 규칙 추가하기
 

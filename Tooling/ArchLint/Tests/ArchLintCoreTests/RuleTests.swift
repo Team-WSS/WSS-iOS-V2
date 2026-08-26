@@ -339,4 +339,54 @@ struct RuleTests {
         )]
         #expect(lintModule(sources: domainSources, moduleName: "SampleDomain", rule: FactoryExclusivityRule()).isEmpty)
     }
+
+    // MARK: - ⑬ feature-exclusivity (module rule, error)
+
+    @Test("⑬ Factory만 public이고 View/VM이 internal이면 통과")
+    func featureExclusivityPasses() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
+             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
+             source: "struct SampleView {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
+             source: "final class SampleViewModel {}")
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑬ Factory 외 public View/VM이 있으면 error (선언별 1건씩)")
+    func featureExclusivityCatchesPublicViewAndVM() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
+             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
+             source: "public struct SampleView {}"),        // 위반
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
+             source: "public final class SampleViewModel {}")  // 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(vs.count == 2)
+        #expect(vs.allSatisfy { $0.ruleID == "feature-exclusivity" && $0.severity == .error })
+    }
+
+    @Test("⑬ Navigation/ 폴더의 public 조립 seam은 허용")
+    func featureExclusivityAllowsNavigationSeam() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
+             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/TabContentBuilder.swift",
+             source: "public typealias TabContentBuilder = () -> Void")   // seam — 허용
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑬ 비-Feature 모듈은 스코프 밖(통과)")
+    func featureExclusivitySkipsNonFeature() {
+        let dataSources = [(
+            path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+            source: "public struct SampleResponse {}"
+        )]
+        #expect(lintModule(sources: dataSources, moduleName: "SampleData", rule: FeatureExclusivityRule()).isEmpty)
+    }
 }
