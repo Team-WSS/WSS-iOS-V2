@@ -12,7 +12,7 @@ import DependencyPlugin
 
 let project = Project.createFeatureModule(
     name: ModuleType.feature(.setting).name,
-    targets: [.sources, .demo, .tests],
+    targets: [.sources, .demo],
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.profile)),

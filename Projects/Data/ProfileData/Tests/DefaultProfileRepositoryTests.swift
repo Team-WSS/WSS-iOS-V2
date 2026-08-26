@@ -130,7 +130,7 @@ struct DefaultProfileRepositoryTests {
                 intro: "소개글",
                 avatarImage: "",
                 isProfilePublic: nil,
-                genrePreferences: ["ROMANCE"]
+                genrePreferences: ["romance"]
             )
         )
 
