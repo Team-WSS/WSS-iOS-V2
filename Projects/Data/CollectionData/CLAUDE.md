@@ -16,10 +16,12 @@
 
 - **`isPublic` → `isPrivate` 뒤집기는 여기(Mapper)에서만 한다.** 도메인·화면은 이미 "나만 보는" 방향으로 통일돼 있으니
   어디서도 다시 뒤집지 말 것.
-- **에러는 상태 코드가 아니라 `code` 문자열로 분기한다.** `400` 하나에 `BAD_REQUEST`·`COLLECTION-002`(작품 1~100개)·
-  `COLLECTION-003`(중복 작품)·`COLLECTION-004`(대표 작품이 목록에 없음)·`COLLECTION-007`(잘못된 커서)·
-  `COLLECTION-008`(size 범위)이 공존한다. `401`도 `AUTH-000`/`AUTH-001`/`AUTH-003`으로 갈린다.
-  화면에서만 의미가 다른 코드는 공용 `NetworkingError.toRepositoryError()`에 섞지 말고 이 모듈의 리포지토리 메서드에서 변환한다
+- **에러는 상태 코드가 아니라 `code` 문자열로 분기할 여지가 크다(현재는 미구현 — 소비 화면 연결 시 도입 예정).**
+  `400` 하나에 `BAD_REQUEST`·`COLLECTION-002`(작품 1~100개)·`COLLECTION-003`(중복 작품)·
+  `COLLECTION-004`(대표 작품이 목록에 없음)·`COLLECTION-007`(잘못된 커서)·`COLLECTION-008`(size 범위)이 공존하고,
+  `401`도 `AUTH-000`/`AUTH-001`/`AUTH-003`으로 갈린다. 지금 `DefaultCollectionRepository`는 공용
+  `NetworkingError.toRepositoryError()`만 쓴다 — Feature가 아직 없어 코드별 구분을 미뤄뒀다.
+  화면에서만 의미가 다른 코드가 필요해지면 공용 변환에 섞지 말고 이 모듈의 리포지토리 메서드에서 변환할 것
   (`RepositoryError.privateProfile` 선례 — `BaseDomain/CLAUDE.md`).
 - 커서는 **서버가 발급한 불투명 문자열**이다. 마지막 아이템 ID로 유도하거나 파싱하지 말고 받은 값을 그대로 되돌려 보낸다.
 - **Query DTO는 `Encodable`이 아니라 `QueryItemConvertible`(Networking)을 준수해야 한다.** `Encodable`만 붙이면
