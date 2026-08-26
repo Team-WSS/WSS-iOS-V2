@@ -309,3 +309,37 @@ jobs:
       # emit 해 위반이 PR diff에 인라인으로 붙는다. error가 있으면 종료코드 1로 job 실패.
       - name: Run ArchLint
         run: swift run --package-path Tooling/ArchLint ArchLint .
+
+  # 5) 스타일 검사(A3) — Apple swift-format. arch-lint와 같은 swift 컨테이너에서 Xcode 없이 돈다.
+  #    swift-format은 Swift 툴체인 번들이라 별도 설치가 없다(첫 스텝 `swift format --version`이
+  #    이 전제를 검증 — 없으면 여기서 빨간불로 폴백 신호).
+  #    "변경된 .swift 파일만" 린트한다(레거시 백로그 제외) — 그 이유와 설정은
+  #    Tooling/SwiftFormat/lint-changed.sh 주석 참고. 스타일 규칙은 루트 .swift-format.
+  #    ⚠️ 아직 report-only(위반 출력만, 실패 안 시킴). develop 초록 확인 후 스크립트에
+  #    --strict를 붙여 하드 게이트로 승격하고, 이 job 이름("Swift Format")을 develop
+  #    보호의 필수 통과 체크로 건다(arch-lint와 동일한 승격 순서).
+  format-lint:
+    name: Swift Format
+    runs-on: ubuntu-latest
+    container: swift:6.3.3
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+      # 3-dot diff(merge-base..HEAD)로 PR 자기 변경만 보려면 PR head + 전체 히스토리가 필요.
+      - name: Checkout (PR head, 전체 히스토리)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: safe.directory (컨테이너 소유권 경고 회피)
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: base 브랜치 fetch (diff 기준)
+        run: git fetch --no-tags origin ${{ github.event.pull_request.base.ref || 'develop' }}
+
+      # 전제 검증: 이 컨테이너에 swift-format이 실제로 있는지. 없으면 job 실패 → 폴백 신호.
+      - name: swift format 전제 검증
+        run: swift format --version
+
+      - name: 변경 .swift 파일 lint (report-only)
+        run: bash Tooling/SwiftFormat/lint-changed.sh --base "origin/${{ github.event.pull_request.base.ref || 'develop' }}"
