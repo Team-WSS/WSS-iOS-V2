@@ -8,7 +8,7 @@
 ## 여기 들어있는 핵심 공통 타입
 
 - `RepositoryError` — 전 레이어 공통 에러 (Data가 여기로 변환해 throw). `notFound`(404)와 `forbidden`(403, 숨김·차단 등 "존재하나 접근 불가")은 의도적으로 분리돼 있다 — 특정 화면이 둘을 같은 취급으로 묶고 싶으면 그 화면에서 `error == .notFound || error == .forbidden`처럼 판단하고, 전역 매핑에서 섞지 말 것(FeedDetail의 "피드를 찾을 수 없어요" 알럿이 그 예).
-- `Paginated<T>` (`PaginatedWrapper`) — 페이지네이션 공통 래퍼.
+- `Paginated<T>`(`PaginatedWrapper`) / `CursorPaginated<T>` — 페이지네이션 래퍼 **두 종류**. 아래 주의사항의 "셋이 공존한다" 항목을 먼저 읽을 것.
 - `WSSIdentifiers` / `IDWrapper` — `NovelID`, `UserID`, `FeedID`, `CommentID` 등 타입 안전 ID 래퍼.
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
 - **Novel 서브도메인** (`Novel/`): `Novel` Entity(관심 등록 정책 포함) + `NovelRatingThreshold` + `NovelPublicationStatus`. 원래 `NovelDomain` 소유였으나 `NovelDomain`(서재·상세)과 `SearchDomain`(작품 검색) 양쪽이 참조해야 해서 이곳으로 승격했다(작품 검색을 `SearchDomain`으로 옮긴 리팩토링, 관련 배경은 `SearchDomain/CLAUDE.md` 참고).
@@ -20,6 +20,12 @@
 - `KeywordRepository`의 `fetchKeywords`/`searchKeywords`는 **로컬 DB(파일 캐시) 기반**, `syncKeywords()`는 서버→로컬 동기화이며 **`throws` 없는 `async`**(실패를 던지지 않음). **`fetchPopularKeywords`(실시간 인기 키워드)만 예외적으로 매번 서버 직접 호출** — 같은 프로토콜 안에 로컬/서버 계약이 섞여 있으니 새 메서드 추가 시 어느 쪽인지 doc comment에 명시할 것. 구현은 `BaseData`의 `DefaultKeywordRepository` 하나.
 - 키워드는 여러 도메인(Novel, Profile 등)이 캐시로 주입받아 쓴다 → Keyword 변경 시 교차 영향 확인.
 - ID는 반드시 래퍼 타입 사용. raw `Int`/`String`을 도메인 경계로 넘기지 말 것.
+- **페이지네이션 모델이 셋 공존한다 — 하나로 합치려 하지 말 것.** 서재·컬렉션은 서버가 발급한 불투명 커서(`CursorPaginated`,
+  `nextCursor`를 그대로 왕복), 피드는 `lastFeedId`(클라이언트가 마지막 항목에서 **유도**), 검색은 `page`/`size` 오프셋이다.
+  뒤 둘은 넘길 커서 자체가 없어서 `CursorPaginated`로 바꾸면 `nextCursor`가 영원히 nil인 껍데기 필드가 되고,
+  특히 피드의 `lastFeedId` 방식은 `CursorPaginated` 주석이 명시적으로 금지한 그 패턴이다.
+  → `Paginated<T>`(68곳에서 사용)를 "구식이니 지우자"고 접근하지 말 것. 서버가 커서로 통일하면 그때 다시 본다.
+  (`CursorPaginated`는 서재 전용이었으나 컬렉션도 같은 방식이라 #191에서 `NovelDomain`에서 승격했다.)
 - 화면 전용 부분집합/순서가 있는 필터 목록(예: 구 `NovelGenre.filterGenre`, `47b59a6a`에서 `WSSComponent`의 `myFeedFilter`로 이동·개명됨)은 여기 두지 않는다 — `BaseDomain`은 순수 enum만 갖고, 그런 목록은 `WSSComponent`의 `DomainPresentation` 확장(`NovelGenre+Presentation`)에 둔다.
   - ⚠️ **오래된 브랜치를 develop 위로 rebase하면 이 파일에서 `extension NovelGenre { filterGenre ... }` 형태의 충돌이 뜰 수 있다** — develop(빈 확장) 쪽이 맞다. 옛 `filterGenre`를 되살리지 말고, 그 커밋이 함께 추가한 새 목록(있다면)만 `WSSComponent`의 `DomainPresentation` 확장으로 옮겨 반영할 것.
 - `PopularKeywords`(`Keyword/Entity/`)는 실시간 인기 키워드 랭킹을 담는 별도 타입 — 랭킹은 `keywords: [Keyword]` **배열 순서로만** 표현한다(명시적 rank/count 필드 없음).
