@@ -62,7 +62,7 @@ public enum CollectionMapper {
             owner: Author(
                 userId: UserID(dto.owner.userId),
                 nickname: dto.owner.nickname,
-                profileImage: dto.owner.avatarImage.flatMap(URL.init(string:))
+                profileImage: dto.owner.avatarImage.flatMap { ImageURLResolver.resolve(from: $0) }
             ),
             isMine: dto.isMyCollection,
             isPrivate: dto.isPublic == false,
@@ -102,7 +102,7 @@ public enum CollectionMapper {
             id: NovelID(dto.novelId),
             title: dto.title,
             author: dto.author,
-            thumbnailImage: dto.novelImage.flatMap(URL.init(string:))
+            thumbnailImage: dto.novelImage.flatMap { ImageURLResolver.resolve(from: $0) }
         )
     }
 }
