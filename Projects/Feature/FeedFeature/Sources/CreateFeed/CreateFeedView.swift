@@ -14,7 +14,7 @@ import SearchDomain
 import DesignSystem
 import WSSComponent
 
-public struct CreateFeedView: View {
+struct CreateFeedView: View {
     
     @State private var viewModel: CreateFeedViewModel
     

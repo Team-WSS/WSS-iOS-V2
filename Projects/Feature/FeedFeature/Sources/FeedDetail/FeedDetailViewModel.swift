@@ -19,7 +19,7 @@ import Logger
 
 @Observable
 @MainActor
-public final class FeedDetailViewModel {
+final class FeedDetailViewModel {
     
     // MARK: - State
 
