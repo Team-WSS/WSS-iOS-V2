@@ -76,5 +76,51 @@
 - `HapticManager`(`Sources/Haptic/`)는 Core가 아니라 여기 있다 — 도메인 지식이 없는 순수 기술이라 Core 기준(재사용 가능한 기반 기술)에도 맞지만, 등록된 `CoreModule`에 범용 유틸 모듈이 없고(`Keychain`/`Networking`/`Logger`만 존재) 이걸 위해 새 Core 모듈을 만들 정도는 아니라고 판단해 WSSComponent에 뒀다. 호출은 자동 적용되지 않고 **각 콜사이트가 상황에 맞는 스타일을 직접 골라 명시적으로 호출**해야 한다(예: `WSSSortButton` action 클로저 안에서 `HapticManager.selection()`).
 - Capsule 모양 칩/버튼의 배경·테두리는 `.background(Color).clipShape(Capsule()).overlay(Capsule().stroke(...))` 대신 `.background { Capsule().fill(...) }.overlay { Capsule().strokeBorder(...) }` 패턴을 쓰면 clipShape가 불필요해지고(도형이 이미 캡슐로만 그려짐) `strokeBorder`는 테두리가 프레임 안쪽으로만 그려져 `stroke`처럼 경계 밖으로 살짝 번지지 않는다. `WhiteRemovableKeywordChip`은 이 패턴으로 전환됨, `PrimaryRemovableKeywordChip`/`WSSFilterButton`은 아직 구 패턴 — 새로 만들 때는 신 패턴을 우선한다.
 - **칩·셀 안에 "우선순위 서브 액션"(삭제 X 등)과 "나머지 영역 액션"을 함께 넣을 땐 서브 액션만 `Button`으로, 나머지 컨테이너는 `onTapGesture`로.** `Button`을 중첩하면(전체를 Button으로 감싸고 그 안에 또 Button) 안쪽 제스처가 불안정해진다(NovelDetailFeature에서도 같은 이유로 중첩 Button을 피함). `Button`은 자기 hit-test 영역에서 조상의 `onTapGesture`보다 우선한다 → `WhiteRemovableKeywordChip(keyword:onSelect:onDelete:)`가 이 패턴(X만 `Button`=`onDelete`, 컨테이너 `onTapGesture`=`onSelect`). `onSelect`는 `(() -> Void)? = nil` — 몸통 탭 액션이 필요 없는 호출부(예: `KeywordFeature`의 선택 트레이, X만으로 충분)는 생략하면 된다.
+- **`WSSPrivateToggleRow`(`Sources/Toggle/`)는 `FeedFeature`의 "나만 보는 기록"과 `CollectionFeature`의 "나만
+  보는 컬렉션"이 같이 쓰는 공개범위 토글 줄이다**(2026-08, #199 — 두 화면이 자물쇠 아이콘+라벨+`WSSToggleButton`을
+  완전히 같은 규격(어두운 `wssGray300` 배경, 높이 58, 좌우 패딩 20)으로 손으로 각자 짜고 있어 승격) —
+  `label: String`만 화면마다 다르게 받고 나머지(아이콘·색·크기)는 고정이다. **바인딩은 `isOn`을 직접 쓰지
+  않고 `Binding(get:set:)`으로 감싸 `set`에서 VM의 `togglePrivate()` 액션을 부르는 패턴**(호출부 둘 다
+  동일) — 토글 컴포넌트 자체는 값을 몰라도 되고 정책은 VM의 도메인 엔티티가 갖는다.
+- **`WSSNovelSelectRow`(`Sources/NovelCell/`)는 `FeedFeature`의 연결 작품 검색(단일선택)과
+  `CollectionFeature`의 작품 추가(다중선택)가 같이 쓰는 작품 검색 결과 행이다**(2026-08, #199,
+  `FeedFeature`의 `CreateFeedConnectNovelRow`가 원본) — 단일/다중선택 정책은 이 컴포넌트가 모른다.
+  `isSelected`/`action`만 값으로 받고, 그 의미(단일선택은 덮어쓰기·다중선택은 토글)는 호출부(VM)가
+  정한다. 승격하며 원본이 쓰던 raw `AsyncImage`를 `WSSNovelCoverImage`로 교체했다(목록 반복 렌더의
+  placeholder 번쩍임 방지, 이 문서 상단 `WSSAsyncImage`/`WSSNovelCoverImage` 항목과 동일 이유) — 크기가
+  고정(78×105)인 자리라 `aspectRatio` 파라미터 없이 `.frame(width:height:)`로 직접 크기를 준다.
+- **`WSSLibraryGridCell`(`Sources/NovelCell/`)는 `LibraryFeature`의 내 서재/타유저 서재 그리드와
+  `CollectionFeature`의 "서재에서 추가" 화면이 같이 쓰는 서재류 작품 그리드 셀이다**(2026-08, 원본은
+  `LibraryFeature`의 `LibraryGridCell`) — 두 화면의 유일한 차이가 선택 서클 오버레이뿐이라
+  `isSelected: Bool?`로 흡수했다. **`nil`이면 선택 UI 자체를 안 그린다**(서재의 순수 열람 그리드),
+  값이 있으면 그 상태로 서클(`WSSNovelSelectRow`와 동일 에셋)을 그린다 — "선택 가능 여부"와 "선택
+  안 됨" 두 상태를 `Bool` 하나로는 구분 못 해 옵셔널을 썼다. `readingStatus`/`myRating`/`dateText`
+  전부 옵셔널 — 있는 것만 자연스럽게 흐르고(1줄 제목이면 별점이 바로 따라옴), 정보 스택 **자체**는
+  고정 높이(65)라 `LazyVGrid` 행이 안 어긋난다(`WSSNovelGridCell`과 같은 계약). **`LibraryNovel`
+  같은 상위 Entity를 직접 받지 않는다** — `dateText: String?`처럼 이미 포맷된 표시값만 받는다(날짜
+  포맷 로직 자체는 아래 `ReadingPeriod.displayText` 참고, 표기는 호출부 몫이라는 이 문서의 기본
+  원칙과 동일). 탭 동작도 갖지 않는다(순수 표시 뷰) — 서재는 셀 전체를 `Button`으로, 컬렉션은
+  `.onTapGesture`로 감싸는 등 호출부마다 방식이 달라서 강제하지 않는다.
+  - `ReadingPeriod.displayText`(`Sources/DomainPresentation/ReadingPeriod+Presentation.swift`)도
+    같은 이유로 공용화됐다(원본은 `LibraryFeature`의 `LibraryDateFormatter`) — "yy.MM.dd" 또는
+    "yy.MM.dd ~ yy.MM.dd" 표기를 `ReadingPeriod`의 `public` computed property로 노출한다.
+    `LibraryFeature`의 `LibraryListCell`(그리드 셀 승격과 무관하게 리스트 모드 전용, `WSSLibraryGridCell`로
+    승격 안 됨)도 이 확장을 쓴다 — 날짜 포맷을 새로 필요로 하는 화면은 자체 포매터를 새로 만들지
+    말고 이걸 재사용할 것.
 - **`WSSNicknameField`(`Sources/TextField/`)는 `OnboardingFeature`의 닉네임 화면과 `UserPageFeature`의 `MyPageEditView`가 같이 쓰는 닉네임 필드다**(2026-08, 두 화면이 손으로 맞추다 드리프트해서 승격) — 글자수 clamp 트랩(로컬 `fieldText` 버퍼 → `text` 반영 2단계, [상위 CLAUDE.md](../../Feature/CLAUDE.md) 주의사항 참고)을 여기 한 곳에서만 처리한다. `WSSSearchBar`와 같은 이유로 `isFocused: FocusState<Bool>.Binding`을 **필수** 파라미터로 받는다(내부 자체 포커스 없음) — 호출부가 "필드 바깥 탭하면 키보드 내리기"를 계속 제어해야 해서다. **도메인(`ProfileDomain.NicknameDraft.ValidationState`)을 모른다** — `isError`/`isSuccess`·캡션(문구+색)을 값으로만 받고 판단은 호출자(VM)가 한다. **캡션 문구는 컴포넌트가 하드코딩하지 않는다** — 두 화면의 워딩이 의도적으로 다르게 유지돼 왔기 때문(1:1 동기화 요구 아님).
   - ⚠️ **`isFocused`는 이 필드 전용 `@FocusState`여야 한다 — 같은 화면의 다른 텍스트필드와 공유하지 말 것**(#178). 배경(gray50→white)·테두리(`wssGray70`)가 포커스 여부(`isFocused.wrappedValue`)로 바뀌는데, 다른 필드와 공유하면 그 다른 필드가 포커스돼도 이 컴포넌트가 함께 화이트/테두리로 반응한다(`MyPageEditView`가 원래 소개글과 하나의 `isKeyboardFocused`를 공유하다 이 문제로 필드별로 분리한 사례 — `UserPageFeature/CLAUDE.md` 참고). "빈 곳 탭하면 키보드 내리기"처럼 여러 필드를 동시에 내리고 싶으면, 필드마다 별도 `@FocusState`를 두고 탭 핸들러에서 전부 `false`로 내릴 것.
+- **`WSSPillBadge`(`Sources/Button/`)는 "+ 추가"/"× 삭제" 같은 짧은 필 배지다**(2026-08-23, 원본은
+  `CollectionFeature`의 `CollectionSearchNovelView` 검색 결과 행) — **이례적으로 두 번째 사용처가 이
+  레포에 아직 없는 채로 승격됐다**(사용자 명시 요청, "두 번째 필요 시점에 승격" 관례의 의도적 예외).
+  설정 화면의 작품 알림 해제가 곧 두 번째로 쓸 예정이나 그 작업은 다른 미병합 브랜치에 있다.
+  ⚠️ **라벨·아이콘은 값으로 안 받는다** — `init(style: .add | .remove, action:)`만 받고, 화면에 보이는
+  텍스트("추가"/"삭제")와 아이콘(`icPillBadgePlus`/`icPillBadgeXMark`)은 `Style`이 내부적으로 고정해
+  결정한다(호출부가 문구를 바꿀 수 없음). 두 번째 사용처(작품 알림 해제)가 실제로 다른 문구가 필요하면
+  **이 컴포넌트를 그대로 못 쓴다** — 그 작업이 실제로 이 컴포넌트를 쓰게 되면 라벨을 값으로 받도록
+  API를 넓힐지부터 다시 판단할 것(승격 당시엔 두 번째 사용처의 요구가 확인 전이라 미리 넓혀두지 않았다).
+  `action: (() -> Void)? = nil` — `nil`(기본값)이면 순수 표시용(부모 행의 `onTapGesture`가 탭을 받음),
+  값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다(`WhiteRemovableKeywordChip`의 `onSelect`/`onDelete`
+  분리와 같은 이유 — `nil`일 때 무조건 `onTapGesture`를 걸면 빈 클로저라도 이 뷰가 탭을 소비해버려
+  부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
+  이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
+  확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).

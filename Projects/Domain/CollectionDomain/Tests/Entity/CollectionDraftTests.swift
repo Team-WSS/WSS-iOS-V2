@@ -200,6 +200,47 @@ struct CollectionDraftTests {
         #expect(draft.representativeNovelID == NovelID(1))
     }
 
+    // MARK: - setNovels
+
+    @Test("작품 리스트 전체를 새 선택 결과로 교체한다")
+    func setNovelsReplacesAll() throws {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
+
+        try draft.setNovels([NovelID(3), NovelID(4), NovelID(5)])
+
+        #expect(draft.novelIDs == [NovelID(3), NovelID(4), NovelID(5)])
+    }
+
+    @Test("작품이 100개를 넘으면 교체할 수 없다")
+    func setNovelsOverLimit() {
+        var draft = makeDraft(novelIDs: [NovelID(1)])
+
+        #expect(throws: CollectionDraft.ValidationError.novelOverLimit(max: 100)) {
+            try draft.setNovels((1...101).map { NovelID($0) })
+        }
+        #expect(draft.novelIDs == [NovelID(1)])
+    }
+
+    @Test("대표 작품이 새 목록에 없으면 대표 지정도 함께 풀린다")
+    func setNovelsDropsRepresentativeWhenExcluded() throws {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
+        try draft.setRepresentativeNovel(NovelID(1))
+
+        try draft.setNovels([NovelID(2), NovelID(3)])
+
+        #expect(draft.representativeNovelID == nil)
+    }
+
+    @Test("대표 작품이 새 목록에도 있으면 대표 지정이 유지된다")
+    func setNovelsKeepsRepresentativeWhenIncluded() throws {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
+        try draft.setRepresentativeNovel(NovelID(1))
+
+        try draft.setNovels([NovelID(1), NovelID(3)])
+
+        #expect(draft.representativeNovelID == NovelID(1))
+    }
+
     // MARK: - setRepresentativeNovel
 
     @Test("담긴 작품 중 하나를 대표로 지정할 수 있다")

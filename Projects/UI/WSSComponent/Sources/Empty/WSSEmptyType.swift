@@ -16,6 +16,7 @@ public enum WSSEmptyType {
     /// 알림 목록이 0건. **CTA가 없는 첫 케이스** — 알림은 사용자가 직접 만들 수 있는 게 아니라
     /// 유도할 행동이 마땅치 않다(#181에서 확정).
     case notification
+    case collectionMyLibrary
 
     var description: String {
         switch self {
@@ -24,6 +25,7 @@ public enum WSSEmptyType {
         case .novelNotification:    "알림 등록한 작품이 없어요"
         case .myFeed:               "아직 남긴 기록이 없어요"
         case .notification:         "아직 도착한 알림이 없어요"
+        case .collectionMyLibrary:  "서재가 비어있어요"
         }
     }
 
@@ -35,6 +37,7 @@ public enum WSSEmptyType {
         case .novelNotification:    "작품 둘러보기"
         case .myFeed:               "글 쓰러 가기"
         case .notification:         nil
+        case .collectionMyLibrary:  nil
         }
     }
 }

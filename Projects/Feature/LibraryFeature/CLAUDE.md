@@ -12,7 +12,7 @@
 - 진입점(둘 다 `LibraryFactory`):
   - `makeMyLibraryView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:logger:onNovelSelected:onSearchTapped:onRegisterTapped:onNotificationTapped:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫)
   - `makeUserLibraryView(userID:loadUserLibraryUseCase:logger:onNovelSelected:onAuthenticationRequired:)` — **push 대상**. 대상 사용자는 진입 시점(유저 프로필 등)에서 `UserID`로 넘긴다.
-- 공유 자산: `LibraryGridCell`·`LibraryListCell`(셀), `LibrarySortSheet`(정렬 6종), `LibraryDisplayMode(+Icon)`(표시 모드·아이콘), `LibrarySortType+Library`(카피).
+- 공유 자산: `LibraryListCell`(리스트 셀), `LibrarySortSheet`(정렬 6종), `LibraryDisplayMode(+Icon)`(표시 모드·아이콘), `LibrarySortType+Library`(카피). 그리드 셀은 `WSSComponent.WSSLibraryGridCell`(2026-08, `CollectionFeature`의 "서재에서 추가" 화면과 공용 승격 — 아래 주의사항 참고).
 
 ## 핵심 시나리오
 
@@ -79,10 +79,7 @@
 - ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
   - 인증 만료 뒤 **화면을 치우는 건 App 책임**이라 두 서재 모두 목록은 빈 채 남는다(빈 상태가 비친다) — Feature에서 가리지 말 것. → [Feature CLAUDE.md](../CLAUDE.md)의 "인증 만료 처리 계약".
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.
-- ⚠️ **그리드 셀(`LibraryGridCell`)의 표지 아래 정보 스택은 고정 높이(`Metric.infoHeight` 65)** — 제목 줄 수(1~2)·내 별점 유무·날짜 유무가 작품마다 달라서, 자연 높이로 두면 `LazyVGrid` 행이 어긋나 목록이 삐뚤빼뚤해진다(실제 발생). 스택 **내부는 자연스럽게 흐르게** 두고(1줄 제목이면 별점이 바로 따라옴 — Figma와 동일) 스택 **자체만** 고정한다. 별점·날짜를 빈 자리로 채우거나 제목을 2줄로 강제하지 말 것.
-  - **표지는 고정 높이가 아니라 비율**(`Metric.thumbnailAspectRatio` = 108:160) — 열 너비를 따라 커진다. 화면 폭이 달라져도 비율이 유지돼야 하므로 `height:` 고정으로 되돌리지 말 것.
-    - ⚠️ 그 비율은 **`WSSNovelCoverImage(url:aspectRatio:)`에 파라미터로 넘긴다** — 표지는 `scaledToFill`이라 **밖에서 `.aspectRatio`를 걸면 둘이 충돌해 표지가 좁아진다**. 한때 `Color.clear.aspectRatio(...).overlay { 표지 }`로 우회했으나 컴포넌트가 비율을 받게 되면서 걷어냈다 — 그 우회를 되살리지 말 것(정본: [WSSComponent](../../UI/WSSComponent/CLAUDE.md)).
-  - ⚠️ `.frame(maxWidth:height:)` 조합은 컴파일 안 된다(`maxWidth` 오버로드엔 `height`가 없음) — `minHeight`/`maxHeight`를 같은 값으로 주거나 `.frame`을 두 번 건다.
+- ⚠️ **그리드 셀은 2026-08에 `WSSComponent.WSSLibraryGridCell`로 승격됐다**(`CollectionFeature`의 "서재에서 추가" 화면과 공용, 유일한 차이는 선택 서클 오버레이라 `isSelected: Bool?`로 흡수 — nil이면 이 화면처럼 선택 UI 자체가 안 그려진다). 이 화면은 이제 `LibraryNovel`을 그대로 넘기지 않고 `thumbnailImage`/`title`/`readingStatus`/`myRating`/`dateText`/`isInterested`(+`isSelected: nil`)로 풀어서 넘긴다 — 정보 스택 고정 높이(`Metric.infoHeight` 65)·표지 비율(108:160)·`WSSNovelCoverImage(url:aspectRatio:)` 충돌 회피 같은 레이아웃 함정은 이제 컴포넌트 내부 구현 문제이므로 **정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSLibraryGridCell` 항목** — 이 화면에서 그 함정을 다시 우회하지 말 것. 날짜 문자열은 `ReadingPeriod.displayText`(같은 승격, 아래 참고)로 이미 포맷된 값을 넘긴다.
 - ⚠️ **필터 시트는 진입 탭을 `.sheet(item: $filterSheetTab)`으로 넘긴다** — `isPresented:` + 별도 탭 State로 열면 **앱 실행 후 첫 시트만** 항상 읽기상태 탭으로 열린다(실제 발생). 두 번째부터는 정상이라 "가끔 그러네"로 넘기기 쉬우니, `isPresented`로 되돌리지 말 것. 원리는 Feature CLAUDE.md의 "표시 상태 소유 구분" 항목이 정본.
 - **iOS 26 시트 기본 배경은 글래스(반투명)** — 디자인은 불투명 흰색이라 정렬/필터 시트 모두 `.presentationBackground(Color.wssWhite)` 명시 필수. 빼면 뒤 콘텐츠가 비쳐 보인다.
 - **필터 시트 탭 행(6탭)은 화면 폭보다 넓어 가로 스크롤** — 디자인 시안에서도 우측 탭이 잘려 있다. 고정 HStack으로 두면 "매력포인트"가 2줄로 꺾인다(`fixedSize()`+ScrollView).

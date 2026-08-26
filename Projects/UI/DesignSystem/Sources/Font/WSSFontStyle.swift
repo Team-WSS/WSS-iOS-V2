@@ -14,6 +14,7 @@ public enum WSSFontStyle {
     case title1
     case title2
     case title3
+    case title4
     
     case body1
     case body2
@@ -39,6 +40,8 @@ public extension WSSFontStyle {
             return DesignSystemFontFamily.Pretendard.semiBold
         case .title3:
             return DesignSystemFontFamily.Pretendard.medium
+        case .title4:
+            return DesignSystemFontFamily.Pretendard.bold
             
         case .body1:
             return DesignSystemFontFamily.Pretendard.regular
@@ -71,6 +74,7 @@ extension WSSFontStyle {
         case .title1: 18
         case .title2: 16
         case .title3: 14
+        case .title4: 13
             
         case .body1: 17
         case .body2: 15
@@ -100,6 +104,7 @@ extension WSSFontStyle {
         case .title1: -0.6
         case .title2: -0.6
         case .title3: -0.6
+        case .title4: -0.4
             
         case .body1: -0.6
         case .body2: -0.6
@@ -121,6 +126,7 @@ extension WSSFontStyle {
         case .title1: return 1.4
         case .title2: return 1.4
         case .title3: return 1.5
+        case .title4: return 1.45
             
         case .body1: return 1.4
         case .body2: return 1.5

@@ -101,8 +101,13 @@ public struct CreateFeedView: View {
                         novels: viewModel.state.searchedNovels,
                         selectedNovelID: viewModel.state.selectedSearchedNovelID,
                         isLoading: viewModel.state.isSearchingNovel,
+                        hasSearched: viewModel.state.hasSearchedNovel,
+                        isLoadingMore: viewModel.state.isLoadingMoreNovels,
                         onSearch: {
                             viewModel.handle(.searchNovel(viewModel.state.connectedNovelSearchText))
+                        },
+                        onLoadMore: {
+                            viewModel.handle(.loadMoreSearchedNovels)
                         },
                         onSelect: { novel in
                             viewModel.handle(.selectSearchedNovel(novel.id))
@@ -194,28 +199,15 @@ public struct CreateFeedView: View {
         }
     }
 
+    // 피드 작성/컬렉션 생성이 완전히 같은 룩이라 WSSComponent로 승격됨(#199) — 라벨 문구만 이 화면 값.
     private var privateSection: some View {
-        HStack(spacing: 0) {
-            WSSImage.icLock.swiftUIImage
-                .frame(width: 18, height: 18)
-                .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
-            
-            Spacer().frame(width: 4)
-            
-            Text("나만 보는 기록")
-                .applyWSSFont(.title3)
-                .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
-            
-            Spacer()
-            
-            WSSToggleButton(isOn: Binding(
+        WSSPrivateToggleRow(
+            label: "나만 보는 기록",
+            isOn: Binding(
                 get: { viewModel.state.draft.isPrivate },
                 set: { _ in viewModel.handle(.togglePrivate) }
-            ))
-        }
-        .padding(.horizontal, 20)
-        .frame(height: 58)
-        .background(WSSColor.wssGray300.swiftUIColor)
+            )
+        )
     }
     
     private var spoilerSection: some View {

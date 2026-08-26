@@ -1,0 +1,331 @@
+//
+//  CollectionSearchNovelView.swift
+//  CollectionFeature
+//
+//  Created by Guryss on 8/20/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import CollectionDomain
+import SearchDomain
+import NovelDomain
+import DesignSystem
+import WSSComponent
+import Logger
+
+// 컬렉션 "작품 추가" 화면 — 검색해서 다중선택한 결과를 확정하면 CreateCollectionView의 작품 리스트
+// 전체를 교체한다. CreateCollectionView 내부에서만 push되는 로컬 화면(별도 Factory 진입점 없음).
+struct CollectionSearchNovelView: View {
+
+    @State private var viewModel: CollectionSearchNovelViewModel
+    /// "서재에서 추가" 화면 push 여부 — `isAddNovelPresented`(CreateCollectionView)와 같은 위상으로
+    /// 이 화면이 직접 소유한다. 확정 시 이 화면은 스스로 dismiss()하지 않는다 — `CreateCollectionView`가
+    /// 넘긴 `onConfirm`이 최상위 `isAddNovelPresented`를 내려 이 화면까지 통째로 닫는다(아래
+    /// `.navigationDestination`/`onConfirm` 배선 참고, `CollectionFeature/CLAUDE.md`에 배경 기록).
+    @State private var isMyLibrarySelectPresented = false
+    @FocusState private var isSearchBarFocused: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    /// "서재에서 추가" 화면이 서재 조회에 쓸 UseCase — `searchNovelUseCase`와 같은 위상으로 이 화면이
+    /// 직접 받아 들고 있다가 자식 VM 생성에 쓴다.
+    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
+    /// "서재에서 추가" 화면도 자기 VM에서 실패를 로깅해야 하므로, `CreateCollectionView`에게 받은 걸
+    /// 그대로 들고 있다가 그 화면 생성 시 내려보낸다.
+    private let logger: Logger?
+    /// 확정 콜백 — 최종 선택 결과 전체를 상위(`CreateCollectionView`)로 발화한다. 콜백은 VM이 아니라
+    /// View가 소유한다(프로젝트 관례). "서재에서 추가" 화면의 확정도 같은 콜백을 그대로 재사용한다.
+    private let onConfirm: ([CollectionNovel]) -> Void
+    private let onAuthenticationRequired: () -> Void
+
+    init(
+        viewModel: CollectionSearchNovelViewModel,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
+        onConfirm: @escaping ([CollectionNovel]) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
+        self._viewModel = State(initialValue: viewModel)
+        self.loadMyLibraryUseCase = loadMyLibraryUseCase
+        self.logger = logger
+        self.onConfirm = onConfirm
+        self.onAuthenticationRequired = onAuthenticationRequired
+    }
+
+    var body: some View {
+        content
+            .navigationBarBackButtonHidden(true)
+            .toolbar { toolbarContent }
+            .showWSSToast(isPresented: toastBinding, type: toastType)
+            .onAppear {
+                isSearchBarFocused = true
+            }
+            .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
+                guard confirmed else { return }
+                // 이 화면 자신은 dismiss()하지 않는다 — `onConfirm`이 최상위(`CreateCollectionView`)의
+                // `isAddNovelPresented`를 내려 이 화면을 닫아준다.
+                onConfirm(viewModel.state.selectedNovels)
+            }
+            // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
+            .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
+            }
+            // "서재에서 추가" 확정 → CreateCollectionView가 넘긴 바로 그 onConfirm을 그대로 위로
+            // 전달만 한다(novels 가공 없음). 이 화면도, 자식(CollectionMyLibrarySelectView)도 각자
+            // dismiss()를 부르지 않는다 — `onConfirm`을 타고 최상위(`CreateCollectionView`)까지 올라가
+            // 그쪽이 소유한 `isAddNovelPresented` 하나만 false로 내려 이 서브트리 전체(이 화면 +
+            // CollectionMyLibrarySelectView)를 한 번의 pop 애니메이션으로 같이 걷어낸다. 예전엔 각
+            // 화면이 스스로 pop한 뒤 위가 그 완료를 감지해 뒤이어 pop하는 계단식 방식이었는데, 두
+            // pop이 거의 같은 프레임에 겹쳐 전환 애니메이션이 두 번 보였다(실측) — `CollectionFeature/CLAUDE.md`
+            // 참고.
+            .navigationDestination(isPresented: $isMyLibrarySelectPresented) {
+                CollectionMyLibrarySelectView(
+                    viewModel: CollectionMyLibrarySelectViewModel(
+                        initialSelection: viewModel.state.selectedNovels,
+                        loadMyLibraryUseCase: loadMyLibraryUseCase,
+                        logger: logger
+                    ),
+                    onConfirm: onConfirm,
+                    onAuthenticationRequired: onAuthenticationRequired
+                )
+            }
+    }
+
+    private var content: some View {
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal, 16)
+
+            Spacer().frame(height: 16)
+
+            selectionSummary
+                .padding(.horizontal, 20)
+
+            Spacer().frame(height: 16)
+
+            resultArea
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchBarFocused = false
+        }
+    }
+}
+
+// MARK: - Toolbar
+
+private extension CollectionSearchNovelView {
+
+    @ToolbarContentBuilder
+    var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button {
+                dismiss()
+            } label: {
+                WSSImage.icNavigateLeft.swiftUIImage
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(Color.wssBlack)
+            }
+        }
+
+        ToolbarItem(placement: .principal) {
+            Text("작품 리스트")
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+        }
+
+        ToolbarItem(placement: .confirmationAction) {
+            Button {
+                viewModel.handle(.confirm)
+            } label: {
+                Text("완료")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(Color.wssPrimary100)
+            }
+        }
+    }
+}
+
+// MARK: - Sections
+
+private extension CollectionSearchNovelView {
+
+    var searchBar: some View {
+        WSSSearchBar(
+            text: Binding(
+                get: { viewModel.state.searchText },
+                set: { viewModel.handle(.updateSearchText($0)) }
+            ),
+            placeholder: "작품 제목, 작가를 검색하세요",
+            isFocused: $isSearchBarFocused,
+            onSearch: { viewModel.handle(.search(viewModel.state.searchText)) }
+        )
+    }
+
+    var selectionSummary: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 2) {
+                Text("추가한 작품")
+                    .foregroundStyle(Color.wssGray200)
+                Text("\(viewModel.state.selectedNovels.count)개")
+                    .foregroundStyle(Color.wssPrimary100)
+            }
+            .applyWSSFont(.body4)
+
+            Spacer()
+
+            Button {
+                isMyLibrarySelectPresented = true
+            } label: {
+                Text("서재에서 추가")
+                    .underline()
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(Color.wssGray200)
+            }
+        }
+    }
+
+    /// `hasSearched`가 꺼져 있으면(=검색 실행 전, 또는 결과를 받은 뒤 다시 타이핑하는 도중) 무조건
+    /// 빈 화면이다 — `searchedNovels`는 이전 검색 결과를 그대로 들고 있을 수 있어서, 그 배열 자체로
+    /// 판단하면 타이핑 중에 직전 검색 결과(또는 "결과 없음" 뷰)가 잘못 남아있는다(실제 발생 — 사용자
+    /// 리포트: 타이핑 도중엔 아무것도 없이 흰 배경이어야 함). `search()`가 실제로 응답을 받아야만
+    /// `hasSearched`가 켜지고, 그제서야 결과 유무에 따라 리스트/결과없음을 가른다.
+    @ViewBuilder
+    var resultArea: some View {
+        if viewModel.state.isSearching {
+            LoadingView()
+        } else if !viewModel.state.hasSearched {
+            Spacer()
+        } else if viewModel.state.searchedNovels.isEmpty {
+            WSSEmptyView(type: .novel, action: {})
+        } else {
+            resultList
+        }
+    }
+
+    var resultList: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(viewModel.state.searchedNovels, id: \.id) { novel in
+                    novelRow(novel)
+                        // 무한스크롤 — 마지막 행이 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
+                        // `LazyVStack`이 아니면 이 onAppear가 전체 행에 한꺼번에 발동하니 반드시 짝지어 유지할 것
+                        // (`SearchFeature/CLAUDE.md` 참고).
+                        .onAppear {
+                            if novel.id == viewModel.state.searchedNovels.last?.id {
+                                viewModel.handle(.loadMore)
+                            }
+                        }
+                }
+
+                if viewModel.state.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.immediately)
+        // 배경 탭으로 키보드를 내리는 제스처(`content`)는 `ScrollView` 내부의 빈 공간까지는 안 먹는다 —
+        // `ScrollView`가 그 터치를 자기 것으로 가져가버린다(`SearchFeature/CLAUDE.md`의 자동완성 항목과
+        // 동일 함정). 그래서 이 스크롤뷰 자신에도 같은 제스처를 직접 건다 — 행 위를 탭하면 `novelRow`의
+        // `onTapGesture`(토글)가 먼저 소비하므로 서로 충돌하지 않는다.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchBarFocused = false
+        }
+    }
+
+    /// 행 전체가 탭 영역이다(`WSSNovelSelectRow`와 같은 이유 — 이 행의 유일한 액션이라 서브 액션과
+    /// 컨테이너를 나눌 필요가 없다). 필 배지(추가/삭제)는 순수 표시용.
+    func novelRow(_ novel: Novel) -> some View {
+        let isSelected = viewModel.selectedNovelIDs.contains(novel.id)
+
+        return HStack(spacing: 16) {
+            WSSNovelCoverImage(url: novel.thumbnailImage)
+                .frame(width: 73, height: 98)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(novel.title)
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(Color.wssBlack)
+                    .lineLimit(1)
+
+                Text(novel.authors.joined(separator: ", "))
+                    .applyWSSFont(.body5)
+                    .foregroundStyle(Color.wssGray200)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            WSSPillBadge(style: isSelected ? .remove : .add)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.handle(.toggleNovel(novel))
+        }
+    }
+}
+
+// MARK: - Presentation
+
+private extension CollectionSearchNovelView {
+
+    var toastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedError != nil },
+            set: { if !$0 { viewModel.handle(.dismissError) } }
+        )
+    }
+
+    /// `presentedError`가 `nil`일 때의 값은 쓰이지 않는다(`toastBinding`이 그때 `isPresented: false`).
+    var toastType: WSSToastType {
+        switch viewModel.state.presentedError {
+        case .selectionLimitReached:
+            .selectionOverLimit(count: CollectionDraft.maxNovelCount)
+        case .unknown, .none:
+            .unknownError
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        CollectionSearchNovelView(
+            viewModel: CollectionSearchNovelViewModel(
+                initialSelection: [],
+                searchNovelUseCase: PreviewSearchNovelUseCase()
+            ),
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            onConfirm: { novels in print("확정: \(novels.count)개") },
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+        )
+    }
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
+    }
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
+    }
+}
+
+private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
+    }
+}
