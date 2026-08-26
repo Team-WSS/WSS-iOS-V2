@@ -166,7 +166,7 @@ struct RuleTests {
     func usecaseNamingChecksProtocolsOnly() {
         let rule = ProtocolNamingRule(
             id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
-            folderFragment: "/Sources/UseCase/", requiredSuffix: "UseCase"
+            folderName: "UseCase", requiredSuffix: "UseCase"
         )
         let path = "/Projects/Domain/SampleDomain/Sources/UseCase/LoadSample.swift"
         let src = """
@@ -183,7 +183,7 @@ struct RuleTests {
     func usecaseNamingPasses() {
         let rule = ProtocolNamingRule(
             id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
-            folderFragment: "/Sources/UseCase/", requiredSuffix: "UseCase"
+            folderName: "UseCase", requiredSuffix: "UseCase"
         )
         let path = "/Projects/Domain/SampleDomain/Sources/UseCase/LoadSampleUseCase.swift"
         let src = """
@@ -197,7 +197,7 @@ struct RuleTests {
     func repositoryNamingChecksProtocolsOnly() {
         let rule = ProtocolNamingRule(
             id: "repository-naming", layerPathFragment: "/Projects/Domain/",
-            folderFragment: "/Sources/Repository/", requiredSuffix: "Repository"
+            folderName: "Repository", requiredSuffix: "Repository"
         )
         let path = "/Projects/Domain/SampleDomain/Sources/Repository/SampleStore.swift"
         let src = """
@@ -208,6 +208,29 @@ struct RuleTests {
         #expect(vs.count == 1)
         #expect(vs.first?.ruleID == "repository-naming")
         #expect(vs.first?.severity == .error)
+    }
+
+    @Test("⑨/⑩ 중첩·기능그룹 폴더와 소문자 Usecase도 스코프에 든다(평평한 폴더만 보지 않는다)")
+    func protocolNamingCoversNestedAndLowercaseFolders() {
+        let ucRule = ProtocolNamingRule(
+            id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "UseCase", requiredSuffix: "UseCase"
+        )
+        // 기능그룹 하위 폴더의 오명명 protocol → 잡아야 한다(예: SettingDomain/AppUpdate/UseCase).
+        let nested = "/Projects/Domain/SettingDomain/Sources/AppUpdate/UseCase/CheckUpdate.swift"
+        #expect(lint(source: "public protocol CheckUpdate {}", path: nested, rules: [ucRule]).count == 1)
+        // 소문자 `Usecase/` 폴더도 스코프(RecommendationDomain·BaseDomain).
+        let lower = "/Projects/Domain/RecommendationDomain/Sources/Usecase/LoadHome.swift"
+        #expect(lint(source: "public protocol LoadHome {}", path: lower, rules: [ucRule]).count == 1)
+        // 올바른 이름은 통과.
+        #expect(lint(source: "public protocol CheckUpdateUseCase {}", path: nested, rules: [ucRule]).isEmpty)
+
+        let repoRule = ProtocolNamingRule(
+            id: "repository-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "Repository", requiredSuffix: "Repository"
+        )
+        let nestedRepo = "/Projects/Domain/NotificationDomain/Sources/Push/Repository/PushSetting.swift"
+        #expect(lint(source: "public protocol PushSetting {}", path: nestedRepo, rules: [repoRule]).count == 1)
     }
 
     // MARK: - ⑪ factory-existence (module rule, error)

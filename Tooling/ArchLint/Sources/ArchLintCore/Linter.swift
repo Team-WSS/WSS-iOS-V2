@@ -13,13 +13,13 @@ let allRules: [Rule] = [
     ProtocolNamingRule(
         id: "usecase-naming",
         layerPathFragment: "/Projects/Domain/",
-        folderFragment: "/Sources/UseCase/",
+        folderName: "UseCase",
         requiredSuffix: "UseCase"
     ),
     ProtocolNamingRule(
         id: "repository-naming",
         layerPathFragment: "/Projects/Domain/",
-        folderFragment: "/Sources/Repository/",
+        folderName: "Repository",
         requiredSuffix: "Repository"
     )
 ]
