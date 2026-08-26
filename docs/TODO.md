@@ -154,11 +154,13 @@
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)
 
-### 1. SettingFeature에 VM 테스트가 없다 (`.tests` 선언을 되돌림)
+### 1. SettingFeature·CollectionFeature에 VM 테스트가 없다
 
-- **무엇**: SettingFeature는 `.tests`를 선언했으나 `Tests/`가 비어(`.gitkeep`만) 있어 빈 xctest 번들이 "실행 파일 없음"으로 로드 실패했다 → #210에서 `.tests`를 제거해 CI에서 뺐다. 즉 지금 SettingFeature는 **테스트 0개**.
-- **왜 지금 안 했나**: VM 테스트 작성은 별건(지도 이슈 #205 축 B-B2 "Feature VM TDD"). 여러 `SettingViewModel`의 계약을 파악해 써야 해서 #210(기존 실패 청소) 범위 밖.
-- **어디를 고치나(할 때)**: `Projects/Feature/SettingFeature/Tests/`에 VM 테스트 추가 + `Project.swift` targets에 `.tests` 재선언(필요 시 `testDependencies`도). `NovelReviewFeature`가 선례.
+- **무엇**: 두 Feature 모두 `.tests`를 선언했으나 `Tests/`에 실제 테스트가 없었다. 처리 방식이 갈린다:
+  - **SettingFeature**: `Tests/`가 비어(`.gitkeep`만) 빈 xctest 번들이 "실행 파일 없음"으로 로드 실패 → #210에서 **`.tests` 제거**. VM 테스트 생기면 재선언.
+  - **CollectionFeature**: `Tests/`에 `.swift` 파일이 0개인데 `.tests`를 선언해 **`tuist generate`가 "Tests/** 글롭 무효"로 워크스페이스 전체를 깨뜨렸다**(모든 모듈 테스트가 Generate 단계에서 실패, develop 전 CI 정지) → #217에서 **placeholder 테스트 1개 추가**(`CollectionFeaturePlaceholderTests`, `.tests` 유지). ⚠️ **`.tests`는 Tests에 통과 테스트가 최소 1개 있을 때만 선언할 것** — 빈 채 선언하면 (빈 번들 로드 실패 또는) generate 자체를 막아 전 CI를 세운다.
+- **왜 지금 안 했나**: VM 테스트 작성은 별건(지도 이슈 #205 축 B-B2 "Feature VM TDD"). VM 계약을 파악해 써야 해 청소 범위 밖.
+- **어디를 고치나(할 때)**: 해당 `Feature/<Module>/Tests/`에 VM 테스트 추가 + `Project.swift` targets에 `.tests` 재선언(필요 시 `testDependencies`도). `NovelReviewFeature`가 선례.
 
 ### 2. swift-format 게이트를 "변경 파일만 report-only" → "레포 전체 --strict"로 격상 (전체 1회 리포맷)
 
