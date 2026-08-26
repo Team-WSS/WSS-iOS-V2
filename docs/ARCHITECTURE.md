@@ -19,7 +19,7 @@
             Data        Repository 구현·외부 데이터 연결
               │
               ▼
-            Core        Networking·Keychain·Logger (의존성 최소 기반 기술)
+            Core        Networking·Keychain·Logger·PushAuthorization (의존성 최소 기반 기술)
 ```
 
 - **단방향 원칙**: 화살표 역방향 import 금지.
@@ -55,7 +55,7 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 | UI | 재사용 컴포넌트·디자인 토큰 | SwiftUI | DesignSystem, WSSComponent |
 | Domain | 비즈니스 로직·계약 | async/await | Entity, UseCase, Repository(protocol) |
 | Data | 외부 데이터 연결 | async/await | DTO, Service, Mapper, Repository(impl), Factory |
-| Core | 기반 기술 | async/await | Networking, Keychain, Logger |
+| Core | 기반 기술 | async/await | Networking, Keychain, Logger, PushAuthorization |
 
 ## 모듈 구성 방식 (Tuist)
 

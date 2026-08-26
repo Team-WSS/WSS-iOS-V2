@@ -17,6 +17,7 @@ import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
+import PushAuthorization
 
 struct SettingView: View {
 
@@ -142,6 +143,24 @@ struct SettingView: View {
             )
         }
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
+        .onChange(of: viewModel.state.shouldNavigateToNotificationSetting) { _, shouldNavigate in
+            guard shouldNavigate else { return }
+            viewModel.handle(.consumeNotificationSettingNavigation)
+            isNotificationSettingPresented = true
+        }
+        .showWSSAlert(
+            isPresented: pushAuthorizationAlertBinding,
+            type: .setAppNotification,
+            buttonActions: [
+                { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
+                {
+                    viewModel.handle(.dismissPushAuthorizationAlert)
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }  // "설정하러 가기"
+            ]
+        )
     }
 
     private func select(_ menu: SettingMenu) {
@@ -151,7 +170,7 @@ struct SettingView: View {
         case .profileVisibility:
             isProfilePublicPresented = true
         case .notification:
-            isNotificationSettingPresented = true
+            viewModel.handle(.notificationMenuTapped)
         case .officialAccount, .inquiry, .privacyPolicy, .termsOfService:
             if let url = menu.externalURL { openURL(url) }
         }
@@ -160,6 +179,13 @@ struct SettingView: View {
     private func showVisibilityChangedToast(isPublic: Bool) {
         visibilityChangedToastType = isPublic ? .changePublic : .changePrivate
         isVisibilityChangedToastPresented = true
+    }
+
+    private var pushAuthorizationAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isPushAuthorizationAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
+        )
     }
 }
 
@@ -231,7 +257,7 @@ private extension SettingView {
 #Preview {
     NavigationStack {
         SettingView(
-            viewModel: SettingViewModel(),
+            viewModel: SettingViewModel(pushAuthorizationChecker: PreviewPushAuthorizationChecker()),
             loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
             saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
             loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
@@ -246,6 +272,11 @@ private extension SettingView {
             loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
         )
     }
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
 }
 
 private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {

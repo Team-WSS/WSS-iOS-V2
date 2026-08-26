@@ -17,6 +17,7 @@ import RecommendationData
 import NotificationData
 import Logger
 import Networking
+import PushAuthorization
 import DesignSystem
 
 @main
@@ -63,10 +64,27 @@ private struct DemoRootView: View {
         var id: String { rawValue }
     }
 
+    /// 시스템 푸시 권한 상태(#193) — 서버 데이터와 무관해 `scenario`와 별개 축으로 둔다.
+    private enum PushAuthorizationScenario: String, CaseIterable, Identifiable {
+        case authorized = "허용됨"
+        case notDetermined = "notDetermined"
+        case denied = "denied"
+        var id: String { rawValue }
+
+        var status: PushAuthorizationStatus {
+            switch self {
+            case .authorized:    .authorized
+            case .notDetermined: .notDetermined
+            case .denied:        .denied
+            }
+        }
+    }
+
     @State private var dataSource: DataSource = .mock
     @State private var scenario: DemoHomeScenario = .filled
+    @State private var pushAuthorizationScenario: PushAuthorizationScenario = .authorized
     /// 소스·시나리오 전환 시 화면 정체성을 갈아 새 ViewModel(깨끗한 로드)을 강제한다.
-    private var homeViewID: String { "\(dataSource.rawValue)-\(scenario.rawValue)" }
+    private var homeViewID: String { "\(dataSource.rawValue)-\(scenario.rawValue)-\(pushAuthorizationScenario.rawValue)" }
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
@@ -75,6 +93,12 @@ private struct DemoRootView: View {
         VStack(spacing: 0) {
             Picker("데이터 소스", selection: $dataSource) {
                 ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 20)
+
+            Picker("푸시 권한 시나리오", selection: $pushAuthorizationScenario) {
+                ForEach(PushAuthorizationScenario.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
@@ -126,6 +150,7 @@ private struct DemoRootView: View {
         HomeFactory.makeView(
             loadHomeDataUseCase: loadHomeDataUseCase,
             loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
+            pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
             onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
             onFeedSelected: { consoleLogger.info("피드 상세 진입 요청: \($0)") },
@@ -164,6 +189,19 @@ private struct DemoRootView: View {
 }
 
 // MARK: - Demo UseCases (Mock)
+
+/// 시스템 권한 상태를 실제로 조회하지 않고 Demo 화면에서 고른 시나리오를 그대로 돌려준다(#193).
+/// `dataSource`가 `.mock`이든 `.live`든 공용으로 쓴다 — 이 값은 서버가 아니라 iOS 설정에서 오기 때문.
+private struct DemoPushAuthorizationChecker: PushAuthorizationChecker {
+    let status: PushAuthorizationStatus
+
+    func authorizationStatus() async -> PushAuthorizationStatus { status }
+
+    func requestAuthorization() async -> Bool {
+        // 실제 시스템 프롬프트 대신 "허용함"으로 시연한다(Demo는 알림 권한을 실제로 요청하지 않음).
+        true
+    }
+}
 
 private struct DemoLoadHomeDataUseCase: LoadHomeDataUseCase {
 

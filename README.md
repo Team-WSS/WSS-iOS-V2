@@ -62,7 +62,7 @@ V2는 이런 문제를 줄이기 위해 시작한 리빌드 프로젝트입니�
 
 현재 V2는 기능을 한 번에 모두 옮기기보다, 기반 구조를 먼저 분리하고 검증 가능한 단위로 쪼개는 데 초점을 맞추고 있습니다.
 
-- `Core`는 Networking, Keychain, Logger처럼 재사용 가능한 기반 기술을 담당합니다.
+- `Core`는 Networking, Keychain, Logger, PushAuthorization처럼 재사용 가능한 기반 기술을 담당합니다.
 - `Domain`은 Entity, UseCase, Repository 프로토콜 등 비즈니스 로직을 담당합니다.
 - `Data`는 DTO, Mapper, Service, Repository 구현체를 통해 외부 데이터를 연결합니다.
 - `Feature`는 화면 단위로 점진 연결 중(`NovelReviewFeature`·`FeedFeature`·`NovelDetailFeature`·`SearchFeature`·`KeywordFeature`·`LibraryFeature`·`HomeFeature`·`NotificationFeature`)이며, 남은 화면과 `App` 조립을 단계적으로 이어갈 계획입니다.
@@ -111,7 +111,8 @@ UI
 Core
 ├── Logger                # 로깅 추상화와 콘솔 로거
 ├── Networking            # 네트워크 클라이언트와 요청/응답 추상화
-└── Keychain              # 보안 저장소와 키체인 접근 래퍼
+├── Keychain              # 보안 저장소와 키체인 접근 래퍼
+└── PushAuthorization     # 시스템 푸시 알림 권한 확인·요청 래퍼
 │
 Domain
 ├── AuthDomain            # 사용자 인증, 로그아웃, 탈퇴

@@ -22,7 +22,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.novel)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        .module(.core(.pushAuthorization))
     ],
     // Demo 앱만 실서버 조립을 위해 Data/Networking을 의존한다(App의 DI 역할 대행).
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.

@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import PushAuthorization
 import DesignSystem
 import WSSComponent
 
@@ -19,6 +20,10 @@ import WSSComponent
 struct HomeView: View {
 
     @State private var viewModel: HomeViewModel
+    /// "설정하러 가기" 탭 시 iOS 설정 앱의 **이 앱 알림 설정 페이지**로 바로 여는 데 쓴다 — VM은
+    /// "권한이 denied라 알럿을 띄워야 한다"는 판단만 갖고, 시스템 앱을 여는 행위 자체는 View가 수행한다
+    /// (SettingFeature와 동일).
+    @Environment(\.openURL) private var openURL
     private let onNovelSelected: (NovelID) -> Void
     private let onFeedSelected: (FeedID) -> Void
     private let onSearchTapped: () -> Void
@@ -60,13 +65,34 @@ struct HomeView: View {
 
     var body: some View {
         content
-            .onAppear { viewModel.handle(.load) }
+            .onAppear {
+                viewModel.handle(.load)
+                viewModel.handle(.checkPushAuthorizationOnEntry)
+            }
             .onChange(of: viewModel.state.requiresAuthentication) { _, requiresAuthentication in
                 guard requiresAuthentication else { return }
                 // 홈은 탭 콘텐츠라 VM이 앱 세션 내내 산다 → 신호를 소진해야 2회차 만료가 삼켜지지 않는다.
                 viewModel.handle(.consumeAuthenticationRequired)
                 onAuthenticationRequired()
             }
+            .onChange(of: viewModel.state.shouldNavigateToNotifications) { _, shouldNavigate in
+                guard shouldNavigate else { return }
+                viewModel.handle(.consumeNotificationNavigation)
+                onNotificationTapped()
+            }
+            .showWSSAlert(
+                isPresented: pushAuthorizationAlertBinding,
+                type: .setAppNotification,
+                buttonActions: [
+                    { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
+                    {
+                        viewModel.handle(.dismissPushAuthorizationAlert)
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                            openURL(url)
+                        }
+                    }  // "설정하러 가기"
+                ]
+            )
     }
 
     /// 헤더만 고정이고 그 아래가 통째로 스크롤/로딩/실패로 갈린다(구 WSSiOS와 같은 경계).
@@ -74,7 +100,7 @@ struct HomeView: View {
         VStack(spacing: 0) {
             HomeHeaderView(
                 hasUnreadNotifications: viewModel.state.hasUnreadNotifications,
-                onNotificationTapped: onNotificationTapped
+                onNotificationTapped: { viewModel.handle(.notificationBellTapped) }
             )
 
             content(for: viewModel.state)
@@ -177,6 +203,13 @@ private extension HomeView {
         if case .novels(let novels) = state { return novels.isEmpty }
         return false
     }
+
+    var pushAuthorizationAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isPushAuthorizationAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
+        )
+    }
 }
 
 // MARK: - Preview
@@ -186,7 +219,8 @@ private extension HomeView {
     HomeView(
         viewModel: HomeViewModel(
             loadHomeDataUseCase: PreviewLoadHomeDataUseCase(),
-            loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase()
+            loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase(),
+            pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         ),
         onNovelSelected: { _ in },
         onFeedSelected: { _ in },
@@ -262,4 +296,9 @@ private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificatio
     func execute() async throws(RepositoryError) -> UnreadNotificationStatus {
         UnreadNotificationStatus(hasUnreadNotifications: true)
     }
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
 }

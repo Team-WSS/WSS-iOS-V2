@@ -12,6 +12,10 @@ import Observation
 import NotificationDomain
 import Logger
 
+/// ⚠️ 시스템 푸시 권한(denied) 확인·유도 알럿은 이 화면이 아니라 `SettingView`가 "알림 설정" 메뉴를
+/// 탭한 시점에 한다(#193) — `showWSSAlert`가 `.overlay` 기반이라 push 전환과 동시에 띄우면 화면 전환에
+/// 밀려 사라지므로, 전환 전에 출발 화면에서 먼저 보여준다. 여기서 다시 확인하면 방금 SettingView에서
+/// 본 알럿이 곧바로 한 번 더 뜬다 — `onAppear`에 재확인 로직을 되살리지 말 것(과거엔 있었다).
 @MainActor
 @Observable
 final class NotificationSettingViewModel {

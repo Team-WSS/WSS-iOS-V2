@@ -14,6 +14,7 @@ import NotificationDomain
 import AuthDomain
 import NovelDomain
 import Logger
+import PushAuthorization
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -41,11 +42,13 @@ public enum SettingFactory {
         logoutUseCase: LogoutUseCase,
         // NovelDomain
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
+        // PushAuthorization
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onLogoutSuccess: @escaping () -> Void = {}
     ) -> some View {
-        let viewModel = SettingViewModel(logger: logger)
+        let viewModel = SettingViewModel(pushAuthorizationChecker: pushAuthorizationChecker, logger: logger)
         return SettingView(
             viewModel: viewModel,
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
