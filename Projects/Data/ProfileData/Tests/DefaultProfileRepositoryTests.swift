@@ -157,7 +157,13 @@ struct DefaultProfileRepositoryTests {
     @Test("updateProfile localStorage에 닉네임과 캐릭터ID 저장")
     func updateProfile_savesNicknameAndCharacterIDToLocalStorage() async throws {
         let (sut, _, localStorage) = makeRepository()
-        let draft = makeDraft(nickname: "새닉네임", characterID: 5)
+        // makeDraft(생성자)로 막 만든 draft는 초기값=현재값이라 "변경 없음" 상태다(#185에서 updateProfile이
+        // 변경 감지 가드를 통과해야만 localStorage에 쓰도록 고쳐지며 드러난 함정) — 실제로 바뀐 상태를
+        // 표현하려면 생성 후 mutate 메서드로 값을 옮겨야 한다.
+        var draft = makeDraft(nickname: "이전닉네임", characterID: 1)
+        draft.setCharacter(5)
+        draft.updateNickname("새닉네임")
+        draft.applyNicknameDuplicationCheck(.notDuplicated, checkedText: "새닉네임")
 
         try await sut.updateProfile(draft)
 
