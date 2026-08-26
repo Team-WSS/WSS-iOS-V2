@@ -9,7 +9,7 @@
 
 ## 구조
 
-- `Sources/ArchLintCore/` — 규칙 5개 + 스캔/파싱 로직(라이브러리)
+- `Sources/ArchLintCore/` — 규칙 9개(파일 단위 8 + 모듈 단위 1) + 스캔/파싱 로직(라이브러리)
 - `Sources/ArchLint/` — 얇은 실행 파일(`main.swift` → `runArchLint(...)` 호출)
 - `Tests/ArchLintCoreTests/` — 규칙 자체 테스트
 
@@ -40,6 +40,10 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | ③ 의존성 방향 | `dependency-direction` | **error** | `Projects/**/Project.swift` | 모듈이 선언한 internalDependencies의 레이어 방향 강제(App→Feature→(UI/Domain)←Data→Core). `ui→domain`은 허용. 매니페스트 선언이라 명확한 위반. |
 | ⑤ Service 분기 | `service-no-branch` | warning | `Projects/Data/**/*Service*` (Sources) | `if`/`switch`/삼항(`?:`) 금지(매핑 leak 방지). `guard`·에러 전파는 제외. 분기≠항상 leak이라 프록시. |
 | ⑦ Service 쿼리 조립 | `service-no-query-build` | warning | `Projects/Data/**/*Service*` (Sources) | `XxxQuery(...)` 생성자 호출 금지 — 완성 Query를 Input으로 받게 강제해 매핑 leak을 문법적으로 예방. `*Query` 네이밍 휴리스틱이라 프록시. |
+| ⑧ VM 네이밍(역방향) | `vm-naming-reverse` | **error** | `Projects/{Feature,UI}/**/Sources` | `@Observable` class는 이름이 `*ViewModel`이어야 한다(②의 역방향 — "@Observable ⇔ ViewModel"을 닫는다). `@Observable`는 class 전용 매크로라 예외 없음. |
+| ⑨ UseCase 네이밍 | `usecase-naming` | **error** | `Projects/Domain/**/Sources/UseCase` | 폴더의 **protocol**은 이름이 `*UseCase`. 곁에 사는 `Default*` 구현·반환 Entity(`HomeData` 등)는 대상이 아니라 protocol만 본다. |
+| ⑩ Repository 네이밍 | `repository-naming` | **error** | `Projects/Domain/**/Sources/Repository` | 폴더의 **protocol**은 이름이 `*Repository`. 곁 enum(`AuthError`·`ProfileTarget`)은 대상이 아니라 protocol만 본다. |
+| ⑪ Factory 존재성 | `factory-existence` | **error** | `Projects/Data/<Module>` (모듈 단위) | 각 Data 모듈은 조립 진입점 `public *DataFactory`를 노출한다. BaseData(공용 토대)는 제외. 파일이 아니라 모듈 전체를 봐야 해 `ModuleRule`로 둔다. |
 
 ## 규칙 추가하기
 
@@ -52,6 +56,14 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 4. **`Tests/ArchLintCoreTests`에 테스트를 추가한다** — 소스 문자열에 규칙을 돌려 위반을 단언한다
    (error/warning 경로 + 오탐 없음 둘 다). 레포가 이미 초록이라 **위반 경로는 이 테스트로만 검증된다** →
    규칙을 나중에 건드려 감지가 깨지면 `swift test`가 잡는다(회귀 그물).
+
+### 모듈 단위 규칙(`ModuleRule`)
+
+"이 파일에 X가 있으면 안 된다"가 아니라 **"이 모듈에 X가 있어야 한다"** 같은 집계 조건은
+파일 단위 `Rule`로 표현할 수 없다. 그럴 땐 `ModuleRule`을 채택하고 `allModuleRules`에 등록한다.
+드라이버는 **Project.swift를 가진 정식 모듈만** 골라(유령 폴더 자동 제외) 모듈별로 `check(moduleName:files:)`를
+부른다 — `files`는 그 모듈에서 규칙의 `applies`를 통과한 파일들. 테스트는 `lintModule(sources:moduleName:rule:)`로
+여러 소스를 한 모듈로 묶어 돌린다(`FactoryExistenceRule` 참고).
 
 ## CI
 
