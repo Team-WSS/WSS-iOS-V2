@@ -29,31 +29,134 @@ jobs:
     outputs:
       modules_json: ${{ steps.set-matrix.outputs.modules_json }}
     steps:
+      # 선택적 테스트의 git diff(merge-base..HEAD)를 위해 PR head + 전체 히스토리가 필요.
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.sha }}
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.event.pull_request.head.sha || github.sha }}
 
-      # 정식 모듈(Project.swift 보유) 중 targets에 .tests 를 선언한 것만 scheme로.
-      # 폴더 ls 스캔이 아니라 Project.swift 기준이라, 레지스트리에 없는 유령 폴더
-      # (rename/브랜치 잔재)는 Project.swift가 없어 자동으로 제외된다.
-      - name: Build matrix from modules declaring .tests
+      - name: base 브랜치 fetch (PR diff 기준)
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin ${{ github.event.pull_request.base.ref }}
+
+      # 선택적 테스트: 변경 파일 → 변경 모듈 → 의존 역그래프로 영향 모듈 계산 → .tests 선언 모듈과 교집합.
+      #   전체 실행 폴백: workflow_dispatch·/domain-test 코멘트·인프라 변경·diff/계산 실패(fail-loud).
+      #   모듈 목록은 폴더 ls가 아니라 Project.swift 보유 기준 → 레지스트리 밖 유령 폴더는 자동 제외.
+      #   그래프는 각 Project.swift의 `.module(.<layer>(.<case>))` 선언을 파싱해 만든다(Tuist 불필요).
+      - name: Select test modules (diff-aware)
         id: set-matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'develop' }}
+          RUN_ALL: ${{ github.event_name == 'issue_comment' && 'true' || 'false' }}
         run: |
           python3 - << 'PY'
-          import os, json, re
-          schemes = []
-          for root, _dirs, files in os.walk("Projects"):
-            if "Project.swift" not in files:
-              continue
-            with open(os.path.join(root, "Project.swift"), encoding="utf-8") as f:
-              content = f.read()
-            m = re.search(r'targets:\s*\[([^\]]*)\]', content, re.S)
-            if m and '.tests' in m.group(1):
-              schemes.append(os.path.basename(root))
-          schemes = sorted(set(schemes))
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            f.write("modules_json=" + json.dumps(schemes) + "\n")
+          import os, json, re, subprocess, sys
+
+          EVENT = os.environ.get("EVENT_NAME", "")
+          BASE = os.environ.get("BASE_REF", "develop")
+          RUN_ALL = os.environ.get("RUN_ALL", "false") == "true"
+
+          # .tests 타깃을 선언한 정식 모듈(Project.swift 보유)만 후보. 유령 폴더는 Project.swift가 없어 제외.
+          def modules_with_tests():
+              res = []
+              for root, _d, files in os.walk("Projects"):
+                  if "Project.swift" not in files:
+                      continue
+                  with open(os.path.join(root, "Project.swift"), encoding="utf-8") as f:
+                      c = f.read()
+                  m = re.search(r'targets:\s*\[([^\]]*)\]', c, re.S)
+                  if m and '.tests' in m.group(1):
+                      res.append(os.path.basename(root))
+              return sorted(set(res))
+
+          TEST_MODULES = modules_with_tests()
+
+          def emit(modules, reason):
+              sel = sorted(set(modules) & set(TEST_MODULES))
+              print(f"::notice::[선택적 테스트] {reason} → {len(sel)}개 모듈")
+              print("실행 모듈:", sel)
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("modules_json=" + json.dumps(sel) + "\n")
+              summ = os.environ.get("GITHUB_STEP_SUMMARY")
+              if summ:
+                  with open(summ, "a") as f:
+                      f.write("### 선택적 테스트\n")
+                      f.write(f"- 사유: {reason}\n")
+                      f.write(f"- 실행 모듈({len(sel)}): {', '.join(sel) if sel else '(없음 — 테스트 스킵)'}\n")
+              sys.exit(0)
+
+          try:
+              # 전체 실행 폴백(수동 트리거).
+              if EVENT == "workflow_dispatch" or RUN_ALL:
+                  emit(TEST_MODULES, f"{EVENT} (수동 전체 실행)")
+
+              changed = subprocess.check_output(
+                  ["git", "diff", "--name-only", f"origin/{BASE}...HEAD"], text=True
+              ).splitlines()
+              changed = [c for c in changed if c.strip()]
+              print(f"변경 파일 {len(changed)}건")
+              for c in changed[:50]:
+                  print("  ", c)
+
+              # 인프라/빌드시스템 변경 → 전 모듈(그래프 전체가 흔들릴 수 있음).
+              INFRA_PREFIX = ("Plugins/DependencyPlugin/", "Tuist/", ".github/workflows/")
+              INFRA_EXACT = {"Workspace.swift", "mise.toml", ".mise.toml", "Package.swift", "Package.resolved"}
+              infra = [c for c in changed if c.startswith(INFRA_PREFIX) or c in INFRA_EXACT]
+              if infra:
+                  emit(TEST_MODULES, f"인프라/빌드시스템 변경 {infra[:3]}")
+
+              # 변경 파일 → 변경 모듈(Projects/<Layer>/<Module>/...).
+              def module_of(p):
+                  parts = p.split("/")
+                  return parts[2] if len(parts) >= 3 and parts[0] == "Projects" else None
+
+              changed_modules = set(filter(None, (module_of(c) for c in changed)))
+              print("변경 모듈:", sorted(changed_modules))
+
+              # 의존 그래프: Project.swift의 .module(.<layer>(.<case>)) → dependee 모듈명(ModuleType 네이밍 재현).
+              def pascal(s):
+                  spaced = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', s)
+                  return ''.join(w[:1].upper() + w[1:] for w in spaced.split())
+              SUFFIX = {"feature": "Feature", "domain": "Domain", "data": "Data", "core": "", "ui": ""}
+              UI_SPECIAL = {"wssComponent": "WSSComponent", "designSystem": "DesignSystem"}
+              def resolve(layer, case):
+                  if layer == "ui" and case in UI_SPECIAL:
+                      return UI_SPECIAL[case]
+                  return pascal(case) + SUFFIX.get(layer, "")
+              DEP_RE = re.compile(r'\.module\(\s*\.(feature|domain|data|core|ui)\(\s*\.(\w+)\s*\)')
+
+              deps = {}
+              for root, _d, files in os.walk("Projects"):
+                  if "Project.swift" not in files:
+                      continue
+                  with open(os.path.join(root, "Project.swift"), encoding="utf-8") as f:
+                      c = f.read()
+                  deps[os.path.basename(root)] = {resolve(l, cs) for (l, cs) in DEP_RE.findall(c)}
+
+              # 역그래프: 누가 나를 의존하나.
+              dependents = {}
+              for mod, dd in deps.items():
+                  for d in dd:
+                      dependents.setdefault(d, set()).add(mod)
+
+              # 영향 모듈 = 변경 모듈 ∪ 전이적 dependents.
+              affected = set(changed_modules)
+              queue = list(changed_modules)
+              while queue:
+                  cur = queue.pop()
+                  for dep in dependents.get(cur, ()):
+                      if dep not in affected:
+                          affected.add(dep)
+                          queue.append(dep)
+
+              print("영향 모듈(변경+의존자):", sorted(affected))
+              emit(affected, f"변경 모듈 {sorted(changed_modules) or '없음'} + 의존자")
+          except SystemExit:
+              raise
+          except Exception as e:
+              emit(TEST_MODULES, f"선택 계산 실패({e!r}) → 안전하게 전체 실행")
           PY
 
       - name: Print discovered modules
@@ -272,11 +375,14 @@ jobs:
             echo "::error::모듈 탐색(discover)이 실패했습니다."
             exit 1
           fi
-          if [ "${{ needs.test.result }}" != "success" ]; then
-            echo "::error::일부 모듈 테스트가 실패했습니다. 위 Test 매트릭스에서 빨간 job을 확인하세요."
-            exit 1
-          fi
-          echo "✅ 모든 모듈 테스트 통과"
+          # 선택적 테스트로 영향 모듈이 없으면 매트릭스가 비어 test job이 'skipped' → 정상 통과로 본다.
+          # (discover가 success인 한 skipped는 "빈 매트릭스"뿐 — 실패면 아래 *)로 떨어진다.)
+          case "${{ needs.test.result }}" in
+            success)  echo "✅ 모든 영향 모듈 테스트 통과" ;;
+            skipped)  echo "✅ 영향받는 테스트 모듈 없음(선택적 테스트) — 통과" ;;
+            *)        echo "::error::일부 모듈 테스트가 실패했습니다. 위 Test 매트릭스에서 빨간 job을 확인하세요."
+                      exit 1 ;;
+          esac
 
   # 4) 아키텍처 규칙 검사(A2) — 자체 SwiftSyntax 검사기(Tooling/ArchLint).
   #    ubuntu + 공식 swift 컨테이너로 Xcode 없이 빠르게 돈다.
