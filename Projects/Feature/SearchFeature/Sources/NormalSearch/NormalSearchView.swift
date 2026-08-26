@@ -30,9 +30,9 @@ struct NormalSearchView: View {
     
     @State private var viewModel: NormalSearchViewModel
     @State private var detailSearchNavigation: DetailSearchNavigation?
-    
+
     @FocusState var isFocused: Bool
-    
+
     init(viewModel: NormalSearchViewModel) {
         self._viewModel = State(initialValue: viewModel)
     }

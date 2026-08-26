@@ -62,24 +62,28 @@ struct DetailSearchResultView: View {
                 Text(filterSummaryText)
                     .applyWSSFont(.body4)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
-                
+
                 Spacer()
-                
+
                 WSSImage.icController.swiftUIImage
                     .resizable()
                     .renderingMode(.template)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                     .frame(width: 18, height: 20)
-                    
+
             }
             .padding(.leading, 16)
             .padding(.trailing, 21)
             .frame(height: 42)
             .background(WSSColor.wssGray50.swiftUIColor)
             .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .onTapGesture {
-            dismiss()
+            .contentShape(RoundedRectangle(cornerRadius: 14))
+            .onTapGesture {
+                // 필터를 다시 조정하려면 새 필터 화면을 push하지 않고 뒤로가기(dismiss)로 되돌아간다 —
+                // 이 화면은 항상 DetailSearchFilterView 위에 push되어 있으므로(진입 경로 무관, #185)
+                // 뒤로가면 그 필터 화면이 그대로 남아있다.
+                dismiss()
+            }
         }
     }
 
@@ -130,8 +134,13 @@ struct DetailSearchResultView: View {
             Spacer()
         } else {
             ScrollView(.vertical) {
-                VStack(spacing: 16) {
+                VStack(spacing: 0) {
+                    
+                    Spacer().frame(height: 10)
+                    
                     infoSection
+                    
+                    Spacer().frame(height: 14)
 
                     LazyVGrid(
                         columns: [
@@ -141,13 +150,20 @@ struct DetailSearchResultView: View {
                         spacing: 18
                     ) {
                         ForEach(viewModel.state.novels, id: \.id) { novel in
-                            DetailSearchResultItemRow(novel: novel)
-                                // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
-                                .onAppear {
-                                    if novel.id == viewModel.state.novels.last?.id {
-                                        viewModel.handle(.loadMore)
-                                    }
+                            WSSNovelGridCell(
+                                thumbnailImage: novel.thumbnailImage,
+                                title: novel.title,
+                                author: novel.authors.joined(separator: ", "),
+                                interestCount: novel.interestCount,
+                                rating: novel.rating,
+                                ratingCount: novel.ratingCount
+                            )
+                            // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
+                            .onAppear {
+                                if novel.id == viewModel.state.novels.last?.id {
+                                    viewModel.handle(.loadMore)
                                 }
+                            }
                         }
                     }
 
@@ -173,9 +189,10 @@ private extension DetailSearchResultView {
         let filter = viewModel.state.filter
         var appliedCategories: [String] = []
         if !filter.genres.isEmpty { appliedCategories.append("장르") }
+        if !filter.platforms.isEmpty { appliedCategories.append("플랫폼") }
         if !filter.keywords.isEmpty { appliedCategories.append("키워드") }
         if filter.publicationStatus != nil { appliedCategories.append("연재상태") }
-        if filter.ratingThreshold != nil { appliedCategories.append("별점") }
+        if filter.ratingRange != nil { appliedCategories.append("별점") }
 
         guard !appliedCategories.isEmpty else { return "전체 작품" }
         return appliedCategories.joined(separator: ", ") + " 적용"

@@ -54,6 +54,12 @@
   구분이 안 돼** 한쪽만 눌러도 둘 다 스타일이 바뀌었다. "빈 곳 탭하면 키보드 내리기"(`content`의
   `onTapGesture`)는 두 `FocusState`를 함께 `false`로 내리면 된다 — 필드별 포커스-구동 스타일이 있는 화면에서
   여러 텍스트필드가 키보드 내리기 목적으로 상태를 공유하던 걸 그대로 새 필드에 복제하지 말 것.
+- ⚠️ **`MypageCharacterEditSheet`의 `characterItemSize(for:)`는 결과를 `max(0, ...)`로 클램프한다.**
+  `GeometryReader`가 시트 프레젠테이션 애니메이션 도중 과도기적으로 아주 좁은 폭을 보고하는 프레임이 있는데,
+  클램프 없이 그 값을 `.frame(height:)`/`GridItem(.fixed:)`에 그대로 흘리면 결과가 음수가 되어 SwiftUI가
+  "Invalid frame dimension (negative or non-finite)" 런타임 이슈를 낸다(화면은 다음 프레임에 정상 폭으로
+  바로 잡혀 눈에는 안 보일 수 있음 — Xcode 이슈 내비게이터로만 확인됨). `GeometryReader` 폭으로 그리드
+  아이템 크기를 계산하는 새 화면을 만들 때 이 클램프를 잊지 말 것.
 
 ## UserPage
 

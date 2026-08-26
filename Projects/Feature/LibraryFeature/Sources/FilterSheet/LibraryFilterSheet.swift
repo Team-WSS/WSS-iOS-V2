@@ -266,7 +266,7 @@ private extension LibraryFilterSheet {
             HStack(spacing: 0) {
                 ratingValueBox(viewModel.state.ratingMin)
                 Spacer().frame(width: 17)
-                LibraryRatingSlider(
+                WSSRangeSlider(
                     min: viewModel.state.ratingMin,
                     max: viewModel.state.ratingMax,
                     isDisabled: viewModel.isUnratedOnly

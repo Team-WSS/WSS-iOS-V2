@@ -43,6 +43,35 @@ struct SearchFilterTests {
         #expect(filter.genres == [.romance])
     }
 
+    // MARK: - Platform
+
+    @Test("플랫폼을 추가할 수 있다")
+    func addPlatform() {
+        var filter = makeFilter()
+
+        filter.addPlatform(.kakaoPage)
+
+        #expect(filter.platforms == [.kakaoPage])
+    }
+
+    @Test("이미 추가된 플랫폼은 중복 추가되지 않는다")
+    func addPlatformDuplicate() {
+        var filter = makeFilter(platforms: [.kakaoPage])
+
+        filter.addPlatform(.kakaoPage)
+
+        #expect(filter.platforms == [.kakaoPage])
+    }
+
+    @Test("플랫폼을 제거할 수 있다")
+    func removePlatform() {
+        var filter = makeFilter(platforms: [.kakaoPage, .ridibooks])
+
+        filter.removePlatform(.kakaoPage)
+
+        #expect(filter.platforms == [.ridibooks])
+    }
+
     // MARK: - Publication Status
 
     @Test("출판 상태를 설정할 수 있다")
@@ -74,35 +103,44 @@ struct SearchFilterTests {
         #expect(filter.publicationStatus == .onGoing)
     }
 
-    // MARK: - Rating Threshold
+    // MARK: - Rating Range
 
-    @Test("별점 기준을 설정할 수 있다")
-    func setRatingThreshold() {
+    @Test("별점 범위를 설정할 수 있다")
+    func setRatingRange() {
         var filter = makeFilter()
 
-        filter.setRatingThreshold(.over4_0)
+        filter.setRatingRange(min: 3.5, max: 4.0)
 
-        #expect(filter.ratingThreshold == .over4_0)
+        #expect(filter.ratingRange == NovelRatingRange(min: 3.5, max: 4.0))
     }
 
-    @Test("nil을 전달하면 별점 기준이 해제된다")
-    func setRatingThresholdToggle() {
+    @Test("별점 범위가 경계를 벗어나면 경계값으로 보정된다")
+    func setRatingRangeClampsToBounds() {
         var filter = makeFilter()
 
-        filter.setRatingThreshold(.over4_0)
-        filter.setRatingThreshold(nil)
+        filter.setRatingRange(min: -1.0, max: 4.0)
 
-        #expect(filter.ratingThreshold == nil)
+        #expect(filter.ratingRange == NovelRatingRange(min: 0.0, max: 4.0))
     }
 
-    @Test("다른 별점 기준을 설정하면 변경된다")
-    func setRatingThresholdChange() {
+    @Test("min이 max보다 크면 별점 범위 설정이 무시된다")
+    func setRatingRangeIgnoresInvertedRange() {
         var filter = makeFilter()
+        filter.setRatingRange(min: 3.5, max: 4.0)
 
-        filter.setRatingThreshold(.over3_5)
-        filter.setRatingThreshold(.over4_8)
+        filter.setRatingRange(min: 4.5, max: 4.0)
 
-        #expect(filter.ratingThreshold == .over4_8)
+        #expect(filter.ratingRange == NovelRatingRange(min: 3.5, max: 4.0))
+    }
+
+    @Test("전체 범위(0.0~5.0)를 설정하면 별점 범위 필터가 없는 상태로 정규화된다")
+    func setRatingRangeFullRangeNormalizesToNil() {
+        var filter = makeFilter()
+        filter.setRatingRange(min: 3.5, max: 4.0)
+
+        filter.setRatingRange(min: 0.0, max: 5.0)
+
+        #expect(filter.ratingRange == nil)
     }
 
     // MARK: - Keyword
@@ -154,21 +192,72 @@ struct SearchFilterTests {
         #expect(filter.keywords.count == 1)
         #expect(filter.keywords.first?.name == "현대")
     }
-    
+
+    @Test("키워드 선택 결과를 일괄 반영할 수 있다")
+    func setKeywords() throws {
+        var filter = makeFilter()
+        try filter.addKeyword(Keyword(id: KeywordID(99), name: "이전선택"))
+        let newKeywords = [Keyword(id: KeywordID(1), name: "이세계"), Keyword(id: KeywordID(2), name: "현대")]
+
+        filter.setKeywords(newKeywords)
+
+        #expect(filter.keywords == newKeywords)
+    }
+
+    @Test("일괄 반영 시 최대 개수를 초과하면 나머지는 잘려나간다")
+    func setKeywordsClampsToMax() {
+        var filter = makeFilter()
+        let overLimitKeywords = (1...25).map { Keyword(id: KeywordID($0), name: "키워드\($0)") }
+
+        filter.setKeywords(overLimitKeywords)
+
+        #expect(filter.keywords.count == 20)
+        #expect(filter.keywords == Array(overLimitKeywords.prefix(20)))
+    }
+
+    @Test("키워드만 초기화할 수 있다")
+    func clearKeywords() throws {
+        var filter = makeFilter()
+        try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
+
+        filter.clearKeywords()
+
+        #expect(filter.keywords.isEmpty)
+    }
+
+    // MARK: - Clear (탭별)
+
+    @Test("정보 탭 필터(장르·플랫폼·연재상태·별점범위)만 초기화하고 키워드는 남는다")
+    func clearInfoFilters() throws {
+        var filter = makeFilter(genres: [.fantasy, .romance], platforms: [.kakaoPage])
+        filter.setPublicationStatus(.completed)
+        filter.setRatingRange(min: 3.5, max: 4.0)
+        try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
+
+        filter.clearInfoFilters()
+
+        #expect(filter.genres.isEmpty)
+        #expect(filter.platforms.isEmpty)
+        #expect(filter.publicationStatus == nil)
+        #expect(filter.ratingRange == nil)
+        #expect(filter.keywords.count == 1)
+    }
+
     // MARK: - Clear All
 
     @Test("전체 필터를 초기화할 수 있다")
     func clearAll() throws {
-        var filter = makeFilter(genres: [.fantasy, .romance])
+        var filter = makeFilter(genres: [.fantasy, .romance], platforms: [.kakaoPage])
         filter.setPublicationStatus(.completed)
-        filter.setRatingThreshold(.over4_0)
+        filter.setRatingRange(min: 3.5, max: 4.0)
         try filter.addKeyword(Keyword(id: KeywordID(1), name: "이세계"))
 
         filter.clearAll()
 
         #expect(filter.genres.isEmpty)
+        #expect(filter.platforms.isEmpty)
         #expect(filter.publicationStatus == nil)
-        #expect(filter.ratingThreshold == nil)
+        #expect(filter.ratingRange == nil)
         #expect(filter.keywords.isEmpty)
     }
 }
@@ -176,14 +265,14 @@ struct SearchFilterTests {
 extension SearchFilterTests {
     private func makeFilter(
         genres: [NovelGenre] = [],
+        platforms: [NovelPlatform] = [],
         publicationStatus: NovelPublicationStatus? = nil,
-        ratingThreshold: NovelRatingThreshold? = nil,
         keywords: [Keyword] = []
     ) -> SearchFilter {
         SearchFilter(
             genres: genres,
+            platforms: platforms,
             publicationStatus: publicationStatus,
-            ratingThreshold: ratingThreshold,
             keywords: keywords
         )
     }

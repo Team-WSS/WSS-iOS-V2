@@ -81,19 +81,11 @@ struct MypageCharacterEditSheet: View {
 
     private var thumbnailSection: some View {
         VStack(spacing: 0) {
-            AsyncImage(url: selectedCharacter?.representativeImage) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                case .failure(_):
-                    WSSImage.imgEmptyCover.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    ProgressView()
-                }
+            WSSAsyncImage(url: selectedCharacter?.representativeImage) { image in
+                image.resizable()
+                    .scaledToFit()
+            } placeholder: {
+                ProgressView()
             }
             .frame(width: 250, height: 250)
 
@@ -155,9 +147,12 @@ struct MypageCharacterEditSheet: View {
         viewModel.state.characters.first { $0.id == viewModel.state.selectedCharacterID }
     }
     
+    /// `GeometryReader`가 아주 좁은 폭(예: 시트 프레젠테이션 애니메이션 도중 과도기 프레임)을 보고하면
+    /// 결과가 음수가 될 수 있다 — 그대로 `.frame(height:)`/`GridItem(.fixed:)`에 흘러들어가면 SwiftUI가
+    /// "Invalid frame dimension (negative or non-finite)" 런타임 이슈를 낸다. 0으로 클램프.
     private func characterItemSize(for width: CGFloat) -> CGFloat {
         let totalSpacing = characterItemSpacing * CGFloat(characterColumnCount - 1)
-        return (width - characterHorizontalPadding * 2 - totalSpacing) / CGFloat(characterColumnCount)
+        return max(0, (width - characterHorizontalPadding * 2 - totalSpacing) / CGFloat(characterColumnCount))
     }
 
     /// 페이지당 10개(5열×2행)로 나눈 뒤, 각 페이지를 열 우선 순서로 재배치한다.
@@ -228,19 +223,11 @@ private struct CharacterSelectionCell: View {
 
     var body: some View {
         Button(action: action) {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure(_):
-                    WSSImage.imgEmptyCover.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    ProgressView()
-                }
+            WSSAsyncImage(url: imageURL) { image in
+                image.resizable()
+                    .scaledToFill()
+            } placeholder: {
+                ProgressView()
             }
             .frame(width: size, height: size)
             .clipShape(Circle())
