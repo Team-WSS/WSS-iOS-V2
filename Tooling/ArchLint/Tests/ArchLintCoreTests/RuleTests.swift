@@ -274,4 +274,69 @@ struct RuleTests {
         )]
         #expect(lintModule(sources: domainSources, moduleName: "SampleDomain", rule: FactoryExistenceRule()).isEmpty)
     }
+
+    // MARK: - ⑫ factory-exclusivity (module rule, error)
+
+    @Test("⑫ Factory만 public이고 나머지가 internal이면 통과")
+    func factoryExclusivityPasses() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "struct DefaultSampleRepository {}"),
+            (path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+             source: "struct SampleResponse: Decodable {}")
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑫ Factory 외 public 타입이 있으면 error (타입별로 1건씩)")
+    func factoryExclusivityCatchesPublicTypes() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "public struct DefaultSampleRepository {}"),   // 위반
+            (path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+             source: "public struct SampleResponse: Decodable {}")  // 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExclusivityRule())
+        #expect(vs.count == 2)
+        #expect(vs.allSatisfy { $0.ruleID == "factory-exclusivity" && $0.severity == .error })
+    }
+
+    @Test("⑫ top-level public func/extension도 위반, 타입 내부 멤버 public은 허용")
+    func factoryExclusivityCatchesNonTypeAndAllowsMembers() {
+        // 타입 내부 멤버의 public은 바깥 타입이 internal이면 무해 → 통과.
+        let memberSources = [(
+            path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+            source: "struct SampleResponse { public let id: Int }"
+        )]
+        #expect(lintModule(sources: memberSources, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+
+        // 최상위 public func·extension은 위반.
+        let topLevelSources = [(
+            path: "/Projects/Data/SampleData/Sources/Support/Helpers.swift",
+            source: """
+            public func makeSomething() {}
+            public extension String {}
+            """
+        )]
+        #expect(lintModule(sources: topLevelSources, moduleName: "SampleData", rule: FactoryExclusivityRule()).count == 2)
+    }
+
+    @Test("⑫ BaseData와 비-Data 모듈은 스코프 밖(통과)")
+    func factoryExclusivitySkipsBaseAndNonData() {
+        let baseSources = [(
+            path: "/Projects/Data/BaseData/Sources/Storage/AppStorage.swift",
+            source: "public struct AppStorage {}"
+        )]
+        #expect(lintModule(sources: baseSources, moduleName: "BaseData", rule: FactoryExclusivityRule()).isEmpty)
+
+        let domainSources = [(
+            path: "/Projects/Domain/SampleDomain/Sources/UseCase/SampleUseCase.swift",
+            source: "public protocol SampleUseCase {}"
+        )]
+        #expect(lintModule(sources: domainSources, moduleName: "SampleDomain", rule: FactoryExclusivityRule()).isEmpty)
+    }
 }

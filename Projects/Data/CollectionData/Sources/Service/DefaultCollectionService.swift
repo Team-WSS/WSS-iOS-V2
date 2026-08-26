@@ -10,7 +10,7 @@ import Foundation
 
 import Networking
 
-public struct DefaultCollectionService: CollectionService {
+struct DefaultCollectionService: CollectionService {
 
     private let network: NetworkingRequestable
 

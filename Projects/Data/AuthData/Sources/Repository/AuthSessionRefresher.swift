@@ -9,7 +9,7 @@
 import Networking
 import BaseData
 
-public struct AuthSessionRefresher: AuthSessionRefreshing {
+struct AuthSessionRefresher: AuthSessionRefreshing {
     private let service: AuthService
     private let tokenStore: TokenStore
     private let logger: DataLogger?

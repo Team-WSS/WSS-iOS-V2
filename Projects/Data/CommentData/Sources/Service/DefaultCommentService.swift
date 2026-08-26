@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-public struct DefaultCommentService: CommentService {
+struct DefaultCommentService: CommentService {
     
     private let client: NetworkingRequestable
 

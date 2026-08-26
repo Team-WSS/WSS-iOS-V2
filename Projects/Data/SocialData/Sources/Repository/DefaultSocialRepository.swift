@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultSocialRepository: SocialRepository {
+struct DefaultSocialRepository: SocialRepository {
     private let service: SocialService
     private let logger: DataLogger?
 

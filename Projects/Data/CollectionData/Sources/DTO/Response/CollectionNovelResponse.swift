@@ -9,7 +9,7 @@
 import Foundation
 
 /// 컬렉션 응답 전반(카드 미리보기·상세 목록)이 공유하는 작품 요약 구조.
-public struct CollectionNovelResponse: Decodable {
+struct CollectionNovelResponse: Decodable {
     public let novelId: Int
     public let title: String
     public let novelImage: String?

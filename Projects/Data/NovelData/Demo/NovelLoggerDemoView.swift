@@ -9,7 +9,7 @@
 import SwiftUI
 import Logger
 import Networking
-import NovelData
+@testable import NovelData
 import NovelDomain
 import BaseDomain
 import BaseData

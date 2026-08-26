@@ -26,7 +26,8 @@ let allRules: [Rule] = [
 
 /// 등록된 모듈 단위 규칙 전체. 파일 하나가 아니라 모듈 전체를 봐야 하는 규칙(존재성 등)을 여기 둔다.
 let allModuleRules: [ModuleRule] = [
-    FactoryExistenceRule()
+    FactoryExistenceRule(),
+    FactoryExclusivityRule()
 ]
 
 /// 소스 문자열 하나에 규칙을 적용해 위반을 반환한다(테스트 진입점).

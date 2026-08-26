@@ -10,11 +10,11 @@ import Foundation
 
 //MARK: - 홈 - 지금 뜨는 글
 
-public struct TrendingFeedsResponse: Decodable {
+struct TrendingFeedsResponse: Decodable {
     public let popularFeeds: [TrendingFeedResponse]
 }
 
-public struct TrendingFeedResponse: Decodable {
+struct TrendingFeedResponse: Decodable {
     public let feedId: Int
     public let feedContent: String
     public let likeCount: Int

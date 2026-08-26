@@ -9,7 +9,7 @@
 import Foundation
 
 /// 서재 V2 조회 응답. 아이템 구조는 V1과 동일해 `UserLibraryNovelResponse`를 재사용한다.
-public struct UserLibraryNovelsV2Response: Decodable {
+struct UserLibraryNovelsV2Response: Decodable {
     public let userNovelCount: Int
     public let isLoadable: Bool
     /// 다음 페이지 요청에 그대로 넘길 서버 발급 커서. 마지막 페이지면 null.

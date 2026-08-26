@@ -40,7 +40,7 @@ Projects/Data/<Module>Data/
 4. 에러를 **Domain의 `RepositoryError`로 변환**해 throw
 
 ```swift
-public struct DefaultNovelRepository: NovelRepository {
+struct DefaultNovelRepository: NovelRepository {   // internal — 외부는 Factory가 반환하는 Domain 프로토콜만 본다
     private let service: NovelService
     private let appStorage: AppStorage
     private let logger: DataLogger?
@@ -79,8 +79,10 @@ public struct DefaultNovelRepository: NovelRepository {
 - **DTO**: `Response`(서버→앱), `Query`(앱→서버) 분리. Entity와 혼용 금지.
 - **Mapper**: `enum XxxMapper`의 static 함수. DTO ↔ Entity 변환만. 변환 실패 시 `MappingError`.
 - **Factory**: `enum XxxDataFactory.makeXxxRepository(client:appStorage:logger:)` — 의존성을 조립해 Domain 프로토콜 타입으로 반환. **상위 레이어는 Factory만 알면 된다.**
+- **접근제어(구조 강제)**: 모듈의 **top-level public은 `*DataFactory` 하나뿐**. Repository·Service·Mapper·DTO(`*Response`/`*Query`/`*Request`)·Logger(`*Action`)는 전부 `internal`로 둔다 — Factory가 같은 모듈 안에서 이들을 조립해 Domain 프로토콜/Entity로만 내보내므로 바깥에 열 필요가 없다. arch-lint `factory-exclusivity`(규칙⑫)가 CI에서 강제한다(→ `Tooling/ArchLint`). BaseData만 예외(다른 Data가 직접 import하는 공용 토대).
 - 로컬 저장 접근은 `BaseData`의 `AppStorage` 사용 (`UserDefaultsStorage` 등).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- 테스트는 현재 Data 레이어에 적용하지 않음 (Domain 우선). `Testing/`, `Tests/` 폴더가 있어도 비어있을 수 있음.
+- **Demo가 모듈 internal을 쓰면 `@testable import`**: Demo 앱은 별도 타깃이라 plain `import`로는 `public`만 본다. `factory-exclusivity`로 Repository·Logger·util 등이 internal이 된 뒤, 그걸 직접 시연하는 Demo(예: `NovelLoggerDemoView`가 `NovelAction`, `FeedDataDemoView`가 `ImageCompressor`)는 `@testable import XxxData`로 바꿔야 컴파일된다(Demo는 Debug라 testability 켜져 있어 동작). 자기 모듈 개발 하네스라 internal 접근은 정당 — 규칙에 예외를 뚫지 말고 이쪽을 쓴다.
+- Tests는 `@testable import`가 기본이라 internal 타입에 그대로 접근된다(접근제어 조여도 테스트는 안 깨진다).

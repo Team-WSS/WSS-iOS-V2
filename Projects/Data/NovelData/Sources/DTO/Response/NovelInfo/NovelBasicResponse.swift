@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NovelBasicResponse: Decodable {
+struct NovelBasicResponse: Decodable {
     public let userNovelId: Int?
     public let novelTitle: String
     public let novelImage: String

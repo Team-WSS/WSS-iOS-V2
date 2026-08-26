@@ -8,13 +8,13 @@
 
 import Foundation
 
-public struct UserLibraryNovelsResponse: Decodable {
+struct UserLibraryNovelsResponse: Decodable {
     public let userNovelCount: Int
     public let isLoadable: Bool
     public let userNovels: [UserLibraryNovelResponse]
 }
 
-public struct UserLibraryNovelResponse: Decodable {
+struct UserLibraryNovelResponse: Decodable {
     public let userNovelId: Int
     public let novelId: Int
     public let title: String

@@ -12,7 +12,7 @@ import BaseData
 import BaseDomain
 import CollectionDomain
 
-public enum CollectionMapper {
+enum CollectionMapper {
 
     // MARK: - 목록
 

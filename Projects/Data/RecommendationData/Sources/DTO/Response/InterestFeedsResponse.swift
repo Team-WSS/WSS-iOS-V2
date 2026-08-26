@@ -10,17 +10,17 @@ import Foundation
 
 //MARK: - 홈 - 관심글
 
-public enum InterestFeedsMessage: String {
+enum InterestFeedsMessage: String {
     case noInterestNovels = "NO_INTEREST_NOVELS"
     case noAssociatedFeeds = "NO_ASSOCIATED_FEEDS"
 }
 
-public struct InterestFeedsResponse: Decodable {
+struct InterestFeedsResponse: Decodable {
     public let recommendFeeds: [InterestFeedResponse]
     public let message: String
 }
 
-public struct InterestFeedResponse: Decodable {
+struct InterestFeedResponse: Decodable {
     public let novelId: Int
     public let novelTitle: String
     public let novelImage: String

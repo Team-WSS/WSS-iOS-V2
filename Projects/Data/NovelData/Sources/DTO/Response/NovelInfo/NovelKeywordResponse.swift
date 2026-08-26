@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NovelKeywordResponse: Decodable {
+struct NovelKeywordResponse: Decodable {
     public let keywordName: String
     public let keywordCount: Int
 }

@@ -7,11 +7,11 @@
 
 import Foundation
 
-public struct RecentSearchWordsResponse: Decodable {
+struct RecentSearchWordsResponse: Decodable {
     public let recentSearches: [RecentSearchWordResponse]
 }
 
-public struct RecentSearchWordResponse: Decodable {
+struct RecentSearchWordResponse: Decodable {
     public let id: Int
     public let keyword: String
 }

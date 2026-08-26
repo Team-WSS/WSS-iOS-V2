@@ -13,7 +13,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultRecommendationRepository: RecommendationRepository {
+struct DefaultRecommendationRepository: RecommendationRepository {
     
     private let service: RecommendationService
     private let appStorage: AppStorage

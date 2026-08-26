@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultPushSettingRepository: PushSettingRepository {
+struct DefaultPushSettingRepository: PushSettingRepository {
     private let service: PushSettingService
     private let logger: DataLogger?
 

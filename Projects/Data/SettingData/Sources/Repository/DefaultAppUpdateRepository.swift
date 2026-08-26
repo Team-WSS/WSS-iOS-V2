@@ -10,7 +10,7 @@ import BaseData
 import BaseDomain
 import SettingDomain
 
-public struct DefaultAppUpdateRepository: AppUpdateRepository {
+struct DefaultAppUpdateRepository: AppUpdateRepository {
     private let service: SettingService
     private let logger: DataLogger?
 

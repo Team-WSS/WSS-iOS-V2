@@ -13,7 +13,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultNovelRepository: NovelRepository {
+struct DefaultNovelRepository: NovelRepository {
     
     private let service: NovelService
     private let appStorage: AppStorage

@@ -12,7 +12,7 @@ import RecommendationDomain
 import BaseDomain
 import BaseData
 
-public enum RecommendationMapper {
+enum RecommendationMapper {
     
     //MARK: - 오늘의 발견
     

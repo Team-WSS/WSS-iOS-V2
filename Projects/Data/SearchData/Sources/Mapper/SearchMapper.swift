@@ -11,7 +11,7 @@ import SearchDomain
 import BaseDomain
 import BaseData
 
-public enum SearchMapper {
+enum SearchMapper {
 
     // MARK: - 최근 검색어
 

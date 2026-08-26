@@ -13,7 +13,7 @@ import BaseData
 import Logger
 import Networking
 
-public struct DefaultAuthRepository: AuthRepository {
+struct DefaultAuthRepository: AuthRepository {
     
     private let service: AuthService
     private let tokenStore: TokenStore

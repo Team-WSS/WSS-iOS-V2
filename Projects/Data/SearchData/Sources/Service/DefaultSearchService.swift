@@ -8,7 +8,7 @@
 import Foundation
 import Networking
 
-public struct DefaultSearchService: SearchService {
+struct DefaultSearchService: SearchService {
 
     private let network: NetworkingRequestable
 

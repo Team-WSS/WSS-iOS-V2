@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-public struct DefaultRecommendationService: RecommendationService {
+struct DefaultRecommendationService: RecommendationService {
     
     private let network: NetworkingRequestable
     

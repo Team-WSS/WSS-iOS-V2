@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol NovelService {
+protocol NovelService {
     func getUserLibraryNovels(userID: Int,
                               query: UserLibraryQuery) async throws -> UserLibraryNovelsResponse
     func getUserLibraryNovelsV2(userID: Int,

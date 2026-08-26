@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-public struct DefaultNovelService: NovelService {
+struct DefaultNovelService: NovelService {
     private let client: NetworkingRequestable
 
     public init(client: NetworkingRequestable) {

@@ -10,11 +10,11 @@ import Foundation
 
 //MARK: - 탐색 - 소소픽 웹소설
 
-public struct SosopickNovelsResponse: Decodable {
+struct SosopickNovelsResponse: Decodable {
     public let sosoPicks: [SosopickNovelResponse]
 }
 
-public struct SosopickNovelResponse: Decodable {
+struct SosopickNovelResponse: Decodable {
     public let novelId: Int
     public let novelImage: String
     public let title: String

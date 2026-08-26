@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NovelPlatformResponse: Decodable {
+struct NovelPlatformResponse: Decodable {
     public let platformName: String
     public let platformImage: String
     public let platformUrl: String

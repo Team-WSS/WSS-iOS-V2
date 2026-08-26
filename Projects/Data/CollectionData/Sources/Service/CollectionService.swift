@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol CollectionService {
+protocol CollectionService {
     func getUserCollections(userID: Int, query: CollectionsQuery) async throws -> CollectionsResponse
     func getLikedCollections(query: CollectionsQuery) async throws -> CollectionsResponse
     func getCollectionDetail(collectionID: Int, query: CollectionDetailQuery) async throws -> CollectionDetailResponse
