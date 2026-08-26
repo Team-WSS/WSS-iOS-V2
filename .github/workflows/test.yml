@@ -101,19 +101,13 @@ jobs:
                   print("  ", c)
 
               # 인프라/빌드시스템 변경 → 전 모듈(그래프 전체가 흔들릴 수 있음).
-              INFRA_PREFIX = ("Plugins/DependencyPlugin/", "Tuist/", ".github/workflows/")
+              # Plugins/ 전체(DependencyPlugin·ConfigurationPlugin·EnvironmentPlugin 등)·Tuist·워크플로우·
+              # Config(xcconfig)는 그래프/빌드 전반을 흔들 수 있어 변경 시 전체 실행.
+              INFRA_PREFIX = ("Plugins/", "Tuist/", ".github/workflows/", "Config/")
               INFRA_EXACT = {"Workspace.swift", "mise.toml", ".mise.toml", "Package.swift", "Package.resolved"}
               infra = [c for c in changed if c.startswith(INFRA_PREFIX) or c in INFRA_EXACT]
               if infra:
                   emit(TEST_MODULES, f"인프라/빌드시스템 변경 {infra[:3]}")
-
-              # 변경 파일 → 변경 모듈(Projects/<Layer>/<Module>/...).
-              def module_of(p):
-                  parts = p.split("/")
-                  return parts[2] if len(parts) >= 3 and parts[0] == "Projects" else None
-
-              changed_modules = set(filter(None, (module_of(c) for c in changed)))
-              print("변경 모듈:", sorted(changed_modules))
 
               # 의존 그래프: Project.swift의 .module(.<layer>(.<case>)) → dependee 모듈명(ModuleType 네이밍 재현).
               def pascal(s):
@@ -127,13 +121,38 @@ jobs:
                   return pascal(case) + SUFFIX.get(layer, "")
               DEP_RE = re.compile(r'\.module\(\s*\.(feature|domain|data|core|ui)\(\s*\.(\w+)\s*\)')
 
+              # 정식 모듈 디렉토리(Project.swift 보유)와 의존 그래프를 한 번의 walk로 만든다.
+              # module_dirs 키는 상대경로 dir → 모듈명. App(Projects/App)처럼 <Layer>/<Module> 2단이
+              # 아닌 특수 구조도 이걸로 일관 처리(경로 접두 매칭).
+              module_dirs = {}
               deps = {}
               for root, _d, files in os.walk("Projects"):
                   if "Project.swift" not in files:
                       continue
+                  name = os.path.basename(root)
+                  module_dirs[root] = name
                   with open(os.path.join(root, "Project.swift"), encoding="utf-8") as f:
                       c = f.read()
-                  deps[os.path.basename(root)] = {resolve(l, cs) for (l, cs) in DEP_RE.findall(c)}
+                  deps[name] = {resolve(l, cs) for (l, cs) in DEP_RE.findall(c)}
+
+              known = set(module_dirs.values())
+              # drift 방어: .module() 의존 대상이 실제 모듈 집합에 없으면 그래프를 믿을 수 없다(ModuleType
+              # 네이밍 예외·파서 drift) → 조용히 dependents를 놓쳐 거짓 초록을 내느니 안전하게 전체 실행.
+              unknown = sorted({d for dd in deps.values() for d in dd if d not in known})
+              if unknown:
+                  emit(TEST_MODULES, f"의존 그래프 drift(미확인 모듈 {unknown[:3]}) → 안전하게 전체 실행")
+
+              # 변경 파일 → 변경 모듈: 파일의 접두가 되는 module dir 중 가장 긴 것(App 등 특수구조 포함).
+              def module_of(p):
+                  best = None
+                  for d in module_dirs:
+                      if p == d or p.startswith(d + "/"):
+                          if best is None or len(d) > len(best):
+                              best = d
+                  return module_dirs.get(best)
+
+              changed_modules = set(filter(None, (module_of(c) for c in changed)))
+              print("변경 모듈:", sorted(changed_modules))
 
               # 역그래프: 누가 나를 의존하나.
               dependents = {}
