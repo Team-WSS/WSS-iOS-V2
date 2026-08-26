@@ -30,11 +30,14 @@ struct FactoryExclusivityRule: ModuleRule {
         // Data 레이어 모듈만(이름이 Data로 끝남). BaseData는 공용 토대라 제외.
         guard moduleName.hasSuffix("Data"), moduleName != "BaseData" else { return [] }
 
+        let localTypeNames = collectLocalTypeNames(files)
         var violations: [Violation] = []
         for file in files {
             let converter = SourceLocationConverter(fileName: file.path, tree: file.tree)
             for statement in file.tree.statements {
-                guard let offense = publicTopLevelOffense(statement.item, allowedSuffix: "DataFactory") else { continue }
+                guard let offense = publicTopLevelOffense(
+                    statement.item, allowedSuffix: "DataFactory", localTypeNames: localTypeNames
+                ) else { continue }
                 let line = offense.node.startLocation(converter: converter, afterLeadingTrivia: true).line
                 violations.append(Violation(
                     path: file.path,

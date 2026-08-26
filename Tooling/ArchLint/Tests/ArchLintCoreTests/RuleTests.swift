@@ -389,4 +389,44 @@ struct RuleTests {
         )]
         #expect(lintModule(sources: dataSources, moduleName: "SampleData", rule: FeatureExclusivityRule()).isEmpty)
     }
+
+    // MARK: - ⑫/⑬ extension 노출·Navigation 좁힘 (Codex 리뷰 반영)
+
+    @Test("⑫ 로컬 internal 타입 확장의 public 멤버는 허용, 외부 타입 확장의 public 멤버는 위반")
+    func factoryExclusivityExtensionMembers() {
+        // 로컬 internal 타입(SampleMapper) 확장 — 멤버 public이어도 대상이 internal이라 모듈 밖으로 안 샘 → 통과.
+        let localExt = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Mapper/SampleMapper.swift",
+             source: "enum SampleMapper {}"),
+            (path: "/Projects/Data/SampleData/Sources/Mapper/SampleMapper+X.swift",
+             source: "extension SampleMapper { public static func f() {} }")
+        ]
+        #expect(lintModule(sources: localExt, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+
+        // 외부(도메인) public 타입 확장에 public 멤버 → 모듈 밖으로 API 노출 → 위반.
+        let externalExt = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Support/Novel+X.swift",
+             source: "extension Novel { public func leak() {} }")   // Novel은 로컬 타입 아님 → 위반
+        ]
+        let vs = lintModule(sources: externalExt, moduleName: "SampleData", rule: FactoryExclusivityRule())
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "factory-exclusivity" && vs.first?.severity == .error)
+    }
+
+    @Test("⑬ Navigation/의 구체 View는 seam이 아니라 위반(계약 typealias/protocol만 허용)")
+    func featureExclusivityNavigationOnlyAllowsContracts() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
+             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/DebugView.swift",
+             source: "public struct DebugView {}")   // Navigation이라도 구체 타입 → 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "feature-exclusivity" && vs.first?.severity == .error)
+    }
 }
