@@ -60,7 +60,7 @@ struct CollectionMyLibrarySelectView: View {
         } else if viewModel.state.isLoading {
             LoadingView()
         } else if viewModel.state.novels.isEmpty {
-            WSSEmptyView(type: .novel, action: {})
+            WSSEmptyView(type: .collectionMyLibrary, action: {})
         } else {
             novelGrid
         }
