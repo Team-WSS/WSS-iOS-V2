@@ -49,11 +49,21 @@ fi
 
 # 3-dot diff: merge-base(BASE,HEAD)..HEAD → PR가 develop에서 갈라진 뒤 자기 쪽 변경만.
 # --diff-filter=ACMR: 추가/수정/이름변경/복사만(삭제 제외 → 목록 파일은 HEAD에 존재).
-# 생성물 경로(Derived/.build/Tuist)는 제외.
 FILES_TMP="$(mktemp)"
 trap 'rm -f "$FILES_TMP"' EXIT
-git diff --name-only --diff-filter=ACMR "${BASE}...HEAD" -- '*.swift' \
-  | grep -vE '(^|/)(Derived|\.build|Tuist)/' > "$FILES_TMP" || true
+
+# ⚠️ git diff 실패(잘못된 base 등)를 "변경 0개"로 착각하면 게이트가 **거짓 초록**이 된다.
+# 그래서 diff를 먼저 잡아 실패면 fail-loud로 멈춘다(| grep ... || true 뒤에 두면 실패가 묻힌다).
+if ! CHANGED="$(git diff --name-only --diff-filter=ACMR "${BASE}...HEAD" -- '*.swift')"; then
+  echo "::error::git diff 실패 — base '${BASE}'가 유효한지 확인하세요(fetch 누락 등). 게이트를 통과시키지 않습니다." >&2
+  exit 4
+fi
+
+# 생성물만 제외: Derived(tuist generate 산출물) / .build(SPM·Tuist/.build 포함).
+# Tuist/의 매니페스트(ProjectDescriptionHelpers/*, Package.swift, Config.swift)는 실제 관리 소스라
+# 제외하지 않는다 — Projects/**/Project.swift가 이미 대상인 것과 일관.
+# (grep은 "매치 0"에도 종료코드 1이라 여기서만 || true로 정상 처리.)
+printf '%s\n' "$CHANGED" | grep -vE '(^|/)(Derived|\.build)/' > "$FILES_TMP" || true
 
 # 이식성(bash 3.2엔 mapfile 없음): while-read로 배열 구성 + 존재 확인
 FILES=()
