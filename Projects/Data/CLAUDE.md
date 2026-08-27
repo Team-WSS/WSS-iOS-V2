@@ -90,5 +90,6 @@ struct DefaultNovelRepository: NovelRepository {   // internal — 외부는 Fac
   `Default*Repository`(internal struct)도 Sendable 검증을 받는데, `service`/`logger`/`appStorage` 의존이
   Sendable이어야 통과한다 — 그래서 Service 프로토콜·`DataLogger`·`AppStorage`가 전부 Sendable이다. 새 Service를
   만들면 `protocol XxxService: Sendable`로 둘 것(안 붙이면 그 Repository가 "non-Sendable stored property" 경고).
-  구현 struct는 의존만 Sendable이면 **implicit Sendable**로 따라오니 impl엔 보통 손댈 게 없다. 결정 배경(actor가
-  아니라 Sendable을 택한 이유)은 `Tooling/StrictConcurrency/README.md`.
+  구현 struct는 의존만 Sendable이면 **implicit Sendable**로 따라오니 impl엔 보통 손댈 게 없다. (actor/lock이
+  아니라 Sendable conformance를 택한 배경 — Service·Storage·Logger가 스레드-안전 시스템 API 위 stateless
+  추상화라서 — 은 #219 A4 커밋 이력 참조.)
