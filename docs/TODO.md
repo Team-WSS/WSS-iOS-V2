@@ -171,6 +171,24 @@
   선례). 카카오 공유 카드의 `Content.imageUrl`은 필수 필드라 대표 작품 표지가 없는 컬렉션을 위한
   원격 기본 이미지 URL을 먼저 정해야 한다.
 
+### 9. 컬렉션 상세 작품 탭이 작품 상세로 연결되지 않는다
+
+- **무엇**: `CollectionDetailView`의 작품 그리드 셀을 탭하면 `onNovelTapped(NovelID)` 콜백까지는
+  발화하지만, `CollectionFeatureFactory`(`makeCollectionListView`/`makeCollectionDetailView`)를
+  실제로 호출하는 곳(App 조립 계층)이 아직 없어 그 콜백을 받아 `NovelDetailFeature`로 연결해주는
+  배선이 없다. Demo는 콘솔 로그만 찍는다(`handleNovelTapped`).
+- **결과**: 컬렉션 상세에서 작품을 탭해도 아무 화면 전환이 일어나지 않는다.
+- **어디를 고치나**: App이 `CollectionFeatureFactory.makeCollectionListView`/`makeCollectionDetailView`를
+  조립하는 지점에서 `onNovelTapped: { novelID in ... }`를 `NovelDetailFeatureFactory.makeView(...)`로
+  push하도록 연결한다(다른 화면의 `onXxxTapped` 콜백들과 동일한 배선 방식 — `NovelDetailFeature`의
+  `onAuthorTapped` 등 이미 있는 App 배선 선례를 따를 것).
+- **왜 지금 안 했나**: Feature 모듈끼리는 서로 import 못 해(`App → Feature → Domain` 단방향) 이
+  연결은 원래 App의 몫이다. App이 아직 "Hello, World!" 스켈레톤 단계라 화면 조립·라우팅 자체가
+  없어서 지금은 콜백 시그니처만 뚫어두고 실제 연결은 App 조립 시점으로 미뤘다(2026-08).
+- **놓치기 쉬운 것**: `onNovelTapped`는 VM을 거치지 않고 `CollectionDetailView`가 탭 즉시 직접
+  호출한다(`NovelDetailFeature.onAuthorTapped`와 동일 패턴) — App 쪽에서 이 콜백을 받을 때도 VM
+  상태를 개입시키려 하지 말 것.
+
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)

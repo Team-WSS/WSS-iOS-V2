@@ -121,8 +121,11 @@
     삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
-  - **작품 카드 탭·"공유하기"는 TODO 스텁**(이번 범위 밖) — 작품 카드는 `NovelDetailFeature`로 갈 콜백
-    배선이 아직 없고, "공유하기"는 카카오톡 공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+  - **작품 카드 탭은 `onNovelTapped(NovelID)` 콜백까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
+    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
+    동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다
+    — 다만 **App이 아직 이 콜백을 실제로 연결하지 않았다**(App이 스켈레톤 단계라 조립 지점 자체가 없음,
+    `docs/TODO.md` 참고). "공유하기"는 카카오톡 공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드(`Mode.edit`)로 로컬 push**한다 — 더보기 메뉴
     탭 → `isEditPresented = true`, 복귀 시(`onChange`) 성공/취소 구분 없이 무조건 `reloadAfterEdit`로
     다시 불러온다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단 — 이미

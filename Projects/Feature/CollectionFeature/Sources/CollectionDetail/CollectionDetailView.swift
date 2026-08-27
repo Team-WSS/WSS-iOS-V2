@@ -40,6 +40,11 @@ struct CollectionDetailView: View {
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
     /// 인증 만료 시 로그인 화면 진입 콜백. "컬렉션 수정" 화면(및 그 하위 "작품 추가")도 같은 콜백을 공유한다.
     private let onAuthenticationRequired: () -> Void
+    /// 작품 그리드 셀 탭 → 작품 상세 진입 콜백. `NovelDetailFeature`로 가야 하지만 Feature 모듈끼리는
+    /// 서로 import 못 해 이 화면이 직접 만들 수 없다 — `NovelDetailFeature.onAuthorTapped`와 동일하게
+    /// VM을 거치지 않고 View가 탭 즉시 호출하고, 실제 화면 전환은 호출자(App)가 수행한다. App이 아직
+    /// 이 콜백을 실제로 연결하지 않았다 — `docs/TODO.md` 참고.
+    private let onNovelTapped: (NovelID) -> Void
 
     init(
         viewModel: CollectionDetailViewModel,
@@ -47,7 +52,8 @@ struct CollectionDetailView: View {
         searchNovelUseCase: SearchNovelUseCase,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         logger: Logger? = nil,
-        onAuthenticationRequired: @escaping () -> Void
+        onAuthenticationRequired: @escaping () -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.updateCollectionUseCase = updateCollectionUseCase
@@ -55,6 +61,7 @@ struct CollectionDetailView: View {
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
+        self.onNovelTapped = onNovelTapped
     }
 
     var body: some View {
@@ -459,7 +466,7 @@ private extension CollectionDetailView {
     /// 표지(독립 크기) + 정보 영역(제목 최대 2줄 + 작가, 고정 높이).
     func novelCell(_ novel: CollectionNovel) -> some View {
         Button {
-            viewModel.handle(.novelTapped(novel.id))
+            onNovelTapped(novel.id)
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio)
@@ -570,7 +577,8 @@ private extension CollectionDetailView {
             updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
             searchNovelUseCase: PreviewSearchNovelUseCase(),
             loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
-            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
+            onNovelTapped: { print("작품 상세 진입: \($0)") }
         )
     }
 }

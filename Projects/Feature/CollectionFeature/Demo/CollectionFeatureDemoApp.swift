@@ -172,7 +172,8 @@ private struct DemoRootView: View {
                 deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
                 updateCollectionUseCase: DemoUpdateCollectionUseCase(),
                 logger: consoleLogger,
-                onAuthenticationRequired: handleAuthenticationRequired
+                onAuthenticationRequired: handleAuthenticationRequired,
+                onNovelTapped: handleNovelTapped
             )
         case .live:
             makeLiveListView()
@@ -190,7 +191,8 @@ private struct DemoRootView: View {
             searchNovelUseCase: DemoSearchNovelUseCase(),
             loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
             logger: consoleLogger,
-            onAuthenticationRequired: handleAuthenticationRequired
+            onAuthenticationRequired: handleAuthenticationRequired,
+            onNovelTapped: handleNovelTapped
         )
     }
 
@@ -278,13 +280,20 @@ private struct DemoRootView: View {
             deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: repository),
             updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: repository),
             logger: consoleLogger,
-            onAuthenticationRequired: handleAuthenticationRequired
+            onAuthenticationRequired: handleAuthenticationRequired,
+            onNovelTapped: handleNovelTapped
         )
     }
 
     /// 인증 만료 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
     private func handleAuthenticationRequired() {
         consoleLogger.info("인증 만료 → 로그인 진입 요청")
+    }
+
+    /// 작품 상세 진입 콜백. `NovelDetailFeature`로 갈 실제 배선은 App 몫이라(#201, `docs/TODO.md` 참고)
+    /// Demo는 로그만 남긴다(`handleAuthenticationRequired`와 동일한 판단).
+    private func handleNovelTapped(_ novelID: NovelID) {
+        consoleLogger.info("작품 상세 진입 요청: \(novelID)")
     }
 }
 

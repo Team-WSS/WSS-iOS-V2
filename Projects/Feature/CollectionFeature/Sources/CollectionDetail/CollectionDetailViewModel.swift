@@ -54,7 +54,6 @@ final class CollectionDetailViewModel {
         case dismissDeleteAlert
         case confirmDelete
         case dismissActionErrorToast
-        case novelTapped(NovelID)
         case shareTapped
     }
 
@@ -123,9 +122,6 @@ final class CollectionDetailViewModel {
             confirmDelete()
         case .dismissActionErrorToast:
             state.hasActionError = false
-        case .novelTapped:
-            // TODO: - 작품 상세로 이동(이번 범위 밖 — NovelDetailFeature와는 서로 import 불가, App 콜백 필요)
-            break
         case .shareTapped:
             // TODO: - 공유하기(이번 범위 밖 — 공유 URL/딥링크 체계 없음)
             break

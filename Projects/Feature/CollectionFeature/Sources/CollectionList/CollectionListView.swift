@@ -42,6 +42,9 @@ struct CollectionListView: View {
     private let updateCollectionUseCase: UpdateCollectionUseCase
     private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
+    /// `CollectionDetailView`의 작품 그리드 셀 탭 콜백 — 그대로 관통만 시킨다(`CollectionFeatureFactory`
+    /// 참고, App이 아직 실제로 연결하지 않았다).
+    private let onNovelTapped: (NovelID) -> Void
 
     init(
         viewModel: CollectionListViewModel,
@@ -53,7 +56,8 @@ struct CollectionListView: View {
         deleteCollectionUseCase: DeleteCollectionUseCase,
         updateCollectionUseCase: UpdateCollectionUseCase,
         logger: Logger? = nil,
-        onAuthenticationRequired: @escaping () -> Void
+        onAuthenticationRequired: @escaping () -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.createCollectionUseCase = createCollectionUseCase
@@ -65,6 +69,7 @@ struct CollectionListView: View {
         self.updateCollectionUseCase = updateCollectionUseCase
         self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
+        self.onNovelTapped = onNovelTapped
     }
 
     var body: some View {
@@ -105,7 +110,8 @@ struct CollectionListView: View {
                 searchNovelUseCase: searchNovelUseCase,
                 loadMyLibraryUseCase: loadMyLibraryUseCase,
                 logger: logger,
-                onAuthenticationRequired: onAuthenticationRequired
+                onAuthenticationRequired: onAuthenticationRequired,
+                onNovelTapped: onNovelTapped
             )
         }
         .onChange(of: selectedCollectionID) { oldValue, newValue in
@@ -379,7 +385,8 @@ private extension CollectionListView {
             collectionLikeUseCase: PreviewCollectionLikeUseCase(),
             deleteCollectionUseCase: PreviewDeleteCollectionUseCase(),
             updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
-            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
+            onNovelTapped: { print("작품 상세 진입: \($0)") }
         )
     }
 }
