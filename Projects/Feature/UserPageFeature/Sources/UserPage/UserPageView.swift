@@ -158,7 +158,7 @@ struct UserPageView: View {
             toolbarContent
         }
         // 스크롤 전엔 프로필 섹션과 이어지는 primary20, 프로필 섹션이 화면 밖으로 스크롤되면(닉네임
-        // 타이틀 페이드인과 동일 트리거인 isScrolledFromTop) 아래 콘텐츠와 이어지는 wssWhite로 전환한다.
+        // 타이틀 전환과 동일 트리거인 isScrolledFromTop) 아래 콘텐츠와 이어지는 wssWhite로 전환한다.
         .toolbarBackground(
             (isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor,
             for: .navigationBar

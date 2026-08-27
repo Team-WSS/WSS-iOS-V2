@@ -22,7 +22,7 @@ import Logger
 struct CollectionDetailView: View {
 
     @State private var viewModel: CollectionDetailViewModel
-    /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목 페이드인) 네비바가 반응한다 —
+    /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목이 즉시 나타남, 페이드 아님) 네비바가 반응한다 —
     /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
     @State private var isScrolledFromTop = false
     /// "컬렉션 수정" 화면(`CreateCollectionView`, 수정 모드) push 여부 — "작품 추가"와 동일 위상으로
