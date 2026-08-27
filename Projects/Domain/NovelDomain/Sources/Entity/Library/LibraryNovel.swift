@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public struct LibraryNovel {
+public struct LibraryNovel: Sendable {
     
     // 작품 정보
     public let id: NovelID

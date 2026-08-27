@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CollectionLikeUseCase {
+public protocol CollectionLikeUseCase: Sendable {
     func like(id: CollectionID) async throws(RepositoryError)
     func unlike(id: CollectionID) async throws(RepositoryError)
 }

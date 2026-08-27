@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public enum WithdrawalReasonOption: CaseIterable, Equatable {
+public enum WithdrawalReasonOption: CaseIterable, Equatable, Sendable {
     case notFrequentlyUsed
     case inconvenientAndBuggy
     case wantToDeleteContent

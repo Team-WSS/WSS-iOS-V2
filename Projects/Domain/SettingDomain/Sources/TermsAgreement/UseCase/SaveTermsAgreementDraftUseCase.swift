@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol SaveTermsAgreementDraftUseCase {
+public protocol SaveTermsAgreementDraftUseCase: Sendable {
     func execute(draft: TermsAgreementDraft) async throws(RepositoryError)
 }
 

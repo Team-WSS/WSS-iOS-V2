@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol SaveNovelReviewUseCase {
+public protocol SaveNovelReviewUseCase: Sendable {
     func execute(draft: NovelReviewDraft) async throws(RepositoryError)
 }
 

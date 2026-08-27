@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadSosoPickUseCase {
+public protocol LoadSosoPickUseCase: Sendable {
     func execute() async throws(RepositoryError) -> [SosoPick]
 }
 

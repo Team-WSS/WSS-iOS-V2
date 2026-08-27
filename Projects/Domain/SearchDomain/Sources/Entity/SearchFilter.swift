@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct SearchFilter {
+public struct SearchFilter: Sendable {
     
     public private(set) var genres: [NovelGenre]
     public private(set) var platforms: [NovelPlatform]

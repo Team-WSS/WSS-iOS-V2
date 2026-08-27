@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol WithdrawUseCase {
+public protocol WithdrawUseCase: Sendable {
     func execute(
         draft: WithdrawalReasonDraft
     ) async throws(RepositoryError)

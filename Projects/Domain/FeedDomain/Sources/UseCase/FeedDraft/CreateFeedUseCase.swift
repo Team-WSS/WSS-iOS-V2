@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CreateFeedUseCase {
+public protocol CreateFeedUseCase: Sendable {
     func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError)
 }
 

@@ -11,7 +11,7 @@ import BaseDomain
 
 /// 홈 - 오늘의 발견
 
-public struct TodayDiscovery {
+public struct TodayDiscovery: Sendable {
 
     public let novelID: NovelID
 
@@ -27,7 +27,7 @@ public struct TodayDiscovery {
 
     /// 카드 본문의 출처. `.novel`이면 작품 소개글, `.userComment`면 그 유저가 남긴 한마디다.
     /// 서버가 nickname·avatarImage를 주는지로 갈린다.
-    public enum Content {
+    public enum Content: Sendable {
         case novel
         case userComment(user: Author)
     }

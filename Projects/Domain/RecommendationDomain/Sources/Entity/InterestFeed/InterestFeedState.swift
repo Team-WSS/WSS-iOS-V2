@@ -10,7 +10,7 @@ import Foundation
 
 /// 홈 - 관심글 상태
 
-public enum InterestFeedState {
+public enum InterestFeedState: Sendable {
     case feeds([InterestFeed])
     case noInterestSettings   // 관심 설정 안 함
     case noAssociatedFeeds    // 관련 피드 없음

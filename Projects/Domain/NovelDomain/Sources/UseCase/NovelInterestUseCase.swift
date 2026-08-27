@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol NovelInterestUseCase {
+public protocol NovelInterestUseCase: Sendable {
     func add(id: NovelID) async throws(RepositoryError)
     func remove(id: NovelID) async throws(RepositoryError)
 }

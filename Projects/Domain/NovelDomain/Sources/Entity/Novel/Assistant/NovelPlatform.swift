@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NovelPlatform {
+public struct NovelPlatform: Sendable {
     public let name: String
     public let image: URL?
     public let url: URL

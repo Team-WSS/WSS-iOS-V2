@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol NovelRepository {
+public protocol NovelRepository: Sendable {
     /// 특정 작품의 전체 정보를 조회한다.
     ///
     /// - 작품의 헤더 정보(Novel)

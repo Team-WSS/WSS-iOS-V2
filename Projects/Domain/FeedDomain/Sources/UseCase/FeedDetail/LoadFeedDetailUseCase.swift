@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadFeedDetailUseCase {
+public protocol LoadFeedDetailUseCase: Sendable {
     func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail
 }
 

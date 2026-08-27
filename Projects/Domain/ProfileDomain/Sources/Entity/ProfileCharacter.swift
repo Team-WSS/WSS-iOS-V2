@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ProfileCharacter {
+public struct ProfileCharacter: Sendable {
     
     public let id: Int
     

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum SosoFeedOption: String {
+public enum SosoFeedOption: String, Sendable {
     case all = "ALL"
     case recommended = "RECOMMENDED"
 }

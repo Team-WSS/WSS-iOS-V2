@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct CommentDraft {
+public struct CommentDraft: Sendable {
     
     public private(set) var content: String
     

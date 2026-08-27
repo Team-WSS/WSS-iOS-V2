@@ -12,7 +12,7 @@ import BaseDomain
 
 /// 홈 - 관심글
 
-public struct InterestFeed {
+public struct InterestFeed: Sendable {
     
     public let novelID: NovelID
     

@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct BlockedUser: Equatable {
+public struct BlockedUser: Equatable, Sendable {
     public let blockID: BlockID
     public let userID: UserID
     public let nickname: String

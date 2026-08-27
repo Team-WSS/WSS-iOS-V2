@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol ProfileRepository {
+public protocol ProfileRepository: Sendable {
     
     /// 받아온 성별, userID, 닉네임을 userDefaults에 저장
     func syncUserBasicInfo() async throws(RepositoryError)

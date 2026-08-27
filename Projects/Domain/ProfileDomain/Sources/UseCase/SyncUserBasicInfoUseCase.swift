@@ -10,11 +10,11 @@ import Foundation
 
 import BaseDomain
 
-public protocol SyncUserBasicInfoUseCase {
+public protocol SyncUserBasicInfoUseCase: Sendable {
     func execute() async throws(RepositoryError)
 }
 
-public class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
+public final class DefaultSyncUserBasicInfoUseCase: SyncUserBasicInfoUseCase {
     let repository: ProfileRepository
     
     public init(repository: ProfileRepository) {

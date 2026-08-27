@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol SearchKeywordsUseCase {
+public protocol SearchKeywordsUseCase: Sendable {
     func execute(searchText: String) async throws(RepositoryError) -> [Keyword]
 }
 

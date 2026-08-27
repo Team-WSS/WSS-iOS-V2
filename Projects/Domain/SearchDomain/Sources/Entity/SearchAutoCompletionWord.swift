@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct SearchAutoCompletionWord {
+public struct SearchAutoCompletionWord: Sendable {
     public let word: String
     
     public init(word: String) {

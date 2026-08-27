@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct RegisteredNovelStats {
+public struct RegisteredNovelStats: Sendable {
     public let interest: Int
     public let watching: Int
     public let watched: Int

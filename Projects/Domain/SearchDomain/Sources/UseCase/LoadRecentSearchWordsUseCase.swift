@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadRecentSearchWordsUseCase {
+public protocol LoadRecentSearchWordsUseCase: Sendable {
     func execute() async throws(RepositoryError) -> [RecentSearchWord]
 }
 

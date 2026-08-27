@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadNovelUseCase {
+public protocol LoadNovelUseCase: Sendable {
     func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation
 }
 

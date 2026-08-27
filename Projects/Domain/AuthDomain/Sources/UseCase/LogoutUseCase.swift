@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LogoutUseCase {
+public protocol LogoutUseCase: Sendable {
     func execute() async throws(RepositoryError)
 }
 

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol KeywordRepository {
+public protocol KeywordRepository: Sendable {
     /// 로컬 DB에서 전체 키워드를 조회한다.
     func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup]
     /// 로컬 DB에서 키워드를 검색한다.

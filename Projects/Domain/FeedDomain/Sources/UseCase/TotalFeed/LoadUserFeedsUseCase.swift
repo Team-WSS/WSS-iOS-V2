@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadUserFeedsUseCase {
+public protocol LoadUserFeedsUseCase: Sendable {
     func execute(userID: UserID,
                  nickname: String,
                  profileImage: URL?,

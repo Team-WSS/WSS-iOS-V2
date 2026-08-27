@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol LoadTotalKeywordsUseCase {
+public protocol LoadTotalKeywordsUseCase: Sendable {
     func execute() async throws(RepositoryError) -> [KeywordGroup]
 }
 

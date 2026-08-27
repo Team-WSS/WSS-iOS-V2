@@ -8,7 +8,7 @@
 
 import BaseDomain
 
-public enum NotificationDeeplink: Equatable {
+public enum NotificationDeeplink: Equatable, Sendable {
     case feedDetail(id: FeedID)
     case notificationDetail(id: NotificationID)
     /// 작품 알림(완결·휴재 복귀 등)이 향할 작품 상세.

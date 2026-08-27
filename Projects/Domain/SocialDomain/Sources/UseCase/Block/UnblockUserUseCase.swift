@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol UnblockUserUseCase {
+public protocol UnblockUserUseCase: Sendable {
     func execute(id: BlockID) async throws(RepositoryError)
 }
 

@@ -8,7 +8,7 @@
 
 import BaseDomain
 
-public struct ProfileRegistration: Equatable {
+public struct ProfileRegistration: Equatable, Sendable {
     public let nickname: String
     public let gender: Gender
     public let birthYear: BirthYear

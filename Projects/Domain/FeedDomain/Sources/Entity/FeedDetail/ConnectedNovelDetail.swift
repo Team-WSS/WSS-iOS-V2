@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct ConnectedNovelDetail {
+public struct ConnectedNovelDetail: Sendable {
 
     public let basicInfo: ConnectedNovel
     public let thumbnailImageURL: URL?

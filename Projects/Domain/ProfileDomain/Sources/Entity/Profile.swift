@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct Profile {
+public struct Profile: Sendable {
     public let nickname: String
     public let introduction: String
     public let characterImage: URL?

@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public enum ProfileTarget {
+public enum ProfileTarget: Sendable {
     case me
     case user(UserID)
 }

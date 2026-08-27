@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct MyFeedOption {
+public struct MyFeedOption: Sendable {
     public let genres: [NovelGenre]
     /// 연결 작품이 없어 장르가 없는(미분류) 내 피드도 포함할지 여부.
     public let includesUncategorized: Bool
@@ -29,7 +29,7 @@ public struct MyFeedOption {
     }
 }
 
-public enum VisibilityType {
+public enum VisibilityType: Sendable {
     case privateOnly
     case publicOnly
     case all

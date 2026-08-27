@@ -16,7 +16,7 @@ import BaseDomain
 /// 같은 응답을 쓰는 `CollectionCard`와 나눠 둔 이유는 서버가 `representativeNovel`과 `recentNovels`를
 /// **둘 다** 내려주고 "무엇을 쓸지는 화면이 정하라"고 위임하기 때문이다 —
 /// 그 선택을 화면마다 반복하지 않도록 매핑 시점에 한 번 고정한다.
-public struct CollectionPreview {
+public struct CollectionPreview: Sendable {
 
     public let id: CollectionID
     public let name: String

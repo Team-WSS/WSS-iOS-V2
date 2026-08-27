@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadCollectionPreviewsUseCase {
+public protocol LoadCollectionPreviewsUseCase: Sendable {
     /// 마이페이지 컬렉션 섹션에 보여줄 미리보기를 가져온다.
     ///
     /// 전용 API가 없어 사용자별 컬렉션 목록을 앞에서 `size`개만 잘라 쓴다.

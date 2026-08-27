@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadSosoFeedsUseCase {
+public protocol LoadSosoFeedsUseCase: Sendable {
     func execute(option: SosoFeedOption,
                  lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed>
 }

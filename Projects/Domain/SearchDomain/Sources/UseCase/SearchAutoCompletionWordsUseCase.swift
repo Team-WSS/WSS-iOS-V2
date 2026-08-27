@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol SearchAutoCompletionWordsUseCase {
+public protocol SearchAutoCompletionWordsUseCase: Sendable {
     func execute(searchText: String) async throws(RepositoryError) -> [SearchAutoCompletionWord]
 }
 

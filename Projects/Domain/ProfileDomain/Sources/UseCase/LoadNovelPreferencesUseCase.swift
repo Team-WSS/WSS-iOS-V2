@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadNovelPreferencesUseCase {
+public protocol LoadNovelPreferencesUseCase: Sendable {
     func execute(_ target: ProfileTarget) async throws(RepositoryError) -> NovelPreference
 }
 

@@ -10,6 +10,6 @@ import Foundation
 
 import BaseDomain
 
-public protocol AppUpdateRepository {
+public protocol AppUpdateRepository: Sendable {
     func loadAppUpdatePolicy() async throws(RepositoryError) -> AppUpdatePolicy
 }

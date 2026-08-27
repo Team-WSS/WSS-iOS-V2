@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct NovelReviewDraft: Equatable {
+public struct NovelReviewDraft: Equatable, Sendable {
     
     public let novelID: NovelID
     public private(set) var status: ReadingStatus

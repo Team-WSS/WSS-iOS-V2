@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public protocol SocialLoginUseCase {
+public protocol SocialLoginUseCase: Sendable {
     func execute(
         credential: SocialLoginCredential
     ) async throws(AuthError) -> NeedOnboarding

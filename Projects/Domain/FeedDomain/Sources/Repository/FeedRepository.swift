@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol FeedRepository {
+public protocol FeedRepository: Sendable {
     func submitFeed(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError)
     func editFeed(id: FeedID, draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError)
     func deleteFeed(id: FeedID) async throws(RepositoryError)
