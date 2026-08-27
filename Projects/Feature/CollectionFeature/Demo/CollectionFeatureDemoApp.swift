@@ -170,6 +170,7 @@ private struct DemoRootView: View {
                 loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
                 collectionLikeUseCase: DemoCollectionLikeUseCase(),
                 deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
+                updateCollectionUseCase: DemoUpdateCollectionUseCase(),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
@@ -185,7 +186,11 @@ private struct DemoRootView: View {
             loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
             collectionLikeUseCase: DemoCollectionLikeUseCase(),
             deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
-            logger: consoleLogger
+            updateCollectionUseCase: DemoUpdateCollectionUseCase(),
+            searchNovelUseCase: DemoSearchNovelUseCase(),
+            loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
+            logger: consoleLogger,
+            onAuthenticationRequired: handleAuthenticationRequired
         )
     }
 
@@ -271,6 +276,7 @@ private struct DemoRootView: View {
             loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(collectionRepository: repository),
             collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: repository),
             deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: repository),
+            updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: repository),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired
         )
@@ -289,6 +295,12 @@ private struct DemoCreateCollectionUseCase: CreateCollectionUseCase {
     func execute(_ draft: CollectionDraft) async throws(RepositoryError) -> CollectionID {
         try? await Task.sleep(nanoseconds: 500_000_000)
         return CollectionID(1)
+    }
+}
+
+private struct DemoUpdateCollectionUseCase: UpdateCollectionUseCase {
+    func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
     }
 }
 

@@ -35,10 +35,11 @@ struct CollectionListView: View {
     private let createCollectionUseCase: CreateCollectionUseCase
     private let searchNovelUseCase: SearchNovelUseCase
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
-    /// 카드 탭 → `CollectionDetailView`(로컬 push)가 필요로 하는 UseCase 3종.
+    /// 카드 탭 → `CollectionDetailView`(로컬 push)가 필요로 하는 UseCase 4종(수정 포함).
     private let loadCollectionDetailUseCase: LoadCollectionDetailUseCase
     private let collectionLikeUseCase: CollectionLikeUseCase
     private let deleteCollectionUseCase: DeleteCollectionUseCase
+    private let updateCollectionUseCase: UpdateCollectionUseCase
     private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
 
@@ -50,6 +51,7 @@ struct CollectionListView: View {
         loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
         collectionLikeUseCase: CollectionLikeUseCase,
         deleteCollectionUseCase: DeleteCollectionUseCase,
+        updateCollectionUseCase: UpdateCollectionUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void
     ) {
@@ -60,6 +62,7 @@ struct CollectionListView: View {
         self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
         self.collectionLikeUseCase = collectionLikeUseCase
         self.deleteCollectionUseCase = deleteCollectionUseCase
+        self.updateCollectionUseCase = updateCollectionUseCase
         self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -98,7 +101,11 @@ struct CollectionListView: View {
                 loadCollectionDetailUseCase: loadCollectionDetailUseCase,
                 collectionLikeUseCase: collectionLikeUseCase,
                 deleteCollectionUseCase: deleteCollectionUseCase,
-                logger: logger
+                updateCollectionUseCase: updateCollectionUseCase,
+                searchNovelUseCase: searchNovelUseCase,
+                loadMyLibraryUseCase: loadMyLibraryUseCase,
+                logger: logger,
+                onAuthenticationRequired: onAuthenticationRequired
             )
         }
         .onChange(of: selectedCollectionID) { oldValue, newValue in
@@ -282,15 +289,19 @@ private extension CollectionListView {
     }
 
     func cardSubtitle(_ card: CollectionCard) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             if let description = card.description {
                 Text(description)
                     .applyWSSFont(.label2, color: .wssGray300)
                     .lineLimit(1)
-
+                
+                Spacer().frame(width: 4)
+                
                 Circle()
                     .fill(Color.wssGray300)
                     .frame(width: 2, height: 2)
+                
+                Spacer().frame(width: 4)
             }
 
             HStack(spacing: 0) {
@@ -299,6 +310,8 @@ private extension CollectionListView {
                 Text("\(card.novelCount)")
                     .applyWSSFont(.label2, color: .wssPrimary100)
             }
+            
+            Spacer().frame(width: 80)
         }
     }
 
@@ -365,6 +378,7 @@ private extension CollectionListView {
             loadCollectionDetailUseCase: PreviewLoadCollectionDetailUseCase(),
             collectionLikeUseCase: PreviewCollectionLikeUseCase(),
             deleteCollectionUseCase: PreviewDeleteCollectionUseCase(),
+            updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -443,4 +457,8 @@ private struct PreviewCollectionLikeUseCase: CollectionLikeUseCase {
 
 private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
     func execute(id: CollectionID) async throws(RepositoryError) {}
+}
+
+private struct PreviewUpdateCollectionUseCase: UpdateCollectionUseCase {
+    func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError) {}
 }

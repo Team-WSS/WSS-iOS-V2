@@ -9,15 +9,24 @@
   아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
   `WSSComponent`, `Logger`
 - 진입점:
-  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:)`
-  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:)`(#201, 컬렉션 상세)
-  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름)
+  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:logger:onAuthenticationRequired:)`
+  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`(#201, 컬렉션 상세) — "컬렉션 수정"이 로컬 push하는 `CreateCollectionView`(수정 모드)까지 필요로 하는 의존성이라 `updateCollectionUseCase`/`searchNovelUseCase`/`loadMyLibraryUseCase`/`onAuthenticationRequired`를 함께 받는다.
+  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름. "컬렉션 수정" 자체는 별도 Factory
+  진입점이 없다 — `CreateCollectionView`를 수정 모드로 재사용하는 로컬 push라 `CollectionSearchNovelView`
+  와 동일 위상.)
 
 ## 핵심 시나리오
 
-- **컬렉션 생성만** — 수정(edit)은 이번 범위 밖. `CreateCollectionViewModel`은 항상 빈 `CollectionDraft()`로
-  시작하고(로드 없음), 완료 시 `CreateCollectionUseCase`로 제출 후 자기완결 dismiss.
+- **`CreateCollectionView`/`CreateCollectionViewModel`은 생성/수정 겸용이다**(`Mode { case create; case
+  edit(CollectionID) }`, `FeedFeature.CreateFeedViewModel`과 동일 패턴). 생성은 빈 `CollectionDraft()`로
+  시작(로드 없음)하고 `CreateCollectionUseCase`로 제출, 수정은 `CollectionDraft(from: detail)`로 원본을
+  편집 가능한 초안으로 되돌려 시작하고 `UpdateCollectionUseCase`로 제출 — 둘 다 성공 시 자기완결
+  dismiss(공통 `submitCollection()`이 `mode`로 분기). 폼 UI·검증(`isSubmittable`)·"작품 추가" 2단계
+  pop·뒤로가기 확인 알럿(`baselineDraft` 비교)은 두 모드가 완전히 공유한다.
+  ⚠️ **수정 진입 시 `initialNovelDisplayInfo`(원본 `detail.novels`를 id로 인덱싱한 딕셔너리)도 함께
+  넘겨야 한다** — 그리드는 `draft.novelIDs`가 아니라 이 캐시를 보고 그리므로, 안 채우면 "N/100" 개수
+  표시는 맞는데 그리드 셀이 하나도 안 그려진다(실측, `novelListSection` 참고).
 - **작품 추가/제거는 `CollectionSearchNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** —
   `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·
   다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로
@@ -112,9 +121,12 @@
     삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
-  - **작품 카드 탭·"공유하기"·"컬렉션 수정"은 전부 TODO 스텁**(이번 범위 밖, 사용자 확정) — 작품 카드는
-    `NovelDetailFeature`로 갈 콜백 배선이, "공유하기"는 앱 전체 공유 URL/딥링크 체계가, "컬렉션 수정"은
-    편집 화면 자체가 아직 없다("서재"/"장르 취향" 섹션의 기존 TODO 스텁과 동일 패턴).
+  - **작품 카드 탭·"공유하기"는 TODO 스텁**(이번 범위 밖) — 작품 카드는 `NovelDetailFeature`로 갈 콜백
+    배선이 아직 없고, "공유하기"는 카카오톡 공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+  - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드(`Mode.edit`)로 로컬 push**한다 — 더보기 메뉴
+    탭 → `isEditPresented = true`, 복귀 시(`onChange`) 성공/취소 구분 없이 무조건 `reloadAfterEdit`로
+    다시 불러온다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단 — 이미
+    `state.detail`이 있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
   - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
     Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
     `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수

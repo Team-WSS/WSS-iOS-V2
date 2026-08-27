@@ -46,6 +46,10 @@ final class CollectionDetailViewModel {
         case menuTapped
         case dismissMenu
         case editTapped
+        /// 수정 화면(로컬 push, `CollectionDetailView`가 소유)에서 돌아왔을 때 — 성공 콜백 없는
+        /// 자기완결 dismiss 계약이라 성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의
+        /// `reloadAfterDetail`과 동일 판단).
+        case reloadAfterEdit
         case deleteTapped
         case dismissDeleteAlert
         case confirmDelete
@@ -105,8 +109,11 @@ final class CollectionDetailViewModel {
         case .dismissMenu:
             state.isMenuPresented = false
         case .editTapped:
-            // TODO: - 컬렉션 수정 화면으로 이동(이번 범위 밖 — 편집 화면은 별도 작업)
-            logger?.info("컬렉션 수정 탭됨(미구현)")
+            // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환(isEditPresented)은 View가 로컬 상태로
+            // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
+            state.isMenuPresented = false
+        case .reloadAfterEdit:
+            reloadAfterEdit()
         case .deleteTapped:
             state.isMenuPresented = false
             state.isDeleteAlertPresented = true
@@ -140,6 +147,16 @@ private extension CollectionDetailViewModel {
     func changeSortType(_ sortType: SortType) {
         guard loadTask == nil else { return }
         state.sortType = sortType
+        state.isLoading = true
+        state.hasLoadError = false
+        loadTask = Task { await loadDetail() }
+    }
+
+    /// 수정 화면 복귀 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시 불러온다. 이미
+    /// `state.detail`이 있는 상태라 View의 `isLoading && detail == nil` 오버레이 조건상 전면 로딩으로
+    /// 덮이지 않는다(정렬 변경과 동일 UX, `CollectionDetailView`의 그 조건 그대로 재사용).
+    func reloadAfterEdit() {
+        guard loadTask == nil else { return }
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadDetail() }

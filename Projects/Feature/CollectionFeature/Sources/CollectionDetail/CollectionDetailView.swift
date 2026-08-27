@@ -10,6 +10,8 @@ import SwiftUI
 
 import BaseDomain
 import CollectionDomain
+import SearchDomain
+import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
@@ -23,12 +25,36 @@ struct CollectionDetailView: View {
     /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목 페이드인) 네비바가 반응한다 —
     /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
     @State private var isScrolledFromTop = false
+    /// "컬렉션 수정" 화면(`CreateCollectionView`, 수정 모드) push 여부 — "작품 추가"와 동일 위상으로
+    /// 이 화면이 직접 소유한다(`CollectionFeature/CLAUDE.md`의 로컬 push 관례).
+    @State private var isEditPresented = false
     @Environment(\.dismiss) private var dismiss
     private let logger: Logger?
 
-    init(viewModel: CollectionDetailViewModel, logger: Logger? = nil) {
+    /// "컬렉션 수정" 화면이 제출에 쓸 UseCase.
+    private let updateCollectionUseCase: UpdateCollectionUseCase
+    /// "컬렉션 수정" 화면의 "작품 추가"가 검색에 쓸 UseCase — `CreateCollectionView`와 같은 이유로
+    /// 이 화면도 `SearchDomain`을 안다.
+    private let searchNovelUseCase: SearchNovelUseCase
+    /// "컬렉션 수정" 화면의 "작품 추가" 안 "서재에서 추가"가 서재 조회에 쓸 UseCase.
+    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
+    /// 인증 만료 시 로그인 화면 진입 콜백. "컬렉션 수정" 화면(및 그 하위 "작품 추가")도 같은 콜백을 공유한다.
+    private let onAuthenticationRequired: () -> Void
+
+    init(
+        viewModel: CollectionDetailViewModel,
+        updateCollectionUseCase: UpdateCollectionUseCase,
+        searchNovelUseCase: SearchNovelUseCase,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.updateCollectionUseCase = updateCollectionUseCase
+        self.searchNovelUseCase = searchNovelUseCase
+        self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.logger = logger
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -95,6 +121,30 @@ struct CollectionDetailView: View {
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
+        }
+        .navigationDestination(isPresented: $isEditPresented) {
+            // detail은 메뉴("컬렉션 수정")가 detail.isMine == true일 때만 노출되므로 이 시점엔 항상 로드돼 있다.
+            if let detail = viewModel.state.detail {
+                CreateCollectionView(
+                    viewModel: CreateCollectionViewModel(
+                        mode: .edit(detail.id),
+                        updateCollectionUseCase: updateCollectionUseCase,
+                        initialDraft: CollectionDraft(from: detail),
+                        initialNovelDisplayInfo: Dictionary(uniqueKeysWithValues: detail.novels.map { ($0.id, $0) }),
+                        logger: logger
+                    ),
+                    searchNovelUseCase: searchNovelUseCase,
+                    loadMyLibraryUseCase: loadMyLibraryUseCase,
+                    logger: logger,
+                    onAuthenticationRequired: onAuthenticationRequired
+                )
+            }
+        }
+        .onChange(of: isEditPresented) { wasPresented, isPresented in
+            // CreateCollectionView는 성공 콜백 없는 자기완결 dismiss 계약이라, 복귀했다는 사실만으로
+            // 무조건 재로드한다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단).
+            guard wasPresented, !isPresented else { return }
+            viewModel.handle(.reloadAfterEdit)
         }
         .onAppear {
             viewModel.handle(.load)
@@ -471,7 +521,10 @@ private extension CollectionDetailView {
                 .onTapGesture { viewModel.handle(.dismissMenu) }
 
             WSSDropdownMenu(items: [
-                WSSDropdownItem(title: "컬렉션 수정") { viewModel.handle(.editTapped) },
+                WSSDropdownItem(title: "컬렉션 수정") {
+                    viewModel.handle(.editTapped)
+                    isEditPresented = true
+                },
                 WSSDropdownItem(title: "컬렉션 삭제") { viewModel.handle(.deleteTapped) }
             ])
             .frame(width: 122)
@@ -513,7 +566,11 @@ private extension CollectionDetailView {
                 loadCollectionDetailUseCase: PreviewLoadCollectionDetailUseCase(),
                 collectionLikeUseCase: PreviewCollectionLikeUseCase(),
                 deleteCollectionUseCase: PreviewDeleteCollectionUseCase()
-            )
+            ),
+            updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
+            searchNovelUseCase: PreviewSearchNovelUseCase(),
+            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
 }
@@ -544,4 +601,24 @@ private struct PreviewCollectionLikeUseCase: CollectionLikeUseCase {
 
 private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
     func execute(id: CollectionID) async throws(RepositoryError) {}
+}
+
+private struct PreviewUpdateCollectionUseCase: UpdateCollectionUseCase {
+    func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError) {}
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
+    }
+
+    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        (Paginated(items: [], hasNext: false), 0)
+    }
+}
+
+private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
+    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
+    }
 }

@@ -163,6 +163,12 @@ private extension CreateCollectionView {
             }
         }
 
+        ToolbarItem(placement: .principal) {
+            Text(viewModel.isEditing ? "컬렉션 수정" : "컬렉션 만들기")
+                .applyWSSFont(.title3)
+                .foregroundStyle(Color.wssBlack)
+        }
+
         ToolbarItem(placement: .confirmationAction) {
             Button {
                 viewModel.handle(.submit)
