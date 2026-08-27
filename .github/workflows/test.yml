@@ -6,6 +6,9 @@ on:
   issue_comment:
     types: [ created ]
   workflow_dispatch:
+  schedule:
+    # Swift 6 준비도(strict-concurrency) 주간 집계 — 매주 월요일 00:00 UTC.
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: read
@@ -468,3 +471,66 @@ jobs:
 
       - name: 변경 .swift 파일 lint (report-only)
         run: bash Tooling/SwiftFormat/lint-changed.sh --base "origin/${{ github.event.pull_request.base.ref || 'develop' }}"
+
+  # 6) Swift 6 준비도(A4) — strict concurrency 경고 수집. report-only(집계만, 실패 안 시킴).
+  #    Swift 5 모드는 그대로 두고 SWIFT_STRICT_CONCURRENCY=complete만 빌드 오버라이드로 얹어
+  #    "Swift 6에서 error가 될 것들"의 규모를 레이어별로 모은다(env.baseSetting은 안 건드림 →
+  #    개발자 로컬 빌드 무영향). 전 모듈을 소스에서 재컴파일하는 무거운 잡이라 매 PR이 아니라
+  #    수동(workflow_dispatch)·주간 스케줄로만 돈다 — 이건 PR 게이트가 아니라 "준비도 대시보드"다.
+  #    (레이어별 경고 0 달성 후 그 레이어를 error로 승격하는 건 A4 후속 단계.)
+  #    ⚠️ 왜 App 스킴 한 방이 아니라 모듈 스킴을 하나씩 도나 → Tooling/StrictConcurrency/scan.sh 주석.
+  strict-concurrency:
+    name: Swift 6 Readiness
+    runs-on: macos-15
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create placeholder xcconfig
+        run: |
+          mkdir -p Config
+          cat > Config/Config_Shared.xcconfig << 'EOF'
+          BUCKET_URL = https://placeholder
+          KAKAO_APP_KEY = placeholder
+          APPSTORE_ID = placeholder
+          EOF
+          cat > Config/Config_Debug.xcconfig << 'EOF'
+          #include "./Config_Shared.xcconfig"
+          BASE_URL = https://placeholder
+          TEST_API_KEY = placeholder
+          EOF
+          cat > Config/Config_Release.xcconfig << 'EOF'
+          #include "./Config_Shared.xcconfig"
+          BASE_URL = https://placeholder
+          AMPLITUDE_API_KEY = placeholder
+          EOF
+
+      - name: Setup mise & install tools
+        uses: jdx/mise-action@v2
+
+      - name: Cache Tuist
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/com.tuist.Tuist
+            Tuist/.build
+          key: tuist-${{ runner.os }}-${{ hashFiles('Tuist/Package.swift', 'Tuist/Package.resolved') }}
+          restore-keys: |
+            tuist-${{ runner.os }}-
+
+      - name: Generate project
+        run: |
+          tuist install
+          tuist generate --no-open
+
+      # scan.sh가 모든 모듈 스킴을 SWIFT_STRICT_CONCURRENCY=complete로 순회 빌드해
+      # concurrency 경고를 레이어별로 집계한다. report-only라 경고로는 실패하지 않고,
+      # concurrency와 무관한 진짜 컴파일 오류가 있을 때만 실패한다(fail-loud).
+      - name: strict concurrency 스캔 (report-only)
+        run: |
+          bash Tooling/StrictConcurrency/scan.sh --out strict-report.md
+          if [ -f strict-report.md ]; then
+            cat strict-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
