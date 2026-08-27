@@ -285,7 +285,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 
 | 파라미터 | V1 전송 규칙 | V2 전송 규칙 | 상태 |
 |---|---|---|---|
-| `genres` | `NovelGenre.rawValue` 콤마조인(빈 배열도 빈 문자열로 전송) | `mapNovelGenreString` 배열(값 동일). ⚠️ **`[String]` non-optional이라 빈 배열도 `?genres=` 빈값 전송**(생략 아님 — `UserLibraryV2Query`는 `Optional`로 생략하는 것과 갈림) | ✅ 값 일치. 빈값 처리 🟡 [C2 §0-4](../../../docs/V1_PARAM_MAPPING_C2.md) |
+| `genres` | `NovelGenre.rawValue` 콤마조인(빈 배열도 빈 문자열로 전송) | `mapNovelGenreString` 배열(값 동일). `[String]` non-optional이라 빈 배열도 `?genres=` 빈값 전송 — **V1과 동일**(서재 `UserLibraryV2Query`만 `Optional`로 생략) | ✅ Keep (V1 parity, [C2 §3-4](../../../docs/V1_PARAM_MAPPING_C2.md)) |
 | `platformNames` | `NovelPlatform.title` — **`.ridi`가 "리디"** | `mapNovelPlatformString` — **`.ridibooks`가 "리디북스"** | 🔧 Improve (§3, `CLAUDE.md` 문서화) |
 | `keywordIds` | `KeywordData.keywordId` 콤마조인 | `keyword.id.value` 배열 | ✅ Keep |
 | `novelRatingStart`/`End` | `lower`/`upper`(**항상** 전송, 기본 0.0~5.0) | `ratingRange?.min ?? 0.0` / `?? 5.0`(항상 전송) | ✅ Keep |

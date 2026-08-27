@@ -34,7 +34,7 @@
 | 1 | **검색 `isCompleted` 항상 전송** — 미선택도 `false`로 나가 완결작 90% 누락 | Search | 🔴 확정 회귀 | 실서버 검증됨(2026-08-28) | `Bool?`로 전환(Library 방식) → **TODO §9** |
 | 2 | **내 피드 정렬 대소문자 불일치** — V1 `RECENT`/`OLD`(대문자) vs V2 `recent`/`old`(소문자) | Feed | 🟠 회귀 유력 | **본 C2에서 신규 발견** · 서버 대소문자 민감도 미확인 | 서버 확인 → 민감하면 `.uppercased()`(타 모듈과 동일) |
 | 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | 🟡 백엔드 확인 | 계약서 §0-1 | 백엔드 V2 스펙이 body refreshToken 불요구인지 확인 |
-| 4 | **검색 필터 빈 배열 `?key=` 빈값 전송** — `genres`/`platformNames`/`keywordIds`가 non-optional 배열 | Search | 🟡 검증 권장 | Library는 `Optional`로 생략(대조됨) | 서버가 빈 값을 무필터로 관용하는지 확인 or `Optional`화 |
+| 4 | **검색 필터 빈 배열 `?key=` 빈값 전송** — `genres`/`platformNames`/`keywordIds`가 non-optional 배열 | Search | 🟢 V1 parity(저위험) | **V1도 `joined(",")`로 빈값 전송** → 서버가 관용(상세검색 실동작이 방증). Library만 `Optional`로 생략 | 회귀 아님. isCompleted 수정 시 `Optional`로 통일하면 자연스러움(선택) |
 | 5 | **플랫폼 서버값 "리디"→"리디북스"** 변경 | Search | 🟡 백엔드 확인 | 의도됨(사용자 확정·#185) | 서버 enum이 "리디북스"를 수용하는지 재확인 |
 | 6 | **리뷰 `keywordIds` 화면 미배선** — 현재 항상 `[]` | NovelReview | 🟢 배선 대기 | 계약서 §7 | 키워드 선택 화면 연결(후속) |
 
@@ -118,10 +118,10 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자, `User
 - **위치**: `WithdrawRequest = { reason }`(V2) vs V1 `{ reason, refreshToken }`. 경로 동일 `/auth/withdraw`, 인증은 access 헤더.
 - **판정 기준**: 백엔드 V2 스펙이 body의 refreshToken을 요구하지 않으면 ✅(정리). 요구하면 누락. → 사용자만 풀 수 있는 백엔드 확인.
 
-### 3-4 🟡 검색 필터 빈 배열 `?key=` 빈값 (검증 권장)
+### 3-4 🟢 검색 필터 빈 배열 `?key=` 빈값 (V1 parity — 회귀 아님)
 - **위치**: `DetailSearchQuery`의 `genres`/`platformNames`/`keywordIds`가 non-optional 배열 → 미선택 시 `?genres=`(빈 값).
-- **대조**: `UserLibraryV2Query`는 같은 함정을 알고 전 배열을 `Optional`로 둬 생략한다(주석 명시). Search만 다른 모델.
-- **판정 기준**: 상세검색이 실제로 동작하므로 서버가 빈 값을 "무필터"로 관용할 가능성이 크나, Library와 규칙이 갈린다 — 서버 관용을 확인하거나 `Optional`로 통일(isCompleted 수정과 함께 하면 자연스럽다).
+- **V1 대조(확정)**: V1도 `URLQueryItem(name:"genres", value: genres.joined(separator:","))`라 빈 배열이면 **똑같이 `?genres=` 빈값을 보낸다**(`SearchService.swift:131-133`). 즉 **V1↔V2 parity**이고, 상세검색이 실제로 동작하므로 **서버가 빈 값을 무필터로 관용**함이 방증된다. **회귀 아님.**
+- **유일한 잔가시**: `UserLibraryV2Query`(서재)만 이 값을 `Optional`로 둬 생략한다(주석 명시) — 검색과 서재가 내부 규칙만 갈릴 뿐 동작 문제는 없다. isCompleted를 `Optional`로 고칠 때 배열들도 함께 `Optional`화하면 규칙이 통일되지만 **필수는 아니다.**
 
 ### 3-5 🟡 플랫폼 "리디"→"리디북스" (백엔드 확인)
 - V1 `NovelPlatform.title`의 `.ridi`="리디" ↔ V2 `mapNovelPlatformString`의 `.ridibooks`="리디북스". 의도된 변경(사용자 확정·#185, `SearchData/CLAUDE.md` 문서화)이나 **서버 enum이 "리디북스"를 실제로 수용하는지**의 실측 근거는 문서에 없다 → 재확인 권장.
