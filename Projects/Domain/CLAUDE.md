@@ -104,3 +104,9 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **유령 폴더**: `Projects/Domain/`의 `XxxDomain` 아닌 폴더(`Comment/`, `Feed/` 등)는 gitignore된 rename 잔재 → root `CLAUDE.md` #3 참조. `ls` 아닌 ModuleType.swift로 모듈 판단, 정식 모듈만 수정.
+- **Domain 계약·값 타입은 전부 `Sendable`이다(A4 #219 — strict concurrency 토대).** 새로 만드는
+  **UseCase/Repository 프로토콜은 `: Sendable`**, **Entity/VO/Draft(struct·enum)도 `: Sendable`**을 유지해야
+  `Swift 6 Readiness` 게이트가 초록으로 남는다(안 붙이면 Feature/Data가 그 값을 async 경계로 넘길 때
+  "sending … risks data races" 경고가 되살아난다). ⚠️ **`Default*UseCase`는 `final class`여야 한다** —
+  프로토콜이 Sendable이면 non-final class는 Sendable 준수가 불가해 경고가 뜬다(ProfileDomain에서 실제로 6개가
+  걸렸다). 검사: `Tooling/StrictConcurrency/scan.sh --layer Domain`.

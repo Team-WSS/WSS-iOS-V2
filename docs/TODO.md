@@ -202,3 +202,34 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   - 대안: 규칙을 **warning(리포트만)** 으로 두면 위 예외를 정리하지 않고도 도입 가능(ArchLint의 "프록시→warning" 철학).
 - **덤(별개 정리감)**: `BlockdUser`는 `BlockedUser` **오타**(e 누락, `SocialData/DTO/Response/BlockedUserResponse.swift`).
   접미사 규칙 대상은 아니나 함께 손볼 때 고칠 것.
+
+### 4. A4 Swift 6 — 잔여 concurrency 경고 3건 + Feature @MainActor 완주
+
+- **무엇**: #219(A4 1~4단계)에서 프로덕션 strict concurrency 경고를 **249→3**으로 줄였다(Domain·Core·UI·Data=0).
+  남은 **3건은 전부 `NovelDetailFeature`의 `TopBounceDisabler`**(`NovelDetail/NovelDetailView.swift:685·687·688`):
+  `UIScrollView.observe(\.contentOffset)` KVO 클로저가 main-actor 격리 프로퍼티(`contentOffset`)에 key path를
+  걸고 읽고/쓴다.
+- **왜 이번에 안 했나**: 이 클램프 로직은 **서브틀한 버그 이력이 있고 시뮬레이터 자동화로 검증이 안 되는**
+  스크롤 동작(모듈 `CLAUDE.md`의 `TopBounceDisabler`·`enableSwipeBack` 항목 참고)이라, `MainActor.assumeIsolated`
+  래핑이 동작을 바꾸지 않는지 **사람이 기기에서 직접 밀어** 확인해야 안전하다. 자동 세션에서 블라인드로 손대지 않았다.
+- **어떻게(할 때)**: KVO는 UIScrollView contentOffset 변화라 **메인에서 발화**하므로 클로저 본문을
+  `MainActor.assumeIsolated { … }`로 감싸는 게 정석. 적용 후 실기기에서 최상단 over-scroll 클램프가
+  그대로인지 확인.
+
+### 5. A4 Swift 6 — 레이어별 error 승격 + 모듈별 `SWIFT_VERSION = 6` (5·6단계)
+
+- **무엇**: #219는 A4 **1~4단계**(경고 수집 CI + Domain/Core·Feature·Data 청소)까지다. 남은 5·6단계:
+  ① 경고 0을 달성한 레이어(Domain·Core·UI·Data)를 **error로 승격**해 회귀를 CI가 막게 한다.
+  ② 모듈별로 `SWIFT_VERSION = 6`을 켠다(애플 공식 "모듈 하나씩" 순서).
+- **승격 방법(A1~A3 철학 반복)**: `Tooling/StrictConcurrency/scan.sh --strict`(경고>0이면 exit 1) 또는
+  `--layer <Layer> --strict`로 그 레이어만 게이트. `.github/workflows/test.yml`의 `strict-concurrency`
+  job은 지금 **report-only·수동/주간 스케줄**이다 — required로 걸려면 (a) `--strict`로 바꾸고
+  (b) `pull_request` 트리거를 켜고 (c) GitHub Settings에서 `Swift 6 Readiness`를 required status check로.
+  비용(전 모듈 소스 재컴파일, macos ~10분+)이 커서 지금은 PR마다 안 돈다 — 승격 시 레이어 선택 빌드로 좁히는 것 검토.
+- **모듈별 `SWIFT_VERSION = 6`**: A0에서 A4로 이관해둔 `env.baseSetting`(현재 `[:]`)에 모듈별 세팅을
+  주입할 자리가 있다(`Plugins/EnvironmentPlugin/…/ProjectEnvironment.swift` + `Tuist/…/Project+Templates.swift`의
+  `base: env.baseSetting`). 지금은 빌드 오버라이드로만 strict를 얹지만, 실제 승격은 여기에 레이어별
+  `SWIFT_STRICT_CONCURRENCY`/`SWIFT_VERSION`을 넣는 방식이 된다.
+- **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
+  cascade로 없앴다(@MainActor 없이). Swift 6 language mode 완전 전환 시엔 VM을 `@MainActor`로 명시하는 게
+  정석이므로(로드맵 3단계 본래 취지), 그때 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증한다.
