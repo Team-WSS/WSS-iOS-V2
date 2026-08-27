@@ -15,11 +15,13 @@ import NovelDomain
 import ProfileDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import BaseData
 import NovelData
 import ProfileData
 import FeedData
 import SocialData
+import CollectionData
 import Logger
 import Networking
 import DesignSystem
@@ -103,9 +105,72 @@ private struct DemoScreenSelectionView: View {
                 }
                 .transition(.opacity)
             }
+
+            // Mock 전용 — 예약 userID(`DemoCollectionScenario`)로 컬렉션 개수 시나리오를 바로 시연한다.
+            // 실서버는 실제 데이터를 그대로 조회하므로 이 바로가기가 의미가 없다.
+            if dataSource == .mock {
+                Divider().padding(.vertical, 8)
+
+                Text("컬렉션 개수별 데모 (MyPage)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(DemoCollectionScenario.allCases) { scenario in
+                    NavigationLink(scenario.title) {
+                        DemoFactory.makeMypageView(dataSource: dataSource, userID: scenario.userID)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Divider().padding(.vertical, 8)
+
+                Text("컬렉션 개수별 데모 (UserPage)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(DemoCollectionScenario.allCases) { scenario in
+                    NavigationLink(scenario.title) {
+                        DemoFactory.makeUserPageView(dataSource: dataSource, userID: scenario.userID)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
         }
         .padding()
         .navigationTitle(dataSource.rawValue)
+    }
+}
+
+/// 컬렉션 섹션의 개수별 노출(3개 이상/2개/1개/0개)을 확인하기 위한 예약 userID 시나리오.
+/// MyPage·UserPage 둘 다에서 재사용한다 — `loadCollectionPreviewsUseCase.execute(userID:...)`의
+/// `userID`는 두 화면 모두 컬렉션 미리보기에만 쓰이고(MyPage의 프로필·장르·작품취향·서재통계는
+/// `.me` 기준이라 이 값과 무관) 화면별 노출 정책만 다르다 — MyPage는 0개여도 헤더는 항상 보이고
+/// 미리보기 카드만 숨는 반면, UserPage는 0개면 섹션 자체가 통째로 숨는다(`UserPageFeature/CLAUDE.md`).
+/// `demoPrivateProfileUserID`(999, 비공개 프로필 시나리오)와 동일한 관례 — 특정 userID로 Mock 응답을 분기한다.
+private enum DemoCollectionScenario: CaseIterable, Identifiable {
+    case threeOrMore
+    case two
+    case one
+    case zero
+
+    var id: Self { self }
+
+    var userID: UserID {
+        switch self {
+        case .threeOrMore: UserID(9973)
+        case .two: UserID(9972)
+        case .one: UserID(9971)
+        case .zero: UserID(9970)
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .threeOrMore: "컬렉션 3개 이상"
+        case .two: "컬렉션 2개"
+        case .one: "컬렉션 1개"
+        case .zero: "컬렉션 0개"
+        }
     }
 }
 
@@ -117,20 +182,34 @@ private enum DemoFactory {
     /// Mock 데이터 소스의 "서버" 역할(MyPage 전용) — 편집 화면에서 저장한 값을 마이페이지 조회가 그대로
     /// 돌려받도록 인메모리로 들고 있는다. 없으면 Mock 모드에서 완료를 눌러도 항상 하드코딩된 초기값만 보인다.
     static let demoProfileStore = DemoProfileStore()
+    /// 컬렉션 미리보기(`fetchCollections`)가 명시적으로 요구하는 값 — 실서버 조립(`makeLiveRepositories`)의
+    /// `UserDefaultsStorage` userID(10049)와 맞춘다.
+    static let demoUserID = UserID(10049)
 
     @ViewBuilder
     static func makeMypageView(dataSource: DemoDataSource) -> some View {
+        makeMypageView(dataSource: dataSource, userID: demoUserID)
+    }
+
+    /// 컬렉션 개수 시나리오 바로가기 전용 — `userID`만 예약 userID(`DemoCollectionScenario`)로 바꿔
+    /// 컬렉션 미리보기 개수를 오버라이드한다. 다른 데이터(프로필·장르·작품취향·서재통계)는 전부 `.me`
+    /// 기준이라 이 값과 무관하다.
+    @ViewBuilder
+    static func makeMypageView(dataSource: DemoDataSource, userID: UserID) -> some View {
         switch dataSource {
         case .mock:
             MypageFeatureFactory.makeView(
+                userID: userID,
                 loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 loadInitialProfileUseCase: DemoLoadInitialProfileUseCase(store: demoProfileStore),
                 loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
                 validateNicknameUseCase: DemoValidateNicknameUseCase(),
                 updateProfileUseCase: DemoUpdateProfileUseCase(store: demoProfileStore),
+                onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
                 logger: consoleLogger
             )
         case .live:
@@ -148,6 +227,7 @@ private enum DemoFactory {
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadUserRegisteredNovelStatsUseCase: DemoLoadUserRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 loadUserFeedsUseCase: DemoLoadUserFeedsUseCase(),
                 feedLikeUseCase: DemoFeedLikeUseCase(),
                 blockUserUseCase: DemoBlockUserUseCase(),
@@ -166,7 +246,15 @@ private enum DemoFactory {
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     private static func makeMypageLiveView() -> some View {
         let (profileRepository, novelRepository, keywordRepository, _) = makeLiveRepositories()
+        let collectionRepository = CollectionDataFactory.makeRepository(
+            network: NetworkingClient(
+                logger: DefaultNetworkLogger(base: consoleLogger),
+                tokenStore: DemoSessionTokenStore()
+            ),
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
         return MypageFeatureFactory.makeView(
+            userID: demoUserID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
@@ -174,10 +262,12 @@ private enum DemoFactory {
                 keywordRepository: keywordRepository
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: profileRepository),
             loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: profileRepository),
             updateProfileUseCase: DefaultUpdateProfileUseCase(profileRepository: profileRepository),
+            onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
             logger: consoleLogger
         )
     }
@@ -191,6 +281,13 @@ private enum DemoFactory {
             ),
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
+        let collectionRepository = CollectionDataFactory.makeRepository(
+            network: NetworkingClient(
+                logger: DefaultNetworkLogger(base: consoleLogger),
+                tokenStore: DemoSessionTokenStore()
+            ),
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
         return UserPageFeatureFactory.makeView(
             userID: userID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
@@ -200,6 +297,7 @@ private enum DemoFactory {
                 keywordRepository: keywordRepository
             ),
             loadUserRegisteredNovelStatsUseCase: DefaultLoadUserRegisteredNovelStatsUseCase(novelRepository: novelRepository),
+            loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             loadUserFeedsUseCase: DefaultLoadUserFeedsUseCase(feedRepository: feedRepository),
             feedLikeUseCase: DefaultLikeUseCase(feedRepository: feedRepository),
             blockUserUseCase: DefaultBlockUserUseCase(repository: socialRepository),
@@ -382,6 +480,40 @@ private struct DemoLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseC
     func execute() async throws(RepositoryError) -> RegisteredNovelStats {
         try? await Task.sleep(nanoseconds: 500_000_000)
         return RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
+}
+
+/// 마이페이지·타유저 페이지 공통 컬렉션 섹션 — "컬렉션 3개"(Figma 31613:89234) 상태를 기본값으로
+/// 시연한다. 실제 목록 API를 `size`로 그대로 흉내낸다(`CollectionDomain/CLAUDE.md`의 "마이페이지 전용
+/// API 없음" 계약과 동일한 모양). `DemoCollectionScenario`(9970~9973)의 예약 userID가 오면 그 개수로
+/// 오버라이드한다 — 3개 이상/2개/1개/0개 시나리오 시연용(MyPage/UserPage 둘 다의 바로가기가 이 매핑을
+/// 공유). 기본 진입점("내 화면 (MyPage)")은 `demoUserID`(10049)라 매핑에 없어 항상 3개 그대로다.
+private struct DemoLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    static let scenarioTotalCounts: [UserID: Int] = [
+        UserID(9973): 5, // "3개 이상" — 미리보기는 3개까지만 보이지만 전체 개수는 더 있다
+        UserID(9972): 2,
+        UserID(9971): 1,
+        UserID(9970): 0
+    ]
+
+    func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        let totalCount = Self.scenarioTotalCounts[userID] ?? 3
+        let previewCount = min(size, totalCount)
+        // totalCount 0(빈 시나리오)이면 `1...0`이 유효하지 않은 range라 별도 분기한다.
+        let previews = previewCount > 0 ? (1...previewCount).map { index in
+            CollectionPreview(
+                id: CollectionID(index),
+                name: "마이페이지 컬렉션 \(index)",
+                representativeNovel: CollectionNovel(
+                    id: NovelID(index),
+                    title: "작품 \(index)",
+                    author: "작가 \(index)",
+                    thumbnailImage: nil
+                )
+            )
+        } : []
+        return (previews, totalCount)
     }
 }
 

@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import NovelDomain
 import ProfileDomain
+import CollectionDomain
 import Logger
 import DesignSystem
 import WSSComponent
@@ -27,6 +28,10 @@ struct MypageView: View {
     private let validateNicknameUseCase: ValidateNicknameUseCase
     private let updateProfileUseCase: UpdateProfileUseCase
     private let logger: Logger?
+    /// 컬렉션 섹션 헤더 행 탭 콜백 — `CollectionFeature`는 서로 import 못 하는 다른 Feature 모듈이라
+    /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫). "서재 뷰로 이동"/"설정 뷰로 이동"과 달리
+    /// 이번 작업 범위라 콜백까지는 실제로 배선한다.
+    private let onCollectionTapped: () -> Void
 
     init(
         viewModel: MypageViewModel,
@@ -34,6 +39,7 @@ struct MypageView: View {
         loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
         validateNicknameUseCase: ValidateNicknameUseCase,
         updateProfileUseCase: UpdateProfileUseCase,
+        onCollectionTapped: @escaping () -> Void,
         logger: Logger? = nil
     ) {
         self._viewModel = State(initialValue: viewModel)
@@ -41,6 +47,7 @@ struct MypageView: View {
         self.loadProfileCharacterUseCase = loadProfileCharacterUseCase
         self.validateNicknameUseCase = validateNicknameUseCase
         self.updateProfileUseCase = updateProfileUseCase
+        self.onCollectionTapped = onCollectionTapped
         self.logger = logger
     }
 
@@ -55,14 +62,23 @@ struct MypageView: View {
                     VStack(spacing: 20) {
                         myProfileSection
 
-                        LibrarySection(stats: viewModel.state.registeredNovelStats) {
+                        WSSLibrarySection(
+                            interest: viewModel.state.registeredNovelStats?.interest ?? 0,
+                            watching: viewModel.state.registeredNovelStats?.watching ?? 0,
+                            watched: viewModel.state.registeredNovelStats?.watched ?? 0,
+                            quit: viewModel.state.registeredNovelStats?.quit ?? 0
+                        ) {
                             //TODO: - 서재 뷰로 이동
                             print("서재 뷰로 이동")
                         }
 
                         divider
 
-                        myCollectionSection
+                        CollectionSection(
+                            previews: viewModel.state.collectionPreviews,
+                            totalCount: viewModel.state.collectionCount,
+                            action: onCollectionTapped
+                        )
 
                         divider
 
@@ -157,78 +173,8 @@ struct MypageView: View {
             .frame(height: 3)
     }
     
-    // MARK: - 컬렉션
+    // MARK: - 키워드
 
-    private var myCollectionSection: some View {
-        VStack(spacing: 0) {
-            Button {
-                //TODO: - 컬렉션 뷰로 이동
-                print("컬렉션 뷰로 이동")
-            } label: {
-                HStack(spacing: 0) {
-                    Text("컬렉션 ")
-                        .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                    Text("0개")
-                        .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
-
-                    Spacer()
-
-                    WSSImage.icNavigateRight.swiftUIImage
-                        .resizable()
-                        .renderingMode(.template)
-                        .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                        .frame(width: 24, height: 24)
-                }
-                .applyWSSFont(.title2)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 20)
-    }
-
-    private func collectionItem(imageURL: URL?, title: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ZStack(alignment: .center) {
-                RoundedRectangle(cornerRadius: 6.57)
-                    .fill(WSSColor.wssGrayToast.swiftUIColor)
-                    .offset(x: 14)
-                    .frame(width: 73, height: 108)
-
-                RoundedRectangle(cornerRadius: 6.57)
-                    .fill(WSSColor.wssGray80.swiftUIColor)
-                    .offset(x: 7)
-                    .frame(width: 73, height: 108)
-
-                AsyncImage(url: imageURL) {
-                    phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .scaledToFill()
-                .clipShape(RoundedRectangle(cornerRadius: 6.57))
-                .frame(width: 73, height: 108)
-            }
-            .shadow(color: Color.black.opacity(0.1),
-                    radius: 12.68,
-                    x: 0,
-                    y: 1)
-
-            Text(title)
-                .applyWSSFont(.body5)
-                .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
-                .lineLimit(1)
-        }
-        .frame(width: 88)
-    }
-    
     private var myPageKeywordSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -277,16 +223,32 @@ private extension MypageView {
     NavigationStack {
         MypageView(
             viewModel: MypageViewModel(
+                userID: UserID(10041),
                 loadProfileUseCase: PreviewLoadProfileUseCase(),
                 loadGenrePreferencesUseCase: PreviewLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: PreviewLoadNovelPreferencesUseCase(),
-                loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
+                loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase()
             ),
             loadInitialProfileUseCase: PreviewLoadInitialProfileUseCase(),
             loadProfileCharacterUseCase: PreviewLoadProfileCharacterUseCase(),
             validateNicknameUseCase: PreviewValidateNicknameUseCase(),
-            updateProfileUseCase: PreviewUpdateProfileUseCase()
+            updateProfileUseCase: PreviewUpdateProfileUseCase(),
+            onCollectionTapped: { print("컬렉션 뷰로 이동") }
         )
+    }
+}
+
+private struct PreviewLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
+        let previews = (1...size).map { index in
+            CollectionPreview(
+                id: CollectionID(index),
+                name: "미리보기 컬렉션 \(index)",
+                representativeNovel: CollectionNovel(id: NovelID(index), title: "작품 \(index)", author: "작가 \(index)", thumbnailImage: nil)
+            )
+        }
+        return (previews, previews.count)
     }
 }
 

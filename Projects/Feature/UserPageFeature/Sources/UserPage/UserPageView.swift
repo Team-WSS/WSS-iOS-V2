@@ -16,6 +16,7 @@ import ProfileDomain
 import NovelDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import Logger
 
 struct UserPageView: View {
@@ -104,6 +105,14 @@ struct UserPageView: View {
 
                                     divider
 
+                                    // 타이틀 행은 컬렉션 개수와 무관하게 항상 노출한다(사용자 확정,
+                                    // 2026-08-25) — 0개면 타이틀 행만 보이고, 탭하면 안내 토스트로
+                                    // 응답한다(`userPageCollectionSection` 참고). 이전엔 장르 취향
+                                    // 섹션처럼 데이터가 없으면 섹션째 숨겼다.
+                                    userPageCollectionSection
+
+                                    divider
+
                                     if !viewModel.hasNoGenrePreferenceData {
                                         userPageGenreSection
 
@@ -148,13 +157,16 @@ struct UserPageView: View {
         .toolbar {
             toolbarContent
         }
+        // 스크롤 전엔 프로필 섹션과 이어지는 primary20, 프로필 섹션이 화면 밖으로 스크롤되면(닉네임
+        // 타이틀 페이드인과 동일 트리거인 isScrolledFromTop) 아래 콘텐츠와 이어지는 wssWhite로 전환한다.
         .toolbarBackground(
-            WSSColor.wssPrimary20.swiftUIColor,
+            (isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor,
             for: .navigationBar
         )
         // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 보이는 자동 동작이라
-        // 스크롤 여부와 무관하게 항상 primary20으로 보이도록 강제한다.
+        // 스크롤 여부와 무관하게 항상 배경이 보이도록 강제한다(색 자체는 위에서 스크롤에 따라 전환).
         .toolbarBackground(.visible, for: .navigationBar)
+        .animation(.easeInOut(duration: 0.1), value: isScrolledFromTop)
         // 차단 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
         .showWSSAlert(
             isPresented: blockAlertBinding,
@@ -171,6 +183,7 @@ struct UserPageView: View {
             buttonActions: feedAlertActions
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: noCollectionsToastBinding, type: .noCollections)
         .navigationDestination(isPresented: $isFeedListPresented) {
             UserPageFeatureFactory.makeFeedListView(
                 userID: userID,
@@ -344,13 +357,17 @@ struct UserPageView: View {
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 44, height: 44)
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             
-            LibrarySection(
-                stats: viewModel.state.registeredNovelStats,
-                backgroundColor: WSSColor.wssGray50.swiftUIColor,
-                countColor: WSSColor.wssBlack.swiftUIColor
+            Spacer().frame(height: 8)
+            
+            WSSLibrarySection(
+                interest: viewModel.state.registeredNovelStats?.interest ?? 0,
+                watching: viewModel.state.registeredNovelStats?.watching ?? 0,
+                watched: viewModel.state.registeredNovelStats?.watched ?? 0,
+                quit: viewModel.state.registeredNovelStats?.quit ?? 0
             ) {
                 //TODO: - 서재 뷰로 이동
                 print("서재 뷰로 이동")
@@ -360,7 +377,55 @@ struct UserPageView: View {
         }
         .background(WSSColor.wssWhite.swiftUIColor)
     }
-    
+
+    /// 타이틀 행 텍스트 스타일은 "서재"/"장르취향"과 동일(플레인 텍스트 + 우측 화살표) — 마이페이지
+    /// `CollectionSection`의 "컬렉션 N개" 카운트-인라인 헤더와는 다르다(Figma가 이 화면에서만 카운트를
+    /// 안 보여줌). 컬렉션이 0개여도 타이틀 행은 그대로 보이고 미리보기 행만 비운다(사용자 확정,
+    /// 2026-08-25) — 탭 시 안내 토스트로 응답하려면 행이 계속 눈에 보이고 눌러야 하기 때문. 탭 영역은
+    /// 화살표(44×44)가 아니라 마이페이지 `CollectionSection.header`와 동일하게 행 전체로 넓혔다
+    /// (`.contentShape(Rectangle())`, 좁은 화살표만으론 "행을 클릭하면" 요구와 안 맞는다). 미리보기
+    /// 항목 자체는 `CollectionPreviewRow`로 공유.
+    private var userPageCollectionSection: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 16)
+
+            collectionSectionHeader
+                .padding(.horizontal, 20)
+
+            if viewModel.hasCollections {
+                Spacer().frame(height: 8)
+
+                CollectionPreviewRow(previews: viewModel.state.collectionPreviews)
+            }
+
+            Spacer().frame(height: viewModel.hasCollections ? 30 : 16)
+        }
+        .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    private var collectionSectionHeader: some View {
+        Button {
+            viewModel.handle(.collectionSectionTapped)
+        } label: {
+            HStack(alignment: .center, spacing: 0) {
+                Text("컬렉션")
+                    .applyWSSFont(.title1)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+
+                Spacer()
+
+                WSSImage.icNavigateRight.swiftUIImage
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                    .frame(width: 24, height: 24)
+                    .frame(width: 44, height: 44)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var userPageGenreSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 29)
@@ -650,6 +715,13 @@ private extension UserPageView {
         )
     }
 
+    var noCollectionsToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isNoCollectionsToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissNoCollectionsToast) } }
+        )
+    }
+
     var feedAlertBinding: Binding<Bool> {
         Binding(
             get: { viewModel.state.presentedFeedAlert != nil },
@@ -693,6 +765,7 @@ private extension UserPageView {
                 loadGenrePreferencesUseCase: PreviewLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: PreviewLoadNovelPreferencesUseCase(),
                 loadUserRegisteredNovelStatsUseCase: PreviewLoadUserRegisteredNovelStatsUseCase(),
+                loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase(),
                 loadUserFeedsUseCase: PreviewLoadUserFeedsUseCase(),
                 feedLikeUseCase: PreviewFeedLikeUseCase(),
                 blockUserUseCase: PreviewBlockUserUseCase(),
@@ -747,6 +820,19 @@ private struct PreviewLoadNovelPreferencesUseCase: LoadNovelPreferencesUseCase {
 private struct PreviewLoadUserRegisteredNovelStatsUseCase: LoadUserRegisteredNovelStatsUseCase {
     func execute(id: UserID) async throws(RepositoryError) -> RegisteredNovelStats {
         RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
+    }
+}
+
+private struct PreviewLoadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase {
+    func execute(userID: UserID, size: Int) async throws(RepositoryError) -> ([CollectionPreview], Int) {
+        let previews = (1...size).map { index in
+            CollectionPreview(
+                id: CollectionID(index),
+                name: "미리보기 컬렉션 \(index)",
+                representativeNovel: CollectionNovel(id: NovelID(index), title: "작품 \(index)", author: "작가 \(index)", thumbnailImage: nil)
+            )
+        }
+        return (previews, previews.count)
     }
 }
 

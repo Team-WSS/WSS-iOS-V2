@@ -13,7 +13,7 @@ public extension WSSToastType {
     var image: Image {
         switch self {
         case .deleteBlockUser, .novelAlreadyConnected,
-                .selectionOverLimit, .unknownUser, .networkDelay:
+                .selectionOverLimit, .unknownUser, .noCollections, .networkDelay:
             return WSSImage.icAlertSuccess.swiftUIImage
         case .novelReviewed, .novelReviewDeleted, .feedEdited, .blockUser,
                 .changePublic, .changePrivate, .changeInfo, .editProfile, .limitAddImage:
@@ -27,6 +27,7 @@ public extension WSSToastType {
         switch self {
         case .blockUser(let nickname):          "\(nickname)님을 차단했어요"
         case .unknownUser:                      "웹소소를 떠난 유저예요"
+        case .noCollections:                    "컬렉션을 등록하지 않은 유저에요"
         case .deleteBlockUser(let nickname):    "\(nickname)님을 차단 해제했어요"
         case .novelAlreadyConnected:            "하나의 작품만 연결할 수 있어요"
         case .selectionOverLimit(let count):    "\(count)개까지 선택 가능해요"

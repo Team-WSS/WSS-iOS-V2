@@ -14,6 +14,7 @@ import ProfileDomain
 import NovelDomain
 import FeedDomain
 import SocialDomain
+import CollectionDomain
 import Logger
 
 @MainActor
@@ -27,6 +28,14 @@ final class UserPageViewModel {
         var genrePreferences: [GenrePreference] = []
         var novelPreference: NovelPreference?
         var registeredNovelStats: RegisteredNovelStats?
+        var collectionPreviews: [CollectionPreview] = []
+        /// 컬렉션 섹션의 표시값 겸 타이틀 행 탭 동작 분기 기준 — 미리보기 배열 개수(최대 3)가 아니라
+        /// 전체 개수(`CollectionDomain/CLAUDE.md`의 `collectionsCount`). 0이어도 타이틀 행은 항상
+        /// 보여주고(미리보기만 비움), 그 행을 탭하면 "컬렉션을 등록하지 않은 유저에요" 토스트로 안내한다
+        /// (사용자 확정, 2026-08-25 — 이전엔 섹션 전체를 숨겼다. `hasCollections`/`isNoCollectionsToastPresented` 참고).
+        var collectionCount = 0
+        /// 컬렉션 섹션 타이틀 행을 탭했는데 컬렉션이 0개일 때 뜨는 안내 토스트(`WSSToastType.noCollections`).
+        var isNoCollectionsToastPresented = false
         var isLoading = false
         var hasLoadError = false
         /// 상대가 프로필을 비공개로 설정해 접근할 수 없는 경우(`RepositoryError.privateProfile`) —
@@ -72,6 +81,13 @@ final class UserPageViewModel {
         state.genrePreferences.allSatisfy { $0.count == 0 }
     }
 
+    /// 컬렉션 데이터 존재 여부 — 미리보기 행 노출 여부, 그리고 타이틀 행을 탭했을 때 목록 이동(TODO)과
+    /// "컬렉션을 등록하지 않은 유저에요" 토스트를 가르는 기준(사용자 확정, 2026-08-25 — 이전엔 섹션
+    /// 전체 노출 여부였다).
+    var hasCollections: Bool {
+        state.collectionCount > 0
+    }
+
     /// 작품 취향(매력 포인트+키워드) 데이터가 아예 없거나, 장르 취향이 있어도 전부 0개면 → 콘텐츠를 "데이터 없음"으로 대체.
     var hasNoPreferenceData: Bool {
         let hasNoNovelPreference = (state.novelPreference?.attractivePoints.isEmpty ?? true)
@@ -104,6 +120,8 @@ final class UserPageViewModel {
         case confirmFeedAlert
         case dismissFeedAlert
         case dismissActionErrorToast
+        case collectionSectionTapped
+        case dismissNoCollectionsToast
     }
 
     // MARK: - Output
@@ -114,6 +132,9 @@ final class UserPageViewModel {
 
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+
+    /// 마이페이지 컬렉션 섹션과 동일 상한(디자인) — `MypageViewModel.collectionPreviewSize`와 동일.
+    private static let collectionPreviewSize = 3
 
     @ObservationIgnored private var hasLoadedFirstFeeds = false
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
@@ -134,6 +155,9 @@ final class UserPageViewModel {
     // NovelDomain
     private let loadUserRegisteredNovelStatsUseCase: LoadUserRegisteredNovelStatsUseCase
 
+    // CollectionDomain
+    private let loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase
+
     // FeedDomain
     private let loadUserFeedsUseCase: LoadUserFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
@@ -151,6 +175,7 @@ final class UserPageViewModel {
         loadGenrePreferencesUseCase: LoadGenrePreferencesUseCase,
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadUserRegisteredNovelStatsUseCase: LoadUserRegisteredNovelStatsUseCase,
+        loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         loadUserFeedsUseCase: LoadUserFeedsUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         blockUserUseCase: BlockUserUseCase,
@@ -163,6 +188,7 @@ final class UserPageViewModel {
         self.loadGenrePreferencesUseCase = loadGenrePreferencesUseCase
         self.loadNovelPreferencesUseCase = loadNovelPreferencesUseCase
         self.loadUserRegisteredNovelStatsUseCase = loadUserRegisteredNovelStatsUseCase
+        self.loadCollectionPreviewsUseCase = loadCollectionPreviewsUseCase
         self.loadUserFeedsUseCase = loadUserFeedsUseCase
         self.feedLikeUseCase = feedLikeUseCase
         self.blockUserUseCase = blockUserUseCase
@@ -197,6 +223,10 @@ final class UserPageViewModel {
             state.presentedFeedAlert = nil
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .collectionSectionTapped:
+            tapCollectionSection()
+        case .dismissNoCollectionsToast:
+            state.isNoCollectionsToastPresented = false
         }
     }
 }
@@ -248,6 +278,13 @@ private extension UserPageViewModel {
         state.presentedFeedAlert = alert
     }
 
+    /// 컬렉션 섹션 타이틀 행 탭 — 컬렉션이 있으면 목록으로 이동(TODO, `UserPageFeature/CLAUDE.md` 참고),
+    /// 없으면 "컬렉션을 등록하지 않은 유저에요" 토스트로 안내한다(사용자 확정, 2026-08-25).
+    func tapCollectionSection() {
+        guard !hasCollections else { return } // TODO: - 컬렉션 뷰로 이동
+        state.isNoCollectionsToastPresented = true
+    }
+
     /// 알럿에서 확정. 접수 완료 알럿(1버튼)의 "확인"은 dismiss로만 들어오므로 여기 오지 않는다.
     func confirmFeedAlert() {
         guard let alert = state.presentedFeedAlert else { return }
@@ -267,9 +304,12 @@ private extension UserPageViewModel {
 // MARK: - UseCase Handling
 
 private extension UserPageViewModel {
-    /// 프로필/장르 뱃지/작품 취향/서재 통계를 병렬로 로드한다. 대상은 모두 `ProfileTarget.user(userID)` /
-    /// 서재 통계는 `LoadUserRegisteredNovelStatsUseCase(id:)`로 동일한 userID를 사용한다.
-    /// 하나가 실패해도(구조적 동시성으로 나머지 자식 태스크는 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
+    /// 프로필/장르 뱃지/작품 취향/서재 통계/컬렉션 미리보기를 병렬로 로드한다. 대상은 모두
+    /// `ProfileTarget.user(userID)` / 서재 통계·컬렉션 미리보기는 각각 `LoadUserRegisteredNovelStatsUseCase(id:)`
+    /// / `LoadCollectionPreviewsUseCase.execute(userID:size:)`로 동일한 userID를 사용한다 — 컬렉션
+    /// 목록 API는 대상 사용자를 명시로 받는 계약이라 "본인 조회"와 달리 이 화면이 직접 userID를 넘긴다
+    /// (`CollectionDomain/CLAUDE.md` 참고). 하나가 실패해도(구조적 동시성으로 나머지 자식 태스크는
+    /// 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
     func loadUserPage() async {
         defer { loadTask = nil }
         state.isLoading = true
@@ -280,11 +320,15 @@ private extension UserPageViewModel {
             async let genrePreferences = loadGenrePreferencesUseCase.execute(.user(userID))
             async let novelPreference = loadNovelPreferencesUseCase.execute(.user(userID))
             async let registeredNovelStats = loadUserRegisteredNovelStatsUseCase.execute(id: userID)
+            async let collectionPreviews = loadCollectionPreviewsUseCase.execute(userID: userID, size: Self.collectionPreviewSize)
 
             state.profile = try await profile
             state.genrePreferences = try await genrePreferences
             state.novelPreference = try await novelPreference
             state.registeredNovelStats = try await registeredNovelStats
+            let (loadedCollectionPreviews, loadedCollectionCount) = try await collectionPreviews
+            state.collectionPreviews = loadedCollectionPreviews
+            state.collectionCount = loadedCollectionCount
             hasLoaded = true
         } catch {
             presentError(error)

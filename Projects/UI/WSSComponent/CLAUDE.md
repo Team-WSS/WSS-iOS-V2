@@ -109,6 +109,15 @@
     말고 이걸 재사용할 것.
 - **`WSSNicknameField`(`Sources/TextField/`)는 `OnboardingFeature`의 닉네임 화면과 `UserPageFeature`의 `MyPageEditView`가 같이 쓰는 닉네임 필드다**(2026-08, 두 화면이 손으로 맞추다 드리프트해서 승격) — 글자수 clamp 트랩(로컬 `fieldText` 버퍼 → `text` 반영 2단계, [상위 CLAUDE.md](../../Feature/CLAUDE.md) 주의사항 참고)을 여기 한 곳에서만 처리한다. `WSSSearchBar`와 같은 이유로 `isFocused: FocusState<Bool>.Binding`을 **필수** 파라미터로 받는다(내부 자체 포커스 없음) — 호출부가 "필드 바깥 탭하면 키보드 내리기"를 계속 제어해야 해서다. **도메인(`ProfileDomain.NicknameDraft.ValidationState`)을 모른다** — `isError`/`isSuccess`·캡션(문구+색)을 값으로만 받고 판단은 호출자(VM)가 한다. **캡션 문구는 컴포넌트가 하드코딩하지 않는다** — 두 화면의 워딩이 의도적으로 다르게 유지돼 왔기 때문(1:1 동기화 요구 아님).
   - ⚠️ **`isFocused`는 이 필드 전용 `@FocusState`여야 한다 — 같은 화면의 다른 텍스트필드와 공유하지 말 것**(#178). 배경(gray50→white)·테두리(`wssGray70`)가 포커스 여부(`isFocused.wrappedValue`)로 바뀌는데, 다른 필드와 공유하면 그 다른 필드가 포커스돼도 이 컴포넌트가 함께 화이트/테두리로 반응한다(`MyPageEditView`가 원래 소개글과 하나의 `isKeyboardFocused`를 공유하다 이 문제로 필드별로 분리한 사례 — `UserPageFeature/CLAUDE.md` 참고). "빈 곳 탭하면 키보드 내리기"처럼 여러 필드를 동시에 내리고 싶으면, 필드마다 별도 `@FocusState`를 두고 탭 핸들러에서 전부 `false`로 내릴 것.
+- **`WSSLibrarySection`(`Sources/Stat/`)는 관심/보는중/봤어요/하차 4칸 서재 통계 섹션이다**(2026-08-25,
+  원본은 `UserPageFeature`의 MyPage·UserPage 로컬 `LibrarySection`) — 처음엔 화면별로 배경·숫자 컬러를
+  다르게 넘길 수 있게 파라미터를 열어뒀으나, 두 화면을 완전히 같은 톤(`wssPrimary20`+`wssPrimary100`)
+  으로 통일하며 그 파라미터째 없애고 승격했다(사용자 명시 요청) — **색이 고정값이라 화면마다 달라질
+  일이 없다는 전제가 승격의 근거**이니, 나중에 다시 화면별로 다른 톤이 필요해지면(승격 이전처럼) 이
+  컴포넌트를 그대로 못 쓴다. **도메인 엔티티(`NovelDomain.RegisteredNovelStats`)를 모른다** — `interest`/
+  `watching`/`watched`/`quit` 4개 `Int`만 값으로 받고, 엔티티 → 값 매핑(옵셔널 처리 `stats?.interest ?? 0`
+  포함)은 호출부(Feature)가 한다(이 문서 상단 "입력은 값/콜백" 원칙, `WSSLibraryGridCell`이 `LibraryNovel`
+  을 직접 안 받는 것과 동일 이유).
 - **`WSSPillBadge`(`Sources/Button/`)는 "+ 추가"/"× 삭제" 같은 짧은 필 배지다**(2026-08-23, 원본은
   `CollectionFeature`의 `CollectionSearchNovelView` 검색 결과 행) — **이례적으로 두 번째 사용처가 이
   레포에 아직 없는 채로 승격됐다**(사용자 명시 요청, "두 번째 필요 시점에 승격" 관례의 의도적 예외).
