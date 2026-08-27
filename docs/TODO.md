@@ -212,9 +212,15 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
 - **왜 이번에 안 했나**: 이 클램프 로직은 **서브틀한 버그 이력이 있고 시뮬레이터 자동화로 검증이 안 되는**
   스크롤 동작(모듈 `CLAUDE.md`의 `TopBounceDisabler`·`enableSwipeBack` 항목 참고)이라, `MainActor.assumeIsolated`
   래핑이 동작을 바꾸지 않는지 **사람이 기기에서 직접 밀어** 확인해야 안전하다. 자동 세션에서 블라인드로 손대지 않았다.
-- **어떻게(할 때)**: KVO는 UIScrollView contentOffset 변화라 **메인에서 발화**하므로 클로저 본문을
-  `MainActor.assumeIsolated { … }`로 감싸는 게 정석. 적용 후 실기기에서 최상단 over-scroll 클램프가
-  그대로인지 확인.
+- **시도 결과(2026-08-27, 실측 — `assumeIsolated`는 실패로 판명)**: 클로저 본문을 `MainActor.assumeIsolated`로
+  감싸고 `Coordinator`를 `@MainActor`로 올려 **경고 3→0·빌드 성공**까지 갔으나, **실기기에서 상단 클램프가
+  깨졌다**(하단 bounce만 정상, 상단 over-scroll이 안 잡힘). 진단 로그상 `y=0` 쓰기는 매 프레임 반영되는데도
+  UIScrollView bounce 애니메이션이 덮었다 — `assumeIsolated`가 KVO 콜백 동기 실행 순서를 바꾼 것으로 추정.
+  **되돌렸다**(원본 비격리 유지, 경고 3건 감수). 재현·상세는
+  [NovelDetailFeature CLAUDE.md](../Projects/Feature/NovelDetailFeature/CLAUDE.md)의 `TopBounceDisabler` 항목.
+- **다음 시도 방향(보류)**: `assumeIsolated` 없이 mode 6 경고를 없애는 길을 찾아야 한다 — `@preconcurrency`/
+  `nonisolated` 우회 검토, 또는 이 KVO를 UIKit 컨테이너로 옮겨 SwiftUI 경계 밖에서 처리, 최후엔 이 모듈만
+  mode 6 예외. Feature mode 6 승격(5번 6단계) 착수 시 이 화면을 별도로 다룬다. 경고 3건은 report-only라 빌드 무해.
 
 ### 5. A4 Swift 6 — 경고 0 레이어 mode 6 승격 ✅완료 / Feature·App은 대기 (5·6단계)
 
@@ -229,8 +235,9 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
     강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼
     `scan.sh`/`strict-concurrency` job의 존재 이유가 사라진다.
 - **남은(6단계)**: **Feature·App** 승격. Feature는 `NovelDetailFeature`의 `TopBounceDisabler` 3건(→ 위 4번)이
-  남아 막혀 있다 — 그 3건을 `MainActor.assumeIsolated`로 정리하고 실기기 검증 후, `createFeatureModule`에도
-  `swift6SourcesSettings`를 전달하면 된다. App(WSS-iOS)은 Feature 전부가 mode 6이 된 뒤 마지막.
+  남아 막혀 있다 — 그 3건은 `assumeIsolated`로 정리하려다 **실기기에서 클램프가 깨져 보류**했다(→ 위 4번).
+  해결한 뒤 `createFeatureModule`에도 `swift6SourcesSettings`를 전달하면 된다. App(WSS-iOS)은 Feature 전부가
+  mode 6이 된 뒤 마지막.
 - **정리 대상(Feature 승격 후)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`·`.github/workflows/test.yml`의
   `strict-concurrency`(Swift 6 Readiness) job — 전 레이어가 mode 6이 되면 컴파일러가 역할을 대체하므로 제거 검토.
 - **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
