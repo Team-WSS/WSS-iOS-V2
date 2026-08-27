@@ -147,6 +147,11 @@ KEYS = re.compile(
 WARN = re.compile(r'^(/[^:]+):(\d+):(\d+): warning: (.*)$')
 PROJ = re.compile(r'/Projects/([^/]+)/([^/]+)/')
 
+# Demo(샘플 앱)·Tests/Testing(테스트·Mock)은 배포되지 않는 개발용 코드다. Swift 6 준비도
+# 게이트는 "배포되는 프로덕션 코드"만 본다(A3의 "변경 파일만" 스코핑과 같은 원리) → 이 경로 제외.
+# 실측: 전체 경고의 ~42%가 Demo였다 → 프로덕션 신호를 Demo 노이즈가 덮지 않게 한다.
+DEV_ONLY = re.compile(r'/(Demo|Tests|Testing)/')
+
 seen = set()
 buckets = {}   # (layer, module) -> count
 for line in open(log_path, encoding="utf-8", errors="ignore"):
@@ -155,6 +160,8 @@ for line in open(log_path, encoding="utf-8", errors="ignore"):
         continue
     path, ln, col, msg = m.groups()
     if not KEYS.search(msg):
+        continue
+    if DEV_ONLY.search(path):
         continue
     key = (path, ln, col, msg)
     if key in seen:
