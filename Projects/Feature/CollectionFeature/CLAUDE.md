@@ -304,3 +304,10 @@
     그 묶음 전체에 걸어야 항상 같이 움직인다.
   - `minY` 신호를 스크롤 감지(`isScrolledFromTop`)와 스트레치 계산 둘 다에 공유해서 쓰는 것도
     재사용 포인트(별도 `GeometryReader`를 새로 만들 필요 없음).
+- ⚠️ **정렬 변경(`WSSSortButton`) 재조회는 이미 `state.detail`이 있는 상태라 전면 `LoadingView()`로
+  덮지 않는다** — `isLoading`만 보고 덮으면 히어로·그리드가 전부 사라졌다 다시 그려져 화면이 통째로
+  깜빡인다(사용자 리포트). `viewModel.state.isLoading, viewModel.state.detail == nil`처럼 **"진짜
+  아무것도 없는 첫 로드"일 때만** 전면 로딩을 보여줄 것 — `FeedFeature.SosoFeedView`의
+  `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
+  전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
+  다룸 — 이건 의도한 동작이라 건드리지 않았다).

@@ -53,7 +53,11 @@ struct CollectionDetailView: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .background(Color.wssWhite)
                 .overlay {
-                    if viewModel.state.isLoading {
+                    // 정렬 변경 재조회는 이미 detail이 있는 상태라 전면 로딩으로 덮지 않는다 —
+                    // 덮으면 화면 전체가 깜빡이는 것처럼 보인다(사용자 리포트). 진짜 처음 로드일 때만
+                    // (detail == nil) 보여준다 — `SosoFeedView`의 `isLoading && currentFeeds.isEmpty`와
+                    // 동일 판단.
+                    if viewModel.state.isLoading, viewModel.state.detail == nil {
                         LoadingView()
                     }
                 }
