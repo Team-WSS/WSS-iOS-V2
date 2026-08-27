@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum KeywordCategory: Hashable, CaseIterable {
+public enum KeywordCategory: Hashable, CaseIterable, Sendable {
     case worldview
     case material
     case character

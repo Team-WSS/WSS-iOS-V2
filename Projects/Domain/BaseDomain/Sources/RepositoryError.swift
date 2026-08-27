@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum RepositoryError: Error, Equatable {
+public enum RepositoryError: Error, Equatable, Sendable {
     case networkUnavailable
     case authenticationRequired
     case serverUnavailable

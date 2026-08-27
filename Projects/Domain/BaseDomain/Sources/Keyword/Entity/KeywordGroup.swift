@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct KeywordGroup {
+public struct KeywordGroup: Sendable {
     public let category: KeywordCategory
     public let keywords: [Keyword]
 

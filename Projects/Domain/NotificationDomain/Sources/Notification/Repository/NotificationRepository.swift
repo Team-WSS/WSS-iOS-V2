@@ -8,7 +8,7 @@
 
 import BaseDomain
 
-public protocol NotificationRepository {
+public protocol NotificationRepository: Sendable {
     func loadNotifications(
         lastNotificationID: NotificationID?,
         size: Int

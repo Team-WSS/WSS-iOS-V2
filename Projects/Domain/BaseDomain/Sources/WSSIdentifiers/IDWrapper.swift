@@ -15,3 +15,5 @@ public struct IDWrapper<Value: Hashable>: Hashable {
         self.value = value
     }
 }
+
+extension IDWrapper: Sendable where Value: Sendable {}

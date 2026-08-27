@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum SortType: String {
+public enum SortType: String, Sendable {
     case recent // 최신 순
     case old    // 오래된 순
 }

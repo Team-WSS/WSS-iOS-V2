@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum NovelGenre: CaseIterable {
+public enum NovelGenre: CaseIterable, Sendable {
     case lightNovel
     case wuxia
     case fantasy

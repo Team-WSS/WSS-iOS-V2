@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadHomeDataUseCase {
+public protocol LoadHomeDataUseCase: Sendable {
     func execute() async throws(RepositoryError) -> HomeData
 }
 

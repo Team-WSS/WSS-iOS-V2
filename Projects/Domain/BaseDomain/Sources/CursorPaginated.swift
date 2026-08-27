@@ -26,3 +26,5 @@ public struct CursorPaginated<T> {
         self.nextCursor = nextCursor
     }
 }
+
+extension CursorPaginated: Sendable where T: Sendable {}

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct PopularKeywords {
+public struct PopularKeywords: Sendable {
     public let keywords: [Keyword]
     
     public init(keywords: [Keyword]) {

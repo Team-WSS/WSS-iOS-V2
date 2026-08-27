@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ConnectedNovel {
+public struct ConnectedNovel: Sendable {
 
     public let id: NovelID
     public let title: String

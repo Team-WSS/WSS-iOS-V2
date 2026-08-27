@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ReadingPeriod: Equatable {
+public struct ReadingPeriod: Equatable, Sendable {
     public let start: Date?
     public let end: Date?
     

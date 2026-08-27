@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Keyword: Equatable, Identifiable, Hashable {
+public struct Keyword: Equatable, Identifiable, Hashable, Sendable {
     public let id: KeywordID
     public let name: String
 
