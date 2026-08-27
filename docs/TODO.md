@@ -196,6 +196,55 @@
   흉내낼지(별도 push? 계속 무시?)부터 설계해야 한다.
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
+### 8. 홈 진입 프리페치(오늘의 발견·지금 뜨는 글)를 런치 부트스트랩 위에 되살린다
+
+- **무엇**: V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시
+  소비해 첫 홈 표시 지연을 줄였다. V2엔 이 프리페치가 없다(홈 진입마다 새로 로드). 되살리기로 확정(사용자, 2026-08-27).
+- **전제(선행 작업)**: **V2에 런치 부트스트랩 단계를 둔다**(사용자 확정). 현재 App이 스켈레톤이라 Splash/부트스트랩이
+  없어(`grep Splash`=디자인시스템 에셋뿐) 프리페치를 얹을 자리가 없다. **프리페치 이득은 "런치→홈 표시 사이 dwell"에
+  전적으로 달렸다** — 부트스트랩 없이 홈이 런치 즉시 뜨면 프리페치 착지 전에 홈 로드가 네트워크를 먼저 때려 이득이 0이다.
+  즉 이 항목은 **부트스트랩 단계 신설에 종속**된다(강제 업데이트 게이트·토큰 검증 등과 같은 자리 → 위 기능 2번과 함께 볼 것).
+- **어디를 고치나(할 때)**:
+  1. **`HomePrefetchStore`(actor)** 신설 — `today`·`trending` 단발성(single-shot) 슬롯. `consume…()`은 값을 돌려주고
+     슬롯을 비운다. (Data 또는 Core.)
+  2. `DefaultRecommendationRepository`(현재 `struct`)가 이 actor **참조**를 보유 → `fetchTodayDiscoveries()`/
+     `fetchTrendingFeeds()`가 store에 있으면 소비, 없으면 네트워크.
+  3. 부트스트랩이 `PrefetchHomeDataUseCase`(또는 레포 fetch)를 fire-and-forget으로 호출해 store를 채운다.
+  4. App DI가 `HomePrefetchStore` **단일 인스턴스**를 만들어 부트스트랩 트리거와 레포에 같이 주입.
+- **왜 지금 안 했나**: C1(#222)은 V1 동작 계약 **추출·분류**만이 범위다. 구현은 부트스트랩 신설(App 첫 실전 조립)에
+  종속돼 별건이다.
+- **놓치기 쉬운 것**:
+  - ⚠️ **V1의 `HomePrefetchService.shared` 싱글톤 방식 금지**(레포 철학). struct 레포엔 캐시 필드를 못 둔다(복사되어
+    공유 불가) — actor store 참조 공유가 그 회피책.
+  - ⚠️ **TTL 캐시 금지, single-shot이 정답** — 홈은 "탭 복귀마다 갱신" 계약이라 TTL이면 복귀 때 stale이 나온다.
+    single-shot이면 프리페치가 슬롯 1회 채움 → 첫 홈 로드가 비움 → 이후 복귀 갱신은 전부 네트워크(V1과 정확히 일치).
+  - **범위는 today·trending 2종만**(V1도 그랬음). taste(선호장르)는 느린 개인화라 제외, 알림 배지도 제외.
+  - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) §1.5.
+
+### 9. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들
+
+C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이 판정한 결과, **되살리거나 고치기로 결정됐지만**
+추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
+
+- **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
+  평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
+- **피드 댓글/삭제 조용한 실패 표면화(회귀 확정)** — `FeedDetailViewModel`의 `createComment`·`editComment`·
+  `deleteComment`·`deleteFeed`가 **빈 `catch {}` 4곳**으로 실패를 삼킨다(실측 확인). V1은 "네트워크 지연" 토스트 +
+  전송버튼 재활성. 최소 에러 표면화 필요. → `FeedFeature`.
+- **감상평 첫 진입 온보딩 힌트 재도입 검토** — V1은 감상평을 처음 볼 때 1회성 딤+말풍선 힌트(UserDefaults 가드)를
+  띄웠다. V2 없음. **디자인 검토 대상**(재도입 여부는 디자인 판단). → `NovelDetailFeature`.
+- **피드 좋아요 햅틱 복원** — V1 좋아요에 light impact 햅틱. V2 목록 좋아요엔 없다(정렬 토글엔 있음). → `FeedFeature`.
+- **피드 댓글 500자 제한 복원** — V1은 500자 하드컷. V2는 제한 없음(실측 확인). 무제한이면 서버가 긴 댓글 거부 시
+  조용한 실패 위험. → `FeedFeature`.
+- **매력포인트 버튼 순서 V1로 정렬** — 결정: `worldview·material·필력(writingSkill)·character·relationship·vibe`
+  (**필력 3번째**). 현재 V2는 필력이 맨 끝(둘 다 `allCases` 나열이라 우연히 다름). → `NovelReviewFeature`.
+- **키워드 빈 화면 문의 버튼 목적지 되돌림(오배선)** — 빈 검색결과의 "문의" 버튼이 V2에서 `AppURL.inquiryAddNovel`
+  (작품 등록 문의)로 잘못 연결됐다. V1은 **범용 문의**(`ExternalLinks.inquiry` = V2 `AppURL.errorReport`와 동일 URL).
+  **범용 문의로 되돌릴 것**. (`KeywordFeature/CLAUDE.md`의 "전용 폼 없어 재사용" 설명은 정정 완료.) → `KeywordFeature`.
+- **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
+  계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
+- **서재 `.title`(제목순) 정렬 백엔드 토큰 확정** — V1에도 "백엔드 토큰 미정" TODO 주석이 있었다. V2도 토큰을
+  싣지만 서버 실지원 여부 확인 필요(외부 의존). → `LibraryFeature`.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
