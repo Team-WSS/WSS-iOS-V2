@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct LibraryNovels {
+public struct LibraryNovels: Sendable {
     public let totalCount: Int
     public let novels: Paginated<LibraryNovel>
     

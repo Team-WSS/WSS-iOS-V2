@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadProfileCharacterUseCase {
+public protocol LoadProfileCharacterUseCase: Sendable {
     func execute() async throws(RepositoryError) -> [ProfileCharacter]
 }
 

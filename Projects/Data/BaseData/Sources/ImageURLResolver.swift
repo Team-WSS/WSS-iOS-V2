@@ -19,7 +19,13 @@ public enum ImageURLResolver {
     /// 매퍼는 백그라운드에서 돌 수 있어 `UITraitCollection.current`를 직접 읽으면 0이 나올 수 있다 —
     /// 그래서 값(Int) 주입 방식이다(Data는 UIKit을 모른다).
     /// 기본값 3: 미설정이어도 @3x는 모든 기기에서 다운스케일될 뿐 안전하다.
-    public static var displayScale: Int = 3
+    ///
+    /// `nonisolated(unsafe)`: 이 Int 전역은 기기 스케일(런타임에 안 변함)을 받도록 설계됐고, **쓰기는
+    /// 최대 1회**(설정 지점=UI 컨텍스트의 `onAppear`)라 data race가 성립하지 않는다. 늦게 읽어 기본값 3을
+    /// 봐도 안전(다운스케일). ⚠️ **현재 프로덕션(App 포함)은 어디서도 설정하지 않아 항상 3이고, 실제 설정은
+    /// Demo 앱 2곳뿐**이다 — "write-once"라 unsafe는 여전히 타당하나, 프로덕션에 쓰기를 추가한다면 그 지점이
+    /// 정말 런치 시 1회·메인인지 확인할 것(그 계약이 안전성의 근거다). actor/lock 대신 unsafe로 명시한다.
+    public nonisolated(unsafe) static var displayScale: Int = 3
 
     /// full URL(`http…`)은 그대로, 버킷 경로는 스케일 규약으로 조립한다.
     /// 빈 문자열·버킷 주소(BUCKET_URL) 미설정 등 조립 불가면 nil —

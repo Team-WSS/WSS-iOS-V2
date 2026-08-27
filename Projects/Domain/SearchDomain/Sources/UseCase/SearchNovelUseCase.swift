@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol SearchNovelUseCase {
+public protocol SearchNovelUseCase: Sendable {
     func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int)
 }

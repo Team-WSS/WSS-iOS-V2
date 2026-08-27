@@ -11,7 +11,7 @@ import BaseDomain
 
 /// 홈 - 선호 장르 기반 작품
 
-public struct PreferenceGenreNovel {
+public struct PreferenceGenreNovel: Sendable {
     
     public let novelID: NovelID
     

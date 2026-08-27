@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol ProfileService {
+protocol ProfileService: Sendable {
     func getUserBasicInfo() async throws -> UserInfoResponse
     func validateNickname(_ query: ValidateNicknameQuery) async throws -> NicknameValidationResponse
     func postRegisterProfile(_ request: ProfileRegistrationRequest) async throws

@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol FeedLikeUseCase {
+public protocol FeedLikeUseCase: Sendable {
     func like(feedID: FeedID) async throws(RepositoryError)
     func unlike(feedID: FeedID) async throws(RepositoryError)
 }

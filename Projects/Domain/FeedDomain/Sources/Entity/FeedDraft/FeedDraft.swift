@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct FeedDraft {
+public struct FeedDraft: Sendable {
     
     public private(set) var content: String
     public private(set) var isSpoiler: Bool

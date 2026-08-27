@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct TotalFeed: Equatable {
+public struct TotalFeed: Equatable, Sendable {
     
     public let feedId: FeedID
     public static func == (lhs: TotalFeed, rhs: TotalFeed) -> Bool {

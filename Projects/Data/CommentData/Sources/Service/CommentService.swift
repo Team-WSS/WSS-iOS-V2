@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-protocol CommentService {
+protocol CommentService: Sendable {
     func fetchComments(feedId: Int) async throws -> CommentsResponse
     func postComment(feedId: Int, _ request: CommentRequest) async throws
     func putComment(feedId: Int, commentId: Int, _ request: CommentRequest) async throws

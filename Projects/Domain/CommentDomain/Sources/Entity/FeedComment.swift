@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct FeedComment {
+public struct FeedComment: Sendable {
     
     public let id: CommentID
     
@@ -55,7 +55,7 @@ public struct FeedComment {
     }
 }
 
-public enum CommentVisibility: Equatable {
+public enum CommentVisibility: Equatable, Sendable {
     case blocked
     case hidden
     case spoiler

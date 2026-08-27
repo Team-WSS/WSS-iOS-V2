@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public enum Gender: String {
+public enum Gender: String, Sendable {
     case male
     case female
 }

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Rating: Equatable {
+public struct Rating: Equatable, Sendable {
     public let value: Double
     
     // MARK: - Policy

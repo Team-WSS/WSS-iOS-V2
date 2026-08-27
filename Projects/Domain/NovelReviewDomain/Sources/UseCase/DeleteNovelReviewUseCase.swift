@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol DeleteNovelReviewUseCase {
+public protocol DeleteNovelReviewUseCase: Sendable {
     func execute(novelID: NovelID) async throws(RepositoryError)
 }
 

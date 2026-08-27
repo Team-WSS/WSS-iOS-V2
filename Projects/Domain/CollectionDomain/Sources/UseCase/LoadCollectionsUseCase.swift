@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadCollectionsUseCase {
+public protocol LoadCollectionsUseCase: Sendable {
     /// 사용자별 컬렉션 목록을 가져온다. 본인 목록에는 나만 보는 컬렉션이 함께 오고,
     /// 다른 사용자 목록에는 공개 컬렉션만 오므로 화면에서 따로 거를 필요가 없다.
     /// - Parameter cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.

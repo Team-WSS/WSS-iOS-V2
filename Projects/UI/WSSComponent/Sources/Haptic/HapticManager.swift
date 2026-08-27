@@ -29,6 +29,9 @@ public enum HapticManager {
     }
 
     /// 정렬·필터 전환처럼 가벼운 상태 변경 시.
+    /// `@MainActor`: UIKit 피드백 제너레이터가 main-actor 격리 API라 메인에서 호출해야 한다
+    /// (호출부는 전부 SwiftUI View·제스처 클로저 = 이미 메인).
+    @MainActor
     public static func selection() {
         let generator = UISelectionFeedbackGenerator()
         generator.prepare()
@@ -36,6 +39,7 @@ public enum HapticManager {
     }
 
     /// 버튼 탭 등 물리적 충격감이 필요할 때.
+    @MainActor
     public static func impact(_ style: ImpactStyle = .light) {
         let generator = UIImpactFeedbackGenerator(style: style.uiKitStyle)
         generator.prepare()
@@ -43,6 +47,7 @@ public enum HapticManager {
     }
 
     /// 성공/실패/경고 등 결과를 알릴 때.
+    @MainActor
     public static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()

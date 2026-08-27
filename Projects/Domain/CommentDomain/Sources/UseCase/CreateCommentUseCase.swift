@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CreateCommentUseCase {
+public protocol CreateCommentUseCase: Sendable {
     func execute(feedID: FeedID, _ draft: CommentDraft) async throws(RepositoryError)
 }
 

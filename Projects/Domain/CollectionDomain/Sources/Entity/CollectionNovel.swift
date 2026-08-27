@@ -14,7 +14,7 @@ import BaseDomain
 ///
 /// `BaseDomain`의 `Novel`을 재사용하지 않는 이유: 컬렉션 화면은 평점·관심수·장르를 쓰지 않고
 /// 서버도 내려주지 않는다. `Novel`을 쓰면 매핑에서 없는 값을 0으로 채워 넣게 된다.
-public struct CollectionNovel {
+public struct CollectionNovel: Sendable {
 
     public let id: NovelID
     public let title: String

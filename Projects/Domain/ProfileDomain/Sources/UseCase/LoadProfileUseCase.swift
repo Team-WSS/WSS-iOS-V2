@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadProfileUseCase {
+public protocol LoadProfileUseCase: Sendable {
     func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile
 }
 

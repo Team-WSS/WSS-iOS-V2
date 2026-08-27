@@ -12,7 +12,7 @@ import Foundation
 ///
 /// 공용 `SortType`(최신/오래된 2종)과 달리 서재 V2 조회는 6종 정렬을 지원한다.
 /// 서버 전송 문자열 매핑은 Data 레이어(Mapper) 책임.
-public enum LibrarySortType: CaseIterable, Equatable {
+public enum LibrarySortType: CaseIterable, Equatable, Sendable {
     case registeredNewest   // 등록 최신순
     case registeredOldest   // 등록 오래된순
     case title              // 제목순

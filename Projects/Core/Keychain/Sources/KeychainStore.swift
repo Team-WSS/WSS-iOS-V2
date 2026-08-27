@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol KeychainStore {
+public protocol KeychainStore: Sendable {
     /// 새 항목을 생성합니다. 같은 key가 이미 있으면 실패합니다.
     func create(data: Data?, forKey key: String) throws
 

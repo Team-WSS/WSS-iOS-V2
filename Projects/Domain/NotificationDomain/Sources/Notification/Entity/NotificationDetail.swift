@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct NotificationDetail: Equatable {
+public struct NotificationDetail: Equatable, Sendable {
     public let title: String
     public let createdAtText: String
     public let body: String

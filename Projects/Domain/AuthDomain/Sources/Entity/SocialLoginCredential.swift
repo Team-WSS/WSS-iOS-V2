@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public enum SocialLoginCredential: Equatable {
+public enum SocialLoginCredential: Equatable, Sendable {
     case apple(
         authorizationCode: String,
         idToken: String

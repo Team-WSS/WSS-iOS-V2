@@ -10,11 +10,11 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadLocalGenderAndBirthUseCase {
+public protocol LoadLocalGenderAndBirthUseCase: Sendable {
     func execute() async throws(RepositoryError) -> AccountInfoDraft
 }
 
-public class DefaultLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {
+public final class DefaultLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {
     let repository: ProfileRepository
 
     public init(repository: ProfileRepository) {

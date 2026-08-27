@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public struct KeywordPreference: Equatable {
+public struct KeywordPreference: Equatable, Sendable {
     public let keyword: Keyword
     public let count: Int
 

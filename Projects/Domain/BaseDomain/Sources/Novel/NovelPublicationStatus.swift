@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum NovelPublicationStatus: String {
+public enum NovelPublicationStatus: String, Sendable {
     case onGoing  // 연재중
     case completed  // 완결작
 }

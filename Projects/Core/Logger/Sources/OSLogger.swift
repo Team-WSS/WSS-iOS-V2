@@ -10,7 +10,10 @@ import Foundation
 import os
 
 /// OSLog 기반 Logger 구현체
-public final class OSLogger: Logger {
+///
+/// `Sendable`: 불변 `os.Logger`(그 자체로 Sendable) 하나만 보유하는 final class라 값처럼 안전하게
+/// 공유된다. 공용 인스턴스들(`OSLogger.network` 등 static let)이 여러 스레드에서 쓰이므로 Sendable이어야 한다.
+public final class OSLogger: Logger, Sendable {
     private let logger: os.Logger
 
     public init(subsystem: String = Bundle.main.bundleIdentifier ?? "kr.websoso.app",

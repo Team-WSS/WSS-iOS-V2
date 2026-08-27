@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum AttractivePoint: Equatable, CaseIterable {
+public enum AttractivePoint: Equatable, CaseIterable, Sendable {
     case worldview
     case material
     case character

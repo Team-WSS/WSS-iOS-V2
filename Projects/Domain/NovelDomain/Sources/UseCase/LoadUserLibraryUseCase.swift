@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadUserLibraryUseCase {
+public protocol LoadUserLibraryUseCase: Sendable {
     /// - Parameters:
     ///   - id: 조회 대상 사용자.
     ///   - cursor: 직전 페이지 응답의 `nextCursor`. 첫 페이지는 nil.

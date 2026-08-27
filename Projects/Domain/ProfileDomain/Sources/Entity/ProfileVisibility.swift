@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct ProfileVisibility: Equatable {
+public struct ProfileVisibility: Equatable, Sendable {
     public let isPublic: Bool
     public init(isPublic: Bool) { self.isPublic = isPublic }
 }

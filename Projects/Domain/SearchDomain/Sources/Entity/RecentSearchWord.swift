@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public struct RecentSearchWord {
+public struct RecentSearchWord: Sendable {
     public let id: SearchWordID
     public let title: String
     

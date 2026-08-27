@@ -10,11 +10,11 @@ import Foundation
 
 import BaseDomain
 
-public protocol RegisterProfileUseCase {
+public protocol RegisterProfileUseCase: Sendable {
     func execute(_ profile: ProfileRegistration) async throws(RepositoryError)
 }
 
-public class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
+public final class DefaultRegisterProfileUseCase: RegisterProfileUseCase {
     let repository: ProfileRepository
     
     public init(repository: ProfileRepository) {

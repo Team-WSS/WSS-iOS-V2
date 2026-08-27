@@ -15,7 +15,7 @@ import BaseDomain
 /// 시트 필터 6종(읽기상태·장르·연재상태·별점·매력포인트·키워드)과
 /// 시트 밖 상태 2종(관심 토글·정렬)을 함께 담는다.
 /// `clearAll()`(시트 "초기화")은 **시트 필터 6종만** 리셋한다 — 관심·정렬은 시트 소속이 아니다.
-public struct MyLibraryFilter: Equatable {
+public struct MyLibraryFilter: Equatable, Sendable {
 
     public private(set) var isInterest: Bool
     public private(set) var readingStatus: [ReadingStatus]

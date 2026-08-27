@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol LoadPopularKeywordsUseCase {
+public protocol LoadPopularKeywordsUseCase: Sendable {
     func execute() async throws(RepositoryError) -> PopularKeywords
 }
 

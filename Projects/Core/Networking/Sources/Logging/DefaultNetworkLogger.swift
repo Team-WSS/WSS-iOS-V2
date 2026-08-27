@@ -8,7 +8,7 @@
 import Foundation
 import Logger
 
-public final class DefaultNetworkLogger: NetworkLogging {
+public final class DefaultNetworkLogger: NetworkLogging, Sendable {
     private let base: Logger
     private let showBody: Bool
     private let showHost: Bool

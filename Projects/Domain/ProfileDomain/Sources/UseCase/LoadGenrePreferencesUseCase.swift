@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadGenrePreferencesUseCase {
+public protocol LoadGenrePreferencesUseCase: Sendable {
     func execute(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference]
 }
 

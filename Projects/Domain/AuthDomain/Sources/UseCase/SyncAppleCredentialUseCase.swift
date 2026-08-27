@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol SyncAppleCredentialUseCase {
+public protocol SyncAppleCredentialUseCase: Sendable {
     func execute(
         credential: AppleSyncCredential
     ) async throws

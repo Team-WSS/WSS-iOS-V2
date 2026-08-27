@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol KeywordService {
+protocol KeywordService: Sendable {
     func searchKeyword(_ request: SearchKeywordQuery) async throws -> KeywordGroupsResponse
     func getPopularKeywords() async throws -> PopularKeywordsResponse
 }

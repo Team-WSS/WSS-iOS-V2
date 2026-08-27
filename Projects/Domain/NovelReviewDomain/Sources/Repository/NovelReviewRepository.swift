@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol NovelReviewRepository {
+public protocol NovelReviewRepository: Sendable {
 
     func loadNovelReviewDraft(
         novelID: NovelID

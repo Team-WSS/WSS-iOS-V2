@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol UpdateCollectionUseCase {
+public protocol UpdateCollectionUseCase: Sendable {
     /// 컬렉션을 수정한다. 부분 수정이 아니라 초안 전체를 덮어쓴다 —
     /// 작품 목록도 통째로 다시 보내므로, 화면은 편집 결과 전체를 담은 초안을 넘겨야 한다.
     func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError)

@@ -10,11 +10,11 @@ import Foundation
 
 import BaseDomain
 
-public protocol ValidateNicknameUseCase {
+public protocol ValidateNicknameUseCase: Sendable {
     func execute(_ nickname: String) async throws(RepositoryError) -> Bool
 }
 
-public class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
+public final class DefaultValidateNicknameUseCase: ValidateNicknameUseCase {
     let repository: ProfileRepository
     
     public init(repository: ProfileRepository) {

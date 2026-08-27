@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct NeedOnboarding: Equatable {
+public struct NeedOnboarding: Equatable, Sendable {
     public let value: Bool
     
     public init(value: Bool) {

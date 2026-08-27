@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public enum AuthError: Error {
+public enum AuthError: Error, Sendable {
     case networkUnavailable
     case invalidCredential
     case providerUnavailable

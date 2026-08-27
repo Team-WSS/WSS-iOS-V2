@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CollectionRepository {
+public protocol CollectionRepository: Sendable {
 
     /// 마이페이지 컬렉션 섹션용 미리보기 목록.
     ///

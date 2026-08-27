@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct BirthYear: Equatable {
+public struct BirthYear: Equatable, Sendable {
     public let value: Int
     
     static public let minYear = 1900

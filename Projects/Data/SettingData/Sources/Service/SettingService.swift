@@ -9,7 +9,7 @@
 
 import Foundation
 
-protocol SettingService {
+protocol SettingService: Sendable {
     
     // MARK: - Term
     

@@ -11,7 +11,7 @@ import BaseDomain
 
 /// 홈 - 지금 뜨는 글
 
-public struct TrendingFeed {
+public struct TrendingFeed: Sendable {
     public let feedID: FeedID
 
     /// 글이 달린 작품. 목록이 작품 제목·표지와 함께 보이므로 피드와 한 몸으로 온다.

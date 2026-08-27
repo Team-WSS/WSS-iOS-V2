@@ -19,17 +19,12 @@ enum Config {
             static let amplitudeAPIKey = "AMPLITUDE_API_KEY"
         }
     }
-    
-    private static let infoDictionary: [String: Any] = {
-        guard let dict = Bundle.main.infoDictionary else {
-            fatalError("plist cannot found.")
-        }
-        return dict
-    }()
 }
 
 public enum NetworkingConfig {
-    public static var baseURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.baseURL) as? String ?? ""
-    public static var testApiKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.testToken) as? String ?? ""
-    public static var bucketURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.bucketURL) as? String ?? ""
+    // 앱 시작 시 plist에서 한 번 읽어 고정되는 읽기 전용 설정값 → `let`(재할당 없음, Sendable-safe).
+    // (`var`였으나 어디서도 재할당하지 않아 concurrency-safe하지 않았다 — Swift 6에서 error.)
+    public static let baseURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.baseURL) as? String ?? ""
+    public static let testApiKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.testToken) as? String ?? ""
+    public static let bucketURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.bucketURL) as? String ?? ""
 }

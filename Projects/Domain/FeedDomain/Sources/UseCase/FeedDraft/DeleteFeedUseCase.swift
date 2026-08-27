@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol DeleteFeedUseCase {
+public protocol DeleteFeedUseCase: Sendable {
     func execute(feedID: FeedID) async throws(RepositoryError)
 }
 

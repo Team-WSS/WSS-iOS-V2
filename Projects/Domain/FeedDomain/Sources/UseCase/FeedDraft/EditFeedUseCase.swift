@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol EditFeedUseCase {
+public protocol EditFeedUseCase: Sendable {
     func execute(feedID: FeedID, editedFeed: FeedDraft, imageDatas: [Data]) async throws(RepositoryError)
 }
 

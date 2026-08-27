@@ -621,7 +621,8 @@ private extension UserPageView {
 private let scrollCoordinateSpace = "UserPageScroll"
 
 private struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    // 계산 프로퍼티로 두면 저장(공유 가변 상태)이 없어 concurrency-safe하다. PreferenceKey 요구사항 충족.
+    static var defaultValue: CGFloat { 0 }
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }

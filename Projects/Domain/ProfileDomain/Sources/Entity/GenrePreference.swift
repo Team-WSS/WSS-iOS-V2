@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public struct GenrePreference: Equatable {
+public struct GenrePreference: Equatable, Sendable {
     public let genre: NovelGenre
     public let count: Int
 

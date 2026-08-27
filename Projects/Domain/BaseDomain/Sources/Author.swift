@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Author {
+public struct Author: Sendable {
     
     public let userId: UserID?
     public let nickname: String

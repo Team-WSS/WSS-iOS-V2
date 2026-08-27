@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Novel {
+public struct Novel: Sendable {
     
     public let id: NovelID
     

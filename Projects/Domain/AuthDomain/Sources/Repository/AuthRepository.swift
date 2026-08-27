@@ -8,7 +8,7 @@
 
 import BaseDomain
 
-public protocol AuthRepository {
+public protocol AuthRepository: Sendable {
     func login(
         with credential: SocialLoginCredential
     ) async throws(AuthError) -> NeedOnboarding

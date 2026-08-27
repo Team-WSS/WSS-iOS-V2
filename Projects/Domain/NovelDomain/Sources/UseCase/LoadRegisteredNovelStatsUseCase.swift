@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadRegisteredNovelStatsUseCase {
+public protocol LoadRegisteredNovelStatsUseCase: Sendable {
     func execute() async throws(RepositoryError) -> RegisteredNovelStats
 }
 

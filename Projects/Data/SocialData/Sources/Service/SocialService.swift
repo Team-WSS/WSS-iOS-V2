@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-protocol SocialService {
+protocol SocialService: Sendable {
     func postBlockUser(_ query: BlockUserQuery) async throws
     func deleteBlock(blockID: Int) async throws
     func getBlockedUsers() async throws -> BlockedUserResponse

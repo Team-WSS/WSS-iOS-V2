@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CreateCollectionUseCase {
+public protocol CreateCollectionUseCase: Sendable {
     /// 초안으로 컬렉션을 만든다.
     ///
     /// 제출 가능 여부(`CollectionDraft.isSubmittable`) 판단은 화면 몫이다 —

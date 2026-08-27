@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ProfileDraft {
+public struct ProfileDraft: Sendable {
     public private(set) var characterID: Int
     public private(set) var nickname: NicknameDraft
     public private(set) var introduction: String

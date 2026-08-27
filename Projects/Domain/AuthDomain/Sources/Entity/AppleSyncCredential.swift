@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct AppleSyncCredential: Equatable {
+public struct AppleSyncCredential: Equatable, Sendable {
     public let authorizationCode: String
     public let idToken: String
     

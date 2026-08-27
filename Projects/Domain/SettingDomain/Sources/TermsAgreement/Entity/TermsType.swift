@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum TermsType: CaseIterable, Hashable {
+public enum TermsType: CaseIterable, Hashable, Sendable {
     case serviceAgreement
     case privacyPolicy
     case marketingConsent

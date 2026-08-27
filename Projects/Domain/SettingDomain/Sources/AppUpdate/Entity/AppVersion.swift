@@ -9,7 +9,7 @@
 import Foundation
 
 /// Semantic-ish version: "1.2.3" 형태를 비교 가능하게 만드는 VO
-public struct AppVersion: Equatable, Comparable, Hashable, CustomStringConvertible {
+public struct AppVersion: Equatable, Comparable, Hashable, CustomStringConvertible, Sendable {
     public let major: Int
     public let minor: Int
     public let patch: Int

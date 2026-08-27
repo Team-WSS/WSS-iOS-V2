@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct FeedDetail {
+public struct FeedDetail: Sendable {
     
     public let id: FeedID
     public let author: Author

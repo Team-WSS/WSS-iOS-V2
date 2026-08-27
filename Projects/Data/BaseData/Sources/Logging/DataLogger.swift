@@ -10,7 +10,7 @@ import Logger
 import Networking
 
 /// Data 레이어 Repository용 구조화 로거.
-public struct DataLogger {
+public struct DataLogger: Sendable {
     private let moduleName: String
     private let underlying: Logger?
 

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct UnreadNotificationStatus: Equatable {
+public struct UnreadNotificationStatus: Equatable, Sendable {
     public let hasUnreadNotifications: Bool
 
     public init(hasUnreadNotifications: Bool) {

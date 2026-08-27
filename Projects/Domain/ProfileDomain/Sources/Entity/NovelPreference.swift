@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct NovelPreference {
+public struct NovelPreference: Sendable {
     public let attractivePoints: [AttractivePoint]
     public let keywords: [KeywordPreference]
 

@@ -17,3 +17,5 @@ public struct Paginated<T> {
         self.hasNext = hasNext
     }
 }
+
+extension Paginated: Sendable where T: Sendable {}

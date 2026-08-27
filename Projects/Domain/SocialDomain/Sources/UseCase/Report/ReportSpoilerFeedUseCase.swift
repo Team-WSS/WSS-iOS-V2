@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol ReportSpoilerFeedUseCase {
+public protocol ReportSpoilerFeedUseCase: Sendable {
     func execute(id: FeedID) async throws(RepositoryError)
 }
 

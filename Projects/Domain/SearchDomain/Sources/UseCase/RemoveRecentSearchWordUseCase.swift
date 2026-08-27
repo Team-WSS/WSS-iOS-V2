@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol RemoveRecentSearchWordUseCase {
+public protocol RemoveRecentSearchWordUseCase: Sendable {
     func execute(word: RecentSearchWord) async throws(RepositoryError)
 }
 

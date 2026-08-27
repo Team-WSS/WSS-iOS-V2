@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadLikedCollectionsUseCase {
+public protocol LoadLikedCollectionsUseCase: Sendable {
     /// 좋아요한 컬렉션 목록을 가져온다. 좋아요한 시점 최신순.
     /// - Parameter cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
     /// - Returns: (커서 페이지, 전체 좋아요한 컬렉션 수)

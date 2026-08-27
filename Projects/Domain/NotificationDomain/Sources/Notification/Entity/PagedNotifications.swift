@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct PagedNotifications: Equatable {
+public struct PagedNotifications: Equatable, Sendable {
     public let items: [NotificationItem]
     public let isLoadable: Bool
 

@@ -9,7 +9,7 @@
 import Foundation
 import BaseDomain
 
-public struct NotificationItem: Equatable {
+public struct NotificationItem: Equatable, Sendable {
     public let id: NotificationID
     public let iconURL: URL?
     public let title: String

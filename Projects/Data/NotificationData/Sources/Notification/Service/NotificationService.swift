@@ -9,7 +9,7 @@
 
 import Foundation
 
-protocol NotificationService {
+protocol NotificationService: Sendable {
     
     func getNotifications(_ query: NotificationQuery) async throws -> PagedNotificationsResponse
     func getNotificationDetail(notificationId: Int) async throws -> NotificationDetailResponse

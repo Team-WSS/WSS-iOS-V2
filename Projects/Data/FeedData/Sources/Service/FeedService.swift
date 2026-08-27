@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol FeedService {
+protocol FeedService: Sendable {
     func postFeed(request: SubmitFeedRequest) async throws -> SubmitFeedResponse
     func patchFeed(feedID: Int, request: SubmitFeedRequest) async throws -> SubmitFeedResponse
     func deleteFeed(feedID: Int) async throws

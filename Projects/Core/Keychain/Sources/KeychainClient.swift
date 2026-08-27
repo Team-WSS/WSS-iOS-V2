@@ -8,7 +8,7 @@
 import Foundation
 
 /// 실제 iOS Keychain API를 사용하는 구현체
-public final class KeychainClient: KeychainStore {
+public final class KeychainClient: KeychainStore, Sendable {
 
     private let service: String
 

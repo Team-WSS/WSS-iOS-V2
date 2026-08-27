@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-protocol RecommendationService {
+protocol RecommendationService: Sendable {
     func getTodayDiscovery() async throws -> TodayDiscoveryNovelsResponse
     func getTrendingFeeds() async throws -> TrendingFeedsResponse
     func getInterestFeeds() async throws -> InterestFeedsResponse

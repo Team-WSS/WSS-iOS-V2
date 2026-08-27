@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol UpdateProfileUseCase {
+public protocol UpdateProfileUseCase: Sendable {
     func execute(_ draft: ProfileDraft) async throws(RepositoryError)
 }
 

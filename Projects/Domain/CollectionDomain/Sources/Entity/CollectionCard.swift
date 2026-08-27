@@ -14,7 +14,7 @@ import BaseDomain
 ///
 /// 좋아요 목록 응답에는 `likeCount`가 함께 오지만 그 화면이 좋아요 수를 쓰지 않아 매핑하지 않는다.
 /// 필요해지면 이 타입에 더하지 말고 그 화면 전용 타입을 따로 두는 편이 낫다 — 두 목록이 같은 카드를 쓰는 지금 구조가 깨진다.
-public struct CollectionCard {
+public struct CollectionCard: Sendable {
 
     public let id: CollectionID
     public let name: String

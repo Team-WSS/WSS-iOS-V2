@@ -13,7 +13,7 @@ import Foundation
 /// 화면이 `size`를 정하는 구조라 계산이 Feature에 흩어지기 쉬운데, **이 계산이 이번 기능에서 가장
 /// 틀리기 쉬운 부분**(보던 개수·delta·상한이 얽힌다)이라 순수 함수로 내려 테스트로 고정한다.
 /// 상한이 서버 제약이라는 점도 Feature보다 여기가 제자리다.
-public enum LibraryPageSizePolicy {
+public enum LibraryPageSizePolicy: Sendable {
 
     /// 무한 스크롤 한 페이지 크기.
     public static let pageSize = 15

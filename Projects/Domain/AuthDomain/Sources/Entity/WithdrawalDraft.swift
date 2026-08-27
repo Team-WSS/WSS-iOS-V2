@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct WithdrawalReasonDraft: Equatable {
+public struct WithdrawalReasonDraft: Equatable, Sendable {
     public private(set) var option: WithdrawalReasonOption = WithdrawalReasonOption.allCases.first ?? .notFrequentlyUsed
     public private(set) var customReasonText: String = ""
     public private(set) var policyAgreed: Bool = false

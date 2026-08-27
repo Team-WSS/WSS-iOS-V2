@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol CheckForceUpdateRequirementUseCase {
+public protocol CheckForceUpdateRequirementUseCase: Sendable {
     func execute() async throws(RepositoryError) -> Bool
 }
 

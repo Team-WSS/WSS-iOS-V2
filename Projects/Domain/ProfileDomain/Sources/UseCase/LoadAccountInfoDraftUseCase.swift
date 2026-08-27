@@ -10,11 +10,11 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadAccountInfoDraftUseCase {
+public protocol LoadAccountInfoDraftUseCase: Sendable {
     func execute() async throws(RepositoryError) -> AccountInfoDraft
 }
 
-public class DefaultLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
+public final class DefaultLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
     let repository: ProfileRepository
     
     public init(repository: ProfileRepository) {

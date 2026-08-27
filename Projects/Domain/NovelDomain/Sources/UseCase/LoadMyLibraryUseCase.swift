@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadMyLibraryUseCase {
+public protocol LoadMyLibraryUseCase: Sendable {
     /// - Parameters:
     ///   - cursor: 직전 페이지 응답의 `nextCursor`. 첫 페이지는 nil.
     ///   - size: 이번 요청으로 받을 개수. 화면이 정한다 — 무한 스크롤은 한 페이지지만, 재진입 갱신은

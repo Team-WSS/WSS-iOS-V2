@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct NicknameDraft {
+public struct NicknameDraft: Sendable {
     
     public private(set) var text: String = ""
     
@@ -64,21 +64,21 @@ public struct NicknameDraft {
         text != lastNickname
     }
     
-    public enum ValidationState: Equatable {
+    public enum ValidationState: Equatable, Sendable {
         case notStarted
         case notAvailable(reason: NotAvailableReason)
         case needDuplicatedCheck
         case available
     }
 
-    public enum NotAvailableReason: Equatable {
+    public enum NotAvailableReason: Equatable, Sendable {
         case whiteSpaceIncluded
         case invalidCharacterOrLimitExceeded
         case duplicated
         case notChanged
     }
     
-    public enum DuplicationCheckState: Equatable {
+    public enum DuplicationCheckState: Equatable, Sendable {
         case notYet
         case duplicated
         case notDuplicated

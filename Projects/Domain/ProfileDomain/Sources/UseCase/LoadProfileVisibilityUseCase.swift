@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadProfileVisibilityUseCase {
+public protocol LoadProfileVisibilityUseCase: Sendable {
     func execute() async throws(RepositoryError) -> ProfileVisibility
 }
 

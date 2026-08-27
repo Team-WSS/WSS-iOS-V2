@@ -11,7 +11,7 @@ import Foundation
 import BaseDomain
 
 /// 컬렉션 상세 화면이 쓰는 컬렉션 전체. 목록 카드와 달리 작품이 페이지네이션 없이 전부 내려온다.
-public struct CollectionDetail {
+public struct CollectionDetail: Sendable {
 
     public let id: CollectionID
     public let name: String

@@ -5,7 +5,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public protocol SessionTokenStore {
+public protocol SessionTokenStore: Sendable {
     func accessToken() throws -> String?
     func clearTokens() throws
 }

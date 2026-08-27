@@ -6,7 +6,7 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-public struct AccountInfoDraft: Equatable {
+public struct AccountInfoDraft: Equatable, Sendable {
     
     public let email: String?
     public private(set) var gender: Gender

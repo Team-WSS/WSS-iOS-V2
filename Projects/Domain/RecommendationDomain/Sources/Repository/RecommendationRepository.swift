@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol RecommendationRepository {
+public protocol RecommendationRepository: Sendable {
     func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery]
     func fetchTrendingFeeds() async throws(RepositoryError) -> [TrendingFeed]
     func fetchInterestFeeds() async throws(RepositoryError) -> InterestFeedState

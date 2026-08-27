@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct AppUpdatePolicy: Equatable {
+public struct AppUpdatePolicy: Equatable, Sendable {
     public let minimumVersion: AppVersion
     public let updateDate: Date?
 

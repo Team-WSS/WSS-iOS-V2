@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public protocol LoadCommentsUseCase {
+public protocol LoadCommentsUseCase: Sendable {
     func execute(feedID: FeedID) async throws(RepositoryError) -> [FeedComment]
 }
 
