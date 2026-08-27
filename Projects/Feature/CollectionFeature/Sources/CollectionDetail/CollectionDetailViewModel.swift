@@ -57,6 +57,12 @@ final class CollectionDetailViewModel {
         case confirmDelete
         case dismissActionErrorToast
         case shareTapped
+        /// 뒤로가기 버튼 탭 — `dismiss()` 직전에 View가 함께 호출한다. `.onDisappear`로는 못 쓴다
+        /// — 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하는데, push되는 순간 부모도
+        /// `.onDisappear`가 발화해(SwiftUI 표준 동작) `isClosing`이 영구히 굳어버린다(실측 확인,
+        /// 수정 복귀 후 재조회·정렬·좋아요·삭제 전부 무반응이 되는 회귀였다) — 그래서
+        /// `NovelDetailViewModel.close()`처럼 **명시적 사용자 액션**으로만 세운다.
+        case backTapped
     }
 
     // MARK: - Output
@@ -68,6 +74,8 @@ final class CollectionDetailViewModel {
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var likeTask: Task<Void, Never>?
+    /// 화면이 닫히는 중 — 뒤로가기(`.backTapped`)나 삭제 성공이 세운다(아래 `close()`).
+    @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
 
@@ -127,6 +135,8 @@ final class CollectionDetailViewModel {
         case .shareTapped:
             // TODO: - 공유하기(이번 범위 밖 — 공유 URL/딥링크 체계 없음)
             break
+        case .backTapped:
+            close()
         }
     }
 }
@@ -135,7 +145,7 @@ final class CollectionDetailViewModel {
 
 private extension CollectionDetailViewModel {
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
+        guard !hasLoaded, loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadDetail() }
@@ -143,7 +153,7 @@ private extension CollectionDetailViewModel {
 
     /// 정렬 변경은 진입 1회 가드와 무관하게 매번 새로 조회한다("최신순"↔"오래된순" 토글, `WSSSortButton` 탭).
     func changeSortType(_ sortType: SortType) {
-        guard loadTask == nil else { return }
+        guard loadTask == nil, !isClosing else { return }
         state.sortType = sortType
         state.isLoading = true
         state.hasLoadError = false
@@ -154,7 +164,7 @@ private extension CollectionDetailViewModel {
     /// `state.detail`이 있는 상태라 View의 `isLoading && detail == nil` 오버레이 조건상 전면 로딩으로
     /// 덮이지 않는다(정렬 변경과 동일 UX, `CollectionDetailView`의 그 조건 그대로 재사용).
     func reloadAfterEdit() {
-        guard loadTask == nil else { return }
+        guard loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadDetail() }
@@ -163,7 +173,7 @@ private extension CollectionDetailViewModel {
     /// 좋아요 토글. 정책(카운트 증감·음수 방지)은 엔티티 `CollectionDetail.toggleLike()`에 위임하고,
     /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다(`UserPageFeature`의 피드 좋아요와 동일 패턴).
     func toggleLike() {
-        guard likeTask == nil, var detail = state.detail else { return }
+        guard likeTask == nil, !isClosing, var detail = state.detail else { return }
         let before = detail
         detail.toggleLike()
         state.detail = detail
@@ -171,10 +181,21 @@ private extension CollectionDetailViewModel {
     }
 
     func confirmDelete() {
-        guard !state.isDeleting else { return }
+        guard !state.isDeleting, !isClosing else { return }
         state.isDeleteAlertPresented = false
         state.isDeleting = true
         Task { await deleteCollection() }
+    }
+
+    /// 뒤로가기 — 진행 중인 로드/좋아요 동기화가 뒤늦게 완료되며 이미 떠난 화면의 state를 건드리지
+    /// 않도록 막는다. 삭제(`confirmDelete`)는 취소하지 않는다 — 확인 알럿을 거친 명시적 요청이라
+    /// 화면이 닫히는 도중이어도 서버 반영까지 끝까지 보낸다(`NovelReviewViewModel.close()`가 저장
+    /// Task는 취소하지 않는 것과 동일 판단).
+    func close() {
+        guard !isClosing else { return }
+        isClosing = true
+        loadTask?.cancel()
+        likeTask?.cancel()
     }
 }
 
@@ -184,13 +205,16 @@ private extension CollectionDetailViewModel {
     func loadDetail() async {
         defer {
             loadTask = nil
-            state.isLoading = false
+            if !isClosing { state.isLoading = false }
         }
 
         do {
-            state.detail = try await loadCollectionDetailUseCase.execute(id: id, sortType: state.sortType)
+            let detail = try await loadCollectionDetailUseCase.execute(id: id, sortType: state.sortType)
+            guard !isClosing, !Task.isCancelled else { return }
+            state.detail = detail
             hasLoaded = true
         } catch {
+            guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 상세 로드 실패: \(String(describing: error))")
             state.hasLoadError = true
@@ -206,6 +230,7 @@ private extension CollectionDetailViewModel {
                 try await collectionLikeUseCase.unlike(id: id)
             }
         } catch {
+            guard !isClosing, !Task.isCancelled else { return }
             state.detail = before
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 좋아요 동기화 실패: \(String(describing: error))")
@@ -213,11 +238,18 @@ private extension CollectionDetailViewModel {
     }
 
     func deleteCollection() async {
-        defer { state.isDeleting = false }
+        defer {
+            if !isClosing { state.isDeleting = false }
+        }
         do {
             try await deleteCollectionUseCase.execute(id: id)
+            guard !isClosing, !Task.isCancelled else { return }
+            // 삭제 성공도 뒤로가기와 마찬가지로 진짜 exit다 — 이후 View의 shouldDismiss→dismiss()
+            // 사이 틈에 다른 액션(정렬 변경 등)이 끼어들지 않도록 여기서도 닫힘으로 표시한다.
+            close()
             state.shouldDismiss = true
         } catch {
+            guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 삭제 실패: \(String(describing: error))")
             state.hasActionError = true

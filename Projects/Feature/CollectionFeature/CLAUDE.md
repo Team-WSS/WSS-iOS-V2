@@ -144,6 +144,23 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`CollectionDetailViewModel`은 `isClosing` 가드를 갖는다(#201, 사용자 확정 — 리뷰가 지적했을 땐
+  형제 VM들과의 일관성을 이유로 한 라운드 보류했다가, 이후 이 화면에 한해 반영하기로 뒤집었다)** —
+  뒤로가기 버튼이 `viewModel.handle(.backTapped)`를 부른 뒤 `dismiss()`하면 `close()`가 `isClosing`을
+  세우고 `loadTask`/`likeTask`를 취소한다(`NovelDetailViewModel.close()`와 같은 "명시적 액션" 변형).
+  삭제 성공(`deleteCollection()`)도 같은 `close()`를 타는 진짜 exit로 취급한다 — `confirmDelete`가
+  스폰하는 삭제 Task 자신은 취소하지 않는다(확인 알럿을 거친 명시적 요청이라 화면이 닫히는 도중이어도
+  서버 반영까지 보낸다, `NovelReviewViewModel.close()`가 저장 Task를 안 취소하는 것과 동일 판단).
+  ⚠️ **`View.onDisappear`로 세우는 변형(`NovelNotificationSettingSheetViewModel.disappear()`)은 여기
+  못 쓴다 — 처음엔 그 변형을 그대로 옮겨왔다가 리뷰에서 실제 회귀로 발견됐다.** 이 화면은 "컬렉션
+  수정"을 같은 스택에 **로컬 push**하는데(`isEditPresented`), 자식이 push되는 순간 SwiftUI 표준
+  동작으로 부모의 `.onDisappear`도 함께 발화한다 — 그 시점에 `isClosing`이 `true`로 굳고 되돌리는
+  코드가 없어, 수정 화면에서 복귀한 뒤 재조회(`reloadAfterEdit`)는 물론 정렬 변경·좋아요·삭제까지
+  전부 조용히 무반응이 됐다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장"). `onDisappear`
+  기반 변형은 **로컬 push가 없는 리프 화면(시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택에
+  자식을 push하면 명시적 액션(`NovelDetailViewModel` 쪽 변형)을 쓸 것. **`CollectionListViewModel`/
+  `CreateCollectionViewModel`/`CollectionSearchNovelViewModel`/`CollectionMyLibrarySelectViewModel`은
+  아직 이 패턴이 없다** — 이번엔 리뷰가 지적한 화면 하나만 고쳤을 뿐, 모듈 전체 일괄 적용은 아니다.
 - **`CollectionListViewModel`은 표준 VM 섹션 순서(`Feature/CLAUDE.md`) 끝에 `// MARK: - Tab Bookkeeping
   Access`를 추가로 둔다** — 탭 2개(`.mine`/`.liked`)를 동시에 부기해야 하는 첫 사례라, 그 접근자
   헬퍼(`bookkeeping(for:)`/`content(for:)`/`update...`)가 기존 6개 섹션 어디에도 자연스럽게 안
