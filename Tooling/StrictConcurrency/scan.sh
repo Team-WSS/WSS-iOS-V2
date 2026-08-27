@@ -68,6 +68,10 @@ if [ -z "$SCHEMES_RAW" ]; then
 fi
 
 # 제외: App 스킴 3종(WSS-iOS, -DEBUG, -RELEASE) + 워크스페이스 집계 스킴.
+# ⚠️ **App 레이어(`Projects/App/Sources/*`) 미측정 한계**: App 소스(@main 엔트리·합성 루트/DI)는
+#   오직 WSS-iOS 스킴에서만 컴파일되는데 그 스킴을 제외하므로 App concurrency 경고가 수집되지 않는다.
+#   지금은 report-only라 무해하나, 레이어별 error 승격(TODO 5번) 전에는 App 스킴을 스캔에 포함하거나
+#   App을 명시적 예외로 문서화해야 거짓 초록을 피한다(App은 작은 @MainActor 합성 루트라 위험은 낮다).
 mapfile_compat() {
   # bash 3.2 호환: python으로 스킴 배열을 개행 목록으로.
   python3 - "$SCHEMES_RAW" << 'PY'
@@ -93,16 +97,14 @@ if [ ${#SCHEMES[@]} -eq 0 ]; then
   exit 4
 fi
 
-# --layer 필터: 경로가 아니라 스킴명 접미로 거른다(Domain/Data/Feature) 또는 Core/UI는 명시 목록.
+# --layer 필터: 스킴명 접미(예: *Domain)로 거르지 않고 **레이어 디렉토리 실재**로 거른다
+#   (`Projects/<Layer>/<scheme>/`가 있으면 그 레이어 모듈). 모듈명을 하드코딩하면 새 Core/UI
+#   모듈이 조용히 스킵돼 레이어 승격 시 거짓 초록이 나므로(스킴명==디렉토리명 규약을 이용) 경로 기반으로 둔다.
 layer_match() {
   local scheme="$1"
   case "$LAYER" in
     "") return 0 ;;
-    Domain)  [[ "$scheme" == *Domain ]] ;;
-    Data)    [[ "$scheme" == *Data ]] ;;
-    Feature) [[ "$scheme" == *Feature ]] ;;
-    Core)    [[ "$scheme" == Keychain || "$scheme" == Logger || "$scheme" == Networking || "$scheme" == PushAuthorization ]] ;;
-    UI)      [[ "$scheme" == DesignSystem || "$scheme" == WSSComponent ]] ;;
+    Domain|Data|Core|UI|Feature) [ -d "Projects/$LAYER/$scheme" ] ;;
     *) echo "알 수 없는 --layer: $LAYER (Domain|Data|Core|UI|Feature)" >&2; exit 2 ;;
   esac
 }
@@ -141,7 +143,9 @@ log_path, report_path = sys.argv[1], sys.argv[2]
 KEYS = re.compile(
     r"sendable|concurrency-safe|swift 6 language mode|@?preconcurrency|"
     r"actor-isolated|main actor|global actor|nonisolated|data race|"
-    r"non-sendable|mutable state|@sendable|isolated conformance",
+    r"non-sendable|mutable state|@sendable|isolated conformance|"
+    # sending/task-isolated/could race: 위 키워드 없이 나오는 진단도 놓치지 않게(Codex 리뷰).
+    r"sending .*risks|sending value|task-isolated|could race",
     re.IGNORECASE,
 )
 WARN = re.compile(r'^(/[^:]+):(\d+):(\d+): warning: (.*)$')
@@ -205,6 +209,13 @@ PY
 cat "$REPORT"
 if [ -n "$OUT" ]; then
   cp "$REPORT" "$OUT"
+fi
+
+# 집계기(python)가 죽으면 COUNT가 비거나 숫자가 아니게 된다. 그걸 0으로 착각하면 --strict가
+# 거짓 초록이 된다(집계 실패=경고 0 아님) → 숫자가 아니면 fail-loud로 멈춘다.
+if ! printf '%s' "$COUNT" | grep -qE '^[0-9]+$'; then
+  echo "::error::경고 집계에 실패했습니다(COUNT='$COUNT'). 게이트를 통과시키지 않습니다." >&2
+  exit 1
 fi
 
 # 진짜 빌드 실패는 항상 실패로(concurrency와 무관한 breakage는 숨기면 안 됨).
