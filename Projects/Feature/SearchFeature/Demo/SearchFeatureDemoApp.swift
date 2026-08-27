@@ -63,7 +63,7 @@ private struct DemoRootView: View {
         }
     }
 
-    /// "키워드" 탭 콘텐츠 조립 — `KeywordFactory.makeSearchKeywordView`는 자체 액션바가 없어 그대로
+    /// "키워드" 탭 콘텐츠 조립 — `KeywordFeatureFactory.makeSearchKeywordView`는 자체 액션바가 없어 그대로
     /// 감싸면 된다. 어떤 UseCase(Mock/실서버)를 쓸지는 호출부가 결정 — Mock/실서버 흐름에 맞춰 카탈로그
     /// 출처도 함께 바뀌도록(#185) 여기서 고정하지 않는다.
     private func keywordTabContentBuilder(
@@ -72,7 +72,7 @@ private struct DemoRootView: View {
     ) -> KeywordTabContentBuilder {
         { initialKeywords, onSelectionChanged in
             AnyView(
-                KeywordFactory.makeSearchKeywordView(
+                KeywordFeatureFactory.makeSearchKeywordView(
                     loadTotalKeywordsUseCase: loadTotalKeywordsUseCase,
                     searchKeywordsUseCase: searchKeywordsUseCase,
                     initialSelectedKeywords: initialKeywords,
@@ -84,7 +84,7 @@ private struct DemoRootView: View {
     }
 
     private var mockView: some View {
-        SearchFactory.makeNormalSearchView(
+        SearchFeatureFactory.makeNormalSearchView(
             loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
             loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
             removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
@@ -119,7 +119,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
-        return SearchFactory.makeNormalSearchView(
+        return SearchFeatureFactory.makeNormalSearchView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
@@ -161,7 +161,7 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
         )
-        return SearchFactory.makeDetailSearchResultView(
+        return SearchFeatureFactory.makeDetailSearchResultView(
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             logger: consoleLogger
@@ -197,7 +197,7 @@ private struct DetailSearchDemoFlow: View {
     }
 
     var body: some View {
-        SearchFactory.makeDetailSearchFilterView(
+        SearchFeatureFactory.makeDetailSearchFilterView(
             filter: SearchFilter(),
             keywordTabContent: keywordTabContent
         ) { filter in

@@ -1,5 +1,5 @@
 //
-//  CollectionFactory.swift
+//  CollectionFeatureFactory.swift
 //  CollectionFeature
 //
 //  Created by Guryss on 8/20/26.
@@ -20,7 +20,7 @@ import Logger
 /// (`CollectionMyLibrarySelectView`)은 이 Factory에 노출되지 않는다 — `CreateCollectionView`가 자기
 /// 내부에서만 push하는 로컬 화면이라(`ReadingPeriodSheet`와 같은 위상) 모듈 밖(App/Demo)이 알 이유가
 /// 없다. 대신 그 화면들이 검색·서재 조회에 쓸 UseCase만 여기서 받아 내려보낸다.
-public enum CollectionFactory {
+public enum CollectionFeatureFactory {
 
     /// - Parameters:
     ///   - searchNovelUseCase: "작품 추가" 화면(내부 로컬 push)의 작품 검색용 — `FeedFeature`의 연결

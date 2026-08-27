@@ -1,5 +1,5 @@
 //
-//  SearchFactory.swift
+//  SearchFeatureFactory.swift
 //  SearchFeature
 //
 //  Created by Seoyeon Choi on 7/19/26.
@@ -18,7 +18,7 @@ import Logger
 /// 실제 앱 흐름에서는 `NormalSearchView`/`DetailSearchResultView`가 내부에서 조립해 쓰지 않는다 — 지금
 /// `DetailSearchFilterView`를 push하는 건 Demo의 상세탐색 진입 흐름뿐이다(SearchFeature/CLAUDE.md
 /// "필터 화면 진입·복귀" 참고). Demo에서 단독으로 열어 검증할 수 있도록 여기도 노출한다.
-public enum SearchFactory {
+public enum SearchFeatureFactory {
 
     @MainActor
     public static func makeNormalSearchView(
@@ -47,7 +47,7 @@ public enum SearchFactory {
 
     /// 상세탐색 필터 화면 단독 진입 — UseCase가 없는 순수 입력 화면이라 필터 값과 콜백만 받는다.
     /// `keywordTabContent` — "키워드" 탭 콘텐츠를 조립하는 빌더. `SearchFeature`는 `KeywordFeature`를
-    /// 모르므로 App/Demo가 `KeywordFactory.makeSearchKeywordView(...)`를 감싸 건네준다 — 계약은
+    /// 모르므로 App/Demo가 `KeywordFeatureFactory.makeSearchKeywordView(...)`를 감싸 건네준다 — 계약은
     /// `KeywordTabContentBuilder` 문서 참고.
     @MainActor
     public static func makeDetailSearchFilterView(

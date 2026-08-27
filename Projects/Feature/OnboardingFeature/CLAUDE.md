@@ -4,7 +4,7 @@
 앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → (닉네임 → 성별/출생년도 → 장르 선택 → 계약 완료, 한 컨테이너)**. **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 5단계(약관 동의·닉네임·성별출생년도·장르선택·계약 완료)** 전부를 다룬다. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임·성별/출생년도·장르 선택 — 전용 `OnboardingDomain`은 없다).
-- 진입점(전부 `OnboardingFactory`):
+- 진입점(전부 `OnboardingFeatureFactory`):
   - `makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 1단계.
   - `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)` — 2단계(시트).
   - `makeStepFlowView(validateNicknameUseCase:registerProfileUseCase:logger:onCompleted:onAuthenticationRequired:)` — 나머지 3단계(닉네임→성별/출생년도→장르선택)를 **하나의 컨테이너 화면**(`OnboardingStepFlowView`)으로 진행한다. 그래서 이 셋만 개별 `makeXxxView`가 없다 — 자세한 이유는 `OnboardingStepFlowView`의 타입 문서 참고(사용자 피드백으로 진행바·헤더 공유 + 슬라이드 전환을 위해 컨테이너로 통합).
@@ -59,7 +59,7 @@
 
 - **전용 Domain 모듈이 없다** — 인트로 화면의 소셜 로그인은 `AuthDomain`의 `SocialLoginUseCase(SocialLoginCredential)`를 그대로 재사용한다. 응답 `NeedOnboarding`이 `false`(기존 유저)면 나머지 온보딩 단계를 건너뛰고 바로 완료 콜백을 호출, `true`(신규 유저)면 다음 단계(가입약관 시트, 후속 이슈)로 진행한다.
 - **소셜 로그인 SDK는 `KakaoSDK`를 `Tuist/Package.swift`에 새 SPM 의존성으로 추가해 연동**했다(사용자 승인, 2026-08 — REST API 직접 연동 대신 SDK를 택함). Apple은 시스템 `AuthenticationServices`(`SignInWithAppleButton`)라 추가 의존성 없음. `KAKAO_APP_KEY`는 `Config/Config_Shared.xcconfig`에 이미 있던 실제 키를 그대로 씀 — `Info.plist`(App·`ModuleInfoPlist.featureDemo`)에 `KAKAO_APP_KEY`+`CFBundleURLTypes`(`kakao$(KAKAO_APP_KEY)`)로 노출, App 진입점(`WSSIOSV2App.swift`)에서 `KakaoSDK.initSDK(appKey:)` 호출.
-- **이번 이슈(#176)는 App의 인프라 배선(Kakao 초기화·entitlement·URL scheme)까지만이고, `OnboardingFactory.makeIntroView`를 실제로 호출해 화면을 붙이는 건 후속 이슈 범위다** — 그래서 지금 App(`ContentView`)은 여전히 placeholder이고 Feature 모듈은 아직 아무 데서도 소비되지 않는다. "인프라만 있고 안 쓰인다"는 의도된 중간 상태이지 배선 누락이 아니다.
+- **이번 이슈(#176)는 App의 인프라 배선(Kakao 초기화·entitlement·URL scheme)까지만이고, `OnboardingFeatureFactory.makeIntroView`를 실제로 호출해 화면을 붙이는 건 후속 이슈 범위다** — 그래서 지금 App(`ContentView`)은 여전히 placeholder이고 Feature 모듈은 아직 아무 데서도 소비되지 않는다. "인프라만 있고 안 쓰인다"는 의도된 중간 상태이지 배선 누락이 아니다.
 - **`OnboardingIntroViewModel`은 Apple/Kakao credential을 그대로 `SocialLoginUseCase`에 넘긴다** — Kakao는 `UserApi.shared.loginWithKakaoAccount(completion:)`(웹 기반 `ASWebAuthenticationSession`, KakaoTalk 앱 전환 아님 — 시뮬레이터에서도 동작). SDK 실패(취소 포함)는 provider 구분 없이 `.loginFailed` 하나로 처리(카피가 갈릴 이유가 없어서, `UserPageFeature`와 같은 판단).
 - **푸시 알림 권한 요청은 이 모듈 범위 밖** — 온보딩이 다 끝나고 Home 진입 시점에 별도로 뜬다(App/Home 쪽 책임).
 - **온보딩 완료·로그인 후 라우팅은 App 책임** — 이 Feature는 `Factory`가 콜백만 노출하고, 어느 화면으로 이동할지는 관여하지 않는다.

@@ -1,5 +1,5 @@
 //
-//  OnboardingFactory.swift
+//  OnboardingFeatureFactory.swift
 //  OnboardingFeature
 //
 //  Created by Seoyeon Choi on 8/2/26.
@@ -19,7 +19,7 @@ import Logger
 ///
 /// 이름을 `makeView`가 아니라 `makeXxxView`로 두는 이유: 온보딩 플로우는 인트로·가입약관 시트·
 /// 나머지 3단계 컨테이너까지 진입점이 여럿이라 무엇을 만드는지 이름에 넣어야 호출부에서 구분된다.
-public enum OnboardingFactory {
+public enum OnboardingFeatureFactory {
 
     /// - Parameters:
     ///   - onLoginSucceeded: 소셜 로그인 성공 시 발화(`NeedOnboarding`으로 신규/기존 유저 분기).

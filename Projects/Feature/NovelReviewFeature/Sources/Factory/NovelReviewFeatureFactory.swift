@@ -1,5 +1,5 @@
 //
-//  NovelReviewFactory.swift
+//  NovelReviewFeatureFactory.swift
 //  NovelReviewFeature
 //
 //  Created by YunhakLee on 6/4/26.
@@ -15,7 +15,7 @@ import Logger
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
-public enum NovelReviewFactory {
+public enum NovelReviewFeatureFactory {
 
     /// - Parameters:
     ///   - title: 네비게이션 타이틀. 이 화면은 네비게이션으로만 진입하므로,

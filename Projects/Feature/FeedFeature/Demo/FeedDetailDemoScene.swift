@@ -122,7 +122,7 @@ struct FeedDetailDemoScene: View {
             .navigationTitle("피드 상세 데모")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $openedFeedID) { id in
-                FeedFactory.makeFeedDetailView(
+                FeedFeatureFactory.makeFeedDetailView(
                     feedID: FeedID(id),
                     currentUserID: currentUserID,
                     loadFeedDetailUseCase: loadFeedDetailUseCase,

@@ -1,5 +1,5 @@
 //
-//  UserPageFactory.swift
+//  UserPageFeatureFactory.swift
 //  UserPageFeature
 //
 //  Created by Seoyeon Choi on 7/25/26.
@@ -18,7 +18,7 @@ import Logger
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
-public enum UserPageFactory {
+public enum UserPageFeatureFactory {
 
     @MainActor
     public static func makeView(
@@ -59,7 +59,7 @@ public enum UserPageFactory {
     }
 
     /// "활동" 탭 미리보기(최대 5개)에서 "전체보기"로 진입하는 전체 피드 목록(무한스크롤) 화면.
-    /// `UserPageView`의 내부 네비게이션이 직접 호출한다(`SettingFactory`의 다중 `makeXxxView`와 동일 패턴).
+    /// `UserPageView`의 내부 네비게이션이 직접 호출한다(`SettingFeatureFactory`의 다중 `makeXxxView`와 동일 패턴).
     @MainActor
     public static func makeFeedListView(
         userID: UserID,

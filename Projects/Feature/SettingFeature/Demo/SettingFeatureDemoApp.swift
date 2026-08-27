@@ -128,7 +128,7 @@ private struct DemoRootView: View {
     private var settingView: some View {
         switch dataSource {
         case .mock:
-            SettingFactory.makeView(
+            SettingFeatureFactory.makeView(
                 loadLocalGenderAndBirthUseCase: DemoLoadLocalGenderAndBirthUseCase(),
                 saveAccountInfoDraftUseCase: DemoSaveAccountInfoDraftUseCase(),
                 loadAccountInfoDraftUseCase: DemoLoadAccountInfoDraftUseCase(),
@@ -190,7 +190,7 @@ private struct DemoRootView: View {
             appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
-        return SettingFactory.makeView(
+        return SettingFeatureFactory.makeView(
             loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(repository: profileRepository),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: profileRepository),
             loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: profileRepository),

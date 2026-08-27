@@ -345,8 +345,8 @@ struct RuleTests {
     @Test("⑬ Factory만 public이고 View/VM이 internal이면 통과")
     func featureExclusivityPasses() {
         let sources = [
-            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
-             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
             (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
              source: "struct SampleView {}"),
             (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
@@ -358,8 +358,8 @@ struct RuleTests {
     @Test("⑬ Factory 외 public View/VM이 있으면 error (선언별 1건씩)")
     func featureExclusivityCatchesPublicViewAndVM() {
         let sources = [
-            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
-             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
             (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
              source: "public struct SampleView {}"),        // 위반
             (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
@@ -373,8 +373,8 @@ struct RuleTests {
     @Test("⑬ Navigation/ 폴더의 public 조립 seam은 허용")
     func featureExclusivityAllowsNavigationSeam() {
         let sources = [
-            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
-             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
             (path: "/Projects/Feature/SampleFeature/Sources/Navigation/TabContentBuilder.swift",
              source: "public typealias TabContentBuilder = () -> Void")   // seam — 허용
         ]
@@ -420,8 +420,8 @@ struct RuleTests {
     @Test("⑬ Navigation/의 구체 View는 seam이 아니라 위반(계약 typealias/protocol만 허용)")
     func featureExclusivityNavigationOnlyAllowsContracts() {
         let sources = [
-            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFactory.swift",
-             source: "public enum SampleFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
             (path: "/Projects/Feature/SampleFeature/Sources/Navigation/DebugView.swift",
              source: "public struct DebugView {}")   // Navigation이라도 구체 타입 → 위반
         ]

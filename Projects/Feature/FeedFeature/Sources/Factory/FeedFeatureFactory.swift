@@ -1,5 +1,5 @@
 //
-//  FeedFactory.swift
+//  FeedFeatureFactory.swift
 //  FeedFeature
 //
 //  Created by Seoyeon Choi on 6/4/26.
@@ -18,7 +18,7 @@ import SocialDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
-public enum FeedFactory {
+public enum FeedFeatureFactory {
 
     /// 실제 UseCase를 주입해 CreateFeedView를 생성한다.
     @MainActor

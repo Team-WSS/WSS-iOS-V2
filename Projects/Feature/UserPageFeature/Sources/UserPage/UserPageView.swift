@@ -46,7 +46,7 @@ struct UserPageView: View {
     private let logger: Logger?
 
     // FeedDomain — "활동" 탭 미리보기와 "전체보기" 화면(`UserFeedListView`)이 함께 쓴다.
-    // `SettingFeature`의 내부 네비게이션(SettingFactory.makeXxxView 직접 호출)과 동일 패턴이라
+    // `SettingFeature`의 내부 네비게이션(SettingFeatureFactory.makeXxxView 직접 호출)과 동일 패턴이라
     // VM이 아니라 View가 UseCase를 들고 있다가 다음 화면 조립에 그대로 넘긴다.
     private let loadUserFeedsUseCase: LoadUserFeedsUseCase
     private let feedLikeUseCase: FeedLikeUseCase
@@ -172,7 +172,7 @@ struct UserPageView: View {
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
         .navigationDestination(isPresented: $isFeedListPresented) {
-            UserPageFactory.makeFeedListView(
+            UserPageFeatureFactory.makeFeedListView(
                 userID: userID,
                 nickname: viewModel.state.profile?.nickname ?? "",
                 profileImage: viewModel.state.profile?.characterImage,

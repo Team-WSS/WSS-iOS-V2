@@ -44,7 +44,7 @@ struct CreateFeedDemoScene: View {
 
     var body: some View {
         NavigationStack {
-            FeedFactory.makeCreateFeedView(
+            FeedFeatureFactory.makeCreateFeedView(
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase
             )

@@ -4,7 +4,7 @@
 알림 목록·알림 상세 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.notification)` / 의존: `BaseDomain`, `NotificationDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점(둘 다 `NotificationFactory` — 대등한 화면이라 양쪽 다 `makeXxxView`):
+- 진입점(둘 다 `NotificationFeatureFactory` — 대등한 화면이라 양쪽 다 `makeXxxView`):
   - `makeNotificationListView(loadPagedNotificationsUseCase:markNotificationAsReadUseCase:logger:onNotificationSelected:onFeedSelected:onNovelSelected:onAuthenticationRequired:)` — 홈 알림 벨에서 **push**
   - `makeNotificationDetailView(notificationID:loadNotificationDetailUseCase:logger:onAuthenticationRequired:)` — 목록에서 **push**
 - **모듈 안에 `navigationDestination`은 없다** — 목록 → 상세 전환도 콜백으로 올리고 배선은 호출자(App/Demo)가 한다.

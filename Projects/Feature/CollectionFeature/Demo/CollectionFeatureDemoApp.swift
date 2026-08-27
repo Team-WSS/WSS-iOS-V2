@@ -85,7 +85,7 @@ private struct DemoRootView: View {
     private var createView: some View {
         switch dataSource {
         case .mock:
-            CollectionFactory.makeCreateCollectionView(
+            CollectionFeatureFactory.makeCreateCollectionView(
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
                 searchNovelUseCase: DemoSearchNovelUseCase(),
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
@@ -129,7 +129,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
-        return CollectionFactory.makeCreateCollectionView(
+        return CollectionFeatureFactory.makeCreateCollectionView(
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(

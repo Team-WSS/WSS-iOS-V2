@@ -2,11 +2,11 @@ import Foundation
 import SwiftSyntax
 
 /// 규칙⑬ Feature Factory 배타성 — 하드 게이트(error). **모듈 단위 규칙**(`ModuleRule`).
-/// 각 Feature 모듈은 조립 진입점 `public *Factory`(+ 명시적 조립 seam)만 외부에 노출한다.
+/// 각 Feature 모듈은 조립 진입점 `public *FeatureFactory`(+ 명시적 조립 seam)만 외부에 노출한다.
 /// View·ViewModel·상태 enum 등 나머지 top-level 선언은 internal이어야 한다.
 ///
 /// Data의 `factory-exclusivity`(⑫)를 Feature로 옮긴 것 — 판정 로직(`publicTopLevelOffense`)은 공유하고
-/// **허용 접미사만 `Factory`로** 바꾼다. Feature Factory는 반환을 `some View`(opaque)로 두어야
+/// **허용 접미사만 `FeatureFactory`로** 바꾼다(Data의 `DataFactory`와 대칭). Feature Factory는 반환을 `some View`(opaque)로 두어야
 /// 구체 View/VM이 internal로 숨는다(→ Projects/Feature/CLAUDE.md의 Factory 골격).
 ///
 /// - **Data엔 없는 정당한 예외 — 조립 seam**: Feature 간 직접 의존 없이 App이 콘텐츠를 주입하는 공개 접점
@@ -39,7 +39,7 @@ struct FeatureExclusivityRule: ModuleRule {
                 // Navigation/이라도 **계약 타입(typealias·protocol)만** seam 예외 — 구체 View/VM(struct/class/enum)은 여전히 위반.
                 if isNavigationSeam, Self.isSeamContract(statement.item) { continue }
                 guard let offense = publicTopLevelOffense(
-                    statement.item, allowedSuffix: "Factory", localTypeNames: localTypeNames
+                    statement.item, allowedSuffix: "FeatureFactory", localTypeNames: localTypeNames
                 ) else { continue }
                 let line = offense.node.startLocation(converter: converter, afterLeadingTrivia: true).line
                 violations.append(Violation(

@@ -339,7 +339,7 @@ private struct DemoRootView: View {
             // 삭제 UseCase가 기록하고 로드 UseCase가 읽는 공유 상태 — 삭제 → 재로드에서
             // 평가 없음(셀렉터) 화면으로 바뀌는 흐름을 서버 없이 시연한다. .id로 진입마다 초기화.
             let reviewDeletion = DemoReviewDeletion()
-            NovelDetailFactory.makeView(
+            NovelDetailFeatureFactory.makeView(
                 novelID: mockNovelID,
                 loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario, reviewDeletion: reviewDeletion),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
@@ -405,7 +405,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
-        return NovelDetailFactory.makeView(
+        return NovelDetailFeatureFactory.makeView(
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: novelRepository,

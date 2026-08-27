@@ -94,7 +94,7 @@ struct SettingAccountInfoView: View {
             viewModel.handle(.load)
         }
         .navigationDestination(isPresented: $isChangeGenderOrAgePresented) {
-            SettingFactory.makeChangeGenderOrAgeView(
+            SettingFeatureFactory.makeChangeGenderOrAgeView(
                 loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
                 saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
                 logger: logger,
@@ -102,14 +102,14 @@ struct SettingAccountInfoView: View {
             )
         }
         .navigationDestination(isPresented: $isBlockUserListPresented) {
-            SettingFactory.makeBlockUserListView(
+            SettingFeatureFactory.makeBlockUserListView(
                 loadBlockedUsersUseCase: loadBlockedUsersUseCase,
                 unblockUserUseCase: unblockUserUseCase,
                 logger: logger
             )
         }
         .navigationDestination(isPresented: $isWithdrawConfirmPresented) {
-            SettingFactory.makeWithdrawFlowView(
+            SettingFeatureFactory.makeWithdrawFlowView(
                 loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
                 withdrawUseCase: withdrawUseCase,
                 logger: logger,

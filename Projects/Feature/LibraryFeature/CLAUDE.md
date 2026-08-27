@@ -9,7 +9,7 @@
 | **타유저 서재**(`UserLibrary/`) | `NavigationStack` push(dismiss로 빠짐) | 커스텀 네비바(뒤로가기 + 중앙 "서재") / 카운트·정렬·아이콘 토글 **(필터 없음)** |
 
 - 식별자: `ModuleType.feature(.library)` / 의존: `BaseDomain`, **`NovelDomain`**(서재 Domain 코드가 별도 LibraryDomain이 아니라 여기 있음 — `LoadMyLibraryUseCase`·`LoadUserLibraryUseCase`·`LoadMyLibraryKeywordsUseCase`·`LibraryNovel(s)`·`MyLibraryFilter`·`LibraryFilter`), `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점(둘 다 `LibraryFactory`):
+- 진입점(둘 다 `LibraryFeatureFactory`):
   - `makeMyLibraryView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:logger:onNovelSelected:onSearchTapped:onRegisterTapped:onNotificationTapped:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫)
   - `makeUserLibraryView(userID:loadUserLibraryUseCase:logger:onNovelSelected:onAuthenticationRequired:)` — **push 대상**. 대상 사용자는 진입 시점(유저 프로필 등)에서 `UserID`로 넘긴다.
 - 공유 자산: `LibraryListCell`(리스트 셀), `LibrarySortSheet`(정렬 6종), `LibraryDisplayMode(+Icon)`(표시 모드·아이콘), `LibrarySortType+Library`(카피). 그리드 셀은 `WSSComponent.WSSLibraryGridCell`(2026-08, `CollectionFeature`의 "서재에서 추가" 화면과 공용 승격 — 아래 주의사항 참고).
@@ -76,7 +76,7 @@
   - ⚠️ **dev 서버 테스트 유저의 서재는 작품이 한 자릿수다**(2026-08-18 기준 10041=5건, 10032=2건) — 즉 **페이지네이션·재진입 갱신·delta 보정은 실서버 모드로 확인할 수 없다.** 그 경로들은 Mock에서 보는 게 정상이고, 실서버 모드는 매핑·인증·키워드 복원을 보는 용도다.
   - `authExpired` 시나리오의 **2회차 발화**는 두 화면 다 정렬(또는 필터) 변경으로 확인한다 — 인증 만료는 실패 뷰를 세우지 않아 카운트·정렬 행이 그대로 살아 있다.
 - 서재 Domain을 찾을 때 `LibraryDomain`을 만들지 말 것 — 정본은 `NovelDomain/Sources/Entity/Library/`와 `NovelDomain/Sources/UseCase/`다.
-- ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
+- ⚠️ **`requiresAuthentication`은 View가 소비한 뒤 `.consumeAuthenticationRequired`로 반드시 되돌려야 한다** — 서재는 **탭 콘텐츠라 VM이 앱 세션 내내 산다**(`LibraryFeatureFactory`가 탭 콘텐츠만 반환). 신호가 true로 굳으면 `onChange`가 다시 발화하지 않아 **2회차 인증 만료가 조용히 삼켜지고**(토스트도 인증 에러를 먼저 걸러냄) 빈 목록에 "서재가 비어있어요"가 뜬다. `NovelDetail`·`NovelReview`는 push 후 dismiss돼 VM이 사라지므로 소진 없이도 굴러가지만, **그 배관을 그대로 복사하면 안 된다.**
   - 인증 만료 뒤 **화면을 치우는 건 App 책임**이라 두 서재 모두 목록은 빈 채 남는다(빈 상태가 비친다) — Feature에서 가리지 말 것. → [Feature CLAUDE.md](../CLAUDE.md)의 "인증 만료 처리 계약".
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.
 - ⚠️ **그리드 셀은 2026-08에 `WSSComponent.WSSLibraryGridCell`로 승격됐다**(`CollectionFeature`의 "서재에서 추가" 화면과 공용, 유일한 차이는 선택 서클 오버레이라 `isSelected: Bool?`로 흡수 — nil이면 이 화면처럼 선택 UI 자체가 안 그려진다). 이 화면은 이제 `LibraryNovel`을 그대로 넘기지 않고 `thumbnailImage`/`title`/`readingStatus`/`myRating`/`dateText`/`isInterested`(+`isSelected: nil`)로 풀어서 넘긴다 — 정보 스택 고정 높이(`Metric.infoHeight` 65)·표지 비율(108:160)·`WSSNovelCoverImage(url:aspectRatio:)` 충돌 회피 같은 레이아웃 함정은 이제 컴포넌트 내부 구현 문제이므로 **정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSLibraryGridCell` 항목** — 이 화면에서 그 함정을 다시 우회하지 말 것. 날짜 문자열은 `ReadingPeriod.displayText`(같은 승격, 아래 참고)로 이미 포맷된 값을 넘긴다.

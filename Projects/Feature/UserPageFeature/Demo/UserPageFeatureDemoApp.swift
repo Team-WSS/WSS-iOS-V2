@@ -122,7 +122,7 @@ private enum DemoFactory {
     static func makeMypageView(dataSource: DemoDataSource) -> some View {
         switch dataSource {
         case .mock:
-            MypageFactory.makeView(
+            MypageFeatureFactory.makeView(
                 loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
@@ -142,7 +142,7 @@ private enum DemoFactory {
     static func makeUserPageView(dataSource: DemoDataSource, userID: UserID) -> some View {
         switch dataSource {
         case .mock:
-            UserPageFactory.makeView(
+            UserPageFeatureFactory.makeView(
                 userID: userID,
                 loadProfileUseCase: DemoLoadOtherUserProfileUseCase(),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
@@ -166,7 +166,7 @@ private enum DemoFactory {
     // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
     private static func makeMypageLiveView() -> some View {
         let (profileRepository, novelRepository, keywordRepository, _) = makeLiveRepositories()
-        return MypageFactory.makeView(
+        return MypageFeatureFactory.makeView(
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
@@ -191,7 +191,7 @@ private enum DemoFactory {
             ),
             logger: DataLogger(moduleName: "SocialData", underlying: consoleLogger)
         )
-        return UserPageFactory.makeView(
+        return UserPageFeatureFactory.makeView(
             userID: userID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),

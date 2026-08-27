@@ -8,7 +8,7 @@
   "작품 추가" 화면), `NovelDomain`(서재 조회 — "서재에서 추가" 화면, 서재 Domain 코드는 별도 모듈이
   아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
   `WSSComponent`, `Logger`
-- 진입점: `CollectionFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
+- 진입점: `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
   (모듈에 화면이 더 늘어날 예정이라 `makeView`가 아니라 화면명을 붙인 이름)
 
 ## 핵심 시나리오
@@ -113,7 +113,7 @@
   코드가 아니라 시뮬레이터 런타임부터 의심할 것.
 - ⚠️ **로컬 push 화면(Factory에 안 뜨는 "작품 추가"/"서재에서 추가")은 `logger`가 자동으로 안 흐른다 —
   화면마다 파라미터로 직접 받아 다음 화면에 넘겨야 한다(PR #199 리뷰에서 실제로 놓쳤다 발견).**
-  `CollectionFactory`가 `CreateCollectionViewModel`에는 `logger`를 넘겨도, `CreateCollectionView`
+  `CollectionFeatureFactory`가 `CreateCollectionViewModel`에는 `logger`를 넘겨도, `CreateCollectionView`
   자신의 `init`에 `logger` 파라미터가 없으면 그 화면이 만드는 `CollectionSearchNovelViewModel`은
   기본값 `nil`로 조용히 굳는다 — 컴파일 에러 없이 로그만 사라져서 리뷰 전까진 못 잡았다. 이 모듈처럼
   화면이 화면을 로컬로 여러 단 push하면, **매 단(View 자신 + 그 View가 만드는 다음 VM/View)마다**

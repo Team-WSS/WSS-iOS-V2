@@ -21,7 +21,7 @@ import BaseDomain
 ///   - initialKeywords: 탭 진입 시 이미 선택돼 있던 키워드(`SearchFilter.keywords`) — 콘텐츠에 시딩된다.
 ///   - onSelectionChanged: 콘텐츠 안에서 선택이 바뀔 때마다(확정 버튼 없이 실시간으로) 호출된다.
 ///     하단 "작품 찾기" CTA는 이 화면(`DetailSearchFilterView`) 자신이 공용으로 소유한다 —
-///     `KeywordFactory.makeSearchKeywordView`는 애초에 자체 하단 액션바가 없어(`KeywordFeature/CLAUDE.md`
+///     `KeywordFeatureFactory.makeSearchKeywordView`는 애초에 자체 하단 액션바가 없어(`KeywordFeature/CLAUDE.md`
 ///     참고) 별도 스위치 없이 그대로 주입하면 된다.
 public typealias KeywordTabContentBuilder = (
     _ initialKeywords: [Keyword],

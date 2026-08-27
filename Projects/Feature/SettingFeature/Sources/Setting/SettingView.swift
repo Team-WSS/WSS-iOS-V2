@@ -113,7 +113,7 @@ struct SettingView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .navigationDestination(isPresented: $isAccountInfoPresented) {
-            SettingFactory.makeAccountInfoView(
+            SettingFeatureFactory.makeAccountInfoView(
                 loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
                 saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
                 loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
@@ -128,7 +128,7 @@ struct SettingView: View {
             )
         }
         .navigationDestination(isPresented: $isProfilePublicPresented) {
-            SettingFactory.makeProfilePublicView(
+            SettingFeatureFactory.makeProfilePublicView(
                 loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
                 updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
                 logger: logger,
@@ -136,7 +136,7 @@ struct SettingView: View {
             )
         }
         .navigationDestination(isPresented: $isNotificationSettingPresented) {
-            SettingFactory.makeNotificationSettingView(
+            SettingFeatureFactory.makeNotificationSettingView(
                 loadPushPreferenceUseCase: loadPushPreferenceUseCase,
                 updatePushPreferenceUseCase: updatePushPreferenceUseCase,
                 logger: logger

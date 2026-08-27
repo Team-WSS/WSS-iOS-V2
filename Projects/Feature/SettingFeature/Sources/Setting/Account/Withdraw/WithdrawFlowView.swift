@@ -38,13 +38,13 @@ struct WithdrawFlowView: View {
     }
 
     var body: some View {
-        SettingFactory.makeWithdrawConfirmView(
+        SettingFeatureFactory.makeWithdrawConfirmView(
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
             onConfirm: { isReasonPresented = true }
         )
         .navigationDestination(isPresented: $isReasonPresented) {
-            SettingFactory.makeWithdrawReasonView(
+            SettingFeatureFactory.makeWithdrawReasonView(
                 withdrawUseCase: withdrawUseCase,
                 logger: logger,
                 onWithdrawSuccess: onWithdrawSuccess
