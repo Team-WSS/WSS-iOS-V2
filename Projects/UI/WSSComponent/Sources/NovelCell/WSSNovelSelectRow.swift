@@ -61,17 +61,8 @@ public struct WSSNovelSelectRow: View {
 
             Spacer()
 
-            ZStack {
-                WSSImage.icSelectNovelDefault.swiftUIImage
-                    .opacity(isSelected ? 0 : 1)
-                    .scaleEffect(isSelected ? 0.85 : 1)
-
-                WSSImage.icSelectNovelSelected.swiftUIImage
-                    .opacity(isSelected ? 1 : 0)
-                    .scaleEffect(isSelected ? 1 : 0.6)
-            }
-            .frame(width: 44, height: 44)
-            .animation(.spring(response: 0.32, dampingFraction: 0.6), value: isSelected)
+            WSSSelectionCheckIcon(isSelected: isSelected)
+                .frame(width: 44, height: 44)
         }
         .contentShape(Rectangle())
         .onTapGesture {

@@ -114,8 +114,7 @@ struct WithdrawReasonView: View {
             viewModel.handle(.selectReason(option))
         } label: {
             HStack(spacing: 8) {
-                (isSelected ? WSSImage.icSelectNovelSelected.swiftUIImage : WSSImage.icSelectNovelDefault.swiftUIImage)
-                    .resizable()
+                WSSSelectionCheckIcon(isSelected: isSelected)
                     .frame(width: 24, height: 24)
 
                 Text(option.title)
@@ -215,8 +214,7 @@ struct WithdrawReasonView: View {
             Button {
                 viewModel.handle(.togglePolicyAgreed)
             } label: {
-                (viewModel.state.draft.policyAgreed ? WSSImage.icSelectNovelSelected.swiftUIImage : WSSImage.icSelectNovelDefault.swiftUIImage)
-                    .resizable()
+                WSSSelectionCheckIcon(isSelected: viewModel.state.draft.policyAgreed)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)

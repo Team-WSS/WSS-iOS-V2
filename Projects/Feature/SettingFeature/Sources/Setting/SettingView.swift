@@ -53,6 +53,8 @@ struct SettingView: View {
     // NotificationDomain
     private let loadPushPreferenceUseCase: LoadPushPreferenceUseCase
     private let updatePushPreferenceUseCase: UpdatePushPreferenceUseCase
+    private let loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase
+    private let deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase
 
     // AuthDomain
     private let withdrawUseCase: WithdrawUseCase
@@ -60,6 +62,9 @@ struct SettingView: View {
 
     // NovelDomain
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
+
+    /// 완결/휴재복귀 알림 목록이 비었을 때 "작품 둘러보기" CTA — 다른 Feature 모듈(검색)로의 이동이라 App이 결정한다.
+    private let onBrowseNovels: () -> Void
 
     init(
         viewModel: SettingViewModel,
@@ -72,12 +77,15 @@ struct SettingView: View {
         unblockUserUseCase: UnblockUserUseCase,
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
+        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
+        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         withdrawUseCase: WithdrawUseCase,
         logoutUseCase: LogoutUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
-        onLogoutSuccess: @escaping () -> Void = {}
+        onLogoutSuccess: @escaping () -> Void = {},
+        onBrowseNovels: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
@@ -89,12 +97,15 @@ struct SettingView: View {
         self.unblockUserUseCase = unblockUserUseCase
         self.loadPushPreferenceUseCase = loadPushPreferenceUseCase
         self.updatePushPreferenceUseCase = updatePushPreferenceUseCase
+        self.loadNovelNotificationSubscriptionsUseCase = loadNovelNotificationSubscriptionsUseCase
+        self.deleteNovelNotificationSubscriptionsUseCase = deleteNovelNotificationSubscriptionsUseCase
         self.withdrawUseCase = withdrawUseCase
         self.logoutUseCase = logoutUseCase
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
         self.onLogoutSuccess = onLogoutSuccess
+        self.onBrowseNovels = onBrowseNovels
     }
 
     var body: some View {
@@ -139,7 +150,10 @@ struct SettingView: View {
             SettingFeatureFactory.makeNotificationSettingView(
                 loadPushPreferenceUseCase: loadPushPreferenceUseCase,
                 updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-                logger: logger
+                loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
+                deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
+                logger: logger,
+                onBrowseNovels: onBrowseNovels
             )
         }
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
@@ -267,6 +281,8 @@ private extension SettingView {
             unblockUserUseCase: PreviewUnblockUserUseCase(),
             loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
             updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase(),
+            loadNovelNotificationSubscriptionsUseCase: PreviewLoadNovelNotificationSubscriptionsUseCase(),
+            deleteNovelNotificationSubscriptionsUseCase: PreviewDeleteNovelNotificationSubscriptionsUseCase(),
             withdrawUseCase: PreviewWithdrawUseCase(),
             logoutUseCase: PreviewLogoutUseCase(),
             loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
@@ -321,6 +337,20 @@ private struct PreviewLoadPushPreferenceUseCase: LoadPushPreferenceUseCase {
 
 private struct PreviewUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
     func execute(pushPreference: PushPreference) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase {
+    func execute(
+        type: NovelNotificationType,
+        lastSubscriptionID: SubscriptionID?,
+        size: Int
+    ) async throws(RepositoryError) -> PagedNovelNotificationSubscriptions {
+        PagedNovelNotificationSubscriptions(subscriptions: [], isLoadable: false, nextSubscriptionID: nil)
+    }
+}
+
+private struct PreviewDeleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase {
+    func execute(type: NovelNotificationType, novelIDs: [NovelID]) async throws(RepositoryError) {}
 }
 
 private struct PreviewWithdrawUseCase: WithdrawUseCase {

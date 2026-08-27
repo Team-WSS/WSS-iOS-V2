@@ -115,16 +115,7 @@ struct MyFeedFilterSheet: View {
 
             Spacer()
 
-            ZStack {
-                WSSImage.icSelectNovelDefault.swiftUIImage
-                    .opacity(isSelected ? 0 : 1)
-                    .scaleEffect(isSelected ? 0.85 : 1)
-
-                WSSImage.icSelectNovelSelected.swiftUIImage
-                    .opacity(isSelected ? 1 : 0)
-                    .scaleEffect(isSelected ? 1 : 0.6)
-            }
-            .animation(.spring(response: 0.32, dampingFraction: 0.6), value: isSelected)
+            WSSSelectionCheckIcon(isSelected: isSelected)
         }
         .frame(height: 55)
         .contentShape(Rectangle())
