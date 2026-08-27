@@ -382,7 +382,8 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
 }
 
 private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
-        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
+
+    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
+        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
     }
 }
