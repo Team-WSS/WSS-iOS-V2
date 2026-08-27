@@ -72,9 +72,9 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
   - 근거: V1 `SearchViewController.swift:23`,`70-72`(랜딩+유도배너 바인딩) · V2 `SearchFeatureFactory.swift:24-46`, `CLAUDE.md`(진입점 = NormalSearch)
 - 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱) — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (§5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
   - 근거: V1 `SearchViewModel.swift:48-68`
-- ❓ **Unknown** — `SearchView`는 진입마다 시스템 탭바를 다시 보이고(`showTabBar`) 네비바를 숨긴다(`setNavigationBarHidden(true)`). V2는 탭/네비 체계가 SwiftUI로 달라 직접 대응이 없다(구조 차이).
+- ✅ **Keep** (확정 2026-08-28: SwiftUI 탭/네비 구조 차이, 대응 불필요) — `SearchView`는 진입마다 시스템 탭바를 다시 보이고(`showTabBar`) 네비바를 숨긴다(`setNavigationBarHidden(true)`). V2는 탭/네비 체계가 SwiftUI로 달라 직접 대응이 없다(구조 차이).
   - 근거: V1 `SearchViewController.swift:40-64`
-- ❓ **Unknown (죽은 코드로 보임)** — `"PushToDetailSearchResult"` Notification을 구독하지만 핸들러 본문이 비어 있다(아무 동작 안 함). V2에 대응 없음이 자연스럽다.
+- 🗑 **Delete 확정** (2026-08-28: V1 죽은 코드, 이식 불필요) — `"PushToDetailSearchResult"` Notification을 구독하지만 핸들러 본문이 비어 있다(아무 동작 안 함). V2에 대응 없음이 자연스럽다.
   - 근거: V1 `SearchViewModel.swift:70-74` · `SearchViewController.swift:88-93`(빈 subscribe)
 
 ---
@@ -88,10 +88,10 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 진입점에서 소소픽·최근검색어·인기키워드를 로드한다. V1은 소소픽을 `transform` 최초 1회, 최근검색어·인기키워드를 `viewWillAppear`마다.
   - V2: `onAppear`에서 `.loadSosoPick`/`.loadRecentSearchWords`/`.loadPopularKeywords` 셋 다 발동하되 **각각 `hasLoaded*` 가드로 1회만**. (재진입 재조회를 V1이 하던 것과 미세하게 다르나, 검색화면이 push 단발이라 관찰 차이는 거의 없음.)
   - 근거: V1 `NormalSearchViewModel.swift:160-166`,`259-268`,`331-339` · V2 `NormalSearchViewModel.swift:145-185`, `NormalSearchView.swift:108-112`
-- ❓ **Unknown** — **검색창 자동 포커스**: V1은 `viewDidAppear`에서 `initialSearchText`가 없으면 `searchTextField.becomeFirstResponder()`로 키보드를 바로 띄운다(있으면 그 텍스트로 즉시 검색 실행).
+- 🔧 **복원 확정→TODO** (2026-08-28: V2 자동 포커스 없음 실측) — **검색창 자동 포커스**: V1은 `viewDidAppear`에서 `initialSearchText`가 없으면 `searchTextField.becomeFirstResponder()`로 키보드를 바로 띄운다(있으면 그 텍스트로 즉시 검색 실행).
   - V2: `NormalSearchView`는 `onAppear`에서 `isFocused`를 세우지 않아 키보드가 자동으로 뜨지 않는다. `initialSearchText` 경로도 없다.
   - 근거: V1 `NormalSearchViewController.swift:63-72` · V2 `NormalSearchView.swift:108-112`(포커스 미설정)
-- ❓ **Unknown** — **검색어 30자 제한**: V1 텍스트필드는 `shouldChangeCharactersIn`에서 30자 초과 입력을 막는다.
+- 🔧 **복원 확정→TODO** (2026-08-28: V2 제한 없음 실측) — **검색어 30자 제한**: V1 텍스트필드는 `shouldChangeCharactersIn`에서 30자 초과 입력을 막는다.
   - V2: `WSSSearchBar`의 글자수 제한 여부 미확인.
   - 근거: V1 `NormalSearchViewController.swift:422-430`
 - 🗑 **Delete** — **뒤로가기 3초 throttle**: V1은 back 버튼을 `throttle(.seconds(3), latest: false)`로 감싸 연타로 여러 번 pop되는 걸 막았다.
@@ -124,7 +124,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
   - 근거: V1 `NormalSearchViewModel.swift:300-308`, `NormalSearchViewController.swift:307-327` · V2 `NormalSearchView.swift:230-246`,`113-119`
 - ✅ **Keep (순서 출처 상이)** — 장르 목록 자체는 9종으로 동일. V1은 하드코딩 `NovelGenre.normalSearchGenres`, V2는 `WSSComponent.NovelGenre.searchGenre`(Figma 실측으로 순서 재확정). 순서가 미세하게 다를 수 있으나 의도된 재정렬.
   - 근거: V1 `NovelGenre.swift:219` · V2 `NormalSearchView.swift:221`, `CLAUDE.md`(searchGenre)
-- ❓ **Unknown** — **장르 섹션 "더보기" 헤더 → 상세검색 필터 진입**: V1 장르 헤더 버튼 탭 → 상세검색 **필터 화면**을 push(`pushToDetailSearch`).
+- 🔧 **배선 대기→App** (2026-08-28: 상세검색 진입, App 라우터 담당) — **장르 섹션 "더보기" 헤더 → 상세검색 필터 진입**: V1 장르 헤더 버튼 탭 → 상세검색 **필터 화면**을 push(`pushToDetailSearch`).
   - V2: 헤더 버튼 본문이 `// TODO: - 탐색 정보탭으로 이동`뿐(미배선). 상세검색 필터 화면 자체가 실앱에서 안 열린다(§3).
   - 근거: V1 `NormalSearchViewModel.swift:310-318`, `NormalSearchViewController.swift:329-334` · V2 `NormalSearchView.swift:204-212`(TODO)
 
@@ -133,7 +133,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 실시간 인기 키워드를 조회해 **랭킹 순 그대로** 칩으로 노출하고, 칩 탭 → `SearchFilter(keywords: [keyword])`로 상세검색 결과를 push(텍스트 검색이 아니라 필터 검색).
   - V2: `LoadPopularKeywordsUseCase`, `CapsuleSelectableKeywordChip` 탭 → `DetailSearchNavigation(filter: SearchFilter(keywords: [keyword]))` push. (V1 `entryType: .keywordOnly` 상당.)
   - 근거: V1 `NormalSearchViewModel.swift:331-350`, `NormalSearchViewController.swift:364-384` · V2 `NormalSearchView.swift:272-282`
-- ❓ **Unknown** — **키워드 섹션 "더보기" 헤더 → 상세검색 필터(키워드 탭) 진입**: V1 인기 키워드 헤더 탭 → 상세검색 필터를 **키워드 탭으로 열어** push(`pushToDetailSearchViewController(initialTab: .keyword)`).
+- 🔧 **배선 대기→App** (2026-08-28: 상세검색 키워드탭 진입, App 라우터 담당) — **키워드 섹션 "더보기" 헤더 → 상세검색 필터(키워드 탭) 진입**: V1 인기 키워드 헤더 탭 → 상세검색 필터를 **키워드 탭으로 열어** push(`pushToDetailSearchViewController(initialTab: .keyword)`).
   - V2: 헤더 버튼 본문이 `// TODO: - 탐색 키워드탭으로 이동`뿐(미배선).
   - 근거: V1 `NormalSearchViewModel.swift:352-360`, `NormalSearchViewController.swift:386-391` · V2 `NormalSearchView.swift:259-267`(TODO)
 
@@ -159,12 +159,12 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 검색 후 다시 타이핑하면 결과 화면을 벗어나 브라우즈/자동완성으로 복귀.
   - V2: `updateSearchText`가 `isSearchExecuted=false`. ⚠️ `text != state.searchText` 가드가 없으면 키보드 내림 시 재커밋이 방금 실행한 검색을 취소하는 버그(`CLAUDE.md` 정본).
   - 근거: V1 `NormalSearchViewController.swift:165-187` · V2 `NormalSearchViewModel.swift:191-204`, `CLAUDE.md`(재커밋 가드)
-- ❓ **Unknown (V2 신규 — V1 대응 없음)** — **검색어 자동완성**: V1엔 자동완성이 없다(입력 텍스트는 검색 실행에만 쓰임). V2는 `isFocused && !searchText.isEmpty`일 때 300ms debounce 후 `SearchAutoCompletionWordsUseCase`로 제안어를 띄우고, 일치 구간 하이라이트·제안어 탭 검색을 붙였다.
+- 🔧 **Improve 확정** (2026-08-28: V2 신규 기능, 회귀 아님) — **검색어 자동완성**: V1엔 자동완성이 없다(입력 텍스트는 검색 실행에만 쓰임). V2는 `isFocused && !searchText.isEmpty`일 때 300ms debounce 후 `SearchAutoCompletionWordsUseCase`로 제안어를 띄우고, 일치 구간 하이라이트·제안어 탭 검색을 붙였다.
   - 근거: (V1 없음) · V2 `NormalSearchViewModel.swift:191-204`,`313-332`, `NormalSearchAutoCompletionView`, `CLAUDE.md`(자동완성)
 
 ### 2.7 작품 상세 이동
 
-- ❓ **Unknown (헤드라인)** — V1은 **소소픽 셀·일반 검색 결과 셀** 탭 시 (로그인돼 있으면) 작품 상세로 push한다.
+- 🔧 **배선 대기→App** (2026-08-28: 작품상세 push, App 라우터 담당) — V1은 **소소픽 셀·일반 검색 결과 셀** 탭 시 (로그인돼 있으면) 작품 상세로 push한다.
   - **V2: 둘 다 상세 이동이 없다.** 소소픽 탭은 `print("\(pick.novelID)번 작품 상세로 이동")` 스텁, `NormalSearchResultView`는 `onSelect` 콜백 자체를 받지 않는 순수 표시 뷰다. `makeNormalSearchView` Factory에도 `onNovelSelected` 류 콜백이 없다.
   - 근거: V1 `NormalSearchViewModel.swift:168-178`(소소픽),`230-240`(결과셀) → `NormalSearchViewController.swift:229-233`(pushToNovelDetail) · V2 `NormalSearchView.swift:319-321`(print), `58-66`(결과뷰 onSelect 없음), `SearchFeatureFactory.swift:24-46`(콜백 없음)
   - **판정 포인트**: App 라우터 배선 대기(누락된 유지)인지 / 검색 결과에서 상세 이동을 안 하기로 한 건지. (§4.1의 상세검색 결과도 동일 사안 — 검색 3계열 전부 미배선.)
@@ -182,7 +182,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 정보/키워드 두 탭바 화면. 진입 탭을 인자로 받는다(V1 `initialTab`, 인기키워드 헤더는 `.keyword`로 진입).
   - V2: `DetailSearchFilterView` `@State selectedTab`(`.info`/`.keyword`), 밑줄로 활성 탭 표시. Demo가 진입.
   - 근거: V1 `DetailSearchViewModel.swift:117-121`,`152-162` · V2 `CLAUDE.md`(정보/키워드 탭바)
-- ❓ **Unknown (진입 경로 부재)** — V1은 실제로 3경로로 이 화면을 push했다: 랜딩 유도배너, 장르 헤더, 인기키워드 헤더(§1·§2.3·§2.4). V2는 세 경로가 전부 없거나 TODO라 필터 화면이 **Demo 밖에서 안 열린다**.
+- 🔧 **배선 대기→App** (2026-08-28: 상세검색 진입경로, App 라우터 담당) — V1은 실제로 3경로로 이 화면을 push했다: 랜딩 유도배너, 장르 헤더, 인기키워드 헤더(§1·§2.3·§2.4). V2는 세 경로가 전부 없거나 TODO라 필터 화면이 **Demo 밖에서 안 열린다**.
   - 근거: V2 `CLAUDE.md`("지금은 Demo 전용 진입점에서만 push"), `SearchFeatureFactory.swift:52-59`
 
 ### 3.2 정보 탭 필터
@@ -228,7 +228,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 필터 요약 pill/검색바 탭 = **뒤로가기**(필터 재편집이 아니라 이전 화면으로). V1은 `searchBarViewDidTap`→pop.
   - V2: pill 탭 = `dismiss()`, 결과 화면 자체엔 필터 편집 없음(사용자 확정, `CLAUDE.md`).
   - 근거: V1 `DetailSearchResultViewModel.swift:148-152` · V2 `CLAUDE.md`(pill = 뒤로가기)
-- ❓ **Unknown** — **결과 셀 탭 → 작품 상세 push**: V1은 결과 셀 탭 시 작품 상세로 push(+ Amplitude `clickSeekResult`).
+- 🔧 **배선 대기→App** (2026-08-28: 작품상세 push, App 라우터 담당) — **결과 셀 탭 → 작품 상세 push**: V1은 결과 셀 탭 시 작품 상세로 push(+ Amplitude `clickSeekResult`).
   - V2: 그리드 셀(`WSSNovelGridCell`)이 `onTap` 없는 순수 표시 전용. (§2.7과 같은 사안 — 검색 결과 상세 이동 전면 미배선.)
   - 근거: V1 `DetailSearchResultViewModel.swift:77-85` · V2 `CLAUDE.md`(onTap 없이 순수 표시 전용)
 
@@ -237,7 +237,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 페이지 기반 무한스크롤(page+1), size 20. 커서 아님.
   - V2: `nextPage`, `size: 20`. V1 `currentPage+1`, `searchSize=20`.
   - 근거: V1 `DetailSearchResultViewModel.swift:118-146`, `SearchRepository.swift:29` · V2 `DetailSearchResultViewModel.swift:119-136`, `SearchMapper.swift:68`
-- ❓ **Unknown (잠재 회귀)** — **연재상태 미선택 시 `isCompleted` 전송 여부**: V1은 `isCompleted`가 nil이면 쿼리에서 **생략**(→ 전체 연재상태). V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이고 `QueryItemConvertible`이 Bool을 항상 직렬화하므로, 미선택도 `isCompleted=false`로 나간다 → "연재중만" 필터와 구별 불가.
+- 🔨 **회귀 확정→수정** (2026-08-28 실서버 검증: false=연재중만 9,319·true=완결 85,708·생략=전체 95,027 → 미선택 시 완결작 90% 누락) — **연재상태 미선택 시 `isCompleted` 전송 여부**: V1은 `isCompleted`가 nil이면 쿼리에서 **생략**(→ 전체 연재상태). V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이고 `QueryItemConvertible`이 Bool을 항상 직렬화하므로, 미선택도 `isCompleted=false`로 나간다 → "연재중만" 필터와 구별 불가.
   - 근거: V1 `SearchService.swift:140-142`(`if let`으로 조건부 append) · V2 `SearchMapper.swift:63`(`filter.publicationStatus == .completed`), `DetailSearchQuery.swift:16`, `QueryParameters.swift:45-48`(Bool 항상 전송)
   - **판정 포인트**: 서버가 `isCompleted=false`를 "연재중만"으로 해석하면 회귀(미선택인데 완결작이 사라짐), "false=무시/전체"로 해석하면 무해. 서버 동작 확인 필요.
 

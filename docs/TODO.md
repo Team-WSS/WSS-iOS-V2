@@ -245,6 +245,18 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
 - **서재 `.title`(제목순) 정렬 백엔드 토큰 확정** — V1에도 "백엔드 토큰 미정" TODO 주석이 있었다. V2도 토큰을
   싣지만 서버 실지원 여부 확인 필요(외부 의존). → `LibraryFeature`.
+- **⚠️ 상세검색 연재상태 회귀 수정 (실서버 검증됨, 2026-08-28)** — `DetailSearchQuery.isCompleted`가
+  non-optional `Bool`이라 연재상태 **미선택 시에도 `false`를 전송**하는데, 서버는 `false`를 **"연재중만"** 으로
+  해석한다(실측: `false`=9,319 · `true`=85,708 · 생략=95,027 = 9,319+85,708). 따라서 필터를 안 걸어도
+  **완결작 85,708개(전체의 90%)가 결과에서 조용히 사라진다.** **수정**: `isCompleted`를 `Bool?`로 바꿔
+  미선택이면 nil(→쿼리 생략). `QueryItemConvertible`이 NSNull을 이미 제외하므로 타입 옵셔널화 + Feature 매핑에서
+  미선택 시 nil을 주면 된다. → `SearchData`(`DetailSearchQuery`)·`SearchFeature`.
+- **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
+  포커스 없음(실측 — `@FocusState`만 있고 진입 시 true로 안 켬). 진입 시 `isFocused = true` 복원. → `SearchFeature`.
+- **검색어 30자 제한 복원** — V1은 검색어 30자 초과 입력을 막았다(`shouldChangeCharactersIn`). V2는 제한 없음
+  (실측). 서버 제약 가능성. → `SearchFeature`.
+- **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,
+  상세검색 진입경로 부재. 전부 App 라우터/네비게이션 배선 대기 — **App 모듈에서 처리**(사용자 확정 2026-08-28). → `App`.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
