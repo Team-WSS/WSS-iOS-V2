@@ -169,8 +169,8 @@ struct UserPageView: View {
         // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
         // 서브트리를 감싸면 툴바 principal의 닉네임 `Text` opacity 갱신이 UIKit 브리지(titleView)로
         // 전달되지 않아 계속 숨어있는다(실측 확인, `CollectionFeature.CollectionDetailView`에서 먼저
-        // 발견). 배경 색 전환은 애니메이션 없이 즉시 전환되고, 닉네임 페이드는 `toolbarContent`의
-        // 로컬 `.animation`으로만 건다.
+        // 발견). opacity 대신 아래 `toolbarContent`가 `if`로 뷰 자체를 구조적으로 넣고 뺀다 —
+        // 배경 색·닉네임 모두 애니메이션 없이 즉시 전환된다(페이드 아님).
         // 차단 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
         .showWSSAlert(
             isPresented: blockAlertBinding,

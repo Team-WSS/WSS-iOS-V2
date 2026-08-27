@@ -114,9 +114,9 @@ struct CollectionDetailView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
         // 서브트리를 감싸면 툴바 principal의 `Text` opacity 갱신이 UIKit 브리지(titleView)로 아예
-        // 전달되지 않아 계속 숨어있는다(실측 확인 — 로컬/루트 어느 쪽에 걸든 동일 증상). 배경·아이콘
-        // 색은 애니메이션 없이 즉시 전환되고, 타이틀 자체의 페이드는 `toolbarContent`의 로컬
-        // `.animation`으로만 건다(원래 `UserPageFeature`가 쓰던 단일 로컬 애니메이션 방식).
+        // 전달되지 않아 계속 숨어있는다(실측 확인 — 로컬/루트 어느 쪽에 걸든 동일 증상). 그래서
+        // opacity 대신 아래 `toolbarContent`가 `if`로 뷰 자체를 구조적으로 넣고 뺀다 — 배경·아이콘
+        // 색·타이틀 모두 애니메이션 없이 즉시 전환된다(페이드 아님, `UserPageFeature`도 동일).
         .showWSSAlert(
             isPresented: deleteAlertBinding,
             type: .deleteCollection,
@@ -387,7 +387,7 @@ private extension CollectionDetailView {
                 WSSImage.icShare.swiftUIImage
                     .renderingMode(.template)
                     .resizable()
-                    .foregroundStyle(WSSColor.wssWhite.swiftUIColor)
+                    .foregroundStyle(Color.wssWhite)
                     .frame(width: 24, height: 24)
 
                 Text("공유하기")
