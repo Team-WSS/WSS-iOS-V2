@@ -139,7 +139,8 @@ extension Project {
         externalDependencies: [TargetDependency] = [],
         demoDependencies: [TargetDependency] = [],
         testDependencies: [TargetDependency] = [],
-        demoEntitlements: Entitlements? = nil
+        demoEntitlements: Entitlements? = nil,
+        enableSwift6: Bool = true  // false로 개별 Feature를 mode 6 승격에서 제외(예: NovelDetail의 KVO 미해결)
     ) -> Project {
 
         let allTargets = makeBaseTargets(
@@ -155,7 +156,8 @@ extension Project {
             deploymentTarget: env.deploymentTarget,
             infoPlist: ModuleInfoPlist.feature.infoPlist,
             demoInfoPlist: ModuleInfoPlist.featureDemo.infoPlist,
-            demoEntitlements: demoEntitlements
+            demoEntitlements: demoEntitlements,
+            sourcesSettings: enableSwift6 ? swift6SourcesSettings : [:]
         )
         
         return Project(

@@ -234,10 +234,13 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   - **왜 scan.sh --strict CI가 아니라 pbxproj 직접 승격인가**: 컴파일러 error가 report-only CI 게이트보다
     강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼
     `scan.sh`/`strict-concurrency` job의 존재 이유가 사라진다.
-- **남은(6단계)**: **Feature·App** 승격. Feature는 `NovelDetailFeature`의 `TopBounceDisabler` 3건(→ 위 4번)이
-  남아 막혀 있다 — 그 3건은 `assumeIsolated`로 정리하려다 **실기기에서 클램프가 깨져 보류**했다(→ 위 4번).
-  해결한 뒤 `createFeatureModule`에도 `swift6SourcesSettings`를 전달하면 된다. App(WSS-iOS)은 Feature 전부가
-  mode 6이 된 뒤 마지막.
+- **6단계 진행 — Feature 11개 승격 완료 (NovelDetail 제외)**: `createFeatureModule`에 `enableSwift6: Bool = true`
+  파라미터를 추가해 11개 Feature Sources를 mode 6으로 올렸다. **NovelDetailFeature만 `enableSwift6: false`**
+  (TopBounceDisabler KVO 3건 미해결 → 위 4번). 검증: 11개 전부 **Demo 포함 BUILD SUCCEEDED·Sources error 0**
+  실측(fresh DD) + Home·Library·Search Demo 시뮬레이터 스모크 정상(런타임 무회귀 — 코드 무변경 승격이라 예상대로).
+- **남은 것**: ① **NovelDetailFeature**(위 4번 KVO 해결 후 `enableSwift6: true`) ② **App(WSS-iOS)**(Feature 전부가
+  mode 6이 된 뒤 마지막) ③ **각 모듈 Demo/Testing/Tests**(별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라
+  mode 6 오버라이드 시 error. Sources 승격엔 무관하나 Demo까지 올리려면 정리 필요).
 - **정리 대상(Feature 승격 후)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`·`.github/workflows/test.yml`의
   `strict-concurrency`(Swift 6 Readiness) job — 전 레이어가 mode 6이 되면 컴파일러가 역할을 대체하므로 제거 검토.
 - **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
