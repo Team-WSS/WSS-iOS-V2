@@ -16,13 +16,15 @@ let project = Project.createFeatureModule(
     // 전용 NovelDetailDomain은 없다 — 소설 상세는 NovelDomain의 UseCase를 쓴다(#154).
     // 피드 탭이 이슈 범위에 포함되어 FeedDomain(목록·좋아요·삭제)도,
     // 평가 삭제가 포함되어 NovelReviewDomain(DeleteNovelReviewUseCase)도,
-    // 피드 신고가 포함되어 SocialDomain(Report*FeedUseCase)도 의존한다.
+    // 피드 신고가 포함되어 SocialDomain(Report*FeedUseCase)도,
+    // 작품 알림 등록 시트가 포함되어 NotificationDomain(NovelNotificationSetting)도 의존한다(#189).
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.novel)),
         .module(.domain(.feed)),
         .module(.domain(.novelReview)),
         .module(.domain(.social)),
+        .module(.domain(.notification)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger))
@@ -34,6 +36,7 @@ let project = Project.createFeatureModule(
         .module(.data(.feed)),
         .module(.data(.novelReview)),
         .module(.data(.social)),
+        .module(.data(.notification)),
         .module(.data(.base)),
         .module(.core(.networking))
     ],

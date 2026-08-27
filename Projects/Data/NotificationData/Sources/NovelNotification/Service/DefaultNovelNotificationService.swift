@@ -25,4 +25,14 @@ struct DefaultNovelNotificationService: NovelNotificationService {
         let endpoint = NovelNotificationEndpoint.deleteSubscriptions(request)
         _ = try await client.request(endpoint)
     }
+
+    func getNotificationSetting(novelID: Int) async throws -> NovelNotificationSettingResponse {
+        let endpoint = NovelNotificationEndpoint.getNotificationSetting(novelID: novelID)
+        return try await client.request(endpoint, decodeTo: NovelNotificationSettingResponse.self)
+    }
+
+    func putNotificationSetting(novelID: Int, request: NovelNotificationSettingRequest) async throws {
+        let endpoint = NovelNotificationEndpoint.putNotificationSetting(novelID: novelID, request: request)
+        _ = try await client.request(endpoint)
+    }
 }

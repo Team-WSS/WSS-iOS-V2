@@ -14,11 +14,15 @@ enum NovelNotificationEndpoint: Endpoint {
 
     case getSubscriptions(NovelNotificationSubscriptionsQuery)
     case deleteSubscriptions(NovelNotificationUnsubscribeRequest)
+    case getNotificationSetting(novelID: Int)
+    case putNotificationSetting(novelID: Int, request: NovelNotificationSettingRequest)
 
     var method: HTTPMethod {
         switch self {
-        case .getSubscriptions:     return .get
-        case .deleteSubscriptions:  return .delete
+        case .getSubscriptions:        return .get
+        case .deleteSubscriptions:     return .delete
+        case .getNotificationSetting:  return .get
+        case .putNotificationSetting:  return .put
         }
     }
 
@@ -28,13 +32,16 @@ enum NovelNotificationEndpoint: Endpoint {
         switch self {
         case .getSubscriptions, .deleteSubscriptions:
             return "/users/me/notification/novels"
+        case .getNotificationSetting(let novelID), .putNotificationSetting(let novelID, _):
+            return "/novels/\(novelID)/notification"
         }
     }
 
     var query: QueryParameters {
         switch self {
         case .getSubscriptions(let query): return .convertible(query)
-        case .deleteSubscriptions:         return .none
+        case .deleteSubscriptions, .getNotificationSetting, .putNotificationSetting:
+            return .none
         }
     }
 
@@ -42,8 +49,12 @@ enum NovelNotificationEndpoint: Endpoint {
 
     var body: RequestBody {
         switch self {
-        case .getSubscriptions:                    return .none
-        case .deleteSubscriptions(let request):    return .json(request)
+        case .getSubscriptions, .getNotificationSetting:
+            return .none
+        case .deleteSubscriptions(let request):
+            return .json(request)
+        case .putNotificationSetting(_, let request):
+            return .json(request)
         }
     }
 

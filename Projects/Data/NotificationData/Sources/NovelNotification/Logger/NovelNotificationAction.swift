@@ -9,6 +9,8 @@
 enum NovelNotificationAction {
     case loadSubscriptions
     case deleteSubscriptions
+    case loadSetting
+    case updateSetting
 
     var name: String {
         switch self {
@@ -16,6 +18,10 @@ enum NovelNotificationAction {
             return "loadSubscriptions"
         case .deleteSubscriptions:
             return "deleteSubscriptions"
+        case .loadSetting:
+            return "loadSetting"
+        case .updateSetting:
+            return "updateSetting"
         }
     }
 }

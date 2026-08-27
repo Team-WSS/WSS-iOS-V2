@@ -10,9 +10,11 @@ import SwiftUI
 
 import BaseDomain
 import FeedDomain
+import NotificationDomain
 import NovelDomain
 import NovelReviewDomain
 import SocialDomain
+import Logger
 import DesignSystem
 import WSSComponent
 
@@ -29,6 +31,9 @@ struct NovelDetailView: View {
     @State private var viewModel: NovelDetailViewModel
     /// VM 판단이 필요 없는 순수 표시 상태 — View가 소유한다.
     @State private var isMenuPresented = false
+    /// 종 모양 아이콘 → 완결/휴재복귀 알림 등록 시트(#189). 시트 자체 VM이 로드·토글을 갖고 있어
+    /// 여기선 표시 여부만 View가 소유한다(순수 표시 상태).
+    @State private var isNotificationSettingSheetPresented = false
     @State private var isDescriptionExpanded = false
     /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다.
     @State private var feedMenuContext: FeedMenuContext?
@@ -72,8 +77,19 @@ struct NovelDetailView: View {
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onAuthenticationRequired: () -> Void
 
+    private let novelID: NovelID
+    private let logger: Logger?
+
+    // NotificationDomain — 알림 등록 시트(#189)용. 시트를 열 때만 조립하므로 화면 진입 시점엔 안 쓰인다.
+    private let loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase
+    private let updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase
+
     init(
+        novelID: NovelID,
         viewModel: NovelDetailViewModel,
+        loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
+        updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
+        logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping () -> Void,
         onFeedTapped: @escaping (FeedID) -> Void,
@@ -83,7 +99,11 @@ struct NovelDetailView: View {
         onAuthorTapped: @escaping (String) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
+        self.novelID = novelID
         self._viewModel = State(initialValue: viewModel)
+        self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
+        self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
+        self.logger = logger
         self.onReviewTapped = onReviewTapped
         self.onCreateFeedTapped = onCreateFeedTapped
         self.onFeedTapped = onFeedTapped
@@ -125,6 +145,17 @@ struct NovelDetailView: View {
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
+            }
+            .sheet(isPresented: $isNotificationSettingSheetPresented) {
+                NovelNotificationSettingSheet(
+                    viewModel: NovelNotificationSettingSheetViewModel(
+                        novelID: novelID,
+                        loadNotificationSettingUseCase: loadNotificationSettingUseCase,
+                        updateNotificationSettingUseCase: updateNotificationSettingUseCase,
+                        logger: logger
+                    ),
+                    onAuthenticationRequired: onAuthenticationRequired
+                )
             }
     }
 
@@ -297,32 +328,53 @@ private extension NovelDetailView {
 
             Spacer()
 
-            Button {
-                isMenuPresented.toggle()
-            } label: {
-                WSSImage.icThreedots.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(Color.wssBlack)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            HStack(spacing: 0) {
+                Button {
+                    isNotificationSettingSheetPresented = true
+                } label: {
+                    WSSImage.icAnnouncement.swiftUIImage
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(Color.wssBlack)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer().frame(width: 16)
+
+                Button {
+                    isMenuPresented.toggle()
+                } label: {
+                    WSSImage.icThreedotsVertical.swiftUIImage
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(Color.wssBlack)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer().frame(width: 20)
             }
-            .buttonStyle(.plain)
         }
-        // 스크롤 반응형 네비 타이틀 — 좌우 버튼(44pt)과 겹치지 않게 여백 후 말줄임.
+        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(80pt)으로 맞춘다.
+        // 우측 클러스터(종 24pt+간격 16+threedots 20pt+trailing 간격 20 = 80pt)가 좌측(뒤로가기 44pt
+        // + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어, 좌측 여백도 80으로 맞춰야
+        // 대칭이 된다 — 코드상 44가 아니라 74인 건 이 6pt를 상쇄하기 위해서(74+6=80). 한쪽만
+        // 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
         .overlay {
             Text(novelTitle)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.horizontal, 44)
+                .padding(.leading, 74)
+                .padding(.trailing, 80)
                 .opacity(showNavTitle ? 1 : 0)
                 .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
         .padding(.leading, 6)
-        .padding(.trailing, 12)
         // 타이틀과 함께 페이드인하는 흰 배경 — 없으면 타이틀·버튼이 스크롤되는 본문과 겹쳐 안 읽힌다.
         // 네비바 자신은 ZStack 자식이라 이미 안전영역 상단에 붙는다(UIKit `safeAreaLayoutGuide`와 동일).
         // 상태바까지 뚫고 올라가야 하는 건 배경뿐이고, 그건 `ignoresSafeArea`가 알아서 한다 —
@@ -709,6 +761,7 @@ private extension UIView {
 #Preview {
     NavigationStack {
         NovelDetailView(
+            novelID: NovelID(1),
             viewModel: NovelDetailViewModel(
                 novelID: NovelID(1),
                 loadNovelUseCase: PreviewLoadNovelUseCase(),
@@ -720,6 +773,8 @@ private extension UIView {
                 reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
             ),
+            loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
+            updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
             onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
             onCreateFeedTapped: { print("피드 작성 진입") },
             onFeedTapped: { print("피드 상세 진입: \($0)") },
@@ -781,6 +836,16 @@ private struct PreviewFeedLikeUseCase: FeedLikeUseCase {
 
 private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {
     func execute(feedID: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadNovelNotificationSettingUseCase: LoadNovelNotificationSettingUseCase {
+    func execute(novelID: NovelID) async throws(RepositoryError) -> NovelNotificationSetting {
+        NovelNotificationSetting(isCompletionNotificationEnabled: false, isHiatusReturnNotificationEnabled: false)
+    }
+}
+
+private struct PreviewUpdateNovelNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase {
+    func execute(novelID: NovelID, setting: NovelNotificationSetting) async throws(RepositoryError) {}
 }
 
 private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {

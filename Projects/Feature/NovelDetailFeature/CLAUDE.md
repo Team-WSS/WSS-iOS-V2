@@ -3,8 +3,8 @@
 
 소설 상세(NovelDetail) 화면 — 몰입형 헤더 + 유저 평가 + 탭(정보/피드). 구성요소는 `Sources/`를 직접 보면 된다.
 
-- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고)을 쓴다
-- 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 8종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
+- 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고) + `NotificationDomain`(작품 알림 등록 시트, #189)을 쓴다
+- 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 10종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
   - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
   - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — 단 **작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)**이라 현재 소비처는 Demo 로그뿐.
@@ -16,6 +16,7 @@
 - **관심 토글**: 정책은 엔티티 `Novel.toggleInterest()`에 위임, UI 낙관 반영 후 서버 실패 시 롤백. `isInterested == nil`(비로그인 등)이면 엔티티가 no-op → 서버 호출도 스킵.
 - **정보 탭 조건부 표시**: 매력포인트/키워드/읽기상태그래프는 각각 값 없으면 숨김, 전부 없으면 빈 상태(제목도 "독자들의 평가"로 변경). 그래프 우세 상태·동률 우선순위는 도메인 `dominantReadStatus`가 결정.
   - ⚠️ **"독자들의 감상평" 제목의 소속은 매력포인트·키워드뿐**이다 — 읽기 상태 그래프는 제목을 공유하지 않는 별도 섹션. 그래서 **그래프만 있고 매력포인트·키워드가 다 비면 제목까지 통째로 숨긴다**(`hasReviewContent`). 셋 다 없을 때만 빈 상태(`hasAnyReviewSummary`)라는 점과 헷갈리기 쉽다 — 판정이 **두 단계**인 이유가 이것. 그래프 위 구분선도 감상평이 실제로 있을 때만 그린다(나눌 대상이 없으면 선도 없다).
+- **작품 알림 등록 시트(#189)**: 네비바 threedots 왼쪽에 종 아이콘(`icAnnouncement`, template+틴트)을 추가해 탭하면 `NovelNotificationSettingSheet`가 뜬다. 완결 알림/휴재 복귀 알림 두 줄을 `WSSToggleButton`으로 각각 켜고 끈다 — 서버는 `NovelNotificationSetting(isCompletionNotificationEnabled, isHiatusReturnNotificationEnabled)` 전체를 매번 함께 PUT 받는 **멱등** API라, 토글 하나만 눌러도 VM은 현재 스냅샷 전체를 보낸다. 로드는 시트가 열릴 때(`onAppear → .load`), 토글은 **낙관 반영 후 실패 시 롤백**(전면 실패 뷰 대신 토스트만 — 시트가 작아 재시도는 "닫고 다시 열기"로 충분하다고 판단). `isSyncing` 가드로 두 토글의 PUT이 겹치는 걸 막는다(스냅샷 롤백이 꼬이지 않도록 요청 하나씩만 진행). 시트는 `.presentationDetents([.height(178)])` + `.presentationDragIndicator(.hidden)` 고정 높이(콘텐츠가 두 줄뿐이라 드래그로 늘릴 여지가 없어서).
 
 ## Demo 시나리오 (Mock)
 
@@ -52,7 +53,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - 대응 `NovelDetailDomain`이 없다 — UseCase는 `NovelDomain`/`FeedDomain` 것을 주입받는다. `new-module` 기본 추론(`domain(.<같은이름>)`)과 다른 지점.
 - **`state.novel`을 `state.information.novel`과 분리 보유** — `NovelInformation.novel`이 `let`이라 관심 토글(mutating)을 반영할 수 없어서다. 헤더/관심 버튼은 `state.novel`을 읽는다.
 - **헤더 메타 줄(장르·연재상태·작가)은 작가만 개별 밑줄 버튼이라 단일 `Text`로 못 합치고 `HStack`으로 분해**(`NovelDetailHeaderView.metaRow`) — 앞부분(`nonAuthorMetaText`=장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자(`  ·  `/`, `)는 **비탭 `Text`**. 작가 `Text`엔 `.underline()`을 **raw Text에 먼저** 걸고 `applyWSSFont`를 뒤에 붙여야 밑줄이 렌더된다(순서 반대면 무증상 실패 — [[DesignSystem]] 주의사항 참고). 탭 영역은 작가 글자에만 국한(구분자 제외)됨을 diagnostic 배경으로 실측 확인.
-- **몰입형 헤더 = 시스템 네비바 숨김**(`.toolbar(.hidden)`) + 커스텀 고정 오버레이. `icNavigateLeft`/`icThreedots` 에셋은 **원색이 연회색(wssGray100)이라 밝은 배경에서 안 보임** → `renderingMode(.template)`로 색을 입혀야 한다.
+- **몰입형 헤더 = 시스템 네비바 숨김**(`.toolbar(.hidden)`) + 커스텀 고정 오버레이. `icNavigateLeft`/`icAnnouncement`/`icThreedotsVertical` 에셋은 **원색이 연회색(wssGray100)이라 밝은 배경에서 안 보임** → `renderingMode(.template)`로 색을 입혀야 한다.
   - ⚠️ **네비바를 숨기면 밀어서 뒤로가기(`interactivePopGestureRecognizer`)까지 iOS가 함께 꺼버린다** — 뒤로가기가 버튼으로만 되던 이유. WSSComponent의 **`.enableSwipeBack()`** 이 되살린다. 이 화면에도 자체 `SwipeBackEnabler` 복제본이 있었으나 `LibraryFeature` 복제본과 갈라져(이쪽엔 delegate 반납이 없었다) 사고를 만들어 #166에서 공용으로 통합했다 — **다시 화면 안으로 복제하지 말 것.** delegate 수명이 왜 함정인지는 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 같은 항목이 정본.
     - ⚠️ **이 제스처는 시뮬레이터 자동화로 검증할 수 없다** — XcodeBuildMCP `gesture(swipe-from-left-edge)`는 화면 가장자리 pan을 트리거하지 못하고(delegate의 `shouldBegin`이 아예 안 불림), CGEvent로 HID 마우스를 주입하는 우회로도 손쉬운 사용 권한이 없어 막힌다(탭조차 전달 안 됨). **사람이 직접 밀어서 확인**해야 한다.
     - 참고: `TopBounceDisabler`가 `UIScrollView`를 찾을 때 쓰는 **superview 체인으론 뷰컨트롤러에 못 닿는다**(SwiftUI 뷰는 hosting VC의 child) — 그래서 `enableSwipeBack`은 `next` responder 체인을 탄다.
@@ -83,3 +84,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
   - clip·그림자는 컨테이너가 아니라 **핏된 이미지 자신에** 걸 것 — 컨테이너 크기가 핏 결과와 어긋나면 이미지 주변 탭이 dim에 안 닿는 dead zone 위험. X 아이콘 `icCancelModal`도 원색이 회색(#52515F)이라 dim 위에선 template + 흰색 틴트 필요(네비바 아이콘과 같은 함정).
 - **최상단 over-scroll만 제거(하단 bounce는 유지)는 `TopBounceDisabler`(UIViewRepresentable)로 한다.** iOS 17엔 상단만 끄는 SwiftUI modifier가 없고 `.scrollBounceBehavior(.basedOnSize)`는 콘텐츠가 화면보다 짧을 때만 먹혀 상세 화면엔 무의미. `UIScrollView.bounces = false`는 방향 구분이 없어 하단까지 죽는다 → 대신 조상 `UIScrollView`를 찾아 **`contentOffset` KVO로 `y < 0`을 0으로 클램프**(UIKit `scrollViewDidScroll` 클램프와 동일 동작). ⚠️ **delegate를 직접 교체하지 말 것** — SwiftUI가 delegate를 소유·재설정해 충돌한다. ⚠️ 반드시 **스크롤 콘텐츠 내부**(VStack의 `.background`)에 둬야 superview 체인이 UIScrollView에 닿는다 — ScrollView 바깥 background면 못 찾는다.
   - ⚠️ **Swift 6 mode 6 승격 보류 — `assumeIsolated`로 감싸면 클램프가 깨진다(실측, #219).** 이 KVO 클로저의 main-actor 격리 경고 3건(`\.contentOffset` key path·read·write)을 `MainActor.assumeIsolated`로 감싸면 **컴파일 경고는 0이 되지만 상단 클램프가 시각적으로 안 먹는다**(하단 bounce만 정상, 상단이 안 잡힘). 진단 로그상 `if y<0 { y=0 }` 쓰기는 **매 프레임 반영**되는데도(clamp 직후 다음 KVO가 `y=0.0`) 화면엔 over-scroll이 남았다 — `assumeIsolated`가 KVO 콜백의 동기 실행 순서를 바꿔 **UIScrollView 내부 bounce 애니메이션 트랜잭션과 어긋나는** 것으로 보인다(원본의 비격리 직접 쓰기는 정상). → **경고 3건을 감수하고 원본(비격리) 유지**(report-only라 빌드 무해). Feature를 mode 6으로 올릴 때 **KVO/UIKit 브리징을 `assumeIsolated`로 단순 처리하지 말 것** — 반드시 실기기로 동작 재확인(→ [[verify-dont-assume-runtime]] 정신, [docs/TODO.md](../../../docs/TODO.md) 4번).
+- **`NovelNotificationSettingSheetViewModel`의 `isSyncing`은 반드시 액션 핸들러(동기 코드)에서 Task 스폰 *전에* 세운다.** `sync()`(비동기 함수) 안에서 세우면, 토글 두 개가 Task 스케줄링 틈새(같은 런루프 틱)에 연달아 들어왔을 때 **둘 다 `guard !state.isSyncing`을 통과**해 PUT이 겹쳐 나간다 — `NovelDetailViewModel`의 `isSyncingInterest = true` → `Task { }` 순서와 같은 이유(리뷰에서 실제 발견).
+- **이 시트는 명시적 닫기 버튼이 없다**(스와이프로만 닫힘) — 그래서 화면 다른 곳의 `requestClose` 액션 + `isClosing` 패턴을 못 쓰고, 대신 View의 **`.onDisappear`가 `.disappear` 액션을 발화**해 `isClosing` 세팅 + 진행 중 Task 취소를 대신한다. 닫기 버튼이 없는 서버 호출 화면(시트 등)을 새로 만들 때 이 변형을 참고할 것 — `requestClose`를 억지로 만들 필요 없다.
+- **네비바 우측 아이콘 버튼(종·threedots)은 뒤로가기와 달리 44×44 확장 탭 타깃이 없다** — 아이콘 실제 크기(`.frame(width:24/20,height:24/20)`) 그대로에 `.contentShape`만 얹는다(디자인 지정값, 뒤로가기 버튼만 명시적 `.frame(width:44,height:44)`를 추가로 둔 예외). 우측 클러스터 전체 폭은 종(24)+간격(16)+threedots(20)+trailing 간격(20) = **80pt**다.
+- **스크롤 반응형 네비 타이틀은 화면 정중앙에 오도록 좌우 `.padding`을 대칭(양쪽 다 80pt 기준)으로 맞춘다** — 우측 클러스터(80pt)가 좌측(뒤로가기 44pt + 이 `HStack` 전체에 걸린 `.padding(.leading, 6)` = 화면 기준 실제 50pt)보다 넓어서다. 대칭을 맞추려면 **양쪽 다 더 넓은 쪽(80)을 기준**으로 삼아야 하는데, `Text`의 `.padding(.leading,)`은 이 `.padding(.leading, 6)`으로 이미 6pt만큼 밀린 로컬 좌표 위에서 계산되므로 **코드에는 74를 적는다**(74+6=80). `.padding(.leading, 44)`처럼 뒤로가기 실측값을 그대로 쓰면 좌측 여백이 6pt 부족해 타이틀이 더 넓은 우측으로 밀려 정중앙에서 벗어난다 — 좌우 버튼 폭이 바뀌면 두 값(`leading`은 `-6` 보정 포함, `trailing`은 그대로) 모두 "더 넓은 쪽 폭" 기준으로 다시 맞출 것.
