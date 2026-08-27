@@ -158,6 +158,12 @@
   시점으로 미루는 이유**는 반대편 탭이 화면 밖일 수도 있는 상태에서 즉시 재요청하면 낭비이기 때문 —
   새로 "카드가 양쪽 탭에 다 영향줄 수 있는" 액션을 추가할 땐 이 `invalidate(otherTab(of:))` 패턴을
   따를 것.
+  ⚠️ **`invalidate`는 `hasLoaded`만 끄는 게 아니라 `generation`도 함께 올려야 한다** — 무효화하는
+  시점에 반대편 탭이 이미 로드 중이었다면(화면 전환 직전에 시작된 요청 등), 그 진행 중 `Task`가
+  뒤늦게 성공하며 `loadPage`의 성공 분기가 `hasLoaded`를 다시 `true`로 되돌려버려 무효화 자체가
+  무의미해질 수 있다(PR 리뷰에서 발견, 발생 조건은 좁지만 재현 가능). `generation`을 함께 올리면
+  `loadPage`가 이미 갖고 있는 generation 가드(`bookkeeping(for: tab).generation == generation`)가
+  그 뒤늦은 완료를 걸러낸다 — 별도 가드를 새로 안 만들어도 된다.
 - ⚠️ **`CollectionListView`의 두 탭(내 컬렉션/좋아요한 컬렉션)은 각자 자기 스크롤 뷰를 갖고, 안 보이는
   쪽도 지우지 않고 opacity로만 숨긴다**(`LibraryFeature`의 그리드↔리스트 토글과 동일 함정·동일 해법,
   실측으로 재확인) — 하나의 스크롤 뷰 안에서 `if`/`switch`로 탭 콘텐츠만 갈아끼우면 SwiftUI가 그
