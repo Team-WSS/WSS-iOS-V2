@@ -8,7 +8,7 @@
 
 import BaseDomain
 
-public protocol NovelNotificationRepository {
+public protocol NovelNotificationRepository: Sendable {
     func loadSubscriptions(
         type: NovelNotificationType,
         lastSubscriptionID: SubscriptionID?,

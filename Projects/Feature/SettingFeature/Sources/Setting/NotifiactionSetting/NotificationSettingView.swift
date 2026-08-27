@@ -54,7 +54,7 @@ struct NotificationSettingView: View {
                 viewModel.handle(.load)
             }
             .navigationDestination(isPresented: $isCompletionListPresented) {
-                SettingFactory.makeCompletionNotificationListView(
+                SettingFeatureFactory.makeCompletionNotificationListView(
                     loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
                     deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
                     logger: logger,
@@ -62,7 +62,7 @@ struct NotificationSettingView: View {
                 )
             }
             .navigationDestination(isPresented: $isHiatusReturnListPresented) {
-                SettingFactory.makeHiatusReturnNotificationListView(
+                SettingFeatureFactory.makeHiatusReturnNotificationListView(
                     loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
                     deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
                     logger: logger,

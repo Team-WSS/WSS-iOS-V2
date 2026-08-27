@@ -11,7 +11,7 @@ import BaseDomain
 
 /// 작품 알림 구독 목록의 항목 하나 — 구독 자체의 식별자(`id`)와 대상 작품(`novelID`)을 함께 갖는다
 /// (일괄 구독 해제는 `novelID` 기준으로 서버에 보낸다, `NovelNotificationRepository` 참고).
-public struct NovelNotificationSubscription: Equatable {
+public struct NovelNotificationSubscription: Equatable, Sendable {
     public let id: SubscriptionID
     public let novelID: NovelID
     public let novelTitle: String

@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol NovelNotificationService {
+protocol NovelNotificationService: Sendable {
     func getSubscriptions(_ query: NovelNotificationSubscriptionsQuery) async throws -> NovelNotificationSubscriptionsResponse
     func deleteSubscriptions(_ request: NovelNotificationUnsubscribeRequest) async throws
 }

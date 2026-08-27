@@ -10,7 +10,7 @@ import BaseDomain
 
 /// 작품 알림 구독 목록 페이지 — `PagedNotifications`와 달리 서버가 다음 페이지 커서(`nextSubscriptionID`)를
 /// 명시적으로 내려준다(항목의 마지막 `id`로 유추하지 않는다).
-public struct PagedNovelNotificationSubscriptions: Equatable {
+public struct PagedNovelNotificationSubscriptions: Equatable, Sendable {
     public let subscriptions: [NovelNotificationSubscription]
     public let isLoadable: Bool
     public let nextSubscriptionID: SubscriptionID?
