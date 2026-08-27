@@ -225,6 +225,7 @@
 
 C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이 판정한 결과, **되살리거나 고치기로 결정됐지만**
 추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
+서버 요청 파라미터 매핑의 V1↔V2 교차 종합(C2)은 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md)가 정본.
 
 - **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
   평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
@@ -251,6 +252,13 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   **완결작 85,708개(전체의 90%)가 결과에서 조용히 사라진다.** **수정**: `isCompleted`를 `Bool?`로 바꿔
   미선택이면 nil(→쿼리 생략). `QueryItemConvertible`이 NSNull을 이미 제외하므로 타입 옵셔널화 + Feature 매핑에서
   미선택 시 nil을 주면 된다. → `SearchData`(`DetailSearchQuery`)·`SearchFeature`.
+- **⚠️ 내 피드 정렬 파라미터 대소문자 불일치 (C2 신규 발견 2026-08-28, 회귀 유력)** —
+  `DefaultFeedRepository:186`이 `sortCriteria: option.sortType.rawValue`로 **소문자 `recent`/`old`** 를 보내는데,
+  V1은 같은 `/users/{id}/feeds`에 **대문자 `RECENT`/`OLD`**(`SortType.queryText`)를 보냈다. 타 모듈(서재 읽기상태·
+  컬렉션 정렬)은 전부 `.rawValue.uppercased()`로 방어하는데 **내 피드만 빠졌다**. **선행 확인**: 서버가
+  `sortCriteria`에 대소문자 민감한지 실서버 대조(민감하면 V2 내 피드 정렬이 기본값으로 떨어져 무효 = 회귀).
+  민감하면 `option.sortType.rawValue.uppercased()` 1줄 수정. 근거: [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) §1.2.
+  → `FeedData`.
 - **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
   포커스 없음(실측 — `@FocusState`만 있고 진입 시 true로 안 켬). 진입 시 `isFocused = true` 복원. → `SearchFeature`.
 - **검색어 30자 제한 복원** — V1은 검색어 30자 초과 입력을 막았다(`shouldChangeCharactersIn`). V2는 제한 없음
