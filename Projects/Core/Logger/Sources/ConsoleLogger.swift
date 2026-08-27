@@ -6,7 +6,7 @@
 //
 
 /// 콘솔 출력용 Logger 구현체
-public final class ConsoleLogger: Logger {
+public final class ConsoleLogger: Logger, Sendable {
     private let showDebug: Bool
 
     public init(showDebug: Bool = true) {

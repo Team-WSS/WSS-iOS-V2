@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-protocol AuthService {
+protocol AuthService: Sendable {
     func patchAppleAccountSync(_ request: AppleSyncRequest) async throws
     func postAppleLogin(_ request: AppleLoginRequest) async throws -> LoginSuccessResponse
     func postKakaoLogin(_ requestHeader: KakaoLoginRequestHeader) async throws -> LoginSuccessResponse

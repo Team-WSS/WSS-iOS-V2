@@ -8,7 +8,7 @@
 import Foundation
 import Networking
 
-protocol SearchService {
+protocol SearchService: Sendable {
     func getRecentSearchWords() async throws -> RecentSearchWordsResponse
     func deleteRecentSearchWord(id: Int) async throws
     func deleteAllRecentSearchWords() async throws

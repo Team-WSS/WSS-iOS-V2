@@ -8,12 +8,12 @@
 
 import Foundation
 
-public protocol AppStorage {
+public protocol AppStorage: Sendable {
     func get<V>(_ key: StorageKey<V>) -> V?
     func set<V>(_ key: StorageKey<V>, _ value: V?)
 }
 
-public final class UserDefaultsStorage: AppStorage {
+public final class UserDefaultsStorage: AppStorage, @unchecked Sendable {
     private let userDefaults: UserDefaults
     
     public init(userDefaults: UserDefaults = .standard) {

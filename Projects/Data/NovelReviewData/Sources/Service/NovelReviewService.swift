@@ -9,7 +9,7 @@
 
 import Foundation
 
-protocol NovelReviewService {
+protocol NovelReviewService: Sendable {
     
     // MARK: - Review
     

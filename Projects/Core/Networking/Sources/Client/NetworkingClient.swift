@@ -7,7 +7,7 @@
 
 import Foundation
 
-public final class NetworkingClient: NetworkingRequestable {
+public final class NetworkingClient: NetworkingRequestable, Sendable {
     /// 한 요청이 시도할 수 있는 재인증 횟수 상한. 무한 루프를 막는다.
     private static let maxAuthRetries = 2
 

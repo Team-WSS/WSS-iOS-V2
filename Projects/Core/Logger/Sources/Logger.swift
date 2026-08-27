@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol Logger {
+public protocol Logger: Sendable {
     func debug(_ message: String)
     func info(_ message: String)
     func error(_ message: String)
