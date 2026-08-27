@@ -8,9 +8,9 @@
   아니라 이 화면들이 직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관),
   `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점:
-  - `MypageFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:loadInitialProfileUseCase:loadProfileCharacterUseCase:validateNicknameUseCase:updateProfileUseCase:onCollectionTapped:logger:)`
+  - `MypageFeatureFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:loadInitialProfileUseCase:loadProfileCharacterUseCase:validateNicknameUseCase:updateProfileUseCase:onCollectionTapped:logger:)`
     (내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집), `.makeCharacterEditSheet(...)`(캐릭터 선택 시트)
-  - `UserPageFactory.makeView(...)`(유저 페이지), `.makeFeedListView(...)`(전체 피드 목록 — `UserPageView`의 "전체보기"가 내부적으로 호출)
+  - `UserPageFeatureFactory.makeView(...)`(유저 페이지), `.makeFeedListView(...)`(전체 피드 목록 — `UserPageView`의 "전체보기"가 내부적으로 호출)
 
 ## MyPage
 
@@ -27,7 +27,7 @@
   미리보기 최대 3개(`LoadCollectionPreviewsUseCase.execute(userID:size:3)`, 마이페이지 전용 API가 없어
   컬렉션 목록 API를 `size=3`으로 호출 — `CollectionDomain/CLAUDE.md` 참고). `N`은 미리보기 배열 개수가
   아니라 그 UseCase가 함께 돌려주는 **전체** 개수다.
-- **프로필 편집(`MyPageEditView`)**: 연필 아이콘 → `navigationDestination` → `MypageFactory.makeEditView`.
+- **프로필 편집(`MyPageEditView`)**: 연필 아이콘 → `navigationDestination` → `MypageFeatureFactory.makeEditView`.
   저장 성공 시 곧바로 `dismiss()`하고, "저장됨" 토스트는 **복귀할 마이페이지가** `onSaved` 콜백을 받아
   띄운다(이 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로).
 - **캐릭터 선택(`MypageCharacterEditSheet`)**: 프로필 편집 화면의 `+` 버튼 → `.sheet(item:)`으로 진입.

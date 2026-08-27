@@ -198,7 +198,7 @@ private enum DemoFactory {
     static func makeMypageView(dataSource: DemoDataSource, userID: UserID) -> some View {
         switch dataSource {
         case .mock:
-            MypageFactory.makeView(
+            MypageFeatureFactory.makeView(
                 userID: userID,
                 loadProfileUseCase: DemoLoadProfileUseCase(store: demoProfileStore),
                 loadGenrePreferencesUseCase: DemoLoadGenrePreferencesUseCase(),
@@ -253,7 +253,7 @@ private enum DemoFactory {
             ),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
-        return MypageFactory.makeView(
+        return MypageFeatureFactory.makeView(
             userID: demoUserID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
@@ -288,7 +288,7 @@ private enum DemoFactory {
             ),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
-        return UserPageFactory.makeView(
+        return UserPageFeatureFactory.makeView(
             userID: userID,
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: profileRepository),
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
