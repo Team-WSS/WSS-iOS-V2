@@ -59,6 +59,7 @@ struct CollectionListView: View {
             content
         }
         .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .onAppear { viewModel.handle(.load) }
         .showWSSToast(isPresented: toastBinding, type: .unknownError)
@@ -283,27 +284,18 @@ private extension CollectionListView {
     func emptySection(for tab: CollectionListTab) -> some View {
         switch tab {
         case .mine:
-            // "컬렉션 만들기" 버튼만 보여준다 — 안내 일러스트/문구 없음(사용자 확정, 2026-08-25).
-            // 상단 정렬: 이 자리(ZStack)는 다른 탭의 꽉 찬 높이에 맞춰 늘어나 있어, alignment 없이
-            // 두면 버튼이 화면 중앙으로 밀려 목록 있는 상태(top)와 자리가 달라져 보인다(실측).
-            createCollectionButton
-                .padding(16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        case .liked:
-            // 빈 상태 문구·구성이 아직 기획 확정 전이라 기존 기본값(WSSImage.imgEmpty + 안내 문구,
-            // CTA 없음)을 그대로 둔다 — `CollectionFeature/CLAUDE.md`의 "확정 전 기본값" 목록 참고.
-            VStack(spacing: 0) {
-                WSSImage.imgEmpty.swiftUIImage
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 39, height: 48)
-
-                Spacer().frame(height: 8)
-
-                Text("아직 좋아요한 컬렉션이 없어요")
-                    .applyWSSFont(.body1, color: .wssGray200)
+            ZStack {
+                WSSEmptyView(type: .collectionMine)
+                
+                VStack(spacing: 0) {
+                    createCollectionButton
+                        .padding(16)
+                    Spacer()
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        case .liked:
+            WSSEmptyView(type: .collectionLike)
         }
     }
 }
@@ -382,7 +374,6 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
 }
 
 private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-
     func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
     }
