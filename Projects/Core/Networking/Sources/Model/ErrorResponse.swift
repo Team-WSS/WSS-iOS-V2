@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct ErrorResponse: Codable {
+public struct ErrorResponse: Codable, Sendable {
     
     public init(code: String, message: String) {
         self.code = code
