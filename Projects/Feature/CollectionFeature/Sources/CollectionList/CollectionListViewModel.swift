@@ -127,6 +127,10 @@ final class CollectionListViewModel {
             reload(.mine)
         case .reloadAfterDetail(let tab):
             reload(tab)
+            // 좋아요/삭제는 반대편 탭의 카드에도 영향을 줄 수 있다(예: 좋아요 토글은 "좋아요한
+            // 컬렉션" 목록 자체를 바꾼다) — 지금 안 보이는 탭까지 당장 재요청하는 대신 hasLoaded만
+            // 꺼서, 나중에 그 탭으로 전환하는 순간 loadIfNeeded가 자동으로 새로 불러오게 한다.
+            invalidate(otherTab(of: tab))
         case .dismissToast:
             state.presentedToast = nil
         }
@@ -148,6 +152,19 @@ private extension CollectionListViewModel {
     func retry(_ tab: CollectionListTab) {
         guard bookkeeping(for: tab).task == nil else { return }
         reload(tab)
+    }
+
+    /// 진행 중인 로드는 건드리지 않고 `hasLoaded`만 꺼서 다음 `loadIfNeeded` 호출(탭 전환)이
+    /// 그 탭을 다시 첫 페이지부터 불러오게 만든다 — 지금 화면에 없는 탭을 미리 당겨 로드하지 않는다.
+    func invalidate(_ tab: CollectionListTab) {
+        updateBookkeeping(for: tab) { $0.hasLoaded = false }
+    }
+
+    func otherTab(of tab: CollectionListTab) -> CollectionListTab {
+        switch tab {
+        case .mine: .liked
+        case .liked: .mine
+        }
     }
 
     /// 그 탭의 다음 페이지. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
