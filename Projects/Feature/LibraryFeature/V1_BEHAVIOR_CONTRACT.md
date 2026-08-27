@@ -75,7 +75,7 @@
   - 근거: V1 `MyLibraryViewModel.swift:197-225` · V2 `LibraryViewModel.swift:247-289`, `CLAUDE.md`(동시성 전제)
 - 🔧 **Improve** — **재진입 갱신 요청 크기**: V1은 `refresh` 시 `loadedCount + pageSize`를 **한 번에 over-fetch**한다. V2는 `보던 개수(loadedCount)`를 1차로 받고, 서버 전체 수 delta가 있을 때만 2차를 이어 받는 **1차+delta 2단계**로 정교화했다.
   - 근거: V1 `MyLibraryViewModel.swift:49-53`(`size = loadedCount + pageSize`) · V2 `LibraryViewModel.swift:308-344`, `LibraryPageSizePolicy`, `CLAUDE.md`(재진입 갱신 2단계)
-- ❓ **Unknown** — **페이지 크기 12 → 15**. V1 `pageSize = 12`, V2 `LibraryPageSizePolicy.pageSize = 15`.
+- ✅ **Keep** (확정 2026-08-28: V2 튜닝) — **페이지 크기 12 → 15**. V1 `pageSize = 12`, V2 `LibraryPageSizePolicy.pageSize = 15`.
   - 근거: V1 `MyLibraryViewModel.swift:36` · V2 `LibraryPageSizePolicy.swift:19`
 - ✅ **Keep** — 무한 스크롤(다음 페이지 요청) 자체.
   - V2: 수단 변경 — V1은 스크롤 오프셋 임계값(`offsetY + frameHeight >= contentHeight - 100`), V2는 마지막 셀 `onAppear`.
@@ -104,7 +104,7 @@
   - 근거: V1 `MyLibraryViewController.swift:195-201` · V2 `LibrarySortSheet`, `CLAUDE.md`(정렬 시트 선택 즉시 적용)
 - ✅ **Keep** — 서버 정렬 토큰 매핑 `created_desc/created_asc/title/read_date/rating_desc/rating_asc`.
   - 근거: V1 `LibrarySortType.swift:33-42` · V2 `NovelMapper.mapLibrarySortTypeString`, `NovelData/CLAUDE.md`
-- ❓ **Unknown** — **`.title`(제목순) 서버 토큰 확정**. V1에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석. V2도 토큰을 싣지만 백엔드 실제 지원 여부는 별개 확인.
+- 🔧 **외부 확인→TODO** (2026-08-28: 서버 실지원 확인) — **`.title`(제목순) 서버 토큰 확정**. V1에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석. V2도 토큰을 싣지만 백엔드 실제 지원 여부는 별개 확인.
   - 근거: V1 `LibrarySortType.swift:37`
 
 ### 1.5 영속화 (UserDefaults)
@@ -129,7 +129,7 @@
 
 ### 1.7 상호작용·네비게이션
 
-- ❓ **Unknown** — 작품 셀 선택에 **1초 throttle**을 걸어 중복 push를 막는다.
+- ✅ **Keep** (확정 2026-08-28: NavigationStack+loadTask 가드로 해소) — 작품 셀 선택에 **1초 throttle**을 걸어 중복 push를 막는다.
   - V2: `onNovelSelected` 콜백 위임 — VM에 명시적 throttle 없음. 중복 push 방지가 App 배선에 있는지 확인 필요.
   - 근거: V1 `MyLibraryViewModel.swift:227-233` · V2 `LibraryViewModel`(선택은 View→onNovelSelected)
 - ✅ **Keep** — 그리드↔리스트 표시 토글(기본 그리드). 표시 모드는 **영속화하지 않는다**(세션 내 상태).
@@ -210,7 +210,7 @@
   - 근거: V1 `UserLibraryChildViewModel.swift:98-103` · V2 `CLAUDE.md`(빈 상태 CTA 없음)
 - 🔧 **Improve** — **내/타유저 구분**. V1은 `isMyPage`(저장된 userId와 비교)로 같은 화면에서 내 페이지/타유저를 분기하고 빈 화면 문구도 나눴다. V2는 화면 자체를 분리해 타유저 서재는 항상 타유저 기준.
   - 근거: V1 `UserLibraryChildViewModel.swift:88-89`,`266` · V2 `NovelDomain/CLAUDE.md`(내/유저 Repository 쌍)
-- ❓ **Unknown** — 셀 선택 **2초 throttle**(내 서재 1초보다 김) → 중복 push 방지. V2 대응 미확인(§1.7과 동일 사안).
+- ✅ **Keep** (확정 2026-08-28: 동일 가드로 해소) — 셀 선택 **2초 throttle**(내 서재 1초보다 김) → 중복 push 방지. V2 대응 미확인(§1.7과 동일 사안).
   - 근거: V1 `UserLibraryChildViewModel.swift:105-112`
 
 ---

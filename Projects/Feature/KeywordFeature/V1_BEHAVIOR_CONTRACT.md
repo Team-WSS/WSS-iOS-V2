@@ -111,7 +111,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 - ✅ **Keep (동작 동일, 탭 타깃 좁힘)** — **트레이 칩을 눌러 그 키워드를 해제**한다.
   - V1: 트레이 칩(`KeywordTag`, X 아이콘은 `isUserInteractionEnabled = false`인 **장식**) **몸통 전체 탭**이 해제 트리거였다. V2: X 버튼(`onDelete`)만 해제하고 **몸통 탭은 의도적으로 비활성**(`onSelect` 생략). 시각(칩+X)과 "탭해서 해제" 결과는 같고 탭 영역만 X로 좁혔다.
   - 근거: V1 `…/Base/KeywordLabel/KeywordTag.swift:23,50-53`(eraseButton 비활성), `NovelKeywordSelectModalViewModel.swift:154-161`(셀 선택 = remove) · V2 `Sources/SearchKeywordView.swift:113-118`, `CLAUDE.md`(트레이 칩 몸통 탭 비활성)
-- ❓ **Unknown** — V1은 **키워드를 고를 때마다 키보드를 내린다**(`endEditing`). V2엔 선택 시 명시적 키보드 해제가 없다.
+- ✅ **Keep** (확정 2026-08-28: 사소, V2 유지) — V1은 **키워드를 고를 때마다 키보드를 내린다**(`endEditing`). V2엔 선택 시 명시적 키보드 해제가 없다.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:156,171,179`(select/deselect마다 `endEditing.accept`) · V2 `Sources/SearchKeywordViewModel.swift:112-120`(키보드 처리 없음)
 
 ## 5. 빈 화면 (검색 결과 없음)
@@ -119,7 +119,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 - ✅ **Keep** — 검색 결과가 0건이면 **중앙 빈 뷰**(이미지 + 안내문 + 문의 버튼)를 띄운다.
   - V2: `isSearching && searchedKeywords.isEmpty`면 `WSSEmptyView(type: .keyword)`를 화면 정중앙(`maxHeight: .infinity`)에. V1은 `novelKeywordSelectEmptyView`(이미지+2줄 안내문+`contactButton`)를 `centerY`에.
   - 근거: V1 `…/NovelReviewAssistantView/NovelKeywordSelectEmptyView.swift:38-93`, `…/NovelKeywordSelectModalViewController.swift:134-139` · V2 `Sources/SearchKeywordView.swift:70-78`
-- ❓ **Unknown** — **문의 버튼 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(`https://helpwebsoso.notion.site/…d0a0b0a`)를 열었는데, 이 URL은 **V2에서 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab`)을 연다.
+- 🔨 **오배선 수정 확정→TODO** (2026-08-28: 범용문의로 되돌림) — **문의 버튼 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(`https://helpwebsoso.notion.site/…d0a0b0a`)를 열었는데, 이 URL은 **V2에서 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab`)을 연다.
   - **판정 포인트**: V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의 재사용"이라 하지만, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지**를 썼다 — 재사용 대상 페이지가 실제로 바뀌었다. 어느 페이지가 맞는지 확인 필요.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:215-223`(`ExternalLinks.inquiry` open), `WSSiOS/Resource/Constants/URLs/ExternalLinks.swift:12` · V2 `Sources/SearchKeywordView.swift:74-76`(`AppURL.inquiryAddNovel`), `Projects/Domain/BaseDomain/Sources/AppURL.swift:15,18`
 
@@ -158,7 +158,7 @@ V2 `KeywordFeature`는 콘텐츠만 제공하고 이 껍데기를 전부 호출�
 
 ## 9. 분석 (Analytics)
 
-- ❓ **Unknown** — V1은 문의 버튼 탭에 **Amplitude 이벤트**(`AmplitudeEvent.Search.contactKeyword`)를 기록했다. V2 이 모듈엔 분석 계층이 없다.
+- 🔧 **횡단 이슈→TODO** (2026-08-28) — V1은 문의 버튼 탭에 **Amplitude 이벤트**(`AmplitudeEvent.Search.contactKeyword`)를 기록했다. V2 이 모듈엔 분석 계층이 없다.
   - **판정 포인트**: V2 앱 전반에 분석이 (아직) 없어 생긴 일반적 미포팅인지, 이 지점만 누락인지. (앱 전체 정책이면 이 문서 범위 밖.)
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:217` · V2 `Sources/SearchKeywordView.swift:74-76`(분석 호출 없음)
 

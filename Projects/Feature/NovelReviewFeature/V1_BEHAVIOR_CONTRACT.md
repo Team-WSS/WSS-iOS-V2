@@ -73,7 +73,7 @@
   - V1: 로드 콜백이 `owner.readStatus`(주입값)를 그대로 `readStatusData`로 방출하고, 서버 `data.status`는 **오직 "리뷰 존재 여부"(§2.3) 판단에만** 쓴다.
   - V2: `loadDraft`가 `loaded.changeStatus(initialStatus)`로 주입 상태를 덮어 적용한다(원본과 다르면 '변경됨'으로 잡혀 중단 알럿 대상 — §8).
   - 근거: V1 `NovelReviewViewModel.swift:104`,`117-118` · V2 `NovelReviewViewModel.swift:237-239`
-- ❓ **Unknown** — **로드 실패 처리**. V1 로드는 `flatMapLatest`로 갈아끼우기만 하고 **에러 분기가 없다**(에러 시 스트림이 조용히 끝나 화면이 초기값 그대로 남음). V2는 `state.loadFailed` → **전면 실패 뷰(`NetworkErrorView`, 재시도)**.
+- ❓ **Unknown (판정 보류 2026-08-28)** — **로드 실패 처리**. V1 로드는 `flatMapLatest`로 갈아끼우기만 하고 **에러 분기가 없다**(에러 시 스트림이 조용히 끝나 화면이 초기값 그대로 남음). V2는 `state.loadFailed` → **전면 실패 뷰(`NetworkErrorView`, 재시도)**.
   - V2는 신규 계약(로드 실패 표현). V1엔 대응 동작 자체가 없어 "V1 유지"라 부를 게 없다 → 판정보단 참고. (전면 실패 뷰는 V2 전반의 로드 실패 계약과 정렬 — `Feature/CLAUDE.md`.)
   - 근거: V1 `NovelReviewViewModel.swift:99-120`(에러 분기 없음) · V2 `NovelReviewViewModel.swift:246-254`, `NovelReviewView.swift:44-54`
 
@@ -116,7 +116,7 @@
 
 ### 2.4 저장 부수 작업(앱 리뷰 요청·노티피케이션·분석)
 
-- ❓ **Unknown (헤드라인)** — **저장 성공 후 App Store 리뷰 요청**. V1은 저장 성공 콜백에서 `AppReviewManager.shared.requestReview()`로 **iOS 앱 평점 요청 프롬프트**(StoreKit)를 띄웠다. **V2엔 없다.**
+- 🔧 **재도입 확정→TODO** (2026-08-28) — **저장 성공 후 App Store 리뷰 요청**. V1은 저장 성공 콜백에서 `AppReviewManager.shared.requestReview()`로 **iOS 앱 평점 요청 프롬프트**(StoreKit)를 띄웠다. **V2엔 없다.**
   - **판정 포인트**: 앱 리뷰 요청을 되살릴지(리뷰 남긴 직후가 요청 적기) / 의도적으로 뺀 것인지. (분석·StoreKit 인프라 미이식으로 보이나 근거 미확인.)
   - 근거: V1 `NovelReviewViewModel.swift:163`(`AppReviewManager.shared.requestReview()`) · V2 `NovelReviewViewModel.swift:257-267`(없음)
 - 🗑/✅ — **저장 성공 후 다른 화면 갱신**. V1은 `NotificationCenter.post(name: "NovelReviewed")`로 브로드캐스트해 작품 상세 등이 갱신하게 했다. V2는 노티 없이 **화면을 닫고, 복귀한 화면이 `onAppear` 재조회로 갱신**(탭 콘텐츠 갱신 계약)한다.
@@ -189,7 +189,7 @@
   - 근거: V1 `NovelReviewViewModel.swift:203-217`, `NovelReviewViewController.swift:165-169` · V2 `NovelReviewViewModel.swift:174-184`, `NovelReviewDraft.swift:23`,`65-73`, `NovelReviewView.swift:343-347`
 - ✅ **Keep** — 라벨 문구 6종(세계관·소재·필력·캐릭터·관계·분위기)과 서버 토큰(`worldview`·`material`·`writingskill`·`character`·`relationship`·`vibe`)이 동일. (V2 표시명은 WSSComponent `DomainPresentation`.)
   - 근거: V1 `AttractivePoint.swift:10-40` · V2 `NovelReviewMapper.swift:193-204`(토큰), `NovelReviewView.swift:285`(`point.displayName`)
-- ❓ **Unknown** — **가로 배열 순서가 다르다**. V1 `AttractivePoint.allCases` = `worldview·material·writingSkill(필력)·character·relationship·vibe`. V2 = `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열하므로 **6개 버튼의 나열 순서(특히 필력 위치)가 다르게 보인다**.
+- 🔨 **수정 확정→TODO** (2026-08-28: V1 순서로, 필력 3번째) — **가로 배열 순서가 다르다**. V1 `AttractivePoint.allCases` = `worldview·material·writingSkill(필력)·character·relationship·vibe`. V2 = `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열하므로 **6개 버튼의 나열 순서(특히 필력 위치)가 다르게 보인다**.
   - **판정 포인트**: V2가 `AttractivePoint` enum을 재정렬(필력 마지막)한 결과가 리뷰 화면에도 반영된 것 — 의도된 순서인지(서재 필터는 "필력 마지막" 로컬 배열을 쓴다는 기록이 있으나 이 화면 순서에 대한 명문 근거는 없음) / 간과된 것인지.
   - 근거: V1 `AttractivePoint.swift:10-16`(allCases 순서), `NovelReviewAttractivePointView.swift:19-20`(allCases 나열) · V2 `BaseDomain/Sources/AttractivePoint.swift:12-17`, `NovelReviewView.swift:267`(allCases 나열)
 

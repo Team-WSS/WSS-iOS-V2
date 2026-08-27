@@ -70,7 +70,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - 🗑 **Delete** — 랜딩 화면(`SearchView`)과 유도 배너를 통째로 없애고 V2는 `NormalSearchView` 하나로 진입한다. V1 랜딩의 소소픽은 NormalSearch 브라우즈 섹션으로 흡수됐다(중복이던 걸 하나로).
   - V2: `SearchFeatureFactory.makeNormalSearchView(...)`가 "실제 앱 진입점"으로 명문화. 랜딩·배너 대응 코드 없음.
   - 근거: V1 `SearchViewController.swift:23`,`70-72`(랜딩+유도배너 바인딩) · V2 `SearchFeatureFactory.swift:24-46`, `CLAUDE.md`(진입점 = NormalSearch)
-- ❓ **Unknown** — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (§5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
+- 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱) — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (§5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
   - 근거: V1 `SearchViewModel.swift:48-68`
 - ❓ **Unknown** — `SearchView`는 진입마다 시스템 탭바를 다시 보이고(`showTabBar`) 네비바를 숨긴다(`setNavigationBarHidden(true)`). V2는 탭/네비 체계가 SwiftUI로 달라 직접 대응이 없다(구조 차이).
   - 근거: V1 `SearchViewController.swift:40-64`
@@ -255,14 +255,14 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 
 ### 5.1 로그인 게이팅
 
-- ❓ **Unknown (헤드라인)** — V1은 검색 곳곳을 `isLogined = APIConstants.isLogined`로 가드한다: 검색바 진입·유도배너·소소픽 셀·검색 결과 셀·장르 셀·장르 헤더·인기키워드 셀·인기키워드 헤더 — **비로그인이면 전부 `InduceLoginViewController`를 present**(작품 상세로 안 감). 즉 V1은 **비로그인 상태로도 검색 랜딩/소소픽을 브라우즈**할 수 있고 상호작용에서만 로그인을 유도했다.
+- 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱, 비로그인 경로 없음) — V1은 검색 곳곳을 `isLogined = APIConstants.isLogined`로 가드한다: 검색바 진입·유도배너·소소픽 셀·검색 결과 셀·장르 셀·장르 헤더·인기키워드 셀·인기키워드 헤더 — **비로그인이면 전부 `InduceLoginViewController`를 present**(작품 상세로 안 감). 즉 V1은 **비로그인 상태로도 검색 랜딩/소소픽을 브라우즈**할 수 있고 상호작용에서만 로그인을 유도했다.
   - **V2: 이 가드가 전부 없다.** `NormalSearchViewModel`에 `isLogined` 개념이 없고 모든 액션이 무조건 실행된다.
   - 근거: V1 `SearchViewModel.swift:51-66`, `NormalSearchViewModel.swift:21`,`171-176`,`233-238`,`302-306`,`344-348` · V2 `NormalSearchViewModel.swift`(가드 없음)
   - **판정 포인트**: V2가 검색을 로그인 후에만 진입하게 하는 앱 전체 정책이라 induce-login이 불필요해진 건지(=의도된 제거) / 비로그인 브라우즈를 되살릴지.
 
 ### 5.2 애널리틱스
 
-- ❓ **Unknown** — V1은 검색 흐름 전반에 Amplitude 이벤트를 심었다: `Search.search`(검색화면 진입), `generalSearch`(검색바 탭), `seek`(상세검색 유도), `sosoPick`, `clickSearchResult`, `clickSeekResult`, `contactNovelSearch`(문의).
+- 🔧 **횡단 이슈→TODO** (2026-08-28) — V1은 검색 흐름 전반에 Amplitude 이벤트를 심었다: `Search.search`(검색화면 진입), `generalSearch`(검색바 탭), `seek`(상세검색 유도), `sosoPick`, `clickSearchResult`, `clickSeekResult`, `contactNovelSearch`(문의).
   - V2: 대응 이벤트 전송이 없다(`Logger`는 에러 로깅 전용). 애널리틱스가 아직 이식 안 된 것으로 보임.
   - 근거: V1 `SearchViewController.swift:46`, `SearchViewModel.swift:50`,`61`, `NormalSearchViewModel.swift:170`,`232`,`249`, `DetailSearchResultViewModel.swift:79` · V2 (대응 없음)
 

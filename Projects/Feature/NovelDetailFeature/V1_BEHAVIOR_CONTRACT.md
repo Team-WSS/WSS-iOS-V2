@@ -71,7 +71,7 @@
 
 ### 1.1 진입·재조회·생명주기
 
-- ❓ **Unknown (헤드라인)** — V1은 `viewWillAppear`마다 `reloadData`를 쏴 **header·info·feed 3종을 전부 다시 조회**한다(재진입 시 최신 집계 반영). 최초 1회 가드 없음.
+- ✅ **Keep** (확정 2026-08-28: hasLoaded 가드로 재진입 1회 로드, 의도적) — V1은 `viewWillAppear`마다 `reloadData`를 쏴 **header·info·feed 3종을 전부 다시 조회**한다(재진입 시 최신 집계 반영). 최초 1회 가드 없음.
   - **V2: `hasLoaded` 가드로 1회만 로드**하고 재진입(onAppear 재발화) 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 `hasLoaded = false` 후 `loadNovel()`로 직접 재동기화하지만, **평가 작성/수정·피드 수정·피드 상세 좋아요처럼 다른 화면을 다녀온 결과**는 재진입해도 반영되지 않을 수 있다(V1은 반영됐다).
   - 근거: V1 `NovelDetailViewController.swift:71-77`(viewWillAppear→event), `NovelDetailViewModel.swift:191-204`(reloadData→get 3종) · V2 `NovelDetailViewModel.swift:219-223`(load, `guard !hasLoaded`), `396-411`·`432-446`(내부 삭제만 재로드), `CLAUDE.md`("LoadNovelUseCase 1회(hasLoaded 가드)")
   - **판정 포인트**: "1회 로드"가 의도인 건 맞으나, V1이 매 진입 재조회로 **자연히 얻던 외부 변경 최신화**를 어디서 대체하는지(App이 화면을 새로 세우는지, 알림/신호가 있는지) 확인 필요.
@@ -245,7 +245,7 @@
 
 ### 6.1 더블탭 가드(throttle)
 
-- ❓ **Unknown** — V1은 중복 발화를 막으려 곳곳에 **1초 throttle**을 걸었다: 관심 버튼, 피드작성/플로팅 버튼, 평가 결과 버튼, 피드 셀 선택, 피드 드롭다운, 뒤로가기.
+- ✅ **Keep** (확정 2026-08-28: VM loadTask 가드+NavigationStack로 해소) — V1은 중복 발화를 막으려 곳곳에 **1초 throttle**을 걸었다: 관심 버튼, 피드작성/플로팅 버튼, 평가 결과 버튼, 피드 셀 선택, 피드 드롭다운, 뒤로가기.
   - V2: Task 슬롯 가드(`isSyncingInterest`·`feedsTask == nil`·`feedActionTask == nil`·`isClosing`)로 **서버 호출류의 중복은 막지만**, **순수 화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 빠른 더블탭 시 중복 push 방지는 App 배선에 달림.
   - 근거: V1 `NovelDetailViewModel.swift:280`,`290`,`310`,`320`,`382`,`407`, `NovelDetailViewController.swift:494` · V2 `NovelDetailViewModel.swift:241`,`254`,`293`,`301`(Task 가드), `NovelDetailView.swift`(전환 콜백 직접 발화)
   - **판정 포인트**: 중복 push 가드가 App 네비게이션 계층에 있는지(서재·홈의 동일 ❓와 함께 볼 것).
@@ -259,13 +259,13 @@
 
 ### 6.3 Amplitude 트래킹
 
-- ❓ **Unknown (헤드라인)** — V1은 상세 화면 곳곳에 Amplitude 이벤트를 심었다: 오류 제보(`contactError`)·평가 삭제(`rateDelete`)·평가 진입(`rate`)·관심(`rateLove`)·피드작성 버튼/플로팅(`novelWriteButton`/`novelWriteFloatingButton`)·정보/피드 탭(`novelInfo`/`novelFeed`)·좋아요(`feedLike`)·신고(`alertFeedSpoiler`/`alertFeedAbuse`)·플랫폼 이동(`directNovel`).
+- 🔧 **횡단 이슈→TODO** (2026-08-28: 애널리틱스 별도 이슈) — V1은 상세 화면 곳곳에 Amplitude 이벤트를 심었다: 오류 제보(`contactError`)·평가 삭제(`rateDelete`)·평가 진입(`rate`)·관심(`rateLove`)·피드작성 버튼/플로팅(`novelWriteButton`/`novelWriteFloatingButton`)·정보/피드 탭(`novelInfo`/`novelFeed`)·좋아요(`feedLike`)·신고(`alertFeedSpoiler`/`alertFeedAbuse`)·플랫폼 이동(`directNovel`).
   - **V2엔 트래킹 코드가 없다**(분석 미이식으로 보이나 확인 필요 — Home 문서와 동일 사안).
   - 근거: V1 `NovelDetailViewModel.swift:235`,`238`,`272`,`292`,`312`,`322`, `NovelDetailViewController.swift:244-247`,`270`,`365`,`400` · V2 `NovelDetailViewModel`(트래킹 없음)
 
 ### 6.4 첫 감상평 안내 오버레이
 
-- ❓ **Unknown (헤드라인)** — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
+- 🔧 **재도입 검토→TODO** (2026-08-28: 디자인 검토 대상) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
   - **V2엔 이 오버레이가 통째로 없다**(grep 0 — `firstReview`/`speechBalloon`/`showReviewFirst` 흔적 없음).
   - 근거: V1 `NovelDetailViewModel.swift:183-189`,`197-199`(hideFirstReviewDescription·UserDefaults), `NovelDetailView.swift:26-29`,`269-274`(오버레이 뷰) · V2 `Sources/**`(해당 코드 없음)
   - **판정 포인트**: 온보딩 힌트를 되살릴지 / 없앤 게 의도인지(V2 디자인에서 제외됐을 가능성).

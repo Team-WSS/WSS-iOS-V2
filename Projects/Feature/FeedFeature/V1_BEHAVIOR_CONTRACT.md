@@ -85,7 +85,7 @@
 - ✅ **Keep** — 탭/옵션을 바꾸면 목록을 **처음부터 다시 채운다**(페이징 상태 리셋 후 재조회).
   - V2: `onChange(of: selectedTab)`/`onChange(of: selectedSosoFeedOption)` → `.load`(refresh: true). 스크롤 위치도 `.id(scrollIdentity)`로 최상단 리셋.
   - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedView.swift:98-104`,`259-266`, `SosoFeedViewModel.swift:160-163`
-- ❓ **Unknown** — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(§5)이나 탭 재선택으로만 일어났다.
+- ✅ **Keep** (확정 2026-08-28: 재진입 재조회 없음은 화면별 의도 설계) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(§5)이나 탭 재선택으로만 일어났다.
   - V2: `SosoFeedView`가 `onAppear`마다 `.load`. **탭 콘텐츠라면 복귀마다 갱신**이 V2 규약([Feature CLAUDE.md](../CLAUDE.md))이지만, V1은 오히려 진입 1회였다. 재조회 시점이 어긋날 수 있어 확인 필요.
   - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.swift:95-97`
 
@@ -126,11 +126,11 @@
 - ✅ **Keep** — 내 피드가 0건이면 **빈 화면**(피드 없음 + "피드 작성" 유도)을 띄운다.
   - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). 단 CTA 액션은 아직 빈 클로저(§1.6과 함께 미배선).
   - 근거: V1 `FeedPageContentViewController.swift:118-124`,`299-303`(emptyView.writeFeedButton) · V2 `SosoFeedView.swift:272-275`
-- ❓ **Unknown (헤드라인)** — **목록 로드 실패 표현**. V1은 목록 로드 에러를 **`onError`에서 `print`만** 하고 UI로 알리지 않았다(전면 에러 뷰 없음, 빈/직전 목록 유지). 즉 V1엔 애초에 목록 실패 UI가 없었다.
+- ❓ **Unknown (판정 보류 2026-08-28)** — **목록 로드 실패 표현**. V1은 목록 로드 에러를 **`onError`에서 `print`만** 하고 UI로 알리지 않았다(전면 에러 뷰 없음, 빈/직전 목록 유지). 즉 V1엔 애초에 목록 실패 UI가 없었다.
   - V2: `catch`에서 `state.errorMessage`를 세팅하지만 **`SosoFeedView`가 그 값을 그리지 않는다**(토스트도 전면 뷰도 없음) → 관찰상 V1과 같은 무처리. 하지만 V2 Feature 계약(#195)은 "목록 실패=전면 `NetworkErrorView`+재시도"를 요구하므로 **아직 미이행**이다.
   - 근거: V1 `FeedPageContentViewModel.swift:108-110`,`252-254`,`277-279`(print) · V2 `SosoFeedViewModel.swift:241-243`,`296-298`, `SosoFeedView.swift:268-316`(errorMessage 미표시), [Feature CLAUDE.md](../CLAUDE.md)(로드 실패 표현 계약)
   - **판정 포인트**: V2에서 목록 실패를 전면 뷰로 표현할지(=계약 준수) / V1처럼 조용히 둘지.
-- ❓ **Unknown** — **인증 만료 처리**. V1엔 목록 화면 단위 인증 만료 분기가 없고 네트워크 계층(`tokenCheckURLSession`)이 재발급을 담당했다. V2 `SosoFeedViewModel`엔 `requiresAuthentication`/`onAuthenticationRequired`가 아예 없다(에러를 전부 errorMessage로).
+- 🔧 **통일 확정→코드 대상** (2026-08-28: Library식 authenticationRequired 라우팅 추가) — **인증 만료 처리**. V1엔 목록 화면 단위 인증 만료 분기가 없고 네트워크 계층(`tokenCheckURLSession`)이 재발급을 담당했다. V2 `SosoFeedViewModel`엔 `requiresAuthentication`/`onAuthenticationRequired`가 아예 없다(에러를 전부 errorMessage로).
   - 근거: V1 `FeedService.swift:40`(tokenCheckURLSession) · V2 `SosoFeedViewModel.swift`(인증 신호 없음), [Feature CLAUDE.md](../CLAUDE.md)(인증 만료 처리 계약)
 - ✅ **Keep** — 첫 로드 시 로딩 표시, 갱신/추가 로드 중엔 목록 유지.
   - V2: `isLoading && currentFeeds.isEmpty`일 때만 `LoadingView`(보여줄 게 없을 때만 — 홈·서재와 같은 결).
@@ -141,7 +141,7 @@
 - ✅ **Keep** — 좋아요 토글은 **낙관 반영 후 실패 시 롤백**(카운트·상태 되돌림).
   - V2: `TotalFeed.toggleLike()` 낙관 반영 → 실패 시 동일 토글로 롤백(내 피드/소소피드 두 배열 중 있는 쪽). 관찰 동작 동일.
   - 근거: V1 `FeedPageContentViewModel.swift:186-223` · V2 `SosoFeedViewModel.swift:319-348`, `CLAUDE.md`(toggleLike)
-- ❓ **Unknown (사소)** — V1 좋아요는 **햅틱(light impact)**을 준다. V2 목록 좋아요엔 햅틱이 없다(정렬 토글엔 있음).
+- 🔧 **복원 확정→TODO** (2026-08-28) — V1 좋아요는 **햅틱(light impact)**을 준다. V2 목록 좋아요엔 햅틱이 없다(정렬 토글엔 있음).
   - 근거: V1 `FeedPageContentViewModel.swift:196` · V2 `SosoFeedViewModel.swift:319-339`
 
 ### 1.6 상호작용·네비게이션
@@ -205,7 +205,7 @@
 - 🔧 **Improve (수단)** — V1은 `viewWillAppear`마다 **두 스트림을 병렬로** 발화했다: (a) `getSingleFeed`(피드 본문 → 좋아요·연결작품·이미지 등 채움), (b) `zip(getSingleFeedComments, getMyProfile)`(댓글+내 프로필, 로딩 스피너 제어). V2는 `.load`에서 **세 `Task`를 동시에**(피드 상세 / 댓글 / 내 프로필 이미지) 띄운다.
   - V2: `Task { loadFeed() }` · `Task { loadComments() }` · `Task { loadCurrentUserProfileImage() }`. 관찰상 "본문·댓글·프로필을 함께 받아 그린다"는 같다.
   - 근거: V1 `FeedDetailViewModel.swift:184-231` · V2 `FeedDetailViewModel.swift:155-160`,`201-240`
-- ❓ **Unknown** — V1은 `viewWillAppear`마다 다시 로드(수정 화면에서 돌아오면 최신 반영). V2는 `onAppear`의 `.load` 1회 — push 상세라 더 깊은 push에서 돌아올 때 재발화 여부(수정 반영)가 SwiftUI 생명주기에 달림.
+- ✅ **Keep** (확정 2026-08-28: 의도적 설계) — V1은 `viewWillAppear`마다 다시 로드(수정 화면에서 돌아오면 최신 반영). V2는 `onAppear`의 `.load` 1회 — push 상세라 더 깊은 push에서 돌아올 때 재발화 여부(수정 반영)가 SwiftUI 생명주기에 달림.
   - 근거: V1 `FeedDetailViewController.swift:49-57` · V2 `FeedDetailView.swift:82-84`
 - ✅ **Keep** — 로딩 중엔 로딩 뷰, 본문 도착 후 콘텐츠.
   - V2: `state.detail == nil && !detailLoadFailed`면 `LoadingView`.
@@ -246,10 +246,10 @@
 - ✅ **Keep** — 댓글 삭제/신고: 남의 댓글은 스포일러·부적절 신고(확인→완료 2단), 내 댓글은 수정/삭제. 삭제 성공 시 목록에서 제거 + 댓글 수 감소.
   - V2: `commentDropdownItems()` `selectedCommentIsMine` 분기, `AlertType`에 댓글 삭제/신고 케이스. 삭제 시 `removeCommentCount`.
   - 근거: V1 `FeedDetailViewModel.swift:483-516`, `FeedDetailViewController.swift:426-523` · V2 `FeedDetailView.swift:341-387`, `FeedDetailViewModel.swift:264-271`,`320-329`
-- ❓ **Unknown** — **댓글 500자 제한**. V1은 댓글 입력을 500자에서 하드 컷(`textView.deleteBackward()`).
+- 🔧 **복원 확정→TODO** (2026-08-28: V2 제한 없음 실측) — **댓글 500자 제한**. V1은 댓글 입력을 500자에서 하드 컷(`textView.deleteBackward()`).
   - V2: 입력바에 글자수 제한이 없다(`.lineLimit(5)`는 표시 줄 제한).
   - 근거: V1 `FeedDetailViewController.swift:24`,`599-604` · V2 `FeedDetailCommentInputBar.swift:53-59`
-- ❓ **Unknown** — **댓글 전송 실패 표현**. V1은 작성/수정 실패 시 "네트워크 지연" 토스트 + 전송 버튼 재활성. V2 `createComment`/`editComment`/`deleteComment`/`deleteFeed`의 `catch {}`가 **비어 조용히 삼킨다**.
+- 🔨 **회귀 확정→TODO** (2026-08-28: 빈 catch 4곳 실측) — **댓글 전송 실패 표현**. V1은 작성/수정 실패 시 "네트워크 지연" 토스트 + 전송 버튼 재활성. V2 `createComment`/`editComment`/`deleteComment`/`deleteFeed`의 `catch {}`가 **비어 조용히 삼킨다**.
   - 근거: V1 `FeedDetailViewModel.swift:407-419`, `FeedDetailViewController.swift:247-252` · V2 `FeedDetailViewModel.swift:301-339`
 - ❓ **Unknown (사소)** — V1 전송 버튼 활성 조건: 내용이 비어있지 않고 **초기값과 다를 때만**(수정 시 무변경이면 비활성). V2 `submitComment`는 trim 후 비어있지 않으면 전송(무변경 재전송 가능).
   - 근거: V1 `FeedDetailViewModel.swift:307-319`(isNotChanged) · V2 `FeedDetailViewModel.swift:165-166`
@@ -310,7 +310,7 @@
 - ✅ **Keep** — 뒤로가기 시 **"작성 중단" 확인 알럿**을 띄운다.
   - V2: back 탭 → `showDismissAlert`(`.stopWritingFeed`), 확인 시 `dismiss`.
   - 근거: V1 `FeedEditViewModel.swift:160-165`,`276-280`(stopEditButton) · V2 `CreateFeedView.swift:174-176`,`139-146`
-- ❓ **Unknown (헤드라인)** — **작성/수정 성공 후 처리**. V1은 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭 "수정됨" 토스트) + `AppReviewManager.requestReview()`(앱 리뷰 요청) + pop.
+- 🔧 **부분 확정→TODO** (2026-08-28: 앱 리뷰 요청 재도입) — **작성/수정 성공 후 처리**. V1은 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭 "수정됨" 토스트) + `AppReviewManager.requestReview()`(앱 리뷰 요청) + pop.
   - V2 `CreateFeedView`는 `state.submitState == .submitted`에 **아무 반응이 없다** — dismiss·목록 갱신·리뷰 요청이 View에 배선돼 있지 않다(App 조정 계층 몫일 수 있으나 확인 필요).
   - 근거: V1 `FeedEditViewModel.swift:188-197` · V2 `CreateFeedView.swift`(submitState 반응 없음), `CreateFeedViewModel.swift:277`(state만 `.submitted`)
 - ❓ **Unknown** — **수정 "변경 감지" 게이트**. V1 수정 모드는 내용·스포일러·공개·연결작품·이미지 중 **하나라도 바뀌어야** 완료 버튼 활성(`isInitialFeedChanged`). V2 `canSubmit`은 "내용 비어있지 않음"만 봐 무변경 재저장이 가능하다.
