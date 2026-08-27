@@ -48,7 +48,12 @@ final class CreateCollectionViewModel {
 
     // MARK: - Derived
 
-    var canSubmit: Bool { state.draft.isSubmittable && !state.isSubmitting }
+    /// 수정 모드에서는 원본과 달라진 게 없으면(`hasUnsavedChanges == false`) 완료를 눌러도 보낼 게
+    /// 없으므로 비활성화한다(사용자 확정) — 생성 모드는 원래 기준(`isSubmittable`)만 본다.
+    var canSubmit: Bool {
+        guard state.draft.isSubmittable, !state.isSubmitting else { return false }
+        return isEditing ? hasUnsavedChanges : true
+    }
     var representativeNovelID: NovelID? { state.draft.effectiveRepresentativeNovelID }
 
     var isEditing: Bool {

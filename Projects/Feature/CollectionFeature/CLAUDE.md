@@ -84,9 +84,11 @@
 
 ## 화면 동작 계약
 
-- **뒤로가기(취소)**: 변경 사항이 없으면 바로 닫히고, 있으면 "컬렉션 생성을 그만하시겠어요?" 확인
-  알럿(`WSSAlertType.stopWritingCollection`)을 띄운다 — `NovelReviewFeature`/`FeedFeature`의 "그만 작성"
-  패턴과 동일(사용자 확정, #199). 기준선은 항상 빈 `CollectionDraft()`(로드가 없어서).
+- **뒤로가기(취소)**: 변경 사항이 없으면 바로 닫히고, 있으면 확인 알럿을 띄운다 — `NovelReviewFeature`/
+  `FeedFeature`의 "그만 작성" 패턴과 동일(사용자 확정, #199). 생성/수정 겸용 화면이라 **알럿 타이틀만
+  모드에 따라 갈린다**(사용자 확정) — 생성은 "컬렉션 생성을 그만하시겠어요?"(`WSSAlertType.stopWritingCollection`),
+  수정은 "컬렉션 수정을 그만하시겠어요?"(`.stopEditingCollection`). 버튼 문구("그만하기"/"계속 작성")는
+  두 모드 공통. 기준선은 생성은 빈 `CollectionDraft()`, 수정은 `CollectionDraft(from: detail)`(원본 값).
 - **작품 카드(표지 이미지) 셀 전체를 탭하면 그 작품이 대표로 전환**된다(`CollectionDraft.setRepresentativeNovel`)
   — 처음엔 우상단 "대표" 배지만 탭 대상이었으나, 배지만으론 탭 영역이 좁다는 사용자 피드백으로 **셀
   전체**로 넓혔다(#199). 배지는 순수 표시용(대표 여부 뱃지)이라 더는 별도 `Button`이 아니다 — 커버
@@ -99,6 +101,9 @@
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
   3프레임 모두 "완료" 텍스트가 비활성 회색으로 보이지만(작품까지 채운 프레임도 마찬가지), 이는 목업이
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.
+  ⚠️ **수정 모드에서는 `isSubmittable`을 만족해도 원본과 달라진 게 없으면(`!hasUnsavedChanges`)
+  추가로 비활성화한다**(사용자 확정) — 뒤로가기 확인 알럿과 같은 `hasUnsavedChanges` 비교를 재사용한다.
+  생성 모드는 이 조건이 없다(원래 기준만 본다).
 - "작품 추가" 타일 아이콘은 신규 에셋이 아니라 기존 `WSSImage.icBookRegister`를 재사용한다 — 그 SVG의
   내부 레이어명이 Figma 원본과 동일한 `mdi:book-plus-outline`이라 이미 같은 아이콘이 들어있었다.
 - **"서재에서 추가" 화면("추가" 버튼) 확정 후 `CreateCollectionView`까지 2단계 pop이 정본으로 확정됐다**

@@ -180,10 +180,23 @@ public extension WSSAlertType {
                 ]
             )
 
+        case .stopEditingCollection:
+            WSSAlertContent(
+                iconImage: WSSImage.icModalWarning.swiftUIImage,
+                title: "컬렉션 수정을 그만하시겠어요?",
+                titleFont: .title2,
+                titleBottomPadding: 18,
+                description: nil,
+                buttons: [
+                    WSSAlertButton(title: "그만하기", role: .cancel),
+                    WSSAlertButton(title: "계속 작성", role: .confirm)
+                ]
+            )
+
         case .deleteCollection:
             WSSAlertContent(
                 iconImage: WSSImage.icModalWarning.swiftUIImage,
-                title: "컬렉션을 삭제할까요?",
+                title: "해당 컬렉션을 삭제할까요?",
                 titleFont: .title1,
                 titleBottomPadding: 10,
                 description: WSSAlertDescription(

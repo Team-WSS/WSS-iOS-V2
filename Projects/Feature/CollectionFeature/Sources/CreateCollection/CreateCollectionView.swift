@@ -70,9 +70,11 @@ struct CreateCollectionView: View {
             .toolbar { toolbarContent }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
+            // 생성/수정 겸용 화면이라 타이틀만 모드에 따라 갈린다(사용자 확정) — 버튼 문구("그만하기"/
+            // "계속 작성")는 두 모드 공통.
             .showWSSAlert(
                 isPresented: stopAlertBinding,
-                type: .stopWritingCollection,
+                type: viewModel.isEditing ? .stopEditingCollection : .stopWritingCollection,
                 buttonActions: [
                     { viewModel.handle(.confirmStop) },  // "그만하기" → 화면 닫기
                     { viewModel.handle(.keepWriting) }   // "계속 작성" → 머무름

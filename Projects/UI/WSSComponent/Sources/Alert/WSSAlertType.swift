@@ -26,6 +26,7 @@ public enum WSSAlertType: Hashable {
 
     // 컬렉션
     case stopWritingCollection
+    case stopEditingCollection
     case deleteCollection
 
     // 신고
@@ -54,6 +55,7 @@ extension WSSAlertType: CaseIterable {
             .needTermsAgreement, .needVersionUpdate,
             .stopNovelReview, .deleteNovelReviewDate, .deleteNovelReview,
             .deleteMyFeed, .deleteMyComment, .alreadyDeletedFeed, .stopWritingFeed,
+            .stopWritingCollection, .stopEditingCollection, .deleteCollection,
             .reportImproperContent, .receivedReportImproperContent, .reportSpoilerContent, .receivedReportSpoilerContent,
             .blockUser, .setAppNotification, .logout,
             .deleteNovelNotificationSubscriptions(summary: "작품 제목 외 1작품")
