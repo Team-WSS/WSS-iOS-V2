@@ -156,8 +156,14 @@ private extension CollectionListViewModel {
 
     /// 진행 중인 로드는 건드리지 않고 `hasLoaded`만 꺼서 다음 `loadIfNeeded` 호출(탭 전환)이
     /// 그 탭을 다시 첫 페이지부터 불러오게 만든다 — 지금 화면에 없는 탭을 미리 당겨 로드하지 않는다.
+    /// `generation`도 함께 올려, 이미 진행 중이던(무효화 전에 시작된) 로드가 뒤늦게 성공해도
+    /// `loadPage`의 generation 가드에 걸려 `hasLoaded`를 다시 `true`로 되돌리지 못하게 막는다
+    /// (안 그러면 무효화 의도가 무효화되고 다음 탭 진입 때 stale 데이터가 그대로 남을 수 있다).
     func invalidate(_ tab: CollectionListTab) {
-        updateBookkeeping(for: tab) { $0.hasLoaded = false }
+        updateBookkeeping(for: tab) {
+            $0.hasLoaded = false
+            $0.generation += 1
+        }
     }
 
     func otherTab(of tab: CollectionListTab) -> CollectionListTab {
