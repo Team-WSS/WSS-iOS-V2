@@ -216,20 +216,23 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   `MainActor.assumeIsolated { … }`로 감싸는 게 정석. 적용 후 실기기에서 최상단 over-scroll 클램프가
   그대로인지 확인.
 
-### 5. A4 Swift 6 — 레이어별 error 승격 + 모듈별 `SWIFT_VERSION = 6` (5·6단계)
+### 5. A4 Swift 6 — 경고 0 레이어 mode 6 승격 ✅완료 / Feature·App은 대기 (5·6단계)
 
-- **무엇**: #219는 A4 **1~4단계**(경고 수집 CI + Domain/Core·Feature·Data 청소)까지다. 남은 5·6단계:
-  ① 경고 0을 달성한 레이어(Domain·Core·UI·Data)를 **error로 승격**해 회귀를 CI가 막게 한다.
-  ② 모듈별로 `SWIFT_VERSION = 6`을 켠다(애플 공식 "모듈 하나씩" 순서).
-- **승격 방법(A1~A3 철학 반복)**: `Tooling/StrictConcurrency/scan.sh --strict`(경고>0이면 exit 1) 또는
-  `--layer <Layer> --strict`로 그 레이어만 게이트. `.github/workflows/test.yml`의 `strict-concurrency`
-  job은 지금 **report-only·수동/주간 스케줄**이다 — required로 걸려면 (a) `--strict`로 바꾸고
-  (b) `pull_request` 트리거를 켜고 (c) GitHub Settings에서 `Swift 6 Readiness`를 required status check로.
-  비용(전 모듈 소스 재컴파일, macos ~10분+)이 커서 지금은 PR마다 안 돈다 — 승격 시 레이어 선택 빌드로 좁히는 것 검토.
-- **모듈별 `SWIFT_VERSION = 6`**: A0에서 A4로 이관해둔 `env.baseSetting`(현재 `[:]`)에 모듈별 세팅을
-  주입할 자리가 있다(`Plugins/EnvironmentPlugin/…/ProjectEnvironment.swift` + `Tuist/…/Project+Templates.swift`의
-  `base: env.baseSetting`). 지금은 빌드 오버라이드로만 strict를 얹지만, 실제 승격은 여기에 레이어별
-  `SWIFT_STRICT_CONCURRENCY`/`SWIFT_VERSION`을 넣는 방식이 된다.
+- **완료(5단계)**: 경고 0을 달성한 **Core·Domain·Data·UI 32개 모듈**의 Sources 타깃을 **Swift 6 language
+  mode**(`SWIFT_VERSION = 6`)로 승격했다 — concurrency 위반이 이제 warning이 아니라 **컴파일 error**다
+  (로컬 Xcode·CI 모두 자동으로 막음). 32모듈 전부 mode 6에서 error 0으로 빌드됨을 실측 확인(fresh DD 모듈 스킴 순회).
+  - **구현**: `Tuist/ProjectDescriptionHelpers/Project+Templates.swift`의 `swift6SourcesSettings`를
+    `makeBaseTargets`의 **Sources 타깃에만** 주입(Core·Domain·Data·UI create 함수에서 전달, Feature는 미전달).
+    `env.baseSetting`(전역)이 아닌 이유: #219는 Sources만 청소했고 Demo/Testing/Tests는 strict concurrency
+    미청소라, 전역/프로젝트 세팅에 얹으면 그쪽이 error로 깨진다. Sources 타깃 한정으로 회피.
+  - **왜 scan.sh --strict CI가 아니라 pbxproj 직접 승격인가**: 컴파일러 error가 report-only CI 게이트보다
+    강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼
+    `scan.sh`/`strict-concurrency` job의 존재 이유가 사라진다.
+- **남은(6단계)**: **Feature·App** 승격. Feature는 `NovelDetailFeature`의 `TopBounceDisabler` 3건(→ 위 4번)이
+  남아 막혀 있다 — 그 3건을 `MainActor.assumeIsolated`로 정리하고 실기기 검증 후, `createFeatureModule`에도
+  `swift6SourcesSettings`를 전달하면 된다. App(WSS-iOS)은 Feature 전부가 mode 6이 된 뒤 마지막.
+- **정리 대상(Feature 승격 후)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`·`.github/workflows/test.yml`의
+  `strict-concurrency`(Swift 6 Readiness) job — 전 레이어가 mode 6이 되면 컴파일러가 역할을 대체하므로 제거 검토.
 - **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
-  cascade로 없앴다(@MainActor 없이). Swift 6 language mode 완전 전환 시엔 VM을 `@MainActor`로 명시하는 게
-  정석이므로(로드맵 3단계 본래 취지), 그때 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증한다.
+  cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올릴 때 VM을 `@MainActor`로 명시하는 게 정석이므로
+  (로드맵 3단계 본래 취지), 그때 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증한다.

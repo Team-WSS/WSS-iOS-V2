@@ -11,6 +11,20 @@ let configurations: [Configuration] = [
              xcconfig: .relativeToXCConfig(type: .prod, name: env.targetName))
 ]
 
+/// Swift 6 language mode를 **Sources 타깃에만** 얹는 세팅(A4 5단계: strict concurrency 경고 0을 달성한
+/// 레이어를 error로 승격 → 회귀를 컴파일 단에서 막는다).
+///
+/// 코드만 봐선 모르는 배경:
+///   - **왜 SWIFT_VERSION=6만**: language mode 6이면 strict concurrency가 `complete`로 강제돼
+///     concurrency 위반이 warning이 아니라 **error**가 된다(별도 SWIFT_STRICT_CONCURRENCY 불필요).
+///   - **왜 Sources 타깃 한정**(baseSetting/Project 전역이 아니라): #219는 프로덕션(Sources)만 청소했고
+///     Demo/Testing/Tests는 아직 strict concurrency 미청소다. 전역에 얹으면 그쪽이 error로 깨진다.
+///   - **왜 Feature 제외**: `NovelDetailFeature`의 `TopBounceDisabler` KVO 3건이 남아 있고
+///     실기기 스크롤 검증이 필요해 자동으로 못 고친다(→ docs/TODO.md 4번). 정리 후 편입.
+let swift6SourcesSettings: SettingsDictionary = [
+    "SWIFT_VERSION": "6"
+]
+
 extension Project {
     
     //MARK: - 공통으로 Target을 생성하는 함수
@@ -28,13 +42,15 @@ extension Project {
         deploymentTarget: DeploymentTargets?,
         infoPlist: InfoPlist,
         demoInfoPlist: InfoPlist? = nil,
-        demoEntitlements: Entitlements? = nil
+        demoEntitlements: Entitlements? = nil,
+        sourcesSettings: SettingsDictionary = [:]
     ) -> [Target] {
 
         var allTargets: [Target] = []
         let dependencies = internalDependencies + externalDependencies
 
         // Sources
+        // sourcesSettings는 Sources 타깃에만 얹는다(Swift 6 승격 등) — Demo/Testing/Tests는 무영향.
         allTargets.append(
             .target(
                 name: name,
@@ -45,7 +61,8 @@ extension Project {
                 infoPlist: infoPlist,
                 sources: sources,
                 resources: resources,
-                dependencies: dependencies
+                dependencies: dependencies,
+                settings: sourcesSettings.isEmpty ? nil : .settings(base: sourcesSettings)
             )
         )
 
@@ -174,7 +191,8 @@ extension Project {
             demoDependencies: [],
             testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
-            infoPlist: ModuleInfoPlist.domain.infoPlist
+            infoPlist: ModuleInfoPlist.domain.infoPlist,
+            sourcesSettings: swift6SourcesSettings
         )
         
         return Project(
@@ -209,7 +227,8 @@ extension Project {
             demoDependencies: [],
             testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
-            infoPlist: ModuleInfoPlist.data.infoPlist
+            infoPlist: ModuleInfoPlist.data.infoPlist,
+            sourcesSettings: swift6SourcesSettings
         )
         
         return Project(
@@ -245,7 +264,8 @@ extension Project {
             demoDependencies: [],
             testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
-            infoPlist: ModuleInfoPlist.core.infoPlist
+            infoPlist: ModuleInfoPlist.core.infoPlist,
+            sourcesSettings: swift6SourcesSettings
         )
         
         return Project(
@@ -282,7 +302,8 @@ extension Project {
             demoDependencies: demoDependencies,
             testDependencies: testDependencies,
             deploymentTarget: env.deploymentTarget,
-            infoPlist: ModuleInfoPlist.ui.infoPlist
+            infoPlist: ModuleInfoPlist.ui.infoPlist,
+            sourcesSettings: swift6SourcesSettings
         )
         
         return Project(
