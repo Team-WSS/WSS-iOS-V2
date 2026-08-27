@@ -13,7 +13,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultCollectionRepository: CollectionRepository {
+struct DefaultCollectionRepository: CollectionRepository {
 
     private let service: CollectionService
     private let logger: DataLogger?

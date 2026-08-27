@@ -1,5 +1,5 @@
 //
-//  HomeFactory.swift
+//  HomeFeatureFactory.swift
 //  HomeFeature
 //
 //  Created by YunhakLee on 8/4/26.
@@ -15,7 +15,7 @@ import Logger
 import PushAuthorization
 
 /// 홈 화면의 유일한 public 진입점. View/ViewModel은 internal로 감춘다.
-public enum HomeFactory {
+public enum HomeFeatureFactory {
 
     /// 탭 **콘텐츠만** 반환한다 — 탭바·화면 전환은 App 몫이라 선택 결과를 전부 콜백으로 올린다.
     /// - Parameter onAuthenticationRequired: 인증 만료 신호. 화면(또는 루트) 교체는 호출자가 하며,

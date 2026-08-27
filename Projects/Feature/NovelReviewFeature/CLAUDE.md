@@ -5,13 +5,13 @@
 일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- **진입점: `NovelReviewFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:)`** (`logger`는 옵셔널·nil 기본값)
+- **진입점: `NovelReviewFeatureFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
   - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백(이 화면의 유일한 상위 위임 콜백). 화면 전환은 호출자(App)가 수행 — 현재 소비처는 Demo 로그뿐(실제 로그인 화면·App 라우팅 미구현, 후속).
 
 ### 파일 구조 — 화면(영역)별 그룹
 `Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
-- `Factory/NovelReviewFactory.swift` — 유일한 public 진입점.
+- `Factory/NovelReviewFeatureFactory.swift` — 유일한 public 진입점.
 - `NovelReview/` — 메인 화면: `NovelReviewView` + `NovelReviewViewModel` + `StarRatingView`(별점 입력).
 - `ReadingPeriodSheet/` — 기간 시트: `ReadingPeriodSheet`(View) + `ReadingPeriodSheetViewModel` + `WSSDateWheel`(휠).
 - `Support/` — 모듈 공용 유틸: `ReviewDateFormatter`(기간/segment 날짜 포맷터).

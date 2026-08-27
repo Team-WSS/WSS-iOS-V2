@@ -17,7 +17,7 @@
 
 ## 코드 규칙 (첫 모듈 `NovelReviewFeature`에서 확정한 MVVM 패턴)
 
-파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
+파일 배치: `Sources/XxxView.swift`, `Sources/XxxViewModel.swift`, `Sources/Factory/XxxFeatureFactory.swift`(하위 폴더), `Demo/XxxFeatureDemoApp.swift`.
 
 > **화면의 동작 계약은 모듈 `CLAUDE.md`의 `## 화면 동작 계약` 절이 정본이다.** 정적 Figma로는 안 잡혀
 > 사람에게 확인받은 것(스크롤 고정 영역·로딩/빈/실패 분화·탭 결과·말줄임 줄 수 등)이 거기 쌓인다.
@@ -108,7 +108,7 @@
 ### Factory 골격
 
 ```swift
-public enum XxxFactory {                // 유일한 public 진입점. opaque 반환 → View/VM은 internal 유지
+public enum XxxFeatureFactory {         // 유일한 public 진입점. opaque 반환 → View/VM은 internal 유지
     @MainActor
     public static func makeView(someUseCase: SomeUseCase) -> some View {
         XxxView(viewModel: XxxViewModel(someUseCase: someUseCase))
@@ -116,7 +116,9 @@ public enum XxxFactory {                // 유일한 public 진입점. opaque �
 }
 ```
 
-- **`makeView`는 모듈에 화면이 하나일 때만 쓴다** — 화면이 둘 이상이면 **전부** `makeXxxView`로 무엇을 만드는지 이름에 넣는다(`makeCreateFeedView`·`makeMyLibraryView`·`makeUserLibraryView`). 대등한 화면 중 하나만 `makeView`로 남기면 호출부에서 어느 화면인지 읽히지 않는다(`LibraryFactory`가 실제로 그랬다). 단 `SettingFactory`는 **메인 설정 화면 + 그 하위 상세들**이라 대표 화면이 `makeView`인 게 자연스러운 경우다 — 대등한지 종속인지로 판단할 것.
+- **접근제어(구조 강제)**: 모듈의 top-level public은 **`*Factory` 하나뿐**이어야 한다. View·ViewModel·상태 enum은 전부 `internal`로 두고, **Factory는 `some View`(opaque)로 반환**해 구체 타입을 숨긴다 — 구체 View 타입을 반환하면 그게 public으로 새고 VM·상태까지 끌려나온다. arch-lint `feature-exclusivity`(규칙⑬)가 CI에서 강제한다(→ `Tooling/ArchLint`). Factory 이름은 `XxxFeatureFactory`로 통일한다(Data의 `XxxDataFactory`와 대칭 — 규칙⑬이 `FeatureFactory` 접미사로 진입점을 식별).
+- **조립 seam은 `Sources/Navigation/`에**: Feature 간 직접 의존 없이 App이 다른 Feature 콘텐츠를 주입해야 할 때(예: 상세탐색의 키워드 탭 → `KeywordTabContentBuilder`), 그 public 타입(주로 `typealias`)은 `Navigation/` 폴더에 둔다 — 규칙⑬이 이 폴더의 public만 진입점 외 예외로 허용한다. Factory·seam 외의 것을 public으로 열어야 할 것 같으면 배선을 다시 볼 신호다.
+- **`makeView`는 모듈에 화면이 하나일 때만 쓴다** — 화면이 둘 이상이면 **전부** `makeXxxView`로 무엇을 만드는지 이름에 넣는다(`makeCreateFeedView`·`makeMyLibraryView`·`makeUserLibraryView`). 대등한 화면 중 하나만 `makeView`로 남기면 호출부에서 어느 화면인지 읽히지 않는다(`LibraryFeatureFactory`가 실제로 그랬다). 단 `SettingFeatureFactory`는 **메인 설정 화면 + 그 하위 상세들**이라 대표 화면이 `makeView`인 게 자연스러운 경우다 — 대등한지 종속인지로 판단할 것.
 - **Demo·Preview 필수**: `.demo` 타깃의 Demo 앱이 Factory를 `NavigationStack`에 띄워 단독 실행. Preview는 Sources 내부(internal 접근).
 - **⚠️ Demo 앱 `init()`에서 `DesignSystemFontFamily.registerAllCustomFonts()` 호출.** `applyWSSFont`가 `UIFont(name:)!`를 강제 언래핑 → 폰트 미등록 시 **런타임 크래시(SIGTRAP)**. 프리뷰도 Demo 앱을 호스트로 띄우므로 같이 죽는다.
 - 테스트는 mock UseCase 주입으로 충분. View에 가짜 VM을 통째로 주입할 일이 생기면 그때 가벼운 프로토콜을 다시 얹는다.

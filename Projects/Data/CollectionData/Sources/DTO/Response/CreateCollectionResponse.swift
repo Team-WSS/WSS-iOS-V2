@@ -8,6 +8,6 @@
 
 import Foundation
 
-public struct CreateCollectionResponse: Decodable {
+struct CreateCollectionResponse: Decodable {
     public let collectionId: Int
 }

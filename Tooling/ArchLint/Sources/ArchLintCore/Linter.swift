@@ -2,13 +2,33 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-/// 등록된 규칙 전체. 새 규칙은 여기 추가한다.
+/// 등록된 파일 단위 규칙 전체. 새 규칙은 여기 추가한다.
 let allRules: [Rule] = [
     VMContractRule(),
     VMStateContractRule(),
     DependencyDirectionRule(),
     ServiceBranchRule(),
-    ServiceNoQueryBuildRule()
+    ServiceNoQueryBuildRule(),
+    VMNamingReverseRule(),
+    ProtocolNamingRule(
+        id: "usecase-naming",
+        layerPathFragment: "/Projects/Domain/",
+        folderName: "UseCase",
+        requiredSuffix: "UseCase"
+    ),
+    ProtocolNamingRule(
+        id: "repository-naming",
+        layerPathFragment: "/Projects/Domain/",
+        folderName: "Repository",
+        requiredSuffix: "Repository"
+    )
+]
+
+/// 등록된 모듈 단위 규칙 전체. 파일 하나가 아니라 모듈 전체를 봐야 하는 규칙(존재성 등)을 여기 둔다.
+let allModuleRules: [ModuleRule] = [
+    FactoryExistenceRule(),
+    FactoryExclusivityRule(),
+    FeatureExclusivityRule()
 ]
 
 /// 소스 문자열 하나에 규칙을 적용해 위반을 반환한다(테스트 진입점).
@@ -21,6 +41,15 @@ func lint(source: String, path: String, rules: [Rule] = allRules) -> [Violation]
         result.append(contentsOf: rule.check(tree, path: path, converter: converter))
     }
     return result
+}
+
+/// 모듈 단위 규칙 테스트 진입점 — 여러 소스 문자열을 한 모듈로 묶어 규칙을 돌린다.
+/// applies로 거른 뒤 파싱해 check에 넘긴다(드라이버 `runArchLint`의 모듈 패스와 동일 흐름).
+func lintModule(sources: [(path: String, source: String)], moduleName: String, rule: ModuleRule) -> [Violation] {
+    let files: [ParsedFile] = sources
+        .filter { rule.applies(to: $0.path) }
+        .map { ParsedFile(path: $0.path, tree: Parser.parse(source: $0.source)) }
+    return rule.check(moduleName: moduleName, files: files)
 }
 
 /// <repoRoot>/Projects 아래 모든 .swift 파일의 전체 경로.
@@ -58,21 +87,51 @@ public func runArchLint(repoRoot: String, isGitHubActions: Bool, debug: Bool) ->
     let scanned = swiftFiles(under: repoRoot)
     debugLog("scanned .swift files: \(scanned.count)")
 
+    // 파일별 파싱 캐시 — 같은 파일을 파일 단위 규칙과 모듈 단위 규칙이 모두 필요로 할 때 한 번만 파싱한다.
+    struct Parsed { let relPath: String; let tree: SourceFileSyntax; let converter: SourceLocationConverter }
+    var parseCache: [String: Parsed] = [:]
+    func parse(_ file: String) -> Parsed? {
+        if let cached = parseCache[file] { return cached }
+        guard let source = try? String(contentsOfFile: file, encoding: .utf8) else {
+            debugLog("read failed -> \(file)")
+            return nil
+        }
+        let tree = Parser.parse(source: source)
+        let relPath = repoRelative(file, repoRoot: repoRoot)
+        let parsed = Parsed(relPath: relPath, tree: tree, converter: SourceLocationConverter(fileName: relPath, tree: tree))
+        parseCache[file] = parsed
+        return parsed
+    }
+
+    // 1) 파일 단위 규칙.
     for file in scanned {
         // applies는 전체경로(Projects 앞에 슬래시가 있는)로 판정하고, 리포트는 레포 상대경로로.
         let applicable = allRules.filter { $0.applies(to: file) }
         guard !applicable.isEmpty else { continue }
         debugLog("applicable [\(applicable.map { $0.id }.joined(separator: ","))] -> \(file)")
-
-        guard let source = try? String(contentsOfFile: file, encoding: .utf8) else {
-            debugLog("read failed -> \(file)")
-            continue
-        }
-        let tree = Parser.parse(source: source)
-        let relPath = repoRelative(file, repoRoot: repoRoot)
-        let converter = SourceLocationConverter(fileName: relPath, tree: tree)
+        guard let p = parse(file) else { continue }
         for rule in applicable {
-            allViolations.append(contentsOf: rule.check(tree, path: relPath, converter: converter))
+            allViolations.append(contentsOf: rule.check(p.tree, path: p.relPath, converter: p.converter))
+        }
+    }
+
+    // 2) 모듈 단위 규칙 — Project.swift를 가진 정식 모듈만 대상(레지스트리 밖 유령 폴더는 자동 제외).
+    if !allModuleRules.isEmpty {
+        let moduleDirs = Set(scanned
+            .filter { $0.hasSuffix("/Project.swift") }
+            .map { String($0.dropLast("/Project.swift".count)) })
+        debugLog("module dirs (with Project.swift): \(moduleDirs.count)")
+        for dir in moduleDirs.sorted() {
+            let moduleName = String(dir.split(separator: "/").last ?? "")
+            for rule in allModuleRules {
+                let files: [ParsedFile] = scanned
+                    .filter { $0.hasPrefix(dir + "/") && rule.applies(to: $0) }
+                    .compactMap { file -> ParsedFile? in
+                        guard let p = parse(file) else { return nil }
+                        return ParsedFile(path: p.relPath, tree: p.tree)
+                    }
+                allViolations.append(contentsOf: rule.check(moduleName: moduleName, files: files))
+            }
         }
     }
 

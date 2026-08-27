@@ -12,7 +12,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultCommentRepository: CommentRepository {
+struct DefaultCommentRepository: CommentRepository {
     private let service: CommentService
     private let logger: DataLogger?
     

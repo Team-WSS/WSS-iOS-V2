@@ -10,11 +10,11 @@ import Foundation
 
 //MARK: - 홈 - 오늘의 발견
 
-public struct TodayDiscoveryNovelsResponse: Decodable {
+struct TodayDiscoveryNovelsResponse: Decodable {
     public let popularNovels: [TodayDiscoveryNovelResponse]
 }
 
-public struct TodayDiscoveryNovelResponse: Decodable {
+struct TodayDiscoveryNovelResponse: Decodable {
     public let novelId: Int
     public let title: String
     public let novelImage: String

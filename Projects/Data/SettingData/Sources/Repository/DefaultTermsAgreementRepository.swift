@@ -10,7 +10,7 @@ import BaseDomain
 import Networking
 import SettingDomain
 
-public struct DefaultTermsAgreementRepository: TermsAgreementRepository {
+struct DefaultTermsAgreementRepository: TermsAgreementRepository {
     private let service: SettingService
     private let logger: DataLogger?
 

@@ -8,7 +8,7 @@
 
 import Logger
 
-public enum RecommendationAction {
+enum RecommendationAction {
     case fetchTodayDiscoveries
     case fetchTrendingFeeds
     case fetchInterestFeeds

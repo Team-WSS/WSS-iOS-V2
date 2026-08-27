@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultNotificationRepository: NotificationRepository {
+struct DefaultNotificationRepository: NotificationRepository {
     private let service: NotificationService
     private let logger: DataLogger?
 

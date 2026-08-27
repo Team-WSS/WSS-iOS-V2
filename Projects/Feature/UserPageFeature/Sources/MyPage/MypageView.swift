@@ -21,7 +21,7 @@ struct MypageView: View {
     @State private var showEditView: Bool = false
     @State private var showProfileSavedToast: Bool = false
 
-    /// 프로필 편집 화면으로의 내부 네비게이션 조립에만 쓴다(VM은 만들지 않음, `MypageFactory.makeEditView` 재사용).
+    /// 프로필 편집 화면으로의 내부 네비게이션 조립에만 쓴다(VM은 만들지 않음, `MypageFeatureFactory.makeEditView` 재사용).
     private let loadInitialProfileUseCase: LoadInitialProfileUseCase
     private let loadProfileCharacterUseCase: LoadProfileCharacterUseCase
     private let validateNicknameUseCase: ValidateNicknameUseCase
@@ -91,7 +91,7 @@ struct MypageView: View {
             viewModel.handle(.load)
         }
         .navigationDestination(isPresented: $showEditView) {
-            MypageFactory.makeEditView(
+            MypageFeatureFactory.makeEditView(
                 loadInitialProfileUseCase: loadInitialProfileUseCase,
                 loadProfileCharacterUseCase: loadProfileCharacterUseCase,
                 validateNicknameUseCase: validateNicknameUseCase,

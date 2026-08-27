@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultNovelReviewRepository: NovelReviewRepository {
+struct DefaultNovelReviewRepository: NovelReviewRepository {
     private let service: NovelReviewService
     private let logger: DataLogger?
 

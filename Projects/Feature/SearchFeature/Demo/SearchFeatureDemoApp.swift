@@ -84,7 +84,7 @@ private struct DemoRootView: View {
     }
 
     private var mockView: some View {
-        SearchFactory.makeNormalSearchView(
+        SearchFeatureFactory.makeNormalSearchView(
             loadSosoPickUseCase: DemoLoadSosoPickUseCase(),
             loadRecentSearchWordsUseCase: DemoLoadRecentSearchWordsUseCase(store: demoRecentSearchStore),
             removeRecentSearchWordUseCase: DemoRemoveRecentSearchWordUseCase(store: demoRecentSearchStore),
@@ -119,7 +119,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
-        return SearchFactory.makeNormalSearchView(
+        return SearchFeatureFactory.makeNormalSearchView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: searchRepository),
@@ -161,7 +161,7 @@ private struct DemoRootView: View {
             network: client,
             logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
         )
-        return SearchFactory.makeDetailSearchResultView(
+        return SearchFeatureFactory.makeDetailSearchResultView(
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             logger: consoleLogger
@@ -197,7 +197,7 @@ private struct DetailSearchDemoFlow: View {
     }
 
     var body: some View {
-        SearchFactory.makeDetailSearchFilterView(
+        SearchFeatureFactory.makeDetailSearchFilterView(
             filter: SearchFilter(),
             keywordTabContent: keywordTabContent
         ) { filter in

@@ -10,7 +10,7 @@ import Foundation
 
 import Logger
 
-public enum CollectionAction {
+enum CollectionAction {
     case fetchCollectionPreviews(userID: Int)
     case fetchCollections(userID: Int)
     case fetchLikedCollections

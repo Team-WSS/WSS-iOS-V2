@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 /// 피드 업로드용 이미지 압축 정책입니다.
 ///
 /// 서버 스펙(이미지당 최대 용량)을 충족시키기 위해 다운샘플과 JPEG 품질을 조정합니다.
-public struct ImageCompressionPolicy: Sendable {
+struct ImageCompressionPolicy: Sendable {
     /// 이미지 한 장의 목표 최대 바이트 수입니다. (서버 스펙 기준)
     public let maxByteSize: Int
     /// 긴 변의 최대 픽셀 수입니다. 이보다 크면 다운샘플합니다.
@@ -39,7 +39,7 @@ public struct ImageCompressionPolicy: Sendable {
 ///
 /// `UIImage` 디코딩 없이 ImageIO로 직접 처리하여 메모리 사용을 최소화합니다.
 /// 처리 순서는 ① 다운샘플 1회 → ② JPEG 품질 이진 탐색입니다.
-public struct ImageCompressor: Sendable {
+struct ImageCompressor: Sendable {
     private let policy: ImageCompressionPolicy
 
     public init(policy: ImageCompressionPolicy = .feedDefault) {

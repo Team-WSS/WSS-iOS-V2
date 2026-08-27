@@ -14,7 +14,7 @@ import SearchDomain
 
 @MainActor
 @Observable
-public final class CreateFeedViewModel {
+final class CreateFeedViewModel {
 
     /// 작성/수정 모드. 수정이면 대상 피드의 `FeedID`를 들고 있다.
     public enum Mode {

@@ -11,7 +11,7 @@ import Foundation
 /// 컬렉션 생성·수정이 공유하는 요청 바디.
 ///
 /// 도메인은 "나만 보는"(`isPrivate`) 방향인데 서버는 `isPublic`을 받는다 → 뒤집기는 Mapper가 한 번만 한다.
-public struct SubmitCollectionRequest: Encodable {
+struct SubmitCollectionRequest: Encodable {
     public let name: String
     public let description: String?
     public let isPublic: Bool

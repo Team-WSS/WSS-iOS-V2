@@ -8,6 +8,6 @@
 
 import Foundation
 
-public struct CommentRequest: Encodable {
+struct CommentRequest: Encodable {
     let commentContent: String
 }

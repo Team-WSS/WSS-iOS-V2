@@ -74,7 +74,7 @@ struct MyPageEditView: View {
                 viewModel.handle(.load)
             }
             .sheet(item: $characterEditContext) { context in
-                MypageFactory.makeCharacterEditSheet(
+                MypageFeatureFactory.makeCharacterEditSheet(
                     selectedCharacterID: context.characterID,
                     nickname: context.nickname,
                     loadProfileCharacterUseCase: loadProfileCharacterUseCase,

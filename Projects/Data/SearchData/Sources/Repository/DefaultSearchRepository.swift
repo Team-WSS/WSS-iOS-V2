@@ -12,7 +12,7 @@ import BaseDomain
 import Networking
 import BaseData
 
-public struct DefaultSearchRepository: RecentSearchRepository, SearchAutoCompletionRepository, SearchNovelRepository {
+struct DefaultSearchRepository: RecentSearchRepository, SearchAutoCompletionRepository, SearchNovelRepository {
 
     private let service: SearchService
     private let logger: DataLogger?

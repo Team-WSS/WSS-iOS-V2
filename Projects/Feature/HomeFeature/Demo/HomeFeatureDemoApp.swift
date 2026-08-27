@@ -147,7 +147,7 @@ private struct DemoRootView: View {
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
     ) -> some View {
-        HomeFactory.makeView(
+        HomeFeatureFactory.makeView(
             loadHomeDataUseCase: loadHomeDataUseCase,
             loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),

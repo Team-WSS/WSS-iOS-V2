@@ -9,7 +9,7 @@
 
 import Logger
 
-public enum NovelAction {
+enum NovelAction {
     case fetchNovel
     case addInterest
     case removeInterest

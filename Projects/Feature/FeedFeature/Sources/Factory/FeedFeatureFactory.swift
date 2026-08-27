@@ -25,7 +25,7 @@ public enum FeedFeatureFactory {
     public static func makeCreateFeedView(
         createFeedUseCase: CreateFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase
-    ) -> CreateFeedView {
+    ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
                 createFeedUseCase: createFeedUseCase,
@@ -43,7 +43,7 @@ public enum FeedFeatureFactory {
         initialDraft: FeedDraft,
         editFeedUseCase: EditFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase
-    ) -> CreateFeedView {
+    ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
                 mode: .edit(feedID),
@@ -57,7 +57,7 @@ public enum FeedFeatureFactory {
     /// 네트워크 없이 ViewModel/View 동작만 확인하기 위한 임시 진입점.
     /// 제출 시 1초 후 성공으로 처리한다.
     @MainActor
-    public static func makeCreateFeedPreviewView() -> CreateFeedView {
+    public static func makeCreateFeedPreviewView() -> some View {
         makeCreateFeedView(createFeedUseCase: StubCreateFeedUseCase(),
                            searchNovelUseCase: StubSearchNovelUseCase())
     }
@@ -162,7 +162,7 @@ private struct StubSearchNovelUseCase: SearchNovelUseCase {
     }
 }
 
-public let stubNovels: [Novel] = [
+let stubNovels: [Novel] = [
     Novel(
         id: NovelID(1),
         thumbnailImage: URL(string: "https://i.pinimg.com/736x/58/0a/13/580a13692bdefec82fc37cdc8e87e331.jpg"),

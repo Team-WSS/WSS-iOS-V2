@@ -7,6 +7,6 @@
 
 import Foundation
 
-public struct SearchAutoCompletionWordsResponse: Decodable {
+struct SearchAutoCompletionWordsResponse: Decodable {
     public let keywords: [String]
 }

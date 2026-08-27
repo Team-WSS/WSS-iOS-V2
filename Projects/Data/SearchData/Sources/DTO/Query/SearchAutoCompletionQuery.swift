@@ -8,7 +8,7 @@
 import Foundation
 import Networking
 
-public struct SearchAutoCompletionQuery: QueryItemConvertible {
+struct SearchAutoCompletionQuery: QueryItemConvertible {
     public let query: String
     public let size: Int
 

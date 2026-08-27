@@ -1,5 +1,5 @@
 //
-//  NotificationFactory.swift
+//  NotificationFeatureFactory.swift
 //  NotificationFeature
 //
 //  Created by YunhakLee on 8/7/26.
@@ -18,7 +18,7 @@ import Logger
 ///
 /// 화면이 둘이라 **양쪽 다 `makeXxxView`로 이름에 대상을 넣는다**(대등한 화면 중 하나만 `makeView`로 두지 않는다).
 /// 목록 → 상세 전환도 모듈이 아니라 **호출자(App)가 배선**한다 — 모듈 안에 `navigationDestination`은 없다.
-public enum NotificationFactory {
+public enum NotificationFeatureFactory {
 
     /// 알림 목록 화면. **`NavigationStack`에 push되는 화면**(홈 알림 벨에서 진입).
     ///

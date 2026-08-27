@@ -11,7 +11,7 @@ import Foundation
 /// 컬렉션 목록(사용자별·좋아요한) 공통 응답.
 ///
 /// 두 API의 카드 구조는 `likeCount` 하나만 다르다(좋아요한 목록에만 온다) → optional로 두고 한 DTO로 받는다.
-public struct CollectionsResponse: Decodable {
+struct CollectionsResponse: Decodable {
     public let collections: [CollectionCardResponse]
     public let hasNext: Bool
     public let nextCursor: String?
@@ -20,7 +20,7 @@ public struct CollectionsResponse: Decodable {
     public let collectionsCount: Int
 }
 
-public struct CollectionCardResponse: Decodable {
+struct CollectionCardResponse: Decodable {
     public let collectionId: Int
     public let collectionName: String
     public let collectionDescription: String?

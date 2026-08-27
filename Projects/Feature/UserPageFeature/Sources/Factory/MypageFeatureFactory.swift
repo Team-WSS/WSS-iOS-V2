@@ -1,5 +1,5 @@
 //
-//  MypageFactory.swift
+//  MypageFeatureFactory.swift
 //  UserPageFeature
 //
 //  Created by Seoyeon Choi on 7/8/26.
@@ -15,7 +15,7 @@ import Logger
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
-public enum MypageFactory {
+public enum MypageFeatureFactory {
 
     @MainActor
     public static func makeView(

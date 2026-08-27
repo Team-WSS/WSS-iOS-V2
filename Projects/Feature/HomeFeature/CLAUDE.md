@@ -8,7 +8,7 @@
   별도 `HomeDomain`이 아니라 여기 있음 — `LoadHomeDataUseCase`·`HomeData`·`TodayDiscovery`·`TrendingFeed`·
   `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), `DesignSystem`, `WSSComponent`, `Logger`,
   `PushAuthorization`(#193 — 알림 벨 탭 시 시스템 권한 확인용)
-- 진입점: `HomeFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:
+- 진입점: `HomeFeatureFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:
   pushAuthorizationChecker:logger:onNovelSelected:onFeedSelected:onSearchTapped:onDetailSearchTapped:
   onNotificationTapped:onPreferenceGenreSettingTapped:onAuthenticationRequired:)` —
   **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫)

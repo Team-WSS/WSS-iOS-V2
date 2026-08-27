@@ -134,4 +134,299 @@ struct RuleTests {
         #expect(vs.first?.ruleID == "service-no-query-build")
         #expect(vs.first?.severity == .warning)
     }
+
+    // MARK: - ⑧ vm-naming-reverse (error)
+
+    @Test("⑧ @Observable인데 이름이 *ViewModel이 아니면 error")
+    func vmNamingReverseCatchesMisnamed() {
+        let src = """
+        import Observation
+        @Observable
+        final class SampleStore { private(set) var state = 0 }
+        """
+        let vs = lint(source: src, path: featurePath, rules: [VMNamingReverseRule()])
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "vm-naming-reverse")
+        #expect(vs.first?.severity == .error)
+    }
+
+    @Test("⑧ @Observable *ViewModel과 @Observable 없는 클래스는 통과")
+    func vmNamingReversePasses() {
+        let src = """
+        @Observable
+        final class SampleViewModel { private(set) var state = 0 }
+        final class SampleHelper {}
+        """
+        #expect(lint(source: src, path: featurePath, rules: [VMNamingReverseRule()]).isEmpty)
+    }
+
+    // MARK: - ⑨/⑩ protocol-naming (error) — protocol만 검사, co-locate 타입은 무시
+
+    @Test("⑨ UseCase 폴더의 protocol이 *UseCase가 아니면 error, 곁 타입은 무시")
+    func usecaseNamingChecksProtocolsOnly() {
+        let rule = ProtocolNamingRule(
+            id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "UseCase", requiredSuffix: "UseCase"
+        )
+        let path = "/Projects/Domain/SampleDomain/Sources/UseCase/LoadSample.swift"
+        let src = """
+        public protocol LoadSample {}   // 위반: UseCase로 안 끝남
+        public struct SampleData {}     // protocol 아님 → 무시(HomeData 같은 반환 Entity)
+        """
+        let vs = lint(source: src, path: path, rules: [rule])
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "usecase-naming")
+        #expect(vs.first?.severity == .error)
+    }
+
+    @Test("⑨ *UseCase protocol과 그 Default 구현은 통과")
+    func usecaseNamingPasses() {
+        let rule = ProtocolNamingRule(
+            id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "UseCase", requiredSuffix: "UseCase"
+        )
+        let path = "/Projects/Domain/SampleDomain/Sources/UseCase/LoadSampleUseCase.swift"
+        let src = """
+        public protocol LoadSampleUseCase {}
+        public final class DefaultLoadSampleUseCase: LoadSampleUseCase {}
+        """
+        #expect(lint(source: src, path: path, rules: [rule]).isEmpty)
+    }
+
+    @Test("⑩ Repository 폴더의 protocol이 *Repository가 아니면 error, 곁 enum은 무시")
+    func repositoryNamingChecksProtocolsOnly() {
+        let rule = ProtocolNamingRule(
+            id: "repository-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "Repository", requiredSuffix: "Repository"
+        )
+        let path = "/Projects/Domain/SampleDomain/Sources/Repository/SampleStore.swift"
+        let src = """
+        public protocol SampleStore {}          // 위반
+        public enum SampleError: Error {}       // protocol 아님 → 무시(AuthError·ProfileTarget 류)
+        """
+        let vs = lint(source: src, path: path, rules: [rule])
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "repository-naming")
+        #expect(vs.first?.severity == .error)
+    }
+
+    @Test("⑨/⑩ 중첩·기능그룹 폴더와 소문자 Usecase도 스코프에 든다(평평한 폴더만 보지 않는다)")
+    func protocolNamingCoversNestedAndLowercaseFolders() {
+        let ucRule = ProtocolNamingRule(
+            id: "usecase-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "UseCase", requiredSuffix: "UseCase"
+        )
+        // 기능그룹 하위 폴더의 오명명 protocol → 잡아야 한다(예: SettingDomain/AppUpdate/UseCase).
+        let nested = "/Projects/Domain/SettingDomain/Sources/AppUpdate/UseCase/CheckUpdate.swift"
+        #expect(lint(source: "public protocol CheckUpdate {}", path: nested, rules: [ucRule]).count == 1)
+        // 소문자 `Usecase/` 폴더도 스코프(RecommendationDomain·BaseDomain).
+        let lower = "/Projects/Domain/RecommendationDomain/Sources/Usecase/LoadHome.swift"
+        #expect(lint(source: "public protocol LoadHome {}", path: lower, rules: [ucRule]).count == 1)
+        // 올바른 이름은 통과.
+        #expect(lint(source: "public protocol CheckUpdateUseCase {}", path: nested, rules: [ucRule]).isEmpty)
+
+        let repoRule = ProtocolNamingRule(
+            id: "repository-naming", layerPathFragment: "/Projects/Domain/",
+            folderName: "Repository", requiredSuffix: "Repository"
+        )
+        let nestedRepo = "/Projects/Domain/NotificationDomain/Sources/Push/Repository/PushSetting.swift"
+        #expect(lint(source: "public protocol PushSetting {}", path: nestedRepo, rules: [repoRule]).count == 1)
+    }
+
+    // MARK: - ⑪ factory-existence (module rule, error)
+
+    @Test("⑪ public *DataFactory가 있으면 통과")
+    func factoryExistencePasses() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "struct DefaultSampleRepository {}")
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExistenceRule()).isEmpty)
+    }
+
+    @Test("⑪ public *DataFactory가 없으면 error (internal factory는 존재 인정 안 됨)")
+    func factoryExistenceCatchesMissing() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "struct DefaultSampleRepository {}"),
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "enum SampleDataFactory {}")   // public 아님
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExistenceRule())
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "factory-existence")
+        #expect(vs.first?.severity == .error)
+    }
+
+    @Test("⑪ BaseData와 비-Data 모듈은 Factory 없어도 통과(스코프 밖)")
+    func factoryExistenceSkipsBaseAndNonData() {
+        let baseSources = [(
+            path: "/Projects/Data/BaseData/Sources/Storage/AppStorage.swift",
+            source: "public struct AppStorage {}"
+        )]
+        #expect(lintModule(sources: baseSources, moduleName: "BaseData", rule: FactoryExistenceRule()).isEmpty)
+
+        let domainSources = [(
+            path: "/Projects/Domain/SampleDomain/Sources/UseCase/SampleUseCase.swift",
+            source: "public protocol SampleUseCase {}"
+        )]
+        #expect(lintModule(sources: domainSources, moduleName: "SampleDomain", rule: FactoryExistenceRule()).isEmpty)
+    }
+
+    // MARK: - ⑫ factory-exclusivity (module rule, error)
+
+    @Test("⑫ Factory만 public이고 나머지가 internal이면 통과")
+    func factoryExclusivityPasses() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "struct DefaultSampleRepository {}"),
+            (path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+             source: "struct SampleResponse: Decodable {}")
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑫ Factory 외 public 타입이 있으면 error (타입별로 1건씩)")
+    func factoryExclusivityCatchesPublicTypes() {
+        let sources = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Repository/DefaultSampleRepository.swift",
+             source: "public struct DefaultSampleRepository {}"),   // 위반
+            (path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+             source: "public struct SampleResponse: Decodable {}")  // 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleData", rule: FactoryExclusivityRule())
+        #expect(vs.count == 2)
+        #expect(vs.allSatisfy { $0.ruleID == "factory-exclusivity" && $0.severity == .error })
+    }
+
+    @Test("⑫ top-level public func/extension도 위반, 타입 내부 멤버 public은 허용")
+    func factoryExclusivityCatchesNonTypeAndAllowsMembers() {
+        // 타입 내부 멤버의 public은 바깥 타입이 internal이면 무해 → 통과.
+        let memberSources = [(
+            path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+            source: "struct SampleResponse { public let id: Int }"
+        )]
+        #expect(lintModule(sources: memberSources, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+
+        // 최상위 public func·extension은 위반.
+        let topLevelSources = [(
+            path: "/Projects/Data/SampleData/Sources/Support/Helpers.swift",
+            source: """
+            public func makeSomething() {}
+            public extension String {}
+            """
+        )]
+        #expect(lintModule(sources: topLevelSources, moduleName: "SampleData", rule: FactoryExclusivityRule()).count == 2)
+    }
+
+    @Test("⑫ BaseData와 비-Data 모듈은 스코프 밖(통과)")
+    func factoryExclusivitySkipsBaseAndNonData() {
+        let baseSources = [(
+            path: "/Projects/Data/BaseData/Sources/Storage/AppStorage.swift",
+            source: "public struct AppStorage {}"
+        )]
+        #expect(lintModule(sources: baseSources, moduleName: "BaseData", rule: FactoryExclusivityRule()).isEmpty)
+
+        let domainSources = [(
+            path: "/Projects/Domain/SampleDomain/Sources/UseCase/SampleUseCase.swift",
+            source: "public protocol SampleUseCase {}"
+        )]
+        #expect(lintModule(sources: domainSources, moduleName: "SampleDomain", rule: FactoryExclusivityRule()).isEmpty)
+    }
+
+    // MARK: - ⑬ feature-exclusivity (module rule, error)
+
+    @Test("⑬ Factory만 public이고 View/VM이 internal이면 통과")
+    func featureExclusivityPasses() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
+             source: "struct SampleView {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
+             source: "final class SampleViewModel {}")
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑬ Factory 외 public View/VM이 있으면 error (선언별 1건씩)")
+    func featureExclusivityCatchesPublicViewAndVM() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleView.swift",
+             source: "public struct SampleView {}"),        // 위반
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleViewModel.swift",
+             source: "public final class SampleViewModel {}")  // 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(vs.count == 2)
+        #expect(vs.allSatisfy { $0.ruleID == "feature-exclusivity" && $0.severity == .error })
+    }
+
+    @Test("⑬ Navigation/ 폴더의 public 조립 seam은 허용")
+    func featureExclusivityAllowsNavigationSeam() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/TabContentBuilder.swift",
+             source: "public typealias TabContentBuilder = () -> Void")   // seam — 허용
+        ]
+        #expect(lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule()).isEmpty)
+    }
+
+    @Test("⑬ 비-Feature 모듈은 스코프 밖(통과)")
+    func featureExclusivitySkipsNonFeature() {
+        let dataSources = [(
+            path: "/Projects/Data/SampleData/Sources/DTO/SampleResponse.swift",
+            source: "public struct SampleResponse {}"
+        )]
+        #expect(lintModule(sources: dataSources, moduleName: "SampleData", rule: FeatureExclusivityRule()).isEmpty)
+    }
+
+    // MARK: - ⑫/⑬ extension 노출·Navigation 좁힘 (Codex 리뷰 반영)
+
+    @Test("⑫ 로컬 internal 타입 확장의 public 멤버는 허용, 외부 타입 확장의 public 멤버는 위반")
+    func factoryExclusivityExtensionMembers() {
+        // 로컬 internal 타입(SampleMapper) 확장 — 멤버 public이어도 대상이 internal이라 모듈 밖으로 안 샘 → 통과.
+        let localExt = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Mapper/SampleMapper.swift",
+             source: "enum SampleMapper {}"),
+            (path: "/Projects/Data/SampleData/Sources/Mapper/SampleMapper+X.swift",
+             source: "extension SampleMapper { public static func f() {} }")
+        ]
+        #expect(lintModule(sources: localExt, moduleName: "SampleData", rule: FactoryExclusivityRule()).isEmpty)
+
+        // 외부(도메인) public 타입 확장에 public 멤버 → 모듈 밖으로 API 노출 → 위반.
+        let externalExt = [
+            (path: "/Projects/Data/SampleData/Sources/Factory/SampleDataFactory.swift",
+             source: "public enum SampleDataFactory {}"),
+            (path: "/Projects/Data/SampleData/Sources/Support/Novel+X.swift",
+             source: "extension Novel { public func leak() {} }")   // Novel은 로컬 타입 아님 → 위반
+        ]
+        let vs = lintModule(sources: externalExt, moduleName: "SampleData", rule: FactoryExclusivityRule())
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "factory-exclusivity" && vs.first?.severity == .error)
+    }
+
+    @Test("⑬ Navigation/의 구체 View는 seam이 아니라 위반(계약 typealias/protocol만 허용)")
+    func featureExclusivityNavigationOnlyAllowsContracts() {
+        let sources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/DebugView.swift",
+             source: "public struct DebugView {}")   // Navigation이라도 구체 타입 → 위반
+        ]
+        let vs = lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "feature-exclusivity" && vs.first?.severity == .error)
+    }
 }

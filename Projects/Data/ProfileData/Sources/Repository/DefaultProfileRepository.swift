@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultProfileRepository: ProfileRepository {
+struct DefaultProfileRepository: ProfileRepository {
     private let service: ProfileService
     private let localStorage: AppStorage
     private let logger: DataLogger?

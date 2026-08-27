@@ -9,7 +9,7 @@
 import Foundation
 import Logger
 
-public enum CommentAction {
+enum CommentAction {
     case fetchComments
     case postComment
     case patchComment

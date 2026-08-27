@@ -92,7 +92,7 @@ private struct DemoRootView: View {
     private var introView: some View {
         switch dataSource {
         case .mock:
-            OnboardingFactory.makeIntroView(
+            OnboardingFeatureFactory.makeIntroView(
                 socialLoginUseCase: DemoSocialLoginUseCase(),
                 logger: consoleLogger,
                 onLoginSucceeded: handleLoginSucceeded
@@ -118,7 +118,7 @@ private struct DemoRootView: View {
             deviceIdentifierStore: DefaultDeviceIdentifierStore(),
             logger: DataLogger(moduleName: "AuthData", underlying: consoleLogger)
         )
-        return OnboardingFactory.makeIntroView(
+        return OnboardingFeatureFactory.makeIntroView(
             socialLoginUseCase: DefaultSocialLoginUseCase(authRepository: repository),
             logger: consoleLogger,
             onLoginSucceeded: handleLoginSucceeded
@@ -162,7 +162,7 @@ private struct DemoRootView: View {
     private var termsAgreementView: some View {
         switch dataSource {
         case .mock:
-            OnboardingFactory.makeTermsAgreementView(
+            OnboardingFeatureFactory.makeTermsAgreementView(
                 loadUseCase: DemoLoadTermsAgreementDraftUseCase(),
                 saveUseCase: DemoSaveTermsAgreementDraftUseCase(),
                 logger: consoleLogger,
@@ -186,7 +186,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "SettingData", underlying: consoleLogger)
         )
-        return OnboardingFactory.makeTermsAgreementView(
+        return OnboardingFeatureFactory.makeTermsAgreementView(
             loadUseCase: DefaultLoadTermsAgreementDraftUseCase(repository: repository),
             saveUseCase: DefaultSaveTermsAgreementDraftUseCase(repository: repository),
             logger: consoleLogger,
@@ -211,7 +211,7 @@ private struct DemoRootView: View {
     private var stepFlowView: some View {
         switch dataSource {
         case .mock:
-            OnboardingFactory.makeStepFlowView(
+            OnboardingFeatureFactory.makeStepFlowView(
                 validateNicknameUseCase: DemoValidateNicknameUseCase(),
                 registerProfileUseCase: DemoRegisterProfileUseCase(),
                 logger: consoleLogger,
@@ -236,7 +236,7 @@ private struct DemoRootView: View {
             localStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "ProfileData", underlying: consoleLogger)
         )
-        return OnboardingFactory.makeStepFlowView(
+        return OnboardingFeatureFactory.makeStepFlowView(
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: repository),
             registerProfileUseCase: DefaultRegisterProfileUseCase(repository: repository),
             logger: consoleLogger,

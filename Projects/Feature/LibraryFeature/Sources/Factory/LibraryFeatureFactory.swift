@@ -1,5 +1,5 @@
 //
-//  LibraryFactory.swift
+//  LibraryFeatureFactory.swift
 //  LibraryFeature
 //
 //  Created by YunhakLee on 7/21/26.
@@ -15,7 +15,7 @@ import Logger
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
-public enum LibraryFactory {
+public enum LibraryFeatureFactory {
 
     /// 로그인한 사용자 본인의 서재 화면. **탭 콘텐츠로 쓰이는 화면**이라 뒤로가기가 없다
     /// (타유저 서재는 반대 — push되는 화면이라 스스로 뒤로가기를 갖는다).

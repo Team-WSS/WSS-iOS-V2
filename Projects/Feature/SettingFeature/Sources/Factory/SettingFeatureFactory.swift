@@ -1,5 +1,5 @@
 //
-//  SettingFactory.swift
+//  SettingFeatureFactory.swift
 //  SettingFeature
 //
 //  Created by Seoyeon Choi on 7/15/26.
@@ -18,7 +18,7 @@ import PushAuthorization
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
-public enum SettingFactory {
+public enum SettingFeatureFactory {
 
     /// 설정 진입점. `SettingView`(설정 목록) → `SettingAccountInfoView`(계정정보) → 성별/나이 변경·차단유저 목록,
     /// 그리고 `SettingView` → 프로필 공개 설정·알림 설정까지, 모듈 내부 화면 전환을 전부 포함한 하나의 플로우다.

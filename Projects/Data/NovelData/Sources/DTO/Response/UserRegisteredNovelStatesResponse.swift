@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct UserRegisteredNovelStatesResponse: Decodable {
+struct UserRegisteredNovelStatesResponse: Decodable {
     public let interestNovelCount: Int
     public let watchingNovelCount: Int
     public let watchedNovelCount: Int

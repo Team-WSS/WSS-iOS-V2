@@ -88,7 +88,7 @@ private struct DemoRootView: View {
     private var reviewView: some View {
         switch dataSource {
         case .mock:
-            NovelReviewFactory.makeView(
+            NovelReviewFeatureFactory.makeView(
                 novelID: novelID,
                 title: title,
                 status: .watching,
@@ -116,7 +116,7 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "NovelReviewData", underlying: consoleLogger)
         )
-        return NovelReviewFactory.makeView(
+        return NovelReviewFeatureFactory.makeView(
             novelID: novelID,
             title: title,
             status: .watched,

@@ -12,7 +12,7 @@ import BaseDomain
 import BaseData
 import Networking
 
-public struct DefaultFeedRepository: FeedRepository {
+struct DefaultFeedRepository: FeedRepository {
     private let service: FeedService
     private let logger: DataLogger?
     private let storage: AppStorage

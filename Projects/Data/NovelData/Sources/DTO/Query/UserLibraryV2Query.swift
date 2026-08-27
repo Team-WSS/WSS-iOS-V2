@@ -13,7 +13,7 @@ import Networking
 ///
 /// 서버가 전 필터를 optional로 받으므로, **미적용 필터는 nil로 둬 파라미터 자체를 생략**한다.
 /// 빈 배열을 그대로 보내면 `?genres=`(빈 값)로 직렬화돼 서버가 [""] 필터로 오해한다 — nil 필수.
-public struct UserLibraryV2Query: QueryItemConvertible {
+struct UserLibraryV2Query: QueryItemConvertible {
     public let cursor: String?
     public let size: Int
     public let sortType: String

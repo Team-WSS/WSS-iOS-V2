@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct CollectionDetailResponse: Decodable {
+struct CollectionDetailResponse: Decodable {
     public let collectionId: Int
     public let collectionName: String
     public let collectionDescription: String?
@@ -29,7 +29,7 @@ public struct CollectionDetailResponse: Decodable {
     public let novels: [CollectionNovelResponse]
 }
 
-public struct CollectionOwnerResponse: Decodable {
+struct CollectionOwnerResponse: Decodable {
     public let userId: Int
     public let nickname: String
 

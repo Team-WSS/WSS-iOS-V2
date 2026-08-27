@@ -12,7 +12,7 @@ import BaseDomain
 import NovelDomain
 import BaseData
 
-public enum NovelMapper {
+enum NovelMapper {
     
     // MARK: - Mapping Error
     

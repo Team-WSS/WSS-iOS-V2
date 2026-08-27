@@ -10,7 +10,7 @@ import Foundation
 
 import BaseDomain
 
-public enum SubmitState: Equatable {
+enum SubmitState: Equatable {
     case idle
     case submitting
     case submitted

@@ -10,11 +10,11 @@ import Foundation
 
 //MARK: - 홈 - 선호 장르 기반 추천 웹소설
 
-public struct PreferenceGenreNovelsResponse: Decodable {
+struct PreferenceGenreNovelsResponse: Decodable {
     public let tasteNovels: [PreferenceGenreNovelResponse]
 }
 
-public struct PreferenceGenreNovelResponse: Decodable {
+struct PreferenceGenreNovelResponse: Decodable {
     public let novelId: Int
     public let title: String
     public let author: String

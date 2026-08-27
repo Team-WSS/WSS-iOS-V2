@@ -154,7 +154,7 @@ private struct DemoRootView: View {
         loadPagedNotificationsUseCase: LoadPagedNotificationsUseCase,
         markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
     ) -> some View {
-        NotificationFactory.makeNotificationListView(
+        NotificationFeatureFactory.makeNotificationListView(
             loadPagedNotificationsUseCase: loadPagedNotificationsUseCase,
             markNotificationAsReadUseCase: markNotificationAsReadUseCase,
             logger: consoleLogger,
@@ -170,7 +170,7 @@ private struct DemoRootView: View {
         notificationID: NotificationID,
         loadNotificationDetailUseCase: LoadNotificationDetailUseCase
     ) -> some View {
-        NotificationFactory.makeNotificationDetailView(
+        NotificationFeatureFactory.makeNotificationDetailView(
             notificationID: notificationID,
             loadNotificationDetailUseCase: loadNotificationDetailUseCase,
             logger: consoleLogger,

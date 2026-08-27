@@ -173,7 +173,7 @@ private struct DemoRootView: View {
     private func userLibraryView(_ scenario: DemoUserLibraryScenario) -> some View {
         switch dataSource {
         case .mock:
-            LibraryFactory.makeUserLibraryView(
+            LibraryFeatureFactory.makeUserLibraryView(
                 userID: UserID(1003),
                 loadUserLibraryUseCase: DemoLoadUserLibraryUseCase(scenario: scenario),
                 logger: consoleLogger,
@@ -196,7 +196,7 @@ private struct DemoRootView: View {
     private var libraryView: some View {
         switch dataSource {
         case .mock:
-            LibraryFactory.makeMyLibraryView(
+            LibraryFeatureFactory.makeMyLibraryView(
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
                 loadMyLibraryKeywordsUseCase: DemoLoadMyLibraryKeywordsUseCase(),
                 logger: consoleLogger,
@@ -254,7 +254,7 @@ private struct DemoRootView: View {
     @MainActor
     private func makeLiveUserLibraryView() -> some View {
         let repositories = makeLiveRepositories()
-        return LibraryFactory.makeUserLibraryView(
+        return LibraryFeatureFactory.makeUserLibraryView(
             userID: UserID(liveOtherUserID),
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: repositories.novel,
@@ -271,7 +271,7 @@ private struct DemoRootView: View {
         let repositories = makeLiveRepositories()
         let repository = repositories.novel
         let keywordRepository = repositories.keyword
-        return LibraryFactory.makeMyLibraryView(
+        return LibraryFeatureFactory.makeMyLibraryView(
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: repository,
                 keywordRepository: keywordRepository

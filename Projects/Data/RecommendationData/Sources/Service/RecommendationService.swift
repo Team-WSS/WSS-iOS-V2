@@ -9,7 +9,7 @@
 import Foundation
 import Networking
 
-public protocol RecommendationService {
+protocol RecommendationService {
     func getTodayDiscovery() async throws -> TodayDiscoveryNovelsResponse
     func getTrendingFeeds() async throws -> TrendingFeedsResponse
     func getInterestFeeds() async throws -> InterestFeedsResponse

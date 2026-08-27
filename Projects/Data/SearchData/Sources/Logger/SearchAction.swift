@@ -7,7 +7,7 @@
 
 import Logger
 
-public enum SearchAction {
+enum SearchAction {
     case fetchRecentSearchWords
     case removeRecentSearchWord(String)
     case clearRecentSearchWords

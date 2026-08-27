@@ -9,7 +9,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
-import FeedData
+@testable import FeedData
 import FeedDomain
 import BaseDomain
 import Networking
