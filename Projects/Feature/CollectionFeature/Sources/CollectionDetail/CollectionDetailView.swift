@@ -129,6 +129,11 @@ struct CollectionDetailView: View {
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
+        // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다
+        // (`CollectionListView`와 동일 판단).
+        .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+            if needsAuth { onAuthenticationRequired() }
+        }
         .navigationDestination(isPresented: $isEditPresented) {
             // detail은 메뉴("컬렉션 수정")가 detail.isMine == true일 때만 노출되므로 이 시점엔 항상 로드돼 있다.
             if let detail = viewModel.state.detail {

@@ -35,6 +35,8 @@ final class CollectionDetailViewModel {
 
         /// 좋아요·삭제 실패 공통 에러 토스트 — 둘 다 같은 카피(`WSSToastType.unknownError`)라 하나로 묶는다.
         var hasActionError = false
+
+        var requiresAuthentication = false
     }
 
     // MARK: - Action
@@ -189,6 +191,7 @@ private extension CollectionDetailViewModel {
             state.detail = try await loadCollectionDetailUseCase.execute(id: id, sortType: state.sortType)
             hasLoaded = true
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 상세 로드 실패: \(String(describing: error))")
             state.hasLoadError = true
         }
@@ -204,6 +207,7 @@ private extension CollectionDetailViewModel {
             }
         } catch {
             state.detail = before
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 좋아요 동기화 실패: \(String(describing: error))")
         }
     }
@@ -214,8 +218,21 @@ private extension CollectionDetailViewModel {
             try await deleteCollectionUseCase.execute(id: id)
             state.shouldDismiss = true
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 삭제 실패: \(String(describing: error))")
             state.hasActionError = true
         }
+    }
+}
+
+// MARK: - Error Mapping
+
+private extension CollectionDetailViewModel {
+    /// push 후 dismiss되는 화면(탭 콘텐츠 아님)이라 `CollectionListViewModel`/`CreateCollectionViewModel`과
+    /// 동일하게 1회성 신호로 충분 — `.consumeAuthenticationRequired` 같은 소진 처리가 필요 없다.
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }
