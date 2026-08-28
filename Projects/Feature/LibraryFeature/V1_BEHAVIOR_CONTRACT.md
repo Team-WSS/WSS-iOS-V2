@@ -43,7 +43,7 @@
    - **🗑 확정(2026-08-28, 사용자): 단일 리스트가 의도.** V2는 필터 시트 패러다임으로 통일 — 탭 페이저(구버전 UI) 되살리지 않음.
 3. ✅ **Keep 확정** (2026-08-28: NavigationStack+loadTask 가드로 해소) — **셀 선택 더블탭 가드** — V1은 작품 셀 선택에 throttle(내 서재 1s·타유저 2s)을 걸어 중복 push를 막는다. V2는 `onNovelSelected` 콜백으로 위임하며 **명시적 throttle이 안 보인다**. → [1.7](#17-상호작용네비게이션)
 4. ✅ **Keep 확정** (2026-08-28: V2 튜닝) — **페이지 크기 12 → 15** — V1 내 서재 페이지 크기 `12`, V2 `15`(`LibraryPageSizePolicy.pageSize`). 의도적 조정으로 보이나 **문서화된 결정은 아님**. → [1.2](#12-목록-로드-3방식)
-5. ⏳ **외부 확인(백엔드, [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 3)** — **`.title`(제목순) 정렬 서버 토큰** — V1은 `"title"`에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석이 달려 있다. V2 매퍼도 토큰을 싣지만 **백엔드 확정 여부는 별개 확인**이 필요. → [1.4](#14-정렬)
+5. ✅ **Keep 확정** (2026-08-28, 사용자: 서버가 `title` 토큰을 지원 — 현행 유지, PENDING 3 닫힘) — **`.title`(제목순) 정렬 서버 토큰** — V1은 `"title"`에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석이 달려 있다. V2 매퍼도 토큰을 싣지만 **백엔드 확정 여부는 별개 확인**이 필요. → [1.4](#14-정렬)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
@@ -106,7 +106,7 @@
   - 근거: V1 `MyLibraryViewController.swift:195-201` · V2 `LibrarySortSheet`, `CLAUDE.md`(정렬 시트 선택 즉시 적용)
 - ✅ **Keep** — 서버 정렬 토큰 매핑 `created_desc/created_asc/title/read_date/rating_desc/rating_asc`.
   - 근거: V1 `LibrarySortType.swift:33-42` · V2 `NovelMapper.mapLibrarySortTypeString`, `NovelData/CLAUDE.md`
-- 🔧 **외부 확인→TODO** (2026-08-28: 서버 실지원 확인) — **`.title`(제목순) 서버 토큰 확정**. V1에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석. V2도 토큰을 싣지만 백엔드 실제 지원 여부는 별개 확인.
+- ✅ **Keep 확정** (2026-08-28, 사용자: 서버가 `title` 토큰을 지원, 현행 매퍼 유지 — PENDING_DECISIONS 3 닫힘) — **`.title`(제목순) 서버 토큰 확정**. V1에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석. V2도 토큰을 싣지만 백엔드 실제 지원 여부는 별개 확인.
   - 근거: V1 `LibrarySortType.swift:37`
 
 ### 1.5 영속화 (UserDefaults)

@@ -84,7 +84,7 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 - 🗑 **Delete** — V1 로그인 화면엔 **skip 버튼**이 있어 탭하면 로그인 없이(토큰 없이) 홈으로 진입한다(게스트). `AmplitudeManager.track(nonLogin)`도 남긴다.
   - V2: **제거**. `LoginButtonType`에서 skip이 없고 소셜 버튼(카카오/애플)만 남는다. (`CLAUDE.md:11`에 "비로그인(게스트) 진입 경로는 없다 — 제품 결정으로 제거, 되살리지 말 것"으로 명문화 = 의도.)
   - 근거: V1 `LoginViewModel.swift:104-108`(skip→nonLogin track+navigateToHome), `LoginButtonType.swift:10-11` · V2 `OnboardingIntroView.swift:151-175`, `CLAUDE.md`(비로그인 경로 없음)
-- ⏸ **보류(분석 계측)** (→ `docs/PENDING_DECISIONS.md` 6) — 온보딩/로그인 **분석 계측**(Amplitude). V1은 최소한 "둘러보기"에 `nonLogin` 이벤트를 심는다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로도 없어 해당 이벤트가 사라졌다 — 다른 계측 수단으로 이어받는지, 온보딩 계측을 아예 미루는지는 별개 확인.
+- ➡️ **횡단 재도입으로 흡수** (2026-08-28, 사용자: 비로그인 경로 없음·애널리틱스는 나중에 횡단 도입 — PENDING 6 닫힘, `docs/TODO.md` 9절 Amplitude) — 온보딩/로그인 **분석 계측**(Amplitude). V1은 최소한 "둘러보기"에 `nonLogin` 이벤트를 심는다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로도 없어 해당 이벤트가 사라졌다 — 다른 계측 수단으로 이어받는지, 온보딩 계측을 아예 미루는지는 별개 확인.
   - 근거: V1 `LoginViewModel.swift:106`(`AmplitudeManager.shared.track`) · V2 (Amplitude 미존재)
 
 ### 1.3 카카오 로그인
