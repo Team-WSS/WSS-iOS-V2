@@ -50,8 +50,9 @@
   ⚠️ **`AppVersionProviding` 실구현체가 없다**(`Testing/Mock/MockAppVersionProvider`만 존재) —
   `Bundle`의 `CFBundleShortVersionString` → `AppVersion` 파싱을 새로 써야 한다. 프로토콜만 보고
   "구현체가 어딘가 있겠지" 하기 쉬운 자리다.
-- **왜 지금 안 했나**: #179는 홈 화면 범위였다. 그리고 App이 아직 스켈레톤(`ContentView`가 "Hello, World!")이라
-  **이 작업이 App의 첫 실전 조립**이 된다 — 탭바·라우팅 구조와 함께 정해야 게이트를 어디에 걸지가 확정된다.
+- **왜 지금 안 했나**: #179는 홈 화면 범위였다. #196에서 App의 첫 실전 조립(온보딩 플로우 배선)은
+  끝났지만, 메인 탭바·라우팅 구조가 아직 없어(`ContentView`의 `.main`은 여전히 placeholder) 강제
+  업데이트 게이트를 정확히 어느 지점에 걸지는 그 구조가 잡혀야 확정된다.
 - **놓치기 쉬운 것**:
   - ⚠️ **HomeFeature에 넣지 말 것.** 홈은 탭 복귀마다 `.load`가 도는 화면이라 탭을 옮길 때마다 재체크되고,
     딥링크·알림·온보딩으로 다른 화면에 바로 진입하는 경로는 아예 안 걸린다. 앱 전역 게이트라 App 몫이다.
@@ -173,8 +174,9 @@
   push하도록 연결한다(다른 화면의 `onXxxTapped` 콜백들과 동일한 배선 방식 — `NovelDetailFeature`의
   `onAuthorTapped` 등 이미 있는 App 배선 선례를 따를 것).
 - **왜 지금 안 했나**: Feature 모듈끼리는 서로 import 못 해(`App → Feature → Domain` 단방향) 이
-  연결은 원래 App의 몫이다. App이 아직 "Hello, World!" 스켈레톤 단계라 화면 조립·라우팅 자체가
-  없어서 지금은 콜백 시그니처만 뚫어두고 실제 연결은 App 조립 시점으로 미뤘다(2026-08).
+  연결은 원래 App의 몫이다. #196에서 App의 첫 실전 조립이 이뤄졌지만 범위는 로그인·온보딩뿐이었고,
+  컬렉션 화면 조립(`CollectionDataFactory` 등)과 메인 탭 라우팅은 아직 없어 지금은 콜백 시그니처만
+  뚫어두고 실제 연결은 메인 탭이 생기는 후속 이슈로 미뤘다(2026-08).
 - **놓치기 쉬운 것**: `onNovelTapped`는 VM을 거치지 않고 `CollectionDetailView`가 탭 즉시 직접
   호출한다(`NovelDetailFeature.onAuthorTapped`와 동일 패턴) — App 쪽에서 이 콜백을 받을 때도 VM
   상태를 개입시키려 하지 말 것.
@@ -186,9 +188,10 @@
   시작한다.
 - **결과**: 로그인 성공 시 토큰이 저장되고 401 자동 갱신도 연결돼 있지만(#196), 그 지속성은 **같은
   프로세스 안에서만** 유효하다 — 강제 종료 후 재실행하면 토큰이 살아있어도 도로 로그인해야 한다.
-- **어디를 고치나**: `ContentView.init` 또는 `body` 진입 시점에 `dependencies`가 들고 있는
-  `TokenStore`에서 기존 세션(access/refresh token) 유효 여부를 확인해, 있으면 `route`를 `.main`으로
-  시작하도록 분기를 추가한다.
+- **어디를 고치나**: `ContentView.init` 또는 `body` 진입 시점에서 기존 세션(access/refresh token)
+  유효 여부를 확인해, 있으면 `route`를 `.main`으로 시작하도록 분기를 추가한다. ⚠️ `tokenStore`는
+  현재 `AppDependencies.init()` 내부 지역 변수라 `dependencies.tokenStore`로 바로 못 꺼낸다 — 착수
+  시 먼저 인스턴스 프로퍼티로 승격해야 한다.
 - **왜 지금 안 했나**: #196 체크리스트 범위 밖(사용자 확인, 2026-08) — `.main`이 여전히 placeholder라
   세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
   다룬다.

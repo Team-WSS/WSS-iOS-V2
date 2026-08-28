@@ -73,7 +73,10 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 
 - **Feature**: 레지스트리의 10개(`home`/`feed`/`novelReview`/`novelDetail`/`mypage`/`setting`/`search`/`keyword`/`library`/`notification`)가
   **모두 디스크에 구현되어 있다.** 각 모듈은 Demo 앱으로 단독 실행되며, 화면 간 이동·탭바 조립은 아직 App 몫으로 남아 있다.
-- **App**: 진입점 스켈레톤(`WSSIOSV2App`, `ContentView`)만 존재.
+- **App**: `AppDependencies`(DI 조립 — Auth/Setting/Profile Repository, 2-client `NetworkingClient`)와
+  `OnboardingRootView`(온보딩 플로우 실배선: 인트로→약관동의→닉네임/성별출생년도/장르선택)가 #196에서
+  들어왔다. `ContentView`는 `.onboarding`/`.main` 두 Route를 전환하지만 `.main`은 여전히 placeholder —
+  메인 탭바·컬렉션 등 다른 Feature 화면 조립은 아직 없다.
 
 > ⚠️ **유령 폴더 주의**: `Projects/Domain|Data/`에 suffix 없는 폴더(`Comment/`, `Feed/`, `KeywordData/` 등)나
 > 미등록 폴더가 디스크에 보일 수 있다. 모듈 rename·브랜치 전환이 남긴 **gitignore된 잔재**(`.xcodeproj`/`Derived`)로
