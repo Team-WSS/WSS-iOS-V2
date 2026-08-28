@@ -24,6 +24,8 @@
 > 화면을 수정할 때 **디자인만 보고 추측하지 말고 그 절을 먼저 읽는다**. 새 화면은 `new-feature` 3B가
 > 채운다([design-gap-checklist.md](../../.claude/skills/new-feature/design-gap-checklist.md) — 기존 화면
 > 수정 시에도 갭 점검용으로 쓸 수 있다).
+> 같은 모듈의 `V1_BEHAVIOR_CONTRACT.md`는 이름이 비슷하지만 **V2 정본이 아니라 V1(구 앱) parity 판정 기록**이다 —
+> "V1은 이랬는데 V2가 왜 다른가"가 궁금할 때 읽고, 화면 동작의 기준으로 삼지 않는다.
 
 **레퍼런스는 단일 정본이 아니라 "성격별 대표"다** — 뼈대(MARK 순서·State/Action·얇은 VM·Factory)는 어느 쪽이든 같으니, 만들 화면에 **가까운 쪽의 얹는 패턴**을 본다.
 | 만들 화면 성격 | 볼 정본 | 그 정본이 대표하는 얹는 패턴 |
