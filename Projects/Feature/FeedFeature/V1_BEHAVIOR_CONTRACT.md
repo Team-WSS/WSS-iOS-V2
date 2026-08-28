@@ -157,7 +157,7 @@
 
 ### 1.6 상호작용·네비게이션
 
-- ❓ **Unknown (헤드라인 · 미배선)** — V1 목록의 화면 전환 4종:
+- 🔧 **미배선(App 배선 대기·삭제 아님)** — V1 목록의 화면 전환 4종:
   - **셀 탭 → 피드 상세**(`throttle(1s)` + push `throttle(500ms)` 이중 가드).
   - **프로필 탭 → 유저 페이지**(단, 내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
   - **연결 작품 탭 → 작품 상세**.
@@ -279,7 +279,7 @@
 - ✅ **Keep** — 뒤로가기 → pop/dismiss, 신고·삭제 알럿·드롭다운은 배경 탭으로 닫힘.
   - V2: 툴바 back → `dismiss()`, `.onTapGesture`로 드롭다운/포커스 해제.
   - 근거: V1 `FeedDetailViewController.swift:71-73`,`442-447` · V2 `FeedDetailView.swift:77-81`,`271-280`
-- ❓ **Unknown** — **프로필 탭 → 유저 페이지 / 탈퇴 유저 처리**. V1은 상세·댓글에서 프로필 탭 시 유저 페이지로 push(내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
+- 🔧 **미배선(App 배선 대기)** — **프로필 탭 → 유저 페이지 / 탈퇴 유저 처리**. V1은 상세·댓글에서 프로필 탭 시 유저 페이지로 push(내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
   - V2: 상세 프로필 탭이 `print` 스텁, 탈퇴 유저 분기 없음.
   - 근거: V1 `FeedDetailViewModel.swift:272-281`,`451-465` · V2 `FeedDetailView.swift:110-114`(print)
 
@@ -294,7 +294,7 @@
 - ✅ **Keep** — **작성/수정 겸용 화면**. 수정이면 대상 피드의 내용·스포일러·공개여부·연결작품·이미지를 채워 넣고 상단 타이틀이 "피드 수정"이 된다.
   - V2: `CreateFeedViewModel.Mode(create/edit(FeedID))`, `isEditing` → 타이틀 "피드 작성"/"피드 수정".
   - 근거: V1 `FeedEditViewModel.swift:60-72`,`112-152`, `FeedEditViewController` · V2 `CreateFeedViewModel.swift:19-24`,`62-66`, `CreateFeedView.swift:179-183`, `FeedFeatureFactory.swift:40-55`
-- ❓ **Unknown** — **수정 prefill 방식**. V1은 `viewDidLoad`에서 `getSingleFeed`로 피드를 직접 받아 채우고, **기존 첨부 이미지를 Kingfisher로 내려받아** `selectedImages`에 넣었다.
+- 🔧 **미배선(App 배선 의존)** — **수정 prefill 방식**. V1은 `viewDidLoad`에서 `getSingleFeed`로 피드를 직접 받아 채우고, **기존 첨부 이미지를 Kingfisher로 내려받아** `selectedImages`에 넣었다.
   - V2는 `makeEditFeedView(initialDraft:)`로 **App(호출자)이 미리 채운 `FeedDraft`를 주입**받는다. 이미지의 경우 `initialDraft.attachedImages`(ID)만 있고 `attachedImageDatas`가 비면 회색 placeholder로 뜬다 — 기존 이미지 데이터 주입은 App 배선에 달림.
   - 근거: V1 `FeedEditViewModel.swift:112-152`(getSingleFeed + Kingfisher) · V2 `FeedFeatureFactory.swift:40-55`, `CreateFeedView.swift:324-334`
 
@@ -345,7 +345,7 @@
 - 🗑 **Delete** — **크로스-스크린 알림 토스트**. V1 피드 탭은 `NotificationName.feedEdited`(작성/수정 완료 → "수정됨" 토스트)와 `"BlockUser"`(유저 차단 → "{닉네임} 차단" 토스트)를 `NotificationCenter`로 받아 처리했다.
   - V2엔 이 알림 배관이 없다.
   - 근거: V1 `FeedViewController.swift:130-143` · V2 (알림 관찰 없음)
-- ❓ **Unknown** — **피드 상세 pop 알림**. V1은 `NotificationName.popFeedDetailViewController`를 받아 상세를 스스로 pop했다(예: 차단·삭제 후 외부에서 닫기).
+- 🔧 **미배선(크로스스크린 배관·App)** — **피드 상세 pop 알림**. V1은 `NotificationName.popFeedDetailViewController`를 받아 상세를 스스로 pop했다(예: 차단·삭제 후 외부에서 닫기).
   - V2엔 이 신호가 없다(상세는 자체 back/삭제로만 닫힘).
   - 근거: V1 `FeedDetailViewModel.swift:534-538`, `FeedDetailViewController.swift:135` · V2 (해당 신호 없음)
 

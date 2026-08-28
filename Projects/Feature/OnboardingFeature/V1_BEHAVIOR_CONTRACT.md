@@ -84,7 +84,7 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 - 🗑 **Delete** — V1 로그인 화면엔 **skip 버튼**이 있어 탭하면 로그인 없이(토큰 없이) 홈으로 진입한다(게스트). `AmplitudeManager.track(nonLogin)`도 남긴다.
   - V2: **제거**. `LoginButtonType`에서 skip이 없고 소셜 버튼(카카오/애플)만 남는다. (`CLAUDE.md:11`에 "비로그인(게스트) 진입 경로는 없다 — 제품 결정으로 제거, 되살리지 말 것"으로 명문화 = 의도.)
   - 근거: V1 `LoginViewModel.swift:104-108`(skip→nonLogin track+navigateToHome), `LoginButtonType.swift:10-11` · V2 `OnboardingIntroView.swift:151-175`, `CLAUDE.md`(비로그인 경로 없음)
-- ❓ **Unknown** — 온보딩/로그인 **분석 계측**(Amplitude). V1은 최소한 "둘러보기"에 `nonLogin` 이벤트를 심는다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로도 없어 해당 이벤트가 사라졌다 — 다른 계측 수단으로 이어받는지, 온보딩 계측을 아예 미루는지는 별개 확인.
+- ⏸ **보류(분석 계측)** (→ `docs/PENDING_DECISIONS.md` 6) — 온보딩/로그인 **분석 계측**(Amplitude). V1은 최소한 "둘러보기"에 `nonLogin` 이벤트를 심는다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로도 없어 해당 이벤트가 사라졌다 — 다른 계측 수단으로 이어받는지, 온보딩 계측을 아예 미루는지는 별개 확인.
   - 근거: V1 `LoginViewModel.swift:106`(`AmplitudeManager.shared.track`) · V2 (Amplitude 미존재)
 
 ### 1.3 카카오 로그인
@@ -101,14 +101,14 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 - ✅ **Keep** — 애플 버튼 → `ASAuthorizationController`로 `authorizationCode`+`idToken` 획득 → 서버 로그인.
   - V2: 시스템 `SignInWithAppleButton` 대신 **커스텀 원형 버튼 + `AppleSignInHandler`**가 `ASAuthorizationController`를 직접 구동(카카오와 같은 모양으로 맞추기 위함, 문서화). credential 파싱 후 `SocialLoginUseCase(.apple(...))`.
   - 근거: V1 `LoginViewModel.swift:207-213`,`266-285`(delegate) · V2 `OnboardingIntroView.swift:212-241`,`259-290`
-- ❓ **Unknown** — **v1.4.0 애플 동기화 마이그레이션**. V1은 `needsAppleSyncV140`(accessToken이 캐시에 있고 아직 동기화 안 한 유저)면 일반 애플 로그인 대신 `syncAppleLoginState(authorizationCode:idToken:)`를 호출하고 완료 시 `appleReauthDoneV140` 플래그를 세운다.
+- 🗑 **Delete 확정** (2026-08-28: 마이그레이션 잔재 — V2 불필요) — **v1.4.0 애플 동기화 마이그레이션**. V1은 `needsAppleSyncV140`(accessToken이 캐시에 있고 아직 동기화 안 한 유저)면 일반 애플 로그인 대신 `syncAppleLoginState(authorizationCode:idToken:)`를 호출하고 완료 시 `appleReauthDoneV140` 플래그를 세운다.
   - V2: **대응 없음.** 특정 릴리즈 전환용 워크어라운드라 신규 클라이언트엔 불필요해 보이나, "삭제가 의도"라는 명문 근거는 못 찾음(누락된 유지일 가능성은 낮음).
   - 근거: V1 `LoginViewModel.swift:41-48`,`131-158`,`215-219` · `LoginViewController.swift:125-130`
   - **판정 포인트**: v1.4.0 마이그레이션 대상 유저가 V2로 넘어올 경로가 없다면 삭제가 자연스럽다(확인 필요).
 
 ### 1.5 v140 마이그레이션 워크어라운드
 
-- ❓ **Unknown** — V1 로그인 화면은 `viewDidAppear`에서 `handleLoginCheckV140()`을 돌려, **이미 로그인된 상태 + `didEnterLoginV140` 미설정**이면 "로그인 확인이 필요합니다 / 앱 업데이트 이후 로그인 상태를 다시 확인하고 있습니다" 액션시트를 띄운다(업데이트 후 1회성).
+- 🗑 **Delete 확정** (2026-08-28: 마이그레이션 잔재 — V2 불필요) — V1 로그인 화면은 `viewDidAppear`에서 `handleLoginCheckV140()`을 돌려, **이미 로그인된 상태 + `didEnterLoginV140` 미설정**이면 "로그인 확인이 필요합니다 / 앱 업데이트 이후 로그인 상태를 다시 확인하고 있습니다" 액션시트를 띄운다(업데이트 후 1회성).
   - V2: **대응 없음.** 1.4와 같은 v1.4.0 전환 워크어라운드 성격.
   - 근거: V1 `LoginViewController.swift:54-59`,`179-201`,`132-137` · V2 (대응 없음)
 
@@ -120,7 +120,7 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 - ✅ **Keep** — 토큰 영속화(accessToken·refreshToken·isRegister). V1은 VM이 직접 `UserDefaults`에 쓴다.
   - V2: **저장 책임이 Data/UseCase 레이어로** 내려감(Feature는 `NeedOnboarding`만 받음). 관찰 동작(로그인 후 세션 유지) 동일.
   - 근거: V1 `LoginViewModel.swift:186-191` · V2 `OnboardingIntroViewModel.swift:102`(UseCase 경유), `AuthDomain`
-- ❓ **Unknown** — **FCM 토큰 발급**. V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.shared.fetchFCMToken()`을 호출한다. V2 인트로 흐름엔 안 보인다.
+- ✅ **Keep 확정** (2026-08-28: 인프라 존재·App 배선 대기 — 삭제 아님) — **FCM 토큰 발급**. V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.shared.fetchFCMToken()`을 호출한다. V2 인트로 흐름엔 안 보인다.
   - V2: 푸시 권한 요청은 "Home 진입 시점 별도"라 문서화(`CLAUDE.md:64`) — FCM **등록** 시점이 어디로 이동했는지 확인 필요.
   - 근거: V1 `LoginViewModel.swift:192`(`fetchFCMToken`) · V2 `CLAUDE.md`(푸시 권한은 모듈 범위 밖)
 
@@ -232,7 +232,7 @@ V2: `Sources/TermsAgreement/TermsAgreementView.swift`, `.../TermsAgreementViewMo
 
 ### 3.1 노출 조건
 
-- ❓ **Unknown (헤드라인)** — V1은 온보딩 진입(`viewDidLoad`)에서 `userRepository.getTermSetting()`을 조회해 **`!isAllRequiredTermsAgreed`일 때만** 약관 시트를 present한다(이미 동의한 유저면 안 띄움).
+- 🔧 **미배선(App gating 대기)** — V1은 온보딩 진입(`viewDidLoad`)에서 `userRepository.getTermSetting()`을 조회해 **`!isAllRequiredTermsAgreed`일 때만** 약관 시트를 present한다(이미 동의한 유저면 안 띄움).
   - V2: 약관을 **별도 온보딩 스텝 시트**로 두는데, "이미 동의했으면 건너뛴다"는 게이팅이 **Feature에 없다**(순서·조건부 노출은 App 배선 몫으로 보임). `TermsAgreementViewModel.load()`는 항상 초안을 로드해 현재 동의 상태를 그려줄 뿐, 스텝 자체를 건너뛰진 않는다.
   - 근거: V1 `OnboardingViewModel.swift:389-401`(getTermSetting), `OnboardingViewController.swift:205-209` · V2 `TermsAgreementViewModel.swift:104-108,130-142`
   - **판정 포인트**: 기가입/약관동의 완료 유저가 온보딩을 다시 밟을 때 약관을 또 보이는지(회귀) / 항상 보이는 게 의도인지(App이 게이팅).

@@ -144,7 +144,7 @@
 - ✅ **Keep** — 커밋-온-확인: 휠을 굴려 중앙 셀만 바뀌고, "완료"를 눌러야 부모 생년에 반영된다. X(취소)는 반영 없이 닫기만.
   - V2: `SettingChangeBirthYearPickerSheet`가 내부 `draftYear`만 갱신, "완료"에서 부모 `selectedYear`(Binding)로 커밋, X는 커밋 없이 닫기(`CLAUDE.md` 명문화).
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:68-85`(cancel=dismiss, complete=getCenterCellYear→post) · V2 `CLAUDE.md`(커밋-온-확인 패턴)
-- ❓ **Unknown** — 연도 범위 상한. V1 휠은 `1900...2025`, V2는 `BirthYear.minYear...maxYear = 1900...2024`.
+- 🔧 **복원 확정→TODO** (생년 휠 상한 dynamic화 — 9절 소소 묶음) — 연도 범위 상한. V1 휠은 `1900...2025`, V2는 `BirthYear.minYear...maxYear = 1900...2024`.
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:18`(`Array(1900...2025)`) · V2 `ProfileDomain/…/BirthYear.swift:12-13`
 - ✅ **Keep** (수단) — 스냅 스크롤(가장 가까운 셀에 정렬)·중앙 셀 하이라이트. V2는 `WSSBirthYearWheel`(WSSComponent 공용, 연도 1열) 컴포넌트가 담당.
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:105-146` · V2 `CLAUDE.md`(주의사항 — `WSSBirthYearWheel`)

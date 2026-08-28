@@ -104,7 +104,7 @@
 
 ### 1.3 서재 통계 → 서재 이동
 
-- ❓ **Unknown (헤드라인)** — V1은 서재 통계의 **읽기상태 버튼 4개(관심/보는중/봤어요/하차) 각각**이 탭 대상이고, 탭하면 그 읽기상태로 이동한다(`libraryStatusButtonDidTap` → `pushToSpecificLibraryViewController` → `NotificationCenter.moveToLibraryTab`에 **pageIndex** 전달).
+- 🔧 **미배선(App 배선 — 서재 이동)** — V1은 서재 통계의 **읽기상태 버튼 4개(관심/보는중/봤어요/하차) 각각**이 탭 대상이고, 탭하면 그 읽기상태로 이동한다(`libraryStatusButtonDidTap` → `pushToSpecificLibraryViewController` → `NotificationCenter.moveToLibraryTab`에 **pageIndex** 전달).
   - **V2: `LibrarySection` 전체가 단일 버튼**이고 그 action이 `//TODO: - 서재 뷰로 이동`, 별도 `icNavigateRight` 버튼도 없음(마이페이지엔 서재 타이틀 행이 없다). 읽기상태별 세분 이동이 사라졌고 이동 자체가 미배선.
   - 근거: V1 `MyPageViewController.swift:86-90`,`183-188`, `MyPageViewModel.swift:147-151` · V2 `MypageView.swift:58-61`, `LibrarySection.swift:22-36`
   - **판정 포인트**: 서재 통합 배선이 App에서 채워질 예정인지 / 읽기상태별 진입을 유지할지.
@@ -129,13 +129,13 @@
 
 ### 1.7 설정 진입
 
-- ❓ **Unknown** — V1 마이페이지 우상단 설정 버튼 → 설정 화면 push(`pushToSettingViewController`).
+- 🔧 **미배선(App 배선)** — V1 마이페이지 우상단 설정 버튼 → 설정 화면 push(`pushToSettingViewController`).
   - **V2: 툴바에 설정 아이콘 버튼이 있으나 action이 `//TODO: - 설정 뷰로 이동`** → 미배선. (설정은 `SettingFeature` 소관이라 App 배선 대기일 수 있음.)
   - 근거: V1 `MyPageViewController.swift:55-58`,`101`,`116-121`, `MyPageViewModel.swift:131-133` · V2 `MypageView.swift:252-262`
 
 ### 1.8 스크롤 반응 네비 타이틀
 
-- ❓ **Unknown (낮음)** — V1 마이페이지는 스크롤 오프셋 > 0이면 네비바에 "마이페이지" 타이틀이 드러난다(`updateNavigationBar`, `isVisibleBeforeScroll: false`).
+- 🔧 **복원 확정→TODO** (되살린다 소소 — 9절) — V1 마이페이지는 스크롤 오프셋 > 0이면 네비바에 "마이페이지" 타이틀이 드러난다(`updateNavigationBar`, `isVisibleBeforeScroll: false`).
   - **V2: 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다** → 스크롤해도 "마이페이지"가 뜨지 않는다. (타유저 프로필의 스크롤 반응 닉네임은 4.10에서 유지.)
   - 근거: V1 `MyPageViewController.swift:55-58`, `MyPageViewModel.swift:114-121` · V2 `MypageView.swift:252-262`
 
@@ -193,7 +193,7 @@
 - ✅ **Keep** — 완료 버튼은 실제 변경이 있고 유효할 때만 활성(변경 없으면 비활성).
   - V2: `state.draft.isSubmittable`(도메인 판단)으로 완료 버튼 활성/비활성 + 색.
   - 근거: V1 `MyPageEditProfileViewModel.swift:185-196`,`332-345` · V2 `MyPageEditView.swift:333-350`, `MyPageEditViewModel.swift:141-144`
-- ❓ **Unknown (낮음)** — V1은 저장 성공 시 새 닉네임을 **UserDefaults(`userNickname`)에도 반영**한다.
+- 🔧 **저우선→TODO** (로컬 프로필 캐시 = TODO 1번과 함께) — V1은 저장 성공 시 새 닉네임을 **UserDefaults(`userNickname`)에도 반영**한다.
   - **V2: Feature 코드엔 이 저장이 없다** — 데이터/도메인 레이어가 캐시를 갱신하는지 별도 확인.
   - 근거: V1 `MyPageEditProfileViewModel.swift:170-171` · V2 `MyPageEditViewModel.swift:195-206`(Feature엔 없음)
 - ✅ **Keep** — 저장 실패 시 에러 표시(화면 유지).
@@ -244,7 +244,7 @@
 
 ### 4.1 진입·생명주기
 
-- ❓ **Unknown (헤드라인)** — V1은 `viewWillAppear`마다 프로필·서재·취향·피드를 **다시 로드**한다(`Observable.merge(viewWillAppearEvent, reloadSubject)`).
+- 🔧 **복원 확정→TODO** (push 재진입 재조회 복원 — 9절) — V1은 `viewWillAppear`마다 프로필·서재·취향·피드를 **다시 로드**한다(`Observable.merge(viewWillAppearEvent, reloadSubject)`).
   - **V2: `load()`가 `guard !hasLoaded, loadTask == nil`** → 최초 1회만 로드. push에서 되돌아와도(피드 상세 등) 재조회하지 않는다.
   - **오탐 방지 참고**: 이 화면은 탭 콘텐츠가 아니라 push라서 [Feature/CLAUDE.md](../CLAUDE.md)의 "탭 복귀마다 갱신"이 직접 적용되진 않는다 — 그래서 1회 가드가 의도일 수 있으나 **문서화된 근거는 없다**.
   - 근거: V1 `UserPageViewController.swift:56-59`, `UserPageViewModel.swift:124-153` · V2 `UserPageViewModel.swift:207-212`, `UserPageView.swift:189-191`
@@ -277,7 +277,7 @@
 - 🔧 **Improve** — **피드 셀 좋아요·신고 추가**. V1은 타유저 프로필 피드 셀의 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결 작품 탭만 실제 동작). 즉 남의 프로필에서 그 글에 좋아요/신고를 할 수 없었다.
   - V2: 좋아요 토글(엔티티 정책 위임 + 낙관 반영 + 실패 롤백), threedots 드롭다운으로 스포일러/부적절 신고(2단 확인→접수완료 알럿). (V2 `CLAUDE.md`에 설계로 명문화.)
   - 근거: V1 `UserPageViewController.swift:405-421`(dropdown/like `return`) · V2 `UserPageViewModel.swift:226-236`,`246-264`,`320-359`, `UserPageView.swift:481-521`,`586-616`, `CLAUDE.md`(피드 신고)
-- ❓ **Unknown** — 피드 셀의 **연결 작품 탭 → 작품 상세 이동**. V1은 `connectedNovelViewDidTap` → `pushToNovelDetailViewController`로 동작했다.
+- 🔧 **미배선(App 배선)** — 피드 셀의 **연결 작품 탭 → 작품 상세 이동**. V1은 `connectedNovelViewDidTap` → `pushToNovelDetailViewController`로 동작했다.
   - **V2: `linkNovelTapped`가 `//TODO: - 연결 작품 상세로 이동`** → 미배선.
   - 근거: V1 `UserPageViewController.swift:418-420`, `UserPageViewModel.swift:233-237` · V2 `UserPageView.swift:498-508`
 
@@ -289,7 +289,7 @@
 - ✅ **Keep** — 차단 성공 시 화면을 떠난다(상대 프로필을 더 볼 이유 없음).
   - **수단 차이**: V1은 `popViewController`(pop), V2는 `state.shouldDismiss` → `dismiss()`.
   - 근거: V1 `UserPageViewModel.swift:206-211` · V2 `UserPageViewModel.swift:336-344`, `UserPageView.swift:186-188`, `CLAUDE.md`(성공하면 dismiss)
-- ❓ **Unknown** — 차단 성공 **알림(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 직전 화면에서 "차단했어요" 류 피드백을 띄우게 한다.
+- 🔧 **복원 확정→TODO** (되살린다 소소 — 9절) — 차단 성공 **알림(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 직전 화면에서 "차단했어요" 류 피드백을 띄우게 한다.
   - **V2: 화면 dismiss만** — 부모에게 차단 완료를 알리는 신호(토스트 등)가 없다.
   - 근거: V1 `UserPageViewModel.swift:207-210` · V2 `UserPageViewModel.swift:340`(shouldDismiss만)
 - ✅ **Keep** — 차단 진입점은 네비바 우측 드롭다운(threedots) "차단하기".
@@ -303,17 +303,17 @@
 - ✅ **Keep (수단·감지 방식 차이 확인)** — 비공개 프로필이면 프로필 취향/피드 자리에 "비공개" 안내를 보여준다.
   - **감지 차이**: V1은 프로필 응답의 **`isProfilePublic == false` 필드**로 판단해 취향·피드 뷰를 `isPrivateUserPage(nickname:)`로 덮는다. V2는 장르/작품취향/피드 조회가 **`RepositoryError.privateProfile`(USER-015)**을 던지는지로 판단.
   - 근거: V1 `UserPageViewModel.swift:297-327`,`349-350`,`392-396`, `UserPageViewController.swift:179-185` · V2 `UserPageViewModel.swift:312-313`,`365-372`, `UserPageView.swift:98-100`,`200-217`, `CLAUDE.md`(USER-015 감지는 3곳)
-- ❓ **Unknown** — **비공개일 때 서재 통계 노출**. V1은 서재 통계 조회(`getUserNovelStatus`)가 비공개 게이팅 밖이라 통계 숫자가 바인딩된다(취향/피드만 비공개 처리).
+- ⏸ **보류(기획)** (→ `docs/PENDING_DECISIONS.md` 4) — **비공개일 때 서재 통계 노출**. V1은 서재 통계 조회(`getUserNovelStatus`)가 비공개 게이팅 밖이라 통계 숫자가 바인딩된다(취향/피드만 비공개 처리).
   - **V2: `isProfilePrivate`가 서면 통계 탭 콘텐츠 전체(서재 섹션 포함)를** 비공개 안내로 대체한다 → 통계 숫자가 안 보인다.
   - 근거: V1 `UserPageViewModel.swift:331-338`(private 게이팅 밖) · V2 `UserPageView.swift:97-117`(private면 Section 전체 대체)
   - **판정 포인트**: 비공개 프로필에서도 서재 통계를 보여줄지.
-- ❓ **Unknown** — **"알 수 없는 유저"(USER-018) 폴백**. V1은 프로필 조회가 `USER-018`이면 빈 프로필 + private 처리로 폴백한다("현재 로직상 불가능하지만 대응" 주석).
+- 🔧 **복원 확정→TODO** (USER-018 전용 처리 복원 — 9절) — **"알 수 없는 유저"(USER-018) 폴백**. V1은 프로필 조회가 `USER-018`이면 빈 프로필 + private 처리로 폴백한다("현재 로직상 불가능하지만 대응" 주석).
   - **V2: USER-018 특별 처리 없음** → 일반 로드 실패(`hasLoadError`)로 떨어져 `NetworkErrorView`.
   - 근거: V1 `UserPageViewModel.swift:279-295`,`311-326` · V2 `UserPageViewModel.swift:365-372`(privateProfile만 분기)
 
 ### 4.8 서재 통계 → 네비게이션
 
-- ❓ **Unknown (1.3과 동일 사안)** — V1 타유저 프로필은 서재 타이틀 탭(`libraryStatusViewDidTap` → 타유저 서재 push) **및** 읽기상태 버튼별 탭(pageIndex 동반 push) 둘 다로 서재로 이동한다.
+- 🔧 **미배선(App 배선 — 서재 이동)** — V1 타유저 프로필은 서재 타이틀 탭(`libraryStatusViewDidTap` → 타유저 서재 push) **및** 읽기상태 버튼별 탭(pageIndex 동반 push) 둘 다로 서재로 이동한다.
   - **V2: `LibrarySection` 단일 버튼 + `icNavigateRight` 버튼 모두 `//TODO: - 서재 뷰로 이동`** → 미배선, 읽기상태별 세분도 없음.
   - 근거: V1 `UserPageViewController.swift:105-109`,`137-140`,`292-305`, `UserPageViewModel.swift:214-218`,`239-243` · V2 `UserPageView.swift:326-362`
 
@@ -346,7 +346,7 @@
 
 ### 5.2 진입·생명주기
 
-- ❓ **Unknown (4.1과 동일 사안)** — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
+- 🔧 **복원 확정→TODO** (push 재진입 — 9절, '비우고 처음부터'는 재검토) — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
   - **V2: `load()`가 `guard !hasLoadedFirstPage`** → 최초 1회만 로드(재진입 재조회 없음).
   - 근거: V1 `UserPageFeedDetailViewModel.swift:79-100` · V2 `UserFeedListViewModel.swift:134-139`
 

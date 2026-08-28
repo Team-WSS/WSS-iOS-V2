@@ -133,7 +133,7 @@
 - ✅ **Keep** — 키워드 칩은 **표시 전용**(탭 없음), 키워드가 없으면 칩 영역을 숨긴다.
   - V2: 키워드 칩 표시 전용(노드명 `tagLink`지만 탭 안 함 — 카드 전체 탭과 경합 방지).
   - 근거: V1 `HomeTodayPopularCollectionViewCell.swift:296-305`(`keywordStackView.isHidden = keywords.isEmpty`) · V2 `CLAUDE.md`(키워드 칩 표시 전용)
-- ❓ **Unknown** — V1 카드는 **작가명 5자·제목 17자에서 하드 절단**(`truncateText`)한다.
+- 🔧 **Improve** (2026-08-28: 의도적 변경 #179 — 고정폭 대신 fixedSize+말줄임) — V1 카드는 **작가명 5자·제목 17자에서 하드 절단**(`truncateText`)한다.
   - V2: 폭 제한 대신 `fixedSize`+`layoutPriority`+말줄임으로 실데이터 폭에 맞춘다(#179 — 시안 고정폭이 샘플 문구 결과였음). 관찰 결과(길면 말줄임)는 비슷하나 **자릿수 하드컷은 안 함**.
   - 근거: V1 `HomeTodayPopularCollectionViewCell.swift:285`,`291` · V2 `CLAUDE.md`(시안 텍스트 프레임 폭 함정)
 
@@ -235,7 +235,7 @@
 - ✅ **Keep** — 모든 화면 전환을 **상위(App)에 위임**한다(홈은 스스로 push하지 않음).
   - V2: 선택 결과 전부 콜백(`onNovelSelected`/`onFeedSelected`/`onSearchTapped`/`onDetailSearchTapped`/`onNotificationTapped`/`onPreferenceGenreSettingTapped`). V1도 VM이 `PublishRelay`로 올려 VC가 push — 같은 결.
   - 근거: V1 `HomeViewModel.swift:276-293`(Output relay), `HomeViewController.swift:153-218` · V2 `HomeView.swift:27-33`, `HomeFeatureFactory`
-- ❓ **Unknown** — **선호장르 설정 버튼의 목적지**. V1은 `MyPageEditViewController(entryType: .home)`(마이페이지 프로필 수정 화면)으로 간다.
+- 🔧 **미배선(App 배선 — 마이페이지 수정 화면)** — **선호장르 설정 버튼의 목적지**. V1은 `MyPageEditViewController(entryType: .home)`(마이페이지 프로필 수정 화면)으로 간다.
   - V2: `onPreferenceGenreSettingTapped` 콜백(목적지는 App 배선). 개념상 "선호장르 설정"이나 **V1이 프로필 수정 화면을 재활용**한 것과 같은 목적지인지 확인 필요.
   - 근거: V1 `HomeViewController.swift:195-200`(`pushToMyPageEditViewController(entryType:.home)`) · V2 `HomeView.swift:32`, `CLAUDE.md`
 - 🔧 **Improve (신규)** — **알림 벨 탭 시 이동과 푸시 권한 확인을 동시에**(#193). 탭 즉시 이동 신호를 올리고, 그와 동시에 시스템 푸시 권한을 확인해 `denied`면 **비차단 안내 알럿**(설정 유도), `notDetermined`면 시스템 프롬프트를 띄운다. 이동은 어느 쪽이든 막지 않는다.
@@ -268,7 +268,7 @@
 
 ### 6.3 기타 부수 작업
 
-- ❓ **Unknown (헤드라인)** — **Amplitude 이벤트 트래킹**. V1은 홈 진입(`home`)·오늘의 랭킹 탭(`homeTodayRanking`)·추천작 탭(`homePreferNovellist`)·선호장르 버튼(`homeToPreferButton`)에 Amplitude 이벤트를 심었다.
+- 🗑 **Delete** (횡단 재도입 대상 — 9절) — **Amplitude 이벤트 트래킹**. V1은 홈 진입(`home`)·오늘의 랭킹 탭(`homeTodayRanking`)·추천작 탭(`homePreferNovellist`)·선호장르 버튼(`homeToPreferButton`)에 Amplitude 이벤트를 심었다.
   - **V2엔 트래킹 코드가 없다.** (분석 인프라 미이식으로 보이나 확인 필요.)
   - 근거: V1 `HomeViewController.swift:53`, `HomeViewModel.swift:233`,`245`,`267` · V2 `HomeViewModel`(트래킹 없음)
 - 🔧 **Improve (신규)** — **홈 진입 시 시스템 푸시 권한 확인**(#193). V1은 `viewDidLoad`에서 로그인 상태면 `NotificationHelper.setRemoteNotification()`으로 **원격 알림(APNs)에 조용히 등록**만 했다.
