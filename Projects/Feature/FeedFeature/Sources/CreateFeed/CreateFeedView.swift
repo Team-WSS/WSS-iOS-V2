@@ -133,6 +133,8 @@ struct CreateFeedView: View {
                         }
                     )
                     .interactiveDismissDisabled()
+                    .presentationBackgroundInteraction(.disabled)
+                    .presentationCornerRadius(16)
                 }
                 .showWSSToast(
                     isPresented: Binding(

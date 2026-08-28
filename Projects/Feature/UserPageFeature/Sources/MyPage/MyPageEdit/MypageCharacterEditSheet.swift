@@ -74,6 +74,7 @@ struct MypageCharacterEditSheet: View {
         .presentationBackground(WSSColor.wssWhite.swiftUIColor)
         .presentationBackgroundInteraction(.disabled)
         .interactiveDismissDisabled()
+        .presentationCornerRadius(16)
         .onAppear {
             viewModel.handle(.load)
         }
