@@ -32,7 +32,7 @@
 | # | 항목 | 모듈 | 심각도 | 상태 | 조치 |
 |---|---|---|---|---|---|
 | 1 | **검색 `isCompleted` 항상 전송** — 미선택도 `false`로 나가 완결작 90% 누락 | Search | ✅ **수정 완료** | 실서버 검증됨(2026-08-28) · **수정 적용·빌드 검증 완료** | `Bool?` 전환 + 매퍼 `.map`(3-1). 매퍼 테스트는 타깃 배선 후속 |
-| 2 | **내 피드 정렬 대소문자 불일치** — V1 `RECENT`/`OLD`(대문자) vs V2 `recent`/`old`(소문자) | Feed | 🟢 **실측 무해 → 대문자 통일 결정** | **본 C2 발견 → 실서버 검증(2026-08-28): 서버가 대소문자 무관 파싱**(`recent`==`RECENT`, `old`==`OLD` 순서 동일) | 회귀 아님. **일관성 위해 대문자 통일**(`DefaultFeedRepository:186`에 `.uppercased()`, CollectionData 패턴 — 사용자 확정) |
+| 2 | **내 피드 정렬 대소문자 불일치** — V1 `RECENT`/`OLD`(대문자) vs V2 `recent`/`old`(소문자) | Feed | 🟢 **실측 무해 → 대문자 통일 결정** | **본 C2 발견 → 실서버 검증(2026-08-28): 서버가 대소문자 무관 파싱**(`recent`==`RECENT`, `old`==`OLD` 순서 동일) | 회귀 아님. **일관성 위해 대문자 통일**(`DefaultFeedRepository:188`에 `.uppercased()`, CollectionData 패턴 — 사용자 확정) |
 | 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | ✅ **정리 확정** | 계약서 0-1 | 사용자 확인(2026-08-28): body refreshToken 불요, 헤더 access 토큰 인증 — 현행 유지 |
 | 4 | **검색 필터 빈 배열 `?key=` 빈값 전송** — `genres`/`platformNames`/`keywordIds`가 non-optional 배열 | Search | 🟢 V1 parity(저위험) | **V1도 `joined(",")`로 빈값 전송** → 서버가 관용(상세검색 실동작이 방증). Library만 `Optional`로 생략 | 회귀 아님. isCompleted 수정 시 `Optional`로 통일하면 자연스러움(선택) |
 | 5 | **플랫폼 서버값 "리디"→"리디북스"** 변경 | Search | ✅ **실측 확정** | 의도됨(사용자 확정·#185) | 실서버 실측 2026-08-28: `platformNames=리디북스` 41,203건 / `리디` 0건 / 무필터 95,086건 — V2 값이 맞음 |
@@ -48,17 +48,17 @@
 
 ### 1.1 "조건부 필터를 non-optional로 둬 항상 전송" 부류 — **`isCompleted` 유일**
 
-모든 `*Query.swift`(15종)를 감사했다. **미선택을 표현해야 하는데 non-optional로 둔 필드는
-`DetailSearchQuery.isCompleted: Bool` 하나뿐**이다. 나머지는 전부 안전하다:
+모든 `*Query.swift`(15종)를 감사했다. **미선택을 표현해야 하는데 non-optional로 뒀던 필드는
+`DetailSearchQuery.isCompleted: Bool` 하나뿐**이었다(→ 3-1에서 `Bool?`로 수정 완료). 나머지는 전부 안전하다:
 
 - `UserLibraryV2Query`(서재) — 전 필터 `Optional`. `isCompleted`도 `Bool?`이고 매퍼가
-  `publicationStatus.map { $0 == .completed }`라 미선택이면 nil→생략. **Search가 고쳐야 할 올바른 모델**이다.
+  `publicationStatus.map { $0 == .completed }`라 미선택이면 nil→생략. **Search가 따라간(수정 후) 올바른 모델**이다.
 - `GetUserFeedsQuery`(내 피드) — `isVisible`/`isUnVisible`/`genreNames`/`sortCriteria` 전부 `Optional`.
 - 그 외(`NormalSearchQuery`·`NotificationQuery`·`GetNovelFeedsQuery`·`GetSosoFeedsQuery`·`BlockUserQuery`·
   `ValidateNicknameQuery`·`CollectionsQuery`·`CollectionDetailQuery`·`SearchKeywordQuery`·`AppMinimumVersionQuery`)
   — 필수 파라미터(`query`/`page`/`size`/`cursor`/`os`)거나 항상 값이 있는 열거형(`feedsOption`=ALL/RECOMMENDED)뿐.
 
-**→ isCompleted 회귀는 이 부류의 예외적 단일 사례이지, 만연한 패턴이 아니다.** (안심 근거이자, 이 하나만 고치면 이 축은 닫힌다.)
+**→ isCompleted 회귀는 이 부류의 예외적 단일 사례이지, 만연한 패턴이 아니다.** (안심 근거이자, 이 하나를 고쳐 이 축은 닫혔다.)
 
 ### 1.2 "`rawValue` 그대로 전송해 서버 토큰과 대소문자가 어긋남" 부류 — **내 피드 정렬**
 
@@ -69,7 +69,7 @@ Data에서 열거형 `rawValue`를 쿼리에 직접 싣는 지점을 전수 확�
 | 읽기상태(서재) `NovelMapper:270` | `value.rawValue.uppercased()` | `WATCHING`… | `WATCHING`… | ✅ 방어적 대문자화 |
 | 컬렉션 정렬 `CollectionDetailQuery:19` | `sortType.rawValue.uppercased()` | (대문자) | (대문자) | ✅ 방어적 대문자화 |
 | 소소피드 옵션 `DefaultFeedRepository:118` | `option.rawValue` | `ALL`/`RECOMMENDED` | `ALL`/`RECOMMENDED`(명시 rawValue) | ✅ parity |
-| **내 피드 정렬 `DefaultFeedRepository:186`** | **`option.sortType.rawValue`** | **`RECENT`/`OLD`** (V1 `SortType.queryText`) | **`recent`/`old`** (`BaseDomain.SortType` case명) | 🟢 **실측 무해**(서버 대소문자 무관) → **대문자 통일 결정** |
+| **내 피드 정렬 `DefaultFeedRepository:188`** | **`option.sortType.rawValue.uppercased()`** | **`RECENT`/`OLD`** (V1 `SortType.queryText`) | **`RECENT`/`OLD`** (`BaseDomain.SortType` case명 소문자를 `.uppercased()`로 통일) | 🟢 **실측 무해**(서버 대소문자 무관) → **대문자 통일 완료** |
 
 `BaseDomain.SortType`은 `case recent`/`case old`에 명시 rawValue가 없어 `"recent"`/`"old"`(소문자)로 직렬화된다.
 V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 보냈다(`UserInfoRepository:121` → `SortType.queryText`).
@@ -80,7 +80,7 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 
 > **결정(사용자 확정)**: 기능 회귀는 아니지만 **일관성을 위해 대문자로 통일**한다 — 타 모듈(읽기상태 `NovelMapper:270`,
 > 컬렉션 정렬 `CollectionDetailQuery:19`)이 이미 `.rawValue.uppercased()` 패턴이고 `CollectionDetailQuery`엔
-> "서버는 `RECENT`/`OLD` 대문자를 받는다" 주석까지 있다. **고침**: `DefaultFeedRepository:186`의
+> "서버는 `RECENT`/`OLD` 대문자를 받는다" 주석까지 있다. **고침**: `DefaultFeedRepository:188`의
 > `option.sortType.rawValue` → `option.sortType.rawValue.uppercased()`(call-site 패턴 통일, enum rawValue는 안 건드림).
 
 ---
@@ -91,8 +91,8 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 
 | 모듈 | ✅가 아닌 매핑(요지) |
 |---|---|
-| **Feed** | `sortCriteria` 대소문자(위 1.2, 🟠) · `isVisible`/`isUnVisible`/`genreNames` V1은 all일 때도 전송·V2는 생략(🔧 의도) · `etc` sentinel(미분류, 🔧 의도) |
-| **Search** | `isCompleted` 항상 전송(🔴 0-1) · 빈 배열 `?key=`(🟡 0-4) · 플랫폼 "리디북스"(✅ 0-5 실측) · 최근검색어/인증정책 ✅ |
+| **Feed** | `sortCriteria` 대소문자(위 1.2, 🟢 대문자 통일 완료) · `isVisible`/`isUnVisible`/`genreNames` V1은 all일 때도 전송·V2는 생략(🔧 의도) · `etc` sentinel(미분류, 🔧 의도) |
+| **Search** | `isCompleted` 미선택 생략(✅ 수정완료 0-1) · 빈 배열 `?key=`(🟡 0-4) · 플랫폼 "리디북스"(✅ 0-5 실측) · 최근검색어/인증정책 ✅ |
 | **Library** | `isCompleted`=`publicationStatus.map{…}`(🔧, **올바른 Optional 모델**) · 그 외 필드 V1과 일치 |
 | **NovelReview** | `keywordIds` 화면 미배선→`[]`(🟢 0-6) · POST→PUT 폴백(🔧 의도) · 나머지 body 동일 |
 | **Notification** | 라우팅 `novelId` 신규·`feedId·novelId 無`→`unknown`(V1은 -1 push 깨짐)(🔧 개선) · 엔드포인트/읽음 전송조건 ✅ |
@@ -111,7 +111,7 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 - **증상**: 연재상태 미선택 시 `isCompleted=false`가 항상 전송 → 서버가 "연재중만"으로 해석해 **완결작 90% 누락**.
 - **실서버 검증(2026-08-28)**: `/novels/filtered`에서 `false`=9,318 · `true`=85,720 · 생략=95,038(=9,318+85,720). **여전히 live**(DB 증가로 수치만 소폭 상승, 관계는 동일). 서버는 bool도 대소문자 무관(`False`=false).
 - **고친 2곳 (적용 완료 — SearchData·FeedData `xcodebuild` exit 0 검증)**:
-  - `DetailSearchQuery.swift:15` — `let isCompleted: Bool` → `let isCompleted: Bool?`
+  - `DetailSearchQuery.swift:17` — `let isCompleted: Bool` → `let isCompleted: Bool?`
   - `SearchMapper.swift:63` — `isCompleted: filter.publicationStatus == .completed` → `isCompleted: filter.publicationStatus.map { $0 == .completed }`(= `NovelMapper.myLibraryV2Query`와 동일 방식)
 - **원리**: `SearchFilter.publicationStatus`는 이미 `NovelPublicationStatus?`(nil=미선택). `== .completed`는 nil을 false로 눌러 항상 Bool을 만들지만, `.map`은 nil을 nil로 보존한다. `Bool?` nil → `QueryItemConvertible`이 NSNull로 자동 생략 → 파라미터 안 나감 → 전체(95,038) 반환.
 - **남은 후속**: 매퍼 회귀 테스트(미선택→nil / 완결→true / 연재중→false)는 SearchData에 `.tests` 타깃이 없어 배선 후 추가(SearchData/CLAUDE.md에 명시).
@@ -119,7 +119,7 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 ### 3-2 🟢 내 피드 정렬 대소문자 (실측 무해 → 대문자 통일 결정)
 - **실서버 검증(2026-08-28, userId 10026 피드 5건)**: `sortCriteria=RECENT`와 `=recent`가 **동일 순서**, `OLD`와 `old`도 **동일 순서**, 두 값은 서로 반대 순서 → **서버 대소문자 무관 파싱 확정**. V2 소문자 정상 동작 = **회귀 아님.**
 - **결정(사용자 확정)**: 기능 문제는 없지만 타 모듈 패턴(`.rawValue.uppercased()`)과 **일관성을 위해 대문자로 통일**.
-- **위치(고칠 1곳)**: `DefaultFeedRepository.swift:186` — `sortCriteria: option.sortType.rawValue` → `option.sortType.rawValue.uppercased()`(call-site 패턴, `CollectionDetailQuery:19`와 동일 — enum rawValue는 안 건드려 다른 소비처 무영향).
+- **위치(고친 1곳)**: `DefaultFeedRepository.swift:188` — `sortCriteria: option.sortType.rawValue` → `option.sortType.rawValue.uppercased()`(call-site 패턴, `CollectionDetailQuery:19`와 동일 — enum rawValue는 안 건드려 다른 소비처 무영향).
 
 ### 3-3 ✅ 탈퇴 body `refreshToken` 제거 (확정 2026-08-28 — 불요)
 - **위치**: `WithdrawRequest = { reason }`(V2) vs V1 `{ reason, refreshToken }`. 경로 동일 `/auth/withdraw`, 인증은 access 헤더.

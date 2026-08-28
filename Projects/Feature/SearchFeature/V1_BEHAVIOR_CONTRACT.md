@@ -237,8 +237,8 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — 페이지 기반 무한스크롤(page+1), size 20. 커서 아님.
   - V2: `nextPage`, `size: 20`. V1 `currentPage+1`, `searchSize=20`.
   - 근거: V1 `DetailSearchResultViewModel.swift:118-146`, `SearchRepository.swift:29` · V2 `DetailSearchResultViewModel.swift:119-136`, `SearchMapper.swift:68`
-- 🔨 **회귀 확정→수정** (2026-08-28 실서버 검증: false=연재중만 9,319·true=완결 85,708·생략=전체 95,027 → 미선택 시 완결작 90% 누락) — **연재상태 미선택 시 `isCompleted` 전송 여부**: V1은 `isCompleted`가 nil이면 쿼리에서 **생략**(→ 전체 연재상태). V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이고 `QueryItemConvertible`이 Bool을 항상 직렬화하므로, 미선택도 `isCompleted=false`로 나간다 → "연재중만" 필터와 구별 불가.
-  - 근거: V1 `SearchService.swift:140-142`(`if let`으로 조건부 append) · V2 `SearchMapper.swift:63`(`filter.publicationStatus == .completed`), `DetailSearchQuery.swift:16`, `QueryParameters.swift:45-48`(Bool 항상 전송)
+- 🔨 **회귀 확정→수정 완료** (2026-08-28 실서버 검증: false=연재중만 9,318·true=완결 85,720·생략=전체 95,038 → 미선택 시 완결작 90% 누락) — **연재상태 미선택 시 `isCompleted` 전송 여부**: V1은 `isCompleted`가 nil이면 쿼리에서 **생략**(→ 전체 연재상태). **(수정 전)** V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이고 `QueryItemConvertible`이 Bool을 항상 직렬화해, 미선택도 `isCompleted=false`로 나갔다 → "연재중만" 필터와 구별 불가. **(수정 후)** `Bool?` 전환 + 매퍼 `.map`으로 미선택이면 생략.
+  - 근거: V1 `SearchService.swift:140-142`(`if let`으로 조건부 append) · V2 (수정 전) `SearchMapper.swift:63` `== .completed`·`DetailSearchQuery.swift:17` `Bool` → (수정 후) `.map`·`Bool?`, `QueryParameters.swift:45-48`(Bool 항상 전송)
   - **판정 근거**: 실서버 검증으로 서버가 `isCompleted=false`를 "연재중만"으로 해석함이 확인됐다(위 수치) → 회귀 확정. 수정 내역·빌드 검증은 [C2 3-1](../../../docs/V1_PARAM_MAPPING_C2.md).
 
 ### 4.3 빈 화면·로딩·에러
