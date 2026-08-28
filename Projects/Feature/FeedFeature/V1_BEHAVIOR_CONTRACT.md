@@ -350,7 +350,7 @@ V1 `UserInfoRepository.getUserFeed` → `UserFeedListQuery`. V2 `DefaultFeedRepo
 |---|---|---|---|
 | `lastFeedId` | 커서(첫 페이지 0) | 커서(첫 페이지 `FeedID(0)`) | ✅ Keep |
 | `size` | `size ?? 20` | `20` | ✅ Keep |
-| `sortCriteria` | `SortType.queryText` = **`RECENT`/`OLD`**(대문자) | `option.sortType.rawValue` = **`recent`/`old`**(소문자, `BaseDomain.SortType` case명) | 🟠 **대소문자 불일치**(C2 2026-08-28) — 타 모듈은 `.uppercased()`로 방어하나 내 피드만 raw. 서버 대소문자 민감 시 정렬 무효(회귀). → [C2 §1.2](../../../docs/V1_PARAM_MAPPING_C2.md), `docs/TODO.md` §9 |
+| `sortCriteria` | `SortType.queryText` = **`RECENT`/`OLD`**(대문자) | `option.sortType.rawValue` = **`recent`/`old`**(소문자) | 🟢 **실측 무해**(C2 2026-08-28, 서버 대소문자 무관 확정 — `recent`==`RECENT`) → **대문자 통일 결정**(`DefaultFeedRepository:186` `.uppercased()`, CollectionData 패턴). [C2 §3-2](../../../docs/V1_PARAM_MAPPING_C2.md) |
 | `isVisible` | **항상** `visibilityOptions.contains(.public)` (Bool) | `visibilityFlags`(all이면 **nil**) | 🔧 Improve — V1은 all일 때도 두 Bool을 실어 보냄, V2는 all이면 둘 다 생략 |
 | `isUnVisible` | **항상** `visibilityOptions.contains(.private)` (Bool) | `visibilityFlags`(all이면 **nil**) | 🔧 Improve (동상) |
 | `genreNames` | `genres.map(rawValue)` **항상**(콤마 join, 기본 10개 전부) | `genres.isEmpty ? nil : genres`(빈 배열 = 무필터로 생략) + 미분류면 `"etc"` 추가 | 🔧 Improve — §2.2 |
