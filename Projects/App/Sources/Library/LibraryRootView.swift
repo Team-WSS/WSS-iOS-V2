@@ -19,8 +19,9 @@ import NovelDomain
 import SearchDomain
 import SettingFeature
 
-/// "서재" 탭 콘텐츠. 로그인한 본인 서재(`makeMyLibraryView`)만 붙인다 — 타유저 서재(`makeUserLibraryView`)는
-/// 유저 프로필 화면에서 push되는 용도라 여기서 조립할 대상이 아니다. 작품 상세(`NovelDetailAssembly`)·
+/// "서재" 탭 콘텐츠. 로그인한 본인 서재(`makeMyLibraryView`)를 붙이고, 이 탭에서 push되는 타유저
+/// 프로필의 서재 블록 탭 시 그 유저의 서재(`makeUserLibraryView`)까지 다른 3탭과 동일하게 push한다
+/// (#197 후속, 2026-08-28 — 4탭 전부 `UserPageAssembly.onLibraryTapped`를 연결하기로 확정). 작품 상세(`NovelDetailAssembly`)·
 /// 일반 검색(`SearchAssembly`, "웹소설 찾기"·"작품 등록" 버튼 공용 — 서재는 별도 작품 등록 화면이 없고
 /// 검색해서 작품을 찾아 상세에서 등록하는 흐름, 사용자 확정)·알림 설정(`SettingFeatureFactory.makeNotificationSettingView`,
 /// 서재 알림 관리는 설정 목록 전체가 아니라 이 화면으로 바로 진입한다), 그리고 작품 상세에서 열리는
@@ -35,6 +36,7 @@ struct LibraryRootView: View {
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
+        case userLibrary(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         /// 타유저 프로필의 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세(`CollectionDetailAssembly`).
@@ -97,12 +99,15 @@ struct LibraryRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
+                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
                             onFeedListTapped: { userID, nickname, profileImage in
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.collectionList(userID)) }
                         )
+                    case .userLibrary(let userID):
+                        userLibraryView(userID)
                     case .userFeedList(let userID, let nickname, let profileImage):
                         UserPageAssembly.makeFeedListView(
                             userID: userID,
@@ -172,6 +177,23 @@ private extension LibraryRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}
+
+// MARK: - 타유저 서재 (타유저 프로필의 서재 블록 탭)
+
+private extension LibraryRootView {
+    func userLibraryView(_ userID: UserID) -> some View {
+        LibraryFeatureFactory.makeUserLibraryView(
+            userID: userID,
+            loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
+                novelRepository: dependencies.novelRepository,
+                keywordRepository: dependencies.keywordRepository
+            ),
+            logger: dependencies.logger,
+            onNovelSelected: { path.append(Destination.novel($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

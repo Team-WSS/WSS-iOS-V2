@@ -10,6 +10,7 @@ import SwiftUI
 
 import CollectionFeature
 import FeedFeature
+import LibraryFeature
 import SettingFeature
 import UserPageFeature
 import BaseDomain
@@ -37,8 +38,10 @@ import WSSComponent
 /// App으로 올렸다**(#201, 사용자 명시 재확정) — 이 캐릭터 시트 예외를 새 화면에 확대 적용하는 근거로
 /// 쓰지 말 것. 두 화면은 "이번엔 예외를 두지 않는다"는 별도 지시로 App 소유가 됐다.
 ///
-/// 우측 상단 톱니바퀴 → 설정(`SettingFeatureFactory.makeView`)까지 push한다. 서재 블록 탭은 push가 아니라
-/// **탭 전환**이라(`MainTabView.selectedTab`) `onLibraryTapped` 콜백으로 위로 흘려보낸다.
+/// 우측 상단 톱니바퀴 → 설정(`SettingFeatureFactory.makeView`)까지 push한다. **내** 서재 블록 탭은 push가
+/// 아니라 **탭 전환**이라(`MainTabView.selectedTab`) 이 화면이 받는 `onLibraryTapped` 프로퍼티(콜백)로
+/// 위로 흘려보낸다 — 타유저 프로필 안의 서재 블록(`UserPageAssembly.makeView`가 받는 같은 이름의
+/// 파라미터)과는 이름만 같을 뿐 별개다. 그쪽은 push(`Destination.userLibrary`, 다른 3탭과 동일 패턴).
 ///
 /// **컬렉션(#201)**: "컬렉션 N개" 행 탭 → 컬렉션 목록(`collectionListView`)까지 push하고, 그 안의 생성·
 /// 수정·상세·"작품 추가"/"서재에서 추가"까지 전부 이 루트가 조립한다(`CollectionFeatureFactory`는
@@ -87,6 +90,7 @@ struct MypageRootView: View {
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
+        case userLibrary(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`, "내
@@ -203,12 +207,15 @@ struct MypageRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
+                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
                             onFeedListTapped: { userID, nickname, profileImage in
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.userCollectionList(userID)) }
                         )
+                    case .userLibrary(let userID):
+                        userLibraryView(userID)
                     case .userFeedList(let userID, let nickname, let profileImage):
                         UserPageAssembly.makeFeedListView(
                             userID: userID,
@@ -499,6 +506,23 @@ private extension MypageRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}
+
+// MARK: - 타유저 서재 (타유저 프로필의 서재 블록 탭)
+
+private extension MypageRootView {
+    func userLibraryView(_ userID: UserID) -> some View {
+        LibraryFeatureFactory.makeUserLibraryView(
+            userID: userID,
+            loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
+                novelRepository: dependencies.novelRepository,
+                keywordRepository: dependencies.keywordRepository
+            ),
+            logger: dependencies.logger,
+            onNovelSelected: { path.append(Destination.novel($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

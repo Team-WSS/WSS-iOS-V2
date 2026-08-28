@@ -14,6 +14,7 @@ import CollectionDomain
 import FeedDomain
 import FeedFeature
 import HomeFeature
+import LibraryFeature
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
@@ -27,8 +28,8 @@ import UserPageFeature
 import WSSComponent
 
 /// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFeatureFactory`가 반환하는 화면을 그대로 조립한다.
-/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필·알림 목록/상세·
-/// 상세탐색 필터/결과까지 실제로 push한다.
+/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필·그 프로필의 타유저
+/// 서재·알림 목록/상세·상세탐색 필터/결과까지 실제로 push한다.
 struct HomeRootView: View {
 
     /// `NovelID`/`FeedID`가 둘 다 `IDWrapper<Int>`라 타입이 같아 `NavigationPath`에 그냥 섞어 넣으면
@@ -41,6 +42,7 @@ struct HomeRootView: View {
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
+        case userLibrary(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         /// 타유저 프로필의 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세(`CollectionDetailAssembly`).
@@ -123,12 +125,15 @@ struct HomeRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
+                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
                             onFeedListTapped: { userID, nickname, profileImage in
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.collectionList(userID)) }
                         )
+                    case .userLibrary(let userID):
+                        userLibraryView(userID)
                     case .userFeedList(let userID, let nickname, let profileImage):
                         UserPageAssembly.makeFeedListView(
                             userID: userID,
@@ -213,6 +218,23 @@ private extension HomeRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}
+
+// MARK: - 타유저 서재 (타유저 프로필의 서재 블록 탭)
+
+private extension HomeRootView {
+    func userLibraryView(_ userID: UserID) -> some View {
+        LibraryFeatureFactory.makeUserLibraryView(
+            userID: userID,
+            loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
+                novelRepository: dependencies.novelRepository,
+                keywordRepository: dependencies.keywordRepository
+            ),
+            logger: dependencies.logger,
+            onNovelSelected: { path.append(Destination.novel($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

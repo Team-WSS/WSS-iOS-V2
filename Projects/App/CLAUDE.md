@@ -29,7 +29,8 @@ Sources/
 │                                          # KeywordTabContentBuilder로 감싸 조립. 지금은 홈 탭에만
 │                                          # 있는 진입점이라 SearchAssembly로 안 뽑음)까지(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
-│                                          # SearchAssembly/MypageFactory) 실제 push.
+│                                          # LibraryFactory.makeUserLibraryView(타유저 서재)/SearchAssembly/
+│                                          # MypageFactory) 실제 push.
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
 │                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 전체 피드 목록·
 │                                          # 그 프로필의 타유저 서재·작가 이름 검색(makeFeedDetailView/
@@ -37,7 +38,8 @@ Sources/
 │                                          # UserPageAssembly/LibraryFactory.makeUserLibraryView/
 │                                          # SearchAssembly)까지 push.
 ├── Library/ └── LibraryRootView.swift   # "서재" 탭. LibraryFactory.makeMyLibraryView 조립 + 작품 상세·
-│                                          # 작품 평가·피드 작성·유저 프로필·전체 피드 목록·일반 검색·
+│                                          # 작품 평가·피드 작성·유저 프로필·그 타유저 서재(makeUserLibraryView,
+│                                          # #197)·전체 피드 목록·일반 검색·
 │                                          # 알림 설정+완결/휴재복귀 알림 목록(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
 │                                          # SearchAssembly/SettingFeatureFactory의 makeNotificationSettingView·
@@ -49,9 +51,11 @@ Sources/
 │                                          # 프로필공개설정·알림설정·완결/휴재복귀 알림목록, #201)·
 │                                          # 컬렉션 목록/생성/수정/상세/작품 추가/서재에서 추가
 │                                          # (CollectionFeatureFactory, #201 — 컬렉션 미리보기 개별
-│                                          # 항목 탭도 그 컬렉션 상세로 직행)·타유저 전체 피드 목록까지
-│                                          # push, 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로
-│                                          # 위임(모듈명과 Factory 이름이 다르니 혼동 주의).
+│                                          # 항목 탭도 그 컬렉션 상세로 직행)·타유저 전체 피드 목록·
+│                                          # 그 타유저 서재(makeUserLibraryView, #197)까지 push. **내**
+│                                          # 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로 위임
+│                                          # (모듈명과 Factory 이름이 다르니 혼동 주의) — 타유저 프로필
+│                                          # 안의 서재 블록(push)과는 별개.
 ├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
 │                                             # 3탭이 공유(#197).
