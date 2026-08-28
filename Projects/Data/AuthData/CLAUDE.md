@@ -17,3 +17,4 @@
 
 - ⚠️ **`makeSessionRefresher`에는 refresher가 붙지 않은 client를 주입**해야 한다 (Factory 주석). 안 그러면 토큰 갱신 요청이 다시 갱신 훅을 타는 **무한 재귀**.
 - ⚠️ 로그인 에러는 `RepositoryError`가 아니라 **`AuthError`** 로 변환 (`NetworkingError.toAuthError()`): 4xx→`invalidCredential`, 5xx→`providerUnavailable`, decoding→`invalidData`. 일반 Repository 에러 변환과 다름.
+- ⚠️ **Kakao 로그인의 accessToken은 body가 아니라 `Kakao-Access-Token` 커스텀 헤더로 보내야 한다**(서버 스펙, `KakaoLoginRequestHeader.headers`에 매핑 위치). `AuthEndpoint.additionalHeaders`가 한동안 전 case `nil`로 고정돼 있어 이 헤더가 실제로 전송된 적이 없었다(#196에서 실측 — 항상 401 `AUTH-001`). 새 Endpoint case에 커스텀 헤더가 필요하면 `additionalHeaders`의 `switch self`에 분기를 반드시 추가할 것 — 컴파일은 되니 빠뜨려도 조용히 통과한다.

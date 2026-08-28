@@ -97,6 +97,7 @@ struct OnboardingIntroView: View {
                 Spacer().frame(height: 67)
             }
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
         .disabled(viewModel.state.isLoggingIn)
     }
 }

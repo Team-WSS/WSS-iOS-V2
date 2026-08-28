@@ -27,4 +27,5 @@ public enum NetworkingConfig {
     public static let baseURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.baseURL) as? String ?? ""
     public static let testApiKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.testToken) as? String ?? ""
     public static let bucketURL: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.bucketURL) as? String ?? ""
+    public static let kakaoAppKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.kakaoAppKey) as? String ?? ""
 }
