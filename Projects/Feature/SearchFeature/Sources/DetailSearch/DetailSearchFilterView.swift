@@ -286,7 +286,7 @@ private extension DetailSearchFilterView {
     /// 주석 참고).
     var ctaSection: some View {
         HStack(spacing: 0) {
-            Button {
+            WSSResetButton {
                 switch selectedTab {
                 case .info:
                     viewModel.handle(.clearInfoFilters)
@@ -296,25 +296,7 @@ private extension DetailSearchFilterView {
                     // 반영 안 된다 — 정체성을 바꿔 강제로 다시 시딩한다(위 keywordContentResetToken 주석 참고).
                     keywordContentResetToken = UUID()
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    WSSImage.icReset.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 14, height: 14)
-                    Text("초기화")
-                        .applyWSSFont(.title2, color: .wssGray200)
-                }
-                .frame(width: 95, height: 53)
-                .background(Color.wssWhite)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.wssGray80, lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
 
             Spacer().frame(width: 10)
 

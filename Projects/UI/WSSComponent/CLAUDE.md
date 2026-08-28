@@ -143,3 +143,10 @@
   부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
   이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
   확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).
+- **`WSSResetButton`(`Sources/Button/`)는 필터류 화면 하단 액션바의 "초기화" 보조 버튼이다**(2026-08,
+  원본은 `SearchFeature`의 상세탐색 필터 + `LibraryFeature`의 서재 필터 시트가 각자 손으로 복제하던
+  코드 — 아이콘(`icReset`)·문구·크기(95×53)·색까지 완전히 동일했다) — `action: () -> Void`만 받고
+  라벨·아이콘·스타일은 전부 고정이다. **무엇을 초기화할지는 컴포넌트가 모른다** — 상세탐색은 "보고
+  있는 탭만"(`selectedTab` 분기), 서재 필터는 "시트 전체"(`clearAll`)로 서로 다른 범위를 `action`
+  클로저 안에서 각자 판단한다. 항상 `WSSCTAButton`과 나란히 쓰이며 그 배치(`HStack` +
+  `Spacer().frame(width: 10)`)는 호출부 몫이다.
