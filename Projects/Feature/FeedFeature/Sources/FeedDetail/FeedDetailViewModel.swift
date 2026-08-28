@@ -40,6 +40,10 @@ final class FeedDetailViewModel {
         /// 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현한다.
         /// 댓글 조회의 동종 실패는 화면 전체를 덮지 않고 로그만 남긴다(부차 콘텐츠).
         var detailLoadFailed: Bool = false
+        /// 피드/댓글 작성자 프로필 탭이 탈퇴 유저(`Author.accessibleUserId == nil`)를 가리킬 때 뜨는
+        /// 안내 토스트(`WSSToastType.unknownUser`) — 둘 다 같은 화면·같은 의미라 상태를 공유한다
+        /// (`SosoFeedViewModel.isUnavailableUserToastPresented`와 동일 패턴).
+        var isUnavailableUserToastPresented = false
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -150,6 +154,11 @@ final class FeedDetailViewModel {
         case presentAlert(AlertType)
         case confirmAlert
         case dismissAlert
+
+        /// View가 `Author.accessibleUserId == nil`(탈퇴 유저)로 판정해서 부른다 — 피드 헤더 프로필,
+        /// 댓글 프로필 둘 다 같은 액션을 쓴다.
+        case userProfileUnavailableTapped
+        case dismissUnavailableUserToast
     }
 
     public func handle(_ action: Action) async {
@@ -193,6 +202,12 @@ final class FeedDetailViewModel {
 
         case .dismissAlert:
             state.alert = nil
+
+        case .userProfileUnavailableTapped:
+            state.isUnavailableUserToastPresented = true
+
+        case .dismissUnavailableUserToast:
+            state.isUnavailableUserToastPresented = false
         }
     }
 

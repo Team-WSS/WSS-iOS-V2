@@ -40,6 +40,20 @@
 - 피드 셀 좋아요 버튼은 `feedRow`에서 `WSSFeadView`의 `likeButtonTapped`로 `.toggleLike(feed.feedId)`를 발화한다 — 낙관 반영/실패 롤백은 `SosoFeedViewModel.toggleLike`(엔티티 `TotalFeed.toggleLike()` 사용) 참고.
 - **셀 탭(좋아요·프로필·연결 작품·threedots 등 안쪽 인터랙션 제외) → 피드 상세 진입은 `onFeedTapped: (FeedID) -> Void`**(기본값 `{ _ in }`, `makeSosoFeedView`/`SosoFeedView` 양쪽에 있음, #196에서 추가) — `FeedListSection`의 `.onTapGesture`가 호출한다. 프로필 탭(`onUserProfileTapped: (UserID) -> Void`, `Author.userId`가 nil이면 호출 안 함)·연결 작품 배너 탭(`onNovelTapped: (NovelID) -> Void`)도 같은 방식(파라미터 + `{ _ in }` 기본값)으로 뚫려 있다(#196).
   - **내 글이면 프로필 탭 자체가 비활성화된다** — `feedRow`가 `WSSFeadView`에 `isProfileTappable: !feed.isMyFeed`를 넘긴다(내 프로필로 "이동"할 곳이 없어서, #196). 탭이 죽은 영역이 되는 게 아니라 그대로 행의 나머지 영역과 동일하게 피드 상세 진입으로 흘러간다 — 구현 방식은 `WSSComponent/CLAUDE.md`의 `isProfileTappable` 항목 참고. 소소피드 탭에 내 글이 섞여 나오는 경우(전체글/추천글)도 `feed.isMyFeed` 기준이라 탭과 무관하게 항상 맞게 적용된다.
+  - ⚠️ **`FeedDetailView`(피드 상세, 목록과는 별개 화면)의 프로필 탭은 #197까지 `print`만 찍는 죽은 버튼이었다** — `makeSosoFeedView`가 처음부터 `onUserProfileTapped`를 가졌던 것과 달리, `makeFeedDetailView`엔 그 파라미터 자체가 없었다(사용자 리포트로 발견, 2026-08-28). 이제 `FeedDetailView`/`makeFeedDetailView` 둘 다 `onUserProfileTapped: (UserID) -> Void = { _ in }`를 받고, `viewModel.isMyFeed`로 `isProfileTappable`을 계산해 `WSSFeadHeaderView`에 넘긴다 — 목록 화면과 동일한 계약이 됐다. 이 화면에 새 콜백형 진입점을 추가할 때 "Factory에 파라미터가 있다고 View까지 실제로 쓰는 건 아니다"를 전제로 짝을 맞춰 확인할 것.
+  - ⚠️ **탈퇴 유저(`Author.userId == -1`) 판정은 `guard let userId = author.userId`(nil 체크)가 아니라
+    `BaseDomain.Author.accessibleUserId`를 쓴다**(#197 후속, 2026-08-28) — 매퍼가 서버 `Int`를 항상
+    `UserID`로 감싸 `userId`가 nil이 될 일이 없어, `SosoFeedView`/`FeedDetailView` 둘 다 nil 체크만
+    하던 시절엔 죽은 가드였다(실제 탈퇴 유저는 `userId == -1`로 통과해버림). 이제 두 화면(+댓글) 모두
+    `accessibleUserId`가 nil이면 이동 대신 `WSSToastType.unknownUser`("웹소소를 떠난 유저예요") 토스트를
+    띄운다 — `SosoFeedViewModel`/`FeedDetailViewModel`에 각각 `isUnavailableUserToastPresented` +
+    `userProfileUnavailableTapped`/`dismissUnavailableUserToast` 액션 쌍이 있다. `-1` 리터럴을 View에서
+    다시 비교하지 말 것 — 센티널은 `Author` 안에 캡슐화돼 있다(`BaseDomain/CLAUDE.md` 참고).
+- **`CommentRow`(`Sources/Comment/`)는 `userID: Int` 저장 프로퍼티 대신 `profileImageTapped: () -> Void`
+  콜백만 받는다**(#197 후속, 2026-08-28 — 원래 `userID`는 표시에 안 쓰이고 죽은 `print` 안에서만 쓰였다).
+  탈퇴 유저 판정(`Author.accessibleUserId`)은 호출자(`FeedDetailView`)가 하고 이 컴포넌트는 Domain 타입을
+  모른다. **차단(blocked)/숨김(hidden) 댓글은 프로필 탭 자체를 비활성화한다**(내 댓글과 동일 취급, 사용자
+  확정) — 두 상태에선 닉네임 자체가 "차단한 유저"로 가려져 나오는데 탭만 살아있으면 어색해서다.
   - ⚠️ **행 컨테이너는 `simultaneousGesture`가 아니라 평범한 `onTapGesture`다.** 프로필(`WSSFeadHeaderView`)·좋아요(`WSSFeedReactView`)가 안쪽 `Button`으로 승격되기 전엔 그 둘이 `onTapGesture`라 행의 "피드 상세 진입"을 `simultaneousGesture`로 걸 수밖에 없었는데, `simultaneousGesture`는 조상·자손을 **동시에** 발화시켜(하나가 이기는 구조가 아님) 프로필/좋아요를 눌러도 피드 상세로 같이 넘어가는 버그가 있었다(그 자리가 원래 no-op placeholder라 안 드러났다가 실제 콜백을 연결하며 드러남). 지금은 셀 안 서브 액션이 전부 진짜 `Button`이라 `Button`이 조상의 평범한 `onTapGesture`보다 우선한다 — 새 서브 액션을 이 화면에 추가할 땐 `onTapGesture`가 아니라 `Button`으로 만들 것(자세한 이유는 `WSSComponent/CLAUDE.md` 참고).
 - **우상단 연필 아이콘 → 피드 작성 진입은 `onCreateFeedTapped: () -> Void`**(기본값 `{}`, `makeSosoFeedView`/`SosoFeedView` 양쪽, #196에서 추가) — `FeedTabSection`의 `Button(action: onCreateFeedTapped)`가 호출한다. 호출자(App)가 `makeCreateFeedView`를 조립해 push/present한다.
 - **`FeedFeatureFactory.makeCreateFeedView(connectedNovel: ConnectedNovel? = nil)`**(#197) — 작품 상세의

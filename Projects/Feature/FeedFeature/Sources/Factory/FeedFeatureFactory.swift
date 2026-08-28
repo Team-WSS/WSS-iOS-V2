@@ -88,7 +88,8 @@ public enum FeedFeatureFactory {
         loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in }
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in }
     ) -> some View {
         FeedDetailView(
             viewModel: FeedDetailViewModel(
@@ -109,7 +110,8 @@ public enum FeedFeatureFactory {
                 logger: logger
             ),
             onNovelTapped: onNovelTapped,
-            onEditFeedTapped: onEditFeedTapped
+            onEditFeedTapped: onEditFeedTapped,
+            onUserProfileTapped: onUserProfileTapped
         )
     }
 
