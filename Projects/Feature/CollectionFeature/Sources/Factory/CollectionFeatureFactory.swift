@@ -39,6 +39,7 @@ public enum CollectionFeatureFactory {
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = CreateCollectionViewModel(
+            mode: .create,
             createCollectionUseCase: createCollectionUseCase,
             logger: logger
         )
@@ -58,6 +59,11 @@ public enum CollectionFeatureFactory {
     ///   - createCollectionUseCase/searchNovelUseCase/loadMyLibraryUseCase: "내 컬렉션" 탭의 "컬렉션
     ///     만들기"가 로컬 push하는 `CreateCollectionView`(및 그 하위 "작품 추가"/"서재에서 추가")가
     ///     필요로 하는 UseCase — `makeCreateCollectionView`와 동일하게 그대로 관통시킨다.
+    ///   - loadCollectionDetailUseCase/collectionLikeUseCase/deleteCollectionUseCase/updateCollectionUseCase:
+    ///     카드 탭이 로컬 push하는 `CollectionDetailView`(및 그 안의 "컬렉션 수정")가 필요로 하는
+    ///     UseCase — 위 3종과 같은 이유로 그대로 관통시킨다.
+    ///   - onNovelTapped: `CollectionDetailView`의 작품 그리드 셀 탭 → 작품 상세 진입 콜백. App이 아직
+    ///     실제로 연결하지 않았다(`docs/TODO.md` 참고) — 그대로 관통만 시킨다.
     @MainActor
     public static func makeCollectionListView(
         userID: UserID,
@@ -66,8 +72,13 @@ public enum CollectionFeatureFactory {
         createCollectionUseCase: CreateCollectionUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
+        collectionLikeUseCase: CollectionLikeUseCase,
+        deleteCollectionUseCase: DeleteCollectionUseCase,
+        updateCollectionUseCase: UpdateCollectionUseCase,
         logger: Logger? = nil,
-        onAuthenticationRequired: @escaping () -> Void
+        onAuthenticationRequired: @escaping () -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void
     ) -> some View {
         let viewModel = CollectionListViewModel(
             userID: userID,
@@ -80,8 +91,53 @@ public enum CollectionFeatureFactory {
             createCollectionUseCase: createCollectionUseCase,
             searchNovelUseCase: searchNovelUseCase,
             loadMyLibraryUseCase: loadMyLibraryUseCase,
+            loadCollectionDetailUseCase: loadCollectionDetailUseCase,
+            collectionLikeUseCase: collectionLikeUseCase,
+            deleteCollectionUseCase: deleteCollectionUseCase,
+            updateCollectionUseCase: updateCollectionUseCase,
             logger: logger,
-            onAuthenticationRequired: onAuthenticationRequired
+            onAuthenticationRequired: onAuthenticationRequired,
+            onNovelTapped: onNovelTapped
+        )
+    }
+
+    /// - Parameters:
+    ///   - id: 조회할 컬렉션. `CollectionListView`의 카드 탭에서 넘어온다.
+    ///   - deleteCollectionUseCase: 우상단 더보기(소유자에게만 노출)의 "컬렉션 삭제".
+    ///   - updateCollectionUseCase/searchNovelUseCase/loadMyLibraryUseCase: 더보기의 "컬렉션 수정"이
+    ///     로컬 push하는 `CreateCollectionView`(수정 모드)와 그 하위 "작품 추가"/"서재에서 추가"가
+    ///     필요로 하는 UseCase — `makeCreateCollectionView`와 동일한 의존성을 그대로 관통시킨다.
+    ///   - onAuthenticationRequired: 수정 화면 진입 경로에서 인증이 만료될 수 있어 함께 받는다.
+    ///   - onNovelTapped: 작품 그리드 셀 탭 → 작품 상세(`NovelDetailFeature`) 진입 콜백. Feature 모듈끼리
+    ///     서로 import 못 해 이 화면이 직접 만들 수 없다 — 실제 화면 전환은 호출자(App)가 수행한다.
+    ///     ⚠️ App이 아직 이 콜백을 실제로 연결하지 않았다(`docs/TODO.md` 참고).
+    @MainActor
+    public static func makeCollectionDetailView(
+        id: CollectionID,
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
+        collectionLikeUseCase: CollectionLikeUseCase,
+        deleteCollectionUseCase: DeleteCollectionUseCase,
+        updateCollectionUseCase: UpdateCollectionUseCase,
+        searchNovelUseCase: SearchNovelUseCase,
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        logger: Logger? = nil,
+        onAuthenticationRequired: @escaping () -> Void,
+        onNovelTapped: @escaping (NovelID) -> Void
+    ) -> some View {
+        CollectionDetailView(
+            viewModel: CollectionDetailViewModel(
+                id: id,
+                loadCollectionDetailUseCase: loadCollectionDetailUseCase,
+                collectionLikeUseCase: collectionLikeUseCase,
+                deleteCollectionUseCase: deleteCollectionUseCase,
+                logger: logger
+            ),
+            updateCollectionUseCase: updateCollectionUseCase,
+            searchNovelUseCase: searchNovelUseCase,
+            loadMyLibraryUseCase: loadMyLibraryUseCase,
+            logger: logger,
+            onAuthenticationRequired: onAuthenticationRequired,
+            onNovelTapped: onNovelTapped
         )
     }
 }

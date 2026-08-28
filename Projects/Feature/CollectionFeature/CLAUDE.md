@@ -9,14 +9,24 @@
   아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
   `WSSComponent`, `Logger`
 - 진입점:
-  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`
-  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름)
+  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:logger:onAuthenticationRequired:)`
+  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`(#201, 컬렉션 상세) — "컬렉션 수정"이 로컬 push하는 `CreateCollectionView`(수정 모드)까지 필요로 하는 의존성이라 `updateCollectionUseCase`/`searchNovelUseCase`/`loadMyLibraryUseCase`/`onAuthenticationRequired`를 함께 받는다.
+  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름. "컬렉션 수정" 자체는 별도 Factory
+  진입점이 없다 — `CreateCollectionView`를 수정 모드로 재사용하는 로컬 push라 `CollectionSearchNovelView`
+  와 동일 위상.)
 
 ## 핵심 시나리오
 
-- **컬렉션 생성만** — 수정(edit)은 이번 범위 밖. `CreateCollectionViewModel`은 항상 빈 `CollectionDraft()`로
-  시작하고(로드 없음), 완료 시 `CreateCollectionUseCase`로 제출 후 자기완결 dismiss.
+- **`CreateCollectionView`/`CreateCollectionViewModel`은 생성/수정 겸용이다**(`Mode { case create; case
+  edit(CollectionID) }`, `FeedFeature.CreateFeedViewModel`과 동일 패턴). 생성은 빈 `CollectionDraft()`로
+  시작(로드 없음)하고 `CreateCollectionUseCase`로 제출, 수정은 `CollectionDraft(from: detail)`로 원본을
+  편집 가능한 초안으로 되돌려 시작하고 `UpdateCollectionUseCase`로 제출 — 둘 다 성공 시 자기완결
+  dismiss(공통 `submitCollection()`이 `mode`로 분기). 폼 UI·검증(`isSubmittable`)·"작품 추가" 2단계
+  pop·뒤로가기 확인 알럿(`baselineDraft` 비교)은 두 모드가 완전히 공유한다.
+  ⚠️ **수정 진입 시 `initialNovelDisplayInfo`(원본 `detail.novels`를 id로 인덱싱한 딕셔너리)도 함께
+  넘겨야 한다** — 그리드는 `draft.novelIDs`가 아니라 이 캐시를 보고 그리므로, 안 채우면 "N/100" 개수
+  표시는 맞는데 그리드 셀이 하나도 안 그려진다(실측, `novelListSection` 참고).
 - **작품 추가/제거는 `CollectionSearchNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** —
   `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·
   다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로
@@ -62,12 +72,23 @@
   폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게 하려는 의도, 작품 수는 카드 부제 `작품 N`으로만
   알린다). 오버플로 배지("+N")는 없다 — Figma 목업의 숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의
   잔재였다(사용자 확정).
+- **컬렉션 상세(`CollectionDetailView`, Factory 노출, #201)** — `CollectionListView`의 카드 탭에서 로컬
+  push로 진입한다(`.navigationDestination(item:)`, 진입 파라미터가 있는 push라 `isPresented:` + 별도
+  State 조합 금지 — `Feature/CLAUDE.md` 공통 함정). 히어로 배경은 `representativeNovelID`로 `novels`
+  배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼 블러는
+  없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시 재로드
+  안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다. 좋아요는
+  `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일 패턴).
+  복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(`.reloadAfterDetail`, 좋아요·삭제로 카드가
+  바뀌었을 수 있어서 — `CreateCollectionView` 복귀와 동일 판단).
 
 ## 화면 동작 계약
 
-- **뒤로가기(취소)**: 변경 사항이 없으면 바로 닫히고, 있으면 "컬렉션 생성을 그만하시겠어요?" 확인
-  알럿(`WSSAlertType.stopWritingCollection`)을 띄운다 — `NovelReviewFeature`/`FeedFeature`의 "그만 작성"
-  패턴과 동일(사용자 확정, #199). 기준선은 항상 빈 `CollectionDraft()`(로드가 없어서).
+- **뒤로가기(취소)**: 변경 사항이 없으면 바로 닫히고, 있으면 확인 알럿을 띄운다 — `NovelReviewFeature`/
+  `FeedFeature`의 "그만 작성" 패턴과 동일(사용자 확정, #199). 생성/수정 겸용 화면이라 **알럿 타이틀만
+  모드에 따라 갈린다**(사용자 확정) — 생성은 "컬렉션 생성을 그만하시겠어요?"(`WSSAlertType.stopWritingCollection`),
+  수정은 "컬렉션 수정을 그만하시겠어요?"(`.stopEditingCollection`). 버튼 문구("그만하기"/"계속 작성")는
+  두 모드 공통. 기준선은 생성은 빈 `CollectionDraft()`, 수정은 `CollectionDraft(from: detail)`(원본 값).
 - **작품 카드(표지 이미지) 셀 전체를 탭하면 그 작품이 대표로 전환**된다(`CollectionDraft.setRepresentativeNovel`)
   — 처음엔 우상단 "대표" 배지만 탭 대상이었으나, 배지만으론 탭 영역이 좁다는 사용자 피드백으로 **셀
   전체**로 넓혔다(#199). 배지는 순수 표시용(대표 여부 뱃지)이라 더는 별도 `Button`이 아니다 — 커버
@@ -80,6 +101,9 @@
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
   3프레임 모두 "완료" 텍스트가 비활성 회색으로 보이지만(작품까지 채운 프레임도 마찬가지), 이는 목업이
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.
+  ⚠️ **수정 모드에서는 `isSubmittable`을 만족해도 원본과 달라진 게 없으면(`!hasUnsavedChanges`)
+  추가로 비활성화한다**(사용자 확정) — 뒤로가기 확인 알럿과 같은 `hasUnsavedChanges` 비교를 재사용한다.
+  생성 모드는 이 조건이 없다(원래 기준만 본다).
 - "작품 추가" 타일 아이콘은 신규 에셋이 아니라 기존 `WSSImage.icBookRegister`를 재사용한다 — 그 SVG의
   내부 레이어명이 Figma 원본과 동일한 `mdi:book-plus-outline`이라 이미 같은 아이콘이 들어있었다.
 - **"서재에서 추가" 화면("추가" 버튼) 확정 후 `CreateCollectionView`까지 2단계 pop이 정본으로 확정됐다**
@@ -97,14 +121,66 @@
   - 탭 라벨은 Figma 원문 "내 컬랙션"(오탈자로 추정) 대신 표준 표기 "내 컬렉션"을 썼다.
   - 페이지 크기(`size`)는 서버 권장값이 없어 20으로 고정(컬렉션 도메인 공통 — `LoadCollectionsUseCase`/
     `LoadLikedCollectionsUseCase` 둘 다).
+- **컬렉션 상세(#201) — 사용자 확정 사항**:
+  - 우상단 더보기(`icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
+    삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
+    배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
+    동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
+  - **작품 카드 탭은 `onNovelTapped(NovelID)` 콜백까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
+    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
+    동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다
+    — 다만 **App이 아직 이 콜백을 실제로 연결하지 않았다**(App이 스켈레톤 단계라 조립 지점 자체가 없음,
+    `docs/TODO.md` 참고). "공유하기"는 카카오톡 공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+  - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드(`Mode.edit`)로 로컬 push**한다 — 더보기 메뉴
+    탭 → `isEditPresented = true`, 복귀 시(`onChange`) 성공/취소 구분 없이 무조건 `reloadAfterEdit`로
+    다시 불러온다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단 — 이미
+    `state.detail`이 있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+  - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
+    Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
+    `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수
+    없어 화면에 남아있을 이유가 없음 — `UserPageFeature`의 차단 성공과 동일 판단).
+  - "공유" 아이콘(`icShare`, Figma `humbleicons:share`)은 이 작업에서 `DesignSystem`에 신규 추가한
+    에셋이다(기존엔 없었음, 사용자 승인).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`CollectionDetailViewModel`은 `isClosing` 가드를 갖는다(#201, 사용자 확정 — 리뷰가 지적했을 땐
+  형제 VM들과의 일관성을 이유로 한 라운드 보류했다가, 이후 이 화면에 한해 반영하기로 뒤집었다)** —
+  뒤로가기 버튼이 `viewModel.handle(.backTapped)`를 부른 뒤 `dismiss()`하면 `close()`가 `isClosing`을
+  세우고 `loadTask`/`likeTask`를 취소한다(`NovelDetailViewModel.close()`와 같은 "명시적 액션" 변형).
+  삭제 성공(`deleteCollection()`)도 같은 `close()`를 타는 진짜 exit로 취급한다 — `confirmDelete`가
+  스폰하는 삭제 Task 자신은 취소하지 않는다(확인 알럿을 거친 명시적 요청이라 화면이 닫히는 도중이어도
+  서버 반영까지 보낸다, `NovelReviewViewModel.close()`가 저장 Task를 안 취소하는 것과 동일 판단).
+  ⚠️ **`View.onDisappear`로 세우는 변형(`NovelNotificationSettingSheetViewModel.disappear()`)은 여기
+  못 쓴다 — 처음엔 그 변형을 그대로 옮겨왔다가 리뷰에서 실제 회귀로 발견됐다.** 이 화면은 "컬렉션
+  수정"을 같은 스택에 **로컬 push**하는데(`isEditPresented`), 자식이 push되는 순간 SwiftUI 표준
+  동작으로 부모의 `.onDisappear`도 함께 발화한다 — 그 시점에 `isClosing`이 `true`로 굳고 되돌리는
+  코드가 없어, 수정 화면에서 복귀한 뒤 재조회(`reloadAfterEdit`)는 물론 정렬 변경·좋아요·삭제까지
+  전부 조용히 무반응이 됐다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장"). `onDisappear`
+  기반 변형은 **로컬 push가 없는 리프 화면(시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택에
+  자식을 push하면 명시적 액션(`NovelDetailViewModel` 쪽 변형)을 쓸 것. **`CollectionListViewModel`/
+  `CreateCollectionViewModel`/`CollectionSearchNovelViewModel`/`CollectionMyLibrarySelectViewModel`은
+  아직 이 패턴이 없다** — 이번엔 리뷰가 지적한 화면 하나만 고쳤을 뿐, 모듈 전체 일괄 적용은 아니다.
 - **`CollectionListViewModel`은 표준 VM 섹션 순서(`Feature/CLAUDE.md`) 끝에 `// MARK: - Tab Bookkeeping
   Access`를 추가로 둔다** — 탭 2개(`.mine`/`.liked`)를 동시에 부기해야 하는 첫 사례라, 그 접근자
   헬퍼(`bookkeeping(for:)`/`content(for:)`/`update...`)가 기존 6개 섹션 어디에도 자연스럽게 안
   맞는다. 새 화면에서 같은 "여러 하위상태를 키로 나눠 관리" 패턴이 또 필요하면 이 예외를 정본으로
   삼아도 된다 — 단, 섹션을 늘리는 걸 기본값으로 삼지 말고 정말 기존 섹션에 안 맞을 때만.
+- ⚠️ **상세(`CollectionDetailView`) 복귀 시 `reloadAfterDetail`은 그 순간 선택된 탭만 재로드한다 —
+  반대편 탭은 `hasLoaded`를 꺼서(`invalidate`) 다음에 그 탭으로 전환할 때 자동으로 새로 불러오게
+  한다.** 좋아요 토글은 "좋아요한 컬렉션" 목록 자체를 바꾸는데, "내 컬렉션"에서 상세로 들어가
+  좋아요를 누르고 돌아오면 그 순간 화면엔 "내 컬렉션"이 떠 있으니 그것만 재로드되고 "좋아요한
+  컬렉션"은 손대지 않으면 lazy 1회 로드 정책(`hasLoaded`) 때문에 나중에 그 탭으로 가도 옛 목록이
+  그대로 보인다(실제 버그로 발견). 지금 안 보이는 탭을 그 자리에서 바로 재요청하지 않고 **다음 방문
+  시점으로 미루는 이유**는 반대편 탭이 화면 밖일 수도 있는 상태에서 즉시 재요청하면 낭비이기 때문 —
+  새로 "카드가 양쪽 탭에 다 영향줄 수 있는" 액션을 추가할 땐 이 `invalidate(otherTab(of:))` 패턴을
+  따를 것.
+  ⚠️ **`invalidate`는 `hasLoaded`만 끄는 게 아니라 `generation`도 함께 올려야 한다** — 무효화하는
+  시점에 반대편 탭이 이미 로드 중이었다면(화면 전환 직전에 시작된 요청 등), 그 진행 중 `Task`가
+  뒤늦게 성공하며 `loadPage`의 성공 분기가 `hasLoaded`를 다시 `true`로 되돌려버려 무효화 자체가
+  무의미해질 수 있다(PR 리뷰에서 발견, 발생 조건은 좁지만 재현 가능). `generation`을 함께 올리면
+  `loadPage`가 이미 갖고 있는 generation 가드(`bookkeeping(for: tab).generation == generation`)가
+  그 뒤늦은 완료를 걸러낸다 — 별도 가드를 새로 안 만들어도 된다.
 - ⚠️ **`CollectionListView`의 두 탭(내 컬렉션/좋아요한 컬렉션)은 각자 자기 스크롤 뷰를 갖고, 안 보이는
   쪽도 지우지 않고 opacity로만 숨긴다**(`LibraryFeature`의 그리드↔리스트 토글과 동일 함정·동일 해법,
   실측으로 재확인) — 하나의 스크롤 뷰 안에서 `if`/`switch`로 탭 콘텐츠만 갈아끼우면 SwiftUI가 그
@@ -221,3 +297,69 @@
     앞에 끼워도 높이 방향은 안 채워진다. **`WSSNovelCoverImage`가 쓰는 것과 같은 해법**: `Color.clear`가
     `.aspectRatio`로 비율·크기를 잡고, 실제 콘텐츠는 `.overlay { ... }`로 그 위에 얹는다 — `Color.clear`는
     어떤 제안 크기든 그대로 받아들이므로 aspectRatio가 계산한 박스 전체가 항상 채워진다.
+- ⚠️ **`CollectionDetailView.novelCell`은 표지 크기를 제목/작가와 절대 같은 `.frame(height:)`로 묶지
+  않는다** — 한때 표지+제목+작가 전체를 `.frame(height: 216)` 하나로 묶었는데, 그러면 2줄로 꺾이는
+  제목이 그 고정 예산을 표지와 나눠 쓰게 돼 **표지 실제 렌더 폭이 열 너비보다 좁아지는 버그**가
+  있었다(사용자가 파란 배경 디버그로 실측 발견, 짧은 제목 Mock 데이터로는 재현이 안 됐다 —
+  `DemoLoadCollectionDetailUseCase`가 이제 3의 배수 인덱스에 일부러 긴 제목을 섞어 이 케이스를
+  Mock에서도 잡는다). 표지는 `aspectRatio`만으로 독립적으로 크기를 정해 제목 줄 수의 영향을 아예
+  안 받게 한다 — **셀 전체를 하나의 `.frame(height:)`로 묶는 패턴을 이 모듈의 다른 그리드 셀에도
+  다시 쓰지 말 것.**
+  - ⚠️ **제목 자체도 `addNovelTile`/`novelGridCell`(`CreateCollectionView`)이 쓰는 고정 높이 박스
+    (`Metric.novelTitleHeight`, 2줄 기준 예약)를 따라 하지 않는다** — 처음엔 그 패턴을 그대로
+    옮겨와 `.frame(height: 38, alignment: .top)`을 줬으나, 그러면 제목이 1줄일 때 박스 안 남는
+    공간만큼 작가 텍스트 앞 여백이 쓸데없이 넓어졌다(사용자 확정, 2026-08-25 — 제목 줄 수와 무관하게
+    제목-작가 간격은 항상 `Spacer(2)`만큼만이어야 함). `.fixedSize(horizontal: false, vertical: true)`
+    로 제목이 실제 필요한 높이(1줄/2줄)만 쓰게 하고 그 바로 뒤에 고정 2pt 간격만 둔다 — 그리드 행
+    안에서 제목 줄 수가 다른 셀끼리는 카드 전체 높이가 달라질 수 있지만(짧은 셀 아래 여백), 표지
+    폭·정렬은 위 문제와 이미 분리돼 있어 영향 없다. `CreateCollectionView.novelGridCell`은 여전히
+    고정 높이 박스를 쓴다 — **두 화면의 제목 높이 정책이 이제 의도적으로 다르다**(이 화면은 열람
+    그리드라 카드 아래 여백 차이가 자연스럽고, 그쪽은 편집 그리드라 행 정렬이 더 중요한 것으로 판단),
+    맞추려 하지 말 것.
+  - ⚠️ **위 "제목 줄 수가 다른 셀끼리는 카드 높이가 달라진다"는 이후(2026-08-25) 실제로 문제가 돼
+    카드 높이 216 통일 요구로 이어졌다** — 표지는 여전히 건드리지 않고, "제목+간격(2)+작가"를 감싸는
+    서브스택(`novelCellInfo(_:)`)에만 `.frame(height: novelInfoHeight, alignment: .top)`을 걸어
+    해결했다(`WSSNovelGridCell.Metric.infoHeight`와 동일 원리 — 표지와 정보 스택을 같은 프레임으로
+    묶지 않는 한 위 버그는 재현되지 않는다). 서브스택 끝의 `Spacer(minLength: 0)` + `alignment: .top`
+    덕에 제목이 1줄이라 남는 공간은 항상 작가 텍스트 아래(카드 하단)로 흐른다 — 제목-작가 간격
+    자체는 여전히 고정 `Spacer(2)`라 줄 수와 무관하게 2pt로 유지된다. `novelInfoHeight` 값은 시뮬레이터
+    실측(1줄/2줄 제목이 섞인 그리드에서 바닥선·표지 폭 확인)으로 정했다.
+- ⚠️ **`CollectionDetailView`의 스크롤 반응형 네비 타이틀은 `opacity` 모디파이어가 아니라 `if` 구조적
+  조건으로 넣고 뺀다** — 시스템 `.toolbar { ToolbarItem(.principal) { Text().opacity(조건 ? 1:0) } }`
+  조합은 opacity 값만 바뀌어선 UIKit 브리지(titleView)에 갱신되지 않고 계속 숨어있는다(#201 실측,
+  `Feature/CLAUDE.md` 공통 주의사항에 일반화해 남김 — `UserPageFeature`도 동일 재발).
+- **히어로 표지는 `.frame(height:, alignment: .top)`으로 상단 기준 크롭한다**(기본값 `.center`
+  대신) — `scaledToFill()`로 프레임보다 커진 이미지가 위쪽부터 정렬된 뒤 잘리게 하려는 의도. 가로는
+  이미 화면 폭을 꽉 채운 상태라 세로 정렬만 바뀐다.
+- **히어로 표지는 당겨서 새로고침(오버스크롤) 중에도 흰 배경이 비치지 않고 화면 최상단까지 확대되며
+  늘어나는 "스트레치 줌 헤더"로 구현돼 있다** — `heroSection`의 `GeometryReader`가
+  `scrollCoordinateSpace`(스크롤 반응형 네비 타이틀과 **같은** named coordinate space)에서 읽은
+  `minY`가 양수면(콘텐츠가 아래로 밀린 상태 = 오버스크롤) 그 값(`stretch`)을 두 군데에 쓴다:
+  `scaleEffect(1 + stretch / heroBackgroundHeight, anchor: .top)`로 이미지를 확대하고,
+  `.offset(y: -stretch)`로 같은 양만큼 위로 끌어올린다. **hold 구간(임계값) 없이 당기는 즉시 그
+  값에 비례해 확대된다** — 처음엔 일정 거리(30pt)까진 커버리지만 하고 그 이상 당겨야 확대되는 2단계
+  구조도 시도했으나, 실제로 써보니 "일단 스크롤하면 바로 확대되는 게 낫다"고 확정됐다(2026-08-25).
+  바깥 `GeometryReader` 자체는 여전히 `.frame(height: heroBackgroundHeight)`로 고정돼 있어 정보
+  영역(닉네임·제목 등)의 위치는 전혀 안 밀린다.
+  - ⚠️ **프레임 높이만 키우는 방식(`.frame(height: heroBackgroundHeight + stretch)`)만으로는 확대되는
+    느낌이 안 난다** — 표지가 세로로 긴 작품 썸네일이라 `scaledToFill`이 정지 상태에서 이미 가로 폭
+    기준으로 세로 방향을 넉넉히 넘치게 스케일해둔 상태다. 그 상태에서 프레임 높이만 늘리면 스케일
+    계수가 그대로라(가로 폭이 여전히 지배적이라) 확대 없이 원래 잘려나가 있던 여백만 그대로
+    드러난다(실측 — "이상하다"는 사용자 피드백으로 발견). 그래서 정지 상태 크롭을 먼저
+    `.frame(height: heroBackgroundHeight, alignment: .top).clipped()`로 고정한 뒤, 그 결과물 자체를
+    `scaleEffect`로 키우는 지금 방식으로 바꿨다 — 표지가 세로로 긴 이미지라면 프레임 확장 방식은
+    다시 쓰지 말 것.
+  - ⚠️ **그라디언트(`LinearGradient`)는 반드시 이미지와 같은 변환 체인 안(`heroImageWithGradient`)에
+    넣는다** — 형제 레이어로 따로 두면 이미지만 늘어나고 그라디언트는 `heroBackgroundHeight`에
+    고정된 채로 남아, 오버스크롤 중 이미지 위쪽이 그라디언트 없이 그대로 드러난다(실측 — "그라디언트가
+    잘려 보인다"는 사용자 피드백으로 발견). 이미지+그라디언트를 한 뷰로 묶은 뒤 프레임·스케일·offset을
+    그 묶음 전체에 걸어야 항상 같이 움직인다.
+  - `minY` 신호를 스크롤 감지(`isScrolledFromTop`)와 스트레치 계산 둘 다에 공유해서 쓰는 것도
+    재사용 포인트(별도 `GeometryReader`를 새로 만들 필요 없음).
+- ⚠️ **정렬 변경(`WSSSortButton`) 재조회는 이미 `state.detail`이 있는 상태라 전면 `LoadingView()`로
+  덮지 않는다** — `isLoading`만 보고 덮으면 히어로·그리드가 전부 사라졌다 다시 그려져 화면이 통째로
+  깜빡인다(사용자 리포트). `viewModel.state.isLoading, viewModel.state.detail == nil`처럼 **"진짜
+  아무것도 없는 첫 로드"일 때만** 전면 로딩을 보여줄 것 — `FeedFeature.SosoFeedView`의
+  `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
+  전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
+  다룸 — 이건 의도한 동작이라 건드리지 않았다).

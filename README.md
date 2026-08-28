@@ -39,7 +39,7 @@
 - `WSS-iOS`(V1)는 현재 운영 중인 클라이언트입니다.
 - `WSS-iOS-V2`는 구조 개선과 점진적 기능 이전을 위한 차세대 코드베이스입니다.
 - 현재는 **Core / Domain / Data 레이어 정비와 테스트 가능한 기반 구축**을 우선하고 있습니다.
-- 현재까지 `Core 3개`, `Domain 13개`, `Data 13개` 모듈에 더해 `UI 2개`·`Feature 11개`를 분리했고, Swift Testing과 `/domain-test` 기반 검증 흐름을 갖췄습니다.
+- 현재까지 `Core 3개`, `Domain 13개`, `Data 13개` 모듈에 더해 `UI 2개`·`Feature 12개`를 분리했고, Swift Testing과 `/domain-test` 기반 검증 흐름을 갖췄습니다.
 
 <br/>
 

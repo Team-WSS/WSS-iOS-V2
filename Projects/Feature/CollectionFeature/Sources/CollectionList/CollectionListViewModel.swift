@@ -60,6 +60,9 @@ final class CollectionListViewModel {
         case retry(CollectionListTab)
         case loadMore(CollectionListTab)
         case reloadMineAfterCreate
+        /// `CollectionDetailView`(로컬 push) 복귀 시 — 좋아요·삭제로 그 탭의 카드가 바뀌었을 수
+        /// 있어 성공/취소 구분 없이 무조건 다시 로드한다(`reloadMineAfterCreate`와 동일 판단).
+        case reloadAfterDetail(CollectionListTab)
         case dismissToast
     }
 
@@ -122,6 +125,12 @@ final class CollectionListViewModel {
             loadMore(tab)
         case .reloadMineAfterCreate:
             reload(.mine)
+        case .reloadAfterDetail(let tab):
+            reload(tab)
+            // 좋아요/삭제는 반대편 탭의 카드에도 영향을 줄 수 있다(예: 좋아요 토글은 "좋아요한
+            // 컬렉션" 목록 자체를 바꾼다) — 지금 안 보이는 탭까지 당장 재요청하는 대신 hasLoaded만
+            // 꺼서, 나중에 그 탭으로 전환하는 순간 loadIfNeeded가 자동으로 새로 불러오게 한다.
+            invalidate(otherTab(of: tab))
         case .dismissToast:
             state.presentedToast = nil
         }
@@ -143,6 +152,25 @@ private extension CollectionListViewModel {
     func retry(_ tab: CollectionListTab) {
         guard bookkeeping(for: tab).task == nil else { return }
         reload(tab)
+    }
+
+    /// 진행 중인 로드는 건드리지 않고 `hasLoaded`만 꺼서 다음 `loadIfNeeded` 호출(탭 전환)이
+    /// 그 탭을 다시 첫 페이지부터 불러오게 만든다 — 지금 화면에 없는 탭을 미리 당겨 로드하지 않는다.
+    /// `generation`도 함께 올려, 이미 진행 중이던(무효화 전에 시작된) 로드가 뒤늦게 성공해도
+    /// `loadPage`의 generation 가드에 걸려 `hasLoaded`를 다시 `true`로 되돌리지 못하게 막는다
+    /// (안 그러면 무효화 의도가 무효화되고 다음 탭 진입 때 stale 데이터가 그대로 남을 수 있다).
+    func invalidate(_ tab: CollectionListTab) {
+        updateBookkeeping(for: tab) {
+            $0.hasLoaded = false
+            $0.generation += 1
+        }
+    }
+
+    func otherTab(of tab: CollectionListTab) -> CollectionListTab {
+        switch tab {
+        case .mine: .liked
+        case .liked: .mine
+        }
     }
 
     /// 그 탭의 다음 페이지. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
