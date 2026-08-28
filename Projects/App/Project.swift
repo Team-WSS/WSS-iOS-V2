@@ -79,6 +79,9 @@ let targets: [Target] = [
             .module(.domain(.comment)),
             .module(.data(.search)),
             .module(.data(.comment)),
+            // 홈의 상세탐색 배너 → 필터 화면의 "키워드" 탭 콘텐츠 주입(SearchFeature는 KeywordFeature를
+            // 모른다 — KeywordTabContentBuilder로 App이 조립해 값으로 건네준다).
+            .module(.feature(.keyword)),
             // 서재에서 알림 관리 → 설정의 알림 설정 화면 진입.
             .module(.feature(.setting)),
             // 설정 화면의 푸시 권한 상태 확인.

@@ -16,16 +16,18 @@ import HomeFeature
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
+import KeywordFeature
 import NotificationFeature
 import PushAuthorization
 import RecommendationDomain
 import SearchDomain
+import SearchFeature
 import UserPageFeature
 import WSSComponent
 
 /// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFeatureFactory`가 반환하는 화면을 그대로 조립한다.
-/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필·알림 목록/상세까지는
-/// 실제로 push한다. 그 안에서 다시 열리는 화면(상세탐색)은 아직 로그만 남기는 placeholder다.
+/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필·알림 목록/상세·
+/// 상세탐색 필터/결과까지 실제로 push한다.
 struct HomeRootView: View {
 
     /// `NovelID`/`FeedID`가 둘 다 `IDWrapper<Int>`라 타입이 같아 `NavigationPath`에 그냥 섞어 넣으면
@@ -42,6 +44,10 @@ struct HomeRootView: View {
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         case search
         case authorSearch(String)
+        /// "뭐 읽을지 고민될 때?" 배너 → 상세탐색 필터 화면(정보/키워드 탭). 확정("작품 찾기") 시
+        /// 이 화면 자신은 pop되지 않고 그대로 스택에 남아, 그 위로 `detailSearch(filter)`가 push된다
+        /// (`SearchFeature/CLAUDE.md`의 "필터 화면 진입·복귀" 참고 — pop/push 여부는 항상 호출부 책임).
+        case detailSearchFilter
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case notification
@@ -81,7 +87,7 @@ struct HomeRootView: View {
                 onNovelSelected: { path.append(Destination.novel($0)) },
                 onFeedSelected: { path.append(Destination.feed($0)) },
                 onSearchTapped: { path.append(Destination.search) },
-                onDetailSearchTapped: { dependencies.logger.info("상세탐색 진입(미구현)") },
+                onDetailSearchTapped: { path.append(Destination.detailSearchFilter) },
                 onNotificationTapped: {
                     path.append(Destination.notification)
                     Task {
@@ -126,6 +132,8 @@ struct HomeRootView: View {
                         searchView()
                     case .authorSearch(let authorName):
                         searchView(initialQuery: authorName)
+                    case .detailSearchFilter:
+                        detailSearchFilterView
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     case .novelReview(let novelID, let title, let status):
@@ -234,6 +242,35 @@ private extension HomeRootView {
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) }
         )
+    }
+}
+
+// MARK: - 상세탐색 필터 ("뭐 읽을지 고민될 때?" 배너, #201 — 지금은 홈 탭에만 이 배너가 있어 다른
+// 탭과 공유하는 Assembly로 뽑지 않았다. 2번째 탭이 필요해지면 그때 SearchAssembly로 승격 검토)
+
+private extension HomeRootView {
+    var detailSearchFilterView: some View {
+        SearchFeatureFactory.makeDetailSearchFilterView(
+            keywordTabContent: keywordTabContent,
+            onSearch: { filter in path.append(Destination.detailSearch(filter)) }
+        )
+    }
+
+    /// "키워드" 탭 콘텐츠 — `SearchFeature`는 `KeywordFeature`를 모르므로 App이 조립해 값으로
+    /// 건넨다(`KeywordTabContentBuilder` 참고). `KeywordFeatureFactory.makeSearchKeywordView`는
+    /// 자체 액션바가 없어 그대로 감싸면 된다.
+    var keywordTabContent: KeywordTabContentBuilder {
+        { initialKeywords, onSelectionChanged in
+            AnyView(
+                KeywordFeatureFactory.makeSearchKeywordView(
+                    loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
+                    searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: dependencies.keywordRepository),
+                    initialSelectedKeywords: initialKeywords,
+                    onSelectionChanged: onSelectionChanged,
+                    logger: dependencies.logger
+                )
+            )
+        }
     }
 }
 
