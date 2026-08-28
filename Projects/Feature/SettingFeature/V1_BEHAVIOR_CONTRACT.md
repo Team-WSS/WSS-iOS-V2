@@ -104,7 +104,7 @@
 
 ### 2.3 부수 효과 (생년 로컬 캐싱)
 
-- ❓ **Unknown** — V1은 계정정보 화면이 `getUserInfo` 응답의 `birth`를 **`UserDefaults.userBirth`에 캐싱**한다. 성별/나이 변경 화면이 이 캐시를 읽어 시작하므로, **변경 화면의 초기값 신선도가 계정정보 진입에 의존**한다.
+- ✅ **Keep 확정** (2026-08-28, 조사: ProfileRepository가 로그인·프로필/계정정보 조회 시 로컬에 채움 — 0절 3) — V1은 계정정보 화면이 `getUserInfo` 응답의 `birth`를 **`UserDefaults.userBirth`에 캐싱**한다. 성별/나이 변경 화면이 이 캐시를 읽어 시작하므로, **변경 화면의 초기값 신선도가 계정정보 진입에 의존**한다. V2는 `DefaultProfileRepository`가 로그인·조회 시점에 로컬을 채워 V1보다 이른 시점이라 stale 우려 완화(수단은 로컬 UseCase, 관찰 동작 동일).
   - V2: 성별/나이 변경이 `LoadLocalGenderAndBirthUseCase`(로컬)로 시작하나, **로컬값을 채우는 지점이 이 모듈 밖**이라 대조 불가. 계정정보에 안 들르고 바로 변경 화면에 와도 최신인지 확인 필요.
   - 근거: V1 `MyPageInfoViewModel.swift:89`(`UserDefaults.set(data.birth, …userBirth)`) · V2 `SettingChangeGenderOrAgeViewModel.swift:126-137`
 
@@ -210,7 +210,7 @@
 
 ### 6.3 시스템 푸시 권한 (#193)
 
-- ❓ **Unknown** — V1 `StringLiterals.MyPage.PushNotification`에 기기 알림 유도 알럿 문구(`moveToSettingAlertTitle` "앱 알림을 켤까요?" 등)가 정의돼 있으나 **`MyPagePushNotificationViewController`는 이 문자열을 쓰지 않는다**(이 폴더 안에서 미사용).
+- ✅ **Keep 확정** (2026-08-28, 조사: V1도 설정 메뉴 `MyPageSettingViewController`에서 띄움 = 동일 위치 — 0절 4) — V1 `StringLiterals.MyPage.PushNotification`에 기기 알림 유도 알럿 문구(`moveToSettingAlertTitle` "앱 알림을 켤까요?" 등)가 정의돼 있으나 **`MyPagePushNotificationViewController`는 이 문자열을 쓰지 않는다**(이 폴더 안에서 미사용). 실사용처는 설정 메뉴 목록 VC(`MyPageSettingViewController.swift:141`)로, V2 `SettingView`의 "알림 설정" 메뉴 탭 시점(#193)과 동일 위치 — 신규 배치 아님.
   - V2: 시스템 푸시 권한 확인·유도 알럿을 **`SettingView`가 "알림 설정" 메뉴 탭 순간** 처리한다(#193, `denied`면 이동 안 하고 `setAppNotification` 알럿만, `notDetermined`면 시스템 프롬프트 후 이동). `NotificationSettingView`는 자체 재확인을 하지 않는다(중복 방지). — 이 배치·계약은 `CLAUDE.md`에 명문화된 **의도된 설계**.
   - 판정 포인트: V1이 이 알럿을 실제로 어디서(혹은 띄웠는지) — MyPage 호스트/홈 등 이 폴더 밖일 수 있어 대조 미완.
   - 근거: V1 `StringLiterals+MyPage.swift:138-146`(문구만, VC 미사용) · V2 `SettingViewModel.swift:80-93`, `SettingView.swift:146-163`, `CLAUDE.md`(#193 계약)

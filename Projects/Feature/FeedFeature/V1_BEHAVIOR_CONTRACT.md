@@ -44,9 +44,9 @@
 
 ## 0. 점검 대기 요약
 
-> **판정 상태(2026-08-28 갱신)**: 아래 항목의 배지는 본문 각 절의 확정 배지와 일치한다. **결정된 것**(고치기로/삭제)은
-> `docs/TODO.md` 9절로 넘겼고, **미배선**은 V2 WIP(삭제가 아니라 아직 안 붙인 것 — 배선되면 해소), **판정 대기**만
-> 아직 결정이 안 남았다. FeedFeature는 목록 화면이 배선 진행 중이라 미배선이 유독 많다.
+> **판정 상태(2026-08-28 갱신)**: 아래 항목의 배지는 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건**(마지막 3건도
+> 2026-08-28 사용자 확정으로 고치기로 결정). **결정된 것**(고치기로/삭제)은 `docs/TODO.md` 9절, **미배선**은 V2 WIP
+> (삭제가 아니라 아직 안 붙인 것 — 배선되면 해소). FeedFeature는 목록 화면이 배선 진행 중이라 미배선이 유독 많다.
 
 **되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 9절)**
 
@@ -72,11 +72,11 @@
 14. 🗑 **Amplitude 이벤트 제거** — 피드 진입·작성·좋아요·신고 등. 홈·리뷰와 함께 횡단 재도입 대상(9절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 15. 🗑 **`BlockUser`/`feedEdited` 알림 토스트** — 차단·수정 완료 크로스스크린 토스트 배관. push 재진입 재조회·알림 재도입과 함께 App에서 재설계(9절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 
-**❓ 판정 대기 (아직 결정 안 함)**
+**추가 확정 (2026-08-28 사용자) → 구현 대기 (`docs/TODO.md` 9절)**
 
-16. ❓ **내 피드 개수 표시 출처** — V1은 서버 전체 개수(`feedsCount`), V2는 로드된 배열 길이(`myFeeds.count`) → 페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. **서버 전체 개수로 고칠지 결정 필요**(응답에 `feedsCount` 유무 확인 포함). → [1.3](#13-정렬내-피드-카운트)
-17. ❓ **수정 "변경 감지" 게이트** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경 재저장이 가능. V1처럼 실제 변경 시만 활성으로 복원할지 결정 필요. → [4.3](#43-작성수정-완료저장)
-18. ❓ **댓글 전송 버튼 무변경 재전송 가드** (사소) — V1은 수정 시 초기값과 다를 때만 활성, V2는 비어있지 않으면 전송. 복원할지 결정 필요. → [3.4](#34-댓글-작성수정삭제)
+16. 🔧 **내 피드 개수 표시 출처 → 서버 `feedsCount` 사용** — V2는 로드된 배열 길이(`myFeeds.count`)라 페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가 **실제로 존재**하므로 그 값을 노출해 표시(V1 parity). → [1.3](#13-정렬내-피드-카운트)
+17. 🔧 **수정 "변경 감지" 게이트 복원** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경 재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 버튼 활성. → [4.3](#43-작성수정-완료저장)
+18. 🔧 **댓글 전송 버튼 무변경 재전송 가드 복원** (사소) — V1은 수정 시 초기값과 다를 때만 활성. V2도 동일 복원. → [3.4](#34-댓글-작성수정삭제)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -129,7 +129,7 @@
   - 근거: V1 `FeedPageContentViewModel.swift:113-117`, `FeedPageContentViewController.swift:283-287`(sort 햅틱) · V2 `SosoFeedView.swift:222-226`, `SosoFeedViewModel.swift:303-315`, `CLAUDE.md`(sortType는 필터 커밋 흐름과 별개)
 - ✅ **Keep** — 정렬은 **내 피드에만** 있다(소소피드엔 정렬 컨트롤 없음).
   - 근거: V1 `FeedPageContentView`(`myFeedFilterHeaderView`가 my 페이지에만) · V2 `SosoFeedView.swift:200-245`(myFeed 케이스에만 sort 버튼)
-- ❓ **Unknown** — **내 피드 개수 표시 출처**. V1은 서버 응답의 **전체 개수**(`userFeedListEntity.feedsCount`)를 필터 버튼에 "n개"로 표시.
+- 🔧 **복원 확정→TODO** (2026-08-28: 서버 `feedsCount` 사용) — **내 피드 개수 표시 출처**. V1은 서버 응답의 **전체 개수**(`userFeedListEntity.feedsCount`)를 필터 버튼에 "n개"로 표시. 서버 응답 `UserFeedListResponse.feedsCount`가 V2에도 실재하므로 그 값을 매퍼/상태로 노출해 표시(V1 parity).
   - V2: **현재 로드된 배열 길이**(`state.myFeeds.count`)를 "n개의 기록"으로 표시 → 페이지네이션 전엔 최대 20까지만 세어 서버 전체 수와 다를 수 있다.
   - 근거: V1 `FeedPageContentViewModel.swift:332-334`, `FeedPageContentViewController.swift:97-101` · V2 `SosoFeedView.swift:206-208`
 
@@ -262,7 +262,7 @@
   - 근거: V1 `FeedDetailViewController.swift:24`,`599-604` · V2 `FeedDetailCommentInputBar.swift:53-59`
 - 🔨 **회귀 확정→TODO** (2026-08-28: 빈 catch 4곳 실측) — **댓글 전송 실패 표현**. V1은 작성/수정 실패 시 "네트워크 지연" 토스트 + 전송 버튼 재활성. V2 `createComment`/`editComment`/`deleteComment`/`deleteFeed`의 `catch {}`가 **비어 조용히 삼킨다**.
   - 근거: V1 `FeedDetailViewModel.swift:407-419`, `FeedDetailViewController.swift:247-252` · V2 `FeedDetailViewModel.swift:301-339`
-- ❓ **Unknown (사소)** — V1 전송 버튼 활성 조건: 내용이 비어있지 않고 **초기값과 다를 때만**(수정 시 무변경이면 비활성). V2 `submitComment`는 trim 후 비어있지 않으면 전송(무변경 재전송 가능).
+- 🔧 **복원 확정→TODO** (2026-08-28, 사소) — V1 전송 버튼 활성 조건: 내용이 비어있지 않고 **초기값과 다를 때만**(수정 시 무변경이면 비활성). V2 `submitComment`는 trim 후 비어있지 않으면 전송(무변경 재전송 가능) → V1처럼 초기값과 다를 때만 활성으로 복원.
   - 근거: V1 `FeedDetailViewModel.swift:307-319`(isNotChanged) · V2 `FeedDetailViewModel.swift:165-166`
 - ✅ **Keep** — 스포일러 댓글은 본문 대신 "스포일러" 표시로 가리고 탭하면 펼친다(가시성 처리).
   - V2: `CommentRow(visibility:)`로 스포일러/숨김/차단 표현(`FeedComment.isSpoiler/isHidden/isBlocked`).
@@ -324,7 +324,7 @@
 - 🔧 **부분 확정→TODO** (2026-08-28: 앱 리뷰 요청 재도입) — **작성/수정 성공 후 처리**. V1은 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭 "수정됨" 토스트) + `AppReviewManager.requestReview()`(앱 리뷰 요청) + pop.
   - V2 `CreateFeedView`는 `state.submitState == .submitted`에 **아무 반응이 없다** — dismiss·목록 갱신·리뷰 요청이 View에 배선돼 있지 않다(App 조정 계층 몫일 수 있으나 확인 필요).
   - 근거: V1 `FeedEditViewModel.swift:188-197` · V2 `CreateFeedView.swift`(submitState 반응 없음), `CreateFeedViewModel.swift:277`(state만 `.submitted`)
-- ❓ **Unknown** — **수정 "변경 감지" 게이트**. V1 수정 모드는 내용·스포일러·공개·연결작품·이미지 중 **하나라도 바뀌어야** 완료 버튼 활성(`isInitialFeedChanged`). V2 `canSubmit`은 "내용 비어있지 않음"만 봐 무변경 재저장이 가능하다.
+- 🔧 **복원 확정→TODO** (2026-08-28: 무변경 재저장 차단) — **수정 "변경 감지" 게이트**. V1 수정 모드는 내용·스포일러·공개·연결작품·이미지 중 **하나라도 바뀌어야** 완료 버튼 활성(`isInitialFeedChanged`). V2 `canSubmit`은 "내용 비어있지 않음"만 봐 무변경 재저장이 가능하다 → V1처럼 실제 변경 시만 활성으로 복원(불필요 PUT·이미지 재업로드 방지).
   - 근거: V1 `FeedEditViewModel.swift:322-330` · V2 `CreateFeedViewModel.swift:53-56`
 
 ### 4.4 작품 연결 검색 (Connect Novel)
