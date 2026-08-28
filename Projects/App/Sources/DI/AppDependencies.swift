@@ -6,16 +6,16 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import AuthData
-import AuthDomain
-import BaseData
 import BaseDomain
+import AuthDomain
+import ProfileDomain
+import SettingDomain
+import BaseData
+import AuthData
+import ProfileData
+import SettingData
 import Logger
 import Networking
-import ProfileData
-import ProfileDomain
-import SettingData
-import SettingDomain
 
 /// App(DI)의 유일한 조립 지점 — Data 구현체와 Domain 프로토콜이 만나는 곳.
 /// 온보딩 플로우가 필요로 하는 Repository까지 조립한다.

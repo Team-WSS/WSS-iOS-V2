@@ -8,8 +8,8 @@
 
 import SwiftUI
 
-import AuthDomain
 import OnboardingFeature
+import AuthDomain
 import ProfileDomain
 import SettingDomain
 
