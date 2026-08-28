@@ -73,10 +73,13 @@ struct SosoFeedView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
+                
+                Spacer().frame(height: 8)
+                
                 FeedTabSection
                     .padding(.horizontal, 20)
-
-                Spacer().frame(height: 12)
+                
+                Spacer().frame(height: 8)
 
                 FeedChipSection
                     .transaction { $0.animation = nil }
