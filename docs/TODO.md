@@ -196,17 +196,19 @@
   세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
   다룬다.
 
-### 11. `UserPageFeatureDemoApp`의 마이페이지 Mock 모드가 컴파일 안 된다
+### 11. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
 
-- **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의
-  `DemoFactory.makeMypageView(.mock)`이 `MypageFeatureFactory.makeView`의 현재 시그니처
-  (`onCollectionTapped`/`onEditProfileTapped`/`onSettingTapped`/`onLibraryTapped` 콜백 4개, 프로필 편집용
-  UseCase는 더 이상 받지 않음 — #197에서 편집 진입도 App 콜백으로 통일)와 어긋나 있다.
-- **결과**: 이 Demo 스킴을 `.mock` 데이터소스로 실행하면 컴파일이 안 된다(`.live`는 별도 함수라 영향 없음).
-- **어디를 고치나**: 위 파일의 `makeMypageView` — 프로필 편집·설정·서재 전환·컬렉션 이동을 Demo 안에서
-  어떻게 흉내낼지(별도 push? 무시?)부터 다시 설계해야 한다.
-- **왜 지금 안 했나**: #197(메인 탭 조립) 범위에서 Feature 쪽 API를 바꾸다 발견했지만, Demo 화면 흐름
-  재설계는 별개 작업이라 분리했다.
+- **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`가
+  `MypageFeatureFactory.makeView`의 현재 시그니처(`onCollectionTapped`/`onEditProfileTapped`/
+  `onSettingTapped`/`onLibraryTapped` 콜백 4개 — #197에서 편집 진입도 App 콜백으로 통일)와 어긋나
+  **컴파일이 안 되던 문제는 고쳤다**(`onCollectionTapped`와 동일하게 콘솔 로그만 남기는 no-op으로
+  연결, 2026-08-28 rebase 중 실측 빌드 확인). 다만 실제 push/무시 여부는 아직 설계하지 않았다.
+- **결과**: Demo에서 연필 아이콘·톱니바퀴·서재 블록을 눌러도 콘솔 로그만 찍히고 화면 전환은 없다
+  (컴파일은 되니 CI엔 영향 없음).
+- **어디를 고치나**: 위 파일의 `makeMypageView` — 프로필 편집·설정·서재 전환을 Demo 안에서 실제로
+  흉내낼지(별도 push? 계속 무시?)부터 설계해야 한다.
+- **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
+  설계는 별개 작업이라 분리했다.
 
 ### 12. 작품 평가 화면의 키워드 선택이 draft에 반영되지 않는다
 

@@ -205,12 +205,11 @@ private enum DemoFactory {
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
-                loadInitialProfileUseCase: DemoLoadInitialProfileUseCase(store: demoProfileStore),
-                loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
-                validateNicknameUseCase: DemoValidateNicknameUseCase(),
-                updateProfileUseCase: DemoUpdateProfileUseCase(store: demoProfileStore),
+                logger: consoleLogger,
                 onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-                logger: consoleLogger
+                onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
+                onSettingTapped: { consoleLogger.info("설정 진입") },
+                onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
             )
         case .live:
             makeMypageLiveView()
@@ -263,12 +262,11 @@ private enum DemoFactory {
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
-            loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: profileRepository),
-            loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
-            validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: profileRepository),
-            updateProfileUseCase: DefaultUpdateProfileUseCase(profileRepository: profileRepository),
+            logger: consoleLogger,
             onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-            logger: consoleLogger
+            onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
+            onSettingTapped: { consoleLogger.info("설정 진입") },
+            onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
         )
     }
 

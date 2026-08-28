@@ -183,13 +183,11 @@
   타유저 서재(`onLibraryTapped` → `LibraryFactory.makeUserLibraryView`)도 마찬가지로 지금은
   `FeedRootView`만 배선했다 — `UserPageAssembly.makeView`에 `onLibraryTapped` 콜백이 있으니 다른
   탭이 `UserPageAssembly`를 재사용하면 그 콜백만 채우면 된다.
-- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `DemoFactory.makeMypageView(.mock)`은 `MypageFeatureFactory.makeView`
-  현재 시그니처(`onCollectionTapped`/`onEditProfileTapped`/`onSettingTapped`/`onLibraryTapped` 콜백 4개,
-  편집용 UseCase는 더 이상 안 받음 — #197에서 편집 진입도 App 콜백으로 통일)와 어긋나 있다**(develop 라인
-  #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo만 안 따라옴). `.mock` 데이터소스로
-  이 Demo를 실행하면 컴파일이 안 된다(`.live`는 별도 함수라 영향 없음). Demo 화면 흐름(프로필 편집·설정·
-  서재 전환·컬렉션 이동을 Demo 안에서 어떻게 흉내낼지)까지 다시 설계해야 하는 별개 작업이라 이번 범위에서
-  고치지 않았다 — Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))에 어긋나 있다는 것만 기록
+- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`는 `onEditProfileTapped`/`onSettingTapped`/
+  `onLibraryTapped`를 전부 콘솔 로그만 찍는 no-op으로 연결한다**(`onCollectionTapped`와 동일 패턴) —
+  develop 라인 #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo가 컴파일이 안
+  되게 어긋났던 걸 rebase 중 최소 수정으로 되살렸다(2026-08-28). 실제 push/무시 여부는 아직 미설계 —
+  Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))상 완전하진 않다는 것만 기록
   ([docs/TODO.md](../../../docs/TODO.md) 11번).
 - `WSSAlertView`의 버튼은 접근성 트리에 안 잡힌다 — UI 자동화(XcodeBuildMCP `tap`)로 알럿이 뜨는 것까지만 검증 가능, 버튼 탭 이후 동작은 코드 리뷰로 대체(WSSComponent 공용 컴포넌트라 이 모듈 범위 밖).
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
