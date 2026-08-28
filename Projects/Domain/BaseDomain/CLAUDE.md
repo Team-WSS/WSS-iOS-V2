@@ -29,6 +29,15 @@
 - 화면 전용 부분집합/순서가 있는 필터 목록(예: 구 `NovelGenre.filterGenre`, `47b59a6a`에서 `WSSComponent`의 `myFeedFilter`로 이동·개명됨)은 여기 두지 않는다 — `BaseDomain`은 순수 enum만 갖고, 그런 목록은 `WSSComponent`의 `DomainPresentation` 확장(`NovelGenre+Presentation`)에 둔다.
   - ⚠️ **오래된 브랜치를 develop 위로 rebase하면 이 파일에서 `extension NovelGenre { filterGenre ... }` 형태의 충돌이 뜰 수 있다** — develop(빈 확장) 쪽이 맞다. 옛 `filterGenre`를 되살리지 말고, 그 커밋이 함께 추가한 새 목록(있다면)만 `WSSComponent`의 `DomainPresentation` 확장으로 옮겨 반영할 것.
 - `PopularKeywords`(`Keyword/Entity/`)는 실시간 인기 키워드 랭킹을 담는 별도 타입 — 랭킹은 `keywords: [Keyword]` **배열 순서로만** 표현한다(명시적 rank/count 필드 없음).
+- **`Author.accessibleUserId`(#197 후속, 2026-08-28)** — 서버는 탈퇴한 유저를 `userId: -1`로 내려준다(피드
+  관련 응답 `TotalFeedResponse`/`FeedDetailResponse`/`NovelFeedResponse`가 전부 `userId: Int` non-optional이라
+  항상 채워진다 — `Author.userId`가 옵셔널인 건 다른 매퍼가 애초에 안 채우는 경우 대비일 뿐, 이 -1과는
+  무관). 이 센티널 판정을 `Author` 밖으로 새지 않게 캡슐화한 게 `accessibleUserId: UserID?`(nil이면
+  "이동할 프로필이 없다" — userId 미제공과 탈퇴 유저 둘 다 같은 의미로 묶는다). ⚠️ **`UserID` 자체
+  (`IDWrapper<Int>` typealias)를 확장해 `.withdrawn`을 두지 않았다** — `FeedID`/`NovelID` 등 다른 ID도
+  전부 같은 `IDWrapper<Int>`라 그렇게 하면 의미 없는 `FeedID.withdrawn`까지 새어버린다. 센티널은
+  `Author.swift` 안 `private` 상수로만 존재한다 — 다른 곳에서 `-1` 리터럴로 재판정하지 말고 이 프로퍼티를
+  재사용할 것(Feature 3곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab` — 이 이미 이걸 쓴다).
 - `NovelGenre.myFeedFilter`(피드 필터용, 구 `filterGenre`)·`.searchGenre`(검색 화면 장르 그리드용)·`.onboardingGenre`(온보딩 3x3 배지 그리드용, #178)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.
 - `RepositoryError.privateProfile`: 상대가 프로필을 비공개로 설정해 접근 자체가 거부된 경우 전용(서버 비즈니스 코드 `USER-015`) — `authenticationRequired`(내 세션 문제)와는 원인이 달라 재로그인으로 해결되지 않는다. 매핑은 공용 `NetworkingError.toRepositoryError()`가 아니라 영향받는 개별 Data 리포지토리 메서드가 한다(UserPageFeature #172, 자세한 이유는 `ProfileData`/`FeedData` 주의사항 참고).
