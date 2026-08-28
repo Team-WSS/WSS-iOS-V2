@@ -14,7 +14,7 @@ import ProfileDomain
 import SettingDomain
 
 /// 앱 진입 후 첫 화면 — 온보딩 전체 플로우(인트로+소셜로그인 → 가입약관 동의 시트 →
-/// 닉네임/성별출생년도/장르선택 3단계 컨테이너)를 `OnboardingFactory`로 조립해 배선한다.
+/// 닉네임/성별출생년도/장르선택 3단계 컨테이너)를 `OnboardingFeatureFactory`로 조립해 배선한다.
 /// `OnboardingFeature/Demo/OnboardingFeatureDemoApp.swift`의 `.live` 조립을 그대로 따르되,
 /// Mock 토글·디버그 로그인 우회 버튼은 뺐다(App은 항상 실서버로 붙는다).
 ///
@@ -48,7 +48,7 @@ struct OnboardingRootView: View {
 
 private extension OnboardingRootView {
     var introView: some View {
-        OnboardingFactory.makeIntroView(
+        OnboardingFeatureFactory.makeIntroView(
             socialLoginUseCase: DefaultSocialLoginUseCase(authRepository: dependencies.authRepository),
             logger: dependencies.logger,
             onLoginSucceeded: handleLoginSucceeded
@@ -70,7 +70,7 @@ private extension OnboardingRootView {
 
 private extension OnboardingRootView {
     var termsAgreementView: some View {
-        OnboardingFactory.makeTermsAgreementView(
+        OnboardingFeatureFactory.makeTermsAgreementView(
             loadUseCase: DefaultLoadTermsAgreementDraftUseCase(repository: dependencies.termsAgreementRepository),
             saveUseCase: DefaultSaveTermsAgreementDraftUseCase(repository: dependencies.termsAgreementRepository),
             logger: dependencies.logger,
@@ -90,7 +90,7 @@ private extension OnboardingRootView {
 
 private extension OnboardingRootView {
     var stepFlowView: some View {
-        OnboardingFactory.makeStepFlowView(
+        OnboardingFeatureFactory.makeStepFlowView(
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: dependencies.profileRepository),
             registerProfileUseCase: DefaultRegisterProfileUseCase(repository: dependencies.profileRepository),
             logger: dependencies.logger,
