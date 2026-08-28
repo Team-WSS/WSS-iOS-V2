@@ -44,14 +44,14 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **재진입 재조회 없음** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 `hasLoaded` 가드로 **1회만 로드**하고 재진입 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 V2가 직접 재로드하나, **다른 화면을 다녀온 뒤**(평가 작성·수정, 피드 수정, 피드 상세에서 좋아요)의 헤더 별점·읽기상태·키워드/그래프 집계 최신화가 사라졌을 수 있다. "1회 로드"는 V2 `CLAUDE.md`에 명문화됐으나 그 **부작용(외부 변경 후 stale)**은 별도 판정. → [1.1](#11-진입재조회생명주기)
    - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` 9.
 2. ✅ **Keep 확정** (2026-08-28: VM Task 슬롯 가드+NavigationStack로 해소, 순수 네비 중복만 App 몫 — 본문 6.1) — **더블탭 가드(throttle) 제거**: V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
 3. 🔧 **미배선(App 배선 대기·삭제 아님)** — **작가 검색 화면 라우팅 미구현**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
-4. 🔧 **재도입 확정→TODO 9절** (2026-08-28, 사용자: 되살린다 — PENDING 5 닫힘) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
-5. 🔧 **횡단 이슈→TODO 9절** (Amplitude 재도입) — **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
+4. 🔧 **재도입 확정→TODO 12절** (2026-08-28, 사용자: 되살린다 — PENDING 5 닫힘) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
+5. 🔧 **횡단 이슈→TODO 12절** (Amplitude 재도입) — **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
@@ -59,8 +59,8 @@
 7. 🔧 **Improve 확정** (2026-08-28, 사용자) — **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
 8. 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
 9. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
-10. 🔧 **복원 확정→TODO 9절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
-11. 🔧 **복원 확정→App 크로스스크린 피드백 재설계(Feed 15와 묶음, TODO 9절)** (2026-08-28, 사용자) — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
+10. 🔧 **복원 확정→TODO 12절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
+11. 🔧 **복원 확정→App 크로스스크린 피드백 재설계(Feed 15와 묶음, TODO 12절)** (2026-08-28, 사용자) — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -208,7 +208,7 @@
 - ✅ **Keep** — 신고(스포일러/부적절)는 **확인 알럿 → API → 접수 완료 알럿**의 2단. 삭제는 확인 알럿 → API → 목록 제거.
   - V2: `FeedAlert` 의미값으로 관리(신고는 완료 케이스 분리 — 문구가 종류별로 다름). 삭제 성공 시 목록 제거 + **상세 재로드**(헤더 피드 수 집계 동기화). V1은 삭제 후 `reloadNovelDetailFeed`(피드만 리셋)로 목록만 갱신 — **V2는 집계까지 재동기화**하는 차이(경미한 Improve).
   - 근거: V1 `NovelDetailViewController.swift:353-453`(신고/삭제 2단 알럿), `NovelDetailViewModel.swift:458-477` · V2 `NovelDetailViewModel.swift:291-312`,`433-463`, `NovelDetailView.swift:615-644`, `CLAUDE.md`(피드 삭제/신고 2단 알럿)
-- 🔧 **복원 확정→TODO 9절** (2026-08-28, 사용자: Feed·UserPage 결정과 통일) — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
+- 🔧 **복원 확정→TODO 12절** (2026-08-28, 사용자: Feed·UserPage 결정과 통일) — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
   - V2: `feed.author.userId`가 없으면(응답 미제공) 조용히 무시(토스트 없음). 탈퇴 유저 안내가 사라졌다.
   - 근거: V1 `NovelDetailViewModel.swift:514-522`(userId==-1→토스트) · V2 `NovelDetailFeedTab.swift:108-112`(userId nil→return)
   - ⚠️ **복원 시 함정**: V2 `FeedMapper.author`는 `userId`를 non-optional `UserID`로 넘기므로 서버가 탈퇴 유저를 `-1`로 주면 **nil 가드에 안 걸리고 `UserID(-1)`로 유저 페이지 push → USER-018**. `-1` 판별을 매퍼(→ nil)에서 할지, 유저 페이지의 USER-018 폴백(UserPage 4.7 복원)에 맡길지 구현 시 결정.
@@ -267,14 +267,14 @@
 
 ### 6.4 첫 감상평 안내 오버레이
 
-- 🔧 **재도입 확정→TODO 9절** (2026-08-28, 사용자: 되살린다 — PENDING_DECISIONS 5 닫힘) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
+- 🔧 **재도입 확정→TODO 12절** (2026-08-28, 사용자: 되살린다 — PENDING_DECISIONS 5 닫힘) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
   - **V2엔 이 오버레이가 통째로 없다**(grep 0 — `firstReview`/`speechBalloon`/`showReviewFirst` 흔적 없음).
   - 근거: V1 `NovelDetailViewModel.swift:183-189`,`197-199`(hideFirstReviewDescription·UserDefaults), `NovelDetailView.swift:26-29`,`269-274`(오버레이 뷰) · V2 `Sources/**`(해당 코드 없음)
   - **판정 근거**: 사용자 확정(2026-08-28) — 되살린다. 디자인 시안은 구현 시 V1 오버레이 구성(딤·상태바 미리보기·말풍선)을 재료로 요청.
 
 ### 6.5 알림 관찰자 토스트
 
-- 🔧 **복원 확정→App 크로스스크린 피드백 재설계(TODO 9절)** (2026-08-28, 사용자: 재진입 재조회 복원과 별개로 완료 피드백은 유지 — Feed 15·UserPage 차단 토스트와 한 묶음) — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
+- 🔧 **복원 확정→App 크로스스크린 피드백 재설계(TODO 12절)** (2026-08-28, 사용자: 재진입 재조회 복원과 별개로 완료 피드백은 유지 — Feed 15·UserPage 차단 토스트와 한 묶음) — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
   - V2엔 이 알림 관찰자·토스트가 없다(피드 수정/평가는 콜백으로 위임, 복귀 후 토스트 없음).
   - 근거: V1 `NovelDetailViewModel.swift:506-512`, `NovelDetailViewController.swift:455-459`,`470-474`,`561-562` · V2 `NovelDetailView`(해당 관찰자 없음)
 

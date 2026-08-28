@@ -45,10 +45,10 @@
 ## 0. 점검 대기 요약
 
 > **판정 상태(2026-08-28 갱신)**: 아래 항목의 배지는 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건**(마지막 3건도
-> 2026-08-28 사용자 확정으로 고치기로 결정). **결정된 것**(고치기로/삭제)은 `docs/TODO.md` 9절, **미배선**은 V2 WIP
+> 2026-08-28 사용자 확정으로 고치기로 결정). **결정된 것**(고치기로/삭제)은 `docs/TODO.md` 12절, **미배선**은 V2 WIP
 > (삭제가 아니라 아직 안 붙인 것 — 배선되면 해소). FeedFeature는 목록 화면이 배선 진행 중이라 미배선이 유독 많다.
 
-**되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 9절)**
+**되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 12절)**
 
 1. 🔨 **목록 로드 실패 표현** (회귀 확정) — V1도 목록 실패 UI가 없었지만 **V2 Feature 계약(#195)대로 전면 `NetworkErrorView`+재시도로 표현**하기로 결정(V1 답습 안 함, 계약 우선). → [1.4](#14-빈-화면에러로딩)
 2. 🔧 **인증 만료 라우팅 추가** — V2 목록/상세 VM에 `requiresAuthentication`/`onAuthenticationRequired`가 없다. Library식 라우팅 추가. → [1.4](#14-빈-화면에러로딩)
@@ -63,16 +63,16 @@
 8. 🔧 **미배선** — **프로필 탭 → 유저 페이지 / 탈퇴 유저(userId == -1) 처리** — 프로필 탭 배선 시 V1의 "탈퇴 유저" 토스트 가드도 함께 복원. → [1.6](#16-상호작용네비게이션)·[3.6](#36-상호작용네비게이션-상세)
 9. 🔧 **미배선** — **셀 선택 더블탭 가드** — V1 throttle(1s/500ms). 화면 전환 자체가 미배선이라 배선 시 함께. → [1.6](#16-상호작용네비게이션)
 10. 🔧 **미배선** — **수정 기존 이미지 prefill** — V1은 첨부 이미지를 Kingfisher로 내려받아 채움. V2는 `initialDraft` 데이터가 있어야(App 배선 의존) 채워진다. → [4.1](#41-진입prefill)
-11. 🔧 **미배선** — **작성 성공 후 dismiss·목록 갱신·피드 상세 pop** — `feedEdited`/`popFeedDetailViewController` 크로스스크린 알림 배관이 V2에 없다(App 조정 계층에서 push 재진입 재조회·알림 재도입과 함께, 9절). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
+11. 🔧 **미배선** — **작성 성공 후 dismiss·목록 갱신·피드 상세 pop** — `feedEdited`/`popFeedDetailViewController` 크로스스크린 알림 배관이 V2에 없다(App 조정 계층에서 push 재진입 재조회·알림 재도입과 함께, 12절). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
 12. 🔧 **미배선** — **빈 화면 "피드 작성" CTA** — `WSSEmptyView(type: .myFeed)`는 뜨지만 버튼 액션이 빈 클로저(작성 화면 배선 대기). → [1.4](#14-빈-화면에러로딩)
 
 **의도적 변경 (확인 완료)**
 
 13. 🔧 **미분류(연결 작품 없는 내 피드) 필터** — V1 `etc` case → V2 `includesUncategorized: Bool` 별도 필드 + Data가 `"etc"` sentinel 부착(FeedDomain/CLAUDE.md:18 오탐 방지). → [2.2](#22-장르-필터)·[부록](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
-14. 🗑 **Amplitude 이벤트 제거** — 피드 진입·작성·좋아요·신고 등. 홈·리뷰와 함께 횡단 재도입 대상(9절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
-15. 🗑 **`BlockUser`/`feedEdited` 알림 토스트** — 차단·수정 완료 크로스스크린 토스트 배관. push 재진입 재조회·알림 재도입과 함께 App에서 재설계(9절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
+14. 🗑 **Amplitude 이벤트 제거** — 피드 진입·작성·좋아요·신고 등. 홈·리뷰와 함께 횡단 재도입 대상(12절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
+15. 🗑 **`BlockUser`/`feedEdited` 알림 토스트** — 차단·수정 완료 크로스스크린 토스트 배관. push 재진입 재조회·알림 재도입과 함께 App에서 재설계(12절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 
-**추가 확정 (2026-08-28 사용자) → 구현 대기 (`docs/TODO.md` 9절)**
+**추가 확정 (2026-08-28 사용자) → 구현 대기 (`docs/TODO.md` 12절)**
 
 16. 🔧 **내 피드 개수 표시 출처 → 서버 `feedsCount` 사용** — V2는 로드된 배열 길이(`myFeeds.count`)라 페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가 **실제로 존재**하므로 그 값을 노출해 표시(V1 parity). → [1.3](#13-정렬내-피드-카운트)
 17. 🔧 **수정 "변경 감지" 게이트 복원** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경 재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 버튼 활성. → [4.3](#43-작성수정-완료저장)
@@ -139,7 +139,7 @@
   - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). 단 CTA 액션은 아직 빈 클로저(1.6과 함께 미배선).
   - 근거: V1 `FeedPageContentViewController.swift:118-124`,`299-303`(emptyView.writeFeedButton) · V2 `SosoFeedView.swift:272-275`
 - 🔨 **회귀 확정→TODO** (2026-08-28: V2 계약대로 전면 뷰 표현) — **목록 로드 실패 표현**. V1은 목록 로드 에러를 **`onError`에서 `print`만** 하고 UI로 알리지 않았다(전면 에러 뷰 없음, 빈/직전 목록 유지). V2도 `catch`에서 `state.errorMessage`만 세팅하고 **`SosoFeedView`가 그 값을 안 그린다**(토스트도 전면 뷰도 없음 → 관찰상 V1과 같은 무처리).
-  - **결정**: V1 parity(조용)를 답습하지 않고 **V2 Feature 계약(#195)대로** "목록 로드 실패=전면 `NetworkErrorView`+재시도"로 표현한다(계약이 V1보다 우선). 인증 만료는 위 라우팅으로 먼저 분기. 구현은 C1 범위 밖이라 `docs/TODO.md` 9절.
+  - **결정**: V1 parity(조용)를 답습하지 않고 **V2 Feature 계약(#195)대로** "목록 로드 실패=전면 `NetworkErrorView`+재시도"로 표현한다(계약이 V1보다 우선). 인증 만료는 위 라우팅으로 먼저 분기. 구현은 C1 범위 밖이라 `docs/TODO.md` 12절.
   - 근거: V1 `FeedPageContentViewModel.swift:108-110`,`252-254`,`277-279`(print) · V2 `SosoFeedViewModel.swift:241-243`,`296-298`, `SosoFeedView.swift:268-316`(errorMessage 미표시), [Feature CLAUDE.md](../CLAUDE.md)(로드 실패 표현 계약)
 - 🔧 **통일 확정→코드 대상** (2026-08-28: Library식 authenticationRequired 라우팅 추가) — **인증 만료 처리**. V1엔 목록 화면 단위 인증 만료 분기가 없고 네트워크 계층(`tokenCheckURLSession`)이 재발급을 담당했다. V2 `SosoFeedViewModel`엔 `requiresAuthentication`/`onAuthenticationRequired`가 아예 없다(에러를 전부 errorMessage로).
   - 근거: V1 `FeedService.swift:40`(tokenCheckURLSession) · V2 `SosoFeedViewModel.swift`(인증 신호 없음), [Feature CLAUDE.md](../CLAUDE.md)(인증 만료 처리 계약)

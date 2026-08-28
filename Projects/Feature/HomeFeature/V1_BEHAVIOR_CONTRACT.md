@@ -41,7 +41,7 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **비로그인 홈 경로 전체 제거** — V1 홈은 `isLogined`로 곳곳이 갈렸다: 셀 탭 시 로그인 유도 모달, 추천글 타이틀이 "지금 뜨는 수다글"(비로그인)/"{닉네임}…"(로그인)로 바뀜, 취향추천이 비로그인이면 설정 유도 카드. **V2엔 이 분기가 하나도 없다**(항상 로그인 가정). V2가 로그인 필수 앱이라 의도된 것으로 보이나 **문서화된 결정은 못 찾음**. → [3](#3-로그인-게이팅-비로그인-홈)
    - **✅ 확정(2026-08-27, 사용자): 의도된 제거.** V2는 로그인 필수 앱이라 비로그인 홈 경로가 존재하지 않는다. 회귀 아님 — 되살리지 말 것.
@@ -53,13 +53,13 @@
    - **✅ 확정(2026-08-28): 온보딩으로 이동(누락 아님).** `OnboardingFeature/TermsAgreement` 실재 확인.
 5. **앱 최소 버전 강제 업데이트 제거** — V1은 `viewWillAppear`마다 최소 버전을 조회해 낮으면 **닫을 수 없는 업데이트 알럿**(→ App Store)을 띄웠다. **V2 홈엔 없다**(App 레이어로 옮겼을 가능성). → [6.1](#61-약관-동의강제-업데이트)
    - **🔧 확정(2026-08-28): 드롭 아님, App 배선 대기.** 최소버전 조회 인프라는 `SettingData`에 있음(게이트만 App 몫).
-6. 🗑 **Delete → 횡단 재도입 대상(TODO 9절)** — **Amplitude 이벤트 트래킹 전부 제거.** V1은 홈 진입·오늘의랭킹 탭·추천작 탭·선호장르 버튼 등에 Amplitude 이벤트를 심었다. **V2엔 없다**(앱 전반 애널리틱스 미이식 — 화면별 사안 아님). → [6.3](#63-기타-부수-작업)
+6. 🗑 **Delete → 횡단 재도입 대상(TODO 12절)** — **Amplitude 이벤트 트래킹 전부 제거.** V1은 홈 진입·오늘의랭킹 탭·추천작 탭·선호장르 버튼 등에 Amplitude 이벤트를 심었다. **V2엔 없다**(앱 전반 애널리틱스 미이식 — 화면별 사안 아님). → [6.3](#63-기타-부수-작업)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-7. 🔨 **고치기 확정→TODO 9절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 — V1 parity, 빈 자리보다 행동 유도) — **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
+7. 🔨 **고치기 확정→TODO 12절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 — V1 parity, 빈 자리보다 행동 유도) — **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
 8. ⏸ **보류** (2026-08-28, 사용자: 실측 후 재검토 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 7) — **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
-9. 🔧 **Splash 부트스트랩으로 이관(되살림, TODO 8절)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
+9. 🔧 **Splash 부트스트랩으로 이관(되살림, TODO 11절)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -176,7 +176,7 @@
 - ✅ **Keep** — 선호장르 **미설정**이면 목록 대신 **설정 유도 카드**를 띄우고, 그 버튼은 설정 화면으로 보낸다.
   - V2: `.noGenreSettings` → `settingInduceCard` → `onPreferenceGenreSettingTapped`. (V1은 목적지가 `MyPageEdit(entryType:.home)` — 5.)
   - 근거: V1 `HomeTasteRecommendView.swift:129-164`, `HomeViewModel.swift:265-274` · V2 `PreferenceGenreSection.swift:97-122`
-- 🔨 **고치기 확정→TODO 9절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 통일 — V1 parity) — **"설정했으나 결과 0건" 처리**. V1은 `updateView(isLogined, isEmpty)`에서 **로그인+0건을 미설정과 똑같이** 설정 유도 카드로 덮었다(둘 다 `unregisterView`) — 장르를 골랐는데도 "선호장르 설정하기"가 뜨는 셈.
+- 🔨 **고치기 확정→TODO 12절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 통일 — V1 parity) — **"설정했으나 결과 0건" 처리**. V1은 `updateView(isLogined, isEmpty)`에서 **로그인+0건을 미설정과 똑같이** 설정 유도 카드로 덮었다(둘 다 `unregisterView`) — 장르를 골랐는데도 "선호장르 설정하기"가 뜨는 셈.
   - V2: `PreferenceGenreNovelState`를 `.noGenreSettings`(→ CTA) / `.novels([])`(→ **섹션 통째 숨김**)로 분리해 이 혼동을 없앴다. `state`가 **옵셔널**이라 로딩 전(nil)과 미설정을 안 섞어 CTA 번쩍임도 막는다.
   - 근거: V1 `HomeTasteRecommendView.swift:133-163`(logined+isEmpty → unregister) · V2 `PreferenceGenreSection.swift:48-53`, `HomeView.swift:156-164`,`202-205`, `CLAUDE.md`(preferenceGenreNovelState 옵셔널)
 
@@ -259,7 +259,7 @@
 
 ### 6.2 유저 정보 처리
 
-- 🔧 **Splash 부트스트랩으로 이관 확정** (2026-08-28, 사용자: 유저 정보 조회·캐시 갱신은 앱 진입마다 필요 — `docs/TODO.md` 8절 런치 허브) — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
+- 🔧 **Splash 부트스트랩으로 이관 확정** (2026-08-28, 사용자: 유저 정보 조회·캐시 갱신은 앱 진입마다 필요 — `docs/TODO.md` 11절 런치 허브) — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
   - V2: 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다(`fetchCachedNickname`). 저장은 로그인·프로필 조회 등 다른 경로가 담당(홈의 책임 아님). **앱 진입마다 `/users/me` 재조회·캐시 갱신은 Splash 부트스트랩이 맡는다**(신설 대기).
   - 근거: V1 `HomeViewModel.swift:200-213`,`299-301` · V2 `LoadHomeDataUseCase.swift:46`, `RecommendationDomain/CLAUDE.md`(닉네임은 로컬 캐시)
 - 🗑 **Delete 확정** (2026-08-28, 사용자: 편집 저장 토스트는 마이페이지가 띄움 — UserPage 계약 1.9 ✅, 홈 복귀 경로 자체가 없음) — V1은 `NotificationName.editProfile`을 관찰해 프로필 수정 복귀 시 **"프로필 수정" 토스트**를 띄웠다.
@@ -268,7 +268,7 @@
 
 ### 6.3 기타 부수 작업
 
-- 🗑 **Delete** (횡단 재도입 대상 — 9절) — **Amplitude 이벤트 트래킹**. V1은 홈 진입(`home`)·오늘의 랭킹 탭(`homeTodayRanking`)·추천작 탭(`homePreferNovellist`)·선호장르 버튼(`homeToPreferButton`)에 Amplitude 이벤트를 심었다.
+- 🗑 **Delete** (횡단 재도입 대상 — 12절) — **Amplitude 이벤트 트래킹**. V1은 홈 진입(`home`)·오늘의 랭킹 탭(`homeTodayRanking`)·추천작 탭(`homePreferNovellist`)·선호장르 버튼(`homeToPreferButton`)에 Amplitude 이벤트를 심었다.
   - **V2엔 트래킹 코드가 없다.** (분석 인프라 미이식으로 보이나 확인 필요.)
   - 근거: V1 `HomeViewController.swift:53`, `HomeViewModel.swift:233`,`245`,`267` · V2 `HomeViewModel`(트래킹 없음)
 - 🔧 **Improve (신규)** — **홈 진입 시 시스템 푸시 권한 확인**(#193). V1은 `viewDidLoad`에서 로그인 상태면 `NotificationHelper.setRemoteNotification()`으로 **원격 알림(APNs)에 조용히 등록**만 했다.

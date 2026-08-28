@@ -40,7 +40,7 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. ~~백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.~~ → 불요 확정(아래). → [7](#7-회원탈퇴-withdraw-flow--mypagedeleteid), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
    - **✅ Keep 확정(2026-08-28, 사용자: 탈퇴 body에 refreshToken 불요 — 헤더 access 토큰 인증).** 현행 `{ reason }` 유지. (보류 해제 — PENDING_DECISIONS 1 닫힘)
@@ -144,7 +144,7 @@
 - ✅ **Keep** — 커밋-온-확인: 휠을 굴려 중앙 셀만 바뀌고, "완료"를 눌러야 부모 생년에 반영된다. X(취소)는 반영 없이 닫기만.
   - V2: `SettingChangeBirthYearPickerSheet`가 내부 `draftYear`만 갱신, "완료"에서 부모 `selectedYear`(Binding)로 커밋, X는 커밋 없이 닫기(`CLAUDE.md` 명문화).
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:68-85`(cancel=dismiss, complete=getCenterCellYear→post) · V2 `CLAUDE.md`(커밋-온-확인 패턴)
-- 🔧 **복원 확정→TODO** (생년 휠 상한 dynamic화 — 9절 소소 묶음) — 연도 범위 상한. V1 휠은 `1900...2025`, V2는 `BirthYear.minYear...maxYear = 1900...2024`.
+- 🔧 **복원 확정→TODO** (생년 휠 상한 dynamic화 — 12절 소소 묶음) — 연도 범위 상한. V1 휠은 `1900...2025`, V2는 `BirthYear.minYear...maxYear = 1900...2024`.
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:18`(`Array(1900...2025)`) · V2 `ProfileDomain/…/BirthYear.swift:12-13`
 - ✅ **Keep** (수단) — 스냅 스크롤(가장 가까운 셀에 정렬)·중앙 셀 하이라이트. V2는 `WSSBirthYearWheel`(WSSComponent 공용, 연도 1열) 컴포넌트가 담당.
   - 근거: V1 `MyPageChangeUserBirthViewController.swift:105-146` · V2 `CLAUDE.md`(주의사항 — `WSSBirthYearWheel`)

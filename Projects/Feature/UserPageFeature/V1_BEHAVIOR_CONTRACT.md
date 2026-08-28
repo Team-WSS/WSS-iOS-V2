@@ -49,7 +49,7 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. 🔧 **미배선(App 배선 — 서재 이동)** — **서재 통계 → 서재 이동이 V2에 미배선**. V1은 마이페이지의 읽기상태 버튼(관심/보는중/봤어요/하차) **각각**을 탭하면 그 읽기상태로 필터된 서재로 이동하고(마이페이지=탭 전환 notification, 타유저=UserLibrary push, **pageIndex 동반**), 타유저 프로필은 "서재" 타이틀 탭으로도 이동한다. **V2는 `LibrarySection` 전체가 버튼 하나이고 그 action이 `//TODO: - 서재 뷰로 이동`(마이·타유저 둘 다)** → 아직 안 눌린다. 읽기상태별 진입(pageIndex) 세분도 사라졌다. → [1.3](#13-서재-통계--서재-이동), [4.8](#48-서재-통계--네비게이션)
 2. **타유저 프로필·전체 피드 목록의 재진입 재조회 없음**. V1은 `viewWillAppear`마다 프로필·피드를 다시 받는다(전체 피드 목록은 목록을 **비우고** 처음부터 다시 로드). V2 `UserPageViewModel.load()`·`UserFeedListViewModel.load()`는 **`!hasLoaded`/`!hasLoadedFirstPage` 1회 가드**라 push에서 돌아와도 재조회하지 않는다. → [4.1](#41-진입생명주기), [5.2](#52-진입생명주기)
@@ -135,7 +135,7 @@
 
 ### 1.8 스크롤 반응 네비 타이틀
 
-- 🔧 **복원 확정→TODO** (되살린다 소소 — 9절) — V1 마이페이지는 스크롤 오프셋 > 0이면 네비바에 "마이페이지" 타이틀이 드러난다(`updateNavigationBar`, `isVisibleBeforeScroll: false`).
+- 🔧 **복원 확정→TODO** (되살린다 소소 — 12절) — V1 마이페이지는 스크롤 오프셋 > 0이면 네비바에 "마이페이지" 타이틀이 드러난다(`updateNavigationBar`, `isVisibleBeforeScroll: false`).
   - **V2: 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다** → 스크롤해도 "마이페이지"가 뜨지 않는다. (타유저 프로필의 스크롤 반응 닉네임은 4.10에서 유지.)
   - 근거: V1 `MyPageViewController.swift:55-58`, `MyPageViewModel.swift:114-121` · V2 `MypageView.swift:252-262`
 
@@ -244,11 +244,11 @@
 
 ### 4.1 진입·생명주기
 
-- 🔧 **복원 확정→TODO** (push 재진입 재조회 복원 — 9절) — V1은 `viewWillAppear`마다 프로필·서재·취향·피드를 **다시 로드**한다(`Observable.merge(viewWillAppearEvent, reloadSubject)`).
+- 🔧 **복원 확정→TODO** (push 재진입 재조회 복원 — 12절) — V1은 `viewWillAppear`마다 프로필·서재·취향·피드를 **다시 로드**한다(`Observable.merge(viewWillAppearEvent, reloadSubject)`).
   - **V2: `load()`가 `guard !hasLoaded, loadTask == nil`** → 최초 1회만 로드. push에서 되돌아와도(피드 상세 등) 재조회하지 않는다.
   - **오탐 방지 참고**: 이 화면은 탭 콘텐츠가 아니라 push라서 [Feature/CLAUDE.md](../CLAUDE.md)의 "탭 복귀마다 갱신"이 직접 적용되진 않는다 — 그래서 1회 가드가 의도일 수 있으나 **문서화된 근거는 없다**.
   - 근거: V1 `UserPageViewController.swift:56-59`, `UserPageViewModel.swift:124-153` · V2 `UserPageViewModel.swift:207-212`, `UserPageView.swift:189-191`
-  - **판정 근거**: 되살리기로 확정(횡단 push 재진입 재조회 결정 — `docs/TODO.md` 9절). '비우고 처음부터'는 스크롤·상태 보존을 위해 재검토.
+  - **판정 근거**: 되살리기로 확정(횡단 push 재진입 재조회 결정 — `docs/TODO.md` 12절). '비우고 처음부터'는 스크롤·상태 보존을 위해 재검토.
 
 ### 4.2 콘텐츠 로드 (병렬)
 
@@ -289,7 +289,7 @@
 - ✅ **Keep** — 차단 성공 시 화면을 떠난다(상대 프로필을 더 볼 이유 없음).
   - **수단 차이**: V1은 `popViewController`(pop), V2는 `state.shouldDismiss` → `dismiss()`.
   - 근거: V1 `UserPageViewModel.swift:206-211` · V2 `UserPageViewModel.swift:336-344`, `UserPageView.swift:186-188`, `CLAUDE.md`(성공하면 dismiss)
-- 🔧 **복원 확정→TODO** (되살린다 소소 — 9절) — 차단 성공 **알림(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 직전 화면에서 "차단했어요" 류 피드백을 띄우게 한다.
+- 🔧 **복원 확정→TODO** (되살린다 소소 — 12절) — 차단 성공 **알림(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 직전 화면에서 "차단했어요" 류 피드백을 띄우게 한다.
   - **V2: 화면 dismiss만** — 부모에게 차단 완료를 알리는 신호(토스트 등)가 없다.
   - 근거: V1 `UserPageViewModel.swift:207-210` · V2 `UserPageViewModel.swift:340`(shouldDismiss만)
 - ✅ **Keep** — 차단 진입점은 네비바 우측 드롭다운(threedots) "차단하기".
@@ -307,7 +307,7 @@
   - **V2: `isProfilePrivate`가 서면 통계 탭 콘텐츠 전체(서재 섹션 포함)를** 비공개 안내로 대체한다 → 통계 숫자가 안 보인다.
   - 근거: V1 `UserPageViewModel.swift:331-338`(private 게이팅 밖) · V2 `UserPageView.swift:97-117`(private면 Section 전체 대체)
   - **판정 근거**: 기획 판단 → 보류([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 4).
-- 🔧 **복원 확정→TODO** (USER-018 전용 처리 복원 — 9절) — **"알 수 없는 유저"(USER-018) 폴백**. V1은 프로필 조회가 `USER-018`이면 빈 프로필 + private 처리로 폴백한다("현재 로직상 불가능하지만 대응" 주석).
+- 🔧 **복원 확정→TODO** (USER-018 전용 처리 복원 — 12절) — **"알 수 없는 유저"(USER-018) 폴백**. V1은 프로필 조회가 `USER-018`이면 빈 프로필 + private 처리로 폴백한다("현재 로직상 불가능하지만 대응" 주석).
   - **V2: USER-018 특별 처리 없음** → 일반 로드 실패(`hasLoadError`)로 떨어져 `NetworkErrorView`.
   - 근거: V1 `UserPageViewModel.swift:279-295`,`311-326` · V2 `UserPageViewModel.swift:365-372`(privateProfile만 분기)
 
@@ -346,7 +346,7 @@
 
 ### 5.2 진입·생명주기
 
-- 🔧 **복원 확정→TODO** (push 재진입 — 9절, '비우고 처음부터'는 재검토) — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
+- 🔧 **복원 확정→TODO** (push 재진입 — 12절, '비우고 처음부터'는 재검토) — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
   - **V2: `load()`가 `guard !hasLoadedFirstPage`** → 최초 1회만 로드(재진입 재조회 없음).
   - 근거: V1 `UserPageFeedDetailViewModel.swift:79-100` · V2 `UserFeedListViewModel.swift:134-139`
 

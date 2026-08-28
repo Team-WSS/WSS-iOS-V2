@@ -40,18 +40,18 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
-1. 🔨 **오배선 수정 확정→TODO 9절** (2026-08-28: 범용 문의로 되돌림) — **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [5](#5-빈-화면-검색-결과-없음)
+1. 🔨 **오배선 수정 확정→TODO 12절** (2026-08-28: 범용 문의로 되돌림) — **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [5](#5-빈-화면-검색-결과-없음)
 2. ✅ **Keep 확정** (2026-08-28: 사소, V2 유지 — 본문 4) — **선택할 때마다 키보드를 내리던 동작**(`endEditing`)이 V2엔 없다. V1은 트레이/검색결과/카테고리 어디서 키워드를 고르든 곧바로 키보드를 접었다. → [4](#4-선택)
-3. 🔧 **횡단 이슈→TODO 9절** (Amplitude 재도입) — **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [9](#9-분석-analytics)
+3. 🔧 **횡단 이슈→TODO 12절** (Amplitude 재도입) — **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [9](#9-분석-analytics)
 
 **🔧/🗑 눈에 띄는 의도적 변경 (의도 확인)**
 
 4. 🗑/🔧 **Delete(호출부 이관)·Improve(전달 방식)** — **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
 5. 🗑 **Delete(호출부 이관)** — **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
 6. 🔧 **Improve 확정** (2026-08-28, 사용자: 로컬 고정이 맞음 — 서버 응답 의존 불필요) — **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
-7. 🔧 **Improve 확정** (2026-08-28, 사용자: 캐시 갱신은 Splash 부트스트랩에서 — TODO 8절) — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자: 캐시 갱신은 Splash 부트스트랩에서 — TODO 11절) — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
 
 (나머지는 대부분 ✅ Keep — 수단만 RxSwift→구조적 동시성으로 바뀌고 관찰 동작은 같다.)
 
@@ -94,7 +94,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:134`(`flatMapLatest`) · V2 `Sources/SearchKeywordViewModel.swift:134-143`, `CLAUDE.md`(stale 가드)
 - 🔧 **Improve 확정** (2026-08-28, 사용자) — **검색 데이터 소스**. V1은 제출마다 **서버 왕복**(`GET /keywords?query=`, 액세스 토큰 헤더). V2는 **로컬 DB 캐시** 조회(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 후 재조회 폴백.
   - (오탐 방지: `BaseDomain/CLAUDE.md`에 "fetch/search는 로컬 캐시, sync가 서버 동기화"로 명문화된 의도적 구조.)
-  - **캐시 갱신 시점 = Splash 부트스트랩**(2026-08-28 사용자 결정, `docs/TODO.md` 8절 런치 허브): 앱 진입 시 `syncKeywords()`로 새 키워드가 검색에 빠지는 창을 없앤다.
+  - **캐시 갱신 시점 = Splash 부트스트랩**(2026-08-28 사용자 결정, `docs/TODO.md` 11절 런치 허브): 앱 진입 시 `syncKeywords()`로 새 키워드가 검색에 빠지는 창을 없앤다.
   - 근거: V1 `WSSiOS/Network/Keyword/KeywordService.swift:18-42`(서버 GET) · V2 `SearchKeywordsUseCase.swift:23-33`, `BaseDomain/CLAUDE.md`(로컬/서버 계약)
 
 ## 4. 선택
@@ -160,7 +160,7 @@ V2 `KeywordFeature`는 콘텐츠만 제공하고 이 껍데기를 전부 호출�
 ## 9. 분석 (Analytics)
 
 - 🔧 **횡단 이슈→TODO** (2026-08-28) — V1은 문의 버튼 탭에 **Amplitude 이벤트**(`AmplitudeEvent.Search.contactKeyword`)를 기록했다. V2 이 모듈엔 분석 계층이 없다.
-  - **판정 근거**: 앱 전반 애널리틱스 부재의 일부(이 지점만의 누락이 아님) → 이 문서 범위 밖, 횡단 재도입(`docs/TODO.md` 9절)으로 흡수.
+  - **판정 근거**: 앱 전반 애널리틱스 부재의 일부(이 지점만의 누락이 아님) → 이 문서 범위 밖, 횡단 재도입(`docs/TODO.md` 12절)으로 흡수.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:217` · V2 `Sources/SearchKeywordView.swift:74-76`(분석 호출 없음)
 
 ---
