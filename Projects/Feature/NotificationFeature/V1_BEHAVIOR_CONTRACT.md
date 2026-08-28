@@ -40,7 +40,7 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-08-29 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **재진입 시 서버 재동기화 상실** — V1 목록/상세는 **`viewWillAppear`마다 전체를 처음부터 재조회**한다(로딩뷰 포함). V2는 `hasLoaded` 1회 가드로 **성공 후 재조회하지 않는다**. 낙관 읽음 반영이 "방금 탭한 알림 읽음 표시"는 대체하지만, **상세/피드에서 목록으로 복귀하는 사이 서버에서 바뀐 것**(새로 온 알림·다른 기기 읽음)은 반영되지 않는다. push 화면이라 홈 벨로 새로 진입할 땐 매번 fresh VM이라 무해하나, 복귀 창은 미반영. → [1.1](#11-진입생명주기)
    - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원.** push 복귀 시에도 서버 재조회하기로 결정(횡단 — 타유저 프로필·작품상세와 함께). C1 범위 밖 구현이라 `docs/TODO.md` 9. 스크롤·낙관 반영 보존은 화면별 조정.
@@ -50,7 +50,7 @@
 **🔧 눈에 띄는 의도적 변경 (근거 확인)**
 
 3. 🔧 **Improve 확정** (2026-08-28, 사용자: read 실패해도 피드는 열려야 함) — **비공지 미읽음 탭의 네비게이션이 read 완료에 종속(V1) → 독립(V2)**. V1은 미읽음 피드 알림을 탭하면 **read POST가 성공해야(`onCompleted`) 피드 상세로 push**한다 — read가 네트워크 실패로 끝나면 **피드가 아예 안 열린다**. V2는 read를 fire-and-forget으로 보내고 화면 전환은 즉시 한다. → [1.3](#13-셀-탭--읽음-처리--딥링크-핵심)
-4. ⏸ **보류** (2026-08-28, 사용자: 그런 알림이 실존하는지·목적지(공지 상세?)가 의문 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 8) — **feedId 없는 비공지 알림**: V1은 `feedId ?? -1`로 **피드 -1(존재하지 않는 피드)로 push**한다(깨진 화면). V2는 `.unknown`으로 **전환하지 않는다**. → [1.3](#13-셀-탭--읽음-처리--딥링크-핵심) · 부록
+4. 🔧 **Improve 확정** (2026-08-29, 사용자: 그런 알림은 실존하지 않음 — PENDING 8 닫힘, 현행은 방어 코드로 유지) — **feedId 없는 비공지 알림**: V1은 `feedId ?? -1`로 **피드 -1(존재하지 않는 피드)로 push**한다(깨진 화면). V2는 `.unknown`으로 **전환하지 않는다**. → [1.3](#13-셀-탭--읽음-처리--딥링크-핵심) · 부록
 5. 🔧 **Improve(신규) 확정** (2026-08-28, 사용자) — **작품 딥링크(`.novelDetail`) 신규** — V1엔 `novelId` 개념 자체가 없다(DTO에 필드 없음, 라우팅은 공지/피드 2갈래뿐). V2는 완결·휴재 복귀 알림을 작품 상세로 보낸다(#181). → [1.3](#13-셀-탭--읽음-처리--딥링크-핵심) · 부록
 
 **🔧 V1엔 없던 방어를 V2가 신설 (묶음)**
@@ -95,7 +95,7 @@ V1은 셀 탭을 `isNotice` → `isRead` 3분기로 라우팅한다. **딥링크
 - 🔧 **Improve 확정** (2026-08-28, 사용자) — **작품 딥링크(`.novelDetail`) 신규**. V1엔 `novelId`가 DTO에도 없고(공지/피드 2갈래) 작품 상세로 가는 경로가 없다. V2는 응답 `novelId`(작품 알림, `isNotice: false`)를 `.novelDetail`로 매핑해 작품 상세로 보낸다(#181에서 연결).
   - ⚠️ V2 CLAUDE.md·NotificationDomain CLAUDE.md에 **매퍼 우선순위(`isNotice → feedId → novelId → unknown`)가 "작품 알림은 `isNotice: false`로 온다"는 서버 스펙에 기댄다**는 함정과, **실서버에서 값이 채워진 샘플을 아직 못 봤다**는 미검증이 명시돼 있다.
   - 근거: V1 (해당 없음 — `…/Data/DTO/Notification.swift:16-25`에 novelId 필드 없음) · V2 `NotificationResponse.swift:22`, `NotificationMapper.swift:34-37`, `CLAUDE.md`(작품 알림), `NotificationDomain/CLAUDE.md`(매퍼 우선순위 함정)
-- ⏸ **보류** (2026-08-28, 사용자: 실존 여부·목적지 의문 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 8) — **feedId 없는 비공지 알림 처리**. V1은 무조건 `pushToFeedDetailViewController.accept(notification.feedId ?? -1)` — feedId가 nil이면 **피드 `-1`(존재하지 않는 피드)로 push**한다(깨진 상세). V2는 매퍼가 `.unknown`으로 떨어뜨려 **화면 전환을 하지 않는다**(읽음 처리만 한다).
+- 🔧 **Improve 확정** (2026-08-29, 사용자: 실존하지 않음 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 닫힘 이력 8) — **feedId 없는 비공지 알림 처리**. V1은 무조건 `pushToFeedDetailViewController.accept(notification.feedId ?? -1)` — feedId가 nil이면 **피드 `-1`(존재하지 않는 피드)로 push**한다(깨진 상세). V2는 매퍼가 `.unknown`으로 떨어뜨려 **화면 전환을 하지 않는다**(읽음 처리만 한다).
   - 근거: V1 `HomeNotificationViewModel.swift:87`,`91`(`feedId ?? -1`) · V2 `NotificationMapper.swift:38-39`, `NotificationListView.swift:220-221`
 - 🔧 **Improve** — **낙관 읽음 반영**. V1은 탭 시 목록 셀을 즉시 읽음으로 바꾸지 않는다(읽음 배경색은 read POST 성공 후 **재진입 재조회**로만 반영). V2는 탭 즉시 `applyReadState`로 셀을 읽음으로 교체하고, 실패해도 롤백하지 않는다.
   - **관찰 결과("돌아오면 읽음")는 결국 같지만, V2는 즉각적이고 read POST 실패와 무관하게 읽음 표시가 남는다**(재진입 시 서버 값으로 재동기화). V2 CLAUDE.md에 "실패해도 롤백하지 않는다"로 명문화.
