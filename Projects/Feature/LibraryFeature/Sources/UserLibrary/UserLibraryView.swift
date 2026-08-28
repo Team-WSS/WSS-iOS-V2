@@ -116,6 +116,7 @@ private extension UserLibraryView {
 
     var sortButton: some View {
         Button {
+            HapticManager.selection()
             isSortSheetPresented = true
         } label: {
             HStack(spacing: 4) {

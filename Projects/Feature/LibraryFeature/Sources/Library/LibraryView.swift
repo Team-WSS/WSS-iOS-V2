@@ -189,6 +189,7 @@ private extension LibraryView {
                 .frame(width: 1, height: 8)
             Spacer().frame(width: 10)
             Button {
+                HapticManager.selection()
                 isSortSheetPresented = true
             } label: {
                 HStack(spacing: 4) {
