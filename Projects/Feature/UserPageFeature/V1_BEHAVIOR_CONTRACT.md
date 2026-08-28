@@ -67,9 +67,9 @@
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-9. 🔧 **Improve** — **타유저 프로필/전체 피드 목록의 피드 셀에 좋아요·신고 추가**. V1은 이 두 화면의 피드 셀에서 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결작품 탭만 동작). V2는 좋아요 토글(낙관 반영·롤백)과 스포일러/부적절 신고(2단 알럿)를 붙였다. → [4.5](#45-피드-셀-상호작용), [5.3](#53-피드-셀-상호작용)
-10. 🔧 **Improve** — **차단에 확인 알럿 추가**. V1은 드롭다운 "차단하기" 탭 즉시 차단 API를 호출했다(확인 단계 없음). V2는 `WSSAlertType.blockUser` 확인 알럿을 거친다. → [4.6](#46-차단)
-11. 🔧 **Improve** — **전체 피드 목록 로드 실패 표현**. V1 전체 피드 목록은 로드 실패 시 `print`만 하고 아무 표시가 없었다. V2는 첫 페이지 실패를 `NetworkErrorView`로 덮는다. → [5.1](#51-로드페이지네이션)
+9. 🔧 **Improve 확정** (2026-08-28, 사용자) — **타유저 프로필/전체 피드 목록의 피드 셀에 좋아요·신고 추가**. V1은 이 두 화면의 피드 셀에서 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결작품 탭만 동작). V2는 좋아요 토글(낙관 반영·롤백)과 스포일러/부적절 신고(2단 알럿)를 붙였다. → [4.5](#45-피드-셀-상호작용), [5.3](#53-피드-셀-상호작용)
+10. 🔧 **Improve 확정** (2026-08-28, 사용자) — **차단에 확인 알럿 추가**. V1은 드롭다운 "차단하기" 탭 즉시 차단 API를 호출했다(확인 단계 없음). V2는 `WSSAlertType.blockUser` 확인 알럿을 거친다. → [4.6](#46-차단)
+11. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **전체 피드 목록 로드 실패 표현**. V1 전체 피드 목록은 로드 실패 시 `print`만 하고 아무 표시가 없었다. V2는 첫 페이지 실패를 `NetworkErrorView`로 덮는다. → [5.1](#51-로드페이지네이션)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
@@ -274,7 +274,7 @@
 
 ### 4.5 피드 셀 상호작용
 
-- 🔧 **Improve** — **피드 셀 좋아요·신고 추가**. V1은 타유저 프로필 피드 셀의 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결 작품 탭만 실제 동작). 즉 남의 프로필에서 그 글에 좋아요/신고를 할 수 없었다.
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 셀 좋아요·신고 추가**. V1은 타유저 프로필 피드 셀의 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결 작품 탭만 실제 동작). 즉 남의 프로필에서 그 글에 좋아요/신고를 할 수 없었다.
   - V2: 좋아요 토글(엔티티 정책 위임 + 낙관 반영 + 실패 롤백), threedots 드롭다운으로 스포일러/부적절 신고(2단 확인→접수완료 알럿). (V2 `CLAUDE.md`에 설계로 명문화.)
   - 근거: V1 `UserPageViewController.swift:405-421`(dropdown/like `return`) · V2 `UserPageViewModel.swift:226-236`,`246-264`,`320-359`, `UserPageView.swift:481-521`,`586-616`, `CLAUDE.md`(피드 신고)
 - 🔧 **미배선(App 배선)** — 피드 셀의 **연결 작품 탭 → 작품 상세 이동**. V1은 `connectedNovelViewDidTap` → `pushToNovelDetailViewController`로 동작했다.
@@ -283,7 +283,7 @@
 
 ### 4.6 차단
 
-- 🔧 **Improve** — **차단에 확인 알럿 추가**. V1은 네비바 드롭다운 "차단하기" 탭 **즉시** 차단 API를 호출했다(확인 단계 없음).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **차단에 확인 알럿 추가**. V1은 네비바 드롭다운 "차단하기" 탭 **즉시** 차단 API를 호출했다(확인 단계 없음).
   - V2: `blockUserTapped` → `WSSAlertType.blockUser` 확인 알럿 → `confirmBlockUser`.
   - 근거: V1 `UserPageViewModel.swift:200-212` · V2 `UserPageViewModel.swift:184-189`,`238-243`, `UserPageView.swift:158-166`,`575-580`
 - ✅ **Keep** — 차단 성공 시 화면을 떠난다(상대 프로필을 더 볼 이유 없음).
@@ -340,7 +340,7 @@
 - ✅ **Keep** — 마지막 피드 ID를 커서로 다음 페이지를 이어 받는 무한 스크롤. 진행 중 중복 요청 가드.
   - **수단 차이**: V1은 `lastFeedIdRelay`(마지막 피드의 `feedId`) + `isFetching`/`isLoadable` 가드, 스크롤 오프셋 임계(`offsetY + frameHeight >= contentHeight - 10`)로 발화. V2는 `state.feeds.last?.feedId`를 커서로, `feedsTask == nil`/`hasNextFeeds` 가드, 마지막 셀 `onAppear`로 발화.
   - 근거: V1 `UserPageFeedDetailViewModel.swift:26-29`,`57-77`,`113-128`, `UserPageFeedDetailViewController.swift:84-94` · V2 `UserFeedListViewModel.swift:142-148`,`188-208`
-- 🔧 **Improve** — **로드 실패 표현**. V1은 로드 실패 시 `isFetching = false` + `print`만(화면 표시 없음).
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **로드 실패 표현**. V1은 로드 실패 시 `isFetching = false` + `print`만(화면 표시 없음).
   - V2: 첫 페이지 실패면 `feedsLoadFailed` → `NetworkErrorView`(재시도). (#195 로드 실패 표현 계약 계승.)
   - 근거: V1 `UserPageFeedDetailViewModel.swift:73-76`,`96-99` · V2 `UserFeedListViewModel.swift:204-207`
 
@@ -352,7 +352,7 @@
 
 ### 5.3 피드 셀 상호작용
 
-- 🔧 **Improve** — **좋아요·신고 추가**(4.5와 동일). V1 전체 피드 목록도 셀 드롭다운·좋아요가 no-op였고 연결 작품 탭만 동작했다.
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **좋아요·신고 추가**(4.5와 동일). V1 전체 피드 목록도 셀 드롭다운·좋아요가 no-op였고 연결 작품 탭만 동작했다.
   - V2: `UserFeedListViewModel`이 좋아요 토글·신고를 `UserPageViewModel`과 동일 패턴으로 독립 보유.
   - 근거: V1 `UserPageFeedDetailViewController.swift:125-141`(dropdown/like `return`) · V2 `UserFeedListViewModel.swift:151-182`,`210-239`
 

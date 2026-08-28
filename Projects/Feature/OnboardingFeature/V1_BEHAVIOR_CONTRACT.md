@@ -52,9 +52,9 @@
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-6. 🔧 **Improve** — **"건너뛰기"의 장르 처리가 바뀜** — V1 장르 단계의 "건너뛰기"는 **현재 선택된 장르를 그대로** 등록에 실어 보낸다(complete와 사실상 동일 경로). V2는 **선택을 무시하고 항상 빈 장르로** 등록한다(문서화된 설계). → [2.4](#24-장르-선택)
-7. 🔧 **Improve** — **프로필 등록 실패 표현** — V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼이 **토큰을 지우고 로그인 화면으로 튕긴다**. V2는 등록 실패를 **토스트**로 처리하고 버튼 재탭으로 재시도(문서화된 에러 표현 계약). → [2.5](#25-온보딩-완료-처리-프로필-등록)
-8. 🔧 **Improve** — **진행바 구동 방식** — V1은 스크롤 오프셋에 연속적으로 물린 진행바, V2는 단계(step)에 물린 이산 진행바(스크롤 연동 진행바가 "어색하다"는 사용자 피드백으로 컨테이너 구조로 재작업). → [2.6](#26-단계-네비게이션--진행바)
+6. 🔧 **Improve 확정** (2026-08-28, 사용자: "건너뛰기"는 선택을 버리는 게 맞음) — **"건너뛰기"의 장르 처리가 바뀜** — V1 장르 단계의 "건너뛰기"는 **현재 선택된 장르를 그대로** 등록에 실어 보낸다(complete와 사실상 동일 경로). V2는 **선택을 무시하고 항상 빈 장르로** 등록한다(문서화된 설계). → [2.4](#24-장르-선택)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **프로필 등록 실패 표현** — V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼이 **토큰을 지우고 로그인 화면으로 튕긴다**. V2는 등록 실패를 **토스트**로 처리하고 버튼 재탭으로 재시도(문서화된 에러 표현 계약). → [2.5](#25-온보딩-완료-처리-프로필-등록)
+8. 🔧 **Improve 확정** (2026-08-28, 사용자) — **진행바 구동 방식** — V1은 스크롤 오프셋에 연속적으로 물린 진행바, V2는 단계(step)에 물린 이산 진행바(스크롤 연동 진행바가 "어색하다"는 사용자 피드백으로 컨테이너 구조로 재작업). → [2.6](#26-단계-네비게이션--진행바)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
@@ -183,7 +183,7 @@ V2: `Sources/StepFlow/`(컨테이너) + `Nickname/`·`GenderBirthYear/`·`GenreS
 - ✅ **Keep** — **다중 선택**(토글) + "완료"는 **하나 이상 선택했을 때만** 활성화.
   - V2: `Set<NovelGenre>` 토글, `complete()`가 `!isEmpty` 가드. V1은 `[NovelGenre]` 배열 토글, next 활성 = `!selectedGenres.isEmpty`.
   - 근거: V1 `OnboardingViewModel.swift:192-203` · V2 `GenreSelectionViewModel.swift:94-106`
-- 🔧 **Improve** — **"건너뛰기"의 장르 처리**. V1의 skip 버튼은 `endOnboarding`으로 직행하고, 그 뒤 `postUserProfile`이 **현재 `selectedGenres.value`를 그대로** 실어 보낸다 → 사용자가 장르를 몇 개 고른 뒤 "건너뛰기"를 누르면 **고른 장르가 등록된다**(complete와 사실상 같은 결과).
+- 🔧 **Improve 확정** (2026-08-28, 사용자: "건너뛰기"는 선택을 버리는 게 맞음) — **"건너뛰기"의 장르 처리**. V1의 skip 버튼은 `endOnboarding`으로 직행하고, 그 뒤 `postUserProfile`이 **현재 `selectedGenres.value`를 그대로** 실어 보낸다 → 사용자가 장르를 몇 개 고른 뒤 "건너뛰기"를 누르면 **고른 장르가 등록된다**(complete와 사실상 같은 결과).
   - V2: "건너뛰기"는 **선택을 무시하고 항상 빈 장르로 등록**한다(`register(genres: [])`). "선택하다 만 상태를 애매하게 반영하지 않기 위한 설계"로 문서화.
   - 근거: V1 `OnboardingViewModel.swift:205-211`(skip→endOnboarding),`372`(POST에 `selectedGenres.value`) · V2 `GenreSelectionViewModel.swift:109-112`, `CLAUDE.md`(건너뛰기 = 빈 장르)
 - ✅ **Keep** — 장르 그리드가 곧 **온보딩 완료 트리거**다. "완료"/"건너뛰기" 둘 다 프로필 등록을 부르고 성공 시 완료로 넘어간다.
@@ -198,7 +198,7 @@ V2: `Sources/StepFlow/`(컨테이너) + `Nickname/`·`GenderBirthYear/`·`GenreS
 - ✅ **Keep** — 등록 **성공 시 로컬 프로필 저장**(성별·닉네임·가입완료 플래그) 후 완료 화면으로.
   - V2: `isRegister`/`userGender`/`userNickname` 영속화가 **Data 레이어로 이동**(UseCase가 담당). Feature는 `isCompleted`만.
   - 근거: V1 `OnboardingViewModel.swift:374-381`(UserDefaults 3종) · V2 `GenreSelectionViewModel.swift:134-135`, `ProfileDomain/CLAUDE.md`(로컬 저장은 Data)
-- 🔧 **Improve** — **등록 실패 표현**. V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼(`networkErrorRefreshButtonDidTap`)은 **accessToken·refreshToken을 지우고 로그인 화면으로 루트 교체**한다(꽤 파괴적인 복구).
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **등록 실패 표현**. V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼(`networkErrorRefreshButtonDidTap`)은 **accessToken·refreshToken을 지우고 로그인 화면으로 루트 교체**한다(꽤 파괴적인 복구).
   - V2: 등록 실패는 **토스트**(`.unknownError`)로 알리고 버튼 재탭으로 재시도, 인증 만료만 `onAuthenticationRequired` 라우팅으로 분리(Feature `CLAUDE.md`의 "로드 실패 표현 계약" = 사용자 액션 실패는 토스트). 재로그인 튕김 없음.
   - 근거: V1 `OnboardingViewModel.swift:258-266,382-385` · V2 `GenreSelectionViewModel.swift:144-155`, `Feature/CLAUDE.md`(에러 표현·인증 만료 계약)
 - ✅ **Keep** (구조적으로 자동 충족) — 등록 직전 **성별·출생 누락 가드**. V1은 `postUserProfile` 진입에서 gender/birth가 nil이면 `print` 후 조용히 return(no-op).
@@ -213,7 +213,7 @@ V2: `Sources/StepFlow/`(컨테이너) + `Nickname/`·`GenderBirthYear/`·`GenreS
 - ✅ **Keep** — 뒤로가기·다음은 **화면 이탈이 아니라 컨테이너 내부 단계 이동**이고, 뒤로 갔다 와도 **입력값이 보존**된다.
   - V2: 세 단계 View를 `HStack`에 동시 생성해 `offset`으로 밀고(`.clipped()`), 닉네임/성별출생 VM을 **컨테이너가 소유·재사용**(뒤로 가도 값 유지). V1도 한 스크롤뷰 안이라 stage를 오가도 각 stage view의 입력이 남는다.
   - 근거: V1 `OnboardingViewController.swift:260-274`(가로 스크롤 이동) · V2 `OnboardingStepFlowView.swift:152-183`, `CLAUDE.md`(단계 재사용·슬라이드)
-- 🔧 **Improve** — **진행바 구동 방식**. V1은 스크롤 오프셋에 **연속적으로** 물린 진행바(`progressOffset = screenWidth - (offset.x + screenWidth)/3`).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **진행바 구동 방식**. V1은 스크롤 오프셋에 **연속적으로** 물린 진행바(`progressOffset = screenWidth - (offset.x + screenWidth)/3`).
   - V2: 단계(step)에 물린 **이산** 진행바(`OnboardingStepProgressBar`). "스크롤 연동 진행바 애니메이션이 어색하다"는 사용자 피드백으로 컨테이너 구조로 재작업(문서화).
   - 근거: V1 `OnboardingViewModel.swift:244-250`, `OnboardingViewController.swift:170-174` · V2 `Sources/Component/OnboardingStepProgressBar.swift`, `CLAUDE.md`(컨테이너 재작업 이유)
 - ✅ **Keep** — 단계 이동 **더블탭/연타 가드**. V1은 next/back/skip에 각각 `.throttle(1s)`.

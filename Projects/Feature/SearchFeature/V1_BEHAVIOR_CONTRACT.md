@@ -53,10 +53,10 @@
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-10. 🔧 **Improve** — 상세검색 결과 **에러 무처리 → `NetworkErrorView`**(V1은 실패 시 로딩만 내리고 빈 화면). → [4.3](#43-빈-화면로딩에러)
-11. 🔧 **Improve** — 최근 검색어 삭제 **롤백 추가**(V1은 서버 실패해도 롤백 없이 지운 채 유지). → [2.2](#22-최근-검색어)
-12. 🔧 **Improve** — 검색 직후 **최근 검색어 즉시 갱신**(V1은 다음 진입까지 안 보임). → [2.2](#22-최근-검색어)
-13. 🔧 **Improve** — 상세검색 정보탭 **활성 점 인디케이터가 플랫폼 선택도 반영**(V1은 플랫폼을 점 조건에서 누락 = 버그). → [3.2](#32-정보-탭-필터)
+10. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — 상세검색 결과 **에러 무처리 → `NetworkErrorView`**(V1은 실패 시 로딩만 내리고 빈 화면). → [4.3](#43-빈-화면로딩에러)
+11. 🔧 **Improve 확정** (2026-08-28, 사용자) — 최근 검색어 삭제 **롤백 추가**(V1은 서버 실패해도 롤백 없이 지운 채 유지). → [2.2](#22-최근-검색어)
+12. 🔧 **Improve 확정** (2026-08-28, 사용자) — 검색 직후 **최근 검색어 즉시 갱신**(V1은 다음 진입까지 안 보임). → [2.2](#22-최근-검색어)
+13. 🔧 **Improve 확정** (2026-08-28, 사용자) — 상세검색 정보탭 **활성 점 인디케이터가 플랫폼 선택도 반영**(V1은 플랫폼을 점 조건에서 누락 = 버그). → [3.2](#32-정보-탭-필터)
 14. 🔧 **Improve** · ⏳ 서버 수용 재확인([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 2) — 플랫폼 "리디" **서버 전송값 "리디" → "리디북스"**로 정정(문서화됨). → [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
 
 ---
@@ -111,10 +111,10 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
   - 근거: V1 `NormalSearchViewModel.swift:289-290`, `NormalSearchViewController.swift:289-296`(fillSearchTextField→검색) · V2 `NormalSearchView.swift:176-183`
 - ✅ **Keep** — 개별 삭제·전체 삭제 모두 **낙관적 반영 후 서버 호출**(UI를 먼저 지운다).
   - 근거: V1 `NormalSearchViewModel.swift:270-287` · V2 `NormalSearchViewModel.swift:165-180`
-- 🔧 **Improve** — **삭제 실패 롤백**: V1은 서버 삭제가 실패해도 `catchAndReturn(())`으로 삼켜 **지운 채 유지**(롤백 없음, 서버-화면 불일치 가능). V2는 개별 삭제는 그 단어만 재삽입, 전체 삭제는 스냅샷 복원으로 되돌린다.
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **삭제 실패 롤백**: V1은 서버 삭제가 실패해도 `catchAndReturn(())`으로 삼켜 **지운 채 유지**(롤백 없음, 서버-화면 불일치 가능). V2는 개별 삭제는 그 단어만 재삽입, 전체 삭제는 스냅샷 복원으로 되돌린다.
   - V2: 두 삭제가 **상호 배타**(동시 진행 시 스냅샷 롤백이 서로 덮는 버그를 막음, `CLAUDE.md`·PR 리뷰 근거).
   - 근거: V1 `NormalSearchViewModel.swift:270-281`(no rollback) · V2 `NormalSearchViewModel.swift:273-297`, `CLAUDE.md`(개별/전체 배타)
-- 🔧 **Improve** — **검색 직후 즉시 갱신**: 검색 실행이 성공하면 서버가 최근 검색어를 자동 기록하는데, V1은 그 결과를 **다음 `viewWillAppear`까지** 목록에 안 비친다(그 화면에선 안 보임). V2는 검색 성공 시 가드를 우회해 최근 검색어를 곧바로 다시 불러온다.
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **검색 직후 즉시 갱신**: 검색 실행이 성공하면 서버가 최근 검색어를 자동 기록하는데, V1은 그 결과를 **다음 `viewWillAppear`까지** 목록에 안 비친다(그 화면에선 안 보임). V2는 검색 성공 시 가드를 우회해 최근 검색어를 곧바로 다시 불러온다.
   - 근거: V1 `NormalSearchViewModel.swift:180-196`(검색엔 recent 재조회 없음) · V2 `NormalSearchViewModel.swift:158-161`,`347`(refreshRecentSearchWordsAfterSearch)
 
 ### 2.3 장르별 검색
@@ -199,7 +199,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep** — "작품 찾기" 더블탭 가드: V1은 300ms debounce로 감쌈.
   - V2: `DetailSearchFilterView`는 확정 시 `onSearch` 콜백만 호출(pop 안 함, 호출부 책임 — `CLAUDE.md`). 명시적 debounce는 확인 안 됨(순수 입력 VM이라 재진입 push는 호출부가 관리).
   - 근거: V1 `DetailSearchViewModel.swift:188-208` · V2 `CLAUDE.md`(onSearch 콜백)
-- 🔧 **Improve** — **정보 탭 활성 점(`new` 인디케이터)이 플랫폼 선택을 반영**: V1 `showInfoNewImageView`는 장르·연재상태·별점만 OR로 계산하고 **플랫폼을 빠뜨렸다**(플랫폼만 골라도 점이 안 켜짐 = 버그).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **정보 탭 활성 점(`new` 인디케이터)이 플랫폼 선택을 반영**: V1 `showInfoNewImageView`는 장르·연재상태·별점만 OR로 계산하고 **플랫폼을 빠뜨렸다**(플랫폼만 골라도 점이 안 켜짐 = 버그).
   - V2: `hasActiveInfoFilter`가 장르·플랫폼·연재상태·별점 4종을 모두 본다(`DetailSearchFilterViewModel`의 `Derived`).
   - 근거: V1 `DetailSearchViewModel.swift:386-392`(platform 누락) · V2 `CLAUDE.md`(hasActiveInfoFilter 4종)
 - ✅ **Keep (순서 출처 상이)** — 정보 탭 장르 그리드는 V1 `NovelGenre.detailSearchGenres`, V2 `WSSComponent.NovelGenre.myFeedFilter`(Figma 실측 재확정). 둘 다 9종, `searchGenre`(브라우즈용)와는 다른 목록.
@@ -243,7 +243,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 
 ### 4.3 빈 화면·로딩·에러
 
-- 🔧 **Improve** — **에러 처리**: V1은 결과 조회 실패 시 로딩만 내리고 **아무 표시도 안 한다**(빈 화면 + 콘솔 print). V2는 `NetworkErrorView`(재시도 포함)로 대체.
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **에러 처리**: V1은 결과 조회 실패 시 로딩만 내리고 **아무 표시도 안 한다**(빈 화면 + 콘솔 print). V2는 `NetworkErrorView`(재시도 포함)로 대체.
   - 근거: V1 `DetailSearchResultViewModel.swift:107-110`(에러 시 로딩만 off) · V2 `DetailSearchResultViewModel.swift:112-116`, `CLAUDE.md`(NetworkErrorView)
 - ✅ **Keep** — 로딩 뷰(page 0)·결과 0건 빈 화면.
   - V2: `LoadingView` + 화면 전용 빈 카피("검색의 범위를 더 넓혀보세요" — V1의 재사용 빈뷰 대신 이 화면만의 문구). V1은 `showLoadingView` + `DetailSearchResultEmptyView`.

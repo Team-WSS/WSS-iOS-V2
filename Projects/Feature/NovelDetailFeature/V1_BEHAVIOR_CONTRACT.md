@@ -55,10 +55,10 @@
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-6. 🔧 **이미지 로드 실패 → 전면 에러 뷰 제거** — V1은 **표지/장르 이미지 로드가 실패하면 화면 전체를 `NetworkErrorView`로 덮었다**(`imageNetworkError`). V2는 표지 실패 시 placeholder(`imgLoadingThumbnail`)로 폴백하고 화면을 실패로 만들지 않는다. → [1.4](#14-로드-실패-표현)
-7. 🔧 **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
-8. 🔧 **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
-9. 🔧 **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
+6. 🔧 **Improve 확정** (2026-08-28, 사용자) — **이미지 로드 실패 → 전면 에러 뷰 제거** — V1은 **표지/장르 이미지 로드가 실패하면 화면 전체를 `NetworkErrorView`로 덮었다**(`imageNetworkError`). V2는 표지 실패 시 placeholder(`imgLoadingThumbnail`)로 폴백하고 화면을 실패로 만들지 않는다. → [1.4](#14-로드-실패-표현)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자) — **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
+8. 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
+9. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
 10. 🔧 **복원 확정→TODO 9절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
 11. 🔧 **복원 확정→App 크로스스크린 피드백 재설계(Feed 15와 묶음, TODO 9절)** (2026-08-28, 사용자) — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
 
@@ -96,7 +96,7 @@
 
 ### 1.4 로드 실패 표현
 
-- 🔧 **Improve** — **이미지 로드 실패가 화면을 죽이지 않는다.** V1은 표지·장르 이미지를 Kingfisher `zip`으로 받다 **둘 중 하나라도 실패하면 `imageNetworkError=true` → 화면 전체를 `NetworkErrorView`로 덮었다**(데이터는 정상인데 이미지만 실패해도 상세가 통째로 에러).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **이미지 로드 실패가 화면을 죽이지 않는다.** V1은 표지·장르 이미지를 Kingfisher `zip`으로 받다 **둘 중 하나라도 실패하면 `imageNetworkError=true` → 화면 전체를 `NetworkErrorView`로 덮었다**(데이터는 정상인데 이미지만 실패해도 상세가 통째로 에러).
   - V2: 표지 실패 시 `imgLoadingThumbnail` placeholder로 폴백하고 화면을 실패로 만들지 않는다(장르 마크는 도메인 값이라 이미지 실패와 무관).
   - 근거: V1 `NovelDetailViewController.swift:573-586`(makeUIImage→imageNetworkError),`206-208`(→showNetworkErrorView) · V2 `NovelDetailHeaderView.swift:91-101`(AsyncImage else placeholder)
 - ✅ **Keep** — header/info **데이터** 로드 실패 시 화면 전체를 실패 뷰 + 재시도로 대체(재시도 = 다시 로드).
@@ -119,7 +119,7 @@
 
 ### 2.2 관심 토글
 
-- 🔧 **Improve** — V1은 관심 버튼 탭(1s throttle) → 서버 POST/DELETE 성공 후 로컬 플래그를 뒤집고 **곧바로 `reloadData`로 header·info·feed 전체를 재조회**했다(하트 하나 바꾸자고 피드까지 1페이지로 리셋되는 무거운 경로).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — V1은 관심 버튼 탭(1s throttle) → 서버 POST/DELETE 성공 후 로컬 플래그를 뒤집고 **곧바로 `reloadData`로 header·info·feed 전체를 재조회**했다(하트 하나 바꾸자고 피드까지 1페이지로 리셋되는 무거운 경로).
   - V2: 엔티티 `Novel.toggleInterest()` 정책 위임 + **낙관 반영 → 서버 실패 시 롤백**(재조회 없음). `isInterested == nil`(비로그인 등)이면 엔티티가 no-op이라 서버 호출도 스킵.
   - 근거: V1 `NovelDetailViewModel.swift:289-307`(throttle→서버→reloadData) · V2 `NovelDetailViewModel.swift:240-250`,`466-479`, `CLAUDE.md`(관심 토글 낙관/롤백)
 - ✅ **Keep** — 관심 on/off 시 하트 에셋·배경색 전환. V2는 짧은 명시 애니메이션(0.1s)로 기본 크로스페이드가 느리게 번지는 걸 막는다(수단 보강, 관찰 동작 동일).
@@ -183,7 +183,7 @@
 
 ### 4.1 지연 로드·페이지네이션
 
-- 🔧 **Improve** — **피드 지연 로드**. V1은 피드를 `viewWillAppear`마다 **eager**로 받고(첫 진입에 정보 탭을 봐도 피드가 이미 로드됨), 추가로 피드 탭 탭 시에도 다시 받는다. V2는 **피드 탭 첫 진입 시에만** 로드(`selectTab(.feed)` + `!hasLoadedFirstFeeds`).
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 지연 로드**. V1은 피드를 `viewWillAppear`마다 **eager**로 받고(첫 진입에 정보 탭을 봐도 피드가 이미 로드됨), 추가로 피드 탭 탭 시에도 다시 받는다. V2는 **피드 탭 첫 진입 시에만** 로드(`selectTab(.feed)` + `!hasLoadedFirstFeeds`).
   - 근거: V1 `NovelDetailViewModel.swift:200-202`(reloadData→feed),`343-364`(탭탭→feed) · V2 `NovelDetailViewModel.swift:226-236`, `CLAUDE.md`(피드 탭 첫 진입 시 지연 로드)
 - ✅ **Keep** — **커서 페이지네이션**: 첫 페이지 `lastFeedId=0`, 이후 마지막 피드 ID를 커서로 다음 페이지 append. 서버 `isLoadable`(= 더 있음)일 때만 다음 요청, 진행 중 중복 요청 가드.
   - V2: `loadFeeds(after: lastFeedID ?? FeedID(0))`, `hasNextFeeds`(= 서버 hasNext)와 `feedsTask == nil` 가드. V1의 `isLoadable && !isFetching`과 같은 결. 첫 페이지 커서 0 규약 동일.
@@ -221,7 +221,7 @@
 - ✅ **Keep** — 피드 0건이면 빈 상태("아직 글이 없어요\n최초로 남겨보세요!").
   - V2: `feeds.isEmpty && !isLoading` → `NovelDetailEmptyView`. V1은 `bindData(isEmpty:)`로 emptyView 교체.
   - 근거: V1 `NovelDetailFeedView.swift:58-66`, `NovelDetailFeedEmptyView.swift` · V2 `NovelDetailFeedTab.swift:52-63`
-- 🔧 **Improve** — **피드 로드 실패 표현 통일**. V1은 경로가 갈렸다: eager(viewWillAppear) 피드 로드 실패는 **화면 전체 `NetworkErrorView`**, 탭탭·페이지네이션·삭제후 리로드 실패는 **`print`만(무음, 재시도 수단 없음)**. V2는 **첫 페이지·더보기를 가리지 않고 탭 자리를 `NetworkErrorView`+재시도로 대체**(#195).
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **피드 로드 실패 표현 통일**. V1은 경로가 갈렸다: eager(viewWillAppear) 피드 로드 실패는 **화면 전체 `NetworkErrorView`**, 탭탭·페이지네이션·삭제후 리로드 실패는 **`print`만(무음, 재시도 수단 없음)**. V2는 **첫 페이지·더보기를 가리지 않고 탭 자리를 `NetworkErrorView`+재시도로 대체**(#195).
   - V2: `feedsLoadFailed`를 실패보다 **먼저** 판단(목록이 남아도 걷어내고 실패 뷰). 재시도는 첫 페이지부터 다시 세운다.
   - 근거: V1 `NovelDetailViewModel.swift:607-609`(eager 실패→에러뷰),`361-363`,`474-476`,`501-503`(탭탭/리로드/스크롤 실패→print) · V2 `NovelDetailViewModel.swift:382-392`, `NovelDetailFeedTab.swift:46-51`, `Feature/CLAUDE.md`(로드 실패 표현 계약), `CLAUDE.md`(피드 실패 규칙)
 

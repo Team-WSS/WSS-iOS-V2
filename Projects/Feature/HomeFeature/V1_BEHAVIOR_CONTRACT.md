@@ -57,7 +57,7 @@
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-7. 🔧 **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
+7. 🔨 **고치기 확정→TODO 9절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 — V1 parity, 빈 자리보다 행동 유도) — **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
 8. ⏸ **보류** (2026-08-28, 사용자: 실측 후 재검토 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 7) — **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
 9. 🔧 **Splash 부트스트랩으로 이관(되살림, TODO 8절)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
 
@@ -176,7 +176,7 @@
 - ✅ **Keep** — 선호장르 **미설정**이면 목록 대신 **설정 유도 카드**를 띄우고, 그 버튼은 설정 화면으로 보낸다.
   - V2: `.noGenreSettings` → `settingInduceCard` → `onPreferenceGenreSettingTapped`. (V1은 목적지가 `MyPageEdit(entryType:.home)` — 5.)
   - 근거: V1 `HomeTasteRecommendView.swift:129-164`, `HomeViewModel.swift:265-274` · V2 `PreferenceGenreSection.swift:97-122`
-- 🔧 **Improve** — **"설정했으나 결과 0건" 처리**. V1은 `updateView(isLogined, isEmpty)`에서 **로그인+0건을 미설정과 똑같이** 설정 유도 카드로 덮었다(둘 다 `unregisterView`) — 장르를 골랐는데도 "선호장르 설정하기"가 뜨는 셈.
+- 🔨 **고치기 확정→TODO 9절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 통일 — V1 parity) — **"설정했으나 결과 0건" 처리**. V1은 `updateView(isLogined, isEmpty)`에서 **로그인+0건을 미설정과 똑같이** 설정 유도 카드로 덮었다(둘 다 `unregisterView`) — 장르를 골랐는데도 "선호장르 설정하기"가 뜨는 셈.
   - V2: `PreferenceGenreNovelState`를 `.noGenreSettings`(→ CTA) / `.novels([])`(→ **섹션 통째 숨김**)로 분리해 이 혼동을 없앴다. `state`가 **옵셔널**이라 로딩 전(nil)과 미설정을 안 섞어 CTA 번쩍임도 막는다.
   - 근거: V1 `HomeTasteRecommendView.swift:133-163`(logined+isEmpty → unregister) · V2 `PreferenceGenreSection.swift:48-53`, `HomeView.swift:156-164`,`202-205`, `CLAUDE.md`(preferenceGenreNovelState 옵셔널)
 

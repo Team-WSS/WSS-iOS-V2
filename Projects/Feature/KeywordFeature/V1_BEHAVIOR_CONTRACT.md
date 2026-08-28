@@ -50,8 +50,8 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 
 4. 🗑/🔧 **Delete(호출부 이관)·Improve(전달 방식)** — **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
 5. 🗑 **Delete(호출부 이관)** — **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
-6. 🔧 **Improve** — **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
-7. 🔧 **Improve** — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
+6. 🔧 **Improve 확정** (2026-08-28, 사용자: 로컬 고정이 맞음 — 서버 응답 의존 불필요) — **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자: 캐시 갱신은 Splash 부트스트랩에서 — TODO 8절) — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
 
 (나머지는 대부분 ✅ Keep — 수단만 RxSwift→구조적 동시성으로 바뀌고 관찰 동작은 같다.)
 
@@ -75,7 +75,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 - ✅ **Keep** — 카테고리 블록은 기본 **2줄만 보이고**(고정 높이), chevron 버튼으로 펼침/접힘한다.
   - V2: 접힘 높이 `80`(칩35+간격8+칩35+여유2) + `.clipped()`, chevron **180° 회전**. V1은 컬렉션뷰 높이 `78`↔`contentSize` 토글 + 화살표 에셋 교체(`icChevronDown`↔`icChevronUp`). 표현 수단만 다르고 "2줄 접힘 + 토글" 동작 동일.
   - 근거: V1 `…/NovelReviewAssistantView/NovelKeywordSelectCategoryView.swift:131-135,157-165` · V2 `Sources/SearchKeywordView.swift:176-238`
-- 🔧 **Improve** — **카테고리 목록·이름·아이콘의 출처**. V1은 **서버 응답**(`categoryName` + `categoryImage` URL, `kfSetImage`로 원격 로드)으로 카테고리를 그렸다. V2는 **로컬 고정 enum 5종**(`worldview/material/character/relationship/vibe`) + `WSSComponent`의 `DomainPresentation`(아이콘은 로컬 에셋). 서버 `categoryImage`는 의도적으로 미매핑.
+- 🔧 **Improve 확정** (2026-08-28, 사용자: 로컬 고정이 맞음) — **카테고리 목록·이름·아이콘의 출처**. V1은 **서버 응답**(`categoryName` + `categoryImage` URL, `kfSetImage`로 원격 로드)으로 카테고리를 그렸다. V2는 **로컬 고정 enum 5종**(`worldview/material/character/relationship/vibe`) + `WSSComponent`의 `DomainPresentation`(아이콘은 로컬 에셋). 서버 `categoryImage`는 의도적으로 미매핑.
   - (오탐 방지: `BaseDomain/CLAUDE.md`에 "카테고리 5종 고정·서버 categoryImage 의도적 미매핑"으로 명문화 — Break로 오분류 금지. 단 **서버가 6번째 카테고리를 추가하면 V1은 노출·V2는 무시**라는 차이는 남는다.)
   - 근거: V1 `WSSiOS/Source/Data/DTO/SearchKeywordResult.swift:14-18`(서버 `categoryName`/`categoryImage`), `…/NovelKeywordSelectCategoryView.swift:71-81` · V2 `Projects/Domain/BaseDomain/Sources/Keyword/Entity/KeywordCategory.swift:11-17`, `BaseDomain/CLAUDE.md`(카테고리 표시값)
 
@@ -92,8 +92,9 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 - ✅ **Keep (수단)** — **늦게 온 이전 검색 응답이 새 결과를 덮지 않는다**(경합 방어, 마지막 제출만 반영).
   - V2: 구현 수단 변경 — V1 RxSwift `flatMapLatest`(이전 요청 취소), V2는 응답 도착 시 `state.query == query` **stale 가드**로 그사이 바뀐 결과를 버린다. 관찰 동작 동일.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:134`(`flatMapLatest`) · V2 `Sources/SearchKeywordViewModel.swift:134-143`, `CLAUDE.md`(stale 가드)
-- 🔧 **Improve** — **검색 데이터 소스**. V1은 제출마다 **서버 왕복**(`GET /keywords?query=`, 액세스 토큰 헤더). V2는 **로컬 DB 캐시** 조회(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 후 재조회 폴백.
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **검색 데이터 소스**. V1은 제출마다 **서버 왕복**(`GET /keywords?query=`, 액세스 토큰 헤더). V2는 **로컬 DB 캐시** 조회(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 후 재조회 폴백.
   - (오탐 방지: `BaseDomain/CLAUDE.md`에 "fetch/search는 로컬 캐시, sync가 서버 동기화"로 명문화된 의도적 구조.)
+  - **캐시 갱신 시점 = Splash 부트스트랩**(2026-08-28 사용자 결정, `docs/TODO.md` 8절 런치 허브): 앱 진입 시 `syncKeywords()`로 새 키워드가 검색에 빠지는 창을 없앤다.
   - 근거: V1 `WSSiOS/Network/Keyword/KeywordService.swift:18-42`(서버 GET) · V2 `SearchKeywordsUseCase.swift:23-33`, `BaseDomain/CLAUDE.md`(로컬/서버 계약)
 
 ## 4. 선택

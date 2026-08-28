@@ -53,9 +53,9 @@
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-5. 🔧 **Improve** — **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [4](#4-프로필-공개-설정-profilepublic--mypageprofilevisibility)
-6. 🔧 **Improve** — **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [6.1](#61-활동-알림-토글)
-7. 🔧 **Improve** — **V1은 로드/액션 실패에 사용자 피드백이 거의 없었다** — 계정정보 이메일 로드·차단목록 로드/해제·프로필 공개 로드·알림 로드·로그아웃·탈퇴 실패가 대부분 `print(error)`뿐이다. V2는 전면 `NetworkErrorView`(로드 실패) / 토스트(액션 실패)로 표현한다. → 각 화면 섹션.
+5. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [4](#4-프로필-공개-설정-profilepublic--mypageprofilevisibility)
+6. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [6.1](#61-활동-알림-토글)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약, 본문 각 절의 Improve bullet 일괄) — **V1은 로드/액션 실패에 사용자 피드백이 거의 없었다** — 계정정보 이메일 로드·차단목록 로드/해제·프로필 공개 로드·알림 로드·로그아웃·탈퇴 실패가 대부분 `print(error)`뿐이다. V2는 전면 `NetworkErrorView`(로드 실패) / 토스트(액션 실패)로 표현한다. → 각 화면 섹션.
 
 **🆕 V2 신규 (V1 대응 없음)**
 
@@ -161,7 +161,7 @@
 - ✅ **Keep** — "완료" 저장은 PATCH로 공개/비공개를 서버에 반영하고 화면을 닫는다.
   - V2: `UpdateProfileVisibilityUseCase` → `shouldDismiss`. 성공 후 부모(SettingView)가 공개/비공개별 토스트(`changePublic`/`changePrivate`)를 띄운다(V1은 `ChangeVisibility` 알림 발송, 토스트는 부모 몫).
   - 근거: V1 `MyPageProfileVisibilityViewController.swift:96-108,118-121` · V2 `SettingProfilePublicViewModel.swift:108-140`, `SettingView.swift:130-137,179-182`
-- 🔧 **Improve** — **저장 실패를 V1이 조용히 삼켰다**. V1은 PATCH 실패 시 `.catch { Observable.empty() }`로 에러를 삼키고 **성공한 것처럼 pop + `ChangeVisibility` 알림까지 발송**한다(상태 불일치·무피드백 버그). V2는 실패 시 `toastError` 토스트를 띄우고 **화면을 닫지 않는다**(`shouldDismiss`는 성공에서만).
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **저장 실패를 V1이 조용히 삼켰다**. V1은 PATCH 실패 시 `.catch { Observable.empty() }`로 에러를 삼키고 **성공한 것처럼 pop + `ChangeVisibility` 알림까지 발송**한다(상태 불일치·무피드백 버그). V2는 실패 시 `toastError` 토스트를 띄우고 **화면을 닫지 않는다**(`shouldDismiss`는 성공에서만).
   - 근거: V1 `MyPageProfileVisibilityViewController.swift:96-108`(`.catch`→empty→pop) · V2 `SettingProfilePublicViewModel.swift:130-140`
 - 🔧 **Improve** — **로드 실패 표현**. V1은 로드(`getUserProfileVisibility`)에 실패 처리가 없어 화면이 기본값(공개=true)에 멈춘다. V2는 `loadError` → 전면 `NetworkErrorView` + 재시도(저장 실패 토스트와 분리).
   - 근거: V1 `MyPageProfileVisibilityViewController.swift:67-74`(catch 없음) · V2 `SettingProfilePublicViewModel.swift:26-30,117-128,146-149`
@@ -197,7 +197,7 @@
 - ✅ **Keep** — 앱 안 "활동 알림" on/off 토글 1개. 진입 시 서버에서 현재 값을 로드해 초기화, 탭하면 서버에 반전 값을 저장. (이 토글은 iOS 시스템 권한과 **별개** — `CLAUDE.md` 명문화.)
   - V2: `LoadPushPreferenceUseCase`/`UpdatePushPreferenceUseCase`, `WSSToggleButton`.
   - 근거: V1 `MyPagePushNotificationViewController.swift:57,73-84,90-108` · V2 `NotificationSettingViewModel.swift:100-131`, `NotificationSettingView.swift:48-52`
-- 🔧 **Improve** — **낙관 업데이트 + 실패 롤백**. V1 토글은 **서버 성공을 기다린 뒤에야** UI를 바꾸고(`onSuccess`에서만 relay 갱신), `onFailure` 처리가 없어 저장 실패 시 아무 반응이 없다. V2는 즉시 반영(낙관) 후 실패하면 이전 값으로 롤백 + 토스트.
+- 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 로드 실패 표현 계약) — **낙관 업데이트 + 실패 롤백**. V1 토글은 **서버 성공을 기다린 뒤에야** UI를 바꾸고(`onSuccess`에서만 relay 갱신), `onFailure` 처리가 없어 저장 실패 시 아무 반응이 없다. V2는 즉시 반영(낙관) 후 실패하면 이전 값으로 롤백 + 토스트.
   - 근거: V1 `MyPagePushNotificationViewController.swift:101-108`(성공에서만 반영, 실패 무처리) · V2 `NotificationSettingViewModel.swift:100-105,123-130`
 - 🔧 **Improve** — **로드 실패 표현**. V1은 로드 실패 시 `print`만(토글이 기본 true에 멈춤). V2는 `loadError` → 전면 `NetworkErrorView`(토글 실패 토스트와 분리).
   - 근거: V1 `MyPagePushNotificationViewController.swift:90-98` · V2 `NotificationSettingViewModel.swift:28-33,111-121,136-139`
