@@ -33,8 +33,9 @@
   → `MypageView.onCollectionItemTapped` → `MypageFeatureFactory.makeView`까지 그대로 관통해 App
   (`MypageRootView`)이 그 컬렉션 **상세**로 push한다 — 헤더 탭(목록)과는 별개 목적지·별개 콜백. 실제
   화면 전환은 두 콜백 다 App 몫(`CollectionFeature`와 서로 import 못 함).
-  ⚠️ **`UserPageView`(타유저 프로필)도 같은 `CollectionPreviewRow`를 쓰지만, 이 항목 탭 콜백은 아직
-  App에 배선되지 않았다**(`onItemTapped: { _ in }` no-op) — 아래 UserPage "주의사항" 참고.
+  **`UserPageView`(타유저 프로필)도 같은 `CollectionPreviewRow`를 쓰고, 이 항목 탭·헤더 탭(목록) 둘
+  다 #201 후속(2026-08-28)으로 마이페이지와 동일하게 App까지 배선됐다** — 아래 UserPage "핵심
+  시나리오"·"주의사항" 참고.
 - **스크롤 반응형 네비 타이틀·배경(2026-08-28)**: 프로필 섹션이 화면 밖으로 스크롤되면(`minY < -1`,
   `mypageScrollCoordinateSpace` 기준) 툴바 principal에 "마이페이지"가 뜬다 — `UserPageView`와 동일
   패턴(`opacity` 아니라 `if`로 구조적으로 넣고 뺀다, `Feature/CLAUDE.md` 공통 주의사항 참고). **다른
