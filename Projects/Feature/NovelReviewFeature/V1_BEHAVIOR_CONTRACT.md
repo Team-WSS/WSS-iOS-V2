@@ -35,18 +35,24 @@
 
 ## 0. 점검 대기 요약
 
-**❓ 판정 필요 (회귀일 수도 있음)**
+> **판정 상태(2026-08-28)**: 전부 판정 완료. **판정 대기·보류 없음**(전부 개발 단독 결정). 결정된 것은 `docs/TODO.md` 9절, 나머지는 의도적 개선(확인 완료). 본문 각 절 배지가 정본.
 
-1. **저장 성공 후 App Store 리뷰 요청 제거** — V1은 리뷰 저장에 성공하면 `AppReviewManager.shared.requestReview()`로 **App Store 평점 요청 프롬프트**를 띄웠다(리뷰를 남긴 직후 = 앱 평가를 부탁하기 좋은 시점). **V2엔 이 호출이 없다.** → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
-2. **키워드 선택/탐색 모달 전체 미구현** — V1은 키워드 검색바 탭 → **키워드 선택 모달**(검색·카테고리·최대 20개·문의하기)을 present하고, 고른 키워드 ID를 저장에 실었다. **V2는 키워드 섹션이 검색바 룩 버튼(탭 시 `print`만) 하나뿐이고 `draft.keywords`에 연결되지 않았다** → 저장 시 `keywordIds`가 **항상 빈 배열**이다. → [7](#7-키워드)
-3. **매력포인트 가로 배열 순서 차이** — V1 `AttractivePoint.allCases`는 `worldview·material·writingSkill(필력)·character·relationship·vibe` 순, V2는 `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열해 **6개 버튼의 표시 순서가 다르다**(필력 위치). → [6](#6-매력-포인트)
+**되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 9절)**
 
-**🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
+1. 🔧 **저장 성공 후 App Store 리뷰 요청 재도입** — V1은 저장 성공 시 `AppReviewManager.requestReview()`로 평점 프롬프트. V2 없음. **되살리되 호출 타이밍 재설계**(무분별 호출 금지, 피드와 공용). → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
+2. 🔧 **매력포인트 버튼 순서 V1로 정렬** — V1 `worldview·material·필력·character·relationship·vibe`(필력 3번째), V2는 필력이 맨 끝. 둘 다 `allCases` 나열이라 우연히 다름. **V1 순서로 맞춘다.** → [6](#6-매력-포인트)
 
-4. 🔧 **저장 실패의 조용한 실패 → 토스트로 표면화** — V1 저장 `onError`는 `print(error)`뿐이라 실패해도 사용자에게 **아무 표시가 없고 화면도 안 닫힌다**(무엇이 잘못됐는지 모름). V2는 `presentError` → 토스트. → [2.2](#22-저장-실패--중복-저장-가드)
-5. 🔧 **POST/PUT 결정 방식** — V1은 진입 시 **클라이언트가 추정**한다(`isNovelReviewExist = 서버 status != nil || isInterest`). V2는 **항상 POST 먼저 시도**하고 서버가 "이미 리뷰함"(`USER_NOVEL-002`)을 주면 **PUT으로 폴백**한다(서버 주도). → [2.3](#23-생성put-vs-수정post-결정)
-6. 🔧 **뒤로가기 중단 알럿 조건** — V1은 뒤로가기 시 **변경 여부와 무관하게 항상** "평가를 그만할까요?" 알럿을 띄운다. V2는 **초안이 실제로 바뀌었을 때만**(`hasUnsavedChanges`) 알럿을 띄우고, 변경이 없으면 곧장 닫는다. → [8](#8-뒤로가기중단-알럿)
-7. 🗑 **Amplitude 이벤트 전부 제거** — 저장 시 `rateNovel`, 키워드 모달의 `contactKeyword`. V2엔 트래킹이 없다. → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
+**미배선 (배선 대기 · 삭제 아님)**
+
+3. 🔧 **키워드 선택/탐색 모달 미구현** — V1은 키워드 검색바 탭 → 키워드 선택 모달(검색·카테고리·최대 20개). V2는 검색바 룩 버튼(탭 시 `print`)만 있고 `draft.keywords` 미연결 → 저장 시 `keywordIds`가 **항상 빈 배열**(C2 6). 화면 배선 시 해소. → [7](#7-키워드)
+
+**의도적 개선/삭제 (확인 완료)**
+
+4. 🔧 **저장 실패 표면화** — V1 `print`만(무표시·화면 안 닫힘) → V2 `presentError` 토스트. → [2.2](#22-저장-실패--중복-저장-가드)
+5. 🔧 **POST/PUT 서버 주도** — V1 클라이언트 추정 → V2 항상 POST 후 `USER_NOVEL-002`면 PUT 폴백. → [2.3](#23-생성put-vs-수정post-결정)
+6. 🔧 **뒤로가기 알럿 조건** — V1 항상 → V2 실제 변경 시만(`hasUnsavedChanges`). → [8](#8-뒤로가기중단-알럿)
+7. 🔧 **로드 실패 전면 뷰** — V1은 에러 분기 없음(조용) → V2는 `NetworkErrorView`+재시도(계약대로 개선, **이미 구현됨**). → [1.2 초안 로드](#12-초안-로드-최초-1회)
+8. 🗑 **Amplitude 이벤트 제거** — 저장 `rateNovel`·키워드 `contactKeyword`. V2 없음(홈·피드와 함께 횡단 재도입 대상, 9절). → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -73,8 +79,8 @@
   - V1: 로드 콜백이 `owner.readStatus`(주입값)를 그대로 `readStatusData`로 방출하고, 서버 `data.status`는 **오직 "리뷰 존재 여부"(2.3) 판단에만** 쓴다.
   - V2: `loadDraft`가 `loaded.changeStatus(initialStatus)`로 주입 상태를 덮어 적용한다(원본과 다르면 '변경됨'으로 잡혀 중단 알럿 대상 — 8).
   - 근거: V1 `NovelReviewViewModel.swift:104`,`117-118` · V2 `NovelReviewViewModel.swift:237-239`
-- ❓ **Unknown (판정 보류 2026-08-28)** — **로드 실패 처리**. V1 로드는 `flatMapLatest`로 갈아끼우기만 하고 **에러 분기가 없다**(에러 시 스트림이 조용히 끝나 화면이 초기값 그대로 남음). V2는 `state.loadFailed` → **전면 실패 뷰(`NetworkErrorView`, 재시도)**.
-  - V2는 신규 계약(로드 실패 표현). V1엔 대응 동작 자체가 없어 "V1 유지"라 부를 게 없다 → 판정보단 참고. (전면 실패 뷰는 V2 전반의 로드 실패 계약과 정렬 — `Feature/CLAUDE.md`.)
+- 🔧 **개선 확정** (2026-08-28: V2 계약대로 전면 뷰) — **로드 실패 처리**. V1 로드는 `flatMapLatest`로 갈아끼우기만 하고 **에러 분기가 없다**(에러 시 스트림이 조용히 끝나 화면이 초기값 그대로 남음). V2는 `state.loadFailed` → **전면 실패 뷰(`NetworkErrorView`, 재시도)** — V1의 조용한 실패를 계약대로 개선. **이미 구현됨**(추가 작업 없음).
+  - V2는 신규 계약(로드 실패 표현). V1엔 대응 동작 자체가 없어 "V1 유지"라 부를 게 없다 → 회귀 아님. (전면 실패 뷰는 V2 전반의 로드 실패 계약과 정렬 — `Feature/CLAUDE.md`.)
   - 근거: V1 `NovelReviewViewModel.swift:99-120`(에러 분기 없음) · V2 `NovelReviewViewModel.swift:246-254`, `NovelReviewView.swift:44-54`
 
 ### 1.3 인증 만료
@@ -199,12 +205,12 @@
 
 원본: `…/NovelReviewViewModel/NovelKeywordSelectModalViewModel.swift`, `…/NovelReviewViewController/NovelKeywordSelectModalViewController.swift`
 
-- ❓ **Unknown (헤드라인)** — **V2는 키워드 선택/탐색이 통째로 미구현이다**. V1은 키워드 검색바 탭 → **키워드 선택 모달**을 present했다:
+- 🔧 **미배선 확정→배선 대기** (2026-08-28, C2 6: 삭제 아님) — **V2는 키워드 선택/탐색이 통째로 미구현이다**. V1은 키워드 검색바 탭 → **키워드 선택 모달**을 present했다:
   - `/keywords` 검색(카테고리 목록 + 텍스트 검색 결과), **최대 20개** 선택, 초과 시 토스트, "초기화", 결과 없을 때 빈 뷰, **문의하기**(외부 링크 + `contactKeyword` 트래킹).
   - "선택" 시 `NovelReviewKeywordSelected` 노티로 메인에 돌려주고, 메인은 선택 칩을 컬렉션뷰로 표시하며 **칩 탭 시 개별 제거**.
   - 저장 시 `keywordIds`(키워드 정수 ID 배열)를 실어 보냈다.
   - **V2 현황**: 메인 화면에 `WSSSearchBarButton`(검색바 룩) 하나만 배치, **탭 액션이 `print`뿐**이고 `draft.keywords`에 연결되지 않았다. 도메인엔 `NovelReviewDraft.keywords`·`setKeywords`(최대 20, 중복 금지)와 매퍼의 `keywordIds` 매핑이 **준비돼 있으나 화면이 안 씀** → 저장 시 `keywordIds`가 **항상 빈 배열**로 나간다(로드된 키워드도 화면에 안 뜨고, 저장 시 소실될 수 있음).
-  - **판정 포인트**: 키워드 선택 화면(모달 또는 별도 탐색뷰)을 붙이고 `draft.keywords`에 연결하는 후속 작업. V2 `CLAUDE.md`가 "키워드 선택/탐색뷰 미연결(TODO)"로 명시 → **의도된 미완성**이지 회귀는 아님(다만 그때까지 키워드 저장이 비어 나가는 부작용 확인 필요).
+  - **결정(배선 대기)**: 삭제가 아니라 **미완성** — 키워드 선택 화면(모달 또는 별도 탐색뷰)을 붙이고 `draft.keywords`에 연결하는 후속 작업으로 해소한다(C2 6·저장 시 `keywordIds` 빈 배열). V2 `CLAUDE.md`가 "키워드 선택/탐색뷰 미연결(TODO)"로 명시. **배선 전까지 키워드 저장이 비어 나가는 부작용에 주의**.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:21`(최대 20),`163-224`(선택/문의/초기화), `NovelReviewViewModel.swift:136`(`keywordIds`),`219-244`(모달 왕복·칩) · V2 `NovelReviewView.swift:303-319`(TODO), `NovelReviewMapper.swift:75`,`87`(빈 배열 매핑), `NovelReviewDraft.swift:79-92`, `CLAUDE.md`(현재 범위·미연결)
 
 ---
