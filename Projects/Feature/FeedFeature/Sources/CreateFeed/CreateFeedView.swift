@@ -17,6 +17,9 @@ import WSSComponent
 struct CreateFeedView: View {
     
     @State private var viewModel: CreateFeedViewModel
+    /// 글자수 clamp 트랩(로컬 버퍼 → 확정값 반영 2단계, `Feature/CLAUDE.md` 참고) 전용 필드 버퍼.
+    /// VM 상태(`draft.content`)에 TextField를 직접 물리면 초과분이 화면에 그대로 남는다.
+    @State private var contentFieldText: String
     
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var showPhotosPicker: Bool = false
@@ -29,6 +32,7 @@ struct CreateFeedView: View {
     
     public init(viewModel: CreateFeedViewModel) {
         self._viewModel = State(initialValue: viewModel)
+        self._contentFieldText = State(initialValue: viewModel.state.draft.content)
     }
     
     public var body: some View {
@@ -81,6 +85,21 @@ struct CreateFeedView: View {
                 }
                 .onAppear {
                     viewModel.handle(.load)
+                }
+                // 글자수 clamp 2단계: prefix로 자른 값이 다르면 로컬 버퍼에 재대입(네이티브 필드가
+                // 강제로 되돌아감) → 같으면 VM에 전달. VM에 직접 물리면 초과분이 화면에 남는다.
+                .onChange(of: contentFieldText) { _, newValue in
+                    let clamped = String(newValue.prefix(FeedDraft.maxContentCount))
+                    if clamped != newValue {
+                        contentFieldText = clamped
+                    }
+                    viewModel.handle(.updateContent(clamped))
+                }
+                // 수정 모드 로드가 끝나 draft.content가 채워지면 로컬 버퍼도 같이 채운다 —
+                // 이 버퍼는 init 시점에만 시드되므로 비동기 로드 완료를 별도로 반영한다.
+                .onChange(of: viewModel.state.isLoadingForEdit) { wasLoading, isLoading in
+                    guard wasLoading, !isLoading else { return }
+                    contentFieldText = viewModel.state.draft.content
                 }
                 .toolbar {
                     createFeedViewToolBarContent()
@@ -254,7 +273,7 @@ struct CreateFeedView: View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 ZStack(alignment: .topLeading) {
-                    if viewModel.state.draft.content.isEmpty {
+                    if contentFieldText.isEmpty {
                         Text("웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등")
                             .applyWSSFont(.body2)
                             .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
@@ -262,12 +281,7 @@ struct CreateFeedView: View {
                             .allowsHitTesting(false)
                     }
                     
-                    TextField("",
-                              text: Binding(
-                                get: { viewModel.state.draft.content },
-                                set: { value in viewModel.handle(.updateContent(value)) }
-                              ),
-                              axis: .vertical)
+                    TextField("", text: $contentFieldText, axis: .vertical)
                     .applyWSSFont(.body2)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                     .multilineTextAlignment(.leading)
@@ -294,7 +308,7 @@ struct CreateFeedView: View {
                 
                 Spacer()
                 
-                Text("(\(String(viewModel.state.draft.content.count))/\(String(FeedDraft.maxContentCount)))")
+                Text("(\(String(contentFieldText.count))/\(String(FeedDraft.maxContentCount)))")
                     .applyWSSFont(.body2)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
             }
