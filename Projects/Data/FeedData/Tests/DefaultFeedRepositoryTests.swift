@@ -152,7 +152,7 @@ struct DefaultFeedRepositoryTests {
         #expect(query.genreNames == ["romance"])
         #expect(query.isVisible == true)        // publicOnly → isVisible=true
         #expect(query.isUnVisible == nil)
-        #expect(query.sortCriteria == "recent")
+        #expect(query.sortCriteria == "RECENT")  // rawValue "recent"를 .uppercased()로 대문자화(타 모듈 표기 통일)
     }
 
     @Test("fetchMyFeeds includesUncategorized가 true면 genreNames에 etc가 함께 실린다")

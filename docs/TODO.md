@@ -197,6 +197,127 @@
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
 
+### 11. 런치 부트스트랩(Splash)을 신설해 "앱 진입 시 할 일"을 한곳에 모은다 — 홈 프리페치 포함
+
+- **허브 결정(사용자, 2026-08-28)**: V1 `Presentation/Splash`처럼 V2도 **`SplashFeature`(런치 부트스트랩)**를 두고, C1 판정에서
+  "App 부트스트랩 몫"으로 밀어둔 작업을 전부 여기서 처리한다. **이슈 #225**로 승격(2026-08-28). 모을 작업:
+  | 작업 | 출처 판정 |
+  |---|---|
+  | 유저 정보(`/users/me`) 조회 → 로컬 캐시(userId·nickname·gender·birth) 갱신 — **앱 진입마다** | Home 계약 6.2 (0절 9) |
+  | 홈 프리페치(오늘의 발견·지금 뜨는 글) — 아래 본문 | Home 계약 1.5 (0절 3) |
+  | 앱 최소 버전 조회 → 강제 업데이트 알럿(인프라 `SettingData`) | Home 계약 0절 5 · 위 기능 2번 |
+  | 필수 약관 동의 게이팅(미동의 유저만 약관 시트) | Onboarding 계약 3.1 (0절 1) |
+  | FCM 토큰 등록(`RegisterDeviceTokenUseCase`, 세션 있을 때) | Onboarding 계약 1.6 (0절 4) |
+  | 로그인 세션 유무 라우팅(인트로 vs 홈) | 기존 App 골격 |
+  | 키워드 로컬 캐시 동기화(`syncKeywords`) — 검색·카테고리가 로컬 캐시 기반이라 진입 시 갱신 | Keyword 계약 3 (0절 7) |
+
+- **무엇**: V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시
+  소비해 첫 홈 표시 지연을 줄였다. V2엔 이 프리페치가 없다(홈 진입마다 새로 로드). 되살리기로 확정(사용자, 2026-08-27).
+- **전제(선행 작업)**: **V2에 런치 부트스트랩 단계를 둔다**(사용자 확정). 현재 App이 스켈레톤이라 Splash/부트스트랩이
+  없어(`grep Splash`=디자인시스템 에셋뿐) 프리페치를 얹을 자리가 없다. **프리페치 이득은 "런치→홈 표시 사이 dwell"에
+  전적으로 달렸다** — 부트스트랩 없이 홈이 런치 즉시 뜨면 프리페치 착지 전에 홈 로드가 네트워크를 먼저 때려 이득이 0이다.
+  즉 이 항목은 **부트스트랩 단계 신설에 종속**된다(강제 업데이트 게이트·토큰 검증 등과 같은 자리 → 위 기능 2번과 함께 볼 것).
+- **어디를 고치나(할 때)**:
+  1. **`HomePrefetchStore`(actor)** 신설 — `today`·`trending` 단발성(single-shot) 슬롯. `consume…()`은 값을 돌려주고
+     슬롯을 비운다. (Data 또는 Core.)
+  2. `DefaultRecommendationRepository`(현재 `struct`)가 이 actor **참조**를 보유 → `fetchTodayDiscoveries()`/
+     `fetchTrendingFeeds()`가 store에 있으면 소비, 없으면 네트워크.
+  3. 부트스트랩이 `PrefetchHomeDataUseCase`(또는 레포 fetch)를 fire-and-forget으로 호출해 store를 채운다.
+  4. App DI가 `HomePrefetchStore` **단일 인스턴스**를 만들어 부트스트랩 트리거와 레포에 같이 주입.
+- **왜 지금 안 했나**: C1(#222)은 V1 동작 계약 **추출·분류**만이 범위다. 구현은 부트스트랩 신설(App 첫 실전 조립)에
+  종속돼 별건이다.
+- **놓치기 쉬운 것**:
+  - ⚠️ **V1의 `HomePrefetchService.shared` 싱글톤 방식 금지**(레포 철학). struct 레포엔 캐시 필드를 못 둔다(복사되어
+    공유 불가) — actor store 참조 공유가 그 회피책.
+  - ⚠️ **TTL 캐시 금지, single-shot이 정답** — 홈은 "탭 복귀마다 갱신" 계약이라 TTL이면 복귀 때 stale이 나온다.
+    single-shot이면 프리페치가 슬롯 1회 채움 → 첫 홈 로드가 비움 → 이후 복귀 갱신은 전부 네트워크(V1과 정확히 일치).
+  - **범위는 today·trending 2종만**(V1도 그랬음). taste(선호장르)는 느린 개인화라 제외, 알림 배지도 제외.
+  - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
+
+### 12. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들
+
+C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이 판정한 결과, **되살리거나 고치기로 결정됐지만**
+추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
+서버 요청 파라미터 매핑의 V1↔V2 교차 종합(C2)은 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md)가 정본.
+
+- **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
+  평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
+- **피드 댓글/삭제 조용한 실패 표면화(회귀 확정)** — `FeedDetailViewModel`의 `createComment`·`editComment`·
+  `deleteComment`·`deleteFeed`가 **빈 `catch {}` 4곳**으로 실패를 삼킨다(실측 확인). V1은 "네트워크 지연" 토스트 +
+  전송버튼 재활성. 최소 에러 표면화 필요. → `FeedFeature`.
+- **감상평 첫 진입 온보딩 힌트 재도입 (사용자 확정 2026-08-28)** — V1의 1회성 오버레이(딤 + 평가 상태바 미리보기 + 말풍선 힌트,
+  닫으면 `UserDefaults`로 재노출 방지)를 되살린다. 디자인 시안은 구현 시 V1 구성을 재료로 요청. 근거: `NovelDetailFeature` 6.4·0절 4.
+  → `NovelDetailFeature`.
+- **피드 좋아요 햅틱 복원** — V1 좋아요에 light impact 햅틱. V2 목록 좋아요엔 없다(정렬 토글엔 있음). → `FeedFeature`.
+- **피드 댓글 500자 제한 복원** — V1은 500자 하드컷. V2는 제한 없음(실측 확인). 무제한이면 서버가 긴 댓글 거부 시
+  조용한 실패 위험. → `FeedFeature`.
+- **내 피드 개수 표시 = 서버 `feedsCount` 사용 (사용자 확정 2026-08-28)** — V2는 로드된 배열 길이(`myFeeds.count`)라
+  페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가
+  실재하므로 매퍼/상태로 노출해 표시(V1 parity). → `FeedFeature`·`FeedData`.
+- **피드 수정 "변경 감지" 게이트 복원 (사용자 확정 2026-08-28)** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경
+  재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 활성
+  (`isInitialFeedChanged`). 겸사 **댓글 전송 버튼**도 무변경 재전송 가드 복원(초기값과 다를 때만 활성, 사소). → `FeedFeature`.
+- **매력포인트 버튼 순서 V1로 정렬** — 결정: `worldview·material·필력(writingSkill)·character·relationship·vibe`
+  (**필력 3번째**). 현재 V2는 필력이 맨 끝(둘 다 `allCases` 나열이라 우연히 다름). → `NovelReviewFeature`.
+- **키워드 빈 화면 문의 버튼 목적지 되돌림(오배선)** — 빈 검색결과의 "문의" 버튼이 V2에서 `AppURL.inquiryAddNovel`
+  (작품 등록 문의)로 잘못 연결됐다. V1은 **범용 문의**(`ExternalLinks.inquiry` = V2 `AppURL.errorReport`와 동일 URL).
+  **범용 문의로 되돌릴 것**. (`KeywordFeature/CLAUDE.md`의 "전용 폼 없어 재사용" 설명은 정정 완료.) → `KeywordFeature`.
+- **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
+  계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
+- ✅ **[완료 2026-08-28] 상세검색 연재상태 회귀 + 내 피드 정렬 대소문자** — 둘 다 C2에서 수정·빌드 검증
+  완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) 3-1·3-2). `isCompleted`는 `Bool?` +
+  매퍼 `.map`으로 미선택 시 쿼리 생략(완결작 90% 누락 회귀 해소), 내 피드 정렬은 `.uppercased()`로 통일(서버는
+  대소문자 무관이나 표기 일관성). **잔여: `isCompleted` 매퍼 회귀 테스트**(SearchData `.tests` 타깃 미배선이라 후속).
+- **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
+  포커스 없음(실측 — `@FocusState`만 있고 진입 시 true로 안 켬). 진입 시 `isFocused = true` 복원. → `SearchFeature`.
+- **검색어 30자 제한 복원** — V1은 검색어 30자 초과 입력을 막았다(`shouldChangeCharactersIn`). V2는 제한 없음
+  (실측). 서버 제약 가능성. → `SearchFeature`.
+- **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,
+  상세검색 진입경로 부재. 전부 App 라우터/네비게이션 배선 대기 — **App 모듈에서 처리**(사용자 확정 2026-08-28). → `App`.
+- **서재(내 서재) 필터·정렬 영속화 복원 (사용자 확정 2026-08-28)** — V1은 필터·정렬을 UserDefaults에
+  저장하고 앱 재실행 후 복원했다(`libraryFilterOption`·`librarySortOption`). V2는 저장/복원이 전무해 앱을
+  껐다 켜면 초기화된다(Feature·App grep 0). 매 실행 초기화는 UX 후퇴라 **되살리기로 결정** — 경량
+  영속화(UserDefaults 등)로 저장/복원하되 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). 근거·상세는
+  `LibraryFeature/V1_BEHAVIOR_CONTRACT.md` 1.5·0-1. → `LibraryFeature`.
+- **push 화면 재진입 재조회 복원 (횡단, 사용자 확정 2026-08-28)** — V1은 push 화면도 `viewWillAppear`마다
+  서버 재조회했으나 V2는 `hasLoaded` 1회 가드로 성공 후 재조회하지 않는다. **push→pop→복귀 창에서 서버가
+  바뀐 것(새 알림·다른 기기 읽음·외부 변경)이 미반영**되는 걸 없애기로 결정 — 복귀 시 재조회를 복원한다.
+  대상은 **알림 목록/상세·타유저 프로필·전체 피드 목록·작품 상세** 등 push 계열. 단 스크롤 위치·낙관 반영
+  보존을 깨지 않게 화면별로 조정(전체 피드 목록처럼 "비우고 처음부터"는 재검토). 근거: `NotificationFeature`
+  1.1·0-1 / `UserPageFeature` 4.1·5.2·0-2 / `NovelDetailFeature` 0(1회 로드).
+  ⚠️ **작품 상세는 실측 회귀 확인**(사용자 보고 2026-08-28: 작품 평가 후 상세 복귀 시 헤더 별점·집계 미갱신) —
+  parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
+- **크로스스크린 완료 피드백 재설계 (App 조정 계층, 사용자 확정 2026-08-28)** — V1은 `NotificationCenter` 배관
+  (`feedEdited`·`NovelReviewed`·`BlockUser`)으로 다른 화면에서 끝난 일의 결과를 복귀 화면에 토스트로 알렸다
+  ("수정 완료"·"평가 완료"·"차단했어요"). V2엔 이 배관이 없다. 위 push 재진입 재조회 복원과 **같은 App 배선 자리**에서
+  콜백/이벤트로 재설계한다(싱글톤 NotificationCenter 답습 금지). 근거: `FeedFeature` 0절 15 / `NovelDetailFeature`
+  6.5·0절 11 / `UserPageFeature` 4.6(소소 묶음 ①과 합류). → App + 다수 Feature.
+- **알림 상세 본문 URL 자동 링크 복원 (사용자 확정 2026-08-28)** — V1 상세 본문은 `UITextView`
+  `dataDetectorTypes=.link`라 평문 URL이 탭 가능했으나, V2 순수 `Text`는 평문 URL을 링크로 렌더하지 않는다.
+  `AttributedString` 링크 감지로 복원. **선행 확인**: 서버 알림 본문에 실제 링크가 실리는지. 근거:
+  `NotificationFeature` 2.3·0-2. → `NotificationFeature`.
+- **타유저 USER-018('알 수 없는 유저') 전용 처리 복원 (사용자 확정 2026-08-28)** — V1은 `USER-018` 서버
+  에러를 잡아 빈 프로필로 폴백했으나, V2는 `USER-015`(비공개)만 처리하고 018은 일반 로드 실패
+  (`NetworkErrorView`)로 떨어져 재시도만 반복된다(잠재 회귀). 018 전용 "없는 유저" 처리를 복원한다. 근거:
+  `UserPageFeature` 4.7·0-4. → `UserPageFeature`.
+- **홈 선호장르 "설정했으나 추천 0건"도 설정 유도 카드로 (사용자 확정 2026-08-28)** — V2는 `PreferenceGenreNovelState`를
+  `.noGenreSettings`(유도 카드) / `.novels([])`(섹션 숨김)로 나눴으나, 0건일 때도 V1처럼 유도 카드를 띄우기로(빈 자리보다
+  행동 유도가 낫다). `.novels([])` 분기를 유도 카드로 합치거나 별도 케이스로 같은 카드 렌더. 근거: `HomeFeature` 2.5·0절 7.
+  → `HomeFeature`.
+- **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ① 타유저 차단 성공 시 "차단했어요"
+  안내(토스트) 복원(`UserPageFeature` 4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
+  (`UserPageFeature` 1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
+  하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
+  공용). ④ 작품 상세 피드 셀의 **탈퇴 유저(`userId == -1`) 프로필 탭 토스트** 복원(`NovelDetailFeature` 4.3 —
+  Feed 0절 8·USER-018 폴백과 통일; V2 매퍼가 `-1`을 nil로 안 접는 함정은 계약서 4.3 참고). → `UserPageFeature`·`ProfileDomain`·`NovelDetailFeature`.
+
+### 13. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
+
+개발이 **단독으로 못 닫는 것**(백엔드 스펙·기획·디자인 판단)은 12절(되살리기/고치기로 **결정**됨)과 달리
+**판정 자체가 열려 있어** 팀 논의로만 닫힌다. 흩어지지 않게 **[`docs/PENDING_DECISIONS.md`](PENDING_DECISIONS.md)
+한 곳에 모았다** — 현재 1건(**개발 내부 재검토 1** — 1·2·3·4·5·6·8번은 닫힘, 그 문서 "닫힘 이력" 참조).
+**외부 의존이 없어도 "실측 뒤 정하자"고 미룬 것 역시 그 문서(E절)에 둔다** — 열린 판정은 어디든 흩어두지 않는다.
+
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)

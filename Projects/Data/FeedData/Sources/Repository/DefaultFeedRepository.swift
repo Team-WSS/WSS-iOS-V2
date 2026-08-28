@@ -183,7 +183,9 @@ struct DefaultFeedRepository: FeedRepository {
             isVisible: isVisible,
             isUnVisible: isUnVisible,
             genreNames: genres.isEmpty ? nil : genres,
-            sortCriteria: option.sortType.rawValue
+            // 서버는 RECENT/OLD 대문자를 받는다. 도메인 SortType의 rawValue는 소문자라 여기서 맞춘다
+            // (CollectionDetailQuery와 동일 패턴). 서버 자체는 대소문자 무관이나 타 모듈과 표기 통일.
+            sortCriteria: option.sortType.rawValue.uppercased()
         )
         do {
             let response = try await service.getMyFeeds(userID: userID, query: query)

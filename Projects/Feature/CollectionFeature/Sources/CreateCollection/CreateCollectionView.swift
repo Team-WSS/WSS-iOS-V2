@@ -463,6 +463,8 @@ private extension CreateCollectionView {
     }
 }
 
+// Preview 전용 init(`#if DEBUG`)을 쓰므로 Release 빌드에선 함께 제외해야 컴파일된다.
+#if DEBUG
 #Preview("작품 포함") {
     // 제목 길이를 일부러 섞는다(1줄로 끝나는 제목 + 2줄까지 차는 제목) — 그리드 셀 높이가 제목 줄
     // 수와 무관하게 맞는지(Metric.novelTitleHeight) 이 프리뷰만으로 육안 확인할 수 있어야 한다.
@@ -489,6 +491,7 @@ private extension CreateCollectionView {
         )
     }
 }
+#endif
 
 private struct PreviewCreateCollectionUseCase: CreateCollectionUseCase {
     func execute(_ draft: CollectionDraft) async throws(RepositoryError) -> CollectionID {
