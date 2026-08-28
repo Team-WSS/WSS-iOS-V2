@@ -394,7 +394,7 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   경고를 cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올린 지금, VM에 `@MainActor`를 명시하는 게
   정석이므로 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증하는 일이 남는다(로드맵 3단계 본래 취지).
 
-### 5. A4 Swift 6 — 경고 0 레이어 mode 6 승격 ✅완료 / Feature·App은 대기 (5·6단계)
+### 5. A4 Swift 6 — 경고 0 레이어·Feature mode 6 승격 ✅완료 / App·Demo·Tests 대기 (5·6단계)
 
 - **완료(5단계)**: 경고 0을 달성한 **Core·Domain·Data·UI 32개 모듈**의 Sources 타깃을 **Swift 6 language
   mode**(`SWIFT_VERSION = 6`)로 승격했다 — concurrency 위반이 이제 warning이 아니라 **컴파일 error**다
@@ -405,7 +405,7 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
     미청소라, 전역/프로젝트 세팅에 얹으면 그쪽이 error로 깨진다. Sources 타깃 한정으로 회피.
   - **왜 scan.sh --strict CI가 아니라 pbxproj 직접 승격인가**: 컴파일러 error가 report-only CI 게이트보다
     강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼 그
-    존재 이유가 사라져 → **43모듈 승격 후 `Tooling/StrictConcurrency/`와 `strict-concurrency` CI job을 제거함**(아래).
+    존재 이유가 사라져 → **44모듈 승격 후 `Tooling/StrictConcurrency/`와 `strict-concurrency` CI job을 제거함**(아래).
 - **6단계 진행 — Feature 12개 전부 승격 완료**: `createFeatureModule`에 `enableSwift6: Bool = true` 파라미터를
   추가해 Feature Sources를 mode 6으로 올렸다. 처음엔 NovelDetailFeature만 KVO 미해결로 `false`였으나 **#221에서
   TopBounceDisabler를 stretch 헤더로 교체하며 승격**(위 4번). 검증: 전부 **BUILD SUCCEEDED·Sources error 0**
@@ -414,8 +414,8 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   (별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라 mode 6 오버라이드 시 error. Sources 승격엔 무관하나
   Demo까지 올리려면 정리 필요).
 - **정리 완료(6단계와 함께)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`와 `test.yml`의
-  `strict-concurrency`(Swift 6 Readiness) job·주간 `schedule` cron을 **제거함**. 근거: 43모듈이 mode 6라
-  컴파일러가 회귀를 error로 막고(report-only 스캐너보다 강함), 남은 mode 5(NovelDetail·App·Demo/Tests) 승격은
+  `strict-concurrency`(Swift 6 Readiness) job·주간 `schedule` cron을 **제거함**. 근거: 44모듈이 mode 6라
+  컴파일러가 회귀를 error로 막고(report-only 스캐너보다 강함), 남은 mode 5(App·Demo/Tests) 승격은
   "그 스킴을 mode 6으로 직접 빌드"가 scan.sh의 `complete`-warning 집계보다 정확하다(warning 0 ≠ mode 6 error 0).
 - **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
   cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올릴 때 VM을 `@MainActor`로 명시하는 게 정석이므로

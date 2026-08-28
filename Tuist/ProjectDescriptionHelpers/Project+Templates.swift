@@ -141,7 +141,7 @@ extension Project {
         demoDependencies: [TargetDependency] = [],
         testDependencies: [TargetDependency] = [],
         demoEntitlements: Entitlements? = nil,
-        enableSwift6: Bool = true  // false로 개별 Feature를 mode 6 승격에서 제외(예: NovelDetail의 KVO 미해결)
+        enableSwift6: Bool = true  // false로 개별 Feature를 mode 6 승격에서 일시 제외(현재 12개 Feature 전부 mode 6라 사용처 없음)
     ) -> Project {
 
         let allTargets = makeBaseTargets(
