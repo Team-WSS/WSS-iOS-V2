@@ -16,11 +16,12 @@ import HomeFeature
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
+import PushAuthorization
 import RecommendationDomain
 import SearchDomain
 import UserPageFeature
 
-/// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFactory`가 반환하는 화면을 그대로 조립한다.
+/// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFeatureFactory`가 반환하는 화면을 그대로 조립한다.
 /// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필까지는 실제로 push한다.
 /// 그 안에서 다시 열리는 화면(상세탐색·알림 목록)은 대상 Feature가 아직 App에 안 붙어 로그만 남기는
 /// placeholder다.
@@ -41,7 +42,7 @@ struct HomeRootView: View {
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         /// 선호장르 미설정 유도 CTA → 마이페이지 편집(닉네임/캐릭터/장르 등을 한 화면에서 고치는 화면,
-        /// 전용 "장르만" 편집 화면은 없다 — `MypageFactory.makeEditView` 재사용, 사용자 확정).
+        /// 전용 "장르만" 편집 화면은 없다 — `MypageFeatureFactory.makeEditView` 재사용, 사용자 확정).
         case preferenceGenreSetting
     }
 
@@ -59,11 +60,12 @@ struct HomeRootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            HomeFactory.makeView(
+            HomeFeatureFactory.makeView(
                 loadHomeDataUseCase: DefaultLoadHomeDataUseCase(repository: dependencies.recommendationRepository),
                 loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                     repository: dependencies.notificationRepository
                 ),
+                pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
                 onNovelSelected: { path.append(Destination.novel($0)) },
                 onFeedSelected: { path.append(Destination.feed($0)) },
@@ -191,7 +193,7 @@ private extension HomeRootView {
 
 private extension HomeRootView {
     var mypageEditView: some View {
-        MypageFactory.makeEditView(
+        MypageFeatureFactory.makeEditView(
             loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: dependencies.profileRepository),
             loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: dependencies.profileRepository),
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: dependencies.profileRepository),

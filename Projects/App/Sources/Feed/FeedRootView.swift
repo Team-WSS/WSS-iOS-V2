@@ -21,7 +21,7 @@ import SocialDomain
 /// "피드" 탭 콘텐츠. `FeedFeatureFactory.makeSosoFeedView`(전체/내 피드)를 붙이고, 셀 탭 시 피드 상세,
 /// 피드 셀·피드 상세 "수정" 드롭다운 탭 시 피드 수정(`FeedDetailAssembly.makeEditFeedView`), 우상단 연필
 /// 아이콘 탭 시 피드 작성, 작성자 프로필 탭 시 타유저 프로필(`UserPageAssembly`), 연결 작품 배너 탭 시
-/// 작품 상세, 그 타유저 프로필의 서재 블록 탭 시 타유저 서재(`LibraryFactory.makeUserLibraryView`), 작품
+/// 작품 상세, 그 타유저 프로필의 서재 블록 탭 시 타유저 서재(`LibraryFeatureFactory.makeUserLibraryView`), 작품
 /// 상세 헤더의 작가 이름 탭 시 그 작가로 사전 검색된 결과 화면(`SearchAssembly.makeView(initialQuery:)`),
 /// 작품 상세의 평가 상태바 탭 시 작품 평가(`NovelReviewAssembly`), "나도 한마디"/피드 탭 플로팅 버튼 탭
 /// 시 그 작품이 미리 연결된 피드 작성(`createFeedFromNovel`, 연필 아이콘의 `createFeed`와 화면은 같이
@@ -200,7 +200,7 @@ private extension FeedRootView {
 
 private extension FeedRootView {
     func userLibraryView(_ userID: UserID) -> some View {
-        LibraryFactory.makeUserLibraryView(
+        LibraryFeatureFactory.makeUserLibraryView(
             userID: userID,
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: dependencies.novelRepository,

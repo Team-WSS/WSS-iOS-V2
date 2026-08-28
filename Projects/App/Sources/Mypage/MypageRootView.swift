@@ -8,16 +8,20 @@
 
 import SwiftUI
 
+import SettingFeature
+import UserPageFeature
+import BaseDomain
 import AuthDomain
+import CollectionDomain
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
-import SettingFeature
 import SocialDomain
-import UserPageFeature
+import BaseData
+import PushAuthorization
 import WSSComponent
 
-/// "My" 탭 콘텐츠. `MypageFactory`(`UserPageFeature` 모듈 소속 — 모듈명과 Factory 이름이 다르니 헷갈리지
+/// "My" 탭 콘텐츠. `MypageFeatureFactory`(`UserPageFeature` 모듈 소속 — 모듈명과 Factory 이름이 다르니 헷갈리지
 /// 말 것)의 `makeView`를 붙이고, 프로필 편집(`makeEditView`)까지 실제로 push한다 — 화면 간 연결 조립은
 /// 항상 App이 한다는 원칙(#196)에 따라, `MypageView`가 예전에 자체적으로 갖고 있던 내부
 /// `navigationDestination`을 여기로 옮겼다.
@@ -26,12 +30,12 @@ import WSSComponent
 /// 다른 화면으로의 이동이 아니라 그 화면 자신의 draft를 채우는 로컬 값 선택기라, App으로 올리면
 /// 결과를 다시 그 화면 안으로 넣어주는 Binding 왕복이 필요해져 오히려 더 꼬인다(사용자 확정, #196).
 ///
-/// 우측 상단 톱니바퀴 → 설정(`SettingFactory.makeView`)까지 push한다. 서재 블록 탭은 push가 아니라
+/// 우측 상단 톱니바퀴 → 설정(`SettingFeatureFactory.makeView`)까지 push한다. 서재 블록 탭은 push가 아니라
 /// **탭 전환**이라(`MainTabView.selectedTab`) `onLibraryTapped` 콜백으로 위로 흘려보낸다.
 ///
-/// ⚠️ **`MypageFactory.makeView` 자체가 받는 `onAuthenticationRequired`는 없다** — 로드 401은
+/// ⚠️ **`MypageFeatureFactory.makeView` 자체가 받는 `onAuthenticationRequired`는 없다** — 로드 401은
 /// 여전히 조용히 빈 상태로 남는다(FeedFeature와 같은 사정, App 쪽에서 고칠 수 있는 부분이 아님). 다만
-/// 여기서 push하는 **설정(`SettingFactory.makeView`)의 회원탈퇴/로그아웃 성공은 세션 자체를 끝내는
+/// 여기서 push하는 **설정(`SettingFeatureFactory.makeView`)의 회원탈퇴/로그아웃 성공은 세션 자체를 끝내는
 /// 이벤트**라, 다른 탭의 401 처리와 같은 경로(`onAuthenticationRequired` → 온보딩으로 라우팅)를 탄다.
 struct MypageRootView: View {
 
@@ -52,9 +56,16 @@ struct MypageRootView: View {
     /// (편집 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로, `UserPageFeature/CLAUDE.md` 참고).
     @State private var showProfileSavedToast = false
 
+    /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시를 그대로 읽는다(`FeedDetailAssembly`와
+    /// 동일 패턴) — "My" 탭은 로그인 후에만 진입하므로 정상 흐름에선 항상 채워져 있다.
+    private var currentUserID: Int? {
+        UserDefaultsStorage().get(.userID)
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
-            MypageFactory.makeView(
+            MypageFeatureFactory.makeView(
+                userID: UserID(currentUserID ?? 0),
                 loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: dependencies.profileRepository),
                 loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(
                     profileRepository: dependencies.profileRepository
@@ -66,7 +77,12 @@ struct MypageRootView: View {
                 loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(
                     novelRepository: dependencies.novelRepository
                 ),
+                loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(
+                    collectionRepository: dependencies.collectionRepository
+                ),
                 logger: dependencies.logger,
+                // TODO: - 컬렉션 목록 화면으로 이동(CollectionFeature가 아직 App에 연결되지 않음, docs/TODO.md 참고)
+                onCollectionTapped: {},
                 onEditProfileTapped: { path.append(Destination.edit) },
                 onSettingTapped: { path.append(Destination.setting) },
                 onLibraryTapped: onLibraryTapped
@@ -92,7 +108,7 @@ struct MypageRootView: View {
 
 private extension MypageRootView {
     var editProfileView: some View {
-        MypageFactory.makeEditView(
+        MypageFeatureFactory.makeEditView(
             loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: dependencies.profileRepository),
             loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(
                 profileRepository: dependencies.profileRepository
@@ -111,7 +127,7 @@ private extension MypageRootView {
 
 private extension MypageRootView {
     var settingView: some View {
-        SettingFactory.makeView(
+        SettingFeatureFactory.makeView(
             loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(
                 repository: dependencies.profileRepository
             ),
@@ -127,11 +143,18 @@ private extension MypageRootView {
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(
                 repository: dependencies.pushSettingRepository
             ),
+            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
             withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
             logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(
                 novelRepository: dependencies.novelRepository
             ),
+            pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: dependencies.logger,
             // 회원탈퇴/로그아웃 둘 다 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
             onWithdrawSuccess: onAuthenticationRequired,

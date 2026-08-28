@@ -14,7 +14,7 @@ import RecommendationDomain
 import SearchDomain
 import SearchFeature
 
-/// 일반 검색(`SearchFactory.makeView`) 조립 — 홈·서재 등 여러 탭이 같은 방식으로 push해서(#196) 공용으로
+/// 일반 검색(`SearchFeatureFactory.makeNormalSearchView`) 조립 — 홈·서재 등 여러 탭이 같은 방식으로 push해서(#196) 공용으로
 /// 뽑았다. `onNovelSelected`만 호출자별로 다르다(각 탭 Root가 자기 `Destination` enum에 맞게 push해야 해서).
 ///
 /// ⚠️ **상세탐색 결과(`makeDetailSearchResultView`)는 `NormalSearchView`가 내부에서 직접 push하지 않고
@@ -34,7 +34,7 @@ enum SearchAssembly {
         onDetailSearchRequested: @escaping (SearchFilter) -> Void,
         initialQuery: String? = nil
     ) -> some View {
-        SearchFactory.makeView(
+        SearchFeatureFactory.makeNormalSearchView(
             loadSosoPickUseCase: DefaultLoadSosoPickUseCase(recommendationRepository: dependencies.recommendationRepository),
             loadRecentSearchWordsUseCase: DefaultLoadRecentSearchWordsUseCase(recentSearchRepository: dependencies.searchRepository),
             removeRecentSearchWordUseCase: DefaultRemoveRecentSearchWordUseCase(recentSearchRepository: dependencies.searchRepository),
@@ -56,7 +56,7 @@ enum SearchAssembly {
         dependencies: AppDependencies,
         onNovelSelected: @escaping (NovelID) -> Void
     ) -> some View {
-        SearchFactory.makeDetailSearchResultView(
+        SearchFeatureFactory.makeDetailSearchResultView(
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             logger: dependencies.logger,

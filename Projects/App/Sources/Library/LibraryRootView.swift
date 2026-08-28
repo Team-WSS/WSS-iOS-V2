@@ -21,7 +21,7 @@ import SettingFeature
 /// "서재" 탭 콘텐츠. 로그인한 본인 서재(`makeMyLibraryView`)만 붙인다 — 타유저 서재(`makeUserLibraryView`)는
 /// 유저 프로필 화면에서 push되는 용도라 여기서 조립할 대상이 아니다. 작품 상세(`NovelDetailAssembly`)·
 /// 일반 검색(`SearchAssembly`, "웹소설 찾기"·"작품 등록" 버튼 공용 — 서재는 별도 작품 등록 화면이 없고
-/// 검색해서 작품을 찾아 상세에서 등록하는 흐름, 사용자 확정)·알림 설정(`SettingFactory.makeNotificationSettingView`,
+/// 검색해서 작품을 찾아 상세에서 등록하는 흐름, 사용자 확정)·알림 설정(`SettingFeatureFactory.makeNotificationSettingView`,
 /// 서재 알림 관리는 설정 목록 전체가 아니라 이 화면으로 바로 진입한다), 그리고 작품 상세에서 열리는
 /// 작품 평가·피드 작성·유저 프로필까지 push한다.
 struct LibraryRootView: View {
@@ -54,7 +54,7 @@ struct LibraryRootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            LibraryFactory.makeMyLibraryView(
+            LibraryFeatureFactory.makeMyLibraryView(
                 loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                     novelRepository: dependencies.novelRepository,
                     keywordRepository: dependencies.keywordRepository
@@ -185,9 +185,15 @@ private extension LibraryRootView {
 
 private extension LibraryRootView {
     var notificationSettingView: some View {
-        SettingFactory.makeNotificationSettingView(
+        SettingFeatureFactory.makeNotificationSettingView(
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
+            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
             logger: dependencies.logger
         )
     }
