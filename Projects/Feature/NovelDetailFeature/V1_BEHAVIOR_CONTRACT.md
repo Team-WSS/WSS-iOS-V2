@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/NovelDetail/` = `WSSiOS/Source/Presentation/NovelDetail/`(하위 폴더가 깊어 파일명:줄로 인용 — 파일명은 유일).
   Data/Network는 `WSSiOS/Source/Data/…`·`WSSiOS/Network/…` 그대로.
@@ -31,13 +31,13 @@
 |---|---|---|
 | `Sources/NovelDetailView.swift` (몰입형 헤더 + 탭 컨테이너) | `…/NovelDetail/NovelDetailView/NovelDetailView.swift` + `NovelDetailViewController.swift` + `NovelDetailViewModel/NovelDetailViewModel.swift` | **몰입형 헤더·스티키 탭바·스크롤 반응 타이틀 동일**. RxSwift Input/Output 4구획 → SwiftUI 단일 `@Observable` VM |
 | `Sources/NovelDetailHeaderView.swift` (헤더) | `…/NovelDetailHeaderView/**`(NovelInfo·ReviewResult·CoverImage·Dropdown 등) | 표지·장르 코너뱃지·작가 개별 밑줄·카운트 3종 **동일** |
-| `Sources/NovelDetailReviewSection.swift` (유저 평가 + CTA) | `NovelDetailHeaderReviewResultView.swift` + `NovelDetailHeaderInterestFeedWriteButton.swift` | 평가 없음=셀렉터 / 있음=칩+상태바 **동일**. §2 참조 |
-| `Sources/NovelDetailInfoTab.swift` (정보 탭) | `…/NovelDetailInfoView/**`(Description·Platform·Review·Graph) | 소개 아코디언·플랫폼·감상평 3요소·그래프 **동일**. visibility 2단 판정 **동일**(§3) |
-| `Sources/NovelDetailFeedTab.swift` (피드 탭) | `…/NovelDetailFeedView/**` + `FeedListView`(공용) | 커서 페이지네이션·좋아요·드롭다운·신고 **동일**. **지연 로드·실패 표현이 갈림**(§4) |
-| *(없음)* | `firstReviewDescription` 온보딩 오버레이(NovelDetailView.swift·VM) | **V2엔 통째로 없다**(§6.4) |
+| `Sources/NovelDetailReviewSection.swift` (유저 평가 + CTA) | `NovelDetailHeaderReviewResultView.swift` + `NovelDetailHeaderInterestFeedWriteButton.swift` | 평가 없음=셀렉터 / 있음=칩+상태바 **동일**. 2 참조 |
+| `Sources/NovelDetailInfoTab.swift` (정보 탭) | `…/NovelDetailInfoView/**`(Description·Platform·Review·Graph) | 소개 아코디언·플랫폼·감상평 3요소·그래프 **동일**. visibility 2단 판정 **동일**(3) |
+| `Sources/NovelDetailFeedTab.swift` (피드 탭) | `…/NovelDetailFeedView/**` + `FeedListView`(공용) | 커서 페이지네이션·좋아요·드롭다운·신고 **동일**. **지연 로드·실패 표현이 갈림**(4) |
+| *(없음)* | `firstReviewDescription` 온보딩 오버레이(NovelDetailView.swift·VM) | **V2엔 통째로 없다**(6.4) |
 
 > **작가 검색 결과 화면**(V1 `pushToNormalSearchViewController`)은 V2에서 `onAuthorTapped` 콜백으로 위임하나
-> **App 라우팅이 아직 미구현(후속)**이라 이 문서 범위 밖이다(§6.2). 평가 화면(NovelReview)·피드 작성/수정·피드 상세·
+> **App 라우팅이 아직 미구현(후속)**이라 이 문서 범위 밖이다(6.2). 평가 화면(NovelReview)·피드 작성/수정·피드 상세·
 > 유저 프로필도 전부 콜백 위임이라 목적지 화면 자체는 각 모듈 문서 소관이다.
 
 ---
@@ -46,21 +46,21 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **재진입 재조회 없음** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 `hasLoaded` 가드로 **1회만 로드**하고 재진입 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 V2가 직접 재로드하나, **다른 화면을 다녀온 뒤**(평가 작성·수정, 피드 수정, 피드 상세에서 좋아요)의 헤더 별점·읽기상태·키워드/그래프 집계 최신화가 사라졌을 수 있다. "1회 로드"는 V2 `CLAUDE.md`에 명문화됐으나 그 **부작용(외부 변경 후 stale)**은 별도 판정. → [§1.1](#11-진입재조회생명주기)
-   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` §9.
-2. **더블탭 가드(throttle) 제거** — V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [§6.1](#61-더블탭-가드throttle)
-3. **작가 검색 화면 라우팅 미구현** — V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [§6.2](#62-작가-검색-진입)
-4. **첫 감상평 안내 오버레이 제거** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [§6.4](#64-첫-감상평-안내-오버레이)
-5. **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [§6.3](#63-amplitude-트래킹)
+1. **재진입 재조회 없음** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 `hasLoaded` 가드로 **1회만 로드**하고 재진입 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 V2가 직접 재로드하나, **다른 화면을 다녀온 뒤**(평가 작성·수정, 피드 수정, 피드 상세에서 좋아요)의 헤더 별점·읽기상태·키워드/그래프 집계 최신화가 사라졌을 수 있다. "1회 로드"는 V2 `CLAUDE.md`에 명문화됐으나 그 **부작용(외부 변경 후 stale)**은 별도 판정. → [1.1](#11-진입재조회생명주기)
+   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` 9.
+2. **더블탭 가드(throttle) 제거** — V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
+3. **작가 검색 화면 라우팅 미구현** — V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
+4. **첫 감상평 안내 오버레이 제거** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
+5. **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-6. 🔧 **이미지 로드 실패 → 전면 에러 뷰 제거** — V1은 **표지/장르 이미지 로드가 실패하면 화면 전체를 `NetworkErrorView`로 덮었다**(`imageNetworkError`). V2는 표지 실패 시 placeholder(`imgLoadingThumbnail`)로 폴백하고 화면을 실패로 만들지 않는다. → [§1.4](#14-로드-실패-표현)
-7. 🔧 **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [§2.2](#22-관심-토글)
-8. 🔧 **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [§4.1](#41-지연-로드페이지네이션)
-9. 🔧 **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [§4.4](#44-빈-화면실패)
-10. 🗑 **탈퇴 유저 프로필 탭 토스트 제거** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [§4.3](#43-피드-셀-상호작용)
-11. 🗑 **피드 수정·평가 완료 토스트 제거** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [§6.5](#65-알림-관찰자-토스트)
+6. 🔧 **이미지 로드 실패 → 전면 에러 뷰 제거** — V1은 **표지/장르 이미지 로드가 실패하면 화면 전체를 `NetworkErrorView`로 덮었다**(`imageNetworkError`). V2는 표지 실패 시 placeholder(`imgLoadingThumbnail`)로 폴백하고 화면을 실패로 만들지 않는다. → [1.4](#14-로드-실패-표현)
+7. 🔧 **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
+8. 🔧 **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
+9. 🔧 **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
+10. 🗑 **탈퇴 유저 프로필 탭 토스트 제거** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용)
+11. 🗑 **피드 수정·평가 완료 토스트 제거** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -75,7 +75,7 @@
 - 🔧 **재조회 복원으로 변경** (2026-08-28, 사용자 — 종전 'Keep(1회 로드)' 판정을 뒤집음) — V1은 `viewWillAppear`마다 `reloadData`를 쏴 **header·info·feed 3종을 전부 다시 조회**한다(재진입 시 최신 집계 반영). 최초 1회 가드 없음.
   - **V2: `hasLoaded` 가드로 1회만 로드**하고 재진입(onAppear 재발화) 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 `hasLoaded = false` 후 `loadNovel()`로 직접 재동기화하지만, **평가 작성/수정·피드 수정·피드 상세 좋아요처럼 다른 화면을 다녀온 결과**는 재진입해도 반영되지 않을 수 있다(V1은 반영됐다).
   - 근거: V1 `NovelDetailViewController.swift:71-77`(viewWillAppear→event), `NovelDetailViewModel.swift:191-204`(reloadData→get 3종) · V2 `NovelDetailViewModel.swift:219-223`(load, `guard !hasLoaded`), `396-411`·`432-446`(내부 삭제만 재로드), `CLAUDE.md`("LoadNovelUseCase 1회(hasLoaded 가드)")
-  - **판정(2026-08-28, 사용자): 재진입 재조회 복원.** ⚠️ **실측 회귀(사용자 보고): 작품 평가 후 상세로 복귀하면 헤더 별점·집계가 갱신되지 않는다** — "1회 로드"의 부작용이 실제로 드러난 확정 회귀다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함 — 외부 변경(평가·피드 수정 후 복귀) 최신화를 되살린다. 무거운 화면이라 전체 재로드보다 **헤더 집계 등 외부 변경분 위주의 가벼운 갱신**으로 조정 권장. `docs/TODO.md` §9. (종전 'Keep(1회 로드)' 판정을 뒤집은 것 — `CLAUDE.md`의 "1회 로드" 명문은 구현 시 함께 갱신.)
+  - **판정(2026-08-28, 사용자): 재진입 재조회 복원.** ⚠️ **실측 회귀(사용자 보고): 작품 평가 후 상세로 복귀하면 헤더 별점·집계가 갱신되지 않는다** — "1회 로드"의 부작용이 실제로 드러난 확정 회귀다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함 — 외부 변경(평가·피드 수정 후 복귀) 최신화를 되살린다. 무거운 화면이라 전체 재로드보다 **헤더 집계 등 외부 변경분 위주의 가벼운 갱신**으로 조정 권장. `docs/TODO.md` 9. (종전 'Keep(1회 로드)' 판정을 뒤집은 것 — `CLAUDE.md`의 "1회 로드" 명문은 구현 시 함께 갱신.)
 - ✅ **Keep** — 뒤로가기 = 이전 화면으로 pop(back 버튼). 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 back 버튼 + 스와이프 뒤로가기를 함께 쓴다.
   - V2: `.requestClose` → `shouldDismiss` → `dismiss()`. 커스텀 네비바 + `.enableSwipeBack()`(네비바 숨기면 스와이프백이 꺼져 되살린다 — 두 레포 공통 함정). V1도 `swipeBackGesture()`를 viewWillAppear에서 걸었다.
   - 근거: V1 `NovelDetailViewController.swift:76`(swipeBackGesture),`493-499`(back 1s throttle→pop) · V2 `NovelDetailView.swift:100-102`,`285-296`, `CLAUDE.md`(몰입형 헤더=시스템 네비바 숨김/enableSwipeBack)
@@ -112,7 +112,7 @@
 ### 2.1 작품 정보 (제목·메타·카운트·작가)
 
 - ✅ **Keep** — 제목(최대 3줄 말줄임) + 메타 줄(`장르  ·  연재상태  ·  작가`) + 카운트 3종(관심수·별점(횟수)·피드수). **작가만 개별 밑줄 버튼**(다작가면 이름별 버튼, 구분자 `, `는 비탭)이고 탭 시 작가 검색으로.
-  - V2: `metaRow`가 앞부분(장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자는 비탭 `Text`로 분해 — V1의 `authorStackView`(라벨별 tap gesture)와 같은 결. 작가 목적지는 §6.2.
+  - V2: `metaRow`가 앞부분(장르·연재상태)은 한 `Text`, 작가는 이름마다 `Button`, 구분자는 비탭 `Text`로 분해 — V1의 `authorStackView`(라벨별 tap gesture)와 같은 결. 작가 목적지는 6.2.
   - 근거: V1 `NovelDetailHeaderNovelInfoView.swift:125-186`(메타·카운트·작가별 라벨) · V2 `NovelDetailHeaderView.swift:133-223`, `CLAUDE.md`(작가만 개별 밑줄 버튼)
 - ✅ **Keep** — 연재상태 표기 `완결작`/`연재작`(V1 `isNovelCompleted`), 별점 `%.1f (횟수)`, 장르 나열은 `/` 구분.
   - 근거: V1 `NovelDetailHeaderNovelInfoView.swift:126-134` · V2 `NovelDetailHeaderView.swift:185-207`
@@ -158,7 +158,7 @@
 ### 3.2 플랫폼 (작품 보러가기)
 
 - ✅ **Keep** — 플랫폼 아이콘 나열, 탭 → 외부 브라우저로 해당 플랫폼 URL 오픈. 플랫폼이 없으면 섹션 통째 숨김.
-  - V2: `platformSection`을 `!platforms.isEmpty`로 가드, 아이콘 탭 → `openURL(platform.url)`. V1은 플랫폼 탭 시 Amplitude `directNovel` 트래킹(§6.3).
+  - V2: `platformSection`을 `!platforms.isEmpty`로 가드, 아이콘 탭 → `openURL(platform.url)`. V1은 플랫폼 탭 시 Amplitude `directNovel` 트래킹(6.3).
   - 근거: V1 `NovelDetailViewController.swift:259-275`(itemSelected→open URL + 트래킹), `NovelDetailInfoPlatformView` · V2 `NovelDetailInfoTab.swift:29-113`
 
 ### 3.3 독자 감상평 3요소 + 그래프 (visibility 2단 판정)
@@ -191,13 +191,13 @@
 - ✅ **Keep** — 무한 스크롤(하단 도달 시 다음 페이지). V1은 스크롤 오프셋 임계값(`offsetY + viewHeight >= contentHeight`), V2는 마지막 셀 `onAppear`(수단 변경).
   - 근거: V1 `NovelDetailViewController.swift:588-598`(observeReachedBottom) · V2 `NovelDetailFeedTab.swift:81-86`
 - 🗑 **Delete** — V1 재진입 eager 로드는 **이미 본 개수만큼 over-fetch**(`size = feedList.count`)해 목록을 다시 채웠다(서재의 재진입 갱신과 유사).
-  - V2: 재진입 재조회 자체가 없어(§1.1) 이 경로가 사라졌다. 피드 목록은 화면 수명 동안 유지된다.
+  - V2: 재진입 재조회 자체가 없어(1.1) 이 경로가 사라졌다. 피드 목록은 화면 수명 동안 유지된다.
   - 근거: V1 `NovelDetailViewModel.swift:595-612`(size=count over-fetch) · V2 `NovelDetailViewModel.swift`(재진입 재로드 없음)
 
 ### 4.2 좋아요
 
 - ✅ **Keep** — 좋아요 탭 → **낙관 반영(카운트 ±1·햅틱) + 서버 실패 시 롤백**. 셀별 독립(다른 셀 병행 허용).
-  - V2: 엔티티 `TotalFeed.toggleLike()` 정책 위임 + 낙관/롤백, `syncingLikeFeedIDs`로 같은 셀 연타만 가드. V1도 즉시 반영 후 실패 시 rollback. V1은 좋아요 성공 시 Amplitude `feedLike`(§6.3).
+  - V2: 엔티티 `TotalFeed.toggleLike()` 정책 위임 + 낙관/롤백, `syncingLikeFeedIDs`로 같은 셀 연타만 가드. V1도 즉시 반영 후 실패 시 rollback. V1은 좋아요 성공 시 Amplitude `feedLike`(6.3).
   - 근거: V1 `NovelDetailViewModel.swift:419-456`(UI 반영→서버→롤백) · V2 `NovelDetailViewModel.swift:277-289`,`415-430`, `CLAUDE.md`(좋아요 낙관/롤백)
 
 ### 4.3 피드 셀 상호작용 (탭·프로필·드롭다운·신고)
@@ -291,7 +291,7 @@ V1 상세는 **작품 ID 경로 기반 GET/POST/DELETE** 묶음이다(accessToke
 
 | 용도 | V1 엔드포인트 | V1 파라미터 | V2 대응 | 상태 |
 |---|---|---|---|---|
-| 헤더(제목·카운트·관심·읽기상태) | `GET /novels/{id}` | 없음 | `LoadNovelUseCase`(header+info 합침) | ✅ Keep (§1.2) |
+| 헤더(제목·카운트·관심·읽기상태) | `GET /novels/{id}` | 없음 | `LoadNovelUseCase`(header+info 합침) | ✅ Keep (1.2) |
 | 정보(소개·플랫폼·감상평·그래프) | `GET /novels/{id}/info` | 없음 | 〃 | ✅ Keep |
 | 피드 목록 | `GET /novels/{id}/feeds` | `lastFeedId`, `size` | `LoadNovelFeedsUseCase(novelID:lastFeedID:)` | ✅ Keep (커서 동일) |
 | 관심 등록 | `POST /novels/{id}/is-interest` | 없음 | `NovelInterestUseCase.add(id:)` | ✅ Keep |

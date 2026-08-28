@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - 경로 접두사: V1 `…/NovelReview/` = `WSSiOS/Source/Presentation/NovelReview/`, V1 공용 `…/Base/KeywordLabel/` = `WSSiOS/Source/Presentation/Base/KeywordLabel/`. V2는 이 모듈 기준 상대경로.
 
@@ -42,16 +42,16 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [§5](#5-빈-화면-검색-결과-없음)
-2. **선택할 때마다 키보드를 내리던 동작**(`endEditing`)이 V2엔 없다. V1은 트레이/검색결과/카테고리 어디서 키워드를 고르든 곧바로 키보드를 접었다. → [§4](#4-선택)
-3. **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [§9](#9-분석-analytics)
+1. **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [5](#5-빈-화면-검색-결과-없음)
+2. **선택할 때마다 키보드를 내리던 동작**(`endEditing`)이 V2엔 없다. V1은 트레이/검색결과/카테고리 어디서 키워드를 고르든 곧바로 키보드를 접었다. → [4](#4-선택)
+3. **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [9](#9-분석-analytics)
 
 **🔧/🗑 눈에 띄는 의도적 변경 (의도 확인)**
 
-4. **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [§8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
-5. **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [§8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
-6. **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [§2](#2-카테고리-브라우징-접힘펼침)
-7. **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [§3](#3-검색)
+4. **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
+5. **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
+6. **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
+7. **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
 
 (나머지는 대부분 ✅ Keep — 수단만 RxSwift→구조적 동시성으로 바뀌고 관찰 동작은 같다.)
 
@@ -168,10 +168,10 @@ V2 `KeywordFeature`는 콘텐츠만 제공하고 이 껍데기를 전부 호출�
 
 | 항목 | V1 | V2 | 상태 |
 |---|---|---|---|
-| 검색/브라우징 소스 | 서버 `GET /keywords` (액세스 토큰 헤더) | 로컬 DB 캐시(`searchKeywords`/`fetchKeywords`), 서버 동기화는 `syncKeywords()` | 🔧 Improve (§3) |
+| 검색/브라우징 소스 | 서버 `GET /keywords` (액세스 토큰 헤더) | 로컬 DB 캐시(`searchKeywords`/`fetchKeywords`), 서버 동기화는 `syncKeywords()` | 🔧 Improve (3) |
 | 검색어 파라미터 | `query` (nil이 아닐 때만 쿼리에 추가) | `searchText`(String) → 캐시 조회 | ✅ Keep (개념 동일) |
-| 카테고리 브라우징 | `query` 없이 같은 `GET /keywords` → `categories` | 전용 `LoadTotalKeywordsUseCase`(로컬) | 🔧 Improve (§1·§2) |
-| 응답 스키마 | `SearchKeywordResult { categories: [{ categoryName, categoryImage, keywords: [{ keywordId, keywordName }] }] }` | `KeywordGroup(category: KeywordCategory, keywords: [Keyword(id, name)])`, 카테고리는 로컬 enum 5종 | 🔧 Improve (서버 categoryName/Image 미사용, §2) |
+| 카테고리 브라우징 | `query` 없이 같은 `GET /keywords` → `categories` | 전용 `LoadTotalKeywordsUseCase`(로컬) | 🔧 Improve (1·2) |
+| 응답 스키마 | `SearchKeywordResult { categories: [{ categoryName, categoryImage, keywords: [{ keywordId, keywordName }] }] }` | `KeywordGroup(category: KeywordCategory, keywords: [Keyword(id, name)])`, 카테고리는 로컬 enum 5종 | 🔧 Improve (서버 categoryName/Image 미사용, 2) |
 | 인기 키워드(`GET /keywords/popular`, size=7) | `getPopularKeywords` (이 화면 미사용 — 홈/일반검색용) | `LoadPopularKeywordsUseCase`(BaseDomain) | 참고(이 화면 무관) |
 
 - 근거: V1 `WSSiOS/Network/Keyword/KeywordService.swift:18-42`, `WSSiOS/Resource/Constants/URLs/URLs.swift:202-203`(`/keywords`, `/keywords/popular`), `WSSiOS/Source/Data/DTO/SearchKeywordResult.swift:10-23` · V2 `SearchKeywordsUseCase.swift`, `LoadTotalKeywordsUseCase.swift`, `Projects/Domain/BaseDomain/Sources/Keyword/`

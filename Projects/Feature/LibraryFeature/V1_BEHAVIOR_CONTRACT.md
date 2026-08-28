@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/Library/` = `WSSiOS/Source/Presentation/Library/`.
 
@@ -29,7 +29,7 @@
 |---|---|---|
 | `Sources/Library/` (내 서재) | `…/Library/MyLibrary/` (`MyLibraryViewController`+VM, 2025 신버전) | 필터 시트 기반 단일 리스트 |
 | `Sources/FilterSheet/` (필터 시트) | `…/Library/LibraryFilter/` (`LibraryFilterViewController`+VM) | 6탭 필터 |
-| `Sources/UserLibrary/` (타유저 서재) | `…/Library/UserLibrary/` (`UserLibraryViewController`+`UserLibraryChildViewModel`, 2024 구버전) | **V1은 읽기상태 탭 페이저, V2는 탭 없는 단일 리스트** (§3) |
+| `Sources/UserLibrary/` (타유저 서재) | `…/Library/UserLibrary/` (`UserLibraryViewController`+`UserLibraryChildViewModel`, 2024 구버전) | **V1은 읽기상태 탭 페이저, V2는 탭 없는 단일 리스트** (3) |
 
 ---
 
@@ -37,18 +37,18 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **필터·정렬 영속화** — V1은 내 서재의 필터·정렬을 **UserDefaults에 저장하고 앱 재실행 후 복원**한다. **V2엔 이 저장/복원이 전혀 없다**(Feature·App 모두 grep 0) → 앱을 껐다 켜면 필터·정렬이 초기화된다. → [§1.5](#15-영속화-userdefaults)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 UX 후퇴 — 경량 영속화(UserDefaults 등)로 저장/복원. C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) §9에 부활 대기로 올림.
-2. **타유저 서재 읽기상태 탭** — V1 타유저 서재는 **읽기상태별 탭 페이저**(`UIPageViewController` + `UserLibraryPageBar`). V2엔 **탭이 없다**(단일 리스트, 필터 UI 없음). → [§3.1](#31-화면-구조-탭-페이저)
+1. **필터·정렬 영속화** — V1은 내 서재의 필터·정렬을 **UserDefaults에 저장하고 앱 재실행 후 복원**한다. **V2엔 이 저장/복원이 전혀 없다**(Feature·App 모두 grep 0) → 앱을 껐다 켜면 필터·정렬이 초기화된다. → [1.5](#15-영속화-userdefaults)
+   - **🔧 확정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 UX 후퇴 — 경량 영속화(UserDefaults 등)로 저장/복원. C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) 9에 부활 대기로 올림.
+2. **타유저 서재 읽기상태 탭** — V1 타유저 서재는 **읽기상태별 탭 페이저**(`UIPageViewController` + `UserLibraryPageBar`). V2엔 **탭이 없다**(단일 리스트, 필터 UI 없음). → [3.1](#31-화면-구조-탭-페이저)
    - **🗑 확정(2026-08-28, 사용자): 단일 리스트가 의도.** V2는 필터 시트 패러다임으로 통일 — 탭 페이저(구버전 UI) 되살리지 않음.
-3. **셀 선택 더블탭 가드** — V1은 작품 셀 선택에 throttle(내 서재 1s·타유저 2s)을 걸어 중복 push를 막는다. V2는 `onNovelSelected` 콜백으로 위임하며 **명시적 throttle이 안 보인다**. → [§1.7](#17-상호작용네비게이션)
-4. **페이지 크기 12 → 15** — V1 내 서재 페이지 크기 `12`, V2 `15`(`LibraryPageSizePolicy.pageSize`). 의도적 조정으로 보이나 **문서화된 결정은 아님**. → [§1.2](#12-목록-로드-3방식)
-5. **`.title`(제목순) 정렬 서버 토큰** — V1은 `"title"`에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석이 달려 있다. V2 매퍼도 토큰을 싣지만 **백엔드 확정 여부는 별개 확인**이 필요. → [§1.4](#14-정렬)
+3. **셀 선택 더블탭 가드** — V1은 작품 셀 선택에 throttle(내 서재 1s·타유저 2s)을 걸어 중복 push를 막는다. V2는 `onNovelSelected` 콜백으로 위임하며 **명시적 throttle이 안 보인다**. → [1.7](#17-상호작용네비게이션)
+4. **페이지 크기 12 → 15** — V1 내 서재 페이지 크기 `12`, V2 `15`(`LibraryPageSizePolicy.pageSize`). 의도적 조정으로 보이나 **문서화된 결정은 아님**. → [1.2](#12-목록-로드-3방식)
+5. **`.title`(제목순) 정렬 서버 토큰** — V1은 `"title"`에 *"TODO: 백엔드 토큰 확정 필요(v2 스펙 미정의)"* 주석이 달려 있다. V2 매퍼도 토큰을 싣지만 **백엔드 확정 여부는 별개 확인**이 필요. → [1.4](#14-정렬)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-6. 타유저 서재 정렬 **2종(최신/오래된) → 6종**으로 확장, 그리고 **1페이지 내 정렬 시 클라이언트 배열 뒤집기** 최적화 제거. → [§3.2](#32-정렬)
-7. 타유저 서재 빈 화면의 **"작품 찾기" CTA 제거**. → [§3.3](#33-빈-화면에러)
+6. 타유저 서재 정렬 **2종(최신/오래된) → 6종**으로 확장, 그리고 **1페이지 내 정렬 시 클라이언트 배열 뒤집기** 최적화 제거. → [3.2](#32-정렬)
+7. 타유저 서재 빈 화면의 **"작품 찾기" CTA 제거**. → [3.3](#33-빈-화면에러)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -114,7 +114,7 @@
 - 🔧 **되살리기로 결정 (2026-08-28, 사용자)** — V1은 **필터·정렬을 UserDefaults에 저장**하고 **재진입 시 복원**한다. `libraryFilterOption`(JSON 인코딩된 `LibraryFilterOption`)·`librarySortOption`(정렬의 한글 텍스트)로 저장하며, 값이 바뀔 때마다 저장하고 `viewWillAppear`의 `applySavedOption()`에서 읽어 반영한다. 저장값이 현재와 다르면 reload, 같으면 refresh를 낸다.
   - **V2: 이 저장/복원이 전혀 없다.** VM이 매번 `MyLibraryFilter()` 기본값으로 시작하고, Feature·App 어디에도 `libraryFilterOption`/`librarySortOption` 저장이 없다(grep 0). → **앱을 껐다 켜면 필터·정렬이 초기화**된다. 탭 콘텐츠라 앱 세션 내에서는 메모리로 유지되지만, 세션을 넘겨 살아남지 않는다.
   - 근거: V1 `MyLibraryViewModel.swift:297-365`(applySavedOption·save/load) · V2 `LibraryViewModel.swift:22-23`(기본값 시작, 영속화 코드 없음)
-  - **판정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 명백한 UX 후퇴 — V1처럼 마지막 필터·정렬을 경량 영속화(UserDefaults 등)로 저장/복원한다. 단 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) §9에 부활 대기로 올림.
+  - **판정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 명백한 UX 후퇴 — V1처럼 마지막 필터·정렬을 경량 영속화(UserDefaults 등)로 저장/복원한다. 단 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) 9에 부활 대기로 올림.
 
 ### 1.6 빈 화면·에러
 
@@ -212,7 +212,7 @@
   - 근거: V1 `UserLibraryChildViewModel.swift:98-103` · V2 `CLAUDE.md`(빈 상태 CTA 없음)
 - 🔧 **Improve** — **내/타유저 구분**. V1은 `isMyPage`(저장된 userId와 비교)로 같은 화면에서 내 페이지/타유저를 분기하고 빈 화면 문구도 나눴다. V2는 화면 자체를 분리해 타유저 서재는 항상 타유저 기준.
   - 근거: V1 `UserLibraryChildViewModel.swift:88-89`,`266` · V2 `NovelDomain/CLAUDE.md`(내/유저 Repository 쌍)
-- ✅ **Keep** (확정 2026-08-28: 동일 가드로 해소) — 셀 선택 **2초 throttle**(내 서재 1초보다 김) → 중복 push 방지. V2 대응 미확인(§1.7과 동일 사안).
+- ✅ **Keep** (확정 2026-08-28: 동일 가드로 해소) — 셀 선택 **2초 throttle**(내 서재 1초보다 김) → 중복 push 방지. V2 대응 미확인(1.7과 동일 사안).
   - 근거: V1 `UserLibraryChildViewModel.swift:105-112`
 
 ---
@@ -226,7 +226,7 @@
 | `isInterest` | `interestedOption ? true : nil` (true일 때만) | `filter.isInterest ? true : nil` | ✅ Keep |
 | `readStatuses` | 비어있지 않을 때 `rawValue` 배열 | 비어있지 않을 때 `mapReadingStatusString` | ✅ Keep |
 | `genres` | 비어있지 않을 때 `rawValue` 배열 | 비어있지 않을 때 `mapNovelGenreString`(영문) | ✅ Keep (값 동일성 확인 권장) |
-| `isCompleted` | `publicationStatusOptions.count == 1`일 때만 | `publicationStatus.map { $0 == .completed }` (단일) | 🔧 Improve (§1.3) |
+| `isCompleted` | `publicationStatusOptions.count == 1`일 때만 | `publicationStatus.map { $0 == .completed }` (단일) | 🔧 Improve (1.3) |
 | 별점 | `notStarRated` 우선 → `unratedOnly=true`, 아니면 기본범위 아닐 때 `ratingMin/Max` | `switch rating` 동일 | ✅ Keep |
 | `attractivePoints` | 비어있지 않을 때 `rawValue` 배열 | 비어있지 않을 때 `mapAttractivePointString` | ✅ Keep |
 | `keywords` | 비어있지 않을 때 `keywordName`(한글) | 비어있지 않을 때 `keyword.name`(한글) | ✅ Keep |

@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/Home/` = `WSSiOS/Source/Presentation/Home/Home/`.
 
@@ -31,9 +31,9 @@
 | `HomeSearchSection` (검색바+상세검색 배너) | `SearchBarView` + `HomeInduceDetailSearchView` | 동일 |
 | `todayDiscoverySection` (오늘의 발견) | `HomeTodayPopularView` + `HomeTodayPopularCollectionViewCell` | **엔드포인트·카드 2변형 동일** (`/novels/popular`) |
 | `TrendingFeedSection` (추천글) | `HomeRealtimePopularView` + `HomeRealtimePopularCollectionViewCell` | **2건씩 3페이지 캐러셀 동일** (`/feeds/popular`) |
-| `PreferenceGenreSection` (이 웹소설은 어때요) | `HomeTasteRecommendView` (취향추천) | **엔드포인트 동일**(`/novels/taste`). "미설정 vs 0건" 처리가 갈림(§2.5) |
+| `PreferenceGenreSection` (이 웹소설은 어때요) | `HomeTasteRecommendView` (취향추천) | **엔드포인트 동일**(`/novels/taste`). "미설정 vs 0건" 처리가 갈림(2.5) |
 | *(없음)* | `HomeHeaderView.announcementButton` → 알림 목록 | V2는 헤더 벨 하나로 통합 |
-| *(없음)* | 비로그인 홈 경로 전반(로그인 모달·비로그인 타이틀) | **V2엔 비로그인 경로가 통째로 없다**(§3) |
+| *(없음)* | 비로그인 홈 경로 전반(로그인 모달·비로그인 타이틀) | **V2엔 비로그인 경로가 통째로 없다**(3) |
 
 > **알림 목록/상세**(`HomeNotification*`)는 V1에서 이 Home 폴더 하위에 있으나, V2에선 **`NotificationFeature`가 별도 모듈**이라 이 문서 범위 밖이다(홈은 벨 탭으로 이동만 위임).
 
@@ -43,23 +43,23 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **비로그인 홈 경로 전체 제거** — V1 홈은 `isLogined`로 곳곳이 갈렸다: 셀 탭 시 로그인 유도 모달, 추천글 타이틀이 "지금 뜨는 수다글"(비로그인)/"{닉네임}…"(로그인)로 바뀜, 취향추천이 비로그인이면 설정 유도 카드. **V2엔 이 분기가 하나도 없다**(항상 로그인 가정). V2가 로그인 필수 앱이라 의도된 것으로 보이나 **문서화된 결정은 못 찾음**. → [§3](#3-로그인-게이팅-비로그인-홈)
+1. **비로그인 홈 경로 전체 제거** — V1 홈은 `isLogined`로 곳곳이 갈렸다: 셀 탭 시 로그인 유도 모달, 추천글 타이틀이 "지금 뜨는 수다글"(비로그인)/"{닉네임}…"(로그인)로 바뀜, 취향추천이 비로그인이면 설정 유도 카드. **V2엔 이 분기가 하나도 없다**(항상 로그인 가정). V2가 로그인 필수 앱이라 의도된 것으로 보이나 **문서화된 결정은 못 찾음**. → [3](#3-로그인-게이팅-비로그인-홈)
    - **✅ 확정(2026-08-27, 사용자): 의도된 제거.** V2는 로그인 필수 앱이라 비로그인 홈 경로가 존재하지 않는다. 회귀 아님 — 되살리지 말 것.
-2. **에러 철학 반전** — V1은 **섹션마다 `.catch`로 빈 배열 폴백**이라 한 섹션이 실패해도 나머지 홈은 그려지고 **전면 에러가 뜨지 않는다**. V2는 **하나라도 실패하면 홈 전체가 전면 실패 뷰**(#179 문서화). 전면 실패 뷰 자체는 의도지만, **"부분 실패 시 나머지는 보여주던" 그레이스풀 저하가 사라진 것**이 의도인지 확인 필요. → [§4.1](#41-에러-표현)
+2. **에러 철학 반전** — V1은 **섹션마다 `.catch`로 빈 배열 폴백**이라 한 섹션이 실패해도 나머지 홈은 그려지고 **전면 에러가 뜨지 않는다**. V2는 **하나라도 실패하면 홈 전체가 전면 실패 뷰**(#179 문서화). 전면 실패 뷰 자체는 의도지만, **"부분 실패 시 나머지는 보여주던" 그레이스풀 저하가 사라진 것**이 의도인지 확인 필요. → [4.1](#41-에러-표현)
    - **✅ 확정(2026-08-27, 사용자): 전면 실패 일원화가 맞음.** 부분 성공을 안 보여주는 효과를 수용한다(사용자가 실패를 알고 재시도하는 쪽 우선). 그레이스풀 저하 되살리지 말 것.
-3. **Splash 프리페치 제거** — V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시 소비했다. V2엔 이 프리페치가 없다(진입 시 로드). → [§1.5](#15-프리페치)
-   - **🔧 확정(2026-08-27, 사용자): 되살린다(revive).** 단 V1의 `HomePrefetchService.shared` 싱글톤 방식은 쓰지 않는다. 합의된 설계·전제·구현 대기는 [§1.5](#15-프리페치)에 상세. C1 범위 밖 구현이라 `docs/TODO.md`에 부활 대기로 올림.
-4. **약관 동의 체크 제거** — V1은 홈 첫 진입(`viewDidLoad`)에서 `getTermSetting`으로 필수 약관 미동의면 동의 알럿을 띄웠다. **V2 홈엔 없다**(온보딩으로 옮겼을 가능성). → [§6.1](#61-약관-동의-강제-업데이트)
+3. **Splash 프리페치 제거** — V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시 소비했다. V2엔 이 프리페치가 없다(진입 시 로드). → [1.5](#15-프리페치)
+   - **🔧 확정(2026-08-27, 사용자): 되살린다(revive).** 단 V1의 `HomePrefetchService.shared` 싱글톤 방식은 쓰지 않는다. 합의된 설계·전제·구현 대기는 [1.5](#15-프리페치)에 상세. C1 범위 밖 구현이라 `docs/TODO.md`에 부활 대기로 올림.
+4. **약관 동의 체크 제거** — V1은 홈 첫 진입(`viewDidLoad`)에서 `getTermSetting`으로 필수 약관 미동의면 동의 알럿을 띄웠다. **V2 홈엔 없다**(온보딩으로 옮겼을 가능성). → [6.1](#61-약관-동의-강제-업데이트)
    - **✅ 확정(2026-08-28): 온보딩으로 이동(누락 아님).** `OnboardingFeature/TermsAgreement` 실재 확인.
-5. **앱 최소 버전 강제 업데이트 제거** — V1은 `viewWillAppear`마다 최소 버전을 조회해 낮으면 **닫을 수 없는 업데이트 알럿**(→ App Store)을 띄웠다. **V2 홈엔 없다**(App 레이어로 옮겼을 가능성). → [§6.1](#61-약관-동의-강제-업데이트)
+5. **앱 최소 버전 강제 업데이트 제거** — V1은 `viewWillAppear`마다 최소 버전을 조회해 낮으면 **닫을 수 없는 업데이트 알럿**(→ App Store)을 띄웠다. **V2 홈엔 없다**(App 레이어로 옮겼을 가능성). → [6.1](#61-약관-동의-강제-업데이트)
    - **🔧 확정(2026-08-28): 드롭 아님, App 배선 대기.** 최소버전 조회 인프라는 `SettingData`에 있음(게이트만 App 몫).
-6. **Amplitude 이벤트 트래킹 전부 제거** — V1은 홈 진입·오늘의랭킹 탭·추천작 탭·선호장르 버튼 등에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요). → [§6.3](#63-기타-부수-작업)
+6. **Amplitude 이벤트 트래킹 전부 제거** — V1은 홈 진입·오늘의랭킹 탭·추천작 탭·선호장르 버튼 등에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요). → [6.3](#63-기타-부수-작업)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-7. 🔧 **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [§2.5](#25-선호장르-이-웹소설은-어때요)
-8. 🗑 **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [§4.2](#42-로딩)
-9. 🗑 **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [§6.2](#62-유저-정보-처리)
+7. 🔧 **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요)
+8. 🗑 **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
+9. 🗑 **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -78,7 +78,7 @@
 ### 1.2 동시 호출 구조
 
 - 🔧 **Improve** — **N개 요청을 한 흐름으로 묶는 방식**. V1은 RxSwift **독립 스트림 여러 개**로 쪼갰다: (a) 오늘의 인기작+지금 뜨는 글을 `zip`으로 묶어 상단 로딩 스피너를 제어, (b) 취향추천은 **별도 구독**(느린 개인화라 상단 표시를 막지 않음), (c) 알림 미확인·앱 버전도 각각 독립. V2는 추천 3종을 UseCase 안에서 `async let`으로, 알림 배지를 VM에서 `async let`으로 **한 흐름**에 합친다.
-  - V2: 진입 시 **총 4건이 한꺼번에** 나가고 **하나라도 실패하면 홈 전체가 실패**다(아래 §4.1과 연결). 관찰상 "동시에 받아 그린다"는 같지만, **실패·로딩 결합 방식이 달라졌다**(V1은 섹션별로 독립, V2는 전부 한 몸).
+  - V2: 진입 시 **총 4건이 한꺼번에** 나가고 **하나라도 실패하면 홈 전체가 실패**다(아래 4.1과 연결). 관찰상 "동시에 받아 그린다"는 같지만, **실패·로딩 결합 방식이 달라졌다**(V1은 섹션별로 독립, V2는 전부 한 몸).
   - 근거: V1 `HomeViewModel.swift:107-198`(스트림 4개) · V2 `HomeViewModel.swift:182-214`, `LoadHomeDataUseCase.swift:28-51`, `RecommendationDomain/CLAUDE.md`(async let 동시)
 - ✅ **Keep** — 오늘의 인기작·지금 뜨는 글·취향추천을 **동시에** 받아 온다(순차 대기 아님).
   - V2: 수단 변경(RxSwift `zip`/독립 구독 → 구조적 동시성 `async let`). 병렬성 자체는 `issuesThreeCallsConcurrently` 테스트로 고정.
@@ -146,7 +146,7 @@
   - V2: `feed.isSpoiler` → 같은 문구·색, 1줄.
   - 근거: V1 `HomeRealTimePopularFeedView.swift:104-115` · V2 `TrendingFeedSection.swift:145-149`
 - ✅ **Keep** — 피드 행 탭 → **피드 상세**로 이동.
-  - V2: `onFeedSelected(feedID)` 위임. (V1은 비로그인이면 로그인 모달 — §3.)
+  - V2: `onFeedSelected(feedID)` 위임. (V1은 비로그인이면 로그인 모달 — 3.)
   - 근거: V1 `HomeViewController.swift:124-135` · V2 `TrendingFeedSection.swift:130-132`
 - ✅ **Keep** — 페이지 단위 스냅(한 장씩 넘어감)·현재 페이지 도트 강조.
   - V2: 수단 변경 — V1은 `scrollViewWillEndDragging` 커스텀 스냅 + `scrollViewDidScroll` 도트, V2는 `.scrollTargetBehavior(.viewAligned)` + `scrollPosition`.
@@ -160,12 +160,12 @@
 - ✅ **Keep** — 로그인 사용자면 제목 주어에 **닉네임**을 넣는다(`"{nickname}…"`), 없으면 폴백 문구.
   - V2: `nickname.map { "\($0)님을 위한 추천글" } ?? "추천글"`. **닉네임 출처가 다름**(V1은 `getUserMeData` 저장값, V2는 로컬 캐시 `fetchCachedNickname`).
   - 근거: V1 `HomeRealtimePopularView.swift:134-140`, `HomeViewModel.swift:211` · V2 `TrendingFeedSection.swift:77-79`, `LoadHomeDataUseCase.swift:46`
-  - ⚠️ **비로그인 폴백 문구는 §3 참조** — V1은 비로그인 시 "지금 뜨는 수다글"(닉네임 없는 별도 카피), V2는 비로그인 경로가 없어 항상 "추천글"로만 폴백.
+  - ⚠️ **비로그인 폴백 문구는 3 참조** — V1은 비로그인 시 "지금 뜨는 수다글"(닉네임 없는 별도 카피), V2는 비로그인 경로가 없어 항상 "추천글"로만 폴백.
 
 ### 2.4 검색바·상세검색 배너
 
 - ✅ **Keep** — 검색바 탭 → 검색 화면, 상세검색 유도 배너 탭 → 상세검색 화면.
-  - V2: `onSearchTapped` / `onDetailSearchTapped` 위임. (V1은 상세검색이 비로그인이면 로그인 모달 — §3.) 좌우 여백 13(아래 추천 섹션 20과 다름)도 유지.
+  - V2: `onSearchTapped` / `onDetailSearchTapped` 위임. (V1은 상세검색이 비로그인이면 로그인 모달 — 3.) 좌우 여백 13(아래 추천 섹션 20과 다름)도 유지.
   - 근거: V1 `HomeViewModel.swift:215-229`, `HomeView.swift:89-98` · V2 `HomeSearchSection`, `HomeView.swift:136-139`, `CLAUDE.md`(검색바 여백 13)
 
 ### 2.5 선호장르 (이 웹소설은 어때요, `/novels/taste`)
@@ -174,7 +174,7 @@
   - V2: `WSSNovelGridCell` 2열. `onNovelSelected` 위임.
   - 근거: V1 `HomeTasteRecommendView.swift:63-69`,`142-154`, `HomeViewModel.swift:243-249` · V2 `PreferenceGenreSection.swift:78-94`
 - ✅ **Keep** — 선호장르 **미설정**이면 목록 대신 **설정 유도 카드**를 띄우고, 그 버튼은 설정 화면으로 보낸다.
-  - V2: `.noGenreSettings` → `settingInduceCard` → `onPreferenceGenreSettingTapped`. (V1은 목적지가 `MyPageEdit(entryType:.home)` — §5.)
+  - V2: `.noGenreSettings` → `settingInduceCard` → `onPreferenceGenreSettingTapped`. (V1은 목적지가 `MyPageEdit(entryType:.home)` — 5.)
   - 근거: V1 `HomeTasteRecommendView.swift:129-164`, `HomeViewModel.swift:265-274` · V2 `PreferenceGenreSection.swift:97-122`
 - 🔧 **Improve** — **"설정했으나 결과 0건" 처리**. V1은 `updateView(isLogined, isEmpty)`에서 **로그인+0건을 미설정과 똑같이** 설정 유도 카드로 덮었다(둘 다 `unregisterView`) — 장르를 골랐는데도 "선호장르 설정하기"가 뜨는 셈.
   - V2: `PreferenceGenreNovelState`를 `.noGenreSettings`(→ CTA) / `.novels([])`(→ **섹션 통째 숨김**)로 분리해 이 혼동을 없앴다. `state`가 **옵셔널**이라 로딩 전(nil)과 미설정을 안 섞어 CTA 번쩍임도 막는다.
@@ -183,7 +183,7 @@
 ### 2.6 빈 섹션 숨김
 
 - ✅ **Keep** — 섹션 데이터가 0건이면 **제목까지 통째로 숨긴다**(빈 문구 없이). 아래 섹션이 그만큼 올라붙는다.
-  - V2: `if !state.xxx.isEmpty` 가드로 섹션+제목+간격 함께 숨김. 단 선호장르 **미설정**은 빈 상태가 아니라 CTA(§2.5).
+  - V2: `if !state.xxx.isEmpty` 가드로 섹션+제목+간격 함께 숨김. 단 선호장르 **미설정**은 빈 상태가 아니라 CTA(2.5).
   - 근거: V1 `HomeTasteRecommendView.swift:129-164`(isHidden 토글), `HomeRealtimePopularView`(섹션별 표시) · V2 `HomeView.swift:141-164`, `CLAUDE.md`(섹션 0건 제목까지 숨김)
 
 ---
@@ -192,12 +192,12 @@
 
 - 🗑 **의도된 제거 확정 (2026-08-27, 사용자: 로그인 필수 앱)** — V1 홈은 `APIConstants.isLogined`로 **거의 모든 동작이 갈렸다**:
   - **셀·배너 탭**: 오늘의 인기작 셀·상세검색 배너·선호장르 버튼은 비로그인이면 **로그인 유도 모달**(`showInduceLoginModalView` → `presentInduceLoginViewController`). 지금 뜨는 글 피드 탭도 비로그인이면 로그인 모달.
-  - **추천글 타이틀**: 비로그인 → "지금 뜨는 수다글"(별도 카피), 로그인 → "{닉네임}…"(§2.3).
+  - **추천글 타이틀**: 비로그인 → "지금 뜨는 수다글"(별도 카피), 로그인 → "{닉네임}…"(2.3).
   - **취향추천**: 비로그인이면 API를 아예 안 부르고 설정 유도 카드를 띄운다.
   - **알림 미확인 조회**: 비로그인이면 스킵하고 `false`로 둔다.
-  - **V2: 이 `isLogined` 분기가 하나도 없다.** 항상 로그인된 사용자로 가정하고, 인증이 만료되면 §1.4의 로그인 라우팅으로 화면을 교체한다.
+  - **V2: 이 `isLogined` 분기가 하나도 없다.** 항상 로그인된 사용자로 가정하고, 인증이 만료되면 1.4의 로그인 라우팅으로 화면을 교체한다.
   - 근거: V1 `HomeViewModel.swift:151`,`176`,`223-228`,`234-240`,`258-262`,`268-272`, `HomeViewController.swift:125-134`, `HomeRealtimePopularView.swift:134-139`, `HomeTasteRecommendView.swift:155-163` · V2 `HomeViewModel.swift`(isLogined 개념 없음), `HomeView.swift`(로그인 모달 없음)
-  - **판정(2026-08-27, 사용자): 의도된 제거.** V2는 로그인 필수 앱이라 비로그인 홈 경로가 통째로 불필요하다(§0-1). 회귀 아님 — 되살리지 않는다. (2026-08-28 로그인 정책 재확인 — SearchFeature §5.1과 동일 결론.)
+  - **판정(2026-08-27, 사용자): 의도된 제거.** V2는 로그인 필수 앱이라 비로그인 홈 경로가 통째로 불필요하다(0-1). 회귀 아님 — 되살리지 않는다. (2026-08-28 로그인 정책 재확인 — SearchFeature 5.1과 동일 결론.)
 
 ---
 
@@ -219,7 +219,7 @@
   - V2: 홈 전체가 한 로드라 **단일 전면 로딩**만 있고, 그마저 **`isInitialLoading`(보여줄 게 없을 때만)**으로 좁혔다(탭 복귀 갱신 시 이미 그린 화면을 로딩으로 갈아치우지 않음). **섹션 단위 스켈레톤은 사라졌다.**
   - 근거: V1 `HomeViewModel.swift:108-110`,`154`,`162`,`showLoadingView`, `HomeTasteRecommendView.swift:111-127`(setLoading 스켈레톤) · V2 `HomeViewModel.swift:52-54`,`183-187`, `HomeView.swift:111-126`, `CLAUDE.md`(isInitialLoading)
 - ✅ **Keep** — **초기 진입엔 전면 로딩, 갱신(탭 복귀)엔 로딩 표시를 세우지 않는다**(콘텐츠 우선). 로딩과 실패의 기준이 일부러 다르다.
-  - V2: `isInitialLoading`은 `!hasLoadedContent`일 때만 true. 실패는 갱신도 전면 대체(§4.1)라 두 분기 기준이 의도적으로 갈림(#179).
+  - V2: `isInitialLoading`은 `!hasLoadedContent`일 때만 true. 실패는 갱신도 전면 대체(4.1)라 두 분기 기준이 의도적으로 갈림(#179).
   - 근거: V1 `HomeViewModel.swift:108`(viewWillAppear마다 spinner true지만 상단 도착 즉시 false) · V2 `HomeViewModel.swift:49-54`, `CLAUDE.md`(로딩은 콘텐츠 우선, 실패는 첫 로드와 동일 — 기준이 일부러 다름)
 
 ---
@@ -230,7 +230,7 @@
   - V2: 헤더 벨 → `onNotificationTapped`. 안 읽은 알림은 **점 박힌 벨 에셋 variant**(`icAnnouncementDotted`)로 표현.
   - 근거: V1 `HomeViewController.swift:189-193`, `HomeHeaderView.checkNotificationUnread` · V2 `HomeHeaderView.swift:41-55`, `HomeView.swift:100-104`
 - ✅ **Keep** — 알림 미확인 배지 표시(안 읽은 알림 있으면 벨에 표시).
-  - V2: `hasUnreadNotifications` → 점 박힌 벨. **조회 방식이 달라짐**: V1은 독립 스트림(실패해도 홈 무사), V2는 `LoadUnreadNotificationStatusUseCase`를 **결합 로드**(실패 시 홈 전체 실패, §4.1)로.
+  - V2: `hasUnreadNotifications` → 점 박힌 벨. **조회 방식이 달라짐**: V1은 독립 스트림(실패해도 홈 무사), V2는 `LoadUnreadNotificationStatusUseCase`를 **결합 로드**(실패 시 홈 전체 실패, 4.1)로.
   - 근거: V1 `HomeViewModel.swift:174-188`,`252-257` · V2 `HomeViewModel.swift:193`,`206`, `HomeHeaderView.swift:43-45`
 - ✅ **Keep** — 모든 화면 전환을 **상위(App)에 위임**한다(홈은 스스로 push하지 않음).
   - V2: 선택 결과 전부 콜백(`onNovelSelected`/`onFeedSelected`/`onSearchTapped`/`onDetailSearchTapped`/`onNotificationTapped`/`onPreferenceGenreSettingTapped`). V1도 VM이 `PublishRelay`로 올려 VC가 push — 같은 결.
@@ -255,7 +255,7 @@
 - 🔧 **인프라 존재·App 게이트 배선 대기 (2026-08-28)** — **앱 최소 버전 강제 업데이트**. V1은 `viewWillAppear`마다 `getAppMinimumVersion`을 조회해 현재 버전이 낮으면 **닫을 수 없는(`isDismissable: false`) 업데이트 알럿** → App Store로 보냈다.
   - **V2 홈엔 없다.** (App 레이어 공통 처리로 옮겼을 가능성.)
   - 근거: V1 `HomeViewModel.swift:190-198`,`324-326`, `HomeViewController.swift:227-242` · V2 `HomeViewModel`(버전 체크 없음)
-  - **판정(2026-08-28): 드롭 아님 — App 부트스트랩 배선 대기.** 서버 최소버전 조회 인프라는 이미 있다(`SettingData`의 `AppMinimumVersionQuery`/`AppMinimumVersionResponse`·`getAppMinimumVersion` 엔드포인트·`minimumVersion` 매핑). App 모듈이 아직 골격이라 이 게이트를 켜는 배선만 없다 — App 첫 조립(TODO §8) 몫.
+  - **판정(2026-08-28): 드롭 아님 — App 부트스트랩 배선 대기.** 서버 최소버전 조회 인프라는 이미 있다(`SettingData`의 `AppMinimumVersionQuery`/`AppMinimumVersionResponse`·`getAppMinimumVersion` 엔드포인트·`minimumVersion` 매핑). App 모듈이 아직 골격이라 이 게이트를 켜는 배선만 없다 — App 첫 조립(TODO 8) 몫.
 
 ### 6.2 유저 정보 처리
 
@@ -286,9 +286,9 @@ V1 홈은 **쿼리 파라미터 없는 단순 GET 4종**(accessTokenHeader만)�
 | 오늘의 발견 | `GET /novels/popular` | 없음 | `fetchTodayDiscoveries()` | ✅ Keep |
 | 추천글(지금 뜨는 글) | `GET /feeds/popular` | 없음 | `fetchTrendingFeeds()` | ✅ Keep |
 | 선호장르 작품(취향추천) | `GET /novels/taste` | 없음 | `fetchPreferenceGenreNovels()` | ✅ Keep |
-| 관심글 | `GET /feeds/interest` | 없음 | *(홈 미호출)* | 🗑 Delete (§1.3) |
-| 알림 미확인 여부 | *(NotificationRepository)* | 없음 | `LoadUnreadNotificationStatusUseCase` | ✅ Keep (결합 로드로 이동 — §4.1) |
+| 관심글 | `GET /feeds/interest` | 없음 | *(홈 미호출)* | 🗑 Delete (1.3) |
+| 알림 미확인 여부 | *(NotificationRepository)* | 없음 | `LoadUnreadNotificationStatusUseCase` | ✅ Keep (결합 로드로 이동 — 4.1) |
 
 - 근거: V1 `WSSiOS/Resource/Constants/URLs/URLs.swift:170-173`, `RecommendService.swift:22-100` · V2 `RecommendationRepository.swift`, `LoadHomeDataUseCase.swift:29-31`
-- **V1이 홈에서 추가로 부르던 것**(V2 홈엔 없음, §6): `getUserMeData`, `getAppMinimumVersion`, `getTermSetting`. 닉네임은 V2에서 로컬 캐시(`fetchCachedNickname`)로 대체.
+- **V1이 홈에서 추가로 부르던 것**(V2 홈엔 없음, 6): `getUserMeData`, `getAppMinimumVersion`, `getTermSetting`. 닉네임은 V2에서 로컬 캐시(`fetchCachedNickname`)로 대체.
 - 세 추천 엔드포인트 모두 **개수 고정·페이지네이션 없음**(오늘의 발견 3 / 추천글 6→3페이지 / 선호장르 10). V1도 `prefix(6)` 외 별도 페이징 없음. ✅ Keep.

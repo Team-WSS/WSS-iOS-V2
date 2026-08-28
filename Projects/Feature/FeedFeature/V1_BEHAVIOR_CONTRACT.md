@@ -24,7 +24,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도, 미구현일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/Feed/` = `WSSiOS/Source/Presentation/Feed/Feed/`, `…/FeedDetail/` = `WSSiOS/Source/Presentation/FeedDetail/`, `…/FeedEdit/` = `WSSiOS/Source/Presentation/FeedEdit/`.
 
@@ -46,25 +46,25 @@
 
 **❓ 판정 필요 — V2 소소피드/내 피드 목록 화면이 아직 안 붙인 것 (미구현 vs 회귀)**
 
-1. **목록 화면 전환 전부 미배선** — V1 목록은 셀 탭→피드 상세, 프로필 탭→유저 페이지, 연결 작품 탭→작품 상세, 작성 버튼(연필)→피드 작성으로 갔다. **V2 `SosoFeedView`는 이 넷이 전부 `print`/주석 스텁**이다(내 글 "수정하기" 콜백만 배선됨). → [§1.6](#16-상호작용네비게이션)
-2. **목록 로드 실패 표현 없음** — V1도 목록 로드 에러엔 **전면 에러 뷰가 없었다**(그냥 `print`, 빈 목록 유지). V2도 `state.errorMessage`만 세팅하고 **View가 그걸 안 그린다**(사실상 V1과 같은 무처리). 단 V2 Feature 계약(#195, [Feature CLAUDE.md](../CLAUDE.md))은 "목록 로드 실패=전면 `NetworkErrorView`"를 요구하므로 **미이행 상태**다. → [§1.4](#14-빈-화면에러로딩)
-3. **인증 만료 라우팅 없음** — V2 `SosoFeedViewModel`·`FeedDetailViewModel`엔 `requiresAuthentication`/`onAuthenticationRequired`가 아예 없다. V1도 화면 단위 분기는 없었으나(네트워크 계층이 토큰 재발급 담당), V2 Feature 계약은 인증 만료→로그인 라우팅을 요구한다. → [§1.4](#14-빈-화면에러로딩)
-4. **내 피드 카운트 출처가 다르다** — V1은 서버가 준 **전체 개수**(`feedsCount`)를 "n개"로 표시. V2는 **현재 로드된 배열 길이**(`myFeeds.count`)를 "n개의 기록"으로 표시 → 무한 스크롤 전엔 20개까지만 세어 실제 총량과 다르다. → [§1.3](#13-정렬내-피드-카운트)
-5. **셀 선택 더블탭 가드** — V1은 피드 선택에 `throttle(1s)`, push에 `throttle(500ms)`을 걸어 중복 진입을 막았다. V2 목록은 화면 전환 자체가 미배선이라 가드도 없다. → [§1.6](#16-상호작용네비게이션)
+1. **목록 화면 전환 전부 미배선** — V1 목록은 셀 탭→피드 상세, 프로필 탭→유저 페이지, 연결 작품 탭→작품 상세, 작성 버튼(연필)→피드 작성으로 갔다. **V2 `SosoFeedView`는 이 넷이 전부 `print`/주석 스텁**이다(내 글 "수정하기" 콜백만 배선됨). → [1.6](#16-상호작용네비게이션)
+2. **목록 로드 실패 표현 없음** — V1도 목록 로드 에러엔 **전면 에러 뷰가 없었다**(그냥 `print`, 빈 목록 유지). V2도 `state.errorMessage`만 세팅하고 **View가 그걸 안 그린다**(사실상 V1과 같은 무처리). 단 V2 Feature 계약(#195, [Feature CLAUDE.md](../CLAUDE.md))은 "목록 로드 실패=전면 `NetworkErrorView`"를 요구하므로 **미이행 상태**다. → [1.4](#14-빈-화면에러로딩)
+3. **인증 만료 라우팅 없음** — V2 `SosoFeedViewModel`·`FeedDetailViewModel`엔 `requiresAuthentication`/`onAuthenticationRequired`가 아예 없다. V1도 화면 단위 분기는 없었으나(네트워크 계층이 토큰 재발급 담당), V2 Feature 계약은 인증 만료→로그인 라우팅을 요구한다. → [1.4](#14-빈-화면에러로딩)
+4. **내 피드 카운트 출처가 다르다** — V1은 서버가 준 **전체 개수**(`feedsCount`)를 "n개"로 표시. V2는 **현재 로드된 배열 길이**(`myFeeds.count`)를 "n개의 기록"으로 표시 → 무한 스크롤 전엔 20개까지만 세어 실제 총량과 다르다. → [1.3](#13-정렬내-피드-카운트)
+5. **셀 선택 더블탭 가드** — V1은 피드 선택에 `throttle(1s)`, push에 `throttle(500ms)`을 걸어 중복 진입을 막았다. V2 목록은 화면 전환 자체가 미배선이라 가드도 없다. → [1.6](#16-상호작용네비게이션)
 
 **❓ 판정 필요 — 상세/작성 화면(거의 완성)에서 빠진 동작**
 
-6. **댓글 전송 실패 무처리** — V1은 댓글 작성/수정 실패 시 **"네트워크 지연" 토스트** + 전송 버튼 재활성. V2 `FeedDetailViewModel`의 `createComment`/`editComment`/`deleteComment`/`deleteFeed`는 **`catch {}`가 비어 조용히 삼킨다**. → [§3.4](#34-댓글-작성수정삭제)
-7. **댓글 500자 제한** — V1은 댓글 입력을 500자에서 하드 컷(`deleteBackward`). V2 입력바엔 이 제한이 없다(`.lineLimit(5)` 표시 제한만). → [§3.4](#34-댓글-작성수정삭제)
-8. **탈퇴 유저(userId == -1) 처리** — V1은 목록·상세·댓글에서 프로필 탭 시 탈퇴 유저면 **"탈퇴한 유저" 토스트**로 막았다. V2엔 이 분기가 없다(프로필 탭 자체가 상세는 print, 목록은 print). → [§1.6](#16-상호작용네비게이션)·[§3.6](#36-상호작용네비게이션-상세)
-9. **작성 완료 후 처리** — V1은 작성/수정 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭이 "수정됨" 토스트) + `AppReviewManager.requestReview()` + pop. V2 `CreateFeedView`는 `submitState == .submitted`에 **아무 반응이 없다**(dismiss·목록 갱신·리뷰요청 미배선). → [§4.3](#43-작성수정-완료저장)
-10. **수정 모드 "변경 감지" 게이트 / 기존 이미지 prefill** — V1 수정은 **바뀐 게 있어야만** 완료 버튼 활성(`isInitialFeedChanged`), 기존 첨부 이미지를 Kingfisher로 내려받아 채웠다. V2는 `canSubmit`이 "내용 비어있지 않음"만 보고(수정 무변경도 저장 가능), 기존 이미지는 `initialDraft`에 데이터가 없으면 회색 placeholder로 뜬다(App 배선 의존). → [§4.1](#41-진입prefill)·[§4.3](#43-작성수정-완료저장)
+6. **댓글 전송 실패 무처리** — V1은 댓글 작성/수정 실패 시 **"네트워크 지연" 토스트** + 전송 버튼 재활성. V2 `FeedDetailViewModel`의 `createComment`/`editComment`/`deleteComment`/`deleteFeed`는 **`catch {}`가 비어 조용히 삼킨다**. → [3.4](#34-댓글-작성수정삭제)
+7. **댓글 500자 제한** — V1은 댓글 입력을 500자에서 하드 컷(`deleteBackward`). V2 입력바엔 이 제한이 없다(`.lineLimit(5)` 표시 제한만). → [3.4](#34-댓글-작성수정삭제)
+8. **탈퇴 유저(userId == -1) 처리** — V1은 목록·상세·댓글에서 프로필 탭 시 탈퇴 유저면 **"탈퇴한 유저" 토스트**로 막았다. V2엔 이 분기가 없다(프로필 탭 자체가 상세는 print, 목록은 print). → [1.6](#16-상호작용네비게이션)·[3.6](#36-상호작용네비게이션-상세)
+9. **작성 완료 후 처리** — V1은 작성/수정 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭이 "수정됨" 토스트) + `AppReviewManager.requestReview()` + pop. V2 `CreateFeedView`는 `submitState == .submitted`에 **아무 반응이 없다**(dismiss·목록 갱신·리뷰요청 미배선). → [4.3](#43-작성수정-완료저장)
+10. **수정 모드 "변경 감지" 게이트 / 기존 이미지 prefill** — V1 수정은 **바뀐 게 있어야만** 완료 버튼 활성(`isInitialFeedChanged`), 기존 첨부 이미지를 Kingfisher로 내려받아 채웠다. V2는 `canSubmit`이 "내용 비어있지 않음"만 보고(수정 무변경도 저장 가능), 기존 이미지는 `initialDraft`에 데이터가 없으면 회색 placeholder로 뜬다(App 배선 의존). → [4.1](#41-진입prefill)·[4.3](#43-작성수정-완료저장)
 
 **🗑 / 🔧 눈에 띄는 변경 (의도 확인)**
 
-11. 🔧 **미분류(연결 작품 없는 내 피드) 필터 표현** — V1은 필터 장르 목록에 **`etc`(그 외) case**를 넣어 처리. V2는 `NovelGenre`에 case를 안 늘리고 **`includesUncategorized: Bool`** 별도 필드로 표현하고, 서버 전송 시 Data가 `"etc"` sentinel을 덧붙인다. (오탐 방지: `FeedDomain/CLAUDE.md:18` 명문화 — Break로 오분류 금지.) → [§2.2](#22-장르-필터)·[부록](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
-12. 🗑 **Amplitude 이벤트 트래킹 전부 제거** — V1은 피드 진입·작성 버튼·좋아요·신고 등 곳곳에 Amplitude 이벤트를 심었다. V2엔 없다(홈과 동일 — 분석 미이식). → [§5](#5-부수-작업-v1이-피드에서-하던-것들)
-13. 🗑 **`BlockUser` / `feedEdited` 알림 기반 토스트** — V1 피드 탭은 차단·수정 완료를 `NotificationCenter`로 받아 토스트. V2엔 이 크로스-스크린 알림 배관이 없다. → [§5](#5-부수-작업-v1이-피드에서-하던-것들)
+11. 🔧 **미분류(연결 작품 없는 내 피드) 필터 표현** — V1은 필터 장르 목록에 **`etc`(그 외) case**를 넣어 처리. V2는 `NovelGenre`에 case를 안 늘리고 **`includesUncategorized: Bool`** 별도 필드로 표현하고, 서버 전송 시 Data가 `"etc"` sentinel을 덧붙인다. (오탐 방지: `FeedDomain/CLAUDE.md:18` 명문화 — Break로 오분류 금지.) → [2.2](#22-장르-필터)·[부록](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
+12. 🗑 **Amplitude 이벤트 트래킹 전부 제거** — V1은 피드 진입·작성 버튼·좋아요·신고 등 곳곳에 Amplitude 이벤트를 심었다. V2엔 없다(홈과 동일 — 분석 미이식). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
+13. 🗑 **`BlockUser` / `feedEdited` 알림 기반 토스트** — V1 피드 탭은 차단·수정 완료를 `NotificationCenter`로 받아 토스트. V2엔 이 크로스-스크린 알림 배관이 없다. → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -85,7 +85,7 @@
 - ✅ **Keep** — 탭/옵션을 바꾸면 목록을 **처음부터 다시 채운다**(페이징 상태 리셋 후 재조회).
   - V2: `onChange(of: selectedTab)`/`onChange(of: selectedSosoFeedOption)` → `.load`(refresh: true). 스크롤 위치도 `.id(scrollIdentity)`로 최상단 리셋.
   - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedView.swift:98-104`,`259-266`, `SosoFeedViewModel.swift:160-163`
-- ✅ **Keep** (확정 2026-08-28: 재진입 재조회 없음은 화면별 의도 설계) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(§5)이나 탭 재선택으로만 일어났다.
+- ✅ **Keep** (확정 2026-08-28: 재진입 재조회 없음은 화면별 의도 설계) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(5)이나 탭 재선택으로만 일어났다.
   - V2: `SosoFeedView`가 `onAppear`마다 `.load`. **탭 콘텐츠라면 복귀마다 갱신**이 V2 규약([Feature CLAUDE.md](../CLAUDE.md))이지만, V1은 오히려 진입 1회였다. 재조회 시점이 어긋날 수 있어 확인 필요.
   - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.swift:95-97`
 
@@ -124,7 +124,7 @@
 ### 1.4 빈 화면·에러·로딩
 
 - ✅ **Keep** — 내 피드가 0건이면 **빈 화면**(피드 없음 + "피드 작성" 유도)을 띄운다.
-  - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). 단 CTA 액션은 아직 빈 클로저(§1.6과 함께 미배선).
+  - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). 단 CTA 액션은 아직 빈 클로저(1.6과 함께 미배선).
   - 근거: V1 `FeedPageContentViewController.swift:118-124`,`299-303`(emptyView.writeFeedButton) · V2 `SosoFeedView.swift:272-275`
 - ❓ **Unknown (판정 보류 2026-08-28)** — **목록 로드 실패 표현**. V1은 목록 로드 에러를 **`onError`에서 `print`만** 하고 UI로 알리지 않았다(전면 에러 뷰 없음, 빈/직전 목록 유지). 즉 V1엔 애초에 목록 실패 UI가 없었다.
   - V2: `catch`에서 `state.errorMessage`를 세팅하지만 **`SosoFeedView`가 그 값을 그리지 않는다**(토스트도 전면 뷰도 없음) → 관찰상 V1과 같은 무처리. 하지만 V2 Feature 계약(#195)은 "목록 실패=전면 `NetworkErrorView`+재시도"를 요구하므로 **아직 미이행**이다.
@@ -170,7 +170,7 @@
 
 원본: `…/Feed/Filter/FeedFilterViewController/FeedFilterViewController.swift`, `…/Data/Entity/Feed/FeedFilter.swift`
 
-- ✅ **Keep** — 필터 대상은 **장르 다중선택 + 공개/비공개(공개여부)** 두 축뿐이다(정렬은 필터 시트 밖 — §1.3).
+- ✅ **Keep** — 필터 대상은 **장르 다중선택 + 공개/비공개(공개여부)** 두 축뿐이다(정렬은 필터 시트 밖 — 1.3).
   - V2: `MyFeedFilterSheet`가 draft(`myFeedOptionDraft`)를 편집, "작품 찾기"류 CTA에서 `applyMyFeedFilter`로 커밋 후 재조회(ReadingPeriod 패턴). 시트는 순수 입력.
   - 근거: V1 `FeedFilterViewController.swift:22-24`,`160-173` · V2 `SosoFeedViewModel.swift:44-50`,`174-185`,`350-357`, `CLAUDE.md`(draft→apply 커밋)
 - ✅ **Keep** — 닫기(X)는 편집을 버리고 원래 필터를 반환(취소), CTA만 편집본 적용.
@@ -350,10 +350,10 @@ V1 `UserInfoRepository.getUserFeed` → `UserFeedListQuery`. V2 `DefaultFeedRepo
 |---|---|---|---|
 | `lastFeedId` | 커서(첫 페이지 0) | 커서(첫 페이지 `FeedID(0)`) | ✅ Keep |
 | `size` | `size ?? 20` | `20` | ✅ Keep |
-| `sortCriteria` | `SortType.queryText` = **`RECENT`/`OLD`**(대문자) | `option.sortType.rawValue` = **`recent`/`old`**(소문자) | 🟢 **실측 무해**(C2 2026-08-28, 서버 대소문자 무관 확정 — `recent`==`RECENT`) → **대문자 통일 결정**(`DefaultFeedRepository:186` `.uppercased()`, CollectionData 패턴). [C2 §3-2](../../../docs/V1_PARAM_MAPPING_C2.md) |
+| `sortCriteria` | `SortType.queryText` = **`RECENT`/`OLD`**(대문자) | `option.sortType.rawValue` = **`recent`/`old`**(소문자) | 🟢 **실측 무해**(C2 2026-08-28, 서버 대소문자 무관 확정 — `recent`==`RECENT`) → **대문자 통일 결정**(`DefaultFeedRepository:186` `.uppercased()`, CollectionData 패턴). [C2 3-2](../../../docs/V1_PARAM_MAPPING_C2.md) |
 | `isVisible` | **항상** `visibilityOptions.contains(.public)` (Bool) | `visibilityFlags`(all이면 **nil**) | 🔧 Improve — V1은 all일 때도 두 Bool을 실어 보냄, V2는 all이면 둘 다 생략 |
 | `isUnVisible` | **항상** `visibilityOptions.contains(.private)` (Bool) | `visibilityFlags`(all이면 **nil**) | 🔧 Improve (동상) |
-| `genreNames` | `genres.map(rawValue)` **항상**(콤마 join, 기본 10개 전부) | `genres.isEmpty ? nil : genres`(빈 배열 = 무필터로 생략) + 미분류면 `"etc"` 추가 | 🔧 Improve — §2.2 |
+| `genreNames` | `genres.map(rawValue)` **항상**(콤마 join, 기본 10개 전부) | `genres.isEmpty ? nil : genres`(빈 배열 = 무필터로 생략) + 미분류면 `"etc"` 추가 | 🔧 Improve — 2.2 |
 
 - 근거: V1 `UserInfoRepository.swift:117-130`, `UserFeedListQuery.swift:19-37` · V2 `DefaultFeedRepository.swift:170-187`, `FeedData/CLAUDE.md`(visibilityFlags·genres.isEmpty=무필터)
 - `userId`: V1은 `UserDefaults userId`(내 피드), V2는 `storage.get(.userID)`. ✅ Keep.
@@ -371,5 +371,5 @@ V1 `UserInfoRepository.getUserFeed` → `UserFeedListQuery`. V2 `DefaultFeedRepo
 ### 작성/수정 (`postFeed`/`putFeed` → `POST/PUT /feeds`)
 
 - V1은 `FeedContentRequest`(feedContent/novelId?/isSpoiler/isPublic) + 멀티파트 이미지(`compressImages`). V2는 `SubmitFeedRequest`(content/categories/novelId?/isSpoiler/isPublic) + 이미지 Data.
-- 본문 2000자·이미지 5장 상한은 양쪽 동일(§4.2). ✅ Keep. 이미지 압축·멀티파트 조립은 Data 레이어(범위 밖).
+- 본문 2000자·이미지 5장 상한은 양쪽 동일(4.2). ✅ Keep. 이미지 압축·멀티파트 조립은 Data 레이어(범위 밖).
 - 근거: V1 `FeedService.swift:50-129` · V2 `FeedData/CLAUDE.md`(SubmitFeedRequest·멀티파트)

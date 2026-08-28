@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/NovelReview/` = `WSSiOS/Source/Presentation/NovelReview/`.
 
@@ -29,7 +29,7 @@
 |---|---|---|
 | `Sources/NovelReview/` (메인: `NovelReviewView`+`NovelReviewViewModel`+`StarRatingView`) | `…/NovelReviewViewController`+`ViewModel`+`View` + `NovelReviewAssistantView/*` + `NovelReviewViewCell/*` | UIKit `UICollectionView`·`UIStackView` 섹션 → SwiftUI `VStack`. RxSwift `Input/Output` → `State/Action` |
 | `Sources/ReadingPeriodSheet/` (기간 시트) | `…/NovelDateSelectModal*`(VC+VM+View + `NovelDateSelect*` 보조뷰) | UIKit 바텀 모달 + `UIDatePicker(.date)` → SwiftUI `.sheet` + 커스텀 휠(`WSSDateWheel`) |
-| *(미구현 — 진입 버튼만)* | `…/NovelKeywordSelectModal*`(VC+VM+View, 키워드 검색·선택 모달) | **V2는 키워드 선택/탐색 화면이 통째로 미연결(TODO)** — §7 |
+| *(미구현 — 진입 버튼만)* | `…/NovelKeywordSelectModal*`(VC+VM+View, 키워드 검색·선택 모달) | **V2는 키워드 선택/탐색 화면이 통째로 미연결(TODO)** — 7 |
 
 ---
 
@@ -37,16 +37,16 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **저장 성공 후 App Store 리뷰 요청 제거** — V1은 리뷰 저장에 성공하면 `AppReviewManager.shared.requestReview()`로 **App Store 평점 요청 프롬프트**를 띄웠다(리뷰를 남긴 직후 = 앱 평가를 부탁하기 좋은 시점). **V2엔 이 호출이 없다.** → [§2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
-2. **키워드 선택/탐색 모달 전체 미구현** — V1은 키워드 검색바 탭 → **키워드 선택 모달**(검색·카테고리·최대 20개·문의하기)을 present하고, 고른 키워드 ID를 저장에 실었다. **V2는 키워드 섹션이 검색바 룩 버튼(탭 시 `print`만) 하나뿐이고 `draft.keywords`에 연결되지 않았다** → 저장 시 `keywordIds`가 **항상 빈 배열**이다. → [§7](#7-키워드)
-3. **매력포인트 가로 배열 순서 차이** — V1 `AttractivePoint.allCases`는 `worldview·material·writingSkill(필력)·character·relationship·vibe` 순, V2는 `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열해 **6개 버튼의 표시 순서가 다르다**(필력 위치). → [§6](#6-매력-포인트)
+1. **저장 성공 후 App Store 리뷰 요청 제거** — V1은 리뷰 저장에 성공하면 `AppReviewManager.shared.requestReview()`로 **App Store 평점 요청 프롬프트**를 띄웠다(리뷰를 남긴 직후 = 앱 평가를 부탁하기 좋은 시점). **V2엔 이 호출이 없다.** → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
+2. **키워드 선택/탐색 모달 전체 미구현** — V1은 키워드 검색바 탭 → **키워드 선택 모달**(검색·카테고리·최대 20개·문의하기)을 present하고, 고른 키워드 ID를 저장에 실었다. **V2는 키워드 섹션이 검색바 룩 버튼(탭 시 `print`만) 하나뿐이고 `draft.keywords`에 연결되지 않았다** → 저장 시 `keywordIds`가 **항상 빈 배열**이다. → [7](#7-키워드)
+3. **매력포인트 가로 배열 순서 차이** — V1 `AttractivePoint.allCases`는 `worldview·material·writingSkill(필력)·character·relationship·vibe` 순, V2는 `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열해 **6개 버튼의 표시 순서가 다르다**(필력 위치). → [6](#6-매력-포인트)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
-4. 🔧 **저장 실패의 조용한 실패 → 토스트로 표면화** — V1 저장 `onError`는 `print(error)`뿐이라 실패해도 사용자에게 **아무 표시가 없고 화면도 안 닫힌다**(무엇이 잘못됐는지 모름). V2는 `presentError` → 토스트. → [§2.2](#22-저장-실패--중복-저장-가드)
-5. 🔧 **POST/PUT 결정 방식** — V1은 진입 시 **클라이언트가 추정**한다(`isNovelReviewExist = 서버 status != nil || isInterest`). V2는 **항상 POST 먼저 시도**하고 서버가 "이미 리뷰함"(`USER_NOVEL-002`)을 주면 **PUT으로 폴백**한다(서버 주도). → [§2.3](#23-생성put-vs-수정post-결정)
-6. 🔧 **뒤로가기 중단 알럿 조건** — V1은 뒤로가기 시 **변경 여부와 무관하게 항상** "평가를 그만할까요?" 알럿을 띄운다. V2는 **초안이 실제로 바뀌었을 때만**(`hasUnsavedChanges`) 알럿을 띄우고, 변경이 없으면 곧장 닫는다. → [§8](#8-뒤로가기중단-알럿)
-7. 🗑 **Amplitude 이벤트 전부 제거** — 저장 시 `rateNovel`, 키워드 모달의 `contactKeyword`. V2엔 트래킹이 없다. → [§2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
+4. 🔧 **저장 실패의 조용한 실패 → 토스트로 표면화** — V1 저장 `onError`는 `print(error)`뿐이라 실패해도 사용자에게 **아무 표시가 없고 화면도 안 닫힌다**(무엇이 잘못됐는지 모름). V2는 `presentError` → 토스트. → [2.2](#22-저장-실패--중복-저장-가드)
+5. 🔧 **POST/PUT 결정 방식** — V1은 진입 시 **클라이언트가 추정**한다(`isNovelReviewExist = 서버 status != nil || isInterest`). V2는 **항상 POST 먼저 시도**하고 서버가 "이미 리뷰함"(`USER_NOVEL-002`)을 주면 **PUT으로 폴백**한다(서버 주도). → [2.3](#23-생성put-vs-수정post-결정)
+6. 🔧 **뒤로가기 중단 알럿 조건** — V1은 뒤로가기 시 **변경 여부와 무관하게 항상** "평가를 그만할까요?" 알럿을 띄운다. V2는 **초안이 실제로 바뀌었을 때만**(`hasUnsavedChanges`) 알럿을 띄우고, 변경이 없으면 곧장 닫는다. → [8](#8-뒤로가기중단-알럿)
+7. 🗑 **Amplitude 이벤트 전부 제거** — 저장 시 `rateNovel`, 키워드 모달의 `contactKeyword`. V2엔 트래킹이 없다. → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -60,7 +60,7 @@
 
 - ✅ **Keep** — 진입 이전 화면이 **작품 ID·제목·읽기 상태**를 넘겨 준다(화면이 자체 보유하지 않음). 네비게이션 타이틀은 주입된 작품 제목 고정.
   - V1: `init(…, isInterest:, readStatus:, novelId:, novelTitle:)` — 네비 타이틀에 `novelTitle` 사용.
-  - V2: `makeView(novelID:title:status:…)` — `title`(네비 타이틀)·`status`(초기 읽기 상태) 주입. **단 V1의 `isInterest`는 V2에 없다**(§2.3에서 그 용도가 서버 폴백으로 대체됨).
+  - V2: `makeView(novelID:title:status:…)` — `title`(네비 타이틀)·`status`(초기 읽기 상태) 주입. **단 V1의 `isInterest`는 V2에 없다**(2.3에서 그 용도가 서버 폴백으로 대체됨).
   - 근거: V1 `NovelReviewViewModel.swift:57-63`, `NovelReviewViewController.swift:56-58` · V2 `NovelReviewFeatureFactory.swift:28-49`, `CLAUDE.md`(진입점)
 
 ### 1.2 초안 로드 (최초 1회)
@@ -70,8 +70,8 @@
   - **탭 콘텐츠가 아니라 push되는 편집 폼**이라 "최초 1회 가드"가 **여기선 올바르다** — 재진입마다 재조회하면 편집 중 draft를 서버 값으로 덮는다. (홈·서재의 "탭 복귀마다 갱신"과 반대 결정이며, V2 `CLAUDE.md`에 그 이유가 명문화됨.)
   - 근거: V1 `NovelReviewViewController.swift:43-52`(viewDidLoad 1회), `NovelReviewViewModel.swift:99-120` · V2 `NovelReviewViewModel.swift:136-140`,`226-255`, `CLAUDE.md`(로드 최초 1회)
 - ✅ **Keep** — **주입된 읽기 상태를 서버 저장 상태보다 우선**한다(로드된 `status`로 세그먼트를 덮지 않음).
-  - V1: 로드 콜백이 `owner.readStatus`(주입값)를 그대로 `readStatusData`로 방출하고, 서버 `data.status`는 **오직 "리뷰 존재 여부"(§2.3) 판단에만** 쓴다.
-  - V2: `loadDraft`가 `loaded.changeStatus(initialStatus)`로 주입 상태를 덮어 적용한다(원본과 다르면 '변경됨'으로 잡혀 중단 알럿 대상 — §8).
+  - V1: 로드 콜백이 `owner.readStatus`(주입값)를 그대로 `readStatusData`로 방출하고, 서버 `data.status`는 **오직 "리뷰 존재 여부"(2.3) 판단에만** 쓴다.
+  - V2: `loadDraft`가 `loaded.changeStatus(initialStatus)`로 주입 상태를 덮어 적용한다(원본과 다르면 '변경됨'으로 잡혀 중단 알럿 대상 — 8).
   - 근거: V1 `NovelReviewViewModel.swift:104`,`117-118` · V2 `NovelReviewViewModel.swift:237-239`
 - ❓ **Unknown (판정 보류 2026-08-28)** — **로드 실패 처리**. V1 로드는 `flatMapLatest`로 갈아끼우기만 하고 **에러 분기가 없다**(에러 시 스트림이 조용히 끝나 화면이 초기값 그대로 남음). V2는 `state.loadFailed` → **전면 실패 뷰(`NetworkErrorView`, 재시도)**.
   - V2는 신규 계약(로드 실패 표현). V1엔 대응 동작 자체가 없어 "V1 유지"라 부를 게 없다 → 판정보단 참고. (전면 실패 뷰는 V2 전반의 로드 실패 계약과 정렬 — `Feature/CLAUDE.md`.)
@@ -135,7 +135,7 @@
   - 근거: V1 `ReadStatus.swift:10-45`, `NovelReviewViewController.swift:123-134` · V2 `NovelReviewView.swift:171-205`, `BaseDomain/Sources/ReadingStatus.swift:11-14`
 - ✅ **Keep** — 라벨 문구 `보는 중`/`봤어요`/`하차`. (V2는 WSSComponent `DomainPresentation`의 `status.statusName` 재사용.)
   - 근거: V1 `ReadStatus.swift:15-21` · V2 `NovelReviewView.swift:191`(`status.statusName`)
-- ✅ **Keep** — 상태를 바꾸면 **기존 날짜가 새 상태에 맞게 정리**된다(하차로 바꾸면 시작일 무의미, 보는중이면 종료일 무의미). V1은 저장 시점에 날짜를 상태로 걸러 보냈고(§2.1), V2는 `changeStatus`가 `period.normalized(for:)`로 즉시 정리한다.
+- ✅ **Keep** — 상태를 바꾸면 **기존 날짜가 새 상태에 맞게 정리**된다(하차로 바꾸면 시작일 무의미, 보는중이면 종료일 무의미). V1은 저장 시점에 날짜를 상태로 걸러 보냈고(2.1), V2는 `changeStatus`가 `period.normalized(for:)`로 즉시 정리한다.
   - 근거: V1 `NovelReviewViewModel.swift:134-135` · V2 `NovelReviewDomain`(`NovelReviewDraft.changeStatus`)
 
 ---
@@ -246,8 +246,8 @@
 | `startDate` | 하차면 `nil`, 아니면 `yyyy-MM-dd` | `period?.start`를 `yyyy-MM-dd`(normalize가 하차 시작을 이미 제거) | ✅ Keep |
 | `endDate` | 보는중이면 `nil`, 아니면 `yyyy-MM-dd` | `period?.end`를 `yyyy-MM-dd`(normalize가 보는중 종료를 이미 제거) | ✅ Keep |
 | `attractivePoints` | 선택 `rawValue` 배열(최대 3) | `attractivePointString` 배열(동일 토큰) | ✅ Keep |
-| `keywordIds` | 선택 키워드 `keywordId` 배열(최대 20) | `keywords.map{$0.id.value}` — **화면 미연결이라 현재 항상 `[]`** | ❓ (§7) |
-| POST vs PUT | 클라 추정(`status!=nil \|\| isInterest`) | POST 먼저 → `USER_NOVEL-002`면 PUT 폴백 | 🔧 Improve (§2.3) |
+| `keywordIds` | 선택 키워드 `keywordId` 배열(최대 20) | `keywords.map{$0.id.value}` — **화면 미연결이라 현재 항상 `[]`** | ❓ (7) |
+| POST vs PUT | 클라 추정(`status!=nil \|\| isInterest`) | POST 먼저 → `USER_NOVEL-002`면 PUT 폴백 | 🔧 Improve (2.3) |
 
 - 조회 응답 필드(`NovelReviewResult`): `novelTitle`·`status?`·`startDate?`·`endDate?`·`userNovelRating`·`attractivePoints`·`keywords`. V2 `NovelReviewResponse`와 동형이며 `status`가 nil이면 "초안 없음"(POST 대상)으로 본다. ✅ Keep.
 - 날짜 포맷 `yyyy-MM-dd` / `ko_KR` / 서울 타임존은 양쪽 동일(V1 `dateFormatter`, V2 `DateParser`). ✅ Keep.

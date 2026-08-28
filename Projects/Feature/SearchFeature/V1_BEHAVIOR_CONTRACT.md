@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/Search/` = `WSSiOS/Source/Presentation/Search/`.
 
@@ -27,10 +27,10 @@
 
 | V2 (이 모듈) | V1 원본 | 성격 차이 |
 |---|---|---|
-| `Sources/NormalSearch/NormalSearchView` (검색 진입점) | `…/Search/Search/` (`SearchViewController`+VM, **검색 탭 랜딩**) **＋** `…/Search/NormalSearch/` (`NormalSearchViewController`+VM, **push된 검색 화면**) | **V1은 2화면(랜딩→push), V2는 1화면.** V1 랜딩(비편집 검색바+소소픽+상세검색 유도 배너)이 V2에서 사라지고 그 소소픽이 NormalSearch 브라우즈로 흡수됨 (§1) |
-| `Sources/DetailSearch/DetailSearchFilterView` (#185) | `…/Search/DetailSearch/DetailSearchViewController`+`DetailSearchViewModel` | 정보/키워드 탭 필터 화면. **V2는 지금 Demo에서만 push**(실앱 진입점 미배선, §3) |
-| `Sources/DetailSearch/DetailSearchResultView` | `…/Search/DetailSearch/DetailSearchResultViewController`+`DetailSearchResultViewModel` | 필터 검색 결과 그리드 (§4) |
-| (V2 신규) `NormalSearchAutoCompletionView` | **V1 대응 없음** | 검색어 자동완성은 V2 신규 (§2.6) |
+| `Sources/NormalSearch/NormalSearchView` (검색 진입점) | `…/Search/Search/` (`SearchViewController`+VM, **검색 탭 랜딩**) **＋** `…/Search/NormalSearch/` (`NormalSearchViewController`+VM, **push된 검색 화면**) | **V1은 2화면(랜딩→push), V2는 1화면.** V1 랜딩(비편집 검색바+소소픽+상세검색 유도 배너)이 V2에서 사라지고 그 소소픽이 NormalSearch 브라우즈로 흡수됨 (1) |
+| `Sources/DetailSearch/DetailSearchFilterView` (#185) | `…/Search/DetailSearch/DetailSearchViewController`+`DetailSearchViewModel` | 정보/키워드 탭 필터 화면. **V2는 지금 Demo에서만 push**(실앱 진입점 미배선, 3) |
+| `Sources/DetailSearch/DetailSearchResultView` | `…/Search/DetailSearch/DetailSearchResultViewController`+`DetailSearchResultViewModel` | 필터 검색 결과 그리드 (4) |
+| (V2 신규) `NormalSearchAutoCompletionView` | **V1 대응 없음** | 검색어 자동완성은 V2 신규 (2.6) |
 
 ---
 
@@ -38,25 +38,25 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **작품 상세 이동이 화면 전역에서 미배선/스텁이다.** V1은 소소픽 셀·일반 검색 결과 셀·상세검색 결과 셀 **셋 다** 탭하면 작품 상세로 push한다. V2는 소소픽 탭 = `print(...)` 스텁, 두 결과 그리드 = 탭 콜백 자체가 없는 순수 표시 뷰다. → [§2.7](#27-작품-상세-이동)
-2. **장르/키워드 섹션 "더보기" 헤더 → 상세탐색 진입이 TODO 스텁.** V1은 장르 헤더 → 상세검색 필터, 인기 키워드 헤더 → 상세검색 필터(키워드 탭)로 push. V2는 두 헤더 버튼 모두 `// TODO` 주석뿐. → [§2.3](#23-장르별-검색)·[§2.4](#24-키워드-검색인기-키워드)
-3. **연재상태 미선택 시 `isCompleted=false`가 항상 전송된다(잠재 회귀).** V1은 연재상태 미선택이면 `isCompleted` 쿼리를 **아예 생략**(→ 전체)하는데, V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이라 미선택도 `false`로 나간다 = "연재중만" 필터와 구별 불가. → [§4.2 · 부록 A](#42-서버-요청-파라미터)
-4. **로그인 유도(비로그인 브라우즈 + induce login) 전면 제거.** V1은 소소픽/검색결과/장르/키워드/상세검색 진입 등 거의 모든 상호작용을 `isLogined`로 가드해 비로그인 시 `InduceLoginViewController`를 present한다. V2엔 이 분기가 없다. → [§5.1](#51-로그인-게이팅)
-5. **검색창 자동 포커스(키보드 자동 노출) 미구현.** V1은 진입 시 `becomeFirstResponder()`로 키보드를 바로 띄운다. V2 `NormalSearchView`는 `onAppear`에서 포커스를 세우지 않는다. → [§2.1](#21-진입생명주기)
-6. **검색창 30자 입력 제한 미확인.** V1 검색 텍스트필드는 30자 초과 입력을 막는다. V2 `WSSSearchBar`의 제한 여부는 이 조사에서 확인하지 못했다. → [§2.1](#21-진입생명주기)
-7. **Amplitude 애널리틱스 이벤트 전면 부재.** V1은 검색 진입·일반검색·소소픽·결과 클릭·문의 등 다수 이벤트를 track한다. V2엔 대응 이벤트 전송이 없다(Logger는 에러 로깅용). → [§5.2](#52-애널리틱스)
+1. **작품 상세 이동이 화면 전역에서 미배선/스텁이다.** V1은 소소픽 셀·일반 검색 결과 셀·상세검색 결과 셀 **셋 다** 탭하면 작품 상세로 push한다. V2는 소소픽 탭 = `print(...)` 스텁, 두 결과 그리드 = 탭 콜백 자체가 없는 순수 표시 뷰다. → [2.7](#27-작품-상세-이동)
+2. **장르/키워드 섹션 "더보기" 헤더 → 상세탐색 진입이 TODO 스텁.** V1은 장르 헤더 → 상세검색 필터, 인기 키워드 헤더 → 상세검색 필터(키워드 탭)로 push. V2는 두 헤더 버튼 모두 `// TODO` 주석뿐. → [2.3](#23-장르별-검색)·[2.4](#24-키워드-검색인기-키워드)
+3. **연재상태 미선택 시 `isCompleted=false`가 항상 전송된다(잠재 회귀).** V1은 연재상태 미선택이면 `isCompleted` 쿼리를 **아예 생략**(→ 전체)하는데, V2 `DetailSearchQuery.isCompleted`는 non-optional `Bool`이라 미선택도 `false`로 나간다 = "연재중만" 필터와 구별 불가. → [4.2 · 부록 A](#42-서버-요청-파라미터)
+4. **로그인 유도(비로그인 브라우즈 + induce login) 전면 제거.** V1은 소소픽/검색결과/장르/키워드/상세검색 진입 등 거의 모든 상호작용을 `isLogined`로 가드해 비로그인 시 `InduceLoginViewController`를 present한다. V2엔 이 분기가 없다. → [5.1](#51-로그인-게이팅)
+5. **검색창 자동 포커스(키보드 자동 노출) 미구현.** V1은 진입 시 `becomeFirstResponder()`로 키보드를 바로 띄운다. V2 `NormalSearchView`는 `onAppear`에서 포커스를 세우지 않는다. → [2.1](#21-진입생명주기)
+6. **검색창 30자 입력 제한 미확인.** V1 검색 텍스트필드는 30자 초과 입력을 막는다. V2 `WSSSearchBar`의 제한 여부는 이 조사에서 확인하지 못했다. → [2.1](#21-진입생명주기)
+7. **Amplitude 애널리틱스 이벤트 전면 부재.** V1은 검색 진입·일반검색·소소픽·결과 클릭·문의 등 다수 이벤트를 track한다. V2엔 대응 이벤트 전송이 없다(Logger는 에러 로깅용). → [5.2](#52-애널리틱스)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-8. **검색 탭 랜딩 화면(`SearchView`) + "상세 검색으로 찾기" 유도 배너(`SearchDetailInduceView`) 제거** → NormalSearch 단일 화면으로 병합. → [§1](#1-검색-진입랜딩-searchview)
-9. **뒤로가기 3초 throttle**(연타로 pop 여러 번 막던 가드) 제거. → [§2.1](#21-진입생명주기)
+8. **검색 탭 랜딩 화면(`SearchView`) + "상세 검색으로 찾기" 유도 배너(`SearchDetailInduceView`) 제거** → NormalSearch 단일 화면으로 병합. → [1](#1-검색-진입랜딩-searchview)
+9. **뒤로가기 3초 throttle**(연타로 pop 여러 번 막던 가드) 제거. → [2.1](#21-진입생명주기)
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-10. 상세검색 결과 **에러 무처리 → `NetworkErrorView`**(V1은 실패 시 로딩만 내리고 빈 화면). → [§4.3](#43-빈-화면로딩에러)
-11. 최근 검색어 삭제 **롤백 추가**(V1은 서버 실패해도 롤백 없이 지운 채 유지). → [§2.2](#22-최근-검색어)
-12. 검색 직후 **최근 검색어 즉시 갱신**(V1은 다음 진입까지 안 보임). → [§2.2](#22-최근-검색어)
-13. 상세검색 정보탭 **활성 점 인디케이터가 플랫폼 선택도 반영**(V1은 플랫폼을 점 조건에서 누락 = 버그). → [§3.2](#32-정보-탭-필터)
+10. 상세검색 결과 **에러 무처리 → `NetworkErrorView`**(V1은 실패 시 로딩만 내리고 빈 화면). → [4.3](#43-빈-화면로딩에러)
+11. 최근 검색어 삭제 **롤백 추가**(V1은 서버 실패해도 롤백 없이 지운 채 유지). → [2.2](#22-최근-검색어)
+12. 검색 직후 **최근 검색어 즉시 갱신**(V1은 다음 진입까지 안 보임). → [2.2](#22-최근-검색어)
+13. 상세검색 정보탭 **활성 점 인디케이터가 플랫폼 선택도 반영**(V1은 플랫폼을 점 조건에서 누락 = 버그). → [3.2](#32-정보-탭-필터)
 14. 플랫폼 "리디" **서버 전송값 "리디" → "리디북스"**로 정정(문서화됨). → [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
 
 ---
@@ -70,7 +70,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - 🗑 **Delete** — 랜딩 화면(`SearchView`)과 유도 배너를 통째로 없애고 V2는 `NormalSearchView` 하나로 진입한다. V1 랜딩의 소소픽은 NormalSearch 브라우즈 섹션으로 흡수됐다(중복이던 걸 하나로).
   - V2: `SearchFeatureFactory.makeNormalSearchView(...)`가 "실제 앱 진입점"으로 명문화. 랜딩·배너 대응 코드 없음.
   - 근거: V1 `SearchViewController.swift:23`,`70-72`(랜딩+유도배너 바인딩) · V2 `SearchFeatureFactory.swift:24-46`, `CLAUDE.md`(진입점 = NormalSearch)
-- 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱) — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (§5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
+- 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱) — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
   - 근거: V1 `SearchViewModel.swift:48-68`
 - ✅ **Keep** (확정 2026-08-28: SwiftUI 탭/네비 구조 차이, 대응 불필요) — `SearchView`는 진입마다 시스템 탭바를 다시 보이고(`showTabBar`) 네비바를 숨긴다(`setNavigationBarHidden(true)`). V2는 탭/네비 체계가 SwiftUI로 달라 직접 대응이 없다(구조 차이).
   - 근거: V1 `SearchViewController.swift:40-64`
@@ -125,7 +125,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - ✅ **Keep (순서 출처 상이)** — 장르 목록 자체는 9종으로 동일. V1은 하드코딩 `NovelGenre.normalSearchGenres`, V2는 `WSSComponent.NovelGenre.searchGenre`(Figma 실측으로 순서 재확정). 순서가 미세하게 다를 수 있으나 의도된 재정렬.
   - 근거: V1 `NovelGenre.swift:219` · V2 `NormalSearchView.swift:221`, `CLAUDE.md`(searchGenre)
 - 🔧 **배선 대기→App** (2026-08-28: 상세검색 진입, App 라우터 담당) — **장르 섹션 "더보기" 헤더 → 상세검색 필터 진입**: V1 장르 헤더 버튼 탭 → 상세검색 **필터 화면**을 push(`pushToDetailSearch`).
-  - V2: 헤더 버튼 본문이 `// TODO: - 탐색 정보탭으로 이동`뿐(미배선). 상세검색 필터 화면 자체가 실앱에서 안 열린다(§3).
+  - V2: 헤더 버튼 본문이 `// TODO: - 탐색 정보탭으로 이동`뿐(미배선). 상세검색 필터 화면 자체가 실앱에서 안 열린다(3).
   - 근거: V1 `NormalSearchViewModel.swift:310-318`, `NormalSearchViewController.swift:329-334` · V2 `NormalSearchView.swift:204-212`(TODO)
 
 ### 2.4 키워드 검색(인기 키워드)
@@ -167,7 +167,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - 🔧 **배선 대기→App** (2026-08-28: 작품상세 push, App 라우터 담당) — V1은 **소소픽 셀·일반 검색 결과 셀** 탭 시 (로그인돼 있으면) 작품 상세로 push한다.
   - **V2: 둘 다 상세 이동이 없다.** 소소픽 탭은 `print("\(pick.novelID)번 작품 상세로 이동")` 스텁, `NormalSearchResultView`는 `onSelect` 콜백 자체를 받지 않는 순수 표시 뷰다. `makeNormalSearchView` Factory에도 `onNovelSelected` 류 콜백이 없다.
   - 근거: V1 `NormalSearchViewModel.swift:168-178`(소소픽),`230-240`(결과셀) → `NormalSearchViewController.swift:229-233`(pushToNovelDetail) · V2 `NormalSearchView.swift:319-321`(print), `58-66`(결과뷰 onSelect 없음), `SearchFeatureFactory.swift:24-46`(콜백 없음)
-  - **판정 포인트**: App 라우터 배선 대기(누락된 유지)인지 / 검색 결과에서 상세 이동을 안 하기로 한 건지. (§4.1의 상세검색 결과도 동일 사안 — 검색 3계열 전부 미배선.)
+  - **판정 포인트**: App 라우터 배선 대기(누락된 유지)인지 / 검색 결과에서 상세 이동을 안 하기로 한 건지. (4.1의 상세검색 결과도 동일 사안 — 검색 3계열 전부 미배선.)
 
 ---
 
@@ -175,14 +175,14 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 
 원본: `…/Search/DetailSearch/DetailSearchViewModel/DetailSearchViewModel.swift`
 
-> V2 대응 `DetailSearchFilterView`(#185)는 존재하나 **실제 앱 흐름에서 아무 데서도 push되지 않는다**(Demo 전용 진입점만). 따라서 아래 항목들은 대부분 "V2에 구현은 있으나 실앱 경로가 없음" 상태다 — §2.3·§2.4의 헤더 TODO가 열리면 살아난다.
+> V2 대응 `DetailSearchFilterView`(#185)는 존재하나 **실제 앱 흐름에서 아무 데서도 push되지 않는다**(Demo 전용 진입점만). 따라서 아래 항목들은 대부분 "V2에 구현은 있으나 실앱 경로가 없음" 상태다 — 2.3·2.4의 헤더 TODO가 열리면 살아난다.
 
 ### 3.1 진입·구조
 
 - ✅ **Keep** — 정보/키워드 두 탭바 화면. 진입 탭을 인자로 받는다(V1 `initialTab`, 인기키워드 헤더는 `.keyword`로 진입).
   - V2: `DetailSearchFilterView` `@State selectedTab`(`.info`/`.keyword`), 밑줄로 활성 탭 표시. Demo가 진입.
   - 근거: V1 `DetailSearchViewModel.swift:117-121`,`152-162` · V2 `CLAUDE.md`(정보/키워드 탭바)
-- 🔧 **배선 대기→App** (2026-08-28: 상세검색 진입경로, App 라우터 담당) — V1은 실제로 3경로로 이 화면을 push했다: 랜딩 유도배너, 장르 헤더, 인기키워드 헤더(§1·§2.3·§2.4). V2는 세 경로가 전부 없거나 TODO라 필터 화면이 **Demo 밖에서 안 열린다**.
+- 🔧 **배선 대기→App** (2026-08-28: 상세검색 진입경로, App 라우터 담당) — V1은 실제로 3경로로 이 화면을 push했다: 랜딩 유도배너, 장르 헤더, 인기키워드 헤더(1·2.3·2.4). V2는 세 경로가 전부 없거나 TODO라 필터 화면이 **Demo 밖에서 안 열린다**.
   - 근거: V2 `CLAUDE.md`("지금은 Demo 전용 진입점에서만 push"), `SearchFeatureFactory.swift:52-59`
 
 ### 3.2 정보 탭 필터
@@ -229,7 +229,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
   - V2: pill 탭 = `dismiss()`, 결과 화면 자체엔 필터 편집 없음(사용자 확정, `CLAUDE.md`).
   - 근거: V1 `DetailSearchResultViewModel.swift:148-152` · V2 `CLAUDE.md`(pill = 뒤로가기)
 - 🔧 **배선 대기→App** (2026-08-28: 작품상세 push, App 라우터 담당) — **결과 셀 탭 → 작품 상세 push**: V1은 결과 셀 탭 시 작품 상세로 push(+ Amplitude `clickSeekResult`).
-  - V2: 그리드 셀(`WSSNovelGridCell`)이 `onTap` 없는 순수 표시 전용. (§2.7과 같은 사안 — 검색 결과 상세 이동 전면 미배선.)
+  - V2: 그리드 셀(`WSSNovelGridCell`)이 `onTap` 없는 순수 표시 전용. (2.7과 같은 사안 — 검색 결과 상세 이동 전면 미배선.)
   - 근거: V1 `DetailSearchResultViewModel.swift:77-85` · V2 `CLAUDE.md`(onTap 없이 순수 표시 전용)
 
 ### 4.2 서버 요청 파라미터
@@ -285,11 +285,11 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 
 | 파라미터 | V1 전송 규칙 | V2 전송 규칙 | 상태 |
 |---|---|---|---|
-| `genres` | `NovelGenre.rawValue` 콤마조인(빈 배열도 빈 문자열로 전송) | `mapNovelGenreString` 배열(값 동일). `[String]` non-optional이라 빈 배열도 `?genres=` 빈값 전송 — **V1과 동일**(서재 `UserLibraryV2Query`만 `Optional`로 생략) | ✅ Keep (V1 parity, [C2 §3-4](../../../docs/V1_PARAM_MAPPING_C2.md)) |
-| `platformNames` | `NovelPlatform.title` — **`.ridi`가 "리디"** | `mapNovelPlatformString` — **`.ridibooks`가 "리디북스"** | 🔧 Improve (§3, `CLAUDE.md` 문서화) |
+| `genres` | `NovelGenre.rawValue` 콤마조인(빈 배열도 빈 문자열로 전송) | `mapNovelGenreString` 배열(값 동일). `[String]` non-optional이라 빈 배열도 `?genres=` 빈값 전송 — **V1과 동일**(서재 `UserLibraryV2Query`만 `Optional`로 생략) | ✅ Keep (V1 parity, [C2 3-4](../../../docs/V1_PARAM_MAPPING_C2.md)) |
+| `platformNames` | `NovelPlatform.title` — **`.ridi`가 "리디"** | `mapNovelPlatformString` — **`.ridibooks`가 "리디북스"** | 🔧 Improve (3, `CLAUDE.md` 문서화) |
 | `keywordIds` | `KeywordData.keywordId` 콤마조인 | `keyword.id.value` 배열 | ✅ Keep |
 | `novelRatingStart`/`End` | `lower`/`upper`(**항상** 전송, 기본 0.0~5.0) | `ratingRange?.min ?? 0.0` / `?? 5.0`(항상 전송) | ✅ Keep |
-| `isCompleted` | **nil이면 생략**, 아니면 `true`/`false` | **항상 `Bool`**(`publicationStatus == .completed`) | ❓ Unknown (§4.2 잠재 회귀) |
+| `isCompleted` | **nil이면 생략**, 아니면 `true`/`false` | **항상 `Bool`**(`publicationStatus == .completed`) | ❓ Unknown (4.2 잠재 회귀) |
 | `page` | 0부터 정수 | 동일 | ✅ Keep |
 | `size` | `20` | `20` | ✅ Keep |
 | 인가 | `accessTokenHeader` | `.requireToken` | ✅ Keep (`SearchData/CLAUDE.md`) |

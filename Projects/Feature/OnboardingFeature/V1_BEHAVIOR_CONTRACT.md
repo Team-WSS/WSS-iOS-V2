@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/Onboarding/` = `WSSiOS/Source/Presentation/Onboarding/`, `…/Login/` = `WSSiOS/Source/Presentation/Login/`, `…/Base/` = `WSSiOS/Source/Presentation/Base/`.
 
@@ -27,11 +27,11 @@
 
 | V2 (이 모듈) | V1 원본 | 성격 차이 |
 |---|---|---|
-| `Sources/Intro/` (인트로+소셜로그인) | `…/Login/` (`LoginViewController`+VM) | 배너 캐러셀 + 소셜 로그인. **V2는 "둘러보기(비로그인)" 제거** (§1) |
-| `Sources/StepFlow/` + `Nickname/`·`GenderBirthYear/`·`GenreSelection/` (닉네임→성별출생→장르) | `…/Onboarding/Onboarding/` (`OnboardingViewController`+VM, **한 화면 안 3-stage 가로 스크롤**) | V1도 한 VC의 가로 스크롤 3단계 = V2 컨테이너 슬라이드 3단계 (§2) |
-| `Sources/TermsAgreement/` (가입약관 시트) | `…/Base/ServiceTermAgreement/` (`ServiceTermAgreementViewController`, **VM 없음·로직 VC**) | V1은 온보딩 진입 후 조건부 present, V2는 별도 스텝 시트 (§3) |
-| `Sources/Complete/` (계약 완료) | `…/Onboarding/OnboardingSuccess/` (`OnboardingSuccessViewController`) | 닉네임 인사 + CTA → 홈 (§4) |
-| *(V2 없음)* | `…/Base/InduceLogin/` (`InduceLoginViewController`, 게스트 로그인 유도 모달) | **V2가 게스트 경로 통째 제거** (§5) |
+| `Sources/Intro/` (인트로+소셜로그인) | `…/Login/` (`LoginViewController`+VM) | 배너 캐러셀 + 소셜 로그인. **V2는 "둘러보기(비로그인)" 제거** (1) |
+| `Sources/StepFlow/` + `Nickname/`·`GenderBirthYear/`·`GenreSelection/` (닉네임→성별출생→장르) | `…/Onboarding/Onboarding/` (`OnboardingViewController`+VM, **한 화면 안 3-stage 가로 스크롤**) | V1도 한 VC의 가로 스크롤 3단계 = V2 컨테이너 슬라이드 3단계 (2) |
+| `Sources/TermsAgreement/` (가입약관 시트) | `…/Base/ServiceTermAgreement/` (`ServiceTermAgreementViewController`, **VM 없음·로직 VC**) | V1은 온보딩 진입 후 조건부 present, V2는 별도 스텝 시트 (3) |
+| `Sources/Complete/` (계약 완료) | `…/Onboarding/OnboardingSuccess/` (`OnboardingSuccessViewController`) | 닉네임 인사 + CTA → 홈 (4) |
+| *(V2 없음)* | `…/Base/InduceLogin/` (`InduceLoginViewController`, 게스트 로그인 유도 모달) | **V2가 게스트 경로 통째 제거** (5) |
 
 ---
 
@@ -39,27 +39,27 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **약관 시트 조건부 노출** — V1은 온보딩 진입(`viewDidLoad`)에서 `getTermSetting()` 서버 조회로 **필수 약관 미동의일 때만** 약관 시트를 present한다. V2는 약관을 별도 스텝 시트로 두는데, **"이미 동의한 유저면 건너뛴다"는 게이팅이 Feature에 없다**(순서·조건은 App 배선 몫). 기존 유저 재진입 시 약관을 또 보이는지 확인 필요. → [§3.1](#31-노출-조건)
+1. **약관 시트 조건부 노출** — V1은 온보딩 진입(`viewDidLoad`)에서 `getTermSetting()` 서버 조회로 **필수 약관 미동의일 때만** 약관 시트를 present한다. V2는 약관을 별도 스텝 시트로 두는데, **"이미 동의한 유저면 건너뛴다"는 게이팅이 Feature에 없다**(순서·조건은 App 배선 몫). 기존 유저 재진입 시 약관을 또 보이는지 확인 필요. → [3.1](#31-노출-조건)
    - **⏳ App 배선 대기(2026-08-28): 순서·게이팅은 App 몫.** V2는 약관을 온보딩 스텝 시트로 두고, "이미 동의한 유저 스킵" 게이팅은 App 부트스트랩이 조립(로그인 필수 앱 전제와 동일 결). 회귀 아님.
-2. **Apple 로그인 V1.4.0 동기화** — V1은 `needsAppleSyncV140`(accessToken 캐시 있고 미동기화)면 일반 로그인 대신 `syncAppleLoginState`(재인증 동기화)를 탄다. V2엔 대응이 전혀 없다. **특정 릴리즈(v1.4.0) 마이그레이션 워크어라운드**라 신규 클라이언트 V2엔 불필요해 보이나 명문 근거는 못 찾음. → [§1.4](#14-apple-로그인)
+2. **Apple 로그인 V1.4.0 동기화** — V1은 `needsAppleSyncV140`(accessToken 캐시 있고 미동기화)면 일반 로그인 대신 `syncAppleLoginState`(재인증 동기화)를 탄다. V2엔 대응이 전혀 없다. **특정 릴리즈(v1.4.0) 마이그레이션 워크어라운드**라 신규 클라이언트 V2엔 불필요해 보이나 명문 근거는 못 찾음. → [1.4](#14-apple-로그인)
    - **🗑 확정(2026-08-28): 의도된 제거(마이그레이션 잔재).** v1.4.0 특정 릴리즈 전용 재인증 동기화 — 신규 클라이언트 V2엔 불필요. 되살리지 않음.
-3. **v1.4.0 재로그인 확인 액션시트** — V1 로그인 화면은 `didEnterLoginV140` 플래그가 없고 이미 로그인된 상태면 "로그인 확인이 필요합니다" 액션시트를 띄운다(업데이트 후 1회). V2엔 없다. 위와 같은 마이그레이션 성격. → [§1.5](#15-v140-마이그레이션-워크어라운드)
+3. **v1.4.0 재로그인 확인 액션시트** — V1 로그인 화면은 `didEnterLoginV140` 플래그가 없고 이미 로그인된 상태면 "로그인 확인이 필요합니다" 액션시트를 띄운다(업데이트 후 1회). V2엔 없다. 위와 같은 마이그레이션 성격. → [1.5](#15-v140-마이그레이션-워크어라운드)
    - **🗑 확정(2026-08-28): 의도된 제거(마이그레이션 잔재).** #2와 동일 — v1.4.0 업데이트 후 1회 재로그인 유도, V2엔 불필요.
-4. **로그인 성공 시 FCM 토큰 발급** — V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.fetchFCMToken()`을 부른다. V2 인트로 흐름엔 안 보인다(푸시 권한은 "Home 진입 시점 별도"라고 문서화 — FCM 등록 시점이 어디로 옮겨졌는지 확인). → [§1.6](#16-로그인-성공-라우팅)
+4. **로그인 성공 시 FCM 토큰 발급** — V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.fetchFCMToken()`을 부른다. V2 인트로 흐름엔 안 보인다(푸시 권한은 "Home 진입 시점 별도"라고 문서화 — FCM 등록 시점이 어디로 옮겨졌는지 확인). → [1.6](#16-로그인-성공-라우팅)
    - **✅ 확정(2026-08-28, 조사): 인프라 존재·App 배선 대기(삭제 아님).** FCM 등록이 V1의 인라인 로그인 부수효과 → V2는 `NotificationDomain.RegisterDeviceTokenUseCase`(+`DefaultPushRepository`·엔드포인트 `/users/fcm-token`)로 분리됨. **호출부는 아직 미배선**(Feature·App grep 0) = App 부트스트랩 몫.
-5. **온보딩 진입 분석 이벤트** — V1은 "둘러보기" 탭 시 `AmplitudeManager.track(...nonLogin)`을 남긴다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로 자체가 없어 이벤트도 사라졌다. 분석 계측을 어디서 이어받는지 별개 확인. → [§1.2](#12-둘러보기비로그인)
-   - **➡️ 확정(2026-08-28): Amplitude 횡단 재도입으로 흡수.** 화면별 계약이 아니라 앱 전반 애널리틱스 부재 사안 → `docs/TODO.md` §9(Amplitude 횡단 재도입, 별도 이슈 승격)로 이관.
+5. **온보딩 진입 분석 이벤트** — V1은 "둘러보기" 탭 시 `AmplitudeManager.track(...nonLogin)`을 남긴다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로 자체가 없어 이벤트도 사라졌다. 분석 계측을 어디서 이어받는지 별개 확인. → [1.2](#12-둘러보기비로그인)
+   - **➡️ 확정(2026-08-28): Amplitude 횡단 재도입으로 흡수.** 화면별 계약이 아니라 앱 전반 애널리틱스 부재 사안 → `docs/TODO.md` 9(Amplitude 횡단 재도입, 별도 이슈 승격)로 이관.
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-6. **"건너뛰기"의 장르 처리가 바뀜** — V1 장르 단계의 "건너뛰기"는 **현재 선택된 장르를 그대로** 등록에 실어 보낸다(complete와 사실상 동일 경로). V2는 **선택을 무시하고 항상 빈 장르로** 등록한다(문서화된 설계). → [§2.4](#24-장르-선택)
-7. **프로필 등록 실패 표현** — V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼이 **토큰을 지우고 로그인 화면으로 튕긴다**. V2는 등록 실패를 **토스트**로 처리하고 버튼 재탭으로 재시도(문서화된 에러 표현 계약). → [§2.5](#25-온보딩-완료-처리)
-8. **진행바 구동 방식** — V1은 스크롤 오프셋에 연속적으로 물린 진행바, V2는 단계(step)에 물린 이산 진행바(스크롤 연동 진행바가 "어색하다"는 사용자 피드백으로 컨테이너 구조로 재작업). → [§2.6](#26-단계-네비게이션진행바)
+6. **"건너뛰기"의 장르 처리가 바뀜** — V1 장르 단계의 "건너뛰기"는 **현재 선택된 장르를 그대로** 등록에 실어 보낸다(complete와 사실상 동일 경로). V2는 **선택을 무시하고 항상 빈 장르로** 등록한다(문서화된 설계). → [2.4](#24-장르-선택)
+7. **프로필 등록 실패 표현** — V1은 `postUserProfile` 실패 시 **전면 네트워크 에러 뷰**를 띄우고, 그 뷰의 새로고침 버튼이 **토큰을 지우고 로그인 화면으로 튕긴다**. V2는 등록 실패를 **토스트**로 처리하고 버튼 재탭으로 재시도(문서화된 에러 표현 계약). → [2.5](#25-온보딩-완료-처리)
+8. **진행바 구동 방식** — V1은 스크롤 오프셋에 연속적으로 물린 진행바, V2는 단계(step)에 물린 이산 진행바(스크롤 연동 진행바가 "어색하다"는 사용자 피드백으로 컨테이너 구조로 재작업). → [2.6](#26-단계-네비게이션진행바)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-9. **"둘러보기(비로그인)" 게스트 진입** 통째 제거 — 로그인 화면 skip 버튼·게스트 홈 진입 + **로그인 유도 모달(InduceLogin)** 전부. (V2 `CLAUDE.md`에 "비로그인 경로 없음"으로 명문화 = 의도.) → [§1.2](#12-둘러보기비로그인), [§5](#5-로그인-유도-모달-induceloginv2-없음)
-10. **카카오톡 앱 전환 우선 분기** — V1은 카카오톡 설치 시 앱 전환 로그인(`loginWithKakaoTalk`), 아니면 웹. V2는 **항상 웹**(`ASWebAuthenticationSession`, 문서화된 결정). → [§1.3](#13-카카오-로그인)
+9. **"둘러보기(비로그인)" 게스트 진입** 통째 제거 — 로그인 화면 skip 버튼·게스트 홈 진입 + **로그인 유도 모달(InduceLogin)** 전부. (V2 `CLAUDE.md`에 "비로그인 경로 없음"으로 명문화 = 의도.) → [1.2](#12-둘러보기비로그인), [5](#5-로그인-유도-모달-induceloginv2-없음)
+10. **카카오톡 앱 전환 우선 분기** — V1은 카카오톡 설치 시 앱 전환 로그인(`loginWithKakaoTalk`), 아니면 웹. V2는 **항상 웹**(`ASWebAuthenticationSession`, 문서화된 결정). → [1.3](#13-카카오-로그인)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -89,7 +89,7 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 
 ### 1.3 카카오 로그인
 
-- ✅ **Keep** (관찰 동작) — 카카오 버튼 → 카카오 인증 → 서버 로그인. 성공 시 토큰 저장 후 라우팅(§1.6).
+- ✅ **Keep** (관찰 동작) — 카카오 버튼 → 카카오 인증 → 서버 로그인. 성공 시 토큰 저장 후 라우팅(1.6).
   - V2: `UserApi.shared.loginWithKakaoAccount` → `SocialLoginUseCase(.kakao(accessToken:))`. 카카오 콜백 스레드를 명시적으로 메인으로 넘겨 `@MainActor handle` 호출.
   - 근거: V1 `LoginViewModel.swift:223-263`(`loginWithKakao`) · V2 `OnboardingIntroView.swift:230-241`
 - 🗑 **Delete** — **카카오톡 앱 전환 우선 분기**. V1은 `UserApi.isKakaoTalkLoginAvailable()`이면 `loginWithKakaoTalk`(설치된 카카오톡 앱으로 전환), 아니면 `loginWithKakaoAccount`(웹).
@@ -109,7 +109,7 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 ### 1.5 v140 마이그레이션 워크어라운드
 
 - ❓ **Unknown** — V1 로그인 화면은 `viewDidAppear`에서 `handleLoginCheckV140()`을 돌려, **이미 로그인된 상태 + `didEnterLoginV140` 미설정**이면 "로그인 확인이 필요합니다 / 앱 업데이트 이후 로그인 상태를 다시 확인하고 있습니다" 액션시트를 띄운다(업데이트 후 1회성).
-  - V2: **대응 없음.** §1.4와 같은 v1.4.0 전환 워크어라운드 성격.
+  - V2: **대응 없음.** 1.4와 같은 v1.4.0 전환 워크어라운드 성격.
   - 근거: V1 `LoginViewController.swift:54-59`,`179-201`,`132-137` · V2 (대응 없음)
 
 ### 1.6 로그인 성공 라우팅
@@ -193,7 +193,7 @@ V2: `Sources/StepFlow/`(컨테이너) + `Nickname/`·`GenderBirthYear/`·`GenreS
 ### 2.5 온보딩 완료 처리 (프로필 등록)
 
 - ✅ **Keep** — 마지막에 **닉네임+성별+출생+선호장르를 한 번에** 서버에 등록한다.
-  - V2: `ProfileRegistration(nickname:gender:birthYear:genrePreferences:)` → `RegisterProfileUseCase.execute`. V1은 `onboardingRepository.postUserProfile(...)`(`POST` 프로필). 요청 필드 동일(§부록 A).
+  - V2: `ProfileRegistration(nickname:gender:birthYear:genrePreferences:)` → `RegisterProfileUseCase.execute`. V1은 `onboardingRepository.postUserProfile(...)`(`POST` 프로필). 요청 필드 동일(부록 A).
   - 근거: V1 `OnboardingViewModel.swift:361-387`, `OnboardingRepository.swift:38-46` · V2 `GenreSelectionViewModel.swift:123-139`
 - ✅ **Keep** — 등록 **성공 시 로컬 프로필 저장**(성별·닉네임·가입완료 플래그) 후 완료 화면으로.
   - V2: `isRegister`/`userGender`/`userNickname` 영속화가 **Data 레이어로 이동**(UseCase가 담당). Feature는 `isCompleted`만.
@@ -288,7 +288,7 @@ V2: `Sources/Complete/OnboardingCompleteView.swift`
 원본: `…/Base/InduceLogin/InduceLoginViewController.swift`, `.../InduceLoginView.swift`
 
 - 🗑 **Delete** — V1엔 **게스트(비로그인) 사용자에게 로그인을 유도하는 모달**이 있었다: "로그인하고 모든 기능을 자유롭게 사용하세요!" + "로그인 하러가기"(→ 로그인 화면 루트 교체) + "닫기"(dismiss). 게스트가 로그인 필요 기능을 만졌을 때 뜬다.
-  - V2: **대응 화면 없음.** 게스트 진입 경로 자체를 제거했으므로(§1.2, `CLAUDE.md:11`) 유도 모달도 존재 이유가 없다 = 의도된 삭제.
+  - V2: **대응 화면 없음.** 게스트 진입 경로 자체를 제거했으므로(1.2, `CLAUDE.md:11`) 유도 모달도 존재 이유가 없다 = 의도된 삭제.
   - 근거: V1 `InduceLoginViewController.swift:45-60`, `InduceLoginView.swift:66-92`, `StringLiterals+Home.swift:29-31` · V2 (게스트 경로 제거)
 
 ---
@@ -312,7 +312,7 @@ V2: `Sources/Complete/OnboardingCompleteView.swift`
 |---|---|---|---|
 | 요청 | `GET` + `nickname` 쿼리 + accessToken 헤더 | 동일(ProfileData) | ✅ Keep |
 | 응답 해석 | `OnboardingResponse.isValid`(true=사용가능) | `NicknameValidationResponse.isValid` → `Bool` | ✅ Keep |
-| 실패 사유 세분 | 서버 코드 `USER-003`/`USER-014` 파싱 | 로컬 검증이 흡수, 서버는 가용/중복만 | 🔧 Improve (§2.2) |
+| 실패 사유 세분 | 서버 코드 `USER-003`/`USER-014` 파싱 | 로컬 검증이 흡수, 서버는 가용/중복만 | 🔧 Improve (2.2) |
 
 - 근거: V1 `OnboardingService.swift:20-44` · V2 `ProfileDomain/CLAUDE.md`(validateNickname→Bool), `ProfileData`
 

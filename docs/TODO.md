@@ -219,7 +219,7 @@
   - ⚠️ **TTL 캐시 금지, single-shot이 정답** — 홈은 "탭 복귀마다 갱신" 계약이라 TTL이면 복귀 때 stale이 나온다.
     single-shot이면 프리페치가 슬롯 1회 채움 → 첫 홈 로드가 비움 → 이후 복귀 갱신은 전부 네트워크(V1과 정확히 일치).
   - **범위는 today·trending 2종만**(V1도 그랬음). taste(선호장르)는 느린 개인화라 제외, 알림 배지도 제외.
-  - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) §1.5.
+  - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
 
 ### 9. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들
 
@@ -247,7 +247,7 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 - **서재 `.title`(제목순) 정렬 백엔드 토큰 확정** — V1에도 "백엔드 토큰 미정" TODO 주석이 있었다. V2도 토큰을
   싣지만 서버 실지원 여부 확인 필요(외부 의존). → `LibraryFeature`.
 - ✅ **[완료 2026-08-28] 상세검색 연재상태 회귀 + 내 피드 정렬 대소문자** — 둘 다 C2에서 수정·빌드 검증
-  완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) §3-1·§3-2). `isCompleted`는 `Bool?` +
+  완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) 3-1·3-2). `isCompleted`는 `Bool?` +
   매퍼 `.map`으로 미선택 시 쿼리 생략(완결작 90% 누락 회귀 해소), 내 피드 정렬은 `.uppercased()`로 통일(서버는
   대소문자 무관이나 표기 일관성). **잔여: `isCompleted` 매퍼 회귀 테스트**(SearchData `.tests` 타깃 미배선이라 후속).
 - **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
@@ -260,38 +260,38 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   저장하고 앱 재실행 후 복원했다(`libraryFilterOption`·`librarySortOption`). V2는 저장/복원이 전무해 앱을
   껐다 켜면 초기화된다(Feature·App grep 0). 매 실행 초기화는 UX 후퇴라 **되살리기로 결정** — 경량
   영속화(UserDefaults 등)로 저장/복원하되 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). 근거·상세는
-  `LibraryFeature/V1_BEHAVIOR_CONTRACT.md` §1.5·§0-1. → `LibraryFeature`.
+  `LibraryFeature/V1_BEHAVIOR_CONTRACT.md` 1.5·0-1. → `LibraryFeature`.
 - **push 화면 재진입 재조회 복원 (횡단, 사용자 확정 2026-08-28)** — V1은 push 화면도 `viewWillAppear`마다
   서버 재조회했으나 V2는 `hasLoaded` 1회 가드로 성공 후 재조회하지 않는다. **push→pop→복귀 창에서 서버가
   바뀐 것(새 알림·다른 기기 읽음·외부 변경)이 미반영**되는 걸 없애기로 결정 — 복귀 시 재조회를 복원한다.
   대상은 **알림 목록/상세·타유저 프로필·전체 피드 목록·작품 상세** 등 push 계열. 단 스크롤 위치·낙관 반영
   보존을 깨지 않게 화면별로 조정(전체 피드 목록처럼 "비우고 처음부터"는 재검토). 근거: `NotificationFeature`
-  §1.1·§0-1 / `UserPageFeature` §4.1·§5.2·§0-2 / `NovelDetailFeature` §0(1회 로드).
+  1.1·0-1 / `UserPageFeature` 4.1·5.2·0-2 / `NovelDetailFeature` 0(1회 로드).
   ⚠️ **작품 상세는 실측 회귀 확인**(사용자 보고 2026-08-28: 작품 평가 후 상세 복귀 시 헤더 별점·집계 미갱신) —
   parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
 - **알림 상세 본문 URL 자동 링크 복원 (사용자 확정 2026-08-28)** — V1 상세 본문은 `UITextView`
   `dataDetectorTypes=.link`라 평문 URL이 탭 가능했으나, V2 순수 `Text`는 평문 URL을 링크로 렌더하지 않는다.
   `AttributedString` 링크 감지로 복원. **선행 확인**: 서버 알림 본문에 실제 링크가 실리는지. 근거:
-  `NotificationFeature` §2.3·§0-2. → `NotificationFeature`.
+  `NotificationFeature` 2.3·0-2. → `NotificationFeature`.
 - **타유저 USER-018('알 수 없는 유저') 전용 처리 복원 (사용자 확정 2026-08-28)** — V1은 `USER-018` 서버
   에러를 잡아 빈 프로필로 폴백했으나, V2는 `USER-015`(비공개)만 처리하고 018은 일반 로드 실패
   (`NetworkErrorView`)로 떨어져 재시도만 반복된다(잠재 회귀). 018 전용 "없는 유저" 처리를 복원한다. 근거:
-  `UserPageFeature` §4.7·§0-4. → `UserPageFeature`.
+  `UserPageFeature` 4.7·0-4. → `UserPageFeature`.
 - **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ① 타유저 차단 성공 시 "차단했어요"
-  안내(토스트) 복원(`UserPageFeature` §4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
-  (`UserPageFeature` §1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
-  하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` §3.2·`OnboardingFeature`
+  안내(토스트) 복원(`UserPageFeature` 4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
+  (`UserPageFeature` 1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
+  하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
   공용). → `UserPageFeature`·`ProfileDomain`.
 
 ### 10. V1 parity 판정 보류 — 기획·디자인 상의 대기 (#222 C1)
 
-C1 판정 중 **되살릴지/버릴지 자체가 제품·기획 판단이라 개발이 단독 결정 못 한 것**. §9(되살리기/고치기로
+C1 판정 중 **되살릴지/버릴지 자체가 제품·기획 판단이라 개발이 단독 결정 못 한 것**. 9(되살리기/고치기로
 **결정**됨)와 달리 **판정 자체가 열려 있다.** 상세·근거는 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (보류 세션 2026-08-28)
 
 - **비공개 프로필(타유저)에서 서재 통계 노출 여부** — V1은 비공개 프로필이어도 서재 통계(관심/보는중/봤어요/
   하차 개수) 조회가 private 게이팅 **밖**이라 값이 노출됐다. V2는 `isProfilePrivate`면 **통계 포함 탭 전체를
   "비공개" 안내로 덮는다.** "비공개인데 숫자는 보임"이 맞는지 vs "통째로 가림"이 맞는지는 **기획 상의 필요**.
-  근거: `UserPageFeature` §4.7·§0-5. → `UserPageFeature`(기획 확정 후).
+  근거: `UserPageFeature` 4.7·0-5. → `UserPageFeature`(기획 확정 후).
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 

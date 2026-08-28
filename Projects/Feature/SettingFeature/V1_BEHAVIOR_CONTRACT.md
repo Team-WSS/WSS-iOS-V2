@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/MyPageSetting/` = `WSSiOS/Source/Presentation/UserPage/MyPage/MyPageSetting/`.
 
@@ -42,24 +42,24 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. **백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.** → [§7](#7-회원탈퇴), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
+1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. **백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.** → [7](#7-회원탈퇴), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
    - **⏳ 보류(외부 확인, 2026-08-28): 백엔드 스펙 확인 후 확정.** V2 `/auth/withdraw`가 body에 refreshToken을 요구하는지 서버팀 확인 필요(외부 의존). 헤더 access 토큰 인증이면 현행이 맞다.
-2. **연도 휠 상한** — V1 생년 휠은 `1900...2025`(126개), V2는 `BirthYear.minYear...maxYear = 1900...2024`. 2025가 사라진 게 의도인지(도메인 상한 정책) 단순 누락인지. → [§3.2](#32-생년-선택-연도-휠)
-   - **🔧 판정(2026-08-28, 조사): 하드코딩 상수 차이(경미).** `BirthYear.maxYear = 2024`(하드코딩, `ProfileDomain/…/BirthYear.swift:13`), V1도 `2025` 하드코딩 — **둘 다 dynamic 아님**(2026 기준 이미 과거라 도메인 상한 정책이라기보다 stale 상수). 소소한 개선(maxYear 현재연도 기반 dynamic)으로 `docs/TODO.md` §9에 묶음. 저우선.
-3. **성별/생년 로컬 캐싱 시점** — V1은 **계정정보 화면 진입 시** 서버 `getUserInfo`로 받은 `birth`를 `UserDefaults.userBirth`에 캐싱하고, 성별/나이 변경 화면이 그 캐시(+`userGender`)를 읽어 시작한다. V2 성별/나이 변경은 `LoadLocalGenderAndBirthUseCase`(로컬)로 시작하는데, **그 로컬값을 어디서 채우는지**(로그인·온보딩·다른 화면)가 이 모듈 밖이라 확인 필요 — 계정정보에 안 들렀다가 바로 변경 화면에 오면 최신이 아닐 수 있다. → [§2.3](#23-부수-효과-생년-로컬-캐싱)
+2. **연도 휠 상한** — V1 생년 휠은 `1900...2025`(126개), V2는 `BirthYear.minYear...maxYear = 1900...2024`. 2025가 사라진 게 의도인지(도메인 상한 정책) 단순 누락인지. → [3.2](#32-생년-선택-연도-휠)
+   - **🔧 판정(2026-08-28, 조사): 하드코딩 상수 차이(경미).** `BirthYear.maxYear = 2024`(하드코딩, `ProfileDomain/…/BirthYear.swift:13`), V1도 `2025` 하드코딩 — **둘 다 dynamic 아님**(2026 기준 이미 과거라 도메인 상한 정책이라기보다 stale 상수). 소소한 개선(maxYear 현재연도 기반 dynamic)으로 `docs/TODO.md` 9에 묶음. 저우선.
+3. **성별/생년 로컬 캐싱 시점** — V1은 **계정정보 화면 진입 시** 서버 `getUserInfo`로 받은 `birth`를 `UserDefaults.userBirth`에 캐싱하고, 성별/나이 변경 화면이 그 캐시(+`userGender`)를 읽어 시작한다. V2 성별/나이 변경은 `LoadLocalGenderAndBirthUseCase`(로컬)로 시작하는데, **그 로컬값을 어디서 채우는지**(로그인·온보딩·다른 화면)가 이 모듈 밖이라 확인 필요 — 계정정보에 안 들렀다가 바로 변경 화면에 오면 최신이 아닐 수 있다. → [2.3](#23-부수-효과-생년-로컬-캐싱)
    - **✅ 판정(2026-08-28, 조사): ProfileRepository가 로그인·프로필 조회 시 채움(개선·Keep).** `DefaultProfileRepository`가 `.gender`·`.birthYear`를 localStorage에 write(로그인 getMe:36 / 프로필·계정정보 조회:115-116·151-152). V1의 "계정정보 진입 시 캐싱"보다 이른 시점이라 "계정정보 미방문 stale" 우려 완화. 수단은 로컬 UseCase지만 관찰 동작 동일.
-4. **V1 "기기 알림 켜기" 유도 알럿의 출처** — V1 `StringLiterals.MyPage.PushNotification`에 `moveToSettingAlertTitle`("앱 알림을 켤까요?")·`moveCancel`·`moveAccept`가 정의돼 있으나 **`MyPagePushNotificationViewController`는 이 문자열을 쓰지 않는다**. V2는 시스템 푸시 권한 확인·유도 알럿을 **`SettingView`가 "알림 설정" 메뉴를 탭한 시점**에 한다(#193, `CLAUDE.md` 명문화). V1이 이 알럿을 어디서(혹은 실제로) 띄웠는지 불명 → V2 배치가 신규인지 이전인지. → [§6.3](#63-시스템-푸시-권한-193)
+4. **V1 "기기 알림 켜기" 유도 알럿의 출처** — V1 `StringLiterals.MyPage.PushNotification`에 `moveToSettingAlertTitle`("앱 알림을 켤까요?")·`moveCancel`·`moveAccept`가 정의돼 있으나 **`MyPagePushNotificationViewController`는 이 문자열을 쓰지 않는다**. V2는 시스템 푸시 권한 확인·유도 알럿을 **`SettingView`가 "알림 설정" 메뉴를 탭한 시점**에 한다(#193, `CLAUDE.md` 명문화). V1이 이 알럿을 어디서(혹은 실제로) 띄웠는지 불명 → V2 배치가 신규인지 이전인지. → [6.3](#63-시스템-푸시-권한-193)
    - **✅ 판정(2026-08-28, 조사): V1도 같은 위치(설정 메뉴 목록)에서 띄웠다 = Keep.** V1 `moveToSettingAlertTitle`("앱 알림을 켤까요?")은 `MyPageSettingViewController.swift:141`(설정 메뉴 목록 VC, PushNotification 서브VC 아님)에서 사용 — V2 `SettingView`의 "알림 설정" 메뉴 탭 시점(#193)과 **동일 위치**. 신규 배치 아님(수단만 다름).
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-5. **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [§4](#4-프로필-공개-설정)
-6. **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [§6.1](#61-활동-알림-토글)
+5. **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [4](#4-프로필-공개-설정)
+6. **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [6.1](#61-활동-알림-토글)
 7. **V1은 로드/액션 실패에 사용자 피드백이 거의 없었다** — 계정정보 이메일 로드·차단목록 로드/해제·프로필 공개 로드·알림 로드·로그아웃·탈퇴 실패가 대부분 `print(error)`뿐이다. V2는 전면 `NetworkErrorView`(로드 실패) / 토스트(액션 실패)로 표현한다. → 각 화면 섹션.
 
 **🆕 V2 신규 (V1 대응 없음)**
 
-8. **완결 알림 / 휴재 복귀 알림 상세** — V2 알림 설정에 두 navigate 행(+`CompletionNotificationListView`·`HiatusReturnNotificationListView`)이 있으나 **아직 미배선 스텁**(`action: {}` TODO, 목록은 `ForEach(0..<10)` 하드코딩). V1엔 없다. Delete 아님 = 신규. → [§6.2](#62-완결휴재-복귀-알림-행-신규-스텁)
+8. **완결 알림 / 휴재 복귀 알림 상세** — V2 알림 설정에 두 navigate 행(+`CompletionNotificationListView`·`HiatusReturnNotificationListView`)이 있으나 **아직 미배선 스텁**(`action: {}` TODO, 목록은 `ForEach(0..<10)` 하드코딩). V1엔 없다. Delete 아님 = 신규. → [6.2](#62-완결휴재-복귀-알림-행-신규-스텁)
 
 (나머지는 대부분 ✅ Keep — 구현 수단만 RxSwift·throttle·UINavigation → 구조적 동시성·guard 플래그·NavigationStack으로 바뀌고 관찰 동작은 같다.)
 
@@ -263,8 +263,8 @@
 | 항목 | V1 전송 | V2 전송 | 상태 |
 |---|---|---|---|
 | 경로 | `/auth/withdraw` | `/auth/withdraw` | ✅ Keep |
-| body `reason` | 사유 문자열(프리셋 rawValue 또는 직접 입력 텍스트) | 동일(`AuthMapper.withdrawalReason`가 option→문자열 매핑) | ✅ Keep (오타 1건 §7.3) |
-| body `refreshToken` | **포함** | **미포함** | ❓ (§0-1) |
+| body `reason` | 사유 문자열(프리셋 rawValue 또는 직접 입력 텍스트) | 동일(`AuthMapper.withdrawalReason`가 option→문자열 매핑) | ✅ Keep (오타 1건 7.3) |
+| body `refreshToken` | **포함** | **미포함** | ❓ (0-1) |
 | 인증 | access 토큰 헤더(`tokenCheckURLSession`) | access 토큰 헤더(`.requireToken`) | ✅ Keep |
 | 성공 후 로컬 | UserDefaults(userId·nickname·gender·accessToken·refreshToken) 제거 | `tokenStore.clearTokens()`(도메인 계약이 토큰·개인정보 정리 책임) | ✅ Keep (정리 위치 이동) |
 
@@ -287,7 +287,7 @@
 |---|---|---|---|
 | 로드 | `GET pushNotificationSetting` → `isPushEnabled` | `LoadPushPreferenceUseCase` → `PushPreference.isEnabled` | ✅ Keep |
 | 저장 | `POST pushNotificationSetting` body `{isPushEnabled}` | `UpdatePushPreferenceUseCase(PushPreference{isEnabled})` | ✅ Keep |
-| 저장 반영 시점 | 서버 성공 후 반영(비낙관) | 즉시 반영(낙관) + 실패 롤백 | 🔧 Improve (§6.1) |
+| 저장 반영 시점 | 서버 성공 후 반영(비낙관) | 즉시 반영(낙관) + 실패 롤백 | 🔧 Improve (6.1) |
 
 - 근거: V1 `MyPagePushNotificationViewController.swift:90-108`, `WSSiOS/Network/Notification/NotificationService.swift:122-156` · V2 `NotificationSettingViewModel.swift:100-131`
 
@@ -295,7 +295,7 @@
 
 | 액션 | V1 | V2 | 상태 |
 |---|---|---|---|
-| 공개 설정 로드/저장 | `getUserProfileVisibility` / `patchUserProfileVisibility{isProfilePublic}` | `LoadProfileVisibilityUseCase` / `UpdateProfileVisibilityUseCase(ProfileVisibility{isPublic})` | ✅ Keep (저장 실패 처리는 §4) |
+| 공개 설정 로드/저장 | `getUserProfileVisibility` / `patchUserProfileVisibility{isProfilePublic}` | `LoadProfileVisibilityUseCase` / `UpdateProfileVisibilityUseCase(ProfileVisibility{isPublic})` | ✅ Keep (저장 실패 처리는 4) |
 | 성별/나이 저장 | `putUserInfo{gender:"M"/"F", birth:Int}` + UserDefaults 갱신 | `SaveAccountInfoDraftUseCase(AccountInfoDraft)` (서버 PUT + UserDefaults) | ✅ Keep (Gender 매핑값 동일성 확인 권장) |
 | 차단 해제 | `deleteBlockUser(blockID)` | `UnblockUserUseCase(id: BlockID)` | ✅ Keep |
 

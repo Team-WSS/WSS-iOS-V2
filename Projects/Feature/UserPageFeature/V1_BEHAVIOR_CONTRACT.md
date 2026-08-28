@@ -19,7 +19,7 @@
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
 | ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [§0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/UserPage/` = `WSSiOS/Source/Presentation/UserPage/`.
 
@@ -31,13 +31,13 @@
 |---|---|---|
 | `Sources/MyPage/MypageView.swift` (+`MypageViewModel`) | `…/MyPage/MyPageViewController/MyPageViewController.swift` (+`…/MyPageViewModel/MyPageViewModel.swift`) | 탭 콘텐츠(프로필 요약·서재 통계·컬렉션·장르·작품취향) |
 | `Sources/MyPage/MyPageEdit/MyPageEditView.swift` (+VM) | `…/MyPage/MyPageViewController/MyPageEditProfileViewController.swift` (+`…/MyPageViewModel/MyPageEditProfileViewModel.swift`) | 프로필 편집(닉네임·소개·캐릭터·선호장르) |
-| `Sources/MyPage/MyPageEdit/MypageCharacterEditSheet.swift` (+VM) | `…/MyPage/MyPageViewController/MyPageEditAvatarViewController.swift` (+`…/MyPageViewModel/MyPageEditAvatarViewModel.swift`) | **V1은 별도 모달 VC, V2는 `.sheet(item:)`** (§3) |
+| `Sources/MyPage/MyPageEdit/MypageCharacterEditSheet.swift` (+VM) | `…/MyPage/MyPageViewController/MyPageEditAvatarViewController.swift` (+`…/MyPageViewModel/MyPageEditAvatarViewModel.swift`) | **V1은 별도 모달 VC, V2는 `.sheet(item:)`** (3) |
 
 ### 타유저 프로필 (UserPage)
 
 | V2 (이 모듈) | V1 원본 | 성격 차이 |
 |---|---|---|
-| `Sources/UserPage/UserPageView.swift` (+`UserPageViewModel`) | `…/UserPage/UserPageViewController/UserPageViewController.swift` (+`…/UserPageViewModel/UserPageViewModel.swift`) | push 프로필. **V1은 피드 셀 상호작용 no-op, V2는 좋아요·신고 지원** (§4.5) |
+| `Sources/UserPage/UserPageView.swift` (+`UserPageViewModel`) | `…/UserPage/UserPageViewController/UserPageViewController.swift` (+`…/UserPageViewModel/UserPageViewModel.swift`) | push 프로필. **V1은 피드 셀 상호작용 no-op, V2는 좋아요·신고 지원** (4.5) |
 | `Sources/UserPage/UserFeedList/UserFeedListView.swift` (+VM) | `…/UserPage/UserPageViewController/UserPageFeedDetailViewController.swift` (+`…/UserPageViewModel/UserPageFeedDetailViewModel.swift`) | "전체보기"로 진입하는 무한스크롤 전체 피드 목록 |
 
 ### 공용 컴포넌트
@@ -51,29 +51,29 @@
 
 **❓ 판정 필요 (회귀일 수도 있음)**
 
-1. **서재 통계 → 서재 이동이 V2에 미배선**. V1은 마이페이지의 읽기상태 버튼(관심/보는중/봤어요/하차) **각각**을 탭하면 그 읽기상태로 필터된 서재로 이동하고(마이페이지=탭 전환 notification, 타유저=UserLibrary push, **pageIndex 동반**), 타유저 프로필은 "서재" 타이틀 탭으로도 이동한다. **V2는 `LibrarySection` 전체가 버튼 하나이고 그 action이 `//TODO: - 서재 뷰로 이동`(마이·타유저 둘 다)** → 아직 안 눌린다. 읽기상태별 진입(pageIndex) 세분도 사라졌다. → [§1.3](#13-서재-통계--서재-이동), [§4.8](#48-서재-통계--네비게이션)
-2. **타유저 프로필·전체 피드 목록의 재진입 재조회 없음**. V1은 `viewWillAppear`마다 프로필·피드를 다시 받는다(전체 피드 목록은 목록을 **비우고** 처음부터 다시 로드). V2 `UserPageViewModel.load()`·`UserFeedListViewModel.load()`는 **`!hasLoaded`/`!hasLoadedFirstPage` 1회 가드**라 push에서 돌아와도 재조회하지 않는다. → [§4.1](#41-진입생명주기), [§5.2](#52-진입생명주기)
-   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원.** push 복귀 시 재조회하기로 결정(횡단 — 알림·작품상세와 함께, `docs/TODO.md` §9). 전체 피드 목록의 "비우고 처음부터"는 스크롤·상태 보존 위해 재검토.
-3. **차단 성공 알림(토스트) 누락 가능성**. V1은 차단 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 **직전 화면에서 "차단했어요" 류 안내**를 띄우게 한다. V2는 차단 성공 시 화면만 `dismiss`하고 그런 신호가 없다. → [§4.6](#46-차단)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(소소).** 차단 성공 시 직전 화면에 "차단했어요" 안내 복원(V1 parity). 저우선 — `docs/TODO.md` §9 소소 묶음.
-4. **타유저 "알 수 없는 유저"(USER-018) 처리 없음**. V1 UserPage는 `USER-018` 서버 에러를 잡아 **빈 프로필로 폴백**한다. V2는 `privateProfile`(USER-015)만 특별 처리하고 USER-018은 일반 로드 실패(`hasLoadError`)로 떨어진다. → [§4.7](#47-비공개알-수-없는-프로필)
-   - **🔧 확정(2026-08-28, 사용자): 전용 처리 복원.** USER-018 = "없는 유저" 폴백(탈퇴·삭제된 유저 진입 시). 지금은 "네트워크 오류"로 잘못 떨어져 재시도만 반복되는 잠재 회귀. `docs/TODO.md` §9.
-5. **비공개 프로필에서 서재 통계 노출 여부**. V1은 비공개여도 서재 통계 조회(`getUserNovelStatus`)가 private 게이팅 밖이라 값이 바인딩된다. V2는 `isProfilePrivate`가 서면 **통계 탭 콘텐츠 전체(서재 섹션 포함)를** "비공개" 안내로 덮는다. → [§4.7](#47-비공개알-수-없는-프로필)
-   - **⏸ 보류(2026-08-28, 사용자): 기획 상의 필요.** "비공개인데 숫자는 노출"(V1) vs "통째로 가림"(V2) 판단은 제품·기획 몫. `docs/TODO.md` §10(판정 보류)에 모음.
-6. **마이페이지 설정 진입 미배선**. V1 마이페이지 우상단 설정 버튼 → 설정 화면 push. V2는 `//TODO: - 설정 뷰로 이동`. (설정은 `SettingFeature` 소관이라 App 배선 대기일 수 있음.) → [§1.7](#17-설정-진입)
-7. **피드 연결작품 상세 이동 미배선**. V1은 피드 셀의 연결 작품 탭 → 작품 상세 push. V2 피드 셀의 `linkNovelTapped`는 `//TODO: - 연결 작품 상세로 이동`. → [§4.5](#45-피드-셀-상호작용)
-8. **마이페이지 스크롤 반응 네비 타이틀 없음**. V1 마이페이지는 스크롤 > 0이면 네비바에 "마이페이지" 타이틀이 나타난다. V2 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다(타유저 프로필의 스크롤 반응 닉네임 페이드는 §4.10에서 유지). → [§1.8](#18-스크롤-반응-네비-타이틀)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(소소).** 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원(V1 parity). 저우선 — `docs/TODO.md` §9 소소 묶음.
+1. **서재 통계 → 서재 이동이 V2에 미배선**. V1은 마이페이지의 읽기상태 버튼(관심/보는중/봤어요/하차) **각각**을 탭하면 그 읽기상태로 필터된 서재로 이동하고(마이페이지=탭 전환 notification, 타유저=UserLibrary push, **pageIndex 동반**), 타유저 프로필은 "서재" 타이틀 탭으로도 이동한다. **V2는 `LibrarySection` 전체가 버튼 하나이고 그 action이 `//TODO: - 서재 뷰로 이동`(마이·타유저 둘 다)** → 아직 안 눌린다. 읽기상태별 진입(pageIndex) 세분도 사라졌다. → [1.3](#13-서재-통계--서재-이동), [4.8](#48-서재-통계--네비게이션)
+2. **타유저 프로필·전체 피드 목록의 재진입 재조회 없음**. V1은 `viewWillAppear`마다 프로필·피드를 다시 받는다(전체 피드 목록은 목록을 **비우고** 처음부터 다시 로드). V2 `UserPageViewModel.load()`·`UserFeedListViewModel.load()`는 **`!hasLoaded`/`!hasLoadedFirstPage` 1회 가드**라 push에서 돌아와도 재조회하지 않는다. → [4.1](#41-진입생명주기), [5.2](#52-진입생명주기)
+   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원.** push 복귀 시 재조회하기로 결정(횡단 — 알림·작품상세와 함께, `docs/TODO.md` 9). 전체 피드 목록의 "비우고 처음부터"는 스크롤·상태 보존 위해 재검토.
+3. **차단 성공 알림(토스트) 누락 가능성**. V1은 차단 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 **직전 화면에서 "차단했어요" 류 안내**를 띄우게 한다. V2는 차단 성공 시 화면만 `dismiss`하고 그런 신호가 없다. → [4.6](#46-차단)
+   - **🔧 확정(2026-08-28, 사용자): 되살린다(소소).** 차단 성공 시 직전 화면에 "차단했어요" 안내 복원(V1 parity). 저우선 — `docs/TODO.md` 9 소소 묶음.
+4. **타유저 "알 수 없는 유저"(USER-018) 처리 없음**. V1 UserPage는 `USER-018` 서버 에러를 잡아 **빈 프로필로 폴백**한다. V2는 `privateProfile`(USER-015)만 특별 처리하고 USER-018은 일반 로드 실패(`hasLoadError`)로 떨어진다. → [4.7](#47-비공개알-수-없는-프로필)
+   - **🔧 확정(2026-08-28, 사용자): 전용 처리 복원.** USER-018 = "없는 유저" 폴백(탈퇴·삭제된 유저 진입 시). 지금은 "네트워크 오류"로 잘못 떨어져 재시도만 반복되는 잠재 회귀. `docs/TODO.md` 9.
+5. **비공개 프로필에서 서재 통계 노출 여부**. V1은 비공개여도 서재 통계 조회(`getUserNovelStatus`)가 private 게이팅 밖이라 값이 바인딩된다. V2는 `isProfilePrivate`가 서면 **통계 탭 콘텐츠 전체(서재 섹션 포함)를** "비공개" 안내로 덮는다. → [4.7](#47-비공개알-수-없는-프로필)
+   - **⏸ 보류(2026-08-28, 사용자): 기획 상의 필요.** "비공개인데 숫자는 노출"(V1) vs "통째로 가림"(V2) 판단은 제품·기획 몫. `docs/TODO.md` 10(판정 보류)에 모음.
+6. **마이페이지 설정 진입 미배선**. V1 마이페이지 우상단 설정 버튼 → 설정 화면 push. V2는 `//TODO: - 설정 뷰로 이동`. (설정은 `SettingFeature` 소관이라 App 배선 대기일 수 있음.) → [1.7](#17-설정-진입)
+7. **피드 연결작품 상세 이동 미배선**. V1은 피드 셀의 연결 작품 탭 → 작품 상세 push. V2 피드 셀의 `linkNovelTapped`는 `//TODO: - 연결 작품 상세로 이동`. → [4.5](#45-피드-셀-상호작용)
+8. **마이페이지 스크롤 반응 네비 타이틀 없음**. V1 마이페이지는 스크롤 > 0이면 네비바에 "마이페이지" 타이틀이 나타난다. V2 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다(타유저 프로필의 스크롤 반응 닉네임 페이드는 4.10에서 유지). → [1.8](#18-스크롤-반응-네비-타이틀)
+   - **🔧 확정(2026-08-28, 사용자): 되살린다(소소).** 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원(V1 parity). 저우선 — `docs/TODO.md` 9 소소 묶음.
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-9. **타유저 프로필/전체 피드 목록의 피드 셀에 좋아요·신고 추가**. V1은 이 두 화면의 피드 셀에서 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결작품 탭만 동작). V2는 좋아요 토글(낙관 반영·롤백)과 스포일러/부적절 신고(2단 알럿)를 붙였다. → [§4.5](#45-피드-셀-상호작용), [§5.3](#53-피드-셀-상호작용)
-10. **차단에 확인 알럿 추가**. V1은 드롭다운 "차단하기" 탭 즉시 차단 API를 호출했다(확인 단계 없음). V2는 `WSSAlertType.blockUser` 확인 알럿을 거친다. → [§4.6](#46-차단)
-11. **전체 피드 목록 로드 실패 표현**. V1 전체 피드 목록은 로드 실패 시 `print`만 하고 아무 표시가 없었다. V2는 첫 페이지 실패를 `NetworkErrorView`로 덮는다. → [§5.1](#51-로드페이지네이션)
+9. **타유저 프로필/전체 피드 목록의 피드 셀에 좋아요·신고 추가**. V1은 이 두 화면의 피드 셀에서 드롭다운·좋아요를 **전부 no-op**(`return`)으로 뒀다(연결작품 탭만 동작). V2는 좋아요 토글(낙관 반영·롤백)과 스포일러/부적절 신고(2단 알럿)를 붙였다. → [4.5](#45-피드-셀-상호작용), [5.3](#53-피드-셀-상호작용)
+10. **차단에 확인 알럿 추가**. V1은 드롭다운 "차단하기" 탭 즉시 차단 API를 호출했다(확인 단계 없음). V2는 `WSSAlertType.blockUser` 확인 알럿을 거친다. → [4.6](#46-차단)
+11. **전체 피드 목록 로드 실패 표현**. V1 전체 피드 목록은 로드 실패 시 `print`만 하고 아무 표시가 없었다. V2는 첫 페이지 실패를 `NetworkErrorView`로 덮는다. → [5.1](#51-로드페이지네이션)
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-12. 캐릭터 선택 **"변경 없음이면 아무것도 안 하고 닫기"** 최적화 제거(V1은 최종 선택이 대표 아바타와 같으면 notification을 post하지 않았다). → [§3.3](#33-확인취소변경없음)
+12. 캐릭터 선택 **"변경 없음이면 아무것도 안 하고 닫기"** 최적화 제거(V1은 최종 선택이 대표 아바타와 같으면 notification을 post하지 않았다). → [3.3](#33-확인취소변경없음)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -136,7 +136,7 @@
 ### 1.8 스크롤 반응 네비 타이틀
 
 - ❓ **Unknown (낮음)** — V1 마이페이지는 스크롤 오프셋 > 0이면 네비바에 "마이페이지" 타이틀이 드러난다(`updateNavigationBar`, `isVisibleBeforeScroll: false`).
-  - **V2: 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다** → 스크롤해도 "마이페이지"가 뜨지 않는다. (타유저 프로필의 스크롤 반응 닉네임은 §4.10에서 유지.)
+  - **V2: 마이페이지 툴바엔 설정 버튼만 있고 타이틀 표기가 없다** → 스크롤해도 "마이페이지"가 뜨지 않는다. (타유저 프로필의 스크롤 반응 닉네임은 4.10에서 유지.)
   - 근거: V1 `MyPageViewController.swift:55-58`, `MyPageViewModel.swift:114-121` · V2 `MypageView.swift:252-262`
 
 ### 1.9 프로필 편집 진입 + 저장 토스트
@@ -253,8 +253,8 @@
 ### 4.2 콘텐츠 로드 (병렬)
 
 - ✅ **Keep** — 프로필·서재 통계·장르 취향·작품 취향을 대상 userID로 받는다.
-  - V2: `async let` 4종(`.user(userID)` / `LoadUserRegisteredNovelStatsUseCase(id:)`). 하나 실패 시 화면 전체 에러(단, `privateProfile`은 §4.7로 분기).
-  - **수단 차이**: V1은 헤더 먼저 → concat(서재 → 취향zip → 피드) 순차. V2는 통계·취향은 병렬, **피드는 활동 탭 탭 시 지연 로드**(§4.4).
+  - V2: `async let` 4종(`.user(userID)` / `LoadUserRegisteredNovelStatsUseCase(id:)`). 하나 실패 시 화면 전체 에러(단, `privateProfile`은 4.7로 분기).
+  - **수단 차이**: V1은 헤더 먼저 → concat(서재 → 취향zip → 피드) 순차. V2는 통계·취향은 병렬, **피드는 활동 탭 탭 시 지연 로드**(4.4).
   - 근거: V1 `UserPageViewModel.swift:124-153`,`297-375` · V2 `UserPageViewModel.swift:273-292`
 
 ### 4.3 탭 구조 (통계/활동)
@@ -313,7 +313,7 @@
 
 ### 4.8 서재 통계 → 네비게이션
 
-- ❓ **Unknown (§1.3과 동일 사안)** — V1 타유저 프로필은 서재 타이틀 탭(`libraryStatusViewDidTap` → 타유저 서재 push) **및** 읽기상태 버튼별 탭(pageIndex 동반 push) 둘 다로 서재로 이동한다.
+- ❓ **Unknown (1.3과 동일 사안)** — V1 타유저 프로필은 서재 타이틀 탭(`libraryStatusViewDidTap` → 타유저 서재 push) **및** 읽기상태 버튼별 탭(pageIndex 동반 push) 둘 다로 서재로 이동한다.
   - **V2: `LibrarySection` 단일 버튼 + `icNavigateRight` 버튼 모두 `//TODO: - 서재 뷰로 이동`** → 미배선, 읽기상태별 세분도 없음.
   - 근거: V1 `UserPageViewController.swift:105-109`,`137-140`,`292-305`, `UserPageViewModel.swift:214-218`,`239-243` · V2 `UserPageView.swift:326-362`
 
@@ -346,13 +346,13 @@
 
 ### 5.2 진입·생명주기
 
-- ❓ **Unknown (§4.1과 동일 사안)** — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
+- ❓ **Unknown (4.1과 동일 사안)** — V1 전체 피드 목록은 `viewWillAppear`마다 목록을 **비우고(feeds=[], lastFeedId=0) 처음부터** 다시 로드한다.
   - **V2: `load()`가 `guard !hasLoadedFirstPage`** → 최초 1회만 로드(재진입 재조회 없음).
   - 근거: V1 `UserPageFeedDetailViewModel.swift:79-100` · V2 `UserFeedListViewModel.swift:134-139`
 
 ### 5.3 피드 셀 상호작용
 
-- 🔧 **Improve** — **좋아요·신고 추가**(§4.5와 동일). V1 전체 피드 목록도 셀 드롭다운·좋아요가 no-op였고 연결 작품 탭만 동작했다.
+- 🔧 **Improve** — **좋아요·신고 추가**(4.5와 동일). V1 전체 피드 목록도 셀 드롭다운·좋아요가 no-op였고 연결 작품 탭만 동작했다.
   - V2: `UserFeedListViewModel`이 좋아요 토글·신고를 `UserPageViewModel`과 동일 패턴으로 독립 보유.
   - 근거: V1 `UserPageFeedDetailViewController.swift:125-141`(dropdown/like `return`) · V2 `UserFeedListViewModel.swift:151-182`,`210-239`
 
