@@ -138,9 +138,9 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   보낼 이유가 아직 없어서 일부러 하나로 합쳤다. 나중에 갈림이 필요해지면(예: 신규 유저만 튜토리얼)
   `onFinished`를 매개변수 있는 콜백으로 바꿀 것.
 - **각 탭 Root의 화면 전환 콜백 중 상당수는 이미 실제 push로 뚫려 있다**(작품 상세·피드 상세·일반
-  검색·프로필 편집·설정·타유저 프로필·알림 설정) — 남은 건 대상 Feature 모듈이 App에 아직 안 붙어
-  있어 로그만 남기는 placeholder다(예: `HomeRootView`의 상세탐색·알림 목록). 그 모듈을 붙일 때 해당
-  콜백 하나만 실제 화면 전환으로 바꾸면 된다(전부 한 번에 바꿀 필요 없음). **`SosoFeedView`의 피드
+  검색·프로필 편집·설정·타유저 프로필·알림 설정·알림 목록/상세) — 남은 건 대상 Feature 모듈이 App에
+  아직 안 붙어 있어 로그만 남기는 placeholder다(예: `HomeRootView`의 상세탐색 직접 진입, `onDetailSearchTapped`).
+  그 모듈을 붙일 때 해당 콜백 하나만 실제 화면 전환으로 바꾸면 된다(전부 한 번에 바꿀 필요 없음). **`SosoFeedView`의 피드
   셀은 연결 작품 배너(`onNovelTapped`)·작성자 프로필(`onUserProfileTapped`)까지 전부 실제 push다**
   (#196) — `FeedRootView`가 전자는 같은 `Destination.novel`로, 후자는 `Destination.userPage` →
   `UserPageAssembly`로 연결한다.
@@ -161,6 +161,15 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     공유하되, `Destination` case만 나눠서 각 진입점이 자기와 무관한 파라미터를 모르게 한다 — 그 탭에
     "흔한" 진입점 자체가 없으면(Home/Library의 피드 작성처럼) 옵셔널 없이 `case createFeedFromNovel(ConnectedNovel)`
     하나만 두면 된다.
+- ⚠️ **push 전환과 동시에 뜨는 `.overlay` 기반 알럿(`showWSSAlert`)은 push에 밀려 사라진다** —
+  이동 신호를 받는 Feature 화면(예: 홈)에 알럿을 붙이면, 그 화면이 push로 덮이는 순간 알럿도 같이
+  사라져버린다(`HomeFeature`의 알림 벨 탭에서 실측 — denied 알럿이 보였다 안 보였다 하는 게 아니라,
+  이동이 실제로 안 되는 것처럼 보였다). **알럿은 이동 "목적지" 쪽(App이 소유한 `NavigationStack` 또는
+  그 목적지 자체)에 붙여야 push가 끝난 뒤에도 살아남는다** — `HomeRootView`의 `isPushAuthorizationAlertPresented`가
+  선례(탭 → push 시작과 동시에 App이 직접 권한을 재확인해 목적지 화면 위에 알럿을 띄움, Feature
+  쪽에서는 이동 신호만 올리도록 단순화). `SettingFeature`의 알림 설정 메뉴는 반대로 "먼저 알럿 →
+  denied면 아예 이동 안 함" 패턴으로 같은 함정을 피한다(`HomeFeature/CLAUDE.md` 참고) — 이동이 항상
+  일어나야 하는 화면이면 전자, 조건부로 막아도 되는 화면이면 후자를 쓸 것.
 - ⚠️ **My(`MypageRootView`)는 `onAuthenticationRequired`를 받지만, 다른 탭과 발화 경로가 다르다.**
   `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 그 콜백을 모른다 — 즉 마이페이지 로드(프로필·
   장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠 수 있는 게 아니라

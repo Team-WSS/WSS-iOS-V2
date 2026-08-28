@@ -20,10 +20,6 @@ import WSSComponent
 struct HomeView: View {
 
     @State private var viewModel: HomeViewModel
-    /// "설정하러 가기" 탭 시 iOS 설정 앱의 **이 앱 알림 설정 페이지**로 바로 여는 데 쓴다 — VM은
-    /// "권한이 denied라 알럿을 띄워야 한다"는 판단만 갖고, 시스템 앱을 여는 행위 자체는 View가 수행한다
-    /// (SettingFeature와 동일).
-    @Environment(\.openURL) private var openURL
     private let onNovelSelected: (NovelID) -> Void
     private let onFeedSelected: (FeedID) -> Void
     private let onSearchTapped: () -> Void
@@ -80,19 +76,6 @@ struct HomeView: View {
                 viewModel.handle(.consumeNotificationNavigation)
                 onNotificationTapped()
             }
-            .showWSSAlert(
-                isPresented: pushAuthorizationAlertBinding,
-                type: .setAppNotification,
-                buttonActions: [
-                    { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
-                    {
-                        viewModel.handle(.dismissPushAuthorizationAlert)
-                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-                            openURL(url)
-                        }
-                    }  // "설정하러 가기"
-                ]
-            )
     }
 
     /// 헤더만 고정이고 그 아래가 통째로 스크롤/로딩/실패로 갈린다(구 WSSiOS와 같은 경계).
@@ -204,12 +187,6 @@ private extension HomeView {
         return false
     }
 
-    var pushAuthorizationAlertBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.isPushAuthorizationAlertPresented },
-            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
-        )
-    }
 }
 
 // MARK: - Preview

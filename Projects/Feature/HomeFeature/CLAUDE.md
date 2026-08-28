@@ -27,19 +27,17 @@
   진입이 유저가 이 앱에서 처음 겪는 알림 권한 결정 시점이 되게 하려는 의도 — **온보딩 별도 단계로
   권한을 요청할 필요가 없다.** `authorized`/`denied`면 진입 시점엔 아무 것도 안 한다(denied 유도
   알럿은 아래 벨 탭 때만 — 진입만으로 매번 알럿을 띄우면 홈에 올 때마다 거슬린다).
-- **알림 벨 탭 → 이동과 권한 확인이 동시에(#193)**: 탭 즉시 이동 신호(`shouldNavigateToNotifications`)를
-  올려 `onNotificationTapped()`가 바로 발화하고, 그와 **동시에** `PushAuthorizationChecker`로 권한을
-  확인한다. `denied`면 이동을 막지 않은 채 `WSSAlertType.setAppNotification` 알럿을 함께 띄운다(비차단
-  안내). `notDetermined`면 이동과 별개로 시스템 프롬프트(`requestAuthorization`)를 띄운다. 서버
-  저장값(설정 화면의 `isNotificationOn`)과는 무관한 iOS 자체 권한이라, 이 화면의 알림
-  배지(`hasUnreadNotifications`)와도 별개다.
-  ⚠️ **`SettingFeature`의 알림 설정 메뉴는 denied에 한해 정반대다** — 그쪽은 목적지 화면
-  (`NotificationSettingView`)이 이미 실재해서, `showWSSAlert`가 `.overlay` 기반이라 push 전환과 함께
-  밀려 사라지는 걸 피하려고 **먼저 알럿을 보여주고**, `denied`면 **아예 이동시키지 않는다**(사용자 확정
-  — 권한 없이 그 화면에 들어갈 이유가 없다는 판단, Home처럼 "결국 이동은 항상 일어난다"가 아니다).
-  `notDetermined`는 Home과 마찬가지로 시스템 프롬프트를 띄운 뒤 이동한다 — 둘 다 갈리는 건 `denied`
-  뿐이다. 여기(Home)는 이동 콜백의 목적지 화면이 아직 없어(App 스켈레톤) 이 문제가 없다 — 두 화면의
-  패턴이 다른 이유이지, 어느 한쪽이 틀린 게 아니다.
+- **알림 벨 탭 → 이동 신호만 올린다(#193, App으로 이관)**: `notificationBellTapped()`는
+  `shouldNavigateToNotifications`만 세워 `onNotificationTapped()`를 바로 발화시킨다 — 권한 확인·denied
+  유도 알럿은 더 이상 이 화면(HomeFeature) 책임이 아니다. **알럿은 이동한 뒤의 알림 목록 화면 쪽에서
+  App(`HomeRootView`)이 직접 판단·표시한다** — `showWSSAlert`가 `.overlay` 기반이라 push 전환과
+  **동시에** 띄우면(구 설계) 그 전환에 밀려 사라지기 때문(`SettingFeature`의 알림 설정 메뉴가 이 함정을
+  반대 방향으로 피한 선례 — 그쪽은 먼저 알럿을 보여주고 `denied`면 아예 이동시키지 않는다). Home은
+  "결국 이동은 항상 일어난다"는 설계라 그 회피가 안 통해, **알럿을 이동 목적지(App이 소유한
+  `NavigationStack`) 쪽으로 옮기는 쪽을 택했다**(2026-08, 실사용 중 알럿이 홈에서만 뜨고 이동이 안
+  되는 것처럼 보인다는 리포트로 발견). `notDetermined`는 여전히 `checkPushAuthorizationOnEntry`(아래)가
+  홈 진입 시점에 처리하므로 벨 탭 시점엔 신경 쓰지 않는다. 서버 저장값(설정 화면의 `isNotificationOn`)과는
+  무관한 iOS 자체 권한이라, 이 화면의 알림 배지(`hasUnreadNotifications`)와도 별개다.
   ⚠️ **위 진입 시점 체크 덕분에, 이 벨 탭 시점엔 이미 `authorized`/`denied`로 확정돼 있는 게 보통이다**
   — `notDetermined` 분기는 진입 체크가 아직 안 끝난 채 유저가 아주 빠르게 벨을 누르는 등의 방어적
   경로로만 남는다. 같은 이유로 `SettingFeature`의 알림 설정 화면도 진입 시 `notDetermined`를 만날 일이
@@ -94,8 +92,8 @@
   `.consumeAuthenticationRequired`로 되돌려야 2회차 인증 만료가 삼켜지지 않는다(`LibraryFeature`와 같은 이유).
   그 대가로 콜백이 여러 번 발화할 수 있으니 **`onAuthenticationRequired`는 idempotent해야 한다.**
   **`shouldNavigateToNotifications`(#193, 알림 벨 탭 후 이동 신호)도 같은 이유로 같은 패턴**이다 —
-  `.consumeNotificationNavigation`으로 소비하지 않으면 두 번째 벨 탭(denied 케이스)에서 신호가
-  다시 안 올라 이동이 안 된다.
+  `.consumeNotificationNavigation`으로 소비하지 않으면 두 번째 벨 탭에서 신호가 다시 안 올라 이동이
+  안 된다.
 - **`.checkPushAuthorizationOnEntry`도 `.load`처럼 1회 가드가 없다** — 탭 복귀마다 다시 불린다.
   의도적이다: `authorized`/`denied`로 이미 확정된 뒤엔 매번 조회만 하고 아무 것도 안 하니(로컬 시스템
   호출이라 비용도 없음) 가드를 넣을 이유가 없고, 혹시 이 체크가 실행되기 전에 화면이 사라진

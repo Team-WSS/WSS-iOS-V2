@@ -16,15 +16,16 @@ import HomeFeature
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
+import NotificationFeature
 import PushAuthorization
 import RecommendationDomain
 import SearchDomain
 import UserPageFeature
+import WSSComponent
 
 /// `MainTabView`의 "홈" 탭 콘텐츠 — `HomeFeatureFactory`가 반환하는 화면을 그대로 조립한다.
-/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필까지는 실제로 push한다.
-/// 그 안에서 다시 열리는 화면(상세탐색·알림 목록)은 대상 Feature가 아직 App에 안 붙어 로그만 남기는
-/// placeholder다.
+/// 작품 상세·피드 상세·일반 검색·작가 이름 검색·작품 평가·피드 작성·유저 프로필·알림 목록/상세까지는
+/// 실제로 push한다. 그 안에서 다시 열리는 화면(상세탐색)은 아직 로그만 남기는 placeholder다.
 struct HomeRootView: View {
 
     /// `NovelID`/`FeedID`가 둘 다 `IDWrapper<Int>`라 타입이 같아 `NavigationPath`에 그냥 섞어 넣으면
@@ -41,6 +42,8 @@ struct HomeRootView: View {
         case authorSearch(String)
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
+        case notification
+        case notificationDetail(NotificationID)
         /// 선호장르 미설정 유도 CTA → 마이페이지 편집(닉네임/캐릭터/장르 등을 한 화면에서 고치는 화면,
         /// 전용 "장르만" 편집 화면은 없다 — `MypageFeatureFactory.makeEditView` 재사용, 사용자 확정).
         case preferenceGenreSetting
@@ -51,6 +54,12 @@ struct HomeRootView: View {
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+    /// 알림 목록으로 이동한 뒤, 그 화면 위에 기기 설정 유도 알럿을 띄워야 하는지(#193) — `.overlay` 기반
+    /// `showWSSAlert`가 push 전환과 동시에 뜨면 전환에 밀려 사라지므로(`HomeFeature/CLAUDE.md` 참고),
+    /// `HomeFeature`가 아니라 여기(`NavigationStack` 컨테이너)에 붙여 push가 끝난 뒤에도 살아남게 한다.
+    @State private var isPushAuthorizationAlertPresented = false
+    /// "설정하러 가기" 탭 시 iOS 설정 앱의 이 앱 알림 설정 페이지로 바로 연다.
+    @Environment(\.openURL) private var openURL
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -71,7 +80,14 @@ struct HomeRootView: View {
                 onFeedSelected: { path.append(Destination.feed($0)) },
                 onSearchTapped: { path.append(Destination.search) },
                 onDetailSearchTapped: { dependencies.logger.info("상세탐색 진입(미구현)") },
-                onNotificationTapped: { dependencies.logger.info("알림 목록 진입(미구현)") },
+                onNotificationTapped: {
+                    path.append(Destination.notification)
+                    Task {
+                        if await DefaultPushAuthorizationChecker().authorizationStatus() == .denied {
+                            isPushAuthorizationAlertPresented = true
+                        }
+                    }
+                },
                 onPreferenceGenreSettingTapped: { path.append(Destination.preferenceGenreSetting) },
                 onAuthenticationRequired: onAuthenticationRequired
             )
@@ -107,11 +123,28 @@ struct HomeRootView: View {
                         )
                     case .preferenceGenreSetting:
                         mypageEditView
+                    case .notification:
+                        notificationListView
+                    case .notificationDetail(let notificationID):
+                        notificationDetailView(notificationID)
                     }
                 }
                 .toolbar(.hidden, for: .tabBar)
             }
         }
+        .showWSSAlert(
+            isPresented: $isPushAuthorizationAlertPresented,
+            type: .setAppNotification,
+            buttonActions: [
+                { isPushAuthorizationAlertPresented = false },  // "다음에 하기"
+                {
+                    isPushAuthorizationAlertPresented = false
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }  // "설정하러 가기"
+            ]
+        )
     }
 }
 
@@ -185,6 +218,31 @@ private extension HomeRootView {
             filter: filter,
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) }
+        )
+    }
+}
+
+// MARK: - 알림 목록/상세
+
+private extension HomeRootView {
+    var notificationListView: some View {
+        NotificationFeatureFactory.makeNotificationListView(
+            loadPagedNotificationsUseCase: DefaultLoadPagedNotificationsUseCase(repository: dependencies.notificationRepository),
+            markNotificationAsReadUseCase: DefaultMarkNotificationAsReadUseCase(repository: dependencies.notificationRepository),
+            logger: dependencies.logger,
+            onNotificationSelected: { path.append(Destination.notificationDetail($0)) },
+            onFeedSelected: { path.append(Destination.feed($0)) },
+            onNovelSelected: { path.append(Destination.novel($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func notificationDetailView(_ notificationID: NotificationID) -> some View {
+        NotificationFeatureFactory.makeNotificationDetailView(
+            notificationID: notificationID,
+            loadNotificationDetailUseCase: DefaultLoadNotificationDetailUseCase(repository: dependencies.notificationRepository),
+            logger: dependencies.logger,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }

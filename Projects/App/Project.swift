@@ -57,6 +57,7 @@ let targets: [Target] = [
             .module(.feature(.library)),
             .module(.feature(.userPage)),
             .module(.domain(.recommendation)),
+            .module(.feature(.notification)),
             .module(.domain(.notification)),
             .module(.domain(.feed)),
             .module(.domain(.social)),

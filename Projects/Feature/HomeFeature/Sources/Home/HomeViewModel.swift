@@ -35,12 +35,12 @@ final class HomeViewModel {
         var isLoading = true
         var loadFailed = false
         var requiresAuthentication = false
-        /// 알림 벨을 눌렀는데 시스템 푸시 권한이 denied라 기기 설정 유도 알럿을 띄워야 하는지(#193).
-        var isPushAuthorizationAlertPresented = false
-        /// 알림 목록 화면으로 이동해도 되는 신호 — denied 여부와 무관하게 **벨 탭 즉시** 오른다(알럿은
-        /// 비차단 안내라 이동을 막지 않는다). View가 `onChange`로 소비하고 곧바로
-        /// `.consumeNotificationNavigation`으로 되돌린다(`requiresAuthentication`과 같은 1회성 신호
-        /// 패턴 — 이 VM은 탭 세션 내내 살아서 소진해야 두 번째 벨 탭도 신호가 삼켜지지 않는다).
+        /// 알림 목록 화면으로 이동해도 되는 신호 — **벨 탭 즉시** 오른다. View가 `onChange`로 소비하고
+        /// 곧바로 `.consumeNotificationNavigation`으로 되돌린다(`requiresAuthentication`과 같은 1회성
+        /// 신호 패턴 — 이 VM은 탭 세션 내내 살아서 소진해야 두 번째 벨 탭도 신호가 삼켜지지 않는다).
+        /// 푸시 권한이 denied라 기기 설정 유도 알럿을 띄워야 하는지는 이 화면이 아니라 **이동한 뒤의
+        /// 알림 목록 화면(App이 push)이 판단한다** — `showWSSAlert`가 `.overlay` 기반이라 push 전환과
+        /// 동시에 띄우면 그 전환에 밀려 사라지기 때문(`SettingFeature`의 알림 설정 메뉴와 같은 함정).
         var shouldNavigateToNotifications = false
     }
 
@@ -60,7 +60,6 @@ final class HomeViewModel {
         case load
         case consumeAuthenticationRequired
         case notificationBellTapped
-        case dismissPushAuthorizationAlert
         case consumeNotificationNavigation
         /// 홈 진입마다 발화 — 첫 회원가입 직후 첫 홈 진입이 이 앱에서 유저가 처음 겪는 알림 권한
         /// 결정 시점이 되도록 한다(#193). `.load`와 짝을 이루지만 홈 데이터 로드와는 무관한 별도 흐름.
@@ -116,8 +115,7 @@ final class HomeViewModel {
         switch action {
         case .load:                          load()
         case .consumeAuthenticationRequired: state.requiresAuthentication = false
-        case .notificationBellTapped:        notificationBellTapped()
-        case .dismissPushAuthorizationAlert: dismissPushAuthorizationAlert()
+        case .notificationBellTapped:        state.shouldNavigateToNotifications = true
         case .consumeNotificationNavigation: state.shouldNavigateToNotifications = false
         case .checkPushAuthorizationOnEntry: checkPushAuthorizationOnEntry()
         }
@@ -135,28 +133,6 @@ private extension HomeViewModel {
             await self?.loadHome()
             self?.loadTask = nil
         }
-    }
-
-    /// denied여도 이동은 막지 않는다 — 알림 목록 이동 신호는 권한 상태와 무관하게 탭 즉시 올리고,
-    /// denied면 그와 **동시에** 기기 설정 유도 알럿도 띄운다(알럿은 비차단 안내일 뿐이라 화면 전환을
-    /// 가로막을 이유가 없다). notDetermined면 그 자리에서 시스템 프롬프트를 띄운다(알럿은 안 띄움).
-    func notificationBellTapped() {
-        Task { [weak self] in
-            guard let self else { return }
-            state.shouldNavigateToNotifications = true
-            switch await pushAuthorizationChecker.authorizationStatus() {
-            case .authorized:
-                break
-            case .notDetermined:
-                _ = await pushAuthorizationChecker.requestAuthorization()
-            case .denied:
-                state.isPushAuthorizationAlertPresented = true
-            }
-        }
-    }
-
-    func dismissPushAuthorizationAlert() {
-        state.isPushAuthorizationAlertPresented = false
     }
 
     /// notDetermined면 그 자리에서 시스템 프롬프트를 띄운다 — 온보딩 완료 후 첫 홈 진입이 유저가
