@@ -113,6 +113,7 @@ struct SosoFeedView: View {
             type: feedAlertType,
             buttonActions: feedAlertActions
         )
+        .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .onAppear {
             viewModel.handle(.load)
         }
@@ -347,8 +348,11 @@ struct SosoFeedView: View {
                 isEdited: feed.isModified
             ),
             profileImageTapped: {
-                // `Author.userId`는 옵셔널 — 없으면(탈퇴 등) 진입할 프로필이 없으니 무시한다.
-                guard let userId = feed.author.userId else { return }
+                // 탈퇴 유저(Author.accessibleUserId == nil)면 이동 대신 안내 토스트만 띄운다.
+                guard let userId = feed.author.accessibleUserId else {
+                    viewModel.handle(.userProfileUnavailableTapped)
+                    return
+                }
                 onUserProfileTapped(userId)
             },
             // 내 글이면 내 프로필로 "이동"할 곳이 없다 — 탭 영역 자체를 없애 탭이 셀 나머지 영역과
@@ -449,6 +453,13 @@ struct SosoFeedView: View {
         Binding(
             get: { viewModel.state.presentedFeedAlert != nil },
             set: { if !$0 { viewModel.handle(.dismissFeedAlert) } }
+        )
+    }
+
+    private var unavailableUserToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isUnavailableUserToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissUnavailableUserToast) } }
         )
     }
 

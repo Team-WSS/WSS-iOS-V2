@@ -259,6 +259,7 @@ struct NovelDetailView: View {
                                 onRetry: { viewModel.handle(.retryFeeds) },
                                 onFeedTapped: onFeedTapped,
                                 onUserProfileTapped: onUserProfileTapped,
+                                onUnavailableUserProfileTapped: { viewModel.handle(.userProfileUnavailable) },
                                 onNovelTapped: onNovelTapped,
                                 onThreeDotsTapped: { feed, anchorY in
                                     feedMenuContext = FeedMenuContext(feed: feed, anchorY: anchorY)
@@ -629,7 +630,11 @@ private extension NovelDetailView {
     /// 토스트 의미값 → 표현. 실패는 공통 문구를 쓴다 — 케이스별 전용 문구가 필요해지면
     /// WSSToastType에 케이스를 더한다(허락 후).
     var toastType: WSSToastType {
-        viewModel.state.presentedToast == .reviewDeleted ? .novelReviewDeleted : .unknownError
+        switch viewModel.state.presentedToast {
+        case .reviewDeleted: .novelReviewDeleted
+        case .unavailableUser: .unknownUser
+        default: .unknownError
+        }
     }
 
     var deleteReviewAlertBinding: Binding<Bool> {

@@ -79,6 +79,12 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - **플랫폼 아이콘 URL은 래스터(png)여야 한다** — `AsyncImage`(UIImage)는 **런타임 다운로드 SVG를 디코딩 못 해** SVG URL이면 조용히 placeholder만 남는다(에셋 카탈로그 번들 SVG만 지원되는 iOS 제약).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
 - **피드 셀 인터랙션**: 셀 탭=피드 상세 콜백, 프로필 영역(이미지+닉네임) 탭=유저 프로필 콜백(**내 글이면 차단** — `isMyFeed`), 좋아요=엔티티 `TotalFeed.toggleLike()` 낙관 반영+실패 롤백(셀별 병행 허용, 같은 셀 연타만 가드), threedots=셀 드롭다운(**내 글: 수정하기 콜백·삭제하기, 남의 글: 신고 2종 빨강** — Figma 6773-26280/26272). 드롭다운은 화면 레벨 오버레이로 띄우고 앵커는 **셀 y 실측**(네비 타이틀과 같은 스크롤 좌표공간 방식) + threedots 오프셋(52)으로 계산, 하단 셀에선 화면 안에 다 보이게 클램프. ⚠️ 앵커가 화면 최상단(상태바 포함) 기준이라 **오버레이 ZStack에 `ignoresSafeArea(edges: .top)` 필수** — 빼면 메뉴가 안전영역 높이만큼 내려앉는다.
+  - ⚠️ **프로필 탭이 탈퇴 유저(`BaseDomain.Author.accessibleUserId == nil`)를 가리키면 이동 대신
+    `WSSToastType.unknownUser` 토스트를 띄운다**(#197 후속, 2026-08-28) — `NovelDetailFeedTab`이
+    `feed.author.accessibleUserId`로 판정해 `onUnavailableUserProfileTapped()`(새 콜백)를 부르고,
+    `NovelDetailView`가 그걸 `viewModel.handle(.userProfileUnavailable)`로 연결해
+    `DetailToast.unavailableUser`를 세운다. `-1` 리터럴을 여기서 다시 비교하지 말 것 — `SosoFeedView`/
+    `FeedDetailView`(`FeedFeature/CLAUDE.md`)와 같은 Domain API를 공유한다.
   - 좋아요 버튼은 `feedCell`에서 `WSSFeadView`의 `likeButtonTapped`로 `onToggleLike(feed.feedId)`를 넘긴다.
 - **"수정하기"(내 글 드롭다운)는 목록 항목(`TotalFeed`)의 `FeedID`만 `onEditFeedTapped`로 넘긴다** — 데이터 로드는 이 화면이 아니라 App이 조립하는 수정 화면(`FeedFeature`의 `CreateFeedView`) 자신이 한다(`FeedFeature/CLAUDE.md`의 `CreateFeedViewModel` 항목 참고). 이 화면 쪽엔 준비 상태·로딩 오버레이가 없다 — 탭하면 바로 App이 화면을 전환한다(#197, 빠른 전환 우선).
 - **피드 삭제/신고는 2단 알럿 하나의 의미값(`FeedAlert`)으로 관리** — 삭제는 확인 알럿 → `DeleteFeedUseCase` → 목록 제거 + **상세 재로드**(헤더 피드 수 등 집계 동기화, 성공 토스트 없음 — 디자인에 없음). 신고는 확인 알럿 → SocialDomain UseCase → **접수 완료 알럿으로 전환**(문구가 종류별로 달라 완료 케이스 분리). 알럿 타입·버튼 매핑(WSSAlertType 5종)은 View가 한다.

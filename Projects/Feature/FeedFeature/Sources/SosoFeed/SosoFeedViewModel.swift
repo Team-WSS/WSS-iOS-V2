@@ -57,6 +57,9 @@ final class SosoFeedViewModel {
 
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
         var presentedFeedAlert: FeedAlert?
+        /// 프로필 탭이 탈퇴 유저(`Author.userId == -1`)를 가리킬 때 뜨는 안내 토스트
+        /// (`WSSToastType.unknownUser`) — `UserPageViewModel.isNoCollectionsToastPresented`와 동일 패턴.
+        var isUnavailableUserToastPresented = false
     }
 
     /// 피드 셀 액션의 알럿 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
@@ -91,6 +94,11 @@ final class SosoFeedViewModel {
         case reportImproperFeedTapped(FeedID)
         case confirmFeedAlert
         case dismissFeedAlert
+
+        /// View가 `feed.author.accessibleUserId == nil`(탈퇴 유저)로 판정해서 부른다 — 화면 전환
+        /// 콜백 대신 여기서 그친다.
+        case userProfileUnavailableTapped
+        case dismissUnavailableUserToast
     }
 
     //MARK: - Filter Selection Helpers
@@ -194,6 +202,11 @@ final class SosoFeedViewModel {
             confirmFeedAlert()
         case .dismissFeedAlert:
             state.presentedFeedAlert = nil
+
+        case .userProfileUnavailableTapped:
+            state.isUnavailableUserToastPresented = true
+        case .dismissUnavailableUserToast:
+            state.isUnavailableUserToastPresented = false
         }
     }
 
