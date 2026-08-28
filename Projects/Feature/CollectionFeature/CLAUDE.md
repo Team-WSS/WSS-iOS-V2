@@ -433,3 +433,8 @@
   그래도 방어적으로 남겨뒀다 — 삭제하지 말 것(경합으로 0개가 된 채 이미 push된 경우의 안전망).
   `WSSEmptyView(type: .collectionMine)`의 카피("내 컬렉션이 없어요")가 타유저 맥락에 안 맞는 것도
   이 이유로 감수했다(도달 빈도가 사실상 0이라 전용 카피·타입을 새로 만들 만큼은 아니라고 판단).
+- ⚠️ **`#if DEBUG`로 가드한 preview 전용 init을 쓰는 `#Preview`는 그 `#Preview` 블록도 `#if DEBUG`로 감싸야 한다**
+  (`CreateCollectionViewModel.init(previewDraft:…)` ↔ `CreateCollectionView`의 `#Preview("작품 포함")`).
+  `#Preview` 본문은 **Release 구성에서도 컴파일된다** — CI(Debug 테스트)와 시뮬레이터 Debug 빌드는 통과하는데
+  `tuist build`(= `WSS-iOS-RELEASE` 스킴)만 "extra arguments in call"로 깨져, #227 머지 직전 `ready-merge`
+  전체 빌드 검증에서야 드러났다(2026-08-29). `#Preview` 안의 명시적 `return` 자체는 문제 없다(다른 모듈에서 통과 확인).
