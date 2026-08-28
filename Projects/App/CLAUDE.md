@@ -35,8 +35,11 @@ Sources/
 │                                          # (NovelDetailAssembly/NovelReviewAssembly/FeedFeatureFactory/
 │                                          # UserPageAssembly/SearchAssembly/SettingFactory.makeNotificationSettingView)까지 push.
 ├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFactory.makeView 조립 +
-│                                          # 프로필 편집·설정(makeEditView/SettingFactory.makeView)까지
-│                                          # push, 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로
+│                                          # 프로필 편집·설정(makeEditView/SettingFactory.makeView)·
+│                                          # 컬렉션 목록/생성/수정/상세/작품 추가/서재에서 추가
+│                                          # (CollectionFeatureFactory, #201 — 컬렉션 미리보기 개별
+│                                          # 항목 탭도 그 컬렉션 상세로 직행)까지 push, 서재 블록 탭은
+│                                          # push가 아니라 MainTabView 탭 전환으로
 │                                          # 위임(모듈명과 Factory 이름이 다르니 혼동 주의).
 ├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
@@ -124,6 +127,20 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **push할 화면에 "진입 파라미터"를 넘길 땐 별도 `@State` 스크래치 변수에 먼저 써두고 그 값을
+  읽어 destination view를 만들지 말 것 — `NavigationPath`의 `Destination` payload로 직접 실어
+  보내야 한다.** `scratchState = value; path.append(Destination.xxx)`처럼 같은 액션 안에서 `@State`
+  갱신과 push를 연달아 해도, `.navigationDestination(for:)`가 새 destination view를 만드는 시점에
+  그 `@State` 갱신이 **아직 반영되지 않은 이전 값**을 읽어버리는 레이스가 있다(`CollectionFeature`의
+  "작품 추가"→"서재에서 추가" 흐름에서 실측 — `MypageRootView`가 스크래치 `@State`로 초기 선택 목록을
+  넘기다가, 검색에서 고른 작품이 서재 화면 진입 시 통째로 사라지는 버그로 실제 재현됐다. 자세한 재현·
+  디버그 로그는 `CollectionFeature/CLAUDE.md` 참고). **원인이 되는 타입이 아직 Hashable이 아니라서
+  어쩔 수 없이 스크래치 `@State`로 우회하는 것이라면, 먼저 그 타입을 Hashable로 만들 수 있는지부터
+  검토할 것** — 캐스케이드가 없으면(다른 비Hashable 타입을 필드로 안 담고 있으면) 거의 항상 가능하고,
+  Destination payload로 직접 넘기면 이 레이스가 구조적으로 사라진다. 반대로 **화면이 App에 결과를
+  돌려주는 "확정 값"**(`pendingNovelSelection` 같은 `Binding<T?>` + `.onChange` 채널)은 이미 mount된
+  화면이 관찰하는 구조라 이 레이스 대상이 아니다 — 레이스는 오직 "아직 mount 안 된 destination이
+  방금 쓴 `@State`를 못 읽는" 진입(entry) 방향에서만 난다.
 - ⚠️ **`Support/Info.plist`는 Tuist `.extendingDefault(with:)`가 아니라 `.file(path:)`로 직접 지정**돼 있어
   (Feature Demo 앱들과 달리 `ModuleInfoPlist` 헬퍼를 안 씀), Xcode가 표준으로 자동 채워주는
   `CFBundleIdentifier`/`CFBundleExecutable`이 **없으면 시뮬레이터 설치 자체가 실패**한다

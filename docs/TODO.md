@@ -162,26 +162,7 @@
   선례). 카카오 공유 카드의 `Content.imageUrl`은 필수 필드라 대표 작품 표지가 없는 컬렉션을 위한
   원격 기본 이미지 URL을 먼저 정해야 한다.
 
-### 9. 컬렉션 상세 작품 탭이 작품 상세로 연결되지 않는다
-
-- **무엇**: `CollectionDetailView`의 작품 그리드 셀을 탭하면 `onNovelTapped(NovelID)` 콜백까지는
-  발화하지만, `CollectionFeatureFactory`(`makeCollectionListView`/`makeCollectionDetailView`)를
-  실제로 호출하는 곳(App 조립 계층)이 아직 없어 그 콜백을 받아 `NovelDetailFeature`로 연결해주는
-  배선이 없다. Demo는 콘솔 로그만 찍는다(`handleNovelTapped`).
-- **결과**: 컬렉션 상세에서 작품을 탭해도 아무 화면 전환이 일어나지 않는다.
-- **어디를 고치나**: App이 `CollectionFeatureFactory.makeCollectionListView`/`makeCollectionDetailView`를
-  조립하는 지점에서 `onNovelTapped: { novelID in ... }`를 `NovelDetailFeatureFactory.makeView(...)`로
-  push하도록 연결한다(다른 화면의 `onXxxTapped` 콜백들과 동일한 배선 방식 — `NovelDetailFeature`의
-  `onAuthorTapped` 등 이미 있는 App 배선 선례를 따를 것).
-- **왜 지금 안 했나**: Feature 모듈끼리는 서로 import 못 해(`App → Feature → Domain` 단방향) 이
-  연결은 원래 App의 몫이다. #196에서 App의 첫 실전 조립이 이뤄졌지만 범위는 로그인·온보딩뿐이었고,
-  컬렉션 화면 조립(`CollectionDataFactory` 등)과 메인 탭 라우팅은 아직 없어 지금은 콜백 시그니처만
-  뚫어두고 실제 연결은 메인 탭이 생기는 후속 이슈로 미뤘다(2026-08).
-- **놓치기 쉬운 것**: `onNovelTapped`는 VM을 거치지 않고 `CollectionDetailView`가 탭 즉시 직접
-  호출한다(`NovelDetailFeature.onAuthorTapped`와 동일 패턴) — App 쪽에서 이 콜백을 받을 때도 VM
-  상태를 개입시키려 하지 말 것.
-
-### 10. 콜드스타트 시 저장된 세션을 재사용하지 않는다
+### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다
 
 - **무엇**: `ContentView.route`가 항상 `.onboarding`으로 시작한다(`@State private var route: Route = .onboarding`).
   Keychain(`DefaultTokenStore`)에 유효한 토큰이 남아있어도 앱을 재실행하면 확인 없이 다시 인트로부터
@@ -196,7 +177,7 @@
   세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
   다룬다.
 
-### 11. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
+### 10. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
 
 - **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`가
   `MypageFeatureFactory.makeView`의 현재 시그니처(`onCollectionTapped`/`onEditProfileTapped`/
@@ -210,7 +191,7 @@
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
 
-### 12. 작품 평가 화면의 키워드 선택이 draft에 반영되지 않는다
+### 11. 작품 평가 화면의 키워드 선택이 draft에 반영되지 않는다
 
 - **무엇**: `NovelReviewFeature`의 키워드 서치바를 탭하면 `KeywordFeature`의 `SearchKeywordView`가
   시트로 뜨긴 하지만(#197, `NovelReviewFactory.makeView(keywordSearchSheet:)`), 그 시트에서 키워드를

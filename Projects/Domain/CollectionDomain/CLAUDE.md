@@ -44,6 +44,15 @@
   로드 기준선(`baselineDraft`, 이 화면은 항상 빈 `CollectionDraft()`) 대비 변경 여부(`hasUnsavedChanges`)를
   판단해 뒤로가기 시 "그만 작성" 확인 알럿을 띄울지 결정하는 데 쓴다(`FeedDraft`/`NovelReviewDraft`와 같은
   이유). 필드가 전부 이미 Equatable이라 자동 합성만으로 충분했다.
+- **`CollectionNovel`은 `Hashable`을 준수한다**(#201) — App(`MypageRootView`)이 "작품 추가"/"서재에서
+  추가" 화면을 push할 때 진입 선택 목록(`[CollectionNovel]`)을 `NavigationPath`의 `Destination` payload로
+  직접 실어 보내야 해서다. 처음엔 별도 `@State` 스크래치 변수에 먼저 써두고 그 값을 읽어 destination을
+  만드는 방식을 썼는데, `.navigationDestination(for:)`가 destination을 만드는 시점에 그 `@State` 갱신이
+  아직 반영 안 된 이전 값을 읽는 레이스가 있어(실측 — 검색으로 고른 작품이 서재 화면 진입 시 사라짐)
+  Hashable payload로 바꿔 근본 해결했다(`CollectionFeature/CLAUDE.md`·`App/CLAUDE.md` 주의사항 참고).
+  `CollectionDetail.owner: Author`와 달리 이 타입은 `Author`를 담지 않아(작가는 `author: String`) 캐스케이드
+  없이 자동 합성만으로 충분했다 — `CollectionDetail` 전체를 Hashable로 만들려던 시도는 `Author`까지
+  끌고 가 보류된 적이 있다(`CollectionFeature/CLAUDE.md` "자기 로드 방식" 논의 참고), 이 타입 단독은 무관하다.
 - **작품 리스트는 `addNovel`/`removeNovel`(1개씩) 말고 `setNovels(_:)`(통째 교체)도 있다**(#199) —
   "작품 추가" 화면은 이미 담긴 작품도 선택된 채로 보여주고 해제도 가능한 **편집 화면**이라, 그 결과를
   반영할 땐 편도 append 여러 번이 아니라 한 번에 전체를 새 목록으로 바꾸는 게 계약에 맞는다. count

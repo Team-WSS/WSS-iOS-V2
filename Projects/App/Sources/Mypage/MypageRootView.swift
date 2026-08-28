@@ -8,14 +8,18 @@
 
 import SwiftUI
 
+import CollectionFeature
+import FeedFeature
 import SettingFeature
 import UserPageFeature
 import BaseDomain
 import AuthDomain
 import CollectionDomain
+import FeedDomain
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
+import SearchDomain
 import SocialDomain
 import BaseData
 import PushAuthorization
@@ -29,9 +33,19 @@ import WSSComponent
 /// **캐릭터 선택 시트(`makeCharacterEditSheet`)는 예외로 여전히 `MyPageEditView` 내부에 남아있다** —
 /// 다른 화면으로의 이동이 아니라 그 화면 자신의 draft를 채우는 로컬 값 선택기라, App으로 올리면
 /// 결과를 다시 그 화면 안으로 넣어주는 Binding 왕복이 필요해져 오히려 더 꼬인다(사용자 확정, #196).
+/// ⚠️ **`CollectionFeature`의 "작품 추가"/"서재에서 추가"는 성격이 같은 로컬 값 선택기인데도 예외 없이
+/// App으로 올렸다**(#201, 사용자 명시 재확정) — 이 캐릭터 시트 예외를 새 화면에 확대 적용하는 근거로
+/// 쓰지 말 것. 두 화면은 "이번엔 예외를 두지 않는다"는 별도 지시로 App 소유가 됐다.
 ///
 /// 우측 상단 톱니바퀴 → 설정(`SettingFeatureFactory.makeView`)까지 push한다. 서재 블록 탭은 push가 아니라
 /// **탭 전환**이라(`MainTabView.selectedTab`) `onLibraryTapped` 콜백으로 위로 흘려보낸다.
+///
+/// **컬렉션(#201)**: "컬렉션 N개" 행 탭 → 컬렉션 목록(`collectionListView`)까지 push하고, 그 안의 생성·
+/// 수정·상세·"작품 추가"/"서재에서 추가"까지 전부 이 루트가 조립한다(`CollectionFeatureFactory`는
+/// 화면 간 이동을 스스로 하지 않는다 — 모듈 CLAUDE.md 참고). 컬렉션 상세의 작품 탭은 다른 탭과 동일하게
+/// 작품 상세(`NovelDetailAssembly`)까지 이어진다(#201 `docs/TODO.md` 9번의 후속 조치) — 그 상세가 다시
+/// 여는 리뷰·피드 작성·피드 상세·유저 프로필·일반 검색까지 `LibraryRootView`와 동일한 구조로 이 루트에도
+/// 옮겨왔다(마이페이지에서 진입했다고 그 하위 흐름이 달라질 이유가 없어서).
 ///
 /// ⚠️ **`MypageFeatureFactory.makeView` 자체가 받는 `onAuthenticationRequired`는 없다** — 로드 401은
 /// 여전히 조용히 빈 상태로 남는다(FeedFeature와 같은 사정, App 쪽에서 고칠 수 있는 부분이 아님). 다만
@@ -42,6 +56,30 @@ struct MypageRootView: View {
     private enum Destination: Hashable {
         case edit
         case setting
+        // 컬렉션(#201)
+        case collectionList
+        case createCollection
+        case editCollection(CollectionID)
+        case collectionDetail(CollectionID)
+        /// "작품 추가"/"서재에서 추가" — 진입 시점의 선택 스냅샷을 path payload로 직접 실어 보낸다.
+        /// **별도 `@State` 스크래치 변수에 먼저 써두고 그 값을 읽어 destination을 만드는 방식은
+        /// 레이스가 있다**(실측, 2026-08-28) — 같은 액션 안에서 `scratchState = value; path.append(...)`
+        /// 처럼 `@State` 갱신과 push를 연달아 해도, `.navigationDestination(for:)`가 새 destination
+        /// view를 만드는 시점에 그 `@State` 갱신이 아직 반영되지 않은 이전 값(빈 배열)을 읽어버려
+        /// "작품 추가"→"서재에서 추가"로 넘어갈 때 검색에서 고른 작품이 통째로 사라지는 버그로 실제
+        /// 재현됐다. `CollectionNovel`이 Hashable(#201)이라 이제 배열째로 payload에 넣을 수 있다.
+        case searchNovelForCollection([CollectionNovel])
+        case myLibrarySelectForCollection([CollectionNovel])
+        // 작품 상세와 그 하위 흐름(`LibraryRootView`/`HomeRootView`와 동일 구조)
+        case novel(NovelID)
+        case feed(FeedID)
+        case createFeedFromNovel(ConnectedNovel)
+        case editFeed(FeedID)
+        case userPage(UserID)
+        case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
+        case search
+        case authorSearch(String)
+        case detailSearch(SearchFilter)
     }
 
     let dependencies: AppDependencies
@@ -55,6 +93,14 @@ struct MypageRootView: View {
     /// 프로필 편집 화면이 `onSaved`로 알려주면 세운다 — 그 화면이 아니라 복귀할 이 루트가 보여준다
     /// (편집 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로, `UserPageFeature/CLAUDE.md` 참고).
     @State private var showProfileSavedToast = false
+
+    /// "작품 추가"/"서재에서 추가" 확정 결과를 생성/수정 컬렉션 화면에 돌려주는 1회성 nil→값 채널
+    /// (`CollectionFeatureFactory.makeCreateCollectionView` 문서 참고). 생성·수정이 동시에 열릴 일이
+    /// 없어 하나로 공유한다. **이건 진입(entry) 파라미터가 아니라 확정(return) 값**이라 위
+    /// `Destination` 레이스 대상이 아니다 — 이미 mount된 `CreateCollectionView`가 `.onChange`로 값
+    /// 변화를 관찰하는 구조라, "아직 mount 안 된 destination이 최신 `@State`를 못 읽는" 문제 자체가
+    /// 성립하지 않는다.
+    @State private var pendingCollectionNovelSelection: [CollectionNovel]?
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시를 그대로 읽는다(`FeedDetailAssembly`와
     /// 동일 패턴) — "My" 탭은 로그인 후에만 진입하므로 정상 흐름에선 항상 채워져 있다.
@@ -81,8 +127,7 @@ struct MypageRootView: View {
                     collectionRepository: dependencies.collectionRepository
                 ),
                 logger: dependencies.logger,
-                // TODO: - 컬렉션 목록 화면으로 이동(CollectionFeature가 아직 App에 연결되지 않음, docs/TODO.md 참고)
-                onCollectionTapped: {},
+                onCollectionTapped: { path.append(Destination.collectionList) },
                 onEditProfileTapped: { path.append(Destination.edit) },
                 onSettingTapped: { path.append(Destination.setting) },
                 onLibraryTapped: onLibraryTapped
@@ -95,6 +140,42 @@ struct MypageRootView: View {
                         editProfileView
                     case .setting:
                         settingView
+                    case .collectionList:
+                        collectionListView
+                    case .createCollection:
+                        createCollectionView
+                    case .editCollection(let id):
+                        editCollectionView(id: id)
+                    case .collectionDetail(let id):
+                        collectionDetailView(id: id)
+                    case .searchNovelForCollection(let initialSelection):
+                        collectionSearchNovelView(initialSelection: initialSelection)
+                    case .myLibrarySelectForCollection(let initialSelection):
+                        collectionMyLibrarySelectView(initialSelection: initialSelection)
+                    case .novel(let novelID):
+                        novelDetailView(novelID)
+                    case .feed(let feedID):
+                        feedDetailView(feedID)
+                    case .createFeedFromNovel(let connectedNovel):
+                        createFeedView(connectedNovel: connectedNovel)
+                    case .editFeed(let feedID):
+                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                    case .userPage(let userID):
+                        UserPageAssembly.makeView(userID: userID, dependencies: dependencies)
+                    case .novelReview(let novelID, let title, let status):
+                        NovelReviewAssembly.makeView(
+                            novelID: novelID,
+                            title: title,
+                            status: status,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired
+                        )
+                    case .search:
+                        searchView()
+                    case .authorSearch(let authorName):
+                        searchView(initialQuery: authorName)
+                    case .detailSearch(let filter):
+                        detailSearchResultView(filter)
                     }
                 }
                 .toolbar(.hidden, for: .tabBar)
@@ -159,6 +240,187 @@ private extension MypageRootView {
             // 회원탈퇴/로그아웃 둘 다 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
             onWithdrawSuccess: onAuthenticationRequired,
             onLogoutSuccess: onAuthenticationRequired
+        )
+    }
+}
+
+// MARK: - 컬렉션 (#201)
+
+private extension MypageRootView {
+    var collectionListView: some View {
+        CollectionFeatureFactory.makeCollectionListView(
+            userID: UserID(currentUserID ?? 0),
+            loadCollectionsUseCase: DefaultLoadCollectionsUseCase(collectionRepository: dependencies.collectionRepository),
+            loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(
+                collectionRepository: dependencies.collectionRepository
+            ),
+            logger: dependencies.logger,
+            onAuthenticationRequired: onAuthenticationRequired,
+            onCreateTapped: { path.append(Destination.createCollection) },
+            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
+        )
+    }
+
+    var createCollectionView: some View {
+        CollectionFeatureFactory.makeCreateCollectionView(
+            createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: dependencies.collectionRepository),
+            logger: dependencies.logger,
+            pendingNovelSelection: $pendingCollectionNovelSelection,
+            onAddNovelTapped: handleCollectionAddNovelTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func editCollectionView(id: CollectionID) -> some View {
+        CollectionFeatureFactory.makeEditCollectionView(
+            id: id,
+            updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: dependencies.collectionRepository),
+            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(
+                collectionRepository: dependencies.collectionRepository
+            ),
+            logger: dependencies.logger,
+            pendingNovelSelection: $pendingCollectionNovelSelection,
+            onAddNovelTapped: handleCollectionAddNovelTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func collectionDetailView(id: CollectionID) -> some View {
+        CollectionFeatureFactory.makeCollectionDetailView(
+            id: id,
+            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(
+                collectionRepository: dependencies.collectionRepository
+            ),
+            collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: dependencies.collectionRepository),
+            deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: dependencies.collectionRepository),
+            logger: dependencies.logger,
+            onAuthenticationRequired: onAuthenticationRequired,
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditTapped: { path.append(Destination.editCollection(id)) }
+        )
+    }
+
+    func collectionSearchNovelView(initialSelection: [CollectionNovel]) -> some View {
+        CollectionFeatureFactory.makeSearchNovelView(
+            initialSelection: initialSelection,
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            logger: dependencies.logger,
+            onConfirm: handleCollectionSearchNovelConfirm,
+            onLibrarySelectTapped: handleCollectionLibrarySelectTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func collectionMyLibrarySelectView(initialSelection: [CollectionNovel]) -> some View {
+        CollectionFeatureFactory.makeMyLibrarySelectView(
+            initialSelection: initialSelection,
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
+                novelRepository: dependencies.novelRepository,
+                keywordRepository: dependencies.keywordRepository
+            ),
+            logger: dependencies.logger,
+            onConfirm: handleCollectionLibrarySelectConfirm,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// "작품 추가" 타일 탭 → 검색 화면으로 push. 현재 선택을 path payload로 그대로 실어 보낸다(위
+    /// `Destination.searchNovelForCollection` 문서의 레이스 회피 이유 참고).
+    func handleCollectionAddNovelTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.searchNovelForCollection(currentSelection))
+    }
+
+    /// 검색 화면의 "완료" 확정 → 생성/수정 화면까지 1단계 pop, 결과는 `pendingCollectionNovelSelection`으로.
+    func handleCollectionSearchNovelConfirm(_ novels: [CollectionNovel]) {
+        pendingCollectionNovelSelection = novels
+        path.removeLast(1)
+    }
+
+    /// 검색 화면의 "서재에서 추가" 탭 → 서재 선택 화면으로 push. 지금까지 고른 걸 path payload로
+    /// 그대로 실어 보낸다.
+    func handleCollectionLibrarySelectTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.myLibrarySelectForCollection(currentSelection))
+    }
+
+    /// 서재 선택 화면의 "추가" 확정 → 생성/수정 화면까지 2단계 pop(검색 화면도 함께 건너뜀 — 기획
+    /// 확정 사항, `CollectionFeature/CLAUDE.md`의 "2단계 pop" 정본 참고. Feature 안에서 boolean 하나로
+    /// 서브트리를 걷어내던 방식은 #201에서 App으로 옮겨오며 path를 두 단계 pop하는 방식으로 바뀌었다).
+    func handleCollectionLibrarySelectConfirm(_ novels: [CollectionNovel]) {
+        pendingCollectionNovelSelection = novels
+        path.removeLast(2)
+    }
+}
+
+// MARK: - 작품 상세 (컬렉션 상세 작품 탭 → #201 `docs/TODO.md` 9번의 후속 조치)
+
+private extension MypageRootView {
+    func novelDetailView(_ novelID: NovelID) -> some View {
+        NovelDetailAssembly.makeView(
+            novelID: novelID,
+            dependencies: dependencies,
+            onReviewTapped: { information, status in
+                path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+            },
+            onCreateFeedTapped: { path.append(Destination.createFeedFromNovel($0)) },
+            onFeedTapped: { path.append(Destination.feed($0)) },
+            onUserProfileTapped: {
+                // 다른 탭의 프로필 탭 이중 가드(#196)와 동일 — 내 프로필로는 절대 안 간다.
+                guard $0.value != currentUserID else { return }
+                path.append(Destination.userPage($0))
+            },
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
+            onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}
+
+// MARK: - 피드 상세 (작품 상세의 피드 탭)
+
+private extension MypageRootView {
+    func feedDetailView(_ feedID: FeedID) -> some View {
+        FeedDetailAssembly.makeView(
+            feedID: feedID,
+            dependencies: dependencies,
+            onNovelTapped: { path.append(Destination.novel($0)) },
+            onEditFeedTapped: { path.append(Destination.editFeed($0)) }
+        )
+    }
+}
+
+// MARK: - 피드 작성 (작품 상세 "나도 한마디")
+
+private extension MypageRootView {
+    /// 이 탭엔 `.createFeedFromNovel` 하나뿐이라 `connectedNovel`은 항상 값이 있다(`LibraryRootView`와 동일).
+    func createFeedView(connectedNovel: ConnectedNovel) -> some View {
+        FeedFeatureFactory.makeCreateFeedView(
+            createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            connectedNovel: connectedNovel
+        )
+    }
+}
+
+// MARK: - 일반 검색 (작품 상세 "작가" 탭)
+
+private extension MypageRootView {
+    /// `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 전용 — 이 탭엔 `LibraryRootView`의 "웹소설 찾기"
+    /// 같은 직접 진입점이 없어 `.search` 케이스는 지금 이 경로로만 도달한다.
+    func searchView(initialQuery: String? = nil) -> some View {
+        SearchAssembly.makeView(
+            dependencies: dependencies,
+            onNovelSelected: { path.append(Destination.novel($0)) },
+            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            initialQuery: initialQuery
+        )
+    }
+
+    func detailSearchResultView(_ filter: SearchFilter) -> some View {
+        SearchAssembly.makeDetailSearchResultView(
+            filter: filter,
+            dependencies: dependencies,
+            onNovelSelected: { path.append(Destination.novel($0)) }
         )
     }
 }

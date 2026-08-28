@@ -11,46 +11,34 @@ import SwiftUI
 import BaseDomain
 import CollectionDomain
 import SearchDomain
-import NovelDomain
 import DesignSystem
 import WSSComponent
-import Logger
 
 // 컬렉션 "작품 추가" 화면 — 검색해서 다중선택한 결과를 확정하면 CreateCollectionView의 작품 리스트
-// 전체를 교체한다. CreateCollectionView 내부에서만 push되는 로컬 화면(별도 Factory 진입점 없음).
+// 전체를 교체한다. `CollectionFeatureFactory.makeSearchNovelView`로 App이 조립·push한다.
 struct CollectionSearchNovelView: View {
 
     @State private var viewModel: CollectionSearchNovelViewModel
-    /// "서재에서 추가" 화면 push 여부 — `isAddNovelPresented`(CreateCollectionView)와 같은 위상으로
-    /// 이 화면이 직접 소유한다. 확정 시 이 화면은 스스로 dismiss()하지 않는다 — `CreateCollectionView`가
-    /// 넘긴 `onConfirm`이 최상위 `isAddNovelPresented`를 내려 이 화면까지 통째로 닫는다(아래
-    /// `.navigationDestination`/`onConfirm` 배선 참고, `CollectionFeature/CLAUDE.md`에 배경 기록).
-    @State private var isMyLibrarySelectPresented = false
     @FocusState private var isSearchBarFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
-    /// "서재에서 추가" 화면이 서재 조회에 쓸 UseCase — `searchNovelUseCase`와 같은 위상으로 이 화면이
-    /// 직접 받아 들고 있다가 자식 VM 생성에 쓴다.
-    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
-    /// "서재에서 추가" 화면도 자기 VM에서 실패를 로깅해야 하므로, `CreateCollectionView`에게 받은 걸
-    /// 그대로 들고 있다가 그 화면 생성 시 내려보낸다.
-    private let logger: Logger?
-    /// 확정 콜백 — 최종 선택 결과 전체를 상위(`CreateCollectionView`)로 발화한다. 콜백은 VM이 아니라
-    /// View가 소유한다(프로젝트 관례). "서재에서 추가" 화면의 확정도 같은 콜백을 그대로 재사용한다.
+    /// 확정 콜백 — 최종 선택 결과 전체를 발화한다(호출자가 `CreateCollectionView`까지 pop하며
+    /// 반영한다). 콜백은 VM이 아니라 View가 소유한다(프로젝트 관례).
     private let onConfirm: ([CollectionNovel]) -> Void
+    /// "서재에서 추가" 탭 콜백 — 현재까지 선택된 목록을 실어 올린다. 실제 화면 전환
+    /// (`CollectionFeatureFactory.makeMyLibrarySelectView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onLibrarySelectTapped: ([CollectionNovel]) -> Void
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: CollectionSearchNovelViewModel,
-        loadMyLibraryUseCase: LoadMyLibraryUseCase,
-        logger: Logger? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
+        onLibrarySelectTapped: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.loadMyLibraryUseCase = loadMyLibraryUseCase
-        self.logger = logger
         self.onConfirm = onConfirm
+        self.onLibrarySelectTapped = onLibrarySelectTapped
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -64,32 +52,13 @@ struct CollectionSearchNovelView: View {
             }
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }
-                // 이 화면 자신은 dismiss()하지 않는다 — `onConfirm`이 최상위(`CreateCollectionView`)의
-                // `isAddNovelPresented`를 내려 이 화면을 닫아준다.
+                // 이 화면 자신은 dismiss()하지 않는다 — 호출자(App)가 `onConfirm`을 받아 이 화면까지
+                // pop한다.
                 onConfirm(viewModel.state.selectedNovels)
             }
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
-            }
-            // "서재에서 추가" 확정 → CreateCollectionView가 넘긴 바로 그 onConfirm을 그대로 위로
-            // 전달만 한다(novels 가공 없음). 이 화면도, 자식(CollectionMyLibrarySelectView)도 각자
-            // dismiss()를 부르지 않는다 — `onConfirm`을 타고 최상위(`CreateCollectionView`)까지 올라가
-            // 그쪽이 소유한 `isAddNovelPresented` 하나만 false로 내려 이 서브트리 전체(이 화면 +
-            // CollectionMyLibrarySelectView)를 한 번의 pop 애니메이션으로 같이 걷어낸다. 예전엔 각
-            // 화면이 스스로 pop한 뒤 위가 그 완료를 감지해 뒤이어 pop하는 계단식 방식이었는데, 두
-            // pop이 거의 같은 프레임에 겹쳐 전환 애니메이션이 두 번 보였다(실측) — `CollectionFeature/CLAUDE.md`
-            // 참고.
-            .navigationDestination(isPresented: $isMyLibrarySelectPresented) {
-                CollectionMyLibrarySelectView(
-                    viewModel: CollectionMyLibrarySelectViewModel(
-                        initialSelection: viewModel.state.selectedNovels,
-                        loadMyLibraryUseCase: loadMyLibraryUseCase,
-                        logger: logger
-                    ),
-                    onConfirm: onConfirm,
-                    onAuthenticationRequired: onAuthenticationRequired
-                )
             }
     }
 
@@ -180,7 +149,7 @@ private extension CollectionSearchNovelView {
             Spacer()
 
             Button {
-                isMyLibrarySelectPresented = true
+                onLibrarySelectTapped(viewModel.state.selectedNovels)
             } label: {
                 Text("서재에서 추가")
                     .underline()
@@ -308,8 +277,8 @@ private extension CollectionSearchNovelView {
                 initialSelection: [],
                 searchNovelUseCase: PreviewSearchNovelUseCase()
             ),
-            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
             onConfirm: { novels in print("확정: \(novels.count)개") },
+            onLibrarySelectTapped: { novels in print("서재에서 추가 진입, 현재 \(novels.count)개") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -321,11 +290,5 @@ private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
     }
     func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         (Paginated(items: [], hasNext: false), 0)
-    }
-}
-
-private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
-        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
     }
 }

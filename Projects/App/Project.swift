@@ -83,9 +83,11 @@ let targets: [Target] = [
             .module(.feature(.setting)),
             // 설정 화면의 푸시 권한 상태 확인.
             .module(.core(.pushAuthorization)),
-            // 마이페이지/유저페이지 컬렉션 섹션 미리보기.
+            // 마이페이지/유저페이지 컬렉션 섹션 미리보기 + 마이페이지의 컬렉션 목록/생성/수정/상세
+            // 화면 전환(#201, MypageRootView가 조립).
             .module(.domain(.collection)),
-            .module(.data(.collection))
+            .module(.data(.collection)),
+            .module(.feature(.collection))
         ],
         settings: .settings(
             base: env.baseSetting,
