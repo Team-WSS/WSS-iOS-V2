@@ -59,8 +59,8 @@
 7. 🔧 **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
 8. 🔧 **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
 9. 🔧 **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
-10. 🗑 **탈퇴 유저 프로필 탭 토스트 제거** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
-11. 🗑 **피드 수정·평가 완료 토스트 제거** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
+10. 🔧 **복원 확정→TODO 9절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
+11. 🔧 **복원 확정→App 크로스스크린 피드백 재설계(Feed 15와 묶음, TODO 9절)** (2026-08-28, 사용자) — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -208,9 +208,10 @@
 - ✅ **Keep** — 신고(스포일러/부적절)는 **확인 알럿 → API → 접수 완료 알럿**의 2단. 삭제는 확인 알럿 → API → 목록 제거.
   - V2: `FeedAlert` 의미값으로 관리(신고는 완료 케이스 분리 — 문구가 종류별로 다름). 삭제 성공 시 목록 제거 + **상세 재로드**(헤더 피드 수 집계 동기화). V1은 삭제 후 `reloadNovelDetailFeed`(피드만 리셋)로 목록만 갱신 — **V2는 집계까지 재동기화**하는 차이(경미한 Improve).
   - 근거: V1 `NovelDetailViewController.swift:353-453`(신고/삭제 2단 알럿), `NovelDetailViewModel.swift:458-477` · V2 `NovelDetailViewModel.swift:291-312`,`433-463`, `NovelDetailView.swift:615-644`, `CLAUDE.md`(피드 삭제/신고 2단 알럿)
-- 🗑 **Delete** — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
+- 🔧 **복원 확정→TODO 9절** (2026-08-28, 사용자: Feed·UserPage 결정과 통일) — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
   - V2: `feed.author.userId`가 없으면(응답 미제공) 조용히 무시(토스트 없음). 탈퇴 유저 안내가 사라졌다.
   - 근거: V1 `NovelDetailViewModel.swift:514-522`(userId==-1→토스트) · V2 `NovelDetailFeedTab.swift:108-112`(userId nil→return)
+  - ⚠️ **복원 시 함정**: V2 `FeedMapper.author`는 `userId`를 non-optional `UserID`로 넘기므로 서버가 탈퇴 유저를 `-1`로 주면 **nil 가드에 안 걸리고 `UserID(-1)`로 유저 페이지 push → USER-018**. `-1` 판별을 매퍼(→ nil)에서 할지, 유저 페이지의 USER-018 폴백(UserPage 4.7 복원)에 맡길지 구현 시 결정.
 - ✅ **Keep** — 스포일러 피드는 본문 대신 "스포일러가 포함된 글" 대체 표기(공용 피드 셀이 처리).
   - V2: `WSSFeadView(isSpoiler:)`. V1도 공용 `FeedListTableViewCell`이 처리.
   - 근거: V1 `NovelDetailViewController.swift:293-300`(FeedListTableViewCell) · V2 `NovelDetailFeedTab.swift:137`
@@ -273,7 +274,7 @@
 
 ### 6.5 알림 관찰자 토스트
 
-- 🗑 **Delete** — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
+- 🔧 **복원 확정→App 크로스스크린 피드백 재설계(TODO 9절)** (2026-08-28, 사용자: 재진입 재조회 복원과 별개로 완료 피드백은 유지 — Feed 15·UserPage 차단 토스트와 한 묶음) — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
   - V2엔 이 알림 관찰자·토스트가 없다(피드 수정/평가는 콜백으로 위임, 복귀 후 토스트 없음).
   - 근거: V1 `NovelDetailViewModel.swift:506-512`, `NovelDetailViewController.swift:455-459`,`470-474`,`561-562` · V2 `NovelDetailView`(해당 관찰자 없음)
 

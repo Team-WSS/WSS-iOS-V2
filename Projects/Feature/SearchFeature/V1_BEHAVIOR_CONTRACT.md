@@ -27,7 +27,7 @@
 
 | V2 (이 모듈) | V1 원본 | 성격 차이 |
 |---|---|---|
-| `Sources/NormalSearch/NormalSearchView` (검색 진입점) | `…/Search/Search/` (`SearchViewController`+VM, **검색 탭 랜딩**) **＋** `…/Search/NormalSearch/` (`NormalSearchViewController`+VM, **push된 검색 화면**) | **V1은 2화면(랜딩→push), V2는 1화면.** V1 랜딩(비편집 검색바+소소픽+상세검색 유도 배너)이 V2에서 사라지고 그 소소픽이 NormalSearch 브라우즈로 흡수됨 (1) |
+| `Sources/NormalSearch/NormalSearchView` (검색 진입점) | `…/Search/Search/` (`SearchViewController`+VM, **검색 탭 랜딩**) **＋** `…/Search/NormalSearch/` (`NormalSearchViewController`+VM, **push된 검색 화면**) | **V1은 2화면(랜딩→push), V2는 1화면.** V1 랜딩(비편집 검색바+소소픽+상세검색 유도 배너)은 V2에서 사라졌지만 같은 검색바 버튼·상세검색 배너를 **홈 `HomeSearchSection`**이 담당(V1 홈에도 있던 중복을 하나로)하고 소소픽은 NormalSearch 브라우즈로 흡수됨 (1) |
 | `Sources/DetailSearch/DetailSearchFilterView` (#185) | `…/Search/DetailSearch/DetailSearchViewController`+`DetailSearchViewModel` | 정보/키워드 탭 필터 화면. **V2는 지금 Demo에서만 push**(실앱 진입점 미배선, 3) |
 | `Sources/DetailSearch/DetailSearchResultView` | `…/Search/DetailSearch/DetailSearchResultViewController`+`DetailSearchResultViewModel` | 필터 검색 결과 그리드 (4) |
 | (V2 신규) `NormalSearchAutoCompletionView` | **V1 대응 없음** | 검색어 자동완성은 V2 신규 (2.6) |
@@ -48,8 +48,8 @@
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-8. 🗑 **Delete** — **검색 탭 랜딩 화면(`SearchView`) + "상세 검색으로 찾기" 유도 배너(`SearchDetailInduceView`) 제거** → NormalSearch 단일 화면으로 병합. → [1](#1-검색-진입랜딩-searchview)
-9. 🗑 **Delete** — **뒤로가기 3초 throttle**(연타로 pop 여러 번 막던 가드) 제거. → [2.1](#21-진입생명주기)
+8. 🗑 **Delete 확정** (2026-08-28, 사용자: 검색 탭 폐지에 따른 중복 제거 — 검색바 버튼·상세검색 배너는 홈 `HomeSearchSection`이 담당, Home 계약 2.4 ✅) — **검색 탭 랜딩 화면(`SearchView`) + "상세 검색으로 찾기" 유도 배너(`SearchDetailInduceView`) 제거** → NormalSearch 단일 화면으로 병합. → [1](#1-검색-진입랜딩-searchview)
+9. ✅ **Keep(해소) 확정** (2026-08-28, 사용자: `NavigationStack`이 중복 pop을 막음 — 더블탭 가드와 동일 결론) — **뒤로가기 3초 throttle**(연타로 pop 여러 번 막던 가드) 제거. → [2.1](#21-진입생명주기)
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
@@ -67,7 +67,7 @@
 
 V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(탭하면 검색화면 push) + 소소픽 + "상세 검색으로 찾기" 유도 배너(`SearchDetailInduceView`). 이 화면 자체는 검색을 안 하고 **진입 라우터** 역할만 한다.
 
-- 🗑 **Delete** — 랜딩 화면(`SearchView`)과 유도 배너를 통째로 없애고 V2는 `NormalSearchView` 하나로 진입한다. V1 랜딩의 소소픽은 NormalSearch 브라우즈 섹션으로 흡수됐다(중복이던 걸 하나로).
+- 🗑 **Delete 확정** (2026-08-28, 사용자: 검색 탭 폐지 — 검색바 버튼·상세검색 배너는 홈 `HomeSearchSection`이 담당, [Home 계약 2.4](../HomeFeature/V1_BEHAVIOR_CONTRACT.md) ✅) — 랜딩 화면(`SearchView`)과 유도 배너를 통째로 없애고 V2는 `NormalSearchView` 하나로 진입한다. V1 랜딩의 소소픽은 NormalSearch 브라우즈 섹션으로 흡수됐다(중복이던 걸 하나로). 기능 손실 없음 — V1은 홈과 검색 탭 랜딩 양쪽에 같은 진입점을 뒀고 V2는 홈 쪽만 남겼다.
   - V2: `SearchFeatureFactory.makeNormalSearchView(...)`가 "실제 앱 진입점"으로 명문화. 랜딩·배너 대응 코드 없음.
   - 근거: V1 `SearchViewController.swift:23`,`70-72`(랜딩+유도배너 바인딩) · V2 `SearchFeatureFactory.swift:24-46`, `CLAUDE.md`(진입점 = NormalSearch)
 - 🗑 **Delete 확정** (2026-08-28: V2는 로그인 전용 앱) — 검색바 탭/유도배너 탭 시 **로그인 여부 가드**: 로그인 상태면 push, 아니면 로그인 유도 present. (5.1과 동일 사안 — 랜딩이 사라지며 함께 소멸.)
@@ -94,7 +94,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 - 🔧 **복원 확정→TODO** (2026-08-28: V2 제한 없음 실측) — **검색어 30자 제한**: V1 텍스트필드는 `shouldChangeCharactersIn`에서 30자 초과 입력을 막는다.
   - V2: `WSSSearchBar`에 글자수 제한 없음(2026-08-28 실측).
   - 근거: V1 `NormalSearchViewController.swift:422-430`
-- 🗑 **Delete** — **뒤로가기 3초 throttle**: V1은 back 버튼을 `throttle(.seconds(3), latest: false)`로 감싸 연타로 여러 번 pop되는 걸 막았다.
+- ✅ **Keep(해소) 확정** (2026-08-28, 사용자: `NavigationStack`이 중복 pop을 막아 별도 가드 불필요 — 더블탭 가드와 동일 결론) — **뒤로가기 3초 throttle**: V1은 back 버튼을 `throttle(.seconds(3), latest: false)`로 감싸 연타로 여러 번 pop되는 걸 막았다.
   - V2: 뒤로가기 = `@Environment(\.dismiss)` 직호출, throttle 없음.
   - 근거: V1 `NormalSearchViewController.swift:208-213`,`132`(backButton) · V2 `NormalSearchView.swift:126-135`(dismiss)
 - ✅ **Keep** — 화면 아무 곳이나 탭하면 키보드가 내려간다. V1 `touchesBegan`→`endEditing(true)`, 컬렉션뷰 상하 스와이프에도 `endEditing`.

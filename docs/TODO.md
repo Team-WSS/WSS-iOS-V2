@@ -196,7 +196,19 @@
   흉내낼지(별도 push? 계속 무시?)부터 설계해야 한다.
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
-### 8. 홈 진입 프리페치(오늘의 발견·지금 뜨는 글)를 런치 부트스트랩 위에 되살린다
+
+### 8. 런치 부트스트랩(Splash)을 신설해 "앱 진입 시 할 일"을 한곳에 모은다 — 홈 프리페치 포함
+
+- **허브 결정(사용자, 2026-08-28)**: V1 `Presentation/Splash`처럼 V2도 **`SplashFeature`(런치 부트스트랩)**를 두고, C1 판정에서
+  "App 부트스트랩 몫"으로 밀어둔 작업을 전부 여기서 처리한다. 별도 이슈로 승격 예정. 모을 작업:
+  | 작업 | 출처 판정 |
+  |---|---|
+  | 유저 정보(`/users/me`) 조회 → 로컬 캐시(userId·nickname·gender·birth) 갱신 — **앱 진입마다** | Home 계약 6.2 (0절 9) |
+  | 홈 프리페치(오늘의 발견·지금 뜨는 글) — 아래 본문 | Home 계약 1.5 (0절 3) |
+  | 앱 최소 버전 조회 → 강제 업데이트 알럿(인프라 `SettingData`) | Home 계약 0절 5 · 위 기능 2번 |
+  | 필수 약관 동의 게이팅(미동의 유저만 약관 시트) | Onboarding 계약 3.1 (0절 1) |
+  | FCM 토큰 등록(`RegisterDeviceTokenUseCase`, 세션 있을 때) | Onboarding 계약 1.6 (0절 4) |
+  | 로그인 세션 유무 라우팅(인트로 vs 홈) | 기존 App 골격 |
 
 - **무엇**: V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시
   소비해 첫 홈 표시 지연을 줄였다. V2엔 이 프리페치가 없다(홈 진입마다 새로 로드). 되살리기로 확정(사용자, 2026-08-27).
@@ -275,6 +287,11 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   1.1·0-1 / `UserPageFeature` 4.1·5.2·0-2 / `NovelDetailFeature` 0(1회 로드).
   ⚠️ **작품 상세는 실측 회귀 확인**(사용자 보고 2026-08-28: 작품 평가 후 상세 복귀 시 헤더 별점·집계 미갱신) —
   parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
+- **크로스스크린 완료 피드백 재설계 (App 조정 계층, 사용자 확정 2026-08-28)** — V1은 `NotificationCenter` 배관
+  (`feedEdited`·`NovelReviewed`·`BlockUser`)으로 다른 화면에서 끝난 일의 결과를 복귀 화면에 토스트로 알렸다
+  ("수정 완료"·"평가 완료"·"차단했어요"). V2엔 이 배관이 없다. 위 push 재진입 재조회 복원과 **같은 App 배선 자리**에서
+  콜백/이벤트로 재설계한다(싱글톤 NotificationCenter 답습 금지). 근거: `FeedFeature` 0절 15 / `NovelDetailFeature`
+  6.5·0절 11 / `UserPageFeature` 4.6(소소 묶음 ①과 합류). → App + 다수 Feature.
 - **알림 상세 본문 URL 자동 링크 복원 (사용자 확정 2026-08-28)** — V1 상세 본문은 `UITextView`
   `dataDetectorTypes=.link`라 평문 URL이 탭 가능했으나, V2 순수 `Text`는 평문 URL을 링크로 렌더하지 않는다.
   `AttributedString` 링크 감지로 복원. **선행 확인**: 서버 알림 본문에 실제 링크가 실리는지. 근거:
@@ -287,13 +304,18 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   안내(토스트) 복원(`UserPageFeature` 4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
   (`UserPageFeature` 1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
   하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
-  공용). → `UserPageFeature`·`ProfileDomain`.
+  공용). ④ 작품 상세 피드 셀의 **탈퇴 유저(`userId == -1`) 프로필 탭 토스트** 복원(`NovelDetailFeature` 4.3 —
+  Feed 0절 8·USER-018 폴백과 통일; V2 매퍼가 `-1`을 nil로 안 접는 함정은 계약서 4.3 참고). → `UserPageFeature`·`ProfileDomain`·`NovelDetailFeature`.
 
 ### 10. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 
 개발이 **단독으로 못 닫는 것**(백엔드 스펙·기획·디자인 판단)은 9절(되살리기/고치기로 **결정**됨)과 달리
 **판정 자체가 열려 있어** 팀 논의로만 닫힌다. 흩어지지 않게 **[`docs/PENDING_DECISIONS.md`](PENDING_DECISIONS.md)
 한 곳에 모았다** — 현재 6건(백엔드 3·기획 1·디자인 1·분석계측 1). 비공개 프로필 서재 통계 노출(기획)도 그 문서 4번이다.
+
+**개발 내부 재검토 보류(외부 의존 없음 — PENDING_DECISIONS 대상 아님, 여기서 관리)**:
+- 홈 취향추천 **독립 스켈레톤 로딩** 되살릴지(V1은 개인화 지연 때문에 항상 별도 shimmer, V2는 단일 로드) — 사용자 보류 2026-08-28,
+  실기기에서 취향추천 지연이 체감되는지 실측 후 재판정. 근거: `HomeFeature` 계약 4.2·0절 8.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 

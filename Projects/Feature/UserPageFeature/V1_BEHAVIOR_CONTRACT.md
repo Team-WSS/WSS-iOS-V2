@@ -73,7 +73,7 @@
 
 **🗑 눈에 띄는 삭제 (의도 확인)**
 
-12. 🗑 **Delete** — 캐릭터 선택 **"변경 없음이면 아무것도 안 하고 닫기"** 최적화 제거(V1은 최종 선택이 대표 아바타와 같으면 notification을 post하지 않았다). → [3.3](#33-확인취소변경없음)
+12. 🗑 **Delete 확정** (2026-08-28, 사용자: 수단 차이 — 관찰 동작 동일, 서버 호출 없음) — 캐릭터 선택 **"변경 없음이면 아무것도 안 하고 닫기"** 최적화 제거(V1은 최종 선택이 대표 아바타와 같으면 notification을 post하지 않았다). → [3.3](#33-확인취소변경없음)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -232,7 +232,7 @@
 - ✅ **Keep** — "확인"은 선택 결과를 상위(프로필 편집)로 전달하고 닫는다. "취소"는 닫기만.
   - **수단 차이**: V1은 `NotificationCenter.changeRepresentativeAvatar`(avatarId, url) post 후 dismiss. V2는 `onApply(characterID)` 콜백 후 dismiss(draft 반영·시트 dismiss는 부모 책임).
   - 근거: V1 `MyPageEditAvatarViewModel.swift:94-118` · V2 `MypageCharacterEditSheet.swift:193-215`, `MyPageEditView.swift:76-86`, `CLAUDE.md`(.sheet(item:) + onApply)
-- 🗑 **Delete** — **"최종 선택 == 대표면 아무것도 안 하고 닫기"** 최적화. V1은 선택이 대표 아바타와 같으면 notification을 post하지 않고 그냥 dismiss했다.
+- 🗑 **Delete 확정** (2026-08-28, 사용자: 부모의 변경 감지(2.5)가 대신하며 서버 호출은 생기지 않음) — **"최종 선택 == 대표면 아무것도 안 하고 닫기"** 최적화. V1은 선택이 대표 아바타와 같으면 notification을 post하지 않고 그냥 dismiss했다.
   - V2: `onApply(selectedCharacterID)`를 항상 호출(부모의 `setCharacter`가 같은 값이면 draft가 실질 변화 없어 `isSubmittable`에 영향 없음 — 결과는 유사하나 최적화 자체는 제거).
   - 근거: V1 `MyPageEditAvatarViewModel.swift:98-102` · V2 `MypageCharacterEditSheet.swift:207-211`
 

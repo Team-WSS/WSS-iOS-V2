@@ -58,8 +58,8 @@
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
 7. 🔧 **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
-8. 🗑 **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
-9. 🗑 **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
+8. ⏸ **보류** (2026-08-28, 사용자: 실측 후 재검토 — 외부 의존 없음, TODO 10절) — **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
+9. 🔧 **Splash 부트스트랩으로 이관(되살림, TODO 8절)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -215,7 +215,7 @@
 
 ### 4.2 로딩
 
-- 🔧 **Improve / 🗑 Delete(부분)** — **로딩 표시 세분화**. V1은 (a) 상단 2종(오늘의 인기작+지금 뜨는 글) `zip`이 **전면 로딩 스피너**(`WSSLoadingView`)를 제어하고, (b) 취향추천은 **자체 shimmer 스켈레톤**(항상, 개인화가 느려서)을 따로 띄웠다 — 상단이 뜬 뒤에도 취향추천만 스켈레톤이 남을 수 있다.
+- 🔧 **Improve / ⏸ 보류(스켈레톤 부분 — 2026-08-28, 사용자: 실측 후 재검토)** — **로딩 표시 세분화**. V1은 (a) 상단 2종(오늘의 인기작+지금 뜨는 글) `zip`이 **전면 로딩 스피너**(`WSSLoadingView`)를 제어하고, (b) 취향추천은 **자체 shimmer 스켈레톤**(항상, 개인화가 느려서)을 따로 띄웠다 — 상단이 뜬 뒤에도 취향추천만 스켈레톤이 남을 수 있다.
   - V2: 홈 전체가 한 로드라 **단일 전면 로딩**만 있고, 그마저 **`isInitialLoading`(보여줄 게 없을 때만)**으로 좁혔다(탭 복귀 갱신 시 이미 그린 화면을 로딩으로 갈아치우지 않음). **섹션 단위 스켈레톤은 사라졌다.**
   - 근거: V1 `HomeViewModel.swift:108-110`,`154`,`162`,`showLoadingView`, `HomeTasteRecommendView.swift:111-127`(setLoading 스켈레톤) · V2 `HomeViewModel.swift:52-54`,`183-187`, `HomeView.swift:111-126`, `CLAUDE.md`(isInitialLoading)
 - ✅ **Keep** — **초기 진입엔 전면 로딩, 갱신(탭 복귀)엔 로딩 표시를 세우지 않는다**(콘텐츠 우선). 로딩과 실패의 기준이 일부러 다르다.
@@ -259,10 +259,10 @@
 
 ### 6.2 유저 정보 처리
 
-- 🗑 **Delete** — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
-  - V2: 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다(`fetchCachedNickname`). 저장은 로그인·프로필 조회 등 다른 경로가 담당(홈의 책임 아님).
+- 🔧 **Splash 부트스트랩으로 이관 확정** (2026-08-28, 사용자: 유저 정보 조회·캐시 갱신은 앱 진입마다 필요 — `docs/TODO.md` 8절 런치 허브) — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
+  - V2: 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다(`fetchCachedNickname`). 저장은 로그인·프로필 조회 등 다른 경로가 담당(홈의 책임 아님). **앱 진입마다 `/users/me` 재조회·캐시 갱신은 Splash 부트스트랩이 맡는다**(신설 대기).
   - 근거: V1 `HomeViewModel.swift:200-213`,`299-301` · V2 `LoadHomeDataUseCase.swift:46`, `RecommendationDomain/CLAUDE.md`(닉네임은 로컬 캐시)
-- 🗑 **Delete** — V1은 `NotificationName.editProfile`을 관찰해 프로필 수정 복귀 시 **"프로필 수정" 토스트**를 띄웠다.
+- 🗑 **Delete 확정** (2026-08-28, 사용자: 편집 저장 토스트는 마이페이지가 띄움 — UserPage 계약 1.9 ✅, 홈 복귀 경로 자체가 없음) — V1은 `NotificationName.editProfile`을 관찰해 프로필 수정 복귀 시 **"프로필 수정" 토스트**를 띄웠다.
   - V2: 홈에 이 토스트가 없다.
   - 근거: V1 `HomeViewController.swift:245-250` · V2 `HomeView`(editProfile 토스트 없음)
 
