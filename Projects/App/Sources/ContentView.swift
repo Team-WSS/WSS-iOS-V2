@@ -11,19 +11,23 @@ public struct ContentView: View {
     }
 
     @State private var dependencies = AppDependencies()
-    @State private var route: Route = .onboarding
+    @State private var route: Route = .main
 
     public init() {}
 
     public var body: some View {
-        switch route {
-        case .onboarding:
-            OnboardingRootView(dependencies: dependencies, onFinished: { route = .main })
-        case .main:
-            // 온보딩 완료·기존 유저 로그인 이후 갈 곳(홈/피드/서재/My 메인 탭)은 아직 없다 —
-            // 후속 이슈에서 이 자리를 실제 메인 탭 루트로 교체한다.
-            Text("메인 진입 (미구현)")
+        Group {
+            switch route {
+            case .onboarding:
+                OnboardingRootView(dependencies: dependencies, onFinished: { route = .main })
+            case .main:
+                MainTabView(dependencies: dependencies, onAuthenticationRequired: { route = .onboarding })
+            }
         }
+        // DesignSystem 색상이 전부 고정값(다크 배리언트 없음, WSSColor.wssWhite 등)이라 시스템이
+        // 다크모드면 배경만 시스템 기본(검정)으로 바뀌어 보인다 — 화면마다 .background(wssWhite)를
+        // 개별로 다는 대신 앱 전체를 라이트모드로 고정해 한 번에 막는다(사용자 확정).
+        .preferredColorScheme(.light)
     }
 }
 

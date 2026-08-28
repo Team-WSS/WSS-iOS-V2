@@ -10,11 +10,8 @@ import SwiftUI
 
 import BaseDomain
 import CollectionDomain
-import SearchDomain
-import NovelDomain
 import DesignSystem
 import WSSComponent
-import Logger
 
 // 컬렉션 생성 화면. "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View가 결정한다.
 // 화면 동작 계약(뒤로가기·대표 배지·완료 활성화 등)은 CollectionFeature/CLAUDE.md 참고.
@@ -25,9 +22,6 @@ struct CreateCollectionView: View {
     /// VM 상태에 TextField를 직접 물리지 않는다.
     @State private var nameFieldText: String
     @State private var descriptionFieldText: String
-    /// "작품 추가" 화면 push 여부 — `ReadingPeriodSheet`류 로컬 값 선택기와 같은 위상이라(다만 sheet가
-    /// 아니라 push) 이 화면이 직접 소유한다. App/Factory는 몰라도 된다.
-    @State private var isAddNovelPresented = false
     /// 이름·설명 필드는 각자 독립된 `@FocusState`를 쓴다 — 하나로 공유하면 빈 곳 탭으로 둘 다 내릴 때
     /// 어느 필드가 포커스인지 구분이 안 된다(`UserPageFeature`의 `MyPageEditView` 동일 패턴).
     @FocusState private var isNameFieldFocused: Bool
@@ -35,32 +29,27 @@ struct CreateCollectionView: View {
     @FocusState private var isDescriptionFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
-    /// "작품 추가" 화면이 검색에 쓸 UseCase — `FeedFeature`의 연결 작품 검색과 같은 이유로 이 모듈이
-    /// `SearchDomain`을 안다.
-    private let searchNovelUseCase: SearchNovelUseCase
-    /// "작품 추가" 화면의 "서재에서 추가"가 서재 조회에 쓸 UseCase — 서재 Domain 코드는 별도 모듈이
-    /// 아니라 `NovelDomain`에 있다(`LibraryFeature`와 같은 이유, `LibraryFeature/CLAUDE.md` 참고).
-    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
-    /// "작품 추가"/"서재에서 추가" 화면도 각자의 VM에서 실패를 로깅해야 하므로, 이 화면이 Factory에게
-    /// 받은 걸 그대로 들고 있다가 두 화면 생성 시 내려보낸다(`CreateCollectionViewModel`과 같은 인스턴스).
-    private let logger: Logger?
-    /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행. "작품 추가" 화면도 같은
-    /// 콜백을 공유한다(둘 다 결국 이 화면의 하위 화면).
+    /// "작품 추가" 화면(App이 push)이 확정한 결과 — `nil→값` 전이로 감지하는 1회성 신호
+    /// (`OnboardingFeature`의 확정 신호 패턴과 동일). 소비 즉시 다시 `nil`로 되돌린다.
+    private let pendingNovelSelection: Binding<[CollectionNovel]?>
+    /// "작품 추가" 타일 탭 콜백 — 현재 선택된 작품 목록을 실어 올린다("작품 추가" 화면이 이미 담긴
+    /// 작품도 선택된 채로 보여주는 편집 화면이라서). 실제 화면 전환(`CollectionFeatureFactory.makeSearchNovelView`
+    /// 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onAddNovelTapped: ([CollectionNovel]) -> Void
+    /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행.
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: CreateCollectionViewModel,
-        searchNovelUseCase: SearchNovelUseCase,
-        loadMyLibraryUseCase: LoadMyLibraryUseCase,
-        logger: Logger? = nil,
+        pendingNovelSelection: Binding<[CollectionNovel]?>,
+        onAddNovelTapped: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self._nameFieldText = State(initialValue: viewModel.state.draft.name)
         self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
-        self.searchNovelUseCase = searchNovelUseCase
-        self.loadMyLibraryUseCase = loadMyLibraryUseCase
-        self.logger = logger
+        self.pendingNovelSelection = pendingNovelSelection
+        self.onAddNovelTapped = onAddNovelTapped
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -88,27 +77,36 @@ struct CreateCollectionView: View {
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
             }
-            .navigationDestination(isPresented: $isAddNovelPresented) {
-                CollectionSearchNovelView(
-                    viewModel: CollectionSearchNovelViewModel(
-                        initialSelection: viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] },
-                        searchNovelUseCase: searchNovelUseCase,
-                        logger: logger
-                    ),
-                    loadMyLibraryUseCase: loadMyLibraryUseCase,
-                    logger: logger,
-                    // 확정은 몇 단계를 push해 들어갔든(작품 검색만이든, "서재에서 추가"까지 더
-                    // 들어갔든) 이 화면이 소유한 `isAddNovelPresented` 하나를 여기서 딱 한 번만
-                    // false로 내린다 — 그 서브트리 전체가 한 번의 네이티브 pop 애니메이션으로 걷힌다.
-                    // 중간 화면들은 스스로 dismiss()하지 않고 이 콜백을 그대로 위로 전달만 한다
-                    // (`CollectionSearchNovelView.swift`/`CollectionMyLibrarySelectView.swift` 참고,
-                    // `CollectionFeature/CLAUDE.md`에 배경 기록).
-                    onConfirm: { novels in
-                        viewModel.handle(.setNovels(novels))
-                        isAddNovelPresented = false
-                    },
-                    onAuthenticationRequired: onAuthenticationRequired
-                )
+            // "작품 추가" 화면(App이 push)이 확정한 결과 — 소비 즉시 nil로 되돌린다(nil→값 전이
+            // 신호 패턴, `OnboardingFeature/CLAUDE.md` 참고). App이 몇 단계를 push해 들어갔든(작품
+            // 검색만이든, "서재에서 추가"까지 더 들어갔든) 확정 시 이 화면까지 한 번에 pop하고 이
+            // 신호를 채운다 — 중간 화면 개수는 이 화면이 몰라도 된다.
+            // `CollectionNovel`이 Equatable이 아니라(Hashable 캐스케이드 회피, `CollectionFeatureFactory`
+            // 주석 참고) 배열 자체가 아니라 nil 여부(Bool)로만 전이를 감지한다 — 어차피 1회성
+            // nil→값 신호라 내용 비교는 필요 없다.
+            .onChange(of: pendingNovelSelection.wrappedValue != nil) { _, hasValue in
+                guard hasValue, let novels = pendingNovelSelection.wrappedValue else { return }
+                viewModel.handle(.setNovels(novels))
+                pendingNovelSelection.wrappedValue = nil
+            }
+            // 수정 모드 진입 직후 대상 컬렉션을 불러오는 동안의 대기 표시 — 화면 전환은 바로 일어나고
+            // (이전 화면에서 미리 준비하지 않음, `FeedFeature`와 동일 판단) 이 화면 안에서 로드한다.
+            .allowsHitTesting(!viewModel.state.isLoadingForEdit)
+            .overlay {
+                if viewModel.state.isLoadingForEdit {
+                    LoadingView()
+                }
+            }
+            .onAppear {
+                viewModel.handle(.load)
+            }
+            // 수정 모드 로드가 끝나 draft.name/description이 채워지면, 글자수 clamp 트랩용 로컬
+            // 버퍼(nameFieldText/descriptionFieldText)도 같이 채운다 — 이 버퍼는 init 시점에만
+            // 시드되므로 비동기 로드 완료를 별도로 반영해줘야 한다.
+            .onChange(of: viewModel.state.isLoadingForEdit) { wasLoading, isLoading in
+                guard wasLoading, !isLoading else { return }
+                nameFieldText = viewModel.state.draft.name
+                descriptionFieldText = viewModel.state.draft.description
             }
     }
 
@@ -337,7 +335,8 @@ private extension CreateCollectionView {
     /// 늘어나게 하고, 제목 자리는 `Metric.novelTitleHeight`만큼 고정 높이로 예약한다.
     var addNovelTile: some View {
         Button {
-            isAddNovelPresented = true
+            let currentSelection = viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] }
+            onAddNovelTapped(currentSelection)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 // ⚠️ `.aspectRatio`를 VStack에 직접 걸면 VStack이 제 내용물(텍스트+아이콘, ~41pt)의
@@ -457,8 +456,8 @@ private extension CreateCollectionView {
             viewModel: CreateCollectionViewModel(
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
-            searchNovelUseCase: PreviewSearchNovelUseCase(),
-            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            pendingNovelSelection: .constant(nil),
+            onAddNovelTapped: { _ in print("작품 추가 진입") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -484,25 +483,10 @@ private extension CreateCollectionView {
                 previewNovelDisplayInfo: Dictionary(uniqueKeysWithValues: novels.map { ($0.id, $0) }),
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
-            searchNovelUseCase: PreviewSearchNovelUseCase(),
-            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
+            pendingNovelSelection: .constant(nil),
+            onAddNovelTapped: { _ in print("작품 추가 진입") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
-    }
-}
-
-private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-}
-
-private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
-        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
     }
 }
 

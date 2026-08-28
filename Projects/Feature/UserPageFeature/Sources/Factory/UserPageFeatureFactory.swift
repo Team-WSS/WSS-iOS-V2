@@ -21,6 +21,17 @@ import Logger
 /// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
 public enum UserPageFeatureFactory {
 
+    /// - Parameters:
+    ///   - onLibraryTapped: "서재" 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입 콜백.
+    ///     실제 화면 전환(`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록(`makeFeedListView`) 진입 콜백. 이
+    ///     화면이 이미 로드해둔 `(userID, nickname, profileImage)`를 그대로 실어 올린다(#201) — 실제
+    ///     화면 전환은 호출자(App)가 수행한다.
+    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세 진입 콜백. 실제 화면 전환
+    ///     (`CollectionFeature`의 상세 화면 조립)은 호출자(App)가 수행한다.
+    ///   - onCollectionListTapped: 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 그 유저의 컬렉션 목록 진입
+    ///     콜백. 실제 화면 전환(`CollectionFeature`의 목록 화면, "내 컬렉션" 탭만 보이는 모드)은
+    ///     호출자(App)가 수행한다.
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -34,7 +45,11 @@ public enum UserPageFeatureFactory {
         blockUserUseCase: BlockUserUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onLibraryTapped: @escaping () -> Void = {},
+        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
+        onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
+        onCollectionListTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = UserPageViewModel(
             userID: userID,
@@ -53,16 +68,16 @@ public enum UserPageFeatureFactory {
         return UserPageView(
             viewModel: viewModel,
             userID: userID,
-            loadUserFeedsUseCase: loadUserFeedsUseCase,
-            feedLikeUseCase: feedLikeUseCase,
-            reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
-            reportImproperFeedUseCase: reportImproperFeedUseCase,
-            logger: logger
+            onLibraryTapped: onLibraryTapped,
+            onFeedListTapped: onFeedListTapped,
+            onCollectionItemTapped: onCollectionItemTapped,
+            onCollectionListTapped: onCollectionListTapped
         )
     }
 
     /// "활동" 탭 미리보기(최대 5개)에서 "전체보기"로 진입하는 전체 피드 목록(무한스크롤) 화면.
-    /// `UserPageView`의 내부 네비게이션이 직접 호출한다(`SettingFeatureFactory`의 다중 `makeXxxView`와 동일 패턴).
+    /// 호출자(App)가 `makeView`의 `onFeedListTapped`를 받아 조립한다(#201부터 — `UserPageView`가
+    /// 더 이상 로컬로 push하지 않는다).
     @MainActor
     public static func makeFeedListView(
         userID: UserID,

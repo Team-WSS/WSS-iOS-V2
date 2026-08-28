@@ -20,11 +20,17 @@
   - ⚠️ **`LibraryFeature`의 `noMatchSection`(필터 0건)은 아직 이 컴포넌트로 옮기지 않았다** — 그쪽은 이미지를 39×48로 줄이고 상단 여백 120을 직접 잡는 등 **렌더가 달라서**, 옮기면 서재 화면 재검증이 필요하다. 옮길 거면 크기 파라미터를 열지 말고 **왜 두 빈 상태의 이미지 크기가 다른지부터** 디자인과 정할 것.
 - **`WSSSelectionCheckIcon`(#188)** — `icSelectNovelDefault`/`icSelectNovelSelected` 체크 아이콘 전환을 크로스페이드+스케일 스프링(`.spring(response: 0.32, dampingFraction: 0.6)`)으로 통일한 공용 컴포넌트. 원래 `CreateFeedConnectNovelRow`(FeedFeature)에서 시작된 패턴이 `MyFeedFilterSheet`·`WithdrawReasonView`·`NovelNotificationRow`에 각자 손으로 복제(또는 애니메이션 없이 즉시 스냅 전환)돼 있던 걸 여기로 모았다 — `CreateFeedConnectNovelRow`는 이후 `#199`로 `WSSNovelSelectRow`로 승격되며 사라졌고, 그 승격된 파일에도 이 컴포넌트를 반영했다. **탭 제스처를 갖지 않는 순수 표시 컴포넌트**라 호출부가 `Button`이든 `onTapGesture`든 자유롭게 감싼다. 크기도 안 정하므로(`.frame` 없음) 호출부가 필요한 크기로 얹는다 — 콜사이트마다 44×44(히트 영역 포함)·24×24(순수 아이콘) 등으로 다르다. 이 아이콘 쌍을 새로 쓰는 화면은 직접 구현하지 말고 이 컴포넌트를 재사용할 것.
 - **`WSSNovelGridCell`(작품 그리드 셀)의 계약 — "폭은 부모가, 높이는 컴포넌트가"**:
-  - ⚠️ **표지 아래 정보 스택은 고정 높이(72)** 다. 제목이 1~2줄로 갈려 자연 높이로 두면 **`LazyVGrid` 행이
+  - ⚠️ **표지 아래 정보 스택은 고정 높이(72)** 다. 제목이 자연 높이로 늘어나면 **`LazyVGrid` 행이
     어긋나** 목록이 삐뚤빼뚤해진다(홈·서재 양쪽에서 실제로 겪음). 스택 **안은 자연스럽게 흐르게** 두고
-    (1줄 제목이면 작가가 바로 따라옴 — 디자인 의도) 스택 **자체만** 고정한다. 빈 자리를 채우거나 제목을
-    2줄로 강제하지 말 것. **높이를 파라미터로 열지 않은 것도 의도** — 폰트·줄 수가 고정이라 값이 흔들리면
-    행 정렬이라는 존재 이유가 깨진다.
+    스택 **자체만** 고정한다. 빈 자리를 채우지 말 것. **높이를 파라미터로 열지 않은 것도 의도** —
+    폰트·줄 수가 고정이라 값이 흔들리면 행 정렬이라는 존재 이유가 깨진다.
+  - **제목은 항상 1줄 고정(`lineLimit(1)` + `.truncationMode(.tail)`)** 이다 — 2줄로 갈라지던 이전 동작을
+    의도적으로 바꿨다(#196). 길면 말줄임되고 작가 행은 항상 제목 바로 다음 줄에 온다. 시안이나 긴 제목을
+    근거로 다시 2줄 허용으로 되돌리지 말 것 — 사용자 확정.
+  - ⚠️ **위 변경과 짝을 이뤄 `infoHeight`도 72→54로 같이 줄었다** — 72는 제목 2줄 시절 값이라, 1줄
+    고정 이후에도 그대로 두면 셀 하단에 죽은 여백이 남아 `LazyVGrid`의 `rowSpacing`(예: 홈 그리드 18)과
+    합쳐져 행 간격이 의도보다 훨씬 넓어 보인다(실측 확인, #196). **제목 lineLimit을 다시 만지면 이
+    높이도 같이 재계산할 것** — 둘은 독립된 값이 아니다.
   - **표지·제목·작가가 같은 폭을 공유한다**(모두 셀 폭). 홈 시안엔 제목만 140(셀 163)이었으나 표지와
     오른쪽 끝이 어긋나 걷어냈다 — **시안 값을 근거로 제목 폭을 다시 좁히지 말 것**.
   - 표지 비율은 `WSSNovelCoverImage(url:aspectRatio:)`에 **파라미터로 넘긴다**(아래 표지 항목 참고).
@@ -40,7 +46,8 @@
 - **Alert 버튼 탭은 `isPresented`를 자동으로 닫지 않는다**(SwiftUI `.alert`와 다름) — 취소 버튼 포함 **모든 buttonActions가 스스로 표시 상태를 되돌려야** 한다. 안 그러면 알럿이 안 닫힌다.
 - **`isPresented`는 그대로 두고 `alertType`만 바뀌는 다단계 알럿**(예: "신고할까요?" 확인 → "신고 접수했습니다" 완료)은 `WSSAlertView`에 `.id(alertType)`를 걸어 뷰 정체성을 갈라야 `.transition`이 실제로 발동한다 — 안 걸면 SwiftUI가 "같은 뷰"로 보고 내용만 즉시 스냅 교체해버려 애니메이션이 없다(`WSSAlertType`을 `Hashable`로 만든 이유). `.animation(value:)`도 `isPresented`뿐 아니라 `alertType` 변화에도 걸어야 이 전환이 애니메이션된다.
 - **`WSSAlertType`은 원래 전 케이스가 정적 카피라 `CaseIterable` 자동 합성이었지만, `deleteNovelNotificationSubscriptions(summary:)`(#188, "선택 N개 삭제할까요?" 류처럼 화면마다 문구가 달라지는 알럿)가 연관값을 가지면서 깨졌다** — `CaseIterable` 준수를 별도 `extension`으로 옮기고 `allCases`를 수동 나열한다(Demo 프리뷰 목록용, 동적 케이스는 샘플 문자열로 채움). 새 정적 케이스를 추가하면 이 수동 `allCases`에도 반드시 같이 넣을 것 — 안 넣으면 컴파일은 되지만 Demo에서 조용히 안 보인다. 문구 조합(예: "제목 외 N작품")은 컴포넌트가 판단하지 않고 **호출부가 완성된 문자열을 넘긴다**.
-- **이미지 + `onTapGesture` 패턴은 접근성 트리에 안 잡힌다**(VoiceOver·UI 자동화 모두) — 탭 가능한 이미지에는 `.accessibilityLabel` + `.accessibilityAddTraits(.isButton)`을 같이 달거나 `Button`을 쓸 것(WSSFeadHeaderView의 프로필·threedots에서 발견).
+- **이미지 + `onTapGesture` 패턴은 접근성 트리에 안 잡힌다**(VoiceOver·UI 자동화 모두) — 탭 가능한 이미지에는 `.accessibilityLabel` + `.accessibilityAddTraits(.isButton)`을 같이 달거나 `Button`을 쓸 것. `WSSFeadHeaderView`의 프로필·`WSSFeedReactView`의 좋아요가 실제로 이 문제였는데, 접근성 패치만으론 부족해 **결국 둘 다 진짜 `Button`으로 승격**했다(아래 항목 참고) — threedots는 처음부터 `Button`이었다.
+- ⚠️ **셀 행 전체에 "피드 상세 진입" 같은 컨테이너 탭을 걸 계획이면, 그 안의 서브 액션(프로필·좋아요 등)은 처음부터 진짜 `Button`으로 만들 것 — `onTapGesture`로 두면 컨테이너가 `simultaneousGesture`일 때만 "우연히" 공존한다.** `SosoFeedView`의 피드 행이 실제로 이 함정에 걸렸었다(#196) — 셀 프로필/좋아요가 `onTapGesture`였을 땐 행의 "피드 상세 진입"을 `simultaneousGesture`로 걸 수밖에 없었는데, `simultaneousGesture`는 조상·자손 제스처를 **동시에 발화시킨다**(둘 다 실행, 하나가 이기는 게 아님) — 그 자리는 원래 no-op placeholder라 안 드러났다가, 프로필/좋아요에 실제 동작을 연결하자 "눌러도 피드 상세로 같이 넘어가는" 버그로 드러났다. 고친 방법: 프로필·좋아요를 `Button`으로 승격한 뒤, 행의 컨테이너 제스처를 **평범한 `onTapGesture`로 낮춘다** — `Button`은 자기 hit-test 영역에서 조상의 `onTapGesture`보다 우선하므로(아래 "칩·셀 안에 우선순위 서브 액션" 항목과 동일 원리) 그 영역 밖만 컨테이너로 떨어진다. `linkNovelTapped`(연결 작품 배너)는 처음부터 `Button`이라 이 문제가 없었다 — 새 피드/리스트 셀을 만들 때 "서브 액션은 전부 Button, 컨테이너는 평범한 onTapGesture"를 기본값으로 할 것.
 - **`WSSAlertView`의 버튼(`WSSAlertButtonView` = `Text` + `.onTapGesture`)도 같은 이유로 접근성 트리에 안 잡힌다** — 앱 전체 알럿이 이 컴포넌트를 쓰므로, UI 자동화(XcodeBuildMCP `tap` 등)로는 알럿이 뜨는 것까지만 검증 가능하고 버튼 탭은 못 누른다(UserPageFeature #172에서 확인). 자동화로 알럿 버튼까지 검증해야 하면 `Button`으로 바꾸거나 접근성 트레잇을 추가해야 한다.
 - **`scaledToFill().frame(...).clipShape(...)`는 그리기만 자르고 hit-test 영역은 스케일된 원본 크기로 남는다** — 프레임보다 세로로 긴 이미지(정사각 이상)면 보이지 않는 터치 영역이 위아래로 넘쳐 **형제 뷰의 버튼 탭을 가로챈다**(WSSFeedImageView가 WSSFeadView 헤더의 프로필·threedots를 죽이던 버그, #154에서 수정). 장식 이미지는 `.allowsHitTesting(false)`, 탭이 필요한 이미지는 clip 뒤 `.contentShape`로 hit 영역을 명시할 것.
 - `WSSSearchBar`는 `isFocused: FocusState<Bool>.Binding? = nil`로 외부 포커스 제어를 선택적으로 받는다(기본 nil이면 내부 `@FocusState` 사용). 호출부가 포커스를 직접 제어하려면(자동 포커스, 바깥 탭 시 dismiss 등) 일반 `@State`가 아니라 **자체 `@FocusState` 프로퍼티**를 선언해 그 `$binding`을 넘겨야 한다 — 타입이 `FocusState<Bool>.Binding`이라 `Binding<Bool>`과 호환되지 않는다.
@@ -69,6 +76,7 @@
   - 구 WSSiOS에는 `shouldReceive touch`로 **텍스트 입력(`UITextField`/`UITextView`) 위 터치를 무시**하는 규칙도 있었는데 **가져오지 않았다** — 지금 코드베이스엔 발화 지점이 없다(전면 `UITextView` 0건, `TextField`는 전부 좌우 패딩 안쪽이라 엣지 팬 구간에 안 걸린다). 전역 delegate에 검증 못 하는 규칙을 얹지 않으려는 판단이니, 화면 폭을 채우는 텍스트 에디터가 생기면 **그때 실제 증상을 확인하고** 넣을 것.
   - ⚠️ **이 제스처는 시뮬레이터 자동화로 검증할 수 없다** — XcodeBuildMCP `gesture(swipe-from-left-edge)`로는 `shouldBegin`이 아예 불리지 않는다. **사람이 직접 밀어서** 확인해야 한다.
 - `WSSFlowLayout.sizeThatFits`는 제안된 폭이 유한하면 내용 실제 폭이 아니라 **그 폭을 그대로** 자기 크기로 보고한다 — 내용이 한 줄을 못 채워도 상위 스택의 기본(가운데) 정렬에 밀려 왼쪽 정렬이 안 보이는 문제를 막기 위한 의도적 선택. 폭 제약이 없을 때만(`.infinity`) 내용 폭에 맞춰 줄어든다.
+- **`WSSFeadHeaderView`/`WSSFeadView`의 `isProfileTappable: Bool = true`**(#196) — 내 글이면 `false`로 넘겨 프로필 탭 영역 자체를 비활성화한다. `.disabled()`가 아니라 **`Button`을 아예 안 그리는 방식**을 쓴다 — `.disabled()`는 히트테스트를 계속 가로채 그 자리가 죽은 영역이 되지만, `Button`을 안 그리면 탭이 그대로 부모 컨테이너(`SosoFeedView`의 행 `onTapGesture` = 피드 상세 진입)로 흘러가 "이 영역만 아무 반응 없음"이 되지 않는다. 판단은 컴포넌트가 아니라 호출부(Feature)가 한다 — `TotalFeed.isMyFeed` 같은 도메인 판단은 이 레이어가 모른다.
 - `FeedHeader`/`WSSFeedReact`는 콜백(`profileTapped`/`threeDotsButtonTapped`/`likeButtonTapped`)과 `isLiked`를 struct에 담지 않는다 — 각각 `WSSFeadHeaderView`/`WSSFeedReactView` **뷰 레벨** 파라미터로만 받는다(struct는 순수 표시 데이터). 좋아요 아이콘은 `icThumbUp`/`icThumbUpFill`만 쓴다(`icLike`/`icLikeSelected` 에셋 없음). 과거 "콜백 책임 분리" 리팩터(#135/#148)가 이 구조를 몇 번 바꾸려다 접근성 탭 타겟 수정(#154, `.contentShape`+`onTapGesture`+`accessibilityLabel`, 프로필 탭 영역을 닉네임까지 확장)과 반복 충돌했다 — rebase 시 두 설계를 섞지 말고 이 규칙대로 정리할 것.
 - `WSSDropdownItem`의 글자색 파라미터명은 `textColor`(구 `titleColor` 아님), 순서는 `title, action, textColor = 기본값`. `textColor`가 기본값을 갖고 `action` 뒤에 오므로 `WSSDropdownItem(title: "x") { ... }` 트레일링 클로저 호출은 그대로 유효 — 단 색을 지정하려면 `action:`/`textColor:` 라벨을 명시해야 한다(트레일링 클로저는 라벨 있는 인자 뒤엔 못 붙음). `NovelDetailFeature`처럼 **다른 Feature 모듈**이 이 컴포넌트를 쓰면 rebase 시 그 호출부도 같이 깨질 수 있으니 시그니처 변경 시 전 레포 검색 필수.
 - `WSSFeadView`는 `isLiked`/`likeButtonTapped`를 자체 파라미터로 받아 `WSSFeedReactView`에 그대로 넘긴다(둘 다 기본값 없는 필수 파라미터 — 호출부가 실제 좋아요 상태/토글을 직접 채워야 한다).
@@ -135,3 +143,10 @@
   부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
   이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
   확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).
+- **`WSSResetButton`(`Sources/Button/`)는 필터류 화면 하단 액션바의 "초기화" 보조 버튼이다**(2026-08,
+  원본은 `SearchFeature`의 상세탐색 필터 + `LibraryFeature`의 서재 필터 시트가 각자 손으로 복제하던
+  코드 — 아이콘(`icReset`)·문구·크기(95×53)·색까지 완전히 동일했다) — `action: () -> Void`만 받고
+  라벨·아이콘·스타일은 전부 고정이다. **무엇을 초기화할지는 컴포넌트가 모른다** — 상세탐색은 "보고
+  있는 탭만"(`selectedTab` 분기), 서재 필터는 "시트 전체"(`clearAll`)로 서로 다른 범위를 `action`
+  클로저 안에서 각자 판단한다. 항상 `WSSCTAButton`과 나란히 쓰이며 그 배치(`HStack` +
+  `Spacer().frame(width: 10)`)는 호출부 몫이다.

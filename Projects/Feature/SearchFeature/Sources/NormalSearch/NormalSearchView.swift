@@ -14,27 +14,29 @@ import SearchDomain
 import DesignSystem
 import WSSComponent
 
-/// `.navigationDestination(item:)`는 `Hashable` 아이템이 필요하지만, `SearchFilter`(Domain)에 UI 내비게이션
-/// 전용 `Hashable`을 얹고 싶지 않아 UUID 기반 얇은 래퍼로 감싼다 — 탭마다 매번 새 값이라 값 동일성 비교는 불필요.
-private struct DetailSearchNavigation: Hashable {
-    let id = UUID()
-    let filter: SearchFilter
-    
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
-}
-
 struct NormalSearchView: View {
-    
+
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var viewModel: NormalSearchViewModel
-    @State private var detailSearchNavigation: DetailSearchNavigation?
 
     @FocusState var isFocused: Bool
 
-    init(viewModel: NormalSearchViewModel) {
+    /// 검색 결과 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    private let onNovelSelected: (NovelID) -> Void
+    /// 장르 탭·인기 키워드 칩 탭 → 상세탐색 결과(`DetailSearchResultView`) 진입 콜백. 실제 화면 전환은
+    /// 호출자(App 조정 계층)가 수행한다 — App이 소유한 `NavigationPath`에 직접 push해야 그 안에서 다시
+    /// `onNovelSelected`로 작품 상세를 열 때 화면이 제대로 쌓인다(아래 주의사항 참고, #196).
+    private let onDetailSearchRequested: (SearchFilter) -> Void
+
+    init(
+        viewModel: NormalSearchViewModel,
+        onNovelSelected: @escaping (NovelID) -> Void = { _ in },
+        onDetailSearchRequested: @escaping (SearchFilter) -> Void = { _ in }
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onNovelSelected = onNovelSelected
+        self.onDetailSearchRequested = onDetailSearchRequested
     }
     
     /// 검색어는 VM이 소유(입력마다 자동완성 조회를 트리거)하므로 View는 Binding으로 중계만 한다.
@@ -62,7 +64,8 @@ struct NormalSearchView: View {
                         hasLoadError: viewModel.state.hasSearchResultError,
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
-                        onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) }
+                        onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) },
+                        onNovelSelected: onNovelSelected
                     )
                 } else if isFocused, !viewModel.state.searchText.isEmpty {
                     NormalSearchAutoCompletionView(
@@ -109,13 +112,6 @@ struct NormalSearchView: View {
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
             viewModel.handle(.loadPopularKeywords)
-        }
-        .navigationDestination(item: $detailSearchNavigation) { navigation in
-            DetailSearchResultView(
-                viewModel: viewModel.makeDetailSearchResultViewModel(
-                    filter: navigation.filter
-                )
-            )
         }
     }
     
@@ -229,7 +225,7 @@ struct NormalSearchView: View {
     
     private func genreItem(genre: NovelGenre) -> some View {
         Button {
-            detailSearchNavigation = DetailSearchNavigation(filter: SearchFilter(genres: [genre]))
+            onDetailSearchRequested(SearchFilter(genres: [genre]))
         } label: {
             VStack(spacing: 9) {
                 genre.iconImage
@@ -275,7 +271,7 @@ struct NormalSearchView: View {
                         keyword: keyword.name,
                         isSelected: false,
                         action: {
-                            detailSearchNavigation = DetailSearchNavigation(filter: SearchFilter(keywords: [keyword]))
+                            onDetailSearchRequested(SearchFilter(keywords: [keyword]))
                         }
                     )
                 }
@@ -313,12 +309,13 @@ struct NormalSearchView: View {
                        showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.sosoPickNovels, id: \.novelID) { pick in
-                        sosoPickItem(imageURL: pick.novelThumbnailimage,
-                                     title: pick.novelTitle)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            print("\(pick.novelID)번 작품 상세로 이동")
+                        Button {
+                            onNovelSelected(pick.novelID)
+                        } label: {
+                            sosoPickItem(imageURL: pick.novelThumbnailimage,
+                                         title: pick.novelTitle)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }

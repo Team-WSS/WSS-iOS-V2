@@ -366,27 +366,9 @@ private extension LibraryFilterSheet {
     /// 초기화(시트 필터만 리셋, 시트 유지) + 작품 찾기(적용 후 닫기).
     var ctaSection: some View {
         HStack(spacing: 0) {
-            Button {
+            WSSResetButton {
                 viewModel.handle(.clearAll)
-            } label: {
-                HStack(spacing: 4) {
-                    WSSImage.icReset.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 14, height: 14)
-                    Text("초기화")
-                        .applyWSSFont(.title2, color: .wssGray200)
-                }
-                .frame(width: 95, height: 53)
-                .background(Color.wssWhite)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.wssGray80, lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
 
             Spacer().frame(width: 10)
 

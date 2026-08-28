@@ -78,6 +78,9 @@ struct LibraryView: View {
                 // iOS 26 시트 기본 배경은 글래스 — 디자인은 불투명 흰색.
                 // presentationCornerRadius는 쓰지 않는다(배경이 둥근 모서리에 클립되지 않아 삐져나옴).
                 .presentationBackground(Color.wssWhite)
+                .presentationCornerRadius(16)
+                .interactiveDismissDisabled()
+                .presentationBackgroundInteraction(.disabled)
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.requiresAuthentication) { _, required in
@@ -186,6 +189,7 @@ private extension LibraryView {
                 .frame(width: 1, height: 8)
             Spacer().frame(width: 10)
             Button {
+                HapticManager.selection()
                 isSortSheetPresented = true
             } label: {
                 HStack(spacing: 4) {

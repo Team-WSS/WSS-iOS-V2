@@ -69,6 +69,12 @@ final class NovelDetailViewModel {
         case reportFeedFailed
         /// 평가 삭제 완료 — 결과가 화면 재로드로만 보이면 알아차리기 어려워 성공도 토스트로 알린다.
         case reviewDeleted
+        /// ⚠️ 유일하게 네트워크 실패가 아닌 케이스 — 피드 탭 셀 프로필을 탭했는데 그 작성자가 탈퇴한
+        /// 유저(`Author.userId == -1`, 서버가 실제 유저 대신 이 값을 내려준다)일 때. 로컬 판정이라
+        /// UseCase 호출 자체가 없다(#197 후속, 2026-08-28 — `SosoFeedView`/`NovelDetailFeedTab`이
+        /// `userId == nil` 가드만 두고 있었는데 매퍼가 `Int`를 항상 `UserID`로 감싸 nil이 될 일이 없어
+        /// 죽은 가드였다).
+        case unavailableUser
     }
 
     /// 피드 셀 액션의 알럿 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
@@ -101,6 +107,10 @@ final class NovelDetailViewModel {
         case dismissDeleteReviewAlert
         case requestClose
         case dismissToast
+        /// 피드 셀 프로필 탭이 탈퇴 유저를 가리킬 때(`unavailableUser` 토스트) — 화면 전환 콜백을
+        /// 부르지 않고 여기서 그친다. `NovelDetailFeedTab`이 판정(`Author.accessibleUserId == nil`)해서
+        /// `onUnavailableUserProfileTapped()`를 부르면 여기까지 이어진다.
+        case userProfileUnavailable
     }
 
     // MARK: - Output
@@ -206,6 +216,8 @@ final class NovelDetailViewModel {
             close()
         case .dismissToast:
             state.presentedToast = nil
+        case .userProfileUnavailable:
+            state.presentedToast = .unavailableUser
         }
     }
 }

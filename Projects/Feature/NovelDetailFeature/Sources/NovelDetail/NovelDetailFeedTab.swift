@@ -29,6 +29,9 @@ struct NovelDetailFeedTab: View {
     let onFeedTapped: (FeedID) -> Void
     /// 프로필 영역(이미지+닉네임) 탭 → 유저 프로필 진입. 내 글이면 호출하지 않는다(셀 매핑에서 차단).
     let onUserProfileTapped: (UserID) -> Void
+    /// 프로필 영역 탭이 탈퇴 유저(`Author.accessibleUserId == nil`)를 가리킬 때 호출 — 화면 전환 대신
+    /// 안내 토스트를 띄우는 건 호출자(`NovelDetailView`, VM의 `userProfileUnavailable` 액션) 몫이다.
+    let onUnavailableUserProfileTapped: () -> Void
     /// 연결 작품 배너 탭 → 해당 작품 상세 진입. 화면 전환은 호출자(App 조정 계층)가 수행한다.
     let onNovelTapped: (NovelID) -> Void
     /// threedots 탭 → 셀 드롭다운 표시 요청. 두 번째 값은 드롭다운 앵커(threedots 하단의 화면 y).
@@ -106,8 +109,13 @@ struct NovelDetailFeedTab: View {
                 isEdited: feed.isModified
             ),
             profileImageTapped: {
-                // 내 글이면 이동하지 않는다. userId가 없으면(응답 미제공) 이동할 곳이 없다.
-                guard !feed.isMyFeed, let userId = feed.author.userId else { return }
+                // 내 글이면 이동하지 않는다.
+                guard !feed.isMyFeed else { return }
+                // 탈퇴 유저(Author.accessibleUserId == nil)면 이동 대신 안내 토스트만 띄운다.
+                guard let userId = feed.author.accessibleUserId else {
+                    onUnavailableUserProfileTapped()
+                    return
+                }
                 onUserProfileTapped(userId)
             },
             threeDotsButtonTapped: {

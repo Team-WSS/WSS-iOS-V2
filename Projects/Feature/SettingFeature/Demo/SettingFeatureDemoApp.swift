@@ -81,9 +81,30 @@ private struct DemoRootView: View {
         }
     }
 
+    /// Demo가 대행하는 App Destination — 모듈 CLAUDE.md의 "전부 App이 조립" 원칙(#201)에 맞춰, 이
+    /// 화면들을 여기서 `NavigationPath`로 push한다(`SettingFeature` 안엔 `WithdrawFlowView` 하나만
+    /// 예외로 로컬 내비게이션이 남아있다).
+    private enum Destination: Hashable {
+        case setting
+        case accountInfo
+        case changeGenderOrAge
+        case blockUserList
+        case withdrawFlow
+        case profilePublic
+        case notificationSetting
+        case completionNotificationList
+        case hiatusReturnNotificationList
+    }
+
     @State private var dataSource: DataSource = .mock
     @State private var pushAuthorizationScenario: PushAuthorizationScenario = .authorized
-    @State private var isSettingPresented = false
+    @State private var path = NavigationPath()
+    /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 계정정보 화면에서 띄운다(App이 대신
+    /// 띄워야 하는 토스트 — `SettingFeature/CLAUDE.md`의 "저장됨" 토스트 이관 참고).
+    @State private var isChangeSavedToastPresented = false
+    /// 프로필 공개 설정 화면이 저장 성공으로 dismiss된 뒤, 돌아온 설정 목록 화면에서 띄운다.
+    @State private var isVisibilityChangedToastPresented = false
+    @State private var visibilityChangedToastType: WSSToastType = .changePublic
     /// Mock 모드 차단 목록의 인메모리 상태. 화면을 다시 열어도 차단 해제 결과가 유지되도록 세션 동안 보관한다.
     @State private var mockBlockedUsersStore = DemoBlockedUsersStore()
     /// Mock 모드 프로필 공개 설정의 인메모리 상태.
@@ -96,7 +117,7 @@ private struct DemoRootView: View {
     private let consoleLogger = ConsoleLogger()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 24) {
                 Picker("데이터 소스", selection: $dataSource) {
                     ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
@@ -108,10 +129,8 @@ private struct DemoRootView: View {
                 }
                 .pickerStyle(.segmented)
 
-                // 설정 목록 진입 후에는 계정정보/성별·나이 변경/차단유저 목록/프로필 공개 설정/알림 설정/회원탈퇴까지
-                // 전부 SettingFeature 내부 실제 네비게이션으로 이동한다(개별 진입 버튼 없음).
                 Button("설정 목록 열기") {
-                    isSettingPresented = true
+                    path.append(Destination.setting)
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -120,46 +139,250 @@ private struct DemoRootView: View {
             .padding()
             .navigationTitle("WSS Demo")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $isSettingPresented) {
-                settingView
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .setting:
+                    settingView
+                case .accountInfo:
+                    accountInfoView
+                case .changeGenderOrAge:
+                    changeGenderOrAgeView
+                case .blockUserList:
+                    blockUserListView
+                case .withdrawFlow:
+                    withdrawFlowView
+                case .profilePublic:
+                    profilePublicView
+                case .notificationSetting:
+                    notificationSettingView
+                case .completionNotificationList:
+                    completionNotificationListView
+                case .hiatusReturnNotificationList:
+                    hiatusReturnNotificationListView
+                }
             }
+            .showWSSToast(isPresented: $isChangeSavedToastPresented, type: .changeInfo)
+            .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
+        }
+    }
+
+    // MARK: - 화면 조립 (Mock ↔ 실서버)
+
+    /// 설정 목록 자체는 UseCase가 필요 없어졌다(#201) — 하위 화면을 더 이상 여기서 조립하지 않고
+    /// 메뉴 탭 콜백만 올리므로, `pushAuthorizationChecker`(서버와 무관, iOS 시스템 권한) 하나만
+    /// 있으면 된다. `dataSource`(Mock/실서버)는 이 화면엔 영향이 없다.
+    private var settingView: some View {
+        SettingFeatureFactory.makeView(
+            pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
+            logger: consoleLogger,
+            onAccountInfoTapped: { path.append(Destination.accountInfo) },
+            onProfilePublicTapped: { path.append(Destination.profilePublic) },
+            onNotificationSettingTapped: { path.append(Destination.notificationSetting) }
+        )
+    }
+
+    @ViewBuilder
+    private var accountInfoView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeAccountInfoView(
+                loadAccountInfoDraftUseCase: DemoLoadAccountInfoDraftUseCase(),
+                logoutUseCase: DemoLogoutUseCase(),
+                logger: consoleLogger,
+                onLogoutSuccess: { path = NavigationPath() },
+                onChangeGenderOrAgeTapped: { path.append(Destination.changeGenderOrAge) },
+                onBlockUserListTapped: { path.append(Destination.blockUserList) },
+                onWithdrawTapped: { path.append(Destination.withdrawFlow) }
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeAccountInfoView(
+                loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: dependencies.profileRepository),
+                logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
+                logger: consoleLogger,
+                onLogoutSuccess: { path = NavigationPath() },
+                onChangeGenderOrAgeTapped: { path.append(Destination.changeGenderOrAge) },
+                onBlockUserListTapped: { path.append(Destination.blockUserList) },
+                onWithdrawTapped: { path.append(Destination.withdrawFlow) }
+            )
         }
     }
 
     @ViewBuilder
-    private var settingView: some View {
+    private var changeGenderOrAgeView: some View {
         switch dataSource {
         case .mock:
-            SettingFeatureFactory.makeView(
+            SettingFeatureFactory.makeChangeGenderOrAgeView(
                 loadLocalGenderAndBirthUseCase: DemoLoadLocalGenderAndBirthUseCase(),
                 saveAccountInfoDraftUseCase: DemoSaveAccountInfoDraftUseCase(),
-                loadAccountInfoDraftUseCase: DemoLoadAccountInfoDraftUseCase(),
-                loadProfileVisibilityUseCase: DemoLoadProfileVisibilityUseCase(store: mockProfileVisibilityStore),
-                updateProfileVisibilityUseCase: DemoUpdateProfileVisibilityUseCase(store: mockProfileVisibilityStore),
-                loadBlockedUsersUseCase: DemoLoadBlockedUsersUseCase(store: mockBlockedUsersStore),
-                unblockUserUseCase: DemoUnblockUserUseCase(store: mockBlockedUsersStore),
-                loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
-                updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
-                loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
-                deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
-                withdrawUseCase: DemoWithdrawUseCase(),
-                logoutUseCase: DemoLogoutUseCase(),
-                loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
-                pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
                 logger: consoleLogger,
-                onWithdrawSuccess: { isSettingPresented = false },
-                onLogoutSuccess: { isSettingPresented = false },
-                onBrowseNovels: { consoleLogger.info("[디버그] 작품 둘러보기 → 검색 화면 이동(App 라우팅 미구현)") }
+                onSaveSuccess: { isChangeSavedToastPresented = true }
             )
         case .live:
-            makeLiveSettingView()
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeChangeGenderOrAgeView(
+                loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(repository: dependencies.profileRepository),
+                saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: dependencies.profileRepository),
+                logger: consoleLogger,
+                onSaveSuccess: { isChangeSavedToastPresented = true }
+            )
         }
+    }
+
+    @ViewBuilder
+    private var blockUserListView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeBlockUserListView(
+                loadBlockedUsersUseCase: DemoLoadBlockedUsersUseCase(store: mockBlockedUsersStore),
+                unblockUserUseCase: DemoUnblockUserUseCase(store: mockBlockedUsersStore),
+                logger: consoleLogger
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeBlockUserListView(
+                loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: dependencies.socialRepository),
+                unblockUserUseCase: DefaultUnblockUserUseCase(repository: dependencies.socialRepository),
+                logger: consoleLogger
+            )
+        }
+    }
+
+    /// "확인→사유" 2단계는 `WithdrawFlowView` 안에서 여전히 로컬로 진행된다(사용자 확정) — App은
+    /// 이 진입점 하나만 push하면 된다.
+    @ViewBuilder
+    private var withdrawFlowView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeWithdrawFlowView(
+                loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
+                withdrawUseCase: DemoWithdrawUseCase(),
+                logger: consoleLogger,
+                onWithdrawSuccess: { path = NavigationPath() }
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeWithdrawFlowView(
+                loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: dependencies.novelRepository),
+                withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
+                logger: consoleLogger,
+                onWithdrawSuccess: { path = NavigationPath() }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var profilePublicView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeProfilePublicView(
+                loadProfileVisibilityUseCase: DemoLoadProfileVisibilityUseCase(store: mockProfileVisibilityStore),
+                updateProfileVisibilityUseCase: DemoUpdateProfileVisibilityUseCase(store: mockProfileVisibilityStore),
+                logger: consoleLogger,
+                onSaveSuccess: showVisibilityChangedToast
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeProfilePublicView(
+                loadProfileVisibilityUseCase: DefaultLoadProfileVisibilityUseCase(repository: dependencies.profileRepository),
+                updateProfileVisibilityUseCase: DefaultUpdateProfileVisibilityUseCase(repository: dependencies.profileRepository),
+                logger: consoleLogger,
+                onSaveSuccess: showVisibilityChangedToast
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var notificationSettingView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeNotificationSettingView(
+                loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
+                updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
+                logger: consoleLogger,
+                onCompletionListTapped: { path.append(Destination.completionNotificationList) },
+                onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) }
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeNotificationSettingView(
+                loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
+                updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
+                logger: consoleLogger,
+                onCompletionListTapped: { path.append(Destination.completionNotificationList) },
+                onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var completionNotificationListView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeCompletionNotificationListView(
+                loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
+                deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
+                logger: consoleLogger,
+                onBrowseNovels: logBrowseNovels
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeCompletionNotificationListView(
+                loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
+                deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
+                logger: consoleLogger,
+                onBrowseNovels: logBrowseNovels
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var hiatusReturnNotificationListView: some View {
+        switch dataSource {
+        case .mock:
+            SettingFeatureFactory.makeHiatusReturnNotificationListView(
+                loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
+                deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
+                logger: consoleLogger,
+                onBrowseNovels: logBrowseNovels
+            )
+        case .live:
+            let dependencies = makeLiveDependencies()
+            SettingFeatureFactory.makeHiatusReturnNotificationListView(
+                loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
+                deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
+                logger: consoleLogger,
+                onBrowseNovels: logBrowseNovels
+            )
+        }
+    }
+
+    // MARK: - 콜백
+
+    private func showVisibilityChangedToast(isPublic: Bool) {
+        visibilityChangedToastType = isPublic ? .changePublic : .changePrivate
+        isVisibilityChangedToastPresented = true
+    }
+
+    private func logBrowseNovels() {
+        consoleLogger.info("[디버그] 작품 둘러보기 → 검색 화면 이동(App 라우팅 미구현)")
     }
 
     // MARK: - 실서버 조립
 
+    /// 화면마다 새로 호출한다(다른 Demo 앱들과 동일 관례 — client/TokenStore는 화면 진입마다 새로
+    /// 만들어도 무방하다, `App/CLAUDE.md`의 DI 절 참고). 6개 Repository를 여러 화면이 공유하는
+    /// 구조라 튜플로 한 번에 묶어 반환한다.
     @MainActor
-    private func makeLiveSettingView() -> some View {
+    private func makeLiveDependencies() -> (
+        client: NetworkingClient,
+        profileRepository: ProfileRepository,
+        socialRepository: SocialRepository,
+        pushSettingRepository: PushSettingRepository,
+        novelNotificationRepository: NovelNotificationRepository,
+        authRepository: AuthRepository,
+        novelRepository: NovelRepository
+    ) {
         let client = NetworkingClient(
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
@@ -199,27 +422,7 @@ private struct DemoRootView: View {
             appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
-        return SettingFeatureFactory.makeView(
-            loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(repository: profileRepository),
-            saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: profileRepository),
-            loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: profileRepository),
-            loadProfileVisibilityUseCase: DefaultLoadProfileVisibilityUseCase(repository: profileRepository),
-            updateProfileVisibilityUseCase: DefaultUpdateProfileVisibilityUseCase(repository: profileRepository),
-            loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: socialRepository),
-            unblockUserUseCase: DefaultUnblockUserUseCase(repository: socialRepository),
-            loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: pushSettingRepository),
-            updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: pushSettingRepository),
-            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: novelNotificationRepository),
-            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: novelNotificationRepository),
-            withdrawUseCase: DefaultWithdrawUseCase(repository: authRepository),
-            logoutUseCase: DefaultLogoutUseCase(authRepository: authRepository),
-            loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
-            pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
-            logger: consoleLogger,
-            onWithdrawSuccess: { isSettingPresented = false },
-            onLogoutSuccess: { isSettingPresented = false },
-            onBrowseNovels: { consoleLogger.info("[디버그] 작품 둘러보기 → 검색 화면 이동(App 라우팅 미구현)") }
-        )
+        return (client, profileRepository, socialRepository, pushSettingRepository, novelNotificationRepository, authRepository, novelRepository)
     }
 }
 

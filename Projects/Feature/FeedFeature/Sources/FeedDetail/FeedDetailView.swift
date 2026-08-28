@@ -35,13 +35,24 @@ struct FeedDetailView: View {
     @State private var showCommentDropdown: Bool = false
 
     private let onNovelTapped: (NovelID) -> Void
+    /// 내 글 드롭다운의 "수정" → 수정 화면 진입 콜백. 대상 피드 `FeedID`만 넘긴다 — 실제 데이터 로드는
+    /// 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 값만 그대로
+    /// 받아 하면 된다.
+    private let onEditFeedTapped: (FeedID) -> Void
+    /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. 실제 화면 전환(`UserPageAssembly` 조립)은
+    /// 호출자(App 조정 계층)가 수행한다(`SosoFeedView`의 `onUserProfileTapped`와 동일 계약).
+    private let onUserProfileTapped: (UserID) -> Void
 
     init(
         viewModel: FeedDetailViewModel,
-        onNovelTapped: @escaping (NovelID) -> Void
+        onNovelTapped: @escaping (NovelID) -> Void,
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelTapped = onNovelTapped
+        self.onEditFeedTapped = onEditFeedTapped
+        self.onUserProfileTapped = onUserProfileTapped
     }
     
     var body: some View {
@@ -95,6 +106,7 @@ struct FeedDetailView: View {
             type: alertType,
             buttonActions: alertActions
         )
+        .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
     }
     
     @ViewBuilder
@@ -109,7 +121,14 @@ struct FeedDetailView: View {
                         // 피드 헤더 - 프로필
                         WSSFeadHeaderView(
                             header: header,
-                            profileImageTapped: { print("유저 \(String(describing: detail.author.userId?.value)) 페이지로 이동") },
+                            profileImageTapped: {
+                                guard let userID = detail.author.accessibleUserId else {
+                                    Task { await viewModel.handle(.userProfileUnavailableTapped) }
+                                    return
+                                }
+                                onUserProfileTapped(userID)
+                            },
+                            isProfileTappable: !viewModel.isMyFeed,
                             showThreeDotsButton: false
                         )
 
@@ -190,7 +209,6 @@ struct FeedDetailView: View {
                     ForEach(viewModel.state.comments, id: \.id) { comment in
                         let isMine = viewModel.isMyComment(comment)
                         CommentRow(
-                            userID: comment.user.userId?.value ?? -1,
                             profileImageURL: comment.user.profileImage,
                             username:   comment.user.nickname,
                             content: comment.content,
@@ -198,6 +216,13 @@ struct FeedDetailView: View {
                             isEdited: comment.isModified,
                             visibility: comment.visibility,
                             myComment: isMine,
+                            profileImageTapped: {
+                                guard let userID = comment.user.accessibleUserId else {
+                                    Task { await viewModel.handle(.userProfileUnavailableTapped) }
+                                    return
+                                }
+                                onUserProfileTapped(userID)
+                            },
                             threeDotsAction: {
                                 if showCommentDropdown, selectedCommentID == comment.id {
                                     showCommentDropdown = false
@@ -299,7 +324,9 @@ struct FeedDetailView: View {
                     title: "수정",
                     action: {
                         showFeedDropdown = false
-                        // TODO: - CreateFeedView 연결
+                        if let feedID = viewModel.state.detail?.id {
+                            onEditFeedTapped(feedID)
+                        }
                     },
                     textColor: WSSColor.wssBlack.swiftUIColor
                 ),
@@ -407,6 +434,15 @@ struct FeedDetailView: View {
         Binding(
             get: { viewModel.state.alert != nil },
             set: { _ in }
+        )
+    }
+
+    private var unavailableUserToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isUnavailableUserToastPresented },
+            set: { newValue in
+                if !newValue { Task { await viewModel.handle(.dismissUnavailableUserToast) } }
+            }
         )
     }
 

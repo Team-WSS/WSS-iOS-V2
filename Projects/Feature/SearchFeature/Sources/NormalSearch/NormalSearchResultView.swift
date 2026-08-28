@@ -23,6 +23,8 @@ struct NormalSearchResultView: View {
     let isLoadingMore: Bool
     let onLoadMore: () -> Void
     let onRetry: () -> Void
+    /// 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    var onNovelSelected: (NovelID) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,11 +53,16 @@ struct NormalSearchResultView: View {
                     Spacer().frame(height: 16)
                     
                     ForEach(novels, id: \.id) { novel in
-                        NormalSearchResultItemRow(novel: novel)
-                            // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
-                            .onAppear {
-                                if novel.id == novels.last?.id { onLoadMore() }
-                            }
+                        Button {
+                            onNovelSelected(novel.id)
+                        } label: {
+                            NormalSearchResultItemRow(novel: novel)
+                        }
+                        .buttonStyle(.plain)
+                        // 무한스크롤 — 마지막 행이 화면에 보이는 순간 다음 페이지 요청(중복 방지는 VM 가드가 담당).
+                        .onAppear {
+                            if novel.id == novels.last?.id { onLoadMore() }
+                        }
 
                         Spacer().frame(height: 6)
                     }

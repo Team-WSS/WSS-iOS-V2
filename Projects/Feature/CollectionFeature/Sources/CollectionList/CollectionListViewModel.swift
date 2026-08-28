@@ -59,10 +59,11 @@ final class CollectionListViewModel {
         /// 탭의 셀도 onAppear가 fire될 수 있다. 그때 "현재 선택된 탭"으로 잘못 적용되지 않게 한다.
         case retry(CollectionListTab)
         case loadMore(CollectionListTab)
-        case reloadMineAfterCreate
-        /// `CollectionDetailView`(로컬 push) 복귀 시 — 좋아요·삭제로 그 탭의 카드가 바뀌었을 수
-        /// 있어 성공/취소 구분 없이 무조건 다시 로드한다(`reloadMineAfterCreate`와 동일 판단).
-        case reloadAfterDetail(CollectionListTab)
+        /// "컬렉션 만들기"/`CollectionDetailView` 복귀 시(둘 다 App이 push) — 좋아요·삭제·생성으로
+        /// 그 탭의 카드가 바뀌었을 수 있어 성공/취소 구분 없이 무조건 다시 로드한다. "컬렉션 만들기"는
+        /// `.mine` 탭에서만 진입 가능해(그 탭에서만 버튼이 보임) 두 진입 경로 모두 대상 탭 하나로
+        /// 충분히 표현된다 — 별도 액션으로 나눌 필요가 없다.
+        case reloadAfterReturn(CollectionListTab)
         case dismissToast
     }
 
@@ -123,9 +124,7 @@ final class CollectionListViewModel {
             retry(tab)
         case .loadMore(let tab):
             loadMore(tab)
-        case .reloadMineAfterCreate:
-            reload(.mine)
-        case .reloadAfterDetail(let tab):
+        case .reloadAfterReturn(let tab):
             reload(tab)
             // 좋아요/삭제는 반대편 탭의 카드에도 영향을 줄 수 있다(예: 좋아요 토글은 "좋아요한
             // 컬렉션" 목록 자체를 바꾼다) — 지금 안 보이는 탭까지 당장 재요청하는 대신 hasLoaded만

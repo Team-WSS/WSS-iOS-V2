@@ -51,6 +51,9 @@ final class NovelReviewViewModel {
         case updatePeriod(start: Date?, end: Date?)
         case updateRating(Double)
         case toggleAttractivePoint(AttractivePoint)
+        case setKeywords([Keyword])
+        case removeKeyword(Keyword)
+        case clearKeywords
         case save
         case requestClose
         case confirmStop
@@ -116,6 +119,12 @@ final class NovelReviewViewModel {
             updateRating(value)
         case .toggleAttractivePoint(let point):
             toggleAttractivePoint(point)
+        case .setKeywords(let keywords):
+            setKeywords(keywords)
+        case .removeKeyword(let keyword):
+            state.draft.removeKeyword(keyword)
+        case .clearKeywords:
+            setKeywords([])
         case .save:
             save()
         case .requestClose:
@@ -178,6 +187,19 @@ private extension NovelReviewViewModel {
             } else {
                 try state.draft.addAttractivePoint(point)
             }
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 키워드 탐색 시트가 실시간 보고하는 선택 전체를 draft에 반영(전체 교체).
+    /// 최대 개수(20)는 시트(`SearchKeywordViewModel.maxSelectionCount`)가 이미 막고 있어 원래
+    /// 도달하면 안 되는 경로지만, 도메인(`setKeywords`)이 최종 방어선으로 남아있어 그대로 위임한다.
+    /// `.clearKeywords`(빈 배열)도 이 함수를 재사용한다 — throw 여지는 없지만(빈 배열은 항상 유효)
+    /// 도메인 진입점을 하나로 유지한다.
+    func setKeywords(_ keywords: [Keyword]) {
+        do {
+            try state.draft.setKeywords(keywords)
         } catch {
             presentError(error)
         }

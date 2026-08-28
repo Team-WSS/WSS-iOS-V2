@@ -205,12 +205,12 @@ private enum DemoFactory {
                 loadNovelPreferencesUseCase: DemoLoadNovelPreferencesUseCase(),
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
-                loadInitialProfileUseCase: DemoLoadInitialProfileUseCase(store: demoProfileStore),
-                loadProfileCharacterUseCase: DemoLoadProfileCharacterUseCase(),
-                validateNicknameUseCase: DemoValidateNicknameUseCase(),
-                updateProfileUseCase: DemoUpdateProfileUseCase(store: demoProfileStore),
+                logger: consoleLogger,
                 onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-                logger: consoleLogger
+                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+                onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
+                onSettingTapped: { consoleLogger.info("설정 진입") },
+                onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
             )
         case .live:
             makeMypageLiveView()
@@ -233,7 +233,12 @@ private enum DemoFactory {
                 blockUserUseCase: DemoBlockUserUseCase(),
                 reportSpoilerFeedUseCase: DemoReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
-                logger: consoleLogger
+                logger: consoleLogger,
+                onFeedListTapped: { userID, nickname, _ in
+                    consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
+                },
+                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+                onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
             )
         case .live:
             makeUserPageLiveView(userID: userID)
@@ -263,12 +268,12 @@ private enum DemoFactory {
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
-            loadInitialProfileUseCase: DefaultLoadProfileDraftUseCase(profileRepository: profileRepository),
-            loadProfileCharacterUseCase: DefaultLoadProfileCharacterUseCase(profileRepository: profileRepository),
-            validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: profileRepository),
-            updateProfileUseCase: DefaultUpdateProfileUseCase(profileRepository: profileRepository),
+            logger: consoleLogger,
             onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-            logger: consoleLogger
+            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+            onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
+            onSettingTapped: { consoleLogger.info("설정 진입") },
+            onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
         )
     }
 
@@ -303,7 +308,12 @@ private enum DemoFactory {
             blockUserUseCase: DefaultBlockUserUseCase(repository: socialRepository),
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onFeedListTapped: { userID, nickname, _ in
+                consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
+            },
+            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+            onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
         )
     }
 

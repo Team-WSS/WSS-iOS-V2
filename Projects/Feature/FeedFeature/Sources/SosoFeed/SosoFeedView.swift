@@ -36,8 +36,18 @@ struct SosoFeedView: View {
 
     @Namespace private var tabAnimation
 
-    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onEditFeedTapped: (TotalFeed) -> Void
+    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 대상 피드 `FeedID`만 넘긴다 — 실제 데이터
+    /// 로드는 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가
+    /// 값만 그대로 받아 하면 된다.
+    private let onEditFeedTapped: (FeedID) -> Void
+    /// 피드 셀 탭(좋아요 버튼 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백. 화면 전환은 호출자가 수행한다.
+    private let onFeedTapped: (FeedID) -> Void
+    /// 우상단 연필 아이콘 → 피드 작성 진입 콜백. 화면 전환은 호출자가 수행한다.
+    private let onCreateFeedTapped: () -> Void
+    /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. `Author.userId`가 nil이면 호출하지 않는다.
+    private let onUserProfileTapped: (UserID) -> Void
+    /// 연결 작품 배너 탭 → 작품 상세 진입 콜백.
+    private let onNovelTapped: (NovelID) -> Void
 
     /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
     private let threeDotsBottomOffset: CGFloat = 52
@@ -46,19 +56,30 @@ struct SosoFeedView: View {
 
     init(
         viewModel: SosoFeedViewModel,
-        onEditFeedTapped: @escaping (TotalFeed) -> Void = { _ in }
+        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onCreateFeedTapped: @escaping () -> Void = {},
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onEditFeedTapped = onEditFeedTapped
+        self.onFeedTapped = onFeedTapped
+        self.onCreateFeedTapped = onCreateFeedTapped
+        self.onUserProfileTapped = onUserProfileTapped
+        self.onNovelTapped = onNovelTapped
     }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
+                
+                Spacer().frame(height: 8)
+                
                 FeedTabSection
                     .padding(.horizontal, 20)
-
-                Spacer().frame(height: 12)
+                
+                Spacer().frame(height: 8)
 
                 FeedChipSection
                     .transaction { $0.animation = nil }
@@ -92,6 +113,7 @@ struct SosoFeedView: View {
             type: feedAlertType,
             buttonActions: feedAlertActions
         )
+        .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .onAppear {
             viewModel.handle(.load)
         }
@@ -116,9 +138,7 @@ struct SosoFeedView: View {
 
             Spacer()
 
-            Button {
-                // CreateFeedView로 이동
-            } label: {
+            Button(action: onCreateFeedTapped) {
                 WSSImage.icPencilSm.swiftUIImage
             }
         }
@@ -292,13 +312,16 @@ struct SosoFeedView: View {
                                     viewModel.handle(.loadMore)
                                 }
                             }
-                            // 일반 .onTapGesture는 행 전체를 덮어써 안의 좋아요 버튼(WSSFeedReactView)
-                            // 탭을 가로챈다 — simultaneousGesture로 걸어야 안쪽 제스처와 공존한다.
-                            .simultaneousGesture(
-                                TapGesture().onEnded {
-                                    // 피드 상세뷰로 이동
-                                }
-                            )
+                            // 프로필·좋아요(Button)·연결 작품 배너(Button)는 각자 실제 Button이라
+                            // 자기 hit-test 영역에서 이 onTapGesture보다 우선한다(WSSComponent/CLAUDE.md
+                            // "Button은 조상의 onTapGesture보다 우선") — 그 영역 밖만 여기로 떨어져
+                            // 피드 상세로 이동한다. 예전엔 이 우선순위가 없어 simultaneousGesture로
+                            // 걸었었는데, 그건 안쪽 제스처와 "공존"(동시 발화)이라 좋아요/프로필을
+                            // 눌러도 피드 상세로 함께 이동하는 버그가 있었다(#196).
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onFeedTapped(feed.feedId)
+                            }
                         Rectangle()
                             .frame(height: 1)
                             .frame(maxWidth: .infinity)
@@ -324,7 +347,17 @@ struct SosoFeedView: View {
                 createdDate: feed.createdDate,
                 isEdited: feed.isModified
             ),
-            profileImageTapped: { print("\(String(describing: feed.author.userId)) 프로필로 이동") },
+            profileImageTapped: {
+                // 탈퇴 유저(Author.accessibleUserId == nil)면 이동 대신 안내 토스트만 띄운다.
+                guard let userId = feed.author.accessibleUserId else {
+                    viewModel.handle(.userProfileUnavailableTapped)
+                    return
+                }
+                onUserProfileTapped(userId)
+            },
+            // 내 글이면 내 프로필로 "이동"할 곳이 없다 — 탭 영역 자체를 없애 탭이 셀 나머지 영역과
+            // 동일하게 피드 상세 진입으로 흘러가게 한다(죽은 탭 영역을 만들지 않기 위함).
+            isProfileTappable: !feed.isMyFeed,
             threeDotsButtonTapped: {
                 feedMenuContext = FeedMenuContext(
                     feed: feed,
@@ -344,7 +377,7 @@ struct SosoFeedView: View {
                         genreType: genre,
                         novelTitle: novel.title,
                         novelRating: novel.rating ?? 0,
-                        linkNovelTapped: { print("\(novel.id) 작품 상세로 이동") }
+                        linkNovelTapped: { onNovelTapped(novel.id) }
                     )
                 }
             },
@@ -387,7 +420,7 @@ struct SosoFeedView: View {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
-                    onEditFeedTapped(feed)
+                    onEditFeedTapped(feed.feedId)
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
@@ -420,6 +453,13 @@ struct SosoFeedView: View {
         Binding(
             get: { viewModel.state.presentedFeedAlert != nil },
             set: { if !$0 { viewModel.handle(.dismissFeedAlert) } }
+        )
+    }
+
+    private var unavailableUserToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isUnavailableUserToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissUnavailableUserToast) } }
         )
     }
 
@@ -459,7 +499,7 @@ struct SosoFeedView: View {
             reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
             reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
         ),
-        onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
+        onEditFeedTapped: { print("피드 수정 진입: \($0)") }
     )
 }
 

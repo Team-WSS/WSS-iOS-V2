@@ -50,7 +50,47 @@ let targets: [Target] = [
             .module(.data(.profile)),
             .module(.core(.networking)),
             .module(.core(.logger)),
-            .module(.ui(.designSystem))
+            .module(.ui(.designSystem)),
+            // 온보딩 완료 후 진입하는 메인 탭(홈/피드/서재/My) 조립.
+            .module(.feature(.home)),
+            .module(.feature(.feed)),
+            .module(.feature(.library)),
+            .module(.feature(.userPage)),
+            .module(.domain(.recommendation)),
+            .module(.feature(.notification)),
+            .module(.domain(.notification)),
+            .module(.domain(.feed)),
+            .module(.domain(.social)),
+            .module(.domain(.novel)),
+            .module(.data(.recommendation)),
+            .module(.data(.notification)),
+            .module(.data(.feed)),
+            .module(.data(.social)),
+            .module(.data(.novel)),
+            // 홈에서 작품 카드 탭 → 작품 상세 진입.
+            .module(.feature(.novelDetail)),
+            // 작품 상세의 평가 상태바 탭 → 작품 평가 진입.
+            .module(.feature(.novelReview)),
+            .module(.domain(.novelReview)),
+            .module(.data(.novelReview)),
+            // 홈에서 추천글 탭 → 피드 상세, 서치바 탭 → 일반 검색 진입.
+            .module(.feature(.search)),
+            .module(.domain(.search)),
+            .module(.domain(.comment)),
+            .module(.data(.search)),
+            .module(.data(.comment)),
+            // 홈의 상세탐색 배너 → 필터 화면의 "키워드" 탭 콘텐츠 주입(SearchFeature는 KeywordFeature를
+            // 모른다 — KeywordTabContentBuilder로 App이 조립해 값으로 건네준다).
+            .module(.feature(.keyword)),
+            // 서재에서 알림 관리 → 설정의 알림 설정 화면 진입.
+            .module(.feature(.setting)),
+            // 설정 화면의 푸시 권한 상태 확인.
+            .module(.core(.pushAuthorization)),
+            // 마이페이지/유저페이지 컬렉션 섹션 미리보기 + 마이페이지의 컬렉션 목록/생성/수정/상세
+            // 화면 전환(#201, MypageRootView가 조립).
+            .module(.domain(.collection)),
+            .module(.data(.collection)),
+            .module(.feature(.collection))
         ],
         settings: .settings(
             base: env.baseSetting,

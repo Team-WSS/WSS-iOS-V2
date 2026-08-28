@@ -70,7 +70,7 @@ struct SosoFeedDemoScene: View {
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: OSLogger.feed,
-                onEditFeedTapped: { print("피드 수정 진입: \($0.feedId)") }
+                onEditFeedTapped: { print("피드 수정 진입: \($0)") }
             )
         }
     }

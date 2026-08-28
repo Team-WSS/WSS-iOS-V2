@@ -38,8 +38,8 @@ struct CollectionFeatureDemoApp: App {
 
 // MARK: - Root: Mock ↔ 실서버 토글
 
-// Demo가 App(DI) 역할을 대행해 UseCase를 조립한다.
-// Mock = 인메모리(흐름 시연), 실서버 = NetworkingClient + 실제 Repository.
+// Demo가 App(DI+조정 계층) 역할을 대행해 UseCase를 조립하고 화면 전환까지 담당한다 — 모듈 안엔
+// navigationDestination이 없다("화면 간 이동은 전부 App이 조립한다", 모듈 CLAUDE.md 참고).
 private struct DemoRootView: View {
     private enum DataSource: String, CaseIterable, Identifiable {
         case mock = "Mock"
@@ -47,23 +47,41 @@ private struct DemoRootView: View {
         var id: String { rawValue }
     }
 
+    /// Demo가 대행하는 App Destination. 실제 App(MypageRootView 등)이 쓸 설계를 그대로 미리 검증한다 —
+    /// `CollectionNovel`은 Hashable이 아니라(`CollectionFeatureFactory` 주석 참고) "작품 추가"/"서재에서
+    /// 추가"의 초기 선택 목록은 path payload가 아니라 별도 스크래치 State로 채널링한다.
+    private enum Destination: Hashable {
+        case create
+        case edit(CollectionID)
+        case list(isEmpty: Bool)
+        case detail(CollectionID)
+        /// 진입 시점의 선택 스냅샷을 path payload로 직접 태운다 — 별도 `@State` 스크래치 변수에 먼저
+        /// 써두고 그 값을 읽어 destination을 만드는 방식은 **레이스가 있다**(실측, 2026-08-28): 같은
+        /// 액션 안에서 `scratchState = value; path.append(...)`처럼 `@State` 갱신과 push를 연달아
+        /// 해도, `.navigationDestination(for:)`가 새 destination view를 만드는 시점에 그 `@State`
+        /// 갱신이 아직 반영되지 않은 이전 값(빈 배열)을 읽어버려 "작품 추가"→"서재에서 추가"로 넘어갈
+        /// 때 검색에서 고른 작품이 통째로 사라지는 버그로 실제 재현됐다. `CollectionNovel`이
+        /// Hashable(#201)이라 이제 배열째로 payload에 넣을 수 있다.
+        case searchNovel([CollectionNovel])
+        case myLibrarySelect([CollectionNovel])
+    }
+
     @State private var dataSource: DataSource = .mock
-    @State private var isCreatePresented = false
-    @State private var isListPresented = false
-    @State private var isEmptyListPresented = false
-    @State private var isDetailPresented = false
-    @State private var detailID = CollectionID(1)
-    /// 열 때마다 증가. createView/listView/detailView의 .id에 물려 매 진입마다 새 ViewModel이 만들어지게 한다.
-    @State private var createOpenCount = 0
-    @State private var listOpenCount = 0
-    @State private var emptyListOpenCount = 0
-    @State private var detailOpenCount = 0
+    @State private var path = NavigationPath()
+
+    /// "작품 추가"/"서재에서 추가" 확정 결과를 생성/수정 화면(`CreateCollectionView`)에 돌려주는
+    /// 1회성 nil→값 채널(`CollectionFeatureFactory.makeCreateCollectionView` 문서 참고). 생성·수정
+    /// 모드가 동시에 열릴 일이 없어 하나로 공유한다. **이건 진입(entry) 파라미터가 아니라 확정
+    /// (return) 값**이라 위 레이스 대상이 아니다 — 이미 mount된 `CreateCollectionView`가 `.onChange`로
+    /// 값 변화를 관찰하는 구조라, "아직 mount 안 된 destination이 최신 `@State`를 못 읽는" 문제 자체가
+    /// 성립하지 않는다.
+    @State private var pendingNovelSelection: [CollectionNovel]?
 
     /// Demo 전 계층(Feature/Repository/Networking)에 주입할 콘솔 로거. 한 인스턴스를 공유한다.
     private let consoleLogger = ConsoleLogger()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 24) {
                 Picker("데이터 소스", selection: $dataSource) {
                     ForEach(DataSource.allCases) { Text($0.rawValue).tag($0) }
@@ -71,14 +89,12 @@ private struct DemoRootView: View {
                 .pickerStyle(.segmented)
 
                 Button("컬렉션 생성 화면 열기") {
-                    createOpenCount += 1
-                    isCreatePresented = true
+                    path.append(Destination.create)
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("컬렉션 목록 화면 열기") {
-                    listOpenCount += 1
-                    isListPresented = true
+                    path.append(Destination.list(isEmpty: false))
                 }
                 .buttonStyle(.bordered)
 
@@ -87,18 +103,17 @@ private struct DemoRootView: View {
                 // 오가며 두 탭의 빈 상태(CTA 유무 차이 포함)를 한 화면에서 확인할 수 있다.
                 if dataSource == .mock {
                     Button("컬렉션 목록 (빈 상태) 열기") {
-                        emptyListOpenCount += 1
-                        isEmptyListPresented = true
+                        path.append(Destination.list(isEmpty: true))
                     }
                     .buttonStyle(.bordered)
                 }
 
                 // Mock 전용 — 컬렉션 목록에서 카드를 탭해도 상세로 갈 수 있지만(CollectionListView의
-                // .navigationDestination(item:)), 상세 화면 자체를 바로 확인하려면 목록을 거쳐야 하는
-                // 번거로움이 있었다. DemoLoadCollectionDetailUseCase가 컬렉션 id의 홀짝/4배수로 이미
-                // 3가지 상태(타인 컬렉션/내 컬렉션·공개/내 컬렉션·비공개)를 구분해 반환하므로, 그 id를
-                // 그대로 바로가기로 노출한다. 실서버는 데모가 아는 실제 컬렉션 id가 없어 제외한다
-                // (목록 화면에서 카드를 탭해 진입하는 경로만 유효).
+                // onCollectionSelected), 상세 화면 자체를 바로 확인하려면 목록을 거쳐야 하는 번거로움이
+                // 있었다. DemoLoadCollectionDetailUseCase가 컬렉션 id의 홀짝/4배수로 이미 3가지 상태
+                // (타인 컬렉션/내 컬렉션·공개/내 컬렉션·비공개)를 구분해 반환하므로, 그 id를 그대로
+                // 바로가기로 노출한다. 실서버는 데모가 아는 실제 컬렉션 id가 없어 제외한다(목록 화면에서
+                // 카드를 탭해 진입하는 경로만 유효).
                 if dataSource == .mock {
                     Divider().padding(.vertical, 8)
 
@@ -108,9 +123,7 @@ private struct DemoRootView: View {
 
                     ForEach(DemoCollectionDetailScenario.allCases) { scenario in
                         Button(scenario.title) {
-                            detailID = scenario.collectionID
-                            detailOpenCount += 1
-                            isDetailPresented = true
+                            path.append(Destination.detail(scenario.collectionID))
                         }
                         .buttonStyle(.bordered)
                     }
@@ -121,21 +134,21 @@ private struct DemoRootView: View {
             .padding()
             .navigationTitle("WSS Demo")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $isCreatePresented) {
-                createView
-                    .id(createOpenCount)
-            }
-            .navigationDestination(isPresented: $isListPresented) {
-                listView(isEmpty: false)
-                    .id(listOpenCount)
-            }
-            .navigationDestination(isPresented: $isEmptyListPresented) {
-                listView(isEmpty: true)
-                    .id(emptyListOpenCount)
-            }
-            .navigationDestination(isPresented: $isDetailPresented) {
-                detailView(id: detailID)
-                    .id(detailOpenCount)
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .create:
+                    createView
+                case .edit(let id):
+                    editView(id: id)
+                case .list(let isEmpty):
+                    listView(isEmpty: isEmpty)
+                case .detail(let id):
+                    detailView(id: id)
+                case .searchNovel(let initialSelection):
+                    searchNovelView(initialSelection: initialSelection)
+                case .myLibrarySelect(let initialSelection):
+                    myLibrarySelectView(initialSelection: initialSelection)
+                }
             }
         }
     }
@@ -146,13 +159,31 @@ private struct DemoRootView: View {
         case .mock:
             CollectionFeatureFactory.makeCreateCollectionView(
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
-                searchNovelUseCase: DemoSearchNovelUseCase(),
-                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
                 logger: consoleLogger,
+                pendingNovelSelection: $pendingNovelSelection,
+                onAddNovelTapped: handleAddNovelTapped,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
-            makeLiveView()
+            makeLiveCreateView()
+        }
+    }
+
+    @ViewBuilder
+    private func editView(id: CollectionID) -> some View {
+        switch dataSource {
+        case .mock:
+            CollectionFeatureFactory.makeEditCollectionView(
+                id: id,
+                updateCollectionUseCase: DemoUpdateCollectionUseCase(),
+                loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
+                logger: consoleLogger,
+                pendingNovelSelection: $pendingNovelSelection,
+                onAddNovelTapped: handleAddNovelTapped,
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveEditView(id: id)
         }
     }
 
@@ -164,16 +195,10 @@ private struct DemoRootView: View {
                 userID: UserID(10049),
                 loadCollectionsUseCase: DemoLoadCollectionsUseCase(isEmpty: isEmpty),
                 loadLikedCollectionsUseCase: DemoLoadLikedCollectionsUseCase(isEmpty: isEmpty),
-                createCollectionUseCase: DemoCreateCollectionUseCase(),
-                searchNovelUseCase: DemoSearchNovelUseCase(),
-                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
-                loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
-                collectionLikeUseCase: DemoCollectionLikeUseCase(),
-                deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
-                updateCollectionUseCase: DemoUpdateCollectionUseCase(),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired,
-                onNovelTapped: handleNovelTapped
+                onCreateTapped: { path.append(Destination.create) },
+                onCollectionSelected: { id in path.append(Destination.detail(id)) }
             )
         case .live:
             makeLiveListView()
@@ -187,105 +212,75 @@ private struct DemoRootView: View {
             loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
             collectionLikeUseCase: DemoCollectionLikeUseCase(),
             deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
-            updateCollectionUseCase: DemoUpdateCollectionUseCase(),
-            searchNovelUseCase: DemoSearchNovelUseCase(),
-            loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
-            onNovelTapped: handleNovelTapped
+            onNovelTapped: handleNovelTapped,
+            onEditTapped: { path.append(Destination.edit(id)) }
         )
     }
 
-    // MARK: - 실서버 조립
-
-    // NetworkingConfig.baseURL로 호출하고, DemoSessionTokenStore가 TEST_API_KEY를
-    // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
-    @MainActor
-    private func makeLiveView() -> some View {
-        let client = NetworkingClient(
-            logger: DefaultNetworkLogger(base: consoleLogger),
-            tokenStore: DemoSessionTokenStore()
-        )
-        let repository = CollectionDataFactory.makeRepository(
-            network: client,
-            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
-        )
-        let searchRepository = SearchDataFactory.makeRepository(
-            network: client,
-            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
-        )
-        // 서재 조회 — LibraryFeatureDemoApp의 실서버 배관과 동일(내 서재는 저장된 userID를 쓰므로
-        // Demo가 직접 세팅). NovelData의 KeywordRepository도 함께 필요하다(DefaultLoadMyLibraryUseCase
-        // 시그니처 참고).
-        let userDefaults = UserDefaultsStorage()
-        userDefaults.set(.userID, 10049)
-        let novelRepository = NovelDataFactory.makeNovelRepository(
-            client: client,
-            appStorage: userDefaults,
-            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
-        )
-        let keywordRepository = KeywordDataFactory.makeRepository(
-            client: client,
-            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
-        )
-        return CollectionFeatureFactory.makeCreateCollectionView(
-            createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
-            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
-            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
-                novelRepository: novelRepository,
-                keywordRepository: keywordRepository
-            ),
-            logger: consoleLogger,
-            onAuthenticationRequired: handleAuthenticationRequired
-        )
+    @ViewBuilder
+    private func searchNovelView(initialSelection: [CollectionNovel]) -> some View {
+        switch dataSource {
+        case .mock:
+            CollectionFeatureFactory.makeSearchNovelView(
+                initialSelection: initialSelection,
+                searchNovelUseCase: DemoSearchNovelUseCase(),
+                logger: consoleLogger,
+                onConfirm: handleSearchNovelConfirm,
+                onLibrarySelectTapped: handleLibrarySelectTapped,
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveSearchNovelView(initialSelection: initialSelection)
+        }
     }
 
-    @MainActor
-    private func makeLiveListView() -> some View {
-        let client = NetworkingClient(
-            logger: DefaultNetworkLogger(base: consoleLogger),
-            tokenStore: DemoSessionTokenStore()
-        )
-        let repository = CollectionDataFactory.makeRepository(
-            network: client,
-            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
-        )
-        let searchRepository = SearchDataFactory.makeRepository(
-            network: client,
-            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
-        )
-        let userDefaults = UserDefaultsStorage()
-        userDefaults.set(.userID, 10049)
-        let novelRepository = NovelDataFactory.makeNovelRepository(
-            client: client,
-            appStorage: userDefaults,
-            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
-        )
-        let keywordRepository = KeywordDataFactory.makeRepository(
-            client: client,
-            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
-        )
-        return CollectionFeatureFactory.makeCollectionListView(
-            userID: UserID(10049),
-            loadCollectionsUseCase: DefaultLoadCollectionsUseCase(collectionRepository: repository),
-            loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(collectionRepository: repository),
-            createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
-            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
-            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
-                novelRepository: novelRepository,
-                keywordRepository: keywordRepository
-            ),
-            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(collectionRepository: repository),
-            collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: repository),
-            deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: repository),
-            updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: repository),
-            logger: consoleLogger,
-            onAuthenticationRequired: handleAuthenticationRequired,
-            onNovelTapped: handleNovelTapped
-        )
+    @ViewBuilder
+    private func myLibrarySelectView(initialSelection: [CollectionNovel]) -> some View {
+        switch dataSource {
+        case .mock:
+            CollectionFeatureFactory.makeMyLibrarySelectView(
+                initialSelection: initialSelection,
+                loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
+                logger: consoleLogger,
+                onConfirm: handleLibrarySelectConfirm,
+                onAuthenticationRequired: handleAuthenticationRequired
+            )
+        case .live:
+            makeLiveMyLibrarySelectView(initialSelection: initialSelection)
+        }
     }
 
-    /// 인증 만료 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
+    // MARK: - 화면 전환 콜백 (App 조정 계층 역할)
+
+    /// "작품 추가" 타일 탭 → 검색 화면으로 push. 현재 선택을 path payload로 그대로 실어 보낸다(위
+    /// `Destination.searchNovel` 문서의 레이스 회피 이유 참고).
+    private func handleAddNovelTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.searchNovel(currentSelection))
+    }
+
+    /// 검색 화면의 "완료" 확정 → 생성/수정 화면까지 1단계 pop, 결과는 `pendingNovelSelection`으로.
+    private func handleSearchNovelConfirm(_ novels: [CollectionNovel]) {
+        pendingNovelSelection = novels
+        path.removeLast(1)
+    }
+
+    /// 검색 화면의 "서재에서 추가" 탭 → 서재 선택 화면으로 push. 지금까지 고른 걸 path payload로
+    /// 그대로 실어 보낸다.
+    private func handleLibrarySelectTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.myLibrarySelect(currentSelection))
+    }
+
+    /// 서재 선택 화면의 "추가" 확정 → 생성/수정 화면까지 2단계 pop(검색 화면도 함께 건너뜀 — 기획
+    /// 확정 사항, `CollectionFeature/CLAUDE.md`의 "2단계 pop" 정본 참고. 이전엔 Feature 모듈 안에서
+    /// 단일 boolean으로 서브트리를 걷어냈지만, 지금은 App이 두 path 요소를 한 번에 pop한다).
+    private func handleLibrarySelectConfirm(_ novels: [CollectionNovel]) {
+        pendingNovelSelection = novels
+        path.removeLast(2)
+    }
+
+    /// 인증 만료(세션 죽음) 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
     private func handleAuthenticationRequired() {
         consoleLogger.info("인증 만료 → 로그인 진입 요청")
     }
@@ -294,6 +289,122 @@ private struct DemoRootView: View {
     /// Demo는 로그만 남긴다(`handleAuthenticationRequired`와 동일한 판단).
     private func handleNovelTapped(_ novelID: NovelID) {
         consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+    }
+
+    // MARK: - 실서버 조립
+
+    // NetworkingConfig.baseURL로 호출하고, DemoSessionTokenStore가 TEST_API_KEY를
+    // accessToken으로 제공해 .requireToken 엔드포인트를 인증한다.
+    @MainActor
+    private func makeLiveClient() -> NetworkingClient {
+        NetworkingClient(
+            logger: DefaultNetworkLogger(base: consoleLogger),
+            tokenStore: DemoSessionTokenStore()
+        )
+    }
+
+    // 서재 조회 — LibraryFeatureDemoApp의 실서버 배관과 동일(내 서재는 저장된 userID를 쓰므로
+    // Demo가 직접 세팅). NovelData의 KeywordRepository도 함께 필요하다(DefaultLoadMyLibraryUseCase
+    // 시그니처 참고).
+    @MainActor
+    private func makeLiveNovelRepository(client: NetworkingClient) -> (novel: NovelRepository, keyword: KeywordRepository) {
+        let userDefaults = UserDefaultsStorage()
+        userDefaults.set(.userID, 10049)
+        let novelRepository = NovelDataFactory.makeNovelRepository(
+            client: client,
+            appStorage: userDefaults,
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
+        )
+        let keywordRepository = KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
+        return (novelRepository, keywordRepository)
+    }
+
+    @MainActor
+    private func makeLiveCreateView() -> some View {
+        let client = makeLiveClient()
+        let repository = CollectionDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        return CollectionFeatureFactory.makeCreateCollectionView(
+            createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
+            logger: consoleLogger,
+            pendingNovelSelection: $pendingNovelSelection,
+            onAddNovelTapped: handleAddNovelTapped,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    @MainActor
+    private func makeLiveEditView(id: CollectionID) -> some View {
+        let client = makeLiveClient()
+        let repository = CollectionDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        return CollectionFeatureFactory.makeEditCollectionView(
+            id: id,
+            updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: repository),
+            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(collectionRepository: repository),
+            logger: consoleLogger,
+            pendingNovelSelection: $pendingNovelSelection,
+            onAddNovelTapped: handleAddNovelTapped,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    @MainActor
+    private func makeLiveListView() -> some View {
+        let client = makeLiveClient()
+        let repository = CollectionDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+        )
+        return CollectionFeatureFactory.makeCollectionListView(
+            userID: UserID(10049),
+            loadCollectionsUseCase: DefaultLoadCollectionsUseCase(collectionRepository: repository),
+            loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(collectionRepository: repository),
+            logger: consoleLogger,
+            onAuthenticationRequired: handleAuthenticationRequired,
+            onCreateTapped: { path.append(Destination.create) },
+            onCollectionSelected: { id in path.append(Destination.detail(id)) }
+        )
+    }
+
+    @MainActor
+    private func makeLiveSearchNovelView(initialSelection: [CollectionNovel]) -> some View {
+        let client = makeLiveClient()
+        let searchRepository = SearchDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "SearchData", underlying: consoleLogger)
+        )
+        return CollectionFeatureFactory.makeSearchNovelView(
+            initialSelection: initialSelection,
+            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
+            logger: consoleLogger,
+            onConfirm: handleSearchNovelConfirm,
+            onLibrarySelectTapped: handleLibrarySelectTapped,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
+    }
+
+    @MainActor
+    private func makeLiveMyLibrarySelectView(initialSelection: [CollectionNovel]) -> some View {
+        let client = makeLiveClient()
+        let (novelRepository, keywordRepository) = makeLiveNovelRepository(client: client)
+        return CollectionFeatureFactory.makeMyLibrarySelectView(
+            initialSelection: initialSelection,
+            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
+                novelRepository: novelRepository,
+                keywordRepository: keywordRepository
+            ),
+            logger: consoleLogger,
+            onConfirm: handleLibrarySelectConfirm,
+            onAuthenticationRequired: handleAuthenticationRequired
+        )
     }
 }
 

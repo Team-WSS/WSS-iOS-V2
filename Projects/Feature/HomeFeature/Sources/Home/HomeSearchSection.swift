@@ -28,10 +28,9 @@ struct HomeSearchSection: View {
         static let bannerHeight: CGFloat = 104
         static let bannerTextLeading: CGFloat = 20
         static let bannerArrowSize: CGFloat = 24
-        static let bannerImageWidth: CGFloat = 149
-        static let bannerImageHeight: CGFloat = 99
-        static let bannerImageTrailing: CGFloat = 0
-        static let bannerImageTop: CGFloat = 17
+        static let bannerImageWidth: CGFloat = 113
+        static let bannerImageHeight: CGFloat = 91
+        static let bannerImageTop: CGFloat = 36
     }
 
     var body: some View {
@@ -73,18 +72,18 @@ private extension HomeSearchSection {
 
     var detailSearchBanner: some View {
         Button(action: onDetailSearchTapped) {
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .leading) {
                 Color.wssPrimary20
 
                 // 일러스트는 배너 오른쪽에 붙어 아래가 잘린다(카드가 클립).
                 HStack(spacing: 0) {
                     Spacer()
-                    WSSImage.imgHomeDetailSearch.swiftUIImage
+                    WSSImage.imgSearchCat.swiftUIImage
                         .resizable()
                         .scaledToFit()
-                        .frame(width: Metric.bannerImageWidth, height: Metric.bannerImageHeight)
+                        .frame(width: Metric.bannerImageWidth,
+                               height: Metric.bannerImageHeight)
                         .padding(.top, Metric.bannerImageTop)
-                        .padding(.trailing, Metric.bannerImageTrailing)
                 }
 
                 VStack(alignment: .leading, spacing: 0) {
@@ -94,21 +93,30 @@ private extension HomeSearchSection {
 
                         WSSImage.icNavigateRight.swiftUIImage
                             .resizable()
+                            .renderingMode(.template)
+                            .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
                             .scaledToFit()
-                            .frame(width: Metric.bannerArrowSize, height: Metric.bannerArrowSize)
+                            .frame(width: Metric.bannerArrowSize,
+                                   height: Metric.bannerArrowSize)
                     }
 
                     Spacer().frame(height: 4)
 
                     Text("장르, 연재상태, 별점, 키워드로 작품 찾기")
                         .applyWSSFont(.body4, color: .wssGray200, alignment: .leading)
+                    
+                    Spacer().frame(height: 8)
                 }
                 .padding(.leading, Metric.bannerTextLeading)
-                .padding(.top, 24)
             }
             .frame(height: Metric.bannerHeight)
             .clipShape(RoundedRectangle(cornerRadius: Metric.cornerRadius))
             .contentShape(Rectangle())
         }
     }
+}
+
+#Preview {
+    HomeSearchSection(onSearchTapped: {},
+                      onDetailSearchTapped: {})
 }

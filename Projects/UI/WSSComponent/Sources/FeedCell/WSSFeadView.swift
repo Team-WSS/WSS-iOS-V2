@@ -16,6 +16,8 @@ public struct WSSFeadView: View {
     let header: FeedHeader
     
     let profileImageTapped: () -> Void
+    /// 내 글이면 `false` — 내 프로필 탭 영역을 비활성화한다(`WSSFeadHeaderView` 참고).
+    let isProfileTappable: Bool
     let threeDotsButtonTapped: () -> Void
 
     // 피드 내용
@@ -38,6 +40,7 @@ public struct WSSFeadView: View {
     public init(
         header: FeedHeader,
         profileImageTapped: @escaping () -> Void,
+        isProfileTappable: Bool = true,
         threeDotsButtonTapped: @escaping () -> Void,
         content: String,
         feedImage: WSSFeedImage? = nil,
@@ -50,6 +53,7 @@ public struct WSSFeadView: View {
     ) {
         self.header = header
         self.profileImageTapped = profileImageTapped
+        self.isProfileTappable = isProfileTappable
         self.threeDotsButtonTapped = threeDotsButtonTapped
         self.content = content
         self.feedImage = feedImage
@@ -68,6 +72,7 @@ public struct WSSFeadView: View {
             WSSFeadHeaderView(
                 header: header,
                 profileImageTapped: profileImageTapped,
+                isProfileTappable: isProfileTappable,
                 threeDotsButtonTapped: threeDotsButtonTapped
             )
             .padding(.horizontal, 20)

@@ -4,7 +4,15 @@
 설정 화면. 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.feature(.setting)` / 의존: `BaseDomain`, `ProfileDomain`, `NotificationDomain`, `SocialDomain`, `AuthDomain`, `NovelDomain`, `DesignSystem`, `WSSComponent`, `Logger`, `PushAuthorization`(#193 — "알림 설정" 메뉴 탭 시 시스템 권한 확인용) (`SettingDomain`은 실제로 쓰이는 곳이 없어 `Project.swift`에서 제외했다 — 필요해지면 다시 추가)
-- 진입점: `Factory/SettingFeatureFactory.swift` — `makeView(logger:)`(설정 목록), `makeChangeGenderOrAgeView(loadLocalGenderAndBirthUseCase:saveAccountInfoDraftUseCase:logger:)`(성별/나이 변경)
+- 진입점 (#201부터 — **화면 간 이동은 전부 App이 조립한다.** 예외는 `makeWithdrawFlowView` 하나뿐,
+  "확인→사유" 2단계는 그 화면 안에서 여전히 로컬로 진행된다(사용자 확정) — App은 그 진입점 하나만
+  조립하면 된다. 성별/나이 변경 화면의 생년 선택 시트도 그 화면 자신의 draft를 채우는 로컬 값
+  선택기라 그대로 둔다): `Factory/SettingFeatureFactory.swift`의 `makeView`(설정 목록)·
+  `makeAccountInfoView`(계정정보)·`makeChangeGenderOrAgeView`·`makeBlockUserListView`·
+  `makeWithdrawFlowView`·`makeProfilePublicView`·`makeNotificationSettingView`·
+  `makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView` — 각 화면은 자기
+  하위 화면을 만들지 않고 탭 콜백만 올린다(`onXxxTapped`). "저장됨" 계열 토스트(성별/나이 변경,
+  프로필 공개 설정)도 그 화면 자신이 아니라 돌아온 화면 쪽(App)이 `onSaveSuccess` 시점에 띄운다.
 
 ## 핵심 시나리오
 
@@ -40,14 +48,22 @@
   - 삭제는 `WSSAlertType.deleteNovelNotificationSubscriptions(summary:)`(신규, `WSSComponent`) 확인 알럿을 거친다. `summary`는 **목록에 보이는 순서 기준 첫 선택 항목 제목**("{제목} 외 N작품", View의 `Presentation` 확장이 조합 — 알럿 컴포넌트는 문구를 모른다).
   - 페이지네이션은 서버가 명시적으로 내려주는 `nextSubscriptionID` 커서를 쓴다(`NotificationDomain`의 `Notification`처럼 마지막 항목 id로 유추하지 않음).
   - ⚠️ **현재 로드된 페이지를 통째로 선택 삭제하면 목록은 비지만 다음 페이지가 남아있을 수 있다** — `state.subscriptions.isEmpty`만 보고 빈 상태(`WSSEmptyView`)로 판정하면 서버에 남은 구독이 화면에서 사라진 것처럼 보인다. VM이 삭제 직후 `subscriptions.isEmpty && hasNextPage`면 자동으로 다음 페이지를 이어 로드하고(`loadMore()`), View는 그 과도기를 빈 상태 대신 `LoadingView()`로 가린다. 삭제 로직을 만질 땐 이 자동 이어받기를 빠뜨리지 말 것.
-  - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `onBrowseNovels` 콜백으로 `SettingFeatureFactory.makeView(...)`까지 흘려보내고, 실제 이동은 App이 정한다(지금은 미배선, Demo는 로그만 찍음).
+  - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `onBrowseNovels` 콜백을 그대로 받아 실제 이동은 App이 정한다(#201부터 `MypageRootView`/`LibraryRootView` 둘 다 일반 검색 화면으로 push해 배선 완료).
   - ⚠️ **이 두 화면(과 `NotificationSettingView`)은 모듈 내 다른 서버 호출 화면과 달리 인증 만료(`RepositoryError.authenticationRequired`) 라우팅이 없다** — `Feature/CLAUDE.md`의 "인증 만료 처리 계약"이 원칙상 전 서버 호출 화면에 요구하지만, `SettingFeature`는 애초에 어느 화면도(`SettingBlockUserListView` 포함) 이걸 구현하지 않은 상태라 새 화면만 예외로 만들지 않고 기존 패턴을 따랐다 — 모듈 전체에 걸친 기존 갭이니 새 화면 추가 시 되풀이하지 말고, 고칠 땐 모듈 전체를 한 번에 볼 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **`SettingChangeBirthYearPickerSheet`가 쓰는 연도 휠은 `WSSComponent`의 `WSSBirthYearWheel`이다** — Feature 화면 전용이 아니라 UI 레이어로 승격된 **공용** 컴포넌트다(과거엔 `ChangeGenderOrAge/` 안의 화면 전용 타입이었다가 이동했다). `NovelReviewFeature`의 연/월/일 3열 `WSSDateWheel`과 이름은 비슷하지만 다른 컴포넌트다(연도 1열 전용). 연도 배열 자체가 `BirthYear.minYear...maxYear`로 하드 바운드돼 있어 오버슈트(미래 연도) 방지용 되돌림 로직이 필요 없다 — `WSSDateWheel`의 settle/bounce 로직을 그대로 가져오지 말 것. 수정은 `Projects/UI/WSSComponent/Sources/WSSBirthYearWheel.swift`에서.
-- **`SettingFeatureFactory.makeView(...)`가 모듈의 유일한 public 진입점**이다(`SettingView` → `SettingAccountInfoView` → 성별/나이 변경·차단유저 목록·회원탈퇴, `SettingView` → 프로필 공개 설정·알림 설정). Demo/App은 이 하나에 모든 UseCase를 한 번에 주입만 하면 된다. **내부 네비게이션도 개별 `makeXxxView`를 그대로 재사용**한다 — `SettingView`/`SettingAccountInfoView`는 `navigationDestination` 안에서 ViewModel을 직접 만들지 않고 `SettingFeatureFactory.makeXxxView(...)`를 호출한다(VM 조립 로직을 Factory 한 곳에 모으기 위함). 딥링크 등 단독 진입 시에도 같은 메서드를 그대로 쓴다.
+- ⚠️ **`SettingFeatureFactory`는 화면마다 독립된 진입점이다(#201부터) — 더 이상 `makeView(...)` 하나가
+  하위 화면까지 전부 조립하지 않는다.** `SettingView`/`SettingAccountInfoView`/`NotificationSettingView`는
+  `onXxxTapped` 콜백만 올리고, 그 콜백을 받아 실제로 다음 화면을 조립(`SettingFeatureFactory.makeXxxView`
+  호출)하는 건 App(`MypageRootView`)이다 — CollectionFeature #201 이관과 동일 원칙. 이 덕분에 각
+  `makeXxxView`가 받는 UseCase도 그 화면 자신이 실제로 쓰는 것만으로 줄었다(예: `makeView`는
+  `pushAuthorizationChecker` 하나뿐, 하위 화면용 UseCase 10여 개를 더 안 받는다). 유일한 예외는
+  `makeWithdrawFlowView` — "확인→사유" 2단계는 여전히 그 화면 내부에서 로컬로 진행되므로 App은 이
+  진입점 하나만 조립하면 된다(사용자 확정, 아래 "체이닝" 주의사항 참고). 딥링크 등으로 특정 화면에
+  단독 진입해야 하면 해당 `make<Screen>View`를 그대로 쓰면 된다.
 - 회원탈퇴 실서버 조립 시 `BaseData`의 `DemoSessionTokenStore`는 `SessionTokenStore`만 구현해 `AuthDataFactory.makeRepository(tokenStore:)`가 요구하는 **`TokenStore`(저장/갱신 포함 상위 프로토콜)에는 못 쓴다** — save/refresh까지 갖춘 별도 TokenStore가 필요(Demo에선 `DemoAuthTokenStore` 참고).
 - **`WithdrawReasonView`에서 `.disabled`와 `@FocusState`를 같은 탭 핸들러로 함께 갱신할 때, 상태 변경(`selectReason`)과 포커스 요청(`isKeyboardFocused = true`)을 같은 틱에 실행하면 포커스가 씹힌다** — `.disabled`가 아직 갱신 전 렌더값(true)으로 평가되는 시점이라 비활성 뷰는 포커스를 못 받는다. 포커스 요청을 `Task { @MainActor in }`으로 한 틱 미뤄 상태 변경 렌더 뒤에 실행해야 탭 한 번에 선택+포커스가 같이 된다.
-- **같은 소스 뷰에 `navigationDestination(isPresented:)`를 두 개 걸어 A→B로 체이닝하면(A의 콜백이 B의 bool을 true로) 두 bool이 동시에 true가 되어 스택 push가 깨진다** — `WithdrawConfirmView`→`WithdrawReasonView`가 이 문제였다. 해결: B의 트리거를 A가 아니라 **A가 이미 push된 지점(별도 컨테이너 뷰)** 으로 옮긴다(`WithdrawFlowView` 참고). 화면 체이닝이 필요하면 항상 이 패턴을 쓸 것 — 부모 뷰에 bool을 계속 추가하지 말 것.
-- **Demo `실서버` 모드는 로그인 플로우가 없어 `refreshToken`/`deviceIdentifier`가 비어있으면 로그아웃이 `DefaultAuthRepository.logout()`의 guard에서 바로 `RepositoryError.unknown`으로 막힌다**(`LogoutUseCase` 배선 자체의 버그 아님) — `makeLiveSettingView()`가 `DemoAuthTokenStore.saveRefreshToken(_:)` / `DefaultDeviceIdentifierStore.saveDeviceIdentifier(_:)`로 더미 값을 미리 심어 이 guard는 통과하지만, 그 뒤 실제 서버 `postLogout` 호출은 가짜 값이라 정상적으로 네트워크 에러(401 등)로 실패한다 — 이건 의도된 동작이다(guard 실패의 애매한 `unknown`보다 진짜 네트워크 실패가 보이는 게 더 현실적인 데모). `DefaultDeviceIdentifierStore`는 실제 Keychain을 쓰므로 이 시드는 시뮬레이터에 앱을 재실행해도 유지된다.
+- **같은 소스 뷰에 `navigationDestination(isPresented:)`를 두 개 걸어 A→B로 체이닝하면(A의 콜백이 B의 bool을 true로) 두 bool이 동시에 true가 되어 스택 push가 깨진다** — `WithdrawConfirmView`→`WithdrawReasonView`가 이 문제였다. 해결: B의 트리거를 A가 아니라 **A가 이미 push된 지점(별도 컨테이너 뷰)** 으로 옮긴다(`WithdrawFlowView` 참고). #201 이후 모듈의 다른 화면 전환은 전부 App으로 옮겨갔지만 **`WithdrawFlowView` 내부의 이 2단계 체이닝만은 그대로 남겨두기로 사용자가 확정했다** — App이 "확인→사유"를 각각 별도 push로 쪼개려 하면 이 함정이 App 쪽 `NavigationPath`에서도 그대로 재현될 수 있으니, 그 대신 App은 `makeWithdrawFlowView` 진입점 하나만 조립하고 내부 체이닝은 이 패턴 그대로 둘 것.
+- **Demo `실서버` 모드는 로그인 플로우가 없어 `refreshToken`/`deviceIdentifier`가 비어있으면 로그아웃이 `DefaultAuthRepository.logout()`의 guard에서 바로 `RepositoryError.unknown`으로 막힌다**(`LogoutUseCase` 배선 자체의 버그 아님) — Demo의 `makeLiveDependencies()`(#201부터 화면마다 이걸 호출해 Repository 묶음을 만든다, 예전엔 `makeLiveSettingView()` 하나였다)가 `DemoAuthTokenStore.saveRefreshToken(_:)` / `DefaultDeviceIdentifierStore.saveDeviceIdentifier(_:)`로 더미 값을 미리 심어 이 guard는 통과하지만, 그 뒤 실제 서버 `postLogout` 호출은 가짜 값이라 정상적으로 네트워크 에러(401 등)로 실패한다 — 이건 의도된 동작이다(guard 실패의 애매한 `unknown`보다 진짜 네트워크 실패가 보이는 게 더 현실적인 데모). `DefaultDeviceIdentifierStore`는 실제 Keychain을 쓰므로 이 시드는 시뮬레이터에 앱을 재실행해도 유지된다.

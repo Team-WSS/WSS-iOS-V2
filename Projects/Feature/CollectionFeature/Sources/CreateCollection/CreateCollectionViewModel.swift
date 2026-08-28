@@ -32,6 +32,10 @@ final class CreateCollectionViewModel {
         var requiresAuthentication = false
         var isStopAlertPresented = false
         var presentedError: SubmitError?
+        /// 수정 모드 진입 직후, 대상 컬렉션을 불러오는 중 — 화면은 바로 뜨고 이 값이 true인 동안만
+        /// 폼이 비어 보인다(`FeedFeature.CreateFeedViewModel.isLoadingForEdit`와 동일 패턴). 생성
+        /// 모드는 로드 자체가 없어 처음부터 false로 고정.
+        var isLoadingForEdit = false
     }
 
     /// 사용자에게 표시할 에러의 의미값. 카피·표현(토스트 타입)은 View가 결정한다.
@@ -64,6 +68,10 @@ final class CreateCollectionViewModel {
     // MARK: - Action
 
     enum Action {
+        /// 생명주기 액션 — 수정 모드면 대상 컬렉션을 불러와 `draft`/`novelDisplayInfo`를 채운다.
+        /// 생성 모드에선 아무 일도 하지 않는다(빈 draft로 시작하는 게 정상, `CreateFeedViewModel`과
+        /// 동일 계약).
+        case load
         case updateName(String)
         case updateDescription(String)
         case togglePrivate
@@ -85,9 +93,12 @@ final class CreateCollectionViewModel {
     private let mode: Mode
 
     /// 뒤로가기 시 "그만 작성"/"그만 수정" 확인 알럿을 띄울지 판단하는 기준선. 생성은 항상 빈
-    /// `CollectionDraft()`, 수정은 진입 시 서버에서 불러온 원본 값(`initialDraft`)이 기준선이다
+    /// `CollectionDraft()`, 수정은 `loadForEdit()`가 채워준 원본 값이 기준선이다
     /// (`NovelReviewViewModel`의 `baselineDraft`와 같은 역할).
     @ObservationIgnored private var baselineDraft: CollectionDraft
+    /// 수정 모드 로드는 한 번만 — `.onAppear`가 재진입마다 불려도 재요청하지 않는다
+    /// (`CreateFeedViewModel.hasLoadedForEdit`와 동일).
+    @ObservationIgnored private var hasLoadedForEdit = false
 
     /// View가 직접 보지 않는 내부 판단값이라 Derived가 아니라 Property에 둔다.
     private var hasUnsavedChanges: Bool { state.draft != baselineDraft }
@@ -100,29 +111,25 @@ final class CreateCollectionViewModel {
     // 옵셔널: 생성 화면 조립 시 update UseCase가, 수정 화면 조립 시 create UseCase가 굳이 필요 없다).
     private let createCollectionUseCase: CreateCollectionUseCase?
     private let updateCollectionUseCase: UpdateCollectionUseCase?
+    /// 수정 모드 진입 시 대상 컬렉션을 불러오는 용도(`.load`) — 생성 모드에선 쓰지 않는다.
+    private let loadCollectionDetailUseCase: LoadCollectionDetailUseCase?
 
     // MARK: - Init
 
-    /// - Parameters:
-    ///   - initialDraft: 생성은 빈 `CollectionDraft()`(기본값), 수정은 `CollectionDraft(from:)`으로
-    ///     원본 컬렉션을 편집 가능한 초안으로 되돌린 값을 호출부(`CollectionDetailView`)가 넘긴다.
-    ///   - initialNovelDisplayInfo: `initialDraft.novelIDs`에 대응하는 표지·제목 캐시. 그리드는
-    ///     `novelIDs`가 아니라 이 딕셔너리를 보고 그린다(`novelListSection` 참고) — 수정 화면 진입
-    ///     시 이걸 안 채우면 개수 표시는 맞는데 그리드 셀이 하나도 안 그려진다(실측).
     init(
         mode: Mode = .create,
         createCollectionUseCase: CreateCollectionUseCase? = nil,
         updateCollectionUseCase: UpdateCollectionUseCase? = nil,
-        initialDraft: CollectionDraft = CollectionDraft(),
-        initialNovelDisplayInfo: [NovelID: CollectionNovel] = [:],
+        loadCollectionDetailUseCase: LoadCollectionDetailUseCase? = nil,
         logger: Logger? = nil
     ) {
         self.mode = mode
         self.createCollectionUseCase = createCollectionUseCase
         self.updateCollectionUseCase = updateCollectionUseCase
+        self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
         self.logger = logger
-        self.state = State(draft: initialDraft, novelDisplayInfo: initialNovelDisplayInfo)
-        self.baselineDraft = initialDraft
+        self.state = State(draft: CollectionDraft())
+        self.baselineDraft = CollectionDraft()
     }
 
     #if DEBUG
@@ -136,6 +143,7 @@ final class CreateCollectionViewModel {
         self.mode = .create
         self.createCollectionUseCase = createCollectionUseCase
         self.updateCollectionUseCase = nil
+        self.loadCollectionDetailUseCase = nil
         self.logger = nil
         self.state = State(draft: previewDraft, novelDisplayInfo: previewNovelDisplayInfo)
         self.baselineDraft = previewDraft
@@ -146,6 +154,8 @@ final class CreateCollectionViewModel {
 
     func handle(_ action: Action) {
         switch action {
+        case .load:
+            loadForEdit()
         case .updateName(let value):
             updateName(value)
         case .updateDescription(let value):
@@ -242,6 +252,29 @@ private extension CreateCollectionViewModel {
 // MARK: - UseCase Handling
 
 private extension CreateCollectionViewModel {
+
+    /// 수정 모드 진입 직후 대상 컬렉션을 불러와 `draft`/`novelDisplayInfo`/`baselineDraft`를 채운다
+    /// (`CreateFeedViewModel.loadForEdit`와 동일 패턴). 정렬(`sortType`)은 편집에 쓰지 않는 값이라
+    /// `.recent` 고정 — 화면에 정렬 토글이 없다.
+    func loadForEdit() {
+        guard case .edit(let id) = mode, !hasLoadedForEdit, let loadCollectionDetailUseCase else { return }
+        hasLoadedForEdit = true
+        state.isLoadingForEdit = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { state.isLoadingForEdit = false }
+            do {
+                let detail = try await loadCollectionDetailUseCase.execute(id: id, sortType: .recent)
+                let draft = CollectionDraft(from: detail)
+                state.draft = draft
+                state.novelDisplayInfo = Dictionary(uniqueKeysWithValues: detail.novels.map { ($0.id, $0) })
+                baselineDraft = draft
+            } catch {
+                presentError(error)
+            }
+        }
+    }
 
     func submitCollection() async {
         state.isSubmitting = true

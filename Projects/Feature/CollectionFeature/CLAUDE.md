@@ -8,13 +8,28 @@
   "작품 추가" 화면), `NovelDomain`(서재 조회 — "서재에서 추가" 화면, 서재 Domain 코드는 별도 모듈이
   아니라 `NovelDomain`에 있다 — `LibraryFeature`와 같은 이유), `BaseDomain`, `DesignSystem`,
   `WSSComponent`, `Logger`
-- 진입점:
-  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:createCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:logger:onAuthenticationRequired:)`
-  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:updateCollectionUseCase:searchNovelUseCase:loadMyLibraryUseCase:logger:onAuthenticationRequired:)`(#201, 컬렉션 상세) — "컬렉션 수정"이 로컬 push하는 `CreateCollectionView`(수정 모드)까지 필요로 하는 의존성이라 `updateCollectionUseCase`/`searchNovelUseCase`/`loadMyLibraryUseCase`/`onAuthenticationRequired`를 함께 받는다.
-  (모듈에 화면이 둘 이상이라 `makeView`가 아니라 화면명을 붙인 이름. "컬렉션 수정" 자체는 별도 Factory
-  진입점이 없다 — `CreateCollectionView`를 수정 모드로 재사용하는 로컬 push라 `CollectionSearchNovelView`
-  와 동일 위상.)
+- 진입점 (#201부터 — **화면 간 이동은 전부 App이 조립한다.** "작품 추가"/"서재에서 추가"처럼 다른
+  화면의 draft를 채우는 값 선택기까지 포함해 예외 없이 App으로 옮겼다(사용자 확정) — 이 모듈 안에는
+  `navigationDestination`이 없다. 화면이 6개라 전부 `makeXxxView`로 이름을 붙였다):
+  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:logger:pendingNovelSelection:onAddNovelTapped:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
+  - `CollectionFeatureFactory.makeEditCollectionView(id:updateCollectionUseCase:loadCollectionDetailUseCase:logger:pendingNovelSelection:onAddNovelTapped:onAuthenticationRequired:)` — 수정 전용(`Mode.edit(id)` 고정). `CreateCollectionView`를 수정 모드로 재사용하지만, `Mode`가 `internal`이라 `public` 시그니처에 노출할 수 없어(Swift 접근제어 제약) 생성과 별도 진입점으로 쪼갰다.
+  - `CollectionFeatureFactory.makeSearchNovelView(initialSelection:searchNovelUseCase:logger:onConfirm:onLibrarySelectTapped:onAuthenticationRequired:)` — "작품 추가" 화면.
+  - `CollectionFeatureFactory.makeMyLibrarySelectView(initialSelection:loadMyLibraryUseCase:logger:onConfirm:onAuthenticationRequired:)` — "서재에서 추가" 화면.
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:logger:onAuthenticationRequired:onCreateTapped:onCollectionSelected:isOwnCollections:)`
+    (`isOwnCollections` 기본값 `true` — `false`면 세그먼트 탭·"컬렉션 만들기"를 숨기고 "내 컬렉션"
+    콘텐츠만 보여준다, 타유저 프로필 재사용 — 아래 주의사항 참고)
+  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:onNovelTapped:onEditTapped:)`(#201, 컬렉션 상세)
+  - **`pendingNovelSelection: Binding<[CollectionNovel]?>`**은 "작품 추가"/"서재에서 추가" 확정 결과를
+    생성/수정 화면에 **돌려주는**(return) 1회성 nil→값 채널(`OnboardingFeature`의 확정 신호 패턴과
+    동일) — App이 확정 시점에 값을 채우고 그만큼 pop한다(아래 "2단계 pop" 주의사항 참고). 이 방향은
+    Binding이 맞다 — 받는 화면(`CreateCollectionView`)이 이미 mount돼 있어 `.onChange`로 값 변화를
+    안전하게 관찰할 수 있다.
+  - **반대로 `makeSearchNovelView`/`makeMyLibrarySelectView`의 `initialSelection:`(진입 시 채워줄
+    선택 스냅샷)은 App이 반드시 `NavigationPath`의 `Destination` payload로 실어 보내야 한다 —
+    별도 `@State` 스크래치 변수에 먼저 써두고 `path.append(...)`한 뒤 그 변수를 읽어 destination을
+    만드는 방식은 레이스가 있다(#201 실측, 아래 "진입 파라미터는 반드시 path payload로" 주의사항
+    참고).** `CollectionNovel`은 이제 `Hashable`이라(#201) `[CollectionNovel]`을 그대로 payload에
+    넣을 수 있다.
 
 ## 핵심 시나리오
 
@@ -27,19 +42,21 @@
   ⚠️ **수정 진입 시 `initialNovelDisplayInfo`(원본 `detail.novels`를 id로 인덱싱한 딕셔너리)도 함께
   넘겨야 한다** — 그리드는 `draft.novelIDs`가 아니라 이 캐시를 보고 그리므로, 안 채우면 "N/100" 개수
   표시는 맞는데 그리드 셀이 하나도 안 그려진다(실측, `novelListSection` 참고).
-- **작품 추가/제거는 `CollectionSearchNovelView`(로컬 push, Factory 미노출)에서 이뤄진다** —
-  `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 push하고, `SearchNovelUseCase`로 검색·
-  다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가 `.setNovels`로 `draft.novelIDs`를 통째로
-  교체한다(부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은
-  검색어를 바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이
-  차면 더 담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — **문구는 범용 텍스트("100개까지
-  선택 가능해요")를 임시로 쓰는 중**, 기획팀 확정 문구 전달 예정(2026-08-24). 문구가 오면 `WSSToastType`
+- **작품 추가/제거는 `CollectionSearchNovelView`(`makeSearchNovelView`, Factory 노출)에서 이뤄진다** —
+  `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 `onAddNovelTapped`로 App에 알리면 App이 이
+  화면을 push하고, `SearchNovelUseCase`로 검색·다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가
+  `onConfirm` → App의 `pendingNovelSelection` → `.setNovels`로 `draft.novelIDs`를 통째로 교체한다
+  (부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를
+  바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더
+  담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — **문구는 범용 텍스트("100개까지 선택
+  가능해요")를 임시로 쓰는 중**, 기획팀 확정 문구 전달 예정(2026-08-24). 문구가 오면 `WSSToastType`
   텍스트만 교체하면 된다(구조는 이미 확정).
 - **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
   `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
   `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
-- **"서재에서 추가"(`CollectionMyLibrarySelectView`, 로컬 push, Factory 미노출)** — `CollectionSearchNovelView`의
-  "서재에서 추가" 버튼이 push. 사용자의 서재를 `LoadMyLibraryUseCase`(필터 없음, `MyLibraryFilter()`
+- **"서재에서 추가"(`CollectionMyLibrarySelectView`, `makeMyLibrarySelectView`, Factory 노출)** —
+  `CollectionSearchNovelView`의 "서재에서 추가" 버튼이 `onLibrarySelectTapped`로 App에 알리면 App이
+  push. 사용자의 서재를 `LoadMyLibraryUseCase`(필터 없음, `MyLibraryFilter()`
   기본값)로 3열 그리드 조회하며 다중 선택 → "추가"로 확정한다. 데이터 로드는 정수 `page`가 아니라
   `LibraryFeature.LibraryViewModel`과 동일한 **커서 + generation 카운터** 패턴(`LoadMyLibraryUseCase`가
   커서 기반이라서). 선택 상태는 `CollectionSearchNovelView`가 자신의 `selectedNovels`(검색으로 이미
@@ -58,29 +75,32 @@
   두 번째 필요 시점을 기다리지 않고 미리 승격했다(사용자 명시 요청). 자세한 계약은
   [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSPillBadge` 항목 참고.
 - **컬렉션 목록(`CollectionListView`, Factory 노출)** — "내 컬렉션"/"좋아요한 컬렉션"을 한 화면에서
-  세그먼트 탭(`CollectionSegmentedTab`, 로컬)으로 전환. 마이페이지 "컬렉션 N개" 행에서 진입(#200,
-  `UserPageFeature`가 콜백만 노출 — 두 Feature는 서로 import 못 해 실제 화면 전환은 App 몫).
+  세그먼트 탭(`CollectionSegmentedTab`, 로컬)으로 전환. 마이페이지 "컬렉션 N개" 행에서 진입(#200/#201,
+  `UserPageFeature`가 콜백만 노출하고 실제 push는 `MypageRootView`가 한다 — 두 Feature는 서로 import
+  못 해 App 몫).
   `LoadCollectionsUseCase`(userID 필수)/`LoadLikedCollectionsUseCase`(userID 불필요, 세션 토큰 기준)를
   탭마다 독립된 커서+generation 부기로 lazy 로드한다 — 처음 그 탭을 볼 때만 첫 페이지를 요청하고, 이미
   본 탭은 오갈 때마다 재요청하지 않는다(`CollectionListViewModel`, `CollectionMyLibrarySelectViewModel`의
-  패턴을 탭 2개로 확장). "내 컬렉션" 탭에서만 "컬렉션 만들기" 버튼이 보이고, 탭하면 같은 모듈의 기존
-  `CreateCollectionView`로 push한다 — 그 화면은 성공 콜백이 없는 계약이라(자기완결 dismiss만) 복귀 시
-  성공 여부와 무관하게 무조건 `.mine` 탭을 다시 로드한다. 카드 표지 스택은 `CollectionCoverStackView`
-  (로컬) — 마이페이지 미리보기(`UserPageFeature.CollectionSection`, 대표 표지 1장)와는 시각 패턴이
-  달라 별개 컴포넌트다. **표지 슬롯은 실제 작품 수(1~5)와 무관하게 항상 5칸**이다(사용자 확정,
-  2026-08-21) — `recentNovels`가 5개 미만이면 남는 슬롯을 `WSSNovelCoverImage(url: nil)`의 기본 표지
-  폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게 하려는 의도, 작품 수는 카드 부제 `작품 N`으로만
-  알린다). 오버플로 배지("+N")는 없다 — Figma 목업의 숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의
-  잔재였다(사용자 확정).
-- **컬렉션 상세(`CollectionDetailView`, Factory 노출, #201)** — `CollectionListView`의 카드 탭에서 로컬
-  push로 진입한다(`.navigationDestination(item:)`, 진입 파라미터가 있는 push라 `isPresented:` + 별도
-  State 조합 금지 — `Feature/CLAUDE.md` 공통 함정). 히어로 배경은 `representativeNovelID`로 `novels`
-  배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼 블러는
-  없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시 재로드
-  안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다. 좋아요는
-  `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일 패턴).
-  복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(`.reloadAfterDetail`, 좋아요·삭제로 카드가
-  바뀌었을 수 있어서 — `CreateCollectionView` 복귀와 동일 판단).
+  패턴을 탭 2개로 확장). "내 컬렉션" 탭에서만 "컬렉션 만들기" 버튼이 보이고, 탭하면 `onCreateTapped`로
+  App에 알려 `makeCreateCollectionView`가 push된다 — 그 화면은 성공 콜백이 없는 계약이라(자기완결
+  dismiss만) **이 화면은 복귀를 "성공/취소"로 구분하지 않고** `hasAppearedOnce` 플래그로 감지한다(이
+  화면의 App 경로엔 자식이 이 화면 하나뿐이라, 최초 `onAppear` 이후의 재발화는 정의상 "그 자식에서
+  돌아옴"이다) — 복귀 시 무조건 `.reloadAfterReturn(selectedTab)`으로 그 탭을 다시 로드한다. 카드
+  표지 스택은 `CollectionCoverStackView`(로컬) — 마이페이지 미리보기(`UserPageFeature.CollectionSection`,
+  대표 표지 1장)와는 시각 패턴이 달라 별개 컴포넌트다. **표지 슬롯은 실제 작품 수(1~5)와 무관하게 항상
+  5칸**이다(사용자 확정, 2026-08-21) — `recentNovels`가 5개 미만이면 남는 슬롯을
+  `WSSNovelCoverImage(url: nil)`의 기본 표지 폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게
+  하려는 의도, 작품 수는 카드 부제 `작품 N`으로만 알린다). 오버플로 배지("+N")는 없다 — Figma 목업의
+  숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의 잔재였다(사용자 확정).
+- **컬렉션 상세(`CollectionDetailView`, Factory 노출, #201)** — `CollectionListView`의 카드 탭이
+  `onCollectionSelected(CollectionID)`로 App에 알리면 App이 push한다(#201부터 로컬
+  `.navigationDestination(item:)`이 아니라 App의 `NavigationPath`). 히어로 배경은 `representativeNovelID`로
+  `novels` 배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼
+  블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시
+  재로드 안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다.
+  좋아요는 `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일
+  패턴). 복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(위 `hasAppearedOnce`/`reloadAfterReturn`
+  경로 — 좋아요·삭제로 카드가 바뀌었을 수 있어서, `CreateCollectionView` 복귀와 동일 판단).
 
 ## 화면 동작 계약
 
@@ -128,13 +148,17 @@
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
   - **작품 카드 탭은 `onNovelTapped(NovelID)` 콜백까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
     Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
-    동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다
-    — 다만 **App이 아직 이 콜백을 실제로 연결하지 않았다**(App이 스켈레톤 단계라 조립 지점 자체가 없음,
-    `docs/TODO.md` 참고). "공유하기"는 카카오톡 공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
-  - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드(`Mode.edit`)로 로컬 push**한다 — 더보기 메뉴
-    탭 → `isEditPresented = true`, 복귀 시(`onChange`) 성공/취소 구분 없이 무조건 `reloadAfterEdit`로
-    다시 불러온다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단 — 이미
-    `state.detail`이 있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
+    **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201, `docs/TODO.md` 9번
+    해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
+    유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다. "공유하기"는 카카오톡
+    공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+  - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
+    (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
+    (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
+    감지한다(App 경로의 자식이 수정 화면 하나뿐이라 최초 이후 재발화는 곧 "수정에서 돌아옴") —
+    성공/취소 구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(이미 `state.detail`이 있어 전면
+    로딩으로 안 덮인다, 정렬 변경과 동일 UX).
   - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
     Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
     `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수
@@ -144,6 +168,30 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **App이 push하는 화면의 "진입 파라미터"는 반드시 `NavigationPath`의 `Destination` payload로
+  실어 보내야 한다 — 별도 `@State` 스크래치 변수에 먼저 쓰고 그 변수를 읽어 destination view를
+  만드는 방식은 레이스가 있다(#201, 사용자 리포트로 실측 재발견 — "작품 추가→서재에서 추가로 넘어가면
+  검색에서 고른 작품이 사라진다").** 원인: `MypageRootView`(App)가
+  `libraryInitialSelection = currentSelection; path.append(.myLibrarySelectForCollection)`처럼 같은
+  액션 안에서 `@State` 갱신과 push를 연달아 실행해도, `.navigationDestination(for:)`가 새
+  destination view를 만드는 시점에 그 `@State` 갱신이 **아직 반영되지 않은 이전 값**(빈 배열)을 읽어
+  `CollectionMyLibrarySelectViewModel.init(initialSelection:)`이 빈 배열로 초기화됐다(디버그 로그로
+  확인 — `handleLibrarySelectTapped`가 찍은 `currentSelection.count`는 2였는데, 그 직후
+  `ViewModel.init`이 찍은 `initialSelection.count`는 0). `CollectionListView`의 "컬렉션 목록 (빈
+  상태)" `isEmpty: Bool`처럼 **값 타입이 이미 Hashable인 payload는 이 레이스가 없다** — 문제는 오직
+  "Hashable이 아니라서 어쩔 수 없이 스크래치 `@State` + 사이드채널로 우회하던" 경우다.
+  **고친 방법**: `CollectionNovel`을 `Hashable`로 만들고(필드가 전부 Hashable이라 캐스케이드 없이
+  자동 합성만으로 충분, `CollectionDomain/CLAUDE.md` 참고), `Destination.searchNovelForCollection`/
+  `.myLibrarySelectForCollection`이 `[CollectionNovel]`을 직접 들고 다니게 바꿨다 — 스크래치 `@State`
+  (`collectionSearchNovelInitialSelection`/`collectionLibraryInitialSelection`, Demo의
+  `searchNovelInitialSelection`/`libraryInitialSelection`)는 전부 제거됐다. **새로 "진입 파라미터가
+  있는 push 화면"을 추가할 때 그 파라미터 타입이 아직 Hashable이 아니면, 스크래치 `@State`로 우회하지
+  말고 먼저 그 타입을 Hashable로 만들 수 있는지부터 검토할 것** — 캐스케이드가 없으면(다른 비Hashable
+  타입을 필드로 안 담고 있으면) 거의 항상 가능하고, 이 레이스를 구조적으로 없앤다.
+  ⚠️ **반대 방향(화면이 App에 결과를 돌려주는 "확정 값")은 이 레이스 대상이 아니다** — `pendingNovelSelection`
+  처럼 이미 mount된 화면이 `.onChange`로 관찰하는 Binding 채널은 안전하다(위 "진입점" 절 참고). 레이스는
+  오직 "아직 mount 안 된 destination이 방금 쓴 `@State`를 못 읽는" 진입(entry) 방향에서만 난다.
+
 - **`CollectionDetailViewModel`은 `isClosing` 가드를 갖는다(#201, 사용자 확정 — 리뷰가 지적했을 땐
   형제 VM들과의 일관성을 이유로 한 라운드 보류했다가, 이후 이 화면에 한해 반영하기로 뒤집었다)** —
   뒤로가기 버튼이 `viewModel.handle(.backTapped)`를 부른 뒤 `dismiss()`하면 `close()`가 `isClosing`을
@@ -152,13 +200,16 @@
   스폰하는 삭제 Task 자신은 취소하지 않는다(확인 알럿을 거친 명시적 요청이라 화면이 닫히는 도중이어도
   서버 반영까지 보낸다, `NovelReviewViewModel.close()`가 저장 Task를 안 취소하는 것과 동일 판단).
   ⚠️ **`View.onDisappear`로 세우는 변형(`NovelNotificationSettingSheetViewModel.disappear()`)은 여기
-  못 쓴다 — 처음엔 그 변형을 그대로 옮겨왔다가 리뷰에서 실제 회귀로 발견됐다.** 이 화면은 "컬렉션
-  수정"을 같은 스택에 **로컬 push**하는데(`isEditPresented`), 자식이 push되는 순간 SwiftUI 표준
-  동작으로 부모의 `.onDisappear`도 함께 발화한다 — 그 시점에 `isClosing`이 `true`로 굳고 되돌리는
-  코드가 없어, 수정 화면에서 복귀한 뒤 재조회(`reloadAfterEdit`)는 물론 정렬 변경·좋아요·삭제까지
-  전부 조용히 무반응이 됐다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장"). `onDisappear`
-  기반 변형은 **로컬 push가 없는 리프 화면(시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택에
-  자식을 push하면 명시적 액션(`NovelDetailViewModel` 쪽 변형)을 쓸 것. **`CollectionListViewModel`/
+  못 쓴다 — 처음엔 그 변형을 그대로 옮겨왔다가 리뷰에서 실제 회귀로 발견됐다.** 발견 당시엔 "컬렉션
+  수정"이 이 화면의 **로컬 push**였지만(`isEditPresented`), #201에서 App으로 옮긴 지금도 원인은
+  그대로 유효하다 — `MypageRootView`가 같은 `NavigationPath`에 "컬렉션 수정"을 push하면, 그 push가
+  App 소유든 예전처럼 Feature 로컬 소유든 상관없이 **push되는 순간 이전 화면(`CollectionDetailView`)의
+  `.onDisappear`가 SwiftUI 표준 동작으로 함께 발화한다.** 그 시점에 `isClosing`이 `true`로 굳고
+  되돌리는 코드가 없으면, 수정 화면에서 복귀한 뒤 재조회(`.reloadAfterEdit`)는 물론 정렬 변경·좋아요·
+  삭제까지 전부 조용히 무반응이 된다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장").
+  `onDisappear` 기반 변형은 **같은 `NavigationPath`에서 자기 위로 뭔가 push될 일이 없는 리프 화면
+  (시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택 위에 다른 화면이 push되면(App이 하든 Feature가
+  하든) 명시적 액션(`NovelDetailViewModel` 쪽 변형)을 쓸 것. **`CollectionListViewModel`/
   `CreateCollectionViewModel`/`CollectionSearchNovelViewModel`/`CollectionMyLibrarySelectViewModel`은
   아직 이 패턴이 없다** — 이번엔 리뷰가 지적한 화면 하나만 고쳤을 뿐, 모듈 전체 일괄 적용은 아니다.
 - **`CollectionListViewModel`은 표준 VM 섹션 순서(`Feature/CLAUDE.md`) 끝에 `// MARK: - Tab Bookkeeping
@@ -166,7 +217,8 @@
   헬퍼(`bookkeeping(for:)`/`content(for:)`/`update...`)가 기존 6개 섹션 어디에도 자연스럽게 안
   맞는다. 새 화면에서 같은 "여러 하위상태를 키로 나눠 관리" 패턴이 또 필요하면 이 예외를 정본으로
   삼아도 된다 — 단, 섹션을 늘리는 걸 기본값으로 삼지 말고 정말 기존 섹션에 안 맞을 때만.
-- ⚠️ **상세(`CollectionDetailView`) 복귀 시 `reloadAfterDetail`은 그 순간 선택된 탭만 재로드한다 —
+- ⚠️ **상세(`CollectionDetailView`) 복귀 시 `.reloadAfterReturn`(구 `reloadAfterDetail` — #201에서
+  `CreateCollectionView` 복귀와 액션을 합치며 이름도 일반화됐다)은 그 순간 선택된 탭만 재로드한다 —
   반대편 탭은 `hasLoaded`를 꺼서(`invalidate`) 다음에 그 탭으로 전환할 때 자동으로 새로 불러오게
   한다.** 좋아요 토글은 "좋아요한 컬렉션" 목록 자체를 바꾸는데, "내 컬렉션"에서 상세로 들어가
   좋아요를 누르고 돌아오면 그 순간 화면엔 "내 컬렉션"이 떠 있으니 그것만 재로드되고 "좋아요한
@@ -205,23 +257,23 @@
   최상단 뷰에서는 `matchedGeometryEffect`가 정상적으로 슬라이드한다. 인디케이터는 하단 구분선
   (`Rectangle().fill(Color.wssGray70)`)과 같은 `ZStack(alignment: .bottom)`에 겹쳐 그 선 위를 타고
   움직이는 것처럼 배치한다(구분선을 먼저 깔고 탭 버튼을 그 위에 얹는 순서).
-- ⚠️ **2단계 pop("서재에서 추가" 확정 → `CreateCollectionView`까지)은 중간 화면들이 각자
-  `dismiss()`를 부르지 않고, 최상위(`CreateCollectionView`)가 소유한 단 하나의 `isAddNovelPresented`를
-  확정 콜백(`onConfirm`) 안에서 딱 한 번만 false로 내려 서브트리 전체를 한 번에 걷어낸다(정본,
-  `CreateCollectionView.swift`/`CollectionSearchNovelView.swift`/`CollectionMyLibrarySelectView.swift`
-  참고)** — `onConfirm`을 `CreateCollectionView → CollectionSearchNovelView → CollectionMyLibrarySelectView`
-  까지 그대로 재사용해 내려보내고, 확정 시 그 콜백이 novels를 `.setNovels`로 반영함과 동시에
-  `isAddNovelPresented = false`도 함께 실행한다. 중간 화면(`CollectionSearchNovelView`/
-  `CollectionMyLibrarySelectView`)의 확정 핸들러는 `onConfirm(...)` 호출만 하고 자기 자신의
-  `dismiss()`는 부르지 않는다 — `isAddNovelPresented`가 그 화면들을 포함한 서브트리를 통째로 pop해준다.
-  ⚠️ **이전엔 "자식이 스스로 pop → 부모가 `onChange`로 그 완료를 감지해 뒤이어 pop"하는 계단식
+- ⚠️ **2단계 pop("서재에서 추가" 확정 → 생성/수정 화면까지)은 #201부터 App(`MypageRootView` 등)이
+  소유한다 — Feature 안에는 더 이상 이 로직이 없다.** App은 `handleLibrarySelectConfirm`(App 쪽 이름,
+  모듈마다 호출자가 붙임)에서 `pendingNovelSelection`에 결과를 채우고 같은 프레임에 `path.removeLast(2)`
+  를 호출해 "서재에서 추가"+"작품 추가" 두 destination을 한 번에 pop한다("작품 추가" 확정(1단계 pop)은
+  `path.removeLast(1)`). **아래는 이 2단계 pop을 처음 Feature 내부(로컬 push)로 구현하던 시절 실측으로
+  얻은 교훈이다 — App으로 옮긴 지금도 결론은 그대로 적용된다**: 여러 단을 pop할 땐 중간 화면이 각자
+  `dismiss()`(App 기준으로는 `path.removeLast(1)`)를 부르는 계단식 방식도, 화면 간 구조 자체를 바꾸는
+  방식도 아니고, **최상위(App)가 확정 콜백 안에서 필요한 만큼을 한 번에 pop**하는 것만 검증된 정본이다.
+  ⚠️ **Feature 시절엔 "자식이 스스로 pop → 부모가 `onChange`로 그 완료를 감지해 뒤이어 pop"하는 계단식
   2회 `dismiss()` 방식(`isPendingDismissAfterMyLibrarySelect` 플래그)을 썼었다** — 그건 "자식의
   `dismiss()`와 부모의 `dismiss()`를 같은 프레임에서 함께 부르면 부모가 pop되지 않는다"는 실측 버그를
   피하려는 것이었는데, 정작 그 계단식 2회 pop 자체가 **두 전환 애니메이션이 거의 같은 프레임에 겹쳐
-  보여 "추가" 탭 후 화면이 이중으로 dismiss되는 것처럼 보이는** 새 문제를 냈다(사용자 리포트). 지금의
-  "최상위 boolean 한 번만 내리기" 방식은 애초에 pop이 한 번만 발생하므로 이 겹침 문제 자체가 생기지
-  않는다 — 계단식 방식으로 되돌리지 말 것.
-  ⚠️ **폐기한 대안 둘 다 다른 이유로 깨졌다(2026-08-24 실측)** — 지금 방식과 달리 **둘 다 화면 간
+  보여 "추가" 탭 후 화면이 이중으로 dismiss되는 것처럼 보이는** 새 문제를 냈다(사용자 리포트). "한 번에
+  필요한 만큼 pop"(Feature 시절엔 최상위 boolean 하나, 지금은 App의 `path.removeLast(N)`)은 애초에
+  pop이 한 번만 발생하므로 이 겹침 문제 자체가 생기지 않는다 — 계단식 방식으로 되돌리지 말 것.
+  ⚠️ **폐기한 대안 둘 다 다른 이유로 깨졌다(2026-08-24 실측, 아직 Feature가 로컬 push를 소유하던
+  시절)** — 지금 방식과 달리 **둘 다 화면 간
   구조 자체를 바꾸려던 시도**였다는 점에 유의(지금 방식은 구조는 그대로 두고 "누가 dismiss를 부르는지"만
   최상위로 모은 것):
   1. **형제 Bool 교체** — `CreateCollectionView`가 검색 화면과 서재 화면을 형제 레벨로 각각 직접 push해
@@ -236,22 +288,25 @@
      `CreateCollectionView`가 이미 바깥 스택에 push된 상태에서 또 다른 `NavigationStack`을 그 안에
      여는 패턴은 이 프로젝트에서 쓰지 말 것.
   다단계 push에서 "확정만 skip, 취소는 정상 pop"이 필요할 땐 **뒤로가기는 각 화면이 그대로 개별
-  `dismiss()`를 유지하고, 확정만 콜백을 타고 최상위까지 올라가 그쪽의 단일 boolean을 내리는 지금
-  패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩 `NavigationStack`으로 "더 깔끔하게" 다시
-  풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨).
+  `dismiss()`(App 기준 `path.removeLast(1)`)를 유지하고, 확정만 콜백을 타고 최상위까지 올라가 그쪽에서
+  필요한 만큼 한 번에 pop하는 지금 패턴**이 유일하게 검증된 정본이다 — 형제 Bool 교체나 중첩
+  `NavigationStack`으로 "더 깔끔하게" 다시 풀어보려 하지 말 것(둘 다 이미 실측으로 폐기됨). App으로
+  옮긴 뒤에도 같은 함정이 유효하다 — App의 `Destination` enum 안에서 검색/서재 화면을 별개 형제
+  케이스로 다루면서 "서재에서 추가"가 검색 화면을 대체하듯 push하는 식으로 짜면 위 1번과 같은 유실이
+  재현될 수 있으니, 반드시 **push는 각 단계마다, pop만 확정 시점에 필요한 개수만큼 한 번에**의 원칙을
+  지킬 것(`MypageRootView.handleCollectionLibrarySelectConfirm` 참고).
 - ⚠️ **iOS 18.1 시뮬레이터 런타임에서 `CollectionSearchNovelView`로 push하면 진입 즉시 CPU 100%
   무한 리렌더(AttributeGraph 루프)에 빠진다 — 앱·이 화면의 버그가 아니라 그 OS 런타임 한정 SwiftUI
   회귀로 확인됨.** 같은 빌드 산출물을 iOS 26 시뮬레이터에 설치해 동일 자동화 경로로 재현했을 땐 CPU
   0%로 정상 동작했다(화면 전환·"서재에서 추가"·대표 배지까지 전부 정상). 이 화면을 시뮬레이터에서
   검증할 땐 **iOS 18.1을 피하고 최신 iOS 런타임 시뮬레이터를 쓸 것** — CPU가 진입 직후 100%에 붙박이면
   코드가 아니라 시뮬레이터 런타임부터 의심할 것.
-- ⚠️ **로컬 push 화면(Factory에 안 뜨는 "작품 추가"/"서재에서 추가")은 `logger`가 자동으로 안 흐른다 —
-  화면마다 파라미터로 직접 받아 다음 화면에 넘겨야 한다(PR #199 리뷰에서 실제로 놓쳤다 발견).**
-  `CollectionFeatureFactory`가 `CreateCollectionViewModel`에는 `logger`를 넘겨도, `CreateCollectionView`
-  자신의 `init`에 `logger` 파라미터가 없으면 그 화면이 만드는 `CollectionSearchNovelViewModel`은
-  기본값 `nil`로 조용히 굳는다 — 컴파일 에러 없이 로그만 사라져서 리뷰 전까진 못 잡았다. 이 모듈처럼
-  화면이 화면을 로컬로 여러 단 push하면, **매 단(View 자신 + 그 View가 만드는 다음 VM/View)마다**
-  `logger: Logger? = nil` 파라미터를 두고 받은 값을 그대로 내려보내야 체인 끝까지 살아있다.
+- **(#199 시절 함정, #201에서 구조적으로 해소됨)** 화면이 화면을 로컬로 push하던 시절엔 `logger`가
+  자동으로 안 흘러 중간 화면의 `init`에 파라미터를 빠뜨리면 조용히 `nil`로 굳는 함정이 있었다. #201부터
+  "작품 추가"/"서재에서 추가"가 각각 독립된 Factory 진입점(`makeSearchNovelView`/`makeMyLibrarySelectView`)
+  이 되면서 **App이 화면마다 직접 `logger:`를 넘긴다** — 더 이상 앞 화면을 거쳐 체인으로 내려보낼 필요가
+  없어 이 함정 자체가 사라졌다. 같은 함정이 재발하려면 이 모듈이 다시 화면 안에서 화면을 로컬 push하는
+  구조로 돌아가야 하는데, 그건 이 문서의 다른 주의사항들(2단계 pop 등)이 이미 하지 않기로 확정한 방향이다.
 - ⚠️ **`WSSLibraryGridCell`은 탭 동작을 갖지 않는 순수 표시 뷰라, 이 화면처럼 `.onTapGesture`로 감싸
   탭 영역을 만들면 접근성 트리에 안 잡혀 VoiceOver는 물론 UI 자동화(`snapshot_ui`/`tap`)로도 탭할 수
   없다**(`WSSComponent/CLAUDE.md` 공통 주의) — `.accessibilityLabel(novel.title)` + `.accessibilityAddTraits(.isButton)`을
@@ -363,3 +418,18 @@
   `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
   전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
   다룸 — 이건 의도한 동작이라 건드리지 않았다).
+- **`CollectionListView`의 `isOwnCollections: Bool`(기본 `true`, #201 후속·2026-08-28)은 타유저
+  프로필(`UserPageFeature`)의 "컬렉션" 헤더 탭이 이 화면을 재사용할 수 있게 연 스위치다** — "좋아요한
+  컬렉션" 탭이 세션 토큰=로그인 사용자 자신 기준이라, 애초에 이 화면 전체가 "로그인 사용자 자신
+  기준으로만 동작"했다(위 진입점 절 참고). `false`면 `CollectionSegmentedTab`과 "컬렉션 만들기"
+  버튼(리스트 상단·빈 상태 둘 다)을 감춰 "내 컬렉션" 콘텐츠만(`userID`는 여전히 대상 유저) 보여준다.
+  ⚠️ **`CollectionListViewModel`은 손대지 않았다** — 세그먼트 탭이 안 보이면 `.selectTab(.liked)`를
+  호출할 UI 자체가 없어 `state.selectedTab`이 기본값 `.mine`에서 벗어날 방법이 없다. 새로 이 화면에
+  "모드"를 하나 더 추가할 일이 생기면, ViewModel까지 갈라야 하는지 먼저 확인할 것 — 이번처럼 순수
+  화면 표시 분기(View 전용)로 끝나는 경우가 있다.
+  ⚠️ **빈 상태(`emptySection(for: .mine)`)의 `isOwnCollections == false` 분기는 사실상 도달하지
+  않는다** — 정상 경로는 `UserPageFeature`가 헤더 탭 시점에 `hasCollections`를 먼저 보고, 컬렉션이
+  0개면 이 화면 자체를 push하지 않고 토스트로 대신 응답한다(`UserPageFeature/CLAUDE.md` 참고).
+  그래도 방어적으로 남겨뒀다 — 삭제하지 말 것(경합으로 0개가 된 채 이미 push된 경우의 안전망).
+  `WSSEmptyView(type: .collectionMine)`의 카피("내 컬렉션이 없어요")가 타유저 맥락에 안 맞는 것도
+  이 이유로 감수했다(도달 빈도가 사실상 0이라 전용 카피·타입을 새로 만들 만큼은 아니라고 판단).

@@ -15,11 +15,9 @@ import DesignSystem
 import WSSComponent
 
 /// "서재에서 추가" 화면 — 내 서재를 3열 그리드로 조회하며 다중 선택 후 "추가"로 확정한다.
-/// `CollectionSearchNovelView`의 "서재에서 추가" 버튼으로 진입하는 로컬 push 화면(별도 Factory
-/// 진입점 없음). 확정해도 이 화면은 스스로 dismiss()하지 않는다 — `CollectionSearchNovelView`가 받은
-/// 그 `onConfirm`을 그대로 재사용해 `CreateCollectionView`까지 올라가고, 그쪽이 소유한
-/// `isAddNovelPresented` 하나가 이 화면까지 포함한 서브트리 전체를 한 번에 pop한다 — 배선은
-/// `CollectionSearchNovelView.swift`/`CreateCollectionView.swift` 참고.
+/// `CollectionFeatureFactory.makeMyLibrarySelectView`로 App이 조립·push한다
+/// (`CollectionSearchNovelView`의 "서재에서 추가" 버튼이 진입 트리거). 확정해도 이 화면은 스스로
+/// dismiss()하지 않는다 — 호출자(App)가 `onConfirm`을 받아 `CreateCollectionView`까지 pop한다.
 struct CollectionMyLibrarySelectView: View {
 
     @State private var viewModel: CollectionMyLibrarySelectViewModel

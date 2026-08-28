@@ -10,9 +10,6 @@ import SwiftUI
 
 import BaseDomain
 import CollectionDomain
-import SearchDomain
-import NovelDomain
-import Logger
 import DesignSystem
 import WSSComponent
 
@@ -22,104 +19,66 @@ import WSSComponent
 struct CollectionListView: View {
 
     @State private var viewModel: CollectionListViewModel
-    /// "컬렉션 만들기" push 여부 — `CreateCollectionView`는 이 화면이 자기 내부에서만 push하는
-    /// 로컬 화면이라(`CreateCollectionView`가 "작품 추가"를 push하는 것과 동일 위상) 이 화면이 직접 소유.
-    @State private var isCreatePresented = false
-    /// 탭한 카드의 컬렉션 ID — 진입 파라미터가 있는 push라 `isPresented:` + 별도 State 조합 대신
-    /// `.navigationDestination(item:)`을 쓴다(`Feature/CLAUDE.md` 공통 함정 — 첫 진입에서만 파라미터가
-    /// 무시되는 문제 예방).
-    @State private var selectedCollectionID: CollectionID?
+    /// 이 화면의 자식은 "컬렉션 만들기"·`CollectionDetailView`(둘 다 App이 push)뿐이라, 두 번째
+    /// 이후의 `onAppear`는 항상 "그중 하나에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다
+    /// (`CollectionDetailView`의 `hasAppearedOnce`와 동일 이유, App이 소유한 `NavigationPath`로
+    /// 옮기며 로컬 `isCreatePresented`/`selectedCollectionID`·`onChange` 대신 이 방식으로 바뀌었다).
+    @State private var hasAppearedOnce = false
     @Environment(\.dismiss) private var dismiss
 
-    /// "컬렉션 만들기" 화면이 필요로 하는 UseCase 3종 — `CreateCollectionView`로 그대로 관통시킨다.
-    private let createCollectionUseCase: CreateCollectionUseCase
-    private let searchNovelUseCase: SearchNovelUseCase
-    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
-    /// 카드 탭 → `CollectionDetailView`(로컬 push)가 필요로 하는 UseCase 4종(수정 포함).
-    private let loadCollectionDetailUseCase: LoadCollectionDetailUseCase
-    private let collectionLikeUseCase: CollectionLikeUseCase
-    private let deleteCollectionUseCase: DeleteCollectionUseCase
-    private let updateCollectionUseCase: UpdateCollectionUseCase
-    private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
-    /// `CollectionDetailView`의 작품 그리드 셀 탭 콜백 — 그대로 관통만 시킨다(`CollectionFeatureFactory`
-    /// 참고, App이 아직 실제로 연결하지 않았다).
-    private let onNovelTapped: (NovelID) -> Void
+    /// "컬렉션 만들기" 버튼 탭 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCreateCollectionView`
+    /// 조립)은 호출자(App 조정 계층)가 수행한다. `isOwnCollections == false`면 버튼 자체가 안 뜨므로
+    /// 호출될 일이 없다.
+    private let onCreateTapped: () -> Void
+    /// 카드 탭 → 컬렉션 상세 진입 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCollectionDetailView`
+    /// 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onCollectionSelected: (CollectionID) -> Void
+    /// `false`면 남의 컬렉션을 보는 자리다(타유저 프로필의 "컬렉션" 헤더 탭, #201 후속) — 세그먼트
+    /// 탭("좋아요한 컬렉션"이 세션 토큰=로그인 사용자 자신 기준이라 재사용 불가, `CollectionFeature/CLAUDE.md`
+    /// 참고)과 "컬렉션 만들기"를 숨기고 "내 컬렉션" 탭 콘텐츠만 보여준다. `viewModel.state.selectedTab`은
+    /// 세그먼트 탭이 없으면 전환할 방법이 없어 기본값 `.mine`에 항상 머문다 — ViewModel 쪽 변경 불필요.
+    private let isOwnCollections: Bool
 
     init(
         viewModel: CollectionListViewModel,
-        createCollectionUseCase: CreateCollectionUseCase,
-        searchNovelUseCase: SearchNovelUseCase,
-        loadMyLibraryUseCase: LoadMyLibraryUseCase,
-        loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
-        collectionLikeUseCase: CollectionLikeUseCase,
-        deleteCollectionUseCase: DeleteCollectionUseCase,
-        updateCollectionUseCase: UpdateCollectionUseCase,
-        logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void
+        onCreateTapped: @escaping () -> Void,
+        onCollectionSelected: @escaping (CollectionID) -> Void,
+        isOwnCollections: Bool = true
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.createCollectionUseCase = createCollectionUseCase
-        self.searchNovelUseCase = searchNovelUseCase
-        self.loadMyLibraryUseCase = loadMyLibraryUseCase
-        self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
-        self.collectionLikeUseCase = collectionLikeUseCase
-        self.deleteCollectionUseCase = deleteCollectionUseCase
-        self.updateCollectionUseCase = updateCollectionUseCase
-        self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
-        self.onNovelTapped = onNovelTapped
+        self.onCreateTapped = onCreateTapped
+        self.onCollectionSelected = onCollectionSelected
+        self.isOwnCollections = isOwnCollections
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CollectionSegmentedTab(
-                selectedTab: viewModel.state.selectedTab,
-                onSelect: { viewModel.handle(.selectTab($0)) }
-            )
+            if isOwnCollections {
+                CollectionSegmentedTab(
+                    selectedTab: viewModel.state.selectedTab,
+                    onSelect: { viewModel.handle(.selectTab($0)) }
+                )
+            }
             content
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .onAppear { viewModel.handle(.load) }
+        .onAppear {
+            // 이 화면의 자식(컬렉션 만들기/상세) 중 하나에서 복귀한 뒤의 재진입만 무조건 재로드한다 —
+            // 성공/취소를 구분하지 않는다(취소해도 한 번 더 불리는 낭비는 있지만 최소 diff,
+            // `CollectionFeature/CLAUDE.md` 참고).
+            if hasAppearedOnce {
+                viewModel.handle(.reloadAfterReturn(viewModel.state.selectedTab))
+            } else {
+                hasAppearedOnce = true
+                viewModel.handle(.load)
+            }
+        }
         .showWSSToast(isPresented: toastBinding, type: .unknownError)
-        .navigationDestination(isPresented: $isCreatePresented) {
-            CollectionFeatureFactory.makeCreateCollectionView(
-                createCollectionUseCase: createCollectionUseCase,
-                searchNovelUseCase: searchNovelUseCase,
-                loadMyLibraryUseCase: loadMyLibraryUseCase,
-                logger: logger,
-                onAuthenticationRequired: onAuthenticationRequired
-            )
-        }
-        .onChange(of: isCreatePresented) { wasPresented, isPresented in
-            // 성공 콜백이 없는 CreateCollectionView 계약이라, 복귀했다는 사실만으로 무조건 재로드한다
-            // (취소해도 한 번 더 불리는 낭비는 있지만 최소 diff — `CollectionFeature/CLAUDE.md` 참고).
-            guard wasPresented, !isPresented else { return }
-            viewModel.handle(.reloadMineAfterCreate)
-        }
-        .navigationDestination(item: $selectedCollectionID) { id in
-            CollectionFeatureFactory.makeCollectionDetailView(
-                id: id,
-                loadCollectionDetailUseCase: loadCollectionDetailUseCase,
-                collectionLikeUseCase: collectionLikeUseCase,
-                deleteCollectionUseCase: deleteCollectionUseCase,
-                updateCollectionUseCase: updateCollectionUseCase,
-                searchNovelUseCase: searchNovelUseCase,
-                loadMyLibraryUseCase: loadMyLibraryUseCase,
-                logger: logger,
-                onAuthenticationRequired: onAuthenticationRequired,
-                onNovelTapped: onNovelTapped
-            )
-        }
-        .onChange(of: selectedCollectionID) { oldValue, newValue in
-            // 상세 화면에서 좋아요·삭제로 카드가 바뀌었을 수 있어, 복귀했다는 사실만으로 그 탭을
-            // 무조건 다시 로드한다(`isCreatePresented`와 동일 판단).
-            guard oldValue != nil, newValue == nil else { return }
-            viewModel.handle(.reloadAfterDetail(viewModel.state.selectedTab))
-        }
         // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
         .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
             if needsAuth { onAuthenticationRequired() }
@@ -198,7 +157,7 @@ private extension CollectionListView {
     func collectionList(_ tab: CollectionListTab, _ tabContent: CollectionListViewModel.TabContent) -> some View {
         ScrollView {
             VStack(spacing: 0) {
-                if tab == .mine {
+                if tab == .mine, isOwnCollections {
                     createCollectionButton
                     Spacer().frame(height: 16)
                 }
@@ -227,7 +186,7 @@ private extension CollectionListView {
 
     var createCollectionButton: some View {
         Button {
-            isCreatePresented = true
+            onCreateTapped()
         } label: {
             HStack(spacing: 10) {
                 Text("컬렉션 만들기")
@@ -253,7 +212,7 @@ private extension CollectionListView {
 
     func collectionCard(_ card: CollectionCard) -> some View {
         Button {
-            selectedCollectionID = card.id
+            onCollectionSelected(card.id)
         } label: {
             collectionCardContent(card)
         }
@@ -340,16 +299,23 @@ private extension CollectionListView {
     func emptySection(for tab: CollectionListTab) -> some View {
         switch tab {
         case .mine:
-            ZStack {
-                WSSEmptyView(type: .collectionMine)
-                
-                VStack(spacing: 0) {
-                    createCollectionButton
-                        .padding(16)
-                    Spacer()
+            if isOwnCollections {
+                ZStack {
+                    WSSEmptyView(type: .collectionMine)
+
+                    VStack(spacing: 0) {
+                        createCollectionButton
+                            .padding(16)
+                        Spacer()
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else {
+                // 타유저의 컬렉션이 0개인 채로 이 화면에 온 경우(정상 경로는 헤더 탭에서 미리 걸러진다,
+                // `UserPageFeature`의 노 컬렉션 토스트 참고) — "컬렉션 만들기"는 로그인 사용자 자신의
+                // 컬렉션에만 의미가 있어 남의 페이지에서는 보여주지 않는다.
+                WSSEmptyView(type: .collectionMine)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         case .liked:
             WSSEmptyView(type: .collectionLike)
         }
@@ -378,15 +344,9 @@ private extension CollectionListView {
                 loadCollectionsUseCase: PreviewLoadCollectionsUseCase(),
                 loadLikedCollectionsUseCase: PreviewLoadLikedCollectionsUseCase()
             ),
-            createCollectionUseCase: PreviewCreateCollectionUseCase(),
-            searchNovelUseCase: PreviewSearchNovelUseCase(),
-            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
-            loadCollectionDetailUseCase: PreviewLoadCollectionDetailUseCase(),
-            collectionLikeUseCase: PreviewCollectionLikeUseCase(),
-            deleteCollectionUseCase: PreviewDeleteCollectionUseCase(),
-            updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
-            onNovelTapped: { print("작품 상세 진입: \($0)") }
+            onCreateTapped: { print("컬렉션 만들기 진입") },
+            onCollectionSelected: { print("컬렉션 상세 진입: \($0)") }
         )
     }
 }
@@ -420,52 +380,3 @@ private struct PreviewLoadLikedCollectionsUseCase: LoadLikedCollectionsUseCase {
     }
 }
 
-private struct PreviewCreateCollectionUseCase: CreateCollectionUseCase {
-    func execute(_ draft: CollectionDraft) async throws(RepositoryError) -> CollectionID { CollectionID(1) }
-}
-
-private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-
-    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-}
-
-private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
-        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
-    }
-}
-
-private struct PreviewLoadCollectionDetailUseCase: LoadCollectionDetailUseCase {
-    func execute(id: CollectionID, sortType: SortType) async throws(RepositoryError) -> CollectionDetail {
-        CollectionDetail(
-            id: id,
-            name: "미리보기 컬렉션",
-            description: nil,
-            owner: Author(nickname: "판소덕", profileImage: nil),
-            isMine: true,
-            isPrivate: false,
-            representativeNovelID: NovelID(1),
-            novels: [CollectionNovel(id: NovelID(1), title: "작품 1", author: "작가", thumbnailImage: nil)],
-            likeCount: 0,
-            isLiked: false
-        )
-    }
-}
-
-private struct PreviewCollectionLikeUseCase: CollectionLikeUseCase {
-    func like(id: CollectionID) async throws(RepositoryError) {}
-    func unlike(id: CollectionID) async throws(RepositoryError) {}
-}
-
-private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
-    func execute(id: CollectionID) async throws(RepositoryError) {}
-}
-
-private struct PreviewUpdateCollectionUseCase: UpdateCollectionUseCase {
-    func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError) {}
-}

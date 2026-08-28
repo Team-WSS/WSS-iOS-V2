@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseDomain
 import CollectionDomain
 import DesignSystem
 
@@ -20,6 +21,8 @@ struct CollectionSection: View {
     let previews: [CollectionPreview]
     let totalCount: Int
     let action: () -> Void
+    /// 미리보기 항목 탭 → 그 컬렉션 상세로 이동. `action`(헤더 행 → 목록)과 별개 콜백이다.
+    let onItemSelected: (CollectionID) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +31,7 @@ struct CollectionSection: View {
 
             if totalCount > 0 {
                 Spacer().frame(height: 16)
-                CollectionPreviewRow(previews: previews)
+                CollectionPreviewRow(previews: previews, onItemTapped: onItemSelected)
             }
         }
     }

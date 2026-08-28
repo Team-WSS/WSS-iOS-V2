@@ -23,6 +23,10 @@ let project = Project.createFeatureModule(
     // Demo 앱만 실서버 조립을 위해 Data/Networking을 의존한다(App의 DI 역할 대행).
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.
     demoDependencies: [
+        // 키워드 탐색 시트 콘텐츠(KeywordSearchSheetBuilder)를 실제로 조립하려면 KeywordFeature가
+        // 필요하다(Feature 간 직접 의존 금지 — Sources는 여전히 KeywordFeature를 모른다, Demo만
+        // App 역할 대행으로 의존. SearchFeature/Project.swift의 동일 패턴 참고, #185).
+        .module(.feature(.keyword)),
         .module(.data(.novelReview)),
         .module(.data(.base)),
         .module(.core(.networking))

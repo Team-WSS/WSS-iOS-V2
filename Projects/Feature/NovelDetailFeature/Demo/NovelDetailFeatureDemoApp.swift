@@ -448,8 +448,8 @@ private struct DemoRootView: View {
     }
 
     /// 피드 작성 진입 콜백. 실제 앱은 App 조정 계층이 CreateFeed로 전환한다 — Demo는 로그만.
-    private func handleCreateFeedTapped() {
-        consoleLogger.info("피드 작성 진입 요청")
+    private func handleCreateFeedTapped(_ connectedNovel: ConnectedNovel) {
+        consoleLogger.info("피드 작성 진입 요청 — 연결 작품: \(connectedNovel.title)")
     }
 
     /// 피드 상세 진입 콜백. 실제 앱은 App 조정 계층이 피드 상세로 전환한다 — Demo는 로그만.
@@ -468,8 +468,8 @@ private struct DemoRootView: View {
     }
 
     /// 피드 수정 진입 콜백(내 글 드롭다운의 "수정하기"). 실제 앱은 CreateFeed 수정 모드로 전환한다 — Demo는 로그만.
-    private func handleEditFeedTapped(_ feed: TotalFeed) {
-        consoleLogger.info("피드 수정 진입 요청: \(feed.feedId)")
+    private func handleEditFeedTapped(_ feedID: FeedID) {
+        consoleLogger.info("피드 수정 진입 요청: \(feedID)")
     }
 
     /// 작가 이름 탭 콜백(헤더 작품 정보). 실제 앱은 App 조정 계층이 작가 검색 화면으로 전환한다 — Demo는 로그만.

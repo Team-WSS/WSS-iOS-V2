@@ -8,9 +8,8 @@
 
 import SwiftUI
 
-import NotificationDomain
 import BaseDomain
-import Logger
+import NotificationDomain
 
 import DesignSystem
 import WSSComponent
@@ -20,27 +19,21 @@ struct NotificationSettingView: View {
     @State private var viewModel: NotificationSettingViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var isCompletionListPresented = false
-    @State private var isHiatusReturnListPresented = false
-
-    private let loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase
-    private let deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase
-    private let logger: Logger?
-    /// 완결/휴재복귀 알림 목록이 비었을 때 "작품 둘러보기" CTA — 다른 Feature 모듈(검색)로의 이동이라 App이 결정한다.
-    private let onBrowseNovels: () -> Void
+    /// 완결 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeCompletionNotificationListView`
+    /// 조립)은 호출자(App)가 수행한다.
+    private let onCompletionListTapped: () -> Void
+    /// 휴재 복귀 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeHiatusReturnNotificationListView`
+    /// 조립)은 호출자가 수행한다.
+    private let onHiatusReturnListTapped: () -> Void
 
     init(
         viewModel: NotificationSettingViewModel,
-        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
-        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
-        logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {}
+        onCompletionListTapped: @escaping () -> Void = {},
+        onHiatusReturnListTapped: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.loadNovelNotificationSubscriptionsUseCase = loadNovelNotificationSubscriptionsUseCase
-        self.deleteNovelNotificationSubscriptionsUseCase = deleteNovelNotificationSubscriptionsUseCase
-        self.logger = logger
-        self.onBrowseNovels = onBrowseNovels
+        self.onCompletionListTapped = onCompletionListTapped
+        self.onHiatusReturnListTapped = onHiatusReturnListTapped
     }
 
     var body: some View {
@@ -52,22 +45,6 @@ struct NotificationSettingView: View {
             .navigationBarBackButtonHidden()
             .onAppear {
                 viewModel.handle(.load)
-            }
-            .navigationDestination(isPresented: $isCompletionListPresented) {
-                SettingFeatureFactory.makeCompletionNotificationListView(
-                    loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
-                    deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
-                    logger: logger,
-                    onBrowseNovels: onBrowseNovels
-                )
-            }
-            .navigationDestination(isPresented: $isHiatusReturnListPresented) {
-                SettingFeatureFactory.makeHiatusReturnNotificationListView(
-                    loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
-                    deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
-                    logger: logger,
-                    onBrowseNovels: onBrowseNovels
-                )
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
     }
@@ -86,11 +63,11 @@ struct NotificationSettingView: View {
                            title: "활동 알림",
                            description: "댓글, 좋아요 알림을 드려요"
                 )
-                settingRow(type: .navigate(action: { isCompletionListPresented = true }),
+                settingRow(type: .navigate(action: onCompletionListTapped),
                            title: "완결 알림",
                            description: "작품이 완결나면 알림을 드려요"
                 )
-                settingRow(type: .navigate(action: { isHiatusReturnListPresented = true }),
+                settingRow(type: .navigate(action: onHiatusReturnListTapped),
                            title: "휴재 복귀 알림",
                            description: "새로운 회차가 생기면 알림을 드려요"
                 )
@@ -204,9 +181,7 @@ private extension NotificationSettingView {
             viewModel: NotificationSettingViewModel(
                 loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
                 updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase()
-            ),
-            loadNovelNotificationSubscriptionsUseCase: PreviewLoadNovelNotificationSubscriptionsUseCase(),
-            deleteNovelNotificationSubscriptionsUseCase: PreviewDeleteNovelNotificationSubscriptionsUseCase()
+            )
         )
     }
 }
@@ -219,18 +194,4 @@ private struct PreviewLoadPushPreferenceUseCase: LoadPushPreferenceUseCase {
 
 private struct PreviewUpdatePushPreferenceUseCase: UpdatePushPreferenceUseCase {
     func execute(pushPreference: PushPreference) async throws(RepositoryError) {}
-}
-
-private struct PreviewLoadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase {
-    func execute(
-        type: NovelNotificationType,
-        lastSubscriptionID: SubscriptionID?,
-        size: Int
-    ) async throws(RepositoryError) -> PagedNovelNotificationSubscriptions {
-        PagedNovelNotificationSubscriptions(subscriptions: [], isLoadable: false, nextSubscriptionID: nil)
-    }
-}
-
-private struct PreviewDeleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase {
-    func execute(type: NovelNotificationType, novelIDs: [NovelID]) async throws(RepositoryError) {}
 }

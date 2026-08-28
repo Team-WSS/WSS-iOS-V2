@@ -78,40 +78,43 @@ struct NovelDetailInfoTab: View {
     private var platformSection: some View {
         VStack(spacing: 0) {
             sectionTitle("작품 보러가기")
-            Spacer().frame(height: 15)
-            HStack(spacing: 0) {
-                ForEach(information.platforms, id: \.name) { platform in
-                    Button {
-                        openURL(platform.url)
-                    } label: {
-                        platformIcon(platform)
-                    }
-                    .buttonStyle(.plain)
 
-                    if platform.name != information.platforms.last?.name {
-                        Spacer().frame(width: 16)
+            Spacer().frame(height: 15)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(information.platforms, id: \.name) { platform in
+                        Button {
+                            openURL(platform.url)
+                        } label: {
+                            platformIcon(platform)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                Spacer()
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
     }
 
     private func platformIcon(_ platform: NovelPlatform) -> some View {
         AsyncImage(url: platform.image) { phase in
-            if case .success(let image) = phase {
+            switch phase {
+            case .success(let image):
                 image
                     .resizable()
                     .scaledToFill()
-            } else {
+
+            default:
                 Color.wssGray70
             }
         }
         .frame(width: 48, height: 48)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(
+            RoundedRectangle(cornerRadius: 12)
+        )
     }
-
     // MARK: - 독자들의 감상평
 
     /// "독자들의 감상평"의 **내용**은 매력포인트·키워드다 — 읽기 상태 그래프는 제목을 공유하지 않는 별도 섹션.

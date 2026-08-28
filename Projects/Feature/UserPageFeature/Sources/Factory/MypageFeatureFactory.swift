@@ -25,6 +25,15 @@ public enum MypageFeatureFactory {
     ///     계약이 아니다(`CollectionDomain/CLAUDE.md` 참고).
     ///   - onCollectionTapped: 컬렉션 섹션 헤더 행 탭 콜백. 실제 화면 전환(`CollectionFeature`의
     ///     목록 화면으로 이동)은 호출자(App 조정 계층)가 수행한다 — 두 Feature는 서로 import 못 한다.
+    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 콜백. 실제 화면 전환(`CollectionFeature`의
+    ///     그 컬렉션 상세 화면으로 이동)은 호출자가 수행한다 — `onCollectionTapped`(목록)와 별개 목적지.
+    ///   - onEditProfileTapped: 프로필 편집 진입 콜백. 실제 화면 전환(`makeEditView` 조립)은
+    ///     호출자(App 조정 계층)가 수행한다 — 캐릭터 선택 시트(`makeCharacterEditSheet`)와 달리 프로필
+    ///     편집은 별개 화면으로의 진짜 이동이라 이 모듈 안에서 직접 열지 않는다.
+    ///   - onSettingTapped: 우측 상단 톱니바퀴 → 설정 진입 콜백. 실제 화면 전환(`SettingFactory.makeView`
+    ///     조립)은 호출자가 수행한다.
+    ///   - onLibraryTapped: 서재 블록 탭 → "서재" 탭으로 전환 콜백. 화면 push가 아니라 탭 전환이라
+    ///     호출자(App)가 자기 `TabView` selection을 바꾸는 방식으로 처리한다.
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -33,12 +42,12 @@ public enum MypageFeatureFactory {
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
-        loadInitialProfileUseCase: LoadInitialProfileUseCase,
-        loadProfileCharacterUseCase: LoadProfileCharacterUseCase,
-        validateNicknameUseCase: ValidateNicknameUseCase,
-        updateProfileUseCase: UpdateProfileUseCase,
+        logger: Logger? = nil,
         onCollectionTapped: @escaping () -> Void,
-        logger: Logger? = nil
+        onCollectionItemTapped: @escaping (CollectionID) -> Void,
+        onEditProfileTapped: @escaping () -> Void,
+        onSettingTapped: @escaping () -> Void,
+        onLibraryTapped: @escaping () -> Void
     ) -> some View {
         let viewModel = MypageViewModel(
             userID: userID,
@@ -51,12 +60,11 @@ public enum MypageFeatureFactory {
         )
         return MypageView(
             viewModel: viewModel,
-            loadInitialProfileUseCase: loadInitialProfileUseCase,
-            loadProfileCharacterUseCase: loadProfileCharacterUseCase,
-            validateNicknameUseCase: validateNicknameUseCase,
-            updateProfileUseCase: updateProfileUseCase,
             onCollectionTapped: onCollectionTapped,
-            logger: logger
+            onCollectionItemTapped: onCollectionItemTapped,
+            onEditProfileTapped: onEditProfileTapped,
+            onSettingTapped: onSettingTapped,
+            onLibraryTapped: onLibraryTapped
         )
     }
 

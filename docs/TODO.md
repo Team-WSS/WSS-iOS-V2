@@ -162,39 +162,40 @@
   선례). 카카오 공유 카드의 `Content.imageUrl`은 필수 필드라 대표 작품 표지가 없는 컬렉션을 위한
   원격 기본 이미지 URL을 먼저 정해야 한다.
 
-### 9. 컬렉션 상세 작품 탭이 작품 상세로 연결되지 않는다
+### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다(+ 로그아웃 상태에서 탭바가 순간 노출된다)
 
-- **무엇**: `CollectionDetailView`의 작품 그리드 셀을 탭하면 `onNovelTapped(NovelID)` 콜백까지는
-  발화하지만, `CollectionFeatureFactory`(`makeCollectionListView`/`makeCollectionDetailView`)를
-  실제로 호출하는 곳(App 조립 계층)이 아직 없어 그 콜백을 받아 `NovelDetailFeature`로 연결해주는
-  배선이 없다. Demo는 콘솔 로그만 찍는다(`handleNovelTapped`).
-- **결과**: 컬렉션 상세에서 작품을 탭해도 아무 화면 전환이 일어나지 않는다.
-- **어디를 고치나**: App이 `CollectionFeatureFactory.makeCollectionListView`/`makeCollectionDetailView`를
-  조립하는 지점에서 `onNovelTapped: { novelID in ... }`를 `NovelDetailFeatureFactory.makeView(...)`로
-  push하도록 연결한다(다른 화면의 `onXxxTapped` 콜백들과 동일한 배선 방식 — `NovelDetailFeature`의
-  `onAuthorTapped` 등 이미 있는 App 배선 선례를 따를 것).
-- **왜 지금 안 했나**: Feature 모듈끼리는 서로 import 못 해(`App → Feature → Domain` 단방향) 이
-  연결은 원래 App의 몫이다. #196에서 App의 첫 실전 조립이 이뤄졌지만 범위는 로그인·온보딩뿐이었고,
-  컬렉션 화면 조립(`CollectionDataFactory` 등)과 메인 탭 라우팅은 아직 없어 지금은 콜백 시그니처만
-  뚫어두고 실제 연결은 메인 탭이 생기는 후속 이슈로 미뤘다(2026-08).
-- **놓치기 쉬운 것**: `onNovelTapped`는 VM을 거치지 않고 `CollectionDetailView`가 탭 즉시 직접
-  호출한다(`NovelDetailFeature.onAuthorTapped`와 동일 패턴) — App 쪽에서 이 콜백을 받을 때도 VM
-  상태를 개입시키려 하지 말 것.
-
-### 10. 콜드스타트 시 저장된 세션을 재사용하지 않는다
-
-- **무엇**: `ContentView.route`가 항상 `.onboarding`으로 시작한다(`@State private var route: Route = .onboarding`).
-  Keychain(`DefaultTokenStore`)에 유효한 토큰이 남아있어도 앱을 재실행하면 확인 없이 다시 인트로부터
-  시작한다.
+- **무엇**: `ContentView.route`의 기본값이 #197부터 `.main`이다(`@State private var route: Route = .main`,
+  구 `.onboarding`). 세션 복원 로직 자체는 여전히 없다 — Keychain(`DefaultTokenStore`)에 유효한 토큰이
+  남아있는지 확인해 분기하는 게 아니라, 무조건 메인 탭부터 그린다.
 - **결과**: 로그인 성공 시 토큰이 저장되고 401 자동 갱신도 연결돼 있지만(#196), 그 지속성은 **같은
   프로세스 안에서만** 유효하다 — 강제 종료 후 재실행하면 토큰이 살아있어도 도로 로그인해야 한다.
+  **게다가 #197부터는 로그아웃 상태(또는 토큰이 아예 없는 상태)로 앱을 켜도 몇 초간 `MainTabView`
+  (탭바)가 먼저 보였다가 401로 온보딩에 튕겨 돌아간다** — `App/CLAUDE.md`의 "로그인 안 된 상태로
+  `MainTabView`를 열면 몇 초 안에 온보딩으로 튕겨 돌아간다" 항목이 그 증상이다. `.onboarding` 기본값
+  시절엔 이 노출 자체가 없었다는 점에서 체감상 회귀지만, **사용자 확정으로 지금은 그대로 둔다**(4탭이
+  실제 화면으로 다 채워진 지금 상태를 UI 기준으로 유지하기로 함, 2026-08-28) — 세션 복원이 이 회귀의
+  근본 해법이라 아래 작업과 함께 다룬다.
 - **어디를 고치나**: `ContentView.init` 또는 `body` 진입 시점에서 기존 세션(access/refresh token)
-  유효 여부를 확인해, 있으면 `route`를 `.main`으로 시작하도록 분기를 추가한다. ⚠️ `tokenStore`는
-  현재 `AppDependencies.init()` 내부 지역 변수라 `dependencies.tokenStore`로 바로 못 꺼낸다 — 착수
-  시 먼저 인스턴스 프로퍼티로 승격해야 한다.
-- **왜 지금 안 했나**: #196 체크리스트 범위 밖(사용자 확인, 2026-08) — `.main`이 여전히 placeholder라
-  세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
-  다룬다.
+  유효 여부를 확인해, 없으면 `route`를 `.onboarding`으로 시작하도록 분기를 추가한다(있으면 지금처럼
+  `.main`). ⚠️ `tokenStore`는 현재 `AppDependencies.init()` 내부 지역 변수라 `dependencies.tokenStore`로
+  바로 못 꺼낸다 — 착수 시 먼저 인스턴스 프로퍼티로 승격해야 한다.
+- **왜 지금 안 했나**: #196 체크리스트 범위 밖(사용자 확인, 2026-08)이었고, #197(메인 탭이 실제로
+  생기는 이슈)에서도 범위 밖으로 재확인됐다(2026-08-28) — 세션 복원 자체가 별도 작업 단위라 이 PR에
+  묶지 않기로 함.
+
+### 10. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
+
+- **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`가
+  `MypageFeatureFactory.makeView`의 현재 시그니처(`onCollectionTapped`/`onEditProfileTapped`/
+  `onSettingTapped`/`onLibraryTapped` 콜백 4개 — #197에서 편집 진입도 App 콜백으로 통일)와 어긋나
+  **컴파일이 안 되던 문제는 고쳤다**(`onCollectionTapped`와 동일하게 콘솔 로그만 남기는 no-op으로
+  연결, 2026-08-28 rebase 중 실측 빌드 확인). 다만 실제 push/무시 여부는 아직 설계하지 않았다.
+- **결과**: Demo에서 연필 아이콘·톱니바퀴·서재 블록을 눌러도 콘솔 로그만 찍히고 화면 전환은 없다
+  (컴파일은 되니 CI엔 영향 없음).
+- **어디를 고치나**: 위 파일의 `makeMypageView` — 프로필 편집·설정·서재 전환을 Demo 안에서 실제로
+  흉내낼지(별도 push? 계속 무시?)부터 설계해야 한다.
+- **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
+  설계는 별개 작업이라 분리했다.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 

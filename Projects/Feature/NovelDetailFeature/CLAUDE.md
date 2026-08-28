@@ -6,8 +6,12 @@
 - 식별자: `ModuleType.feature(.novelDetail)` / 의존: **전용 `NovelDetailDomain`은 없고** `NovelDomain` + `FeedDomain`(피드 탭·좋아요·삭제) + `NovelReviewDomain`(평가 삭제) + `SocialDomain`(피드 신고) + `NotificationDomain`(작품 알림 등록 시트, #189)을 쓴다
 - 진입점: `NovelDetailFeatureFactory.makeView(...)` — UseCase 10종 + 콜백 8종(화면 전환 7 + 인증 1, 파라미터는 코드가 진실)
   - **`onReviewTapped(NovelInformation, ReadingStatus)`**: 평가 화면 진입 콜백. status는 평가 초안 seed — 평가 없음/있음 모두 상태바에서 탭한 상태(평가 있음의 칩·여백 탭만 현재 상태). 화면 전환은 호출자(App)가 NovelReviewFactory로 조립.
-  - **`onCreateFeedTapped()`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
-  - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — 단 **작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)**이라 현재 소비처는 Demo 로그뿐.
+  - **`onCreateFeedTapped(ConnectedNovel)`**: 피드 작성 진입 콜백 — "나도 한마디" 버튼과 피드 탭 플로팅 버튼이 공유.
+    지금 보고 있는 작품을 `Novel → ConnectedNovel`로 변환해 넘긴다(`NovelDetailView.connectedNovel(from:)`,
+    `genre`는 `Novel.genres.first` — 검색 결과 연결과 같은 변환 규칙, `CreateFeedViewModel.confirmSelectedNovel`
+    참고). 호출자(App)가 이 값을 `FeedFeatureFactory.makeCreateFeedView(connectedNovel:)`에 그대로 넘기면
+    작성 화면이 그 작품이 이미 연결된 상태로 뜬다(#197).
+  - **`onAuthorTapped(String)`**: 작가 검색 화면 진입 콜백 — 헤더 작품 정보의 **작가 이름 탭**. 전달값은 탭한 **작가 한 명**의 이름(다작가면 이름별 개별 버튼). 화면 전환은 호출자(App)가 수행 — App(`NovelDetailAssembly`)이 이 이름을 그대로 `SearchAssembly.makeView(initialQuery:)`에 넘겨, "일반 검색" 화면이 그 작가 이름으로 **이미 검색 실행된 결과**부터 보여준다(#197 — 전용 작가 검색 화면이 따로 있는 게 아니라 `SearchNovelUseCase.searchByText`가 제목/작가 구분 없는 단일 텍스트 검색이라 기존 화면 재사용으로 충분).
   - **`onAuthenticationRequired()`**: 인증 만료(`RepositoryError.authenticationRequired`) 시 로그인 유도 콜백. **화면 내 모든 서버 호출 공통** — VM이 `state.requiresAuthentication` 신호만 세우고(어느 catch에서 발생하든 `presentError`/`loadNovel` 경유 `routeToLoginIfAuthenticationRequired`로 수렴), View가 `onChange`로 소비해 콜백 발화(`shouldDismiss`→`dismiss`와 대칭). 인증 만료면 개별 실패 토스트/실패 뷰 대신 이 신호만 낸다.
 
 ## 핵심 시나리오
@@ -75,7 +79,14 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - **플랫폼 아이콘 URL은 래스터(png)여야 한다** — `AsyncImage`(UIImage)는 **런타임 다운로드 SVG를 디코딩 못 해** SVG URL이면 조용히 placeholder만 남는다(에셋 카탈로그 번들 SVG만 지원되는 iOS 제약).
 - 빈 상태는 `NovelDetailEmptyView`(화면 전용) — WSSComponent `WSSEmptyView`는 검색 빈 상태 전용(고정 문구+버튼 필수)이라 재사용 불가.
 - **피드 셀 인터랙션**: 셀 탭=피드 상세 콜백, 프로필 영역(이미지+닉네임) 탭=유저 프로필 콜백(**내 글이면 차단** — `isMyFeed`), 좋아요=엔티티 `TotalFeed.toggleLike()` 낙관 반영+실패 롤백(셀별 병행 허용, 같은 셀 연타만 가드), threedots=셀 드롭다운(**내 글: 수정하기 콜백·삭제하기, 남의 글: 신고 2종 빨강** — Figma 6773-26280/26272). 드롭다운은 화면 레벨 오버레이로 띄우고 앵커는 **셀 y 실측**(네비 타이틀과 같은 스크롤 좌표공간 방식) + threedots 오프셋(52)으로 계산, 하단 셀에선 화면 안에 다 보이게 클램프. ⚠️ 앵커가 화면 최상단(상태바 포함) 기준이라 **오버레이 ZStack에 `ignoresSafeArea(edges: .top)` 필수** — 빼면 메뉴가 안전영역 높이만큼 내려앉는다.
+  - ⚠️ **프로필 탭이 탈퇴 유저(`BaseDomain.Author.accessibleUserId == nil`)를 가리키면 이동 대신
+    `WSSToastType.unknownUser` 토스트를 띄운다**(#197 후속, 2026-08-28) — `NovelDetailFeedTab`이
+    `feed.author.accessibleUserId`로 판정해 `onUnavailableUserProfileTapped()`(새 콜백)를 부르고,
+    `NovelDetailView`가 그걸 `viewModel.handle(.userProfileUnavailable)`로 연결해
+    `DetailToast.unavailableUser`를 세운다. `-1` 리터럴을 여기서 다시 비교하지 말 것 — `SosoFeedView`/
+    `FeedDetailView`(`FeedFeature/CLAUDE.md`)와 같은 Domain API를 공유한다.
   - 좋아요 버튼은 `feedCell`에서 `WSSFeadView`의 `likeButtonTapped`로 `onToggleLike(feed.feedId)`를 넘긴다.
+- **"수정하기"(내 글 드롭다운)는 목록 항목(`TotalFeed`)의 `FeedID`만 `onEditFeedTapped`로 넘긴다** — 데이터 로드는 이 화면이 아니라 App이 조립하는 수정 화면(`FeedFeature`의 `CreateFeedView`) 자신이 한다(`FeedFeature/CLAUDE.md`의 `CreateFeedViewModel` 항목 참고). 이 화면 쪽엔 준비 상태·로딩 오버레이가 없다 — 탭하면 바로 App이 화면을 전환한다(#197, 빠른 전환 우선).
 - **피드 삭제/신고는 2단 알럿 하나의 의미값(`FeedAlert`)으로 관리** — 삭제는 확인 알럿 → `DeleteFeedUseCase` → 목록 제거 + **상세 재로드**(헤더 피드 수 등 집계 동기화, 성공 토스트 없음 — 디자인에 없음). 신고는 확인 알럿 → SocialDomain UseCase → **접수 완료 알럿으로 전환**(문구가 종류별로 달라 완료 케이스 분리). 알럿 타입·버튼 매핑(WSSAlertType 5종)은 View가 한다.
 - **화면 드롭다운(오류 제보/평가 삭제)**: 오류 제보는 노션 문의 페이지를 외부 브라우저로 연다(`BaseDomain.AppURL.errorReport`, #165에서 화면 전용 상수에서 앱 전역 카탈로그로 이관). 평가 삭제는 알럿 확인 후 `DeleteNovelReviewUseCase`(NovelReviewDomain) → **성공 시 상세 재로드**(키워드·읽기 상태 집계가 함께 바뀌므로 화면 데이터를 서버와 재동기화). 삭제할 평가가 없으면 VM이 무시(관심 토글 no-op과 같은 정책).
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃 — **둘 다 상태별 개별 진입(탭한 상태를 seed)**. 있음은 추가로 박스의 칩·여백을 탭하면 현재 상태로 진입한다(상태 `Button`이 hit-test 우선이라 바깥 `onTapGesture`와 공존 — 중첩 Button은 불안정해 피함).

@@ -19,6 +19,11 @@ struct NovelReviewView: View {
 
     @State private var viewModel: NovelReviewViewModel
     @State private var isPeriodSheetPresented = false
+    @State private var isKeywordSheetPresented = false
+    /// "초기화"를 누르면 새 값으로 바꿔 키워드 탐색 콘텐츠에 `.id()`로 건다 — `keywordSearchSheet`가
+    /// 매번 새 정체성으로 다시 만들어져야 내부(`SearchKeywordViewModel`)의 `initialSelectedKeywords`가
+    /// 다시 시딩된다(최초 1회만 시딩되는 SwiftUI 함정, `SearchFeature`의 `keywordContentResetToken`과 동일 이유).
+    @State private var keywordSheetResetToken = UUID()
     @Environment(\.dismiss) private var dismiss
 
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
@@ -26,15 +31,19 @@ struct NovelReviewView: View {
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 로드/저장 등 서버 호출 공통.
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onAuthenticationRequired: () -> Void
+    /// 키워드 탐색 시트 콘텐츠 — `KeywordFeature`는 이 모듈이 모르므로 App이 조립해 주입한다.
+    private let keywordSearchSheet: KeywordSearchSheetBuilder
 
     init(
         viewModel: NovelReviewViewModel,
         title: String,
-        onAuthenticationRequired: @escaping () -> Void
+        onAuthenticationRequired: @escaping () -> Void,
+        keywordSearchSheet: @escaping KeywordSearchSheetBuilder
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.title = title
         self.onAuthenticationRequired = onAuthenticationRequired
+        self.keywordSearchSheet = keywordSearchSheet
     }
 
     var body: some View {
@@ -52,6 +61,7 @@ struct NovelReviewView: View {
                 NetworkErrorView { viewModel.handle(.load) }
             }
         }
+        .scrollBounceBehavior(.basedOnSize)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -67,6 +77,14 @@ struct NovelReviewView: View {
                 viewModel.handle(.updatePeriod(start: start, end: end))
                 isPeriodSheetPresented = false
             }
+            .presentationBackgroundInteraction(.disabled)
+            .interactiveDismissDisabled()
+        }
+        .sheet(isPresented: $isKeywordSheetPresented) {
+            keywordSearchSheetContent
+                .presentationBackgroundInteraction(.disabled)
+                .interactiveDismissDisabled()
+                .presentationCornerRadius(16)
         }
         .showWSSToast(isPresented: toastBinding, type: toastType)
         // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
@@ -298,8 +316,8 @@ private extension NovelReviewView {
         .frame(maxWidth: .infinity)
     }
 
-    /// 키워드 — 제목 + 검색바 룩 탭 버튼. 탭하면 키워드 탐색뷰로 이동(추후 연결).
-    /// 선택된 키워드 칩 표시는 추후 구현.
+    /// 키워드 — 제목 + 검색바 룩 탭 버튼. 탭하면 시트로 키워드 탐색뷰(App이 주입)가 뜬다.
+    /// 선택은 실시간으로 draft에 반영되고(`onSelectionChanged`), 칩은 `draft.keywords`를 그대로 그린다.
     var keywordSection: some View {
         VStack(spacing: 0) {
             Text("키워드")
@@ -312,9 +330,76 @@ private extension NovelReviewView {
                 placeholder: "작품을 나타내는 키워드는?",
                 placeholderAlignment: .center
             ) {
-                // TODO: 키워드 탐색뷰로 이동 (실제 액션은 추후 연결)
-                print("키워드 탐색뷰로 이동")
+                isKeywordSheetPresented = true
             }
+
+            if !viewModel.state.draft.keywords.isEmpty {
+                Spacer().frame(height: 24)
+
+                WSSFlowLayout(
+                    horizontalSpacing: 8,
+                    verticalSpacing: 8
+                ) {
+                    ForEach(viewModel.state.draft.keywords) { keyword in
+                        PrimaryRemovableKeywordChip(keyword: keyword.name) {
+                            viewModel.handle(.removeKeyword(keyword))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 키워드 탐색 시트 콘텐츠. `SearchKeywordView`(App이 주입) 자신은 하단 액션 바가 없어
+    /// 선택을 실시간 보고만 하므로(`onSelectionChanged`), 이 화면이 하단 "초기화"/"완료" 액션바를
+    /// 얹는다 — 선택은 이미 실시간으로 draft에 반영되니 "완료"는 확정이 아니라 닫기 그 자체다.
+    var keywordSearchSheetContent: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Text("키워드 선택")
+                    .applyWSSFont(.title1)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                
+                Spacer()
+                
+                Button {
+                    isKeywordSheetPresented = false
+                } label: {
+                    WSSImage.icCancelModal.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
+                        .frame(width: 25, height: 25)
+                }
+            }
+            .frame(height: 65)
+            .padding(.leading, 25)
+            .padding(.trailing, 20)
+            
+            Spacer().frame(height: 8)
+            
+            keywordSearchSheet(viewModel.state.draft.keywords) { newKeywords in
+                viewModel.handle(.setKeywords(newKeywords))
+            }
+            .id(keywordSheetResetToken)
+            .frame(maxHeight: .infinity)
+
+            HStack(spacing: 0) {
+                WSSResetButton {
+                    viewModel.handle(.clearKeywords)
+                    // 위 draft만 비워선 SearchKeywordView 내부 선택 상태(체크 표시)는 그대로다 —
+                    // 정체성을 바꿔 initialSelectedKeywords([])로 강제로 다시 시딩한다.
+                    keywordSheetResetToken = UUID()
+                }
+
+                Spacer().frame(width: 10)
+
+                WSSCTAButton(title: "\(viewModel.state.draft.keywords.count)개 선택") {
+                    isKeywordSheetPresented = false
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -360,7 +445,8 @@ private extension NovelReviewView {
                 saveUseCase: PreviewSaveNovelReviewUseCase()
             ),
             title: "당신의 이해를 돕기 위하여",
-            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
+            keywordSearchSheet: { _, _ in AnyView(Text("키워드 탐색뷰 (Preview)")) }
         )
     }
 }

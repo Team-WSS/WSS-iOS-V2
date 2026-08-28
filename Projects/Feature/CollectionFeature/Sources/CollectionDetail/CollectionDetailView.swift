@@ -10,11 +10,8 @@ import SwiftUI
 
 import BaseDomain
 import CollectionDomain
-import SearchDomain
-import NovelDomain
 import DesignSystem
 import WSSComponent
-import Logger
 
 /// 컬렉션 상세 화면 — 대표 작품 표지를 배경으로 한 히어로(소유자·이름·설명·좋아요/공유) + 작품 그리드.
 /// `CollectionListView`의 카드 탭에서 진입한다(`CollectionFeatureFactory.makeCollectionDetailView`가
@@ -25,43 +22,34 @@ struct CollectionDetailView: View {
     /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목이 즉시 나타남, 페이드 아님) 네비바가 반응한다 —
     /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
     @State private var isScrolledFromTop = false
-    /// "컬렉션 수정" 화면(`CreateCollectionView`, 수정 모드) push 여부 — "작품 추가"와 동일 위상으로
-    /// 이 화면이 직접 소유한다(`CollectionFeature/CLAUDE.md`의 로컬 push 관례).
-    @State private var isEditPresented = false
+    /// 이 화면의 유일한 자식은 "컬렉션 수정"(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상
+    /// "수정 화면에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다(`CollectionListView`의
+    /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
+    /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
+    @State private var hasAppearedOnce = false
     @Environment(\.dismiss) private var dismiss
-    private let logger: Logger?
 
-    /// "컬렉션 수정" 화면이 제출에 쓸 UseCase.
-    private let updateCollectionUseCase: UpdateCollectionUseCase
-    /// "컬렉션 수정" 화면의 "작품 추가"가 검색에 쓸 UseCase — `CreateCollectionView`와 같은 이유로
-    /// 이 화면도 `SearchDomain`을 안다.
-    private let searchNovelUseCase: SearchNovelUseCase
-    /// "컬렉션 수정" 화면의 "작품 추가" 안 "서재에서 추가"가 서재 조회에 쓸 UseCase.
-    private let loadMyLibraryUseCase: LoadMyLibraryUseCase
-    /// 인증 만료 시 로그인 화면 진입 콜백. "컬렉션 수정" 화면(및 그 하위 "작품 추가")도 같은 콜백을 공유한다.
+    /// 인증 만료 시 로그인 화면 진입 콜백.
     private let onAuthenticationRequired: () -> Void
     /// 작품 그리드 셀 탭 → 작품 상세 진입 콜백. `NovelDetailFeature`로 가야 하지만 Feature 모듈끼리는
     /// 서로 import 못 해 이 화면이 직접 만들 수 없다 — `NovelDetailFeature.onAuthorTapped`와 동일하게
-    /// VM을 거치지 않고 View가 탭 즉시 호출하고, 실제 화면 전환은 호출자(App)가 수행한다. App이 아직
-    /// 이 콜백을 실제로 연결하지 않았다 — `docs/TODO.md` 참고.
+    /// VM을 거치지 않고 View가 탭 즉시 호출하고, 실제 화면 전환은 호출자(App)가 수행한다.
     private let onNovelTapped: (NovelID) -> Void
+    /// 더보기 "컬렉션 수정" 탭 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCreateCollectionView`를
+    /// 수정 모드로 조립)은 호출자(App 조정 계층)가 수행한다 — `CreateCollectionView`가 대상 컬렉션을
+    /// `id`로 스스로 다시 불러오므로(자기 로드 방식) 이 화면은 `id`만 알면 된다.
+    private let onEditTapped: () -> Void
 
     init(
         viewModel: CollectionDetailViewModel,
-        updateCollectionUseCase: UpdateCollectionUseCase,
-        searchNovelUseCase: SearchNovelUseCase,
-        loadMyLibraryUseCase: LoadMyLibraryUseCase,
-        logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void
+        onNovelTapped: @escaping (NovelID) -> Void,
+        onEditTapped: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.updateCollectionUseCase = updateCollectionUseCase
-        self.searchNovelUseCase = searchNovelUseCase
-        self.loadMyLibraryUseCase = loadMyLibraryUseCase
-        self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onNovelTapped = onNovelTapped
+        self.onEditTapped = onEditTapped
     }
 
     var body: some View {
@@ -134,32 +122,16 @@ struct CollectionDetailView: View {
         .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
             if needsAuth { onAuthenticationRequired() }
         }
-        .navigationDestination(isPresented: $isEditPresented) {
-            // detail은 메뉴("컬렉션 수정")가 detail.isMine == true일 때만 노출되므로 이 시점엔 항상 로드돼 있다.
-            if let detail = viewModel.state.detail {
-                CreateCollectionView(
-                    viewModel: CreateCollectionViewModel(
-                        mode: .edit(detail.id),
-                        updateCollectionUseCase: updateCollectionUseCase,
-                        initialDraft: CollectionDraft(from: detail),
-                        initialNovelDisplayInfo: Dictionary(uniqueKeysWithValues: detail.novels.map { ($0.id, $0) }),
-                        logger: logger
-                    ),
-                    searchNovelUseCase: searchNovelUseCase,
-                    loadMyLibraryUseCase: loadMyLibraryUseCase,
-                    logger: logger,
-                    onAuthenticationRequired: onAuthenticationRequired
-                )
-            }
-        }
-        .onChange(of: isEditPresented) { wasPresented, isPresented in
-            // CreateCollectionView는 성공 콜백 없는 자기완결 dismiss 계약이라, 복귀했다는 사실만으로
-            // 무조건 재로드한다(`CollectionListView`의 `isCreatePresented`/`reloadAfterDetail`과 동일 판단).
-            guard wasPresented, !isPresented else { return }
-            viewModel.handle(.reloadAfterEdit)
-        }
         .onAppear {
-            viewModel.handle(.load)
+            // 이 화면의 유일한 자식(컬렉션 수정)에서 복귀한 뒤의 재진입만 무조건 재로드한다 —
+            // `CreateCollectionView`가 성공 콜백 없는 자기완결 dismiss 계약이라 복귀했다는 사실만으로
+            // 판단한다(`CollectionListView`와 동일 이유).
+            if hasAppearedOnce {
+                viewModel.handle(.reloadAfterEdit)
+            } else {
+                hasAppearedOnce = true
+                viewModel.handle(.load)
+            }
         }
     }
 }
@@ -539,7 +511,7 @@ private extension CollectionDetailView {
             WSSDropdownMenu(items: [
                 WSSDropdownItem(title: "컬렉션 수정") {
                     viewModel.handle(.editTapped)
-                    isEditPresented = true
+                    onEditTapped()
                 },
                 WSSDropdownItem(title: "컬렉션 삭제") { viewModel.handle(.deleteTapped) }
             ])
@@ -583,11 +555,9 @@ private extension CollectionDetailView {
                 collectionLikeUseCase: PreviewCollectionLikeUseCase(),
                 deleteCollectionUseCase: PreviewDeleteCollectionUseCase()
             ),
-            updateCollectionUseCase: PreviewUpdateCollectionUseCase(),
-            searchNovelUseCase: PreviewSearchNovelUseCase(),
-            loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
-            onNovelTapped: { print("작품 상세 진입: \($0)") }
+            onNovelTapped: { print("작품 상세 진입: \($0)") },
+            onEditTapped: { print("컬렉션 수정 진입") }
         )
     }
 }
@@ -620,22 +590,3 @@ private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
     func execute(id: CollectionID) async throws(RepositoryError) {}
 }
 
-private struct PreviewUpdateCollectionUseCase: UpdateCollectionUseCase {
-    func execute(id: CollectionID, draft: CollectionDraft) async throws(RepositoryError) {}
-}
-
-private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-
-    func searchByFilter(_ filter: SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
-        (Paginated(items: [], hasNext: false), 0)
-    }
-}
-
-private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {
-    func execute(filter: MyLibraryFilter, cursor: String?, size: Int) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
-        (CursorPaginated(items: [], hasNext: false, nextCursor: nil), size)
-    }
-}
