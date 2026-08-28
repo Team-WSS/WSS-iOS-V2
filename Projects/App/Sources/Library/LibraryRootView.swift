@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseData
 import BaseDomain
+import CollectionDomain
 import FeedDomain
 import FeedFeature
 import LibraryFeature
@@ -36,6 +37,11 @@ struct LibraryRootView: View {
         case userPage(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
+        /// 타유저 프로필의 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세(`CollectionDetailAssembly`).
+        case collectionDetail(CollectionID)
+        /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`,
+        /// "내 컬렉션" 탭만 보이는 모드).
+        case collectionList(UserID)
         case search
         case authorSearch(String)
         case detailSearch(SearchFilter)
@@ -93,7 +99,9 @@ struct LibraryRootView: View {
                             dependencies: dependencies,
                             onFeedListTapped: { userID, nickname, profileImage in
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
-                            }
+                            },
+                            onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
+                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) }
                         )
                     case .userFeedList(let userID, let nickname, let profileImage):
                         UserPageAssembly.makeFeedListView(
@@ -101,6 +109,20 @@ struct LibraryRootView: View {
                             nickname: nickname,
                             profileImage: profileImage,
                             dependencies: dependencies
+                        )
+                    case .collectionDetail(let id):
+                        CollectionDetailAssembly.makeView(
+                            id: id,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onNovelTapped: { path.append(Destination.novel($0)) }
+                        )
+                    case .collectionList(let userID):
+                        CollectionListAssembly.makeView(
+                            userID: userID,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
                         )
                     case .search:
                         searchView()

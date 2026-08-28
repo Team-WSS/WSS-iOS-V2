@@ -28,30 +28,40 @@ struct CollectionListView: View {
 
     private let onAuthenticationRequired: () -> Void
     /// "컬렉션 만들기" 버튼 탭 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCreateCollectionView`
-    /// 조립)은 호출자(App 조정 계층)가 수행한다.
+    /// 조립)은 호출자(App 조정 계층)가 수행한다. `isOwnCollections == false`면 버튼 자체가 안 뜨므로
+    /// 호출될 일이 없다.
     private let onCreateTapped: () -> Void
     /// 카드 탭 → 컬렉션 상세 진입 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCollectionDetailView`
     /// 조립)은 호출자(App 조정 계층)가 수행한다.
     private let onCollectionSelected: (CollectionID) -> Void
+    /// `false`면 남의 컬렉션을 보는 자리다(타유저 프로필의 "컬렉션" 헤더 탭, #201 후속) — 세그먼트
+    /// 탭("좋아요한 컬렉션"이 세션 토큰=로그인 사용자 자신 기준이라 재사용 불가, `CollectionFeature/CLAUDE.md`
+    /// 참고)과 "컬렉션 만들기"를 숨기고 "내 컬렉션" 탭 콘텐츠만 보여준다. `viewModel.state.selectedTab`은
+    /// 세그먼트 탭이 없으면 전환할 방법이 없어 기본값 `.mine`에 항상 머문다 — ViewModel 쪽 변경 불필요.
+    private let isOwnCollections: Bool
 
     init(
         viewModel: CollectionListViewModel,
         onAuthenticationRequired: @escaping () -> Void,
         onCreateTapped: @escaping () -> Void,
-        onCollectionSelected: @escaping (CollectionID) -> Void
+        onCollectionSelected: @escaping (CollectionID) -> Void,
+        isOwnCollections: Bool = true
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onCreateTapped = onCreateTapped
         self.onCollectionSelected = onCollectionSelected
+        self.isOwnCollections = isOwnCollections
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CollectionSegmentedTab(
-                selectedTab: viewModel.state.selectedTab,
-                onSelect: { viewModel.handle(.selectTab($0)) }
-            )
+            if isOwnCollections {
+                CollectionSegmentedTab(
+                    selectedTab: viewModel.state.selectedTab,
+                    onSelect: { viewModel.handle(.selectTab($0)) }
+                )
+            }
             content
         }
         .navigationBarBackButtonHidden(true)
@@ -147,7 +157,7 @@ private extension CollectionListView {
     func collectionList(_ tab: CollectionListTab, _ tabContent: CollectionListViewModel.TabContent) -> some View {
         ScrollView {
             VStack(spacing: 0) {
-                if tab == .mine {
+                if tab == .mine, isOwnCollections {
                     createCollectionButton
                     Spacer().frame(height: 16)
                 }
@@ -289,16 +299,23 @@ private extension CollectionListView {
     func emptySection(for tab: CollectionListTab) -> some View {
         switch tab {
         case .mine:
-            ZStack {
-                WSSEmptyView(type: .collectionMine)
-                
-                VStack(spacing: 0) {
-                    createCollectionButton
-                        .padding(16)
-                    Spacer()
+            if isOwnCollections {
+                ZStack {
+                    WSSEmptyView(type: .collectionMine)
+
+                    VStack(spacing: 0) {
+                        createCollectionButton
+                            .padding(16)
+                        Spacer()
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else {
+                // 타유저의 컬렉션이 0개인 채로 이 화면에 온 경우(정상 경로는 헤더 탭에서 미리 걸러진다,
+                // `UserPageFeature`의 노 컬렉션 토스트 참고) — "컬렉션 만들기"는 로그인 사용자 자신의
+                // 컬렉션에만 의미가 있어 남의 페이지에서는 보여주지 않는다.
+                WSSEmptyView(type: .collectionMine)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         case .liked:
             WSSEmptyView(type: .collectionLike)
         }

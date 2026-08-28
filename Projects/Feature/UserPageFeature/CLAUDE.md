@@ -201,9 +201,23 @@
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).
 - **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
   컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200)도 서재 통계와 같은 이유로 대상 밖이다 — `DefaultCollectionRepository.fetchCollectionPreviews`가 `code` 문자열 분기 없이 `NetworkingError.toRepositoryError()`로만 넘겨 `.privateProfile`을 던지지 못한다(`CollectionData/CLAUDE.md` 참고). 이 호출이 실패하면 `loadUserPage()`의 같은 `catch`에서 `presentError`가 일반 `hasLoadError`로 처리한다 — 컬렉션만 골라 조용히 숨기는 동작이 아니다.
-- **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)을 탭했을 때, 컬렉션이 있으면(`hasCollections`) 아직 `//TODO: - 컬렉션 뷰로 이동`뿐이다**(`UserPageViewModel.tapCollectionSection()`) — "서재" 섹션의 화살표(`//TODO: - 서재 뷰로 이동`)와 동일하게 실제 네비게이션이 없다. 이 화면에서 다른 유저의 컬렉션 "목록"(전체보기) 화면으로 갈 수 있는 곳 자체가 아직 없다 — `CollectionFeature.CollectionListView`는 "내 컬렉션"/"좋아요한 컬렉션" 2탭이라 **로그인 사용자 자신 기준**으로만 동작해 타유저 프로필에 그대로 재사용할 수 없다(좋아요한 탭이 세션 토큰 기준). 타유저의 컬렉션 전체 목록 화면이 별도로 필요해지면 그때 설계할 것 — 지금은 마이페이지처럼 미리보기(최대 3개)만 보여주는 게 이번 범위(Figma 노드 31756:94603)다. **컬렉션이 0개일 때는** 이 TODO로 가지 않고 `WSSToastType.noCollections` 토스트로 대신 응답한다(2026-08-25, 위 "핵심 시나리오" 항목 참고) — 목록 화면이 없는 상태에서 빈 목록으로 이동하는 것보다 안내가 낫다는 판단.
-  ⚠️ **미리보기 개별 항목 탭(`CollectionPreviewRow.onItemTapped`)도 이 화면은 아직 no-op이다**(#201) —
-  마이페이지는 이 콜백이 App까지 뚫려 그 컬렉션 상세로 바로 이동하지만(위 MyPage "핵심 시나리오"
-  참고), 이건 타유저 프로필과 무관하게(대상 컬렉션이 공개든 비공개든 `CollectionDetailView` 자체는
-  누구 소유인지 몰라도 렌더 가능) **목록 화면과 달리 이 TODO를 막는 진짜 이유가 없다** — 다음에
-  손댈 땐 헤더 탭(목록, 여전히 막힘)과 구분해서 항목 탭만 먼저 뚫는 것도 가능하다.
+- **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)·미리보기 개별 항목 탭 둘 다 #201 후속(2026-08-28)으로
+  뚫렸다** — `CollectionPreviewRow.onItemTapped`/헤더 `Button`이 각각 `onCollectionItemTapped`/
+  `onCollectionListTapped`로 `UserPageFeatureFactory.makeView` → `UserPageAssembly.makeView`까지
+  그대로 관통하고, App(홈/피드/서재/My 4탭 Root 전부)이 새로 뽑은 `CollectionDetailAssembly`/
+  `CollectionListAssembly`로 각각 상세/목록을 push한다.
+  - **헤더 탭은 `viewModel.hasCollections`로 View가 직접 분기한다**(`collectionSectionHeader`) —
+    있으면 `onCollectionListTapped()`를 바로 부르고, 없으면 `viewModel.handle(.collectionSectionTapped)`로
+    "컬렉션을 등록하지 않은 유저에요" 토스트만 띄운다("서재" 블록과 동일 원칙 — 순수 네비게이션은
+    View가 콜백을 직접 부르고 VM은 상태만 관리, `UserPageViewModel.tapCollectionSection()`도 이제
+    토스트 설정 하나만 한다).
+  - **`CollectionFeature.CollectionListView`는 "내 컬렉션"/"좋아요한 컬렉션" 2탭인데 "좋아요한" 탭이
+    세션 토큰=로그인 사용자 자신 기준이라 타유저 프로필에 그대로 재사용할 수 없었다** — `CollectionListView`/
+    `CollectionFeatureFactory.makeCollectionListView`에 `isOwnCollections: Bool`(기본 `true`)을 추가해
+    풀었다. `false`(App은 `CollectionListAssembly`로 기본값을 이렇게 둔다)면 세그먼트 탭·"컬렉션
+    만들기" 버튼을 숨기고 "내 컬렉션"(`userID` 기준, 항상 타유저) 콘텐츠만 보여준다 — 세그먼트 탭이
+    없어 `viewModel.state.selectedTab`이 전환될 방법이 없으므로 `CollectionListViewModel`은 손대지
+    않았다(기본값 `.mine`에 계속 머문다). 자세한 계약은 `CollectionFeature/CLAUDE.md` 참고.
+  - `onEditTapped`(`CollectionDetailAssembly`)는 기본값 no-op으로 둔다 — 타유저 프로필에서 여는
+    컬렉션은 항상 남의 것이라(`detail.isMine == false`) "컬렉션 수정" 버튼 자체가 안 뜬다(마이페이지만
+    실제 `onEditTapped`를 채워 자기 컬렉션 편집 진입점으로 쓴다).

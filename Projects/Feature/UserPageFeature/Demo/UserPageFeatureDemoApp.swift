@@ -236,7 +236,9 @@ private enum DemoFactory {
                 logger: consoleLogger,
                 onFeedListTapped: { userID, nickname, _ in
                     consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
-                }
+                },
+                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+                onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
             )
         case .live:
             makeUserPageLiveView(userID: userID)
@@ -309,7 +311,9 @@ private enum DemoFactory {
             logger: consoleLogger,
             onFeedListTapped: { userID, nickname, _ in
                 consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
-            }
+            },
+            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
+            onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
         )
     }
 

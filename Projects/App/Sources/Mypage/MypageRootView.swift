@@ -89,6 +89,9 @@ struct MypageRootView: View {
         case userPage(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
+        /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`, "내
+        /// 컬렉션" 탭만 보이는 모드) — 위 `collectionList`(파라미터 없음, 내 컬렉션 전용)와 별개 목적지.
+        case userCollectionList(UserID)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case search
         case authorSearch(String)
@@ -202,7 +205,9 @@ struct MypageRootView: View {
                             dependencies: dependencies,
                             onFeedListTapped: { userID, nickname, profileImage in
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
-                            }
+                            },
+                            onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
+                            onCollectionListTapped: { path.append(Destination.userCollectionList(userID)) }
                         )
                     case .userFeedList(let userID, let nickname, let profileImage):
                         UserPageAssembly.makeFeedListView(
@@ -210,6 +215,13 @@ struct MypageRootView: View {
                             nickname: nickname,
                             profileImage: profileImage,
                             dependencies: dependencies
+                        )
+                    case .userCollectionList(let userID):
+                        CollectionListAssembly.makeView(
+                            userID: userID,
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
                         )
                     case .novelReview(let novelID, let title, let status):
                         NovelReviewAssembly.makeView(
@@ -372,16 +384,13 @@ private extension MypageRootView {
 
 private extension MypageRootView {
     var collectionListView: some View {
-        CollectionFeatureFactory.makeCollectionListView(
+        CollectionListAssembly.makeView(
             userID: UserID(currentUserID ?? 0),
-            loadCollectionsUseCase: DefaultLoadCollectionsUseCase(collectionRepository: dependencies.collectionRepository),
-            loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(
-                collectionRepository: dependencies.collectionRepository
-            ),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired,
+            onCollectionSelected: { path.append(Destination.collectionDetail($0)) },
             onCreateTapped: { path.append(Destination.createCollection) },
-            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
+            isOwnCollections: true
         )
     }
 
@@ -410,14 +419,9 @@ private extension MypageRootView {
     }
 
     func collectionDetailView(id: CollectionID) -> some View {
-        CollectionFeatureFactory.makeCollectionDetailView(
+        CollectionDetailAssembly.makeView(
             id: id,
-            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(
-                collectionRepository: dependencies.collectionRepository
-            ),
-            collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: dependencies.collectionRepository),
-            deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: dependencies.collectionRepository),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired,
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditTapped: { path.append(Destination.editCollection(id)) }

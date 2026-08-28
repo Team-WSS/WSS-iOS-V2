@@ -27,6 +27,11 @@ public enum UserPageFeatureFactory {
     ///   - onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록(`makeFeedListView`) 진입 콜백. 이
     ///     화면이 이미 로드해둔 `(userID, nickname, profileImage)`를 그대로 실어 올린다(#201) — 실제
     ///     화면 전환은 호출자(App)가 수행한다.
+    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세 진입 콜백. 실제 화면 전환
+    ///     (`CollectionFeature`의 상세 화면 조립)은 호출자(App)가 수행한다.
+    ///   - onCollectionListTapped: 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 그 유저의 컬렉션 목록 진입
+    ///     콜백. 실제 화면 전환(`CollectionFeature`의 목록 화면, "내 컬렉션" 탭만 보이는 모드)은
+    ///     호출자(App)가 수행한다.
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -42,7 +47,9 @@ public enum UserPageFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
         onLibraryTapped: @escaping () -> Void = {},
-        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in }
+        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
+        onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
+        onCollectionListTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = UserPageViewModel(
             userID: userID,
@@ -62,7 +69,9 @@ public enum UserPageFeatureFactory {
             viewModel: viewModel,
             userID: userID,
             onLibraryTapped: onLibraryTapped,
-            onFeedListTapped: onFeedListTapped
+            onFeedListTapped: onFeedListTapped,
+            onCollectionItemTapped: onCollectionItemTapped,
+            onCollectionListTapped: onCollectionListTapped
         )
     }
 

@@ -15,7 +15,9 @@
   - `CollectionFeatureFactory.makeEditCollectionView(id:updateCollectionUseCase:loadCollectionDetailUseCase:logger:pendingNovelSelection:onAddNovelTapped:onAuthenticationRequired:)` — 수정 전용(`Mode.edit(id)` 고정). `CreateCollectionView`를 수정 모드로 재사용하지만, `Mode`가 `internal`이라 `public` 시그니처에 노출할 수 없어(Swift 접근제어 제약) 생성과 별도 진입점으로 쪼갰다.
   - `CollectionFeatureFactory.makeSearchNovelView(initialSelection:searchNovelUseCase:logger:onConfirm:onLibrarySelectTapped:onAuthenticationRequired:)` — "작품 추가" 화면.
   - `CollectionFeatureFactory.makeMyLibrarySelectView(initialSelection:loadMyLibraryUseCase:logger:onConfirm:onAuthenticationRequired:)` — "서재에서 추가" 화면.
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:logger:onAuthenticationRequired:onCreateTapped:onCollectionSelected:)`
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:logger:onAuthenticationRequired:onCreateTapped:onCollectionSelected:isOwnCollections:)`
+    (`isOwnCollections` 기본값 `true` — `false`면 세그먼트 탭·"컬렉션 만들기"를 숨기고 "내 컬렉션"
+    콘텐츠만 보여준다, 타유저 프로필 재사용 — 아래 주의사항 참고)
   - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:onNovelTapped:onEditTapped:)`(#201, 컬렉션 상세)
   - **`pendingNovelSelection: Binding<[CollectionNovel]?>`**은 "작품 추가"/"서재에서 추가" 확정 결과를
     생성/수정 화면에 **돌려주는**(return) 1회성 nil→값 채널(`OnboardingFeature`의 확정 신호 패턴과
@@ -416,3 +418,18 @@
   `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
   전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
   다룸 — 이건 의도한 동작이라 건드리지 않았다).
+- **`CollectionListView`의 `isOwnCollections: Bool`(기본 `true`, #201 후속·2026-08-28)은 타유저
+  프로필(`UserPageFeature`)의 "컬렉션" 헤더 탭이 이 화면을 재사용할 수 있게 연 스위치다** — "좋아요한
+  컬렉션" 탭이 세션 토큰=로그인 사용자 자신 기준이라, 애초에 이 화면 전체가 "로그인 사용자 자신
+  기준으로만 동작"했다(위 진입점 절 참고). `false`면 `CollectionSegmentedTab`과 "컬렉션 만들기"
+  버튼(리스트 상단·빈 상태 둘 다)을 감춰 "내 컬렉션" 콘텐츠만(`userID`는 여전히 대상 유저) 보여준다.
+  ⚠️ **`CollectionListViewModel`은 손대지 않았다** — 세그먼트 탭이 안 보이면 `.selectTab(.liked)`를
+  호출할 UI 자체가 없어 `state.selectedTab`이 기본값 `.mine`에서 벗어날 방법이 없다. 새로 이 화면에
+  "모드"를 하나 더 추가할 일이 생기면, ViewModel까지 갈라야 하는지 먼저 확인할 것 — 이번처럼 순수
+  화면 표시 분기(View 전용)로 끝나는 경우가 있다.
+  ⚠️ **빈 상태(`emptySection(for: .mine)`)의 `isOwnCollections == false` 분기는 사실상 도달하지
+  않는다** — 정상 경로는 `UserPageFeature`가 헤더 탭 시점에 `hasCollections`를 먼저 보고, 컬렉션이
+  0개면 이 화면 자체를 push하지 않고 토스트로 대신 응답한다(`UserPageFeature/CLAUDE.md` 참고).
+  그래도 방어적으로 남겨뒀다 — 삭제하지 말 것(경합으로 0개가 된 채 이미 push된 경우의 안전망).
+  `WSSEmptyView(type: .collectionMine)`의 카피("내 컬렉션이 없어요")가 타유저 맥락에 안 맞는 것도
+  이 이유로 감수했다(도달 빈도가 사실상 0이라 전용 카피·타입을 새로 만들 만큼은 아니라고 판단).

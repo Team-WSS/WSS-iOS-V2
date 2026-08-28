@@ -144,6 +144,12 @@ public enum CollectionFeatureFactory {
     ///     조립)은 호출자(App 조정 계층)가 수행한다.
     ///   - onCollectionSelected: 카드 탭 → 컬렉션 상세 진입 콜백. 실제 화면 전환
     ///     (`makeCollectionDetailView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - isOwnCollections: `false`면 남의 컬렉션을 보는 자리다(타유저 프로필의 "컬렉션" 헤더 탭) —
+    ///     세그먼트 탭·"컬렉션 만들기"를 숨기고 "내 컬렉션"(`userID` 기준) 콘텐츠만 보여준다.
+    ///     "좋아요한 컬렉션" 탭은 세션 토큰=로그인 사용자 자신 기준이라 타유저 페이지에 재사용할 수
+    ///     없다(`CollectionFeature/CLAUDE.md` 참고). 이 모드에선 `loadLikedCollectionsUseCase`는
+    ///     실제로 호출되지 않지만(세그먼트 탭이 없어 그 탭으로 전환할 방법이 없음) `CollectionListViewModel`
+    ///     생성자가 여전히 요구하므로 호출자가 채워야 한다.
     @MainActor
     public static func makeCollectionListView(
         userID: UserID,
@@ -152,7 +158,8 @@ public enum CollectionFeatureFactory {
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onCreateTapped: @escaping () -> Void,
-        onCollectionSelected: @escaping (CollectionID) -> Void
+        onCollectionSelected: @escaping (CollectionID) -> Void,
+        isOwnCollections: Bool = true
     ) -> some View {
         let viewModel = CollectionListViewModel(
             userID: userID,
@@ -164,7 +171,8 @@ public enum CollectionFeatureFactory {
             viewModel: viewModel,
             onAuthenticationRequired: onAuthenticationRequired,
             onCreateTapped: onCreateTapped,
-            onCollectionSelected: onCollectionSelected
+            onCollectionSelected: onCollectionSelected,
+            isOwnCollections: isOwnCollections
         )
     }
 

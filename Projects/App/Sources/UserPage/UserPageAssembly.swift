@@ -20,14 +20,19 @@ import UserPageFeature
 /// push하도록 공용으로 뽑았다(`FeedDetailAssembly`/`NovelDetailAssembly`와 같은 이유, #196).
 @MainActor
 enum UserPageAssembly {
-    /// - Parameter onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록 진입 콜백. `(userID, nickname,
-    ///   profileImage)`를 그대로 받아 호출자가 자기 `Destination`에 실어 push한다(#201) — 이 화면
-    ///   자신이 이미 로드해둔 프로필 값이라 App이 따로 조회할 필요가 없다.
+    /// - Parameters:
+    ///   - onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록 진입 콜백. `(userID, nickname,
+    ///     profileImage)`를 그대로 받아 호출자가 자기 `Destination`에 실어 push한다(#201) — 이 화면
+    ///     자신이 이미 로드해둔 프로필 값이라 App이 따로 조회할 필요가 없다.
+    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세 진입 콜백.
+    ///   - onCollectionListTapped: 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 그 유저의 컬렉션 목록 진입 콜백.
     static func makeView(
         userID: UserID,
         dependencies: AppDependencies,
         onLibraryTapped: @escaping () -> Void = {},
-        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in }
+        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
+        onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
+        onCollectionListTapped: @escaping () -> Void = {}
     ) -> some View {
         UserPageFeatureFactory.makeView(
             userID: userID,
@@ -52,7 +57,9 @@ enum UserPageAssembly {
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
             logger: dependencies.logger,
             onLibraryTapped: onLibraryTapped,
-            onFeedListTapped: onFeedListTapped
+            onFeedListTapped: onFeedListTapped,
+            onCollectionItemTapped: onCollectionItemTapped,
+            onCollectionListTapped: onCollectionListTapped
         )
     }
 

@@ -56,8 +56,16 @@ Sources/
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
 │                                             # 3탭이 공유(#197).
 ├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
-└── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
-                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
+├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
+│                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
+└── Collection/
+    ├── CollectionDetailAssembly.swift  # 컬렉션 상세 조립 공용 헬퍼 — 마이페이지 "내 컬렉션" 목록뿐
+    │                                     # 아니라 4탭의 타유저 프로필 컬렉션 미리보기도 공유(#201 후속).
+    │                                     # onEditTapped 기본값은 no-op — 타유저 컬렉션은 항상
+    │                                     # isMine==false라 수정 버튼이 안 뜬다.
+    └── CollectionListAssembly.swift    # 컬렉션 목록 조립 공용 헬퍼 — isOwnCollections 기본값 false
+                                          # (타유저 프로필 "컬렉션" 헤더 탭). 마이페이지의 "내 컬렉션"
+                                          # 목록만 true로 명시 호출.
 ```
 
 4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있다. 그 안에서 열리는 2차
