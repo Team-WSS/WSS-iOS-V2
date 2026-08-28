@@ -207,6 +207,7 @@ private enum DemoFactory {
                 loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 logger: consoleLogger,
                 onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
+                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
                 onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
                 onSettingTapped: { consoleLogger.info("설정 진입") },
                 onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
@@ -264,6 +265,7 @@ private enum DemoFactory {
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             logger: consoleLogger,
             onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
+            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
             onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
             onSettingTapped: { consoleLogger.info("설정 진입") },
             onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }

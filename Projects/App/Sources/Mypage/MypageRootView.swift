@@ -128,6 +128,7 @@ struct MypageRootView: View {
                 ),
                 logger: dependencies.logger,
                 onCollectionTapped: { path.append(Destination.collectionList) },
+                onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                 onEditProfileTapped: { path.append(Destination.edit) },
                 onSettingTapped: { path.append(Destination.setting) },
                 onLibraryTapped: onLibraryTapped

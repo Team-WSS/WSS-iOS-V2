@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseDomain
 import CollectionDomain
 import DesignSystem
 import WSSComponent
@@ -19,6 +20,10 @@ import WSSComponent
 struct CollectionPreviewRow: View {
 
     let previews: [CollectionPreview]
+    /// 항목 탭 → 그 컬렉션 상세로 이동. 실제 화면 전환(`CollectionFeature`의 상세 화면 조립)은 호출자
+    /// (App 조정 계층)가 수행한다 — 이 화면은 콜백만 올린다(마이페이지 헤더 행의 `onCollectionTapped`와
+    /// 동일한 위상).
+    let onItemTapped: (CollectionID) -> Void
 
     private enum Metric {
         /// 좌우 여백(사용자 확정, 2026-08-27) — 개수와 무관하게 항상 고정. 헤더 행의 좌측 패딩(20)과는
@@ -59,7 +64,12 @@ struct CollectionPreviewRow: View {
     var body: some View {
         FillingLeadingRowLayout(spacing: Metric.itemSpacing) {
             ForEach(previews, id: \.id) { preview in
-                collectionItem(imageURL: preview.representativeNovel.thumbnailImage, title: preview.name)
+                Button {
+                    onItemTapped(preview.id)
+                } label: {
+                    collectionItem(imageURL: preview.representativeNovel.thumbnailImage, title: preview.name)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, Metric.horizontalMargin)
@@ -100,6 +110,10 @@ struct CollectionPreviewRow: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+        // `.buttonStyle(.plain)` 래핑만으론 표지 바깥 여백·텍스트 아래 빈 공간까지 탭되지 않는다 —
+        // 히트영역을 칸 전체로 넓힌다(`CollectionSection.header`와 동일 관례, 상위 CLAUDE.md의
+        // "커스텀 탭 영역은 `.contentShape(Rectangle())`" 참고).
+        .contentShape(Rectangle())
     }
 }
 

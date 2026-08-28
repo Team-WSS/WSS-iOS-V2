@@ -23,11 +23,16 @@
 - **마이페이지(`MypageView`)**: `onAppear`마다 프로필·장르 뱃지·작품 취향·서재 통계·컬렉션 미리보기
   5개를 병렬 로드(`MypageViewModel.loadMypage`). **탭 복귀마다 다시 로드**한다(1회 가드 없음) — 프로필
   편집에서 저장하고 돌아왔을 때 바뀐 값을 반영해야 해서.
-- **컬렉션 섹션(`CollectionSection`, #200)**: "컬렉션 N개" 헤더 행(탭 → `onCollectionTapped`, 실제
-  화면 전환은 App 몫 — `CollectionFeature`와 서로 import 못 함) + 개수 1 이상이면 그 아래 대표 표지
-  미리보기 최대 3개(`LoadCollectionPreviewsUseCase.execute(userID:size:3)`, 마이페이지 전용 API가 없어
-  컬렉션 목록 API를 `size=3`으로 호출 — `CollectionDomain/CLAUDE.md` 참고). `N`은 미리보기 배열 개수가
-  아니라 그 UseCase가 함께 돌려주는 **전체** 개수다.
+- **컬렉션 섹션(`CollectionSection`, #200)**: "컬렉션 N개" 헤더 행(탭 → `onCollectionTapped`, 목록
+  화면으로 이동) + 개수 1 이상이면 그 아래 대표 표지 미리보기 최대 3개(`LoadCollectionPreviewsUseCase.execute(userID:size:3)`,
+  마이페이지 전용 API가 없어 컬렉션 목록 API를 `size=3`으로 호출 — `CollectionDomain/CLAUDE.md` 참고).
+  `N`은 미리보기 배열 개수가 아니라 그 UseCase가 함께 돌려주는 **전체** 개수다. **미리보기 항목 각각도
+  개별로 탭 가능하다(#201)** — `CollectionPreviewRow.onItemTapped(CollectionID)` → `CollectionSection.onItemSelected`
+  → `MypageView.onCollectionItemTapped` → `MypageFeatureFactory.makeView`까지 그대로 관통해 App
+  (`MypageRootView`)이 그 컬렉션 **상세**로 push한다 — 헤더 탭(목록)과는 별개 목적지·별개 콜백. 실제
+  화면 전환은 두 콜백 다 App 몫(`CollectionFeature`와 서로 import 못 함).
+  ⚠️ **`UserPageView`(타유저 프로필)도 같은 `CollectionPreviewRow`를 쓰지만, 이 항목 탭 콜백은 아직
+  App에 배선되지 않았다**(`onItemTapped: { _ in }` no-op) — 아래 UserPage "주의사항" 참고.
 - **프로필 편집(`MyPageEditView`) 진입은 App 몫**(#196~#197) — `MypageView`는 연필 아이콘 탭 시
   `onEditProfileTapped()` 콜백만 부르고, 실제로 `MypageFeatureFactory.makeEditView`를 조립해 push하는 건
   App(`MypageRootView`)이다("화면 간 연결 조립은 무조건 App" 원칙, 사용자 확정 — 컬렉션 섹션과 동일 원칙을
@@ -195,3 +200,8 @@
 - **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
   컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200)도 서재 통계와 같은 이유로 대상 밖이다 — `DefaultCollectionRepository.fetchCollectionPreviews`가 `code` 문자열 분기 없이 `NetworkingError.toRepositoryError()`로만 넘겨 `.privateProfile`을 던지지 못한다(`CollectionData/CLAUDE.md` 참고). 이 호출이 실패하면 `loadUserPage()`의 같은 `catch`에서 `presentError`가 일반 `hasLoadError`로 처리한다 — 컬렉션만 골라 조용히 숨기는 동작이 아니다.
 - **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)을 탭했을 때, 컬렉션이 있으면(`hasCollections`) 아직 `//TODO: - 컬렉션 뷰로 이동`뿐이다**(`UserPageViewModel.tapCollectionSection()`) — "서재" 섹션의 화살표(`//TODO: - 서재 뷰로 이동`)와 동일하게 실제 네비게이션이 없다. 이 화면에서 다른 유저의 컬렉션 "목록"(전체보기) 화면으로 갈 수 있는 곳 자체가 아직 없다 — `CollectionFeature.CollectionListView`는 "내 컬렉션"/"좋아요한 컬렉션" 2탭이라 **로그인 사용자 자신 기준**으로만 동작해 타유저 프로필에 그대로 재사용할 수 없다(좋아요한 탭이 세션 토큰 기준). 타유저의 컬렉션 전체 목록 화면이 별도로 필요해지면 그때 설계할 것 — 지금은 마이페이지처럼 미리보기(최대 3개)만 보여주는 게 이번 범위(Figma 노드 31756:94603)다. **컬렉션이 0개일 때는** 이 TODO로 가지 않고 `WSSToastType.noCollections` 토스트로 대신 응답한다(2026-08-25, 위 "핵심 시나리오" 항목 참고) — 목록 화면이 없는 상태에서 빈 목록으로 이동하는 것보다 안내가 낫다는 판단.
+  ⚠️ **미리보기 개별 항목 탭(`CollectionPreviewRow.onItemTapped`)도 이 화면은 아직 no-op이다**(#201) —
+  마이페이지는 이 콜백이 App까지 뚫려 그 컬렉션 상세로 바로 이동하지만(위 MyPage "핵심 시나리오"
+  참고), 이건 타유저 프로필과 무관하게(대상 컬렉션이 공개든 비공개든 `CollectionDetailView` 자체는
+  누구 소유인지 몰라도 렌더 가능) **목록 화면과 달리 이 TODO를 막는 진짜 이유가 없다** — 다음에
+  손댈 땐 헤더 탭(목록, 여전히 막힘)과 구분해서 항목 탭만 먼저 뚫는 것도 가능하다.

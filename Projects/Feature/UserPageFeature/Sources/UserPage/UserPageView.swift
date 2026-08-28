@@ -401,7 +401,9 @@ struct UserPageView: View {
             if viewModel.hasCollections {
                 Spacer().frame(height: 8)
 
-                CollectionPreviewRow(previews: viewModel.state.collectionPreviews)
+                // TODO: - 컬렉션 상세로 이동(마이페이지와 달리 이 화면은 아직 App에 개별 항목 탭이
+                // 배선되지 않았다 — 헤더 탭과 동일하게 목록 자체가 없는 상태, 핵심 시나리오 참고).
+                CollectionPreviewRow(previews: viewModel.state.collectionPreviews, onItemTapped: { _ in })
             }
 
             Spacer().frame(height: viewModel.hasCollections ? 30 : 16)

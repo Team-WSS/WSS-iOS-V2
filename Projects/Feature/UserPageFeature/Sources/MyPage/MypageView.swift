@@ -22,6 +22,8 @@ struct MypageView: View {
     /// 컬렉션 섹션 헤더 행 탭 콜백 — `CollectionFeature`는 서로 import 못 하는 다른 Feature 모듈이라
     /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫).
     private let onCollectionTapped: () -> Void
+    /// 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세로 이동. `onCollectionTapped`(헤더 → 목록)와 별개 콜백.
+    private let onCollectionItemTapped: (CollectionID) -> Void
     /// 프로필 편집 진입 콜백 — 실제 화면 전환(`MypageFeatureFactory.makeEditView` 조립)은 호출자(App 조정 계층)가
     /// 수행한다. "저장됨" 토스트도 그 화면 전환을 조립하는 쪽(App)이 `onSaved` 시점에 보여준다.
     private let onEditProfileTapped: () -> Void
@@ -34,12 +36,14 @@ struct MypageView: View {
     init(
         viewModel: MypageViewModel,
         onCollectionTapped: @escaping () -> Void,
+        onCollectionItemTapped: @escaping (CollectionID) -> Void,
         onEditProfileTapped: @escaping () -> Void,
         onSettingTapped: @escaping () -> Void,
         onLibraryTapped: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onCollectionTapped = onCollectionTapped
+        self.onCollectionItemTapped = onCollectionItemTapped
         self.onEditProfileTapped = onEditProfileTapped
         self.onSettingTapped = onSettingTapped
         self.onLibraryTapped = onLibraryTapped
@@ -69,7 +73,8 @@ struct MypageView: View {
                         CollectionSection(
                             previews: viewModel.state.collectionPreviews,
                             totalCount: viewModel.state.collectionCount,
-                            action: onCollectionTapped
+                            action: onCollectionTapped,
+                            onItemSelected: onCollectionItemTapped
                         )
 
                         divider
@@ -207,6 +212,7 @@ private extension MypageView {
                 loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase()
             ),
             onCollectionTapped: { print("컬렉션 뷰로 이동") },
+            onCollectionItemTapped: { print("컬렉션 상세로 이동: \($0)") },
             onEditProfileTapped: { print("프로필 편집 진입") },
             onSettingTapped: { print("설정 진입") },
             onLibraryTapped: { print("서재 탭으로 전환") }
