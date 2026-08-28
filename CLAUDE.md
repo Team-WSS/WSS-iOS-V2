@@ -74,6 +74,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
 | [docs/TODO.md](docs/TODO.md) | **범위 밖이라 미룬 것**을 적거나 꺼낼 때 (그 PR에서 못 고친 결함·부활 대기 코드) |
+| [docs/PENDING_DECISIONS.md](docs/PENDING_DECISIONS.md) | **개발 단독으로 못 닫는 논의 대기 결정**(백엔드·기획·디자인 확정 필요)을 모아둔 곳 |
 
 ### 레이어 가이드 위치
 | 레이어 | 가이드 |

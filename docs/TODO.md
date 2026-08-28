@@ -232,8 +232,8 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 - **피드 댓글/삭제 조용한 실패 표면화(회귀 확정)** — `FeedDetailViewModel`의 `createComment`·`editComment`·
   `deleteComment`·`deleteFeed`가 **빈 `catch {}` 4곳**으로 실패를 삼킨다(실측 확인). V1은 "네트워크 지연" 토스트 +
   전송버튼 재활성. 최소 에러 표면화 필요. → `FeedFeature`.
-- **감상평 첫 진입 온보딩 힌트 재도입 검토** — V1은 감상평을 처음 볼 때 1회성 딤+말풍선 힌트(UserDefaults 가드)를
-  띄웠다. V2 없음. **디자인 검토 대상**(재도입 여부는 디자인 판단). → `NovelDetailFeature`.
+- **감상평 첫 진입 온보딩 힌트 재도입** — 재도입 여부가 **디자인 판단**이라 여기(결정됨)가 아니라
+  [`docs/PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 5번(논의 대기)에 있다. 디자인이 재도입을 확정하면 이 절로 옮겨 구현. → `NovelDetailFeature`.
 - **피드 좋아요 햅틱 복원** — V1 좋아요에 light impact 햅틱. V2 목록 좋아요엔 없다(정렬 토글엔 있음). → `FeedFeature`.
 - **피드 댓글 500자 제한 복원** — V1은 500자 하드컷. V2는 제한 없음(실측 확인). 무제한이면 서버가 긴 댓글 거부 시
   조용한 실패 위험. → `FeedFeature`.
@@ -244,8 +244,8 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   **범용 문의로 되돌릴 것**. (`KeywordFeature/CLAUDE.md`의 "전용 폼 없어 재사용" 설명은 정정 완료.) → `KeywordFeature`.
 - **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
-- **서재 `.title`(제목순) 정렬 백엔드 토큰 확정** — V1에도 "백엔드 토큰 미정" TODO 주석이 있었다. V2도 토큰을
-  싣지만 서버 실지원 여부 확인 필요(외부 의존). → `LibraryFeature`.
+- **서재 `.title`(제목순) 정렬 백엔드 토큰 확정** — 서버 실지원 여부가 **백엔드 확인**이라 여기(결정됨)가 아니라
+  [`docs/PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 3번(논의 대기)에 있다. 백엔드가 토큰을 확정하면 이 절로 옮겨 반영. → `LibraryFeature`.
 - ✅ **[완료 2026-08-28] 상세검색 연재상태 회귀 + 내 피드 정렬 대소문자** — 둘 다 C2에서 수정·빌드 검증
   완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) 3-1·3-2). `isCompleted`는 `Bool?` +
   매퍼 `.map`으로 미선택 시 쿼리 생략(완결작 90% 누락 회귀 해소), 내 피드 정렬은 `.uppercased()`로 통일(서버는
@@ -283,15 +283,11 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
   공용). → `UserPageFeature`·`ProfileDomain`.
 
-### 10. V1 parity 판정 보류 — 기획·디자인 상의 대기 (#222 C1)
+### 10. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 
-C1 판정 중 **되살릴지/버릴지 자체가 제품·기획 판단이라 개발이 단독 결정 못 한 것**. 9(되살리기/고치기로
-**결정**됨)와 달리 **판정 자체가 열려 있다.** 상세·근거는 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (보류 세션 2026-08-28)
-
-- **비공개 프로필(타유저)에서 서재 통계 노출 여부** — V1은 비공개 프로필이어도 서재 통계(관심/보는중/봤어요/
-  하차 개수) 조회가 private 게이팅 **밖**이라 값이 노출됐다. V2는 `isProfilePrivate`면 **통계 포함 탭 전체를
-  "비공개" 안내로 덮는다.** "비공개인데 숫자는 보임"이 맞는지 vs "통째로 가림"이 맞는지는 **기획 상의 필요**.
-  근거: `UserPageFeature` 4.7·0-5. → `UserPageFeature`(기획 확정 후).
+개발이 **단독으로 못 닫는 것**(백엔드 스펙·기획·디자인 판단)은 9절(되살리기/고치기로 **결정**됨)과 달리
+**판정 자체가 열려 있어** 팀 논의로만 닫힌다. 흩어지지 않게 **[`docs/PENDING_DECISIONS.md`](PENDING_DECISIONS.md)
+한 곳에 모았다** — 현재 6건(백엔드 3·기획 1·디자인 1·분석계측 1). 비공개 프로필 서재 통계 노출(기획)도 그 문서 4번이다.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 

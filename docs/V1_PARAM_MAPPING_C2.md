@@ -33,9 +33,9 @@
 |---|---|---|---|---|---|
 | 1 | **검색 `isCompleted` 항상 전송** — 미선택도 `false`로 나가 완결작 90% 누락 | Search | ✅ **수정 완료** | 실서버 검증됨(2026-08-28) · **수정 적용·빌드 검증 완료** | `Bool?` 전환 + 매퍼 `.map`(3-1). 매퍼 테스트는 타깃 배선 후속 |
 | 2 | **내 피드 정렬 대소문자 불일치** — V1 `RECENT`/`OLD`(대문자) vs V2 `recent`/`old`(소문자) | Feed | 🟢 **실측 무해 → 대문자 통일 결정** | **본 C2 발견 → 실서버 검증(2026-08-28): 서버가 대소문자 무관 파싱**(`recent`==`RECENT`, `old`==`OLD` 순서 동일) | 회귀 아님. **일관성 위해 대문자 통일**(`DefaultFeedRepository:186`에 `.uppercased()`, CollectionData 패턴 — 사용자 확정) |
-| 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | 🟡 백엔드 확인 | 계약서 0-1 | 백엔드 V2 스펙이 body refreshToken 불요구인지 확인 |
+| 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | 🟡 백엔드 확인 | 계약서 0-1 | 백엔드 확인 → [`PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 1번 |
 | 4 | **검색 필터 빈 배열 `?key=` 빈값 전송** — `genres`/`platformNames`/`keywordIds`가 non-optional 배열 | Search | 🟢 V1 parity(저위험) | **V1도 `joined(",")`로 빈값 전송** → 서버가 관용(상세검색 실동작이 방증). Library만 `Optional`로 생략 | 회귀 아님. isCompleted 수정 시 `Optional`로 통일하면 자연스러움(선택) |
-| 5 | **플랫폼 서버값 "리디"→"리디북스"** 변경 | Search | 🟡 백엔드 확인 | 의도됨(사용자 확정·#185) | 서버 enum이 "리디북스"를 수용하는지 재확인 |
+| 5 | **플랫폼 서버값 "리디"→"리디북스"** 변경 | Search | 🟡 백엔드 확인 | 의도됨(사용자 확정·#185) | 서버 수용 재확인 → [`PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 2번 |
 | 6 | **리뷰 `keywordIds` 화면 미배선** — 현재 항상 `[]` | NovelReview | 🟢 배선 대기 | 계약서 7 | 키워드 선택 화면 연결(후속) |
 
 > **값 parity 확정(V2 코드 확인 완료, 이슈 없음)**: gender `"M"`/`"F"`(로컬 저장은 `"MALE"`/`"FEMALE"`로 별도),
