@@ -79,7 +79,12 @@ let targets: [Target] = [
             .module(.data(.search)),
             .module(.data(.comment)),
             // 서재에서 알림 관리 → 설정의 알림 설정 화면 진입.
-            .module(.feature(.setting))
+            .module(.feature(.setting)),
+            // 설정 화면의 푸시 권한 상태 확인.
+            .module(.core(.pushAuthorization)),
+            // 마이페이지/유저페이지 컬렉션 섹션 미리보기.
+            .module(.domain(.collection)),
+            .module(.data(.collection))
         ],
         settings: .settings(
             base: env.baseSetting,

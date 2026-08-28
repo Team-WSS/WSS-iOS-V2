@@ -8,6 +8,7 @@
 
 import BaseDomain
 import AuthDomain
+import CollectionDomain
 import CommentDomain
 import FeedDomain
 import NotificationDomain
@@ -20,6 +21,7 @@ import SettingDomain
 import SocialDomain
 import BaseData
 import AuthData
+import CollectionData
 import CommentData
 import FeedData
 import NotificationData
@@ -49,6 +51,8 @@ final class AppDependencies {
     let profileRepository: ProfileRepository
     let recommendationRepository: RecommendationRepository
     let notificationRepository: NotificationRepository
+    let novelNotificationRepository: NovelNotificationRepository
+    let collectionRepository: any CollectionRepository
     let feedRepository: FeedRepository
     let socialRepository: SocialRepository
     let novelRepository: NovelRepository
@@ -102,6 +106,14 @@ final class AppDependencies {
         self.notificationRepository = NotificationDataFactory.makeNotificationRepository(
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: logger)
+        )
+        self.novelNotificationRepository = NotificationDataFactory.makeNovelNotificationRepository(
+            client: client,
+            logger: DataLogger(moduleName: "NotificationData", underlying: logger)
+        )
+        self.collectionRepository = CollectionDataFactory.makeRepository(
+            network: client,
+            logger: DataLogger(moduleName: "CollectionData", underlying: logger)
         )
         self.feedRepository = FeedDataFactory.makeFeedRepository(
             client: client,
