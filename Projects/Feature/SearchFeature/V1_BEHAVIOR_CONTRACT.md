@@ -57,7 +57,7 @@
 11. 🔧 **Improve 확정** (2026-08-28, 사용자) — 최근 검색어 삭제 **롤백 추가**(V1은 서버 실패해도 롤백 없이 지운 채 유지). → [2.2](#22-최근-검색어)
 12. 🔧 **Improve 확정** (2026-08-28, 사용자) — 검색 직후 **최근 검색어 즉시 갱신**(V1은 다음 진입까지 안 보임). → [2.2](#22-최근-검색어)
 13. 🔧 **Improve 확정** (2026-08-28, 사용자) — 상세검색 정보탭 **활성 점 인디케이터가 플랫폼 선택도 반영**(V1은 플랫폼을 점 조건에서 누락 = 버그). → [3.2](#32-정보-탭-필터)
-14. 🔧 **Improve** · ⏳ 서버 수용 재확인([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 2) — 플랫폼 "리디" **서버 전송값 "리디" → "리디북스"**로 정정(문서화됨). → [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
+14. 🔧 **Improve 확정** (실서버 실측 2026-08-28: `platformNames=리디북스` 41,203건 / `리디` 0건 / 무필터 95,086건 → 서버는 "리디북스"만 인식, PENDING 2 닫힘) — 플랫폼 "리디" **서버 전송값 "리디" → "리디북스"**로 정정(문서화됨). → [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
 
 ---
 
@@ -286,7 +286,7 @@ V1은 검색 **탭의 랜딩 화면**이 따로 있었다: 비편집 검색바(�
 | 파라미터 | V1 전송 규칙 | V2 전송 규칙 | 상태 |
 |---|---|---|---|
 | `genres` | `NovelGenre.rawValue` 콤마조인(빈 배열도 빈 문자열로 전송) | `mapNovelGenreString` 배열(값 동일). `[String]` non-optional이라 빈 배열도 `?genres=` 빈값 전송 — **V1과 동일**(서재 `UserLibraryV2Query`만 `Optional`로 생략) | ✅ Keep (V1 parity, [C2 3-4](../../../docs/V1_PARAM_MAPPING_C2.md)) |
-| `platformNames` | `NovelPlatform.title` — **`.ridi`가 "리디"** | `mapNovelPlatformString` — **`.ridibooks`가 "리디북스"** | 🔧 Improve (3, `CLAUDE.md` 문서화) |
+| `platformNames` | `NovelPlatform.title` — **`.ridi`가 "리디"** | `mapNovelPlatformString` — **`.ridibooks`가 "리디북스"** | 🔧 Improve 확정 (실서버 실측 2026-08-28: `platformNames=리디북스` 41,203건 / `리디` 0건 / 무필터 95,086건) — ⚠️ 서버는 모르는 값에 에러 없이 0건을 준다(조용한 실패) |
 | `keywordIds` | `KeywordData.keywordId` 콤마조인 | `keyword.id.value` 배열 | ✅ Keep |
 | `novelRatingStart`/`End` | `lower`/`upper`(**항상** 전송, 기본 0.0~5.0) | `ratingRange?.min ?? 0.0` / `?? 5.0`(항상 전송) | ✅ Keep |
 | `isCompleted` | **nil이면 생략**, 아니면 `true`/`false` | (수정 전) 항상 `Bool` → **(수정 후) `Bool?` = `publicationStatus.map { $0 == .completed }`, nil이면 생략** | 🔨 회귀 확정→수정 완료 (4.2 · [C2 3-1](../../../docs/V1_PARAM_MAPPING_C2.md)) |
