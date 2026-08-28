@@ -35,6 +35,13 @@
   화면 전환은 두 콜백 다 App 몫(`CollectionFeature`와 서로 import 못 함).
   ⚠️ **`UserPageView`(타유저 프로필)도 같은 `CollectionPreviewRow`를 쓰지만, 이 항목 탭 콜백은 아직
   App에 배선되지 않았다**(`onItemTapped: { _ in }` no-op) — 아래 UserPage "주의사항" 참고.
+- **스크롤 반응형 네비 타이틀·배경(2026-08-28)**: 프로필 섹션이 화면 밖으로 스크롤되면(`minY < -1`,
+  `mypageScrollCoordinateSpace` 기준) 툴바 principal에 "마이페이지"가 뜬다 — `UserPageView`와 동일
+  패턴(`opacity` 아니라 `if`로 구조적으로 넣고 뺀다, `Feature/CLAUDE.md` 공통 주의사항 참고). **다른
+  점 하나**: `UserPageView`는 프로필 헤더가 `wssPrimary20`이라 툴바 배경이 스크롤에 따라
+  `wssPrimary20`↔`wssWhite`로 전환되지만, `MypageView`는 그런 색 헤더가 없어 **`.toolbarBackground`를
+  스크롤과 무관하게 항상 `wssWhite`로 고정**한다(`.toolbarBackground(.visible, for:)`도 함께 강제 —
+  기본값은 스크롤 전 투명이라 안 걸면 콘텐츠가 비친다).
 - **프로필 편집(`MyPageEditView`) 진입은 App 몫**(#196~#197) — `MypageView`는 연필 아이콘 탭 시
   `onEditProfileTapped()` 콜백만 부르고, 실제로 `MypageFeatureFactory.makeEditView`를 조립해 push하는 건
   App(`MypageRootView`)이다("화면 간 연결 조립은 무조건 App" 원칙, 사용자 확정 — 컬렉션 섹션과 동일 원칙을

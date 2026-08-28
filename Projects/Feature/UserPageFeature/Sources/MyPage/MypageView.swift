@@ -18,6 +18,9 @@ import WSSComponent
 struct MypageView: View {
 
     @State private var viewModel: MypageViewModel
+    /// 프로필 섹션이 화면 밖으로 스크롤되면(minY < -1) 툴바 principal에 "마이페이지" 타이틀이
+    /// 뜬다 — `UserPageFeature`의 스크롤 반응형 네비 타이틀과 동일 패턴(아래 toolbar 주석 참고).
+    @State private var isScrolledFromTop = false
 
     /// 컬렉션 섹션 헤더 행 탭 콜백 — `CollectionFeature`는 서로 import 못 하는 다른 Feature 모듈이라
     /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫).
@@ -59,6 +62,17 @@ struct MypageView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         myProfileSection
+                            // 스크롤 반응형 네비 타이틀 — 프로필 섹션 상단이 화면 밖으로 올라가면
+                            // (minY < -1) isScrolledFromTop을 켠다.
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .onChange(of: proxy.frame(in: .named(mypageScrollCoordinateSpace)).minY,
+                                                  initial: true) { _, newY in
+                                            isScrolledFromTop = newY < -1
+                                        }
+                                }
+                            )
 
                         WSSLibrarySection(
                             interest: viewModel.state.registeredNovelStats?.interest ?? 0,
@@ -87,6 +101,7 @@ struct MypageView: View {
                         myPageKeywordSection
                     }
                 }
+                .coordinateSpace(name: mypageScrollCoordinateSpace)
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
                 .overlay {
@@ -97,9 +112,14 @@ struct MypageView: View {
             }
         }
         .background(WSSColor.wssWhite.swiftUIColor)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             createMypageViewToolBarContent()
         }
+        // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 자동으로 보이는 동작이라 — 항상 흰
+        // 배경이 보이도록 명시로 강제한다(`UserPageFeature`의 동일 항목과 같은 이유).
+        .toolbarBackground(WSSColor.wssWhite.swiftUIColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {
             viewModel.handle(.load)
         }
@@ -186,8 +206,23 @@ struct MypageView: View {
                 WSSImage.icSetting.swiftUIImage
             }
         }
+
+        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
+        // (titleView)에 갱신되지 않고 계속 숨어있는다(`UserPageFeature`/`CollectionFeature`에서
+        // 먼저 발견한 함정, `Feature/CLAUDE.md` 공통 주의사항 참고) — 대신 `if`로 뷰 자체를
+        // 구조적으로 넣고 뺀다.
+        if isScrolledFromTop {
+            ToolbarItem(placement: .principal) {
+                Text("마이페이지")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+            }
+        }
     }
 }
+
+/// `MypageView`의 스크롤 좌표공간 이름 — `GeometryReader`가 프로필 섹션의 화면상 위치를 재는 기준.
+private let mypageScrollCoordinateSpace = "MypageScroll"
 
 // MARK: - Presentation
 
