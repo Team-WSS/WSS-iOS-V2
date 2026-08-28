@@ -378,24 +378,21 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
 - **덤(별개 정리감)**: `BlockdUser`는 `BlockedUser` **오타**(e 누락, `SocialData/DTO/Response/BlockedUserResponse.swift`).
   접미사 규칙 대상은 아니나 함께 손볼 때 고칠 것.
 
-### 4. A4 Swift 6 — 잔여 concurrency 경고 3건 + Feature @MainActor 완주
+### 4. A4 Swift 6 — 잔여 concurrency 경고 3건 ✅완료(#221) / Feature @MainActor 완주 대기
 
-- **무엇**: #219(A4 1~4단계)에서 프로덕션 strict concurrency 경고를 **249→3**으로 줄였다(Domain·Core·UI·Data=0).
-  남은 **3건은 전부 `NovelDetailFeature`의 `TopBounceDisabler`**(`NovelDetail/NovelDetailView.swift:685·687·688`):
-  `UIScrollView.observe(\.contentOffset)` KVO 클로저가 main-actor 격리 프로퍼티(`contentOffset`)에 key path를
-  걸고 읽고/쓴다.
-- **왜 이번에 안 했나**: 이 클램프 로직은 **서브틀한 버그 이력이 있고 시뮬레이터 자동화로 검증이 안 되는**
-  스크롤 동작(모듈 `CLAUDE.md`의 `TopBounceDisabler`·`enableSwipeBack` 항목 참고)이라, `MainActor.assumeIsolated`
-  래핑이 동작을 바꾸지 않는지 **사람이 기기에서 직접 밀어** 확인해야 안전하다. 자동 세션에서 블라인드로 손대지 않았다.
-- **시도 결과(2026-08-27, 실측 — `assumeIsolated`는 실패로 판명)**: 클로저 본문을 `MainActor.assumeIsolated`로
-  감싸고 `Coordinator`를 `@MainActor`로 올려 **경고 3→0·빌드 성공**까지 갔으나, **실기기에서 상단 클램프가
-  깨졌다**(하단 bounce만 정상, 상단 over-scroll이 안 잡힘). 진단 로그상 `y=0` 쓰기는 매 프레임 반영되는데도
-  UIScrollView bounce 애니메이션이 덮었다 — `assumeIsolated`가 KVO 콜백 동기 실행 순서를 바꾼 것으로 추정.
-  **되돌렸다**(원본 비격리 유지, 경고 3건 감수). 재현·상세는
-  [NovelDetailFeature CLAUDE.md](../Projects/Feature/NovelDetailFeature/CLAUDE.md)의 `TopBounceDisabler` 항목.
-- **다음 시도 방향(보류)**: `assumeIsolated` 없이 mode 6 경고를 없애는 길을 찾아야 한다 — `@preconcurrency`/
-  `nonisolated` 우회 검토, 또는 이 KVO를 UIKit 컨테이너로 옮겨 SwiftUI 경계 밖에서 처리, 최후엔 이 모듈만
-  mode 6 예외. Feature mode 6 승격(5번 6단계) 착수 시 이 화면을 별도로 다룬다. 경고 3건은 report-only라 빌드 무해.
+- **경고 3건 = 해결(#221, 2026-08-29)**: 남아 있던 3건은 전부 `NovelDetailFeature`의 `TopBounceDisabler`
+  (`UIScrollView.observe(\.contentOffset)` KVO)였다. #219에서 `MainActor.assumeIsolated` 래핑은 **경고는
+  없애지만 상단 클램프가 실기기에서 깨져** 되돌렸었다. #221에서 **KVO 클램프를 아예 걷어내고 #200 컬렉션
+  상세식 순수 SwiftUI stretch 헤더로 교체**했다(당겨서 내리면 배경을 그만큼 확대해 빈 영역을 메움) → KVO
+  소멸 → `enableSwift6: true`로 승격. 실기 대신 시뮬레이터 stretch probe(고정 stretch 값 주입)로 채움·경계
+  고정을 실측하고, 스크롤/스티키 탭/네비 타이틀 무회귀 확인.
+  - **덤(mode 6가 드러낸 추가 결함)**: 승격 시 `NovelNotificationSettingSheetViewModel`에서 data-race error가
+    떴다 — `NovelNotificationSetting`(NotificationDomain Entity)만 `Sendable`이 빠져 있었다(형제 엔티티는 전부
+    Sendable). 값 타입이라 `Sendable` 추가로 해결. 이슈가 "KVO가 유일한 잔여"라 한 것은 #189(알림 시트)가
+    그 뒤 들어와 stale했던 것.
+- **남은 것 — Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending"
+  경고를 cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올린 지금, VM에 `@MainActor`를 명시하는 게
+  정석이므로 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증하는 일이 남는다(로드맵 3단계 본래 취지).
 
 ### 5. A4 Swift 6 — 경고 0 레이어 mode 6 승격 ✅완료 / Feature·App은 대기 (5·6단계)
 
@@ -409,13 +406,13 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
   - **왜 scan.sh --strict CI가 아니라 pbxproj 직접 승격인가**: 컴파일러 error가 report-only CI 게이트보다
     강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼 그
     존재 이유가 사라져 → **43모듈 승격 후 `Tooling/StrictConcurrency/`와 `strict-concurrency` CI job을 제거함**(아래).
-- **6단계 진행 — Feature 11개 승격 완료 (NovelDetail 제외)**: `createFeatureModule`에 `enableSwift6: Bool = true`
-  파라미터를 추가해 11개 Feature Sources를 mode 6으로 올렸다. **NovelDetailFeature만 `enableSwift6: false`**
-  (TopBounceDisabler KVO 3건 미해결 → 위 4번). 검증: 11개 전부 **Demo 포함 BUILD SUCCEEDED·Sources error 0**
-  실측(fresh DD) + Home·Library·Search Demo 시뮬레이터 스모크 정상(런타임 무회귀 — 코드 무변경 승격이라 예상대로).
-- **남은 것**: ① **NovelDetailFeature**(위 4번 KVO 해결 후 `enableSwift6: true`) ② **App(WSS-iOS)**(Feature 전부가
-  mode 6이 된 뒤 마지막) ③ **각 모듈 Demo/Testing/Tests**(별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라
-  mode 6 오버라이드 시 error. Sources 승격엔 무관하나 Demo까지 올리려면 정리 필요).
+- **6단계 진행 — Feature 12개 전부 승격 완료**: `createFeatureModule`에 `enableSwift6: Bool = true` 파라미터를
+  추가해 Feature Sources를 mode 6으로 올렸다. 처음엔 NovelDetailFeature만 KVO 미해결로 `false`였으나 **#221에서
+  TopBounceDisabler를 stretch 헤더로 교체하며 승격**(위 4번). 검증: 전부 **BUILD SUCCEEDED·Sources error 0**
+  실측(fresh DD) + NovelDetail·Home·Library·Search Demo 시뮬레이터 스모크 정상.
+- **남은 것**: ① **App(WSS-iOS)**(Feature 전부가 mode 6이 된 지금 마지막 승격 대상) ② **각 모듈 Demo/Testing/Tests**
+  (별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라 mode 6 오버라이드 시 error. Sources 승격엔 무관하나
+  Demo까지 올리려면 정리 필요).
 - **정리 완료(6단계와 함께)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`와 `test.yml`의
   `strict-concurrency`(Swift 6 Readiness) job·주간 `schedule` cron을 **제거함**. 근거: 43모듈이 mode 6라
   컴파일러가 회귀를 error로 막고(report-only 스캐너보다 강함), 남은 mode 5(NovelDetail·App·Demo/Tests) 승격은

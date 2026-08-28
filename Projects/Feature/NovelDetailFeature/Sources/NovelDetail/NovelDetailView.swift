@@ -212,6 +212,7 @@ struct NovelDetailView: View {
                         information: information,
                         novel: viewModel.state.novel ?? information.novel,
                         topInset: navigationBarBottomY,
+                        scrollSpaceName: scrollSpaceName,
                         onCoverTapped: { isLargeCoverPresented = true },
                         onAuthorTapped: onAuthorTapped
                     )
@@ -283,8 +284,6 @@ struct NovelDetailView: View {
                             }
                     }
                 )
-                // 상단 over-scroll만 제거(하단 bounce는 유지) — 최상단에서 빈 영역까지 끌려가지 않게 한다.
-                .background(TopBounceDisabler())
             }
             .coordinateSpace(name: scrollSpaceName)
             .ignoresSafeArea(edges: .top)
@@ -715,61 +714,6 @@ private extension NovelDetailView {
 
 /// 스크롤 오프셋 측정용 ScrollView 좌표공간 이름.
 private let scrollSpaceName = "novelDetailScroll"
-
-// MARK: - Scroll bounce control
-
-/// 조상 `UIScrollView`의 **상단 over-scroll만** 막는다(하단 bounce는 유지) — 최상단에서
-/// 빈 영역까지 끌려가는 걸 막되, 바닥에서의 고무줄 효과는 남긴다.
-/// UIKit에서 `scrollViewDidScroll`이 `contentOffset.y < 0`을 0으로 클램프하던 것과 같은 동작을,
-/// SwiftUI 위에선 **delegate 교체 대신 KVO**로 건다 — SwiftUI가 소유·재설정하는 delegate를
-/// 건드리면 스크롤 내부 동작이 깨질 수 있어서다(발화 시점은 `scrollViewDidScroll`과 동일).
-/// ⚠️ 반드시 **스크롤 콘텐츠 내부**에 배치해야(여기선 VStack의 background) UIView의
-/// superview 체인이 UIScrollView에 닿는다.
-private struct TopBounceDisabler: UIViewRepresentable {
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    // 삽입 시점엔 superview가 없어 makeUIView에선 못 찾는다 → 레이아웃 후(updateUIView + async)에 건다.
-    func updateUIView(_ uiView: UIView, context: Context) {
-        DispatchQueue.main.async { [weak uiView] in
-            guard let scrollView = uiView?.enclosingScrollView else { return }
-            context.coordinator.clampTop(of: scrollView)
-        }
-    }
-
-    final class Coordinator {
-        private weak var observed: UIScrollView?
-        private var observation: NSKeyValueObservation?
-
-        func clampTop(of scrollView: UIScrollView) {
-            guard observed !== scrollView else { return }  // 같은 스크롤뷰면 재관찰하지 않는다.
-            observed = scrollView
-            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { scrollView, _ in
-                // 상단 rest(0) 위로 넘어가면 즉시 되돌린다 — 하단(양수 방향) bounce는 건드리지 않는다.
-                if scrollView.contentOffset.y < 0 {
-                    scrollView.contentOffset.y = 0
-                }
-            }
-        }
-    }
-}
-
-private extension UIView {
-    /// superview 체인을 거슬러 올라 가장 가까운 `UIScrollView`를 찾는다.
-    var enclosingScrollView: UIScrollView? {
-        var current = superview
-        while let view = current {
-            if let scrollView = view as? UIScrollView { return scrollView }
-            current = view.superview
-        }
-        return nil
-    }
-}
 
 // MARK: - Preview
 

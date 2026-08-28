@@ -280,9 +280,9 @@
 
 ### 6.6 스티키 탭바·스크롤 트릭 (구현 수단 — 관찰 동작 동일)
 
-- ✅ **Keep** — 스크롤 시 탭바(정보/피드)가 커스텀 네비바 하단에 닿으면 그 아래에 고정, 조금이라도 스크롤되면 네비바에 작품 제목 페이드인, 최상단 over-scroll만 제거(하단 bounce 유지).
-  - V2: 오버레이 2벌 스티키 탭바 + `GeometryReader` 오프셋 측정 + `TopBounceDisabler`(KVO 클램프). V1은 `scrollViewDidScroll` 클램프 + `contentOffset` 관찰 스티키. **관찰 동작 동일, 수단만 UIKit→SwiftUI**.
-  - 근거: V1 `NovelDetailViewController.swift:484-491`(sticky),`612-618`(top clamp) · V2 `NovelDetailView.swift:459-489`,`652-693`, `CLAUDE.md`(스티키 탭바·TopBounceDisabler)
+- ✅ **Keep**(스티키·네비 타이틀) / 🔧 **Improve**(상단 오버스크롤) — 스크롤 시 탭바(정보/피드)가 커스텀 네비바 하단에 닿으면 그 아래에 고정, 조금이라도 스크롤되면 네비바에 작품 제목 페이드인. **상단 오버스크롤은 V1(그리고 초기 V2)이 0으로 클램프해 막았으나, #221에서 stretch 헤더로 개선** — 당겨 내리면 블러 배경이 확대돼 빈 영역을 메운다(하단 bounce는 그대로).
+  - V2: 오버레이 2벌 스티키 탭바 + `GeometryReader` 오프셋 측정(스티키·네비 타이틀). 상단 오버스크롤은 KVO 클램프(`TopBounceDisabler`)를 걷어내고 `NovelDetailHeaderView.backdrop`의 순수 SwiftUI stretch로 대체(#221, KVO 소멸 → Swift 6 mode 6). V1은 `scrollViewDidScroll` 클램프 + `contentOffset` 관찰 스티키.
+  - 근거: V1 `NovelDetailViewController.swift:484-491`(sticky),`612-618`(top clamp) · V2 `NovelDetailView`(스티키·좌표측정)·`NovelDetailHeaderView.backdrop`(stretch), `CLAUDE.md`(스티키 탭바·stretch 헤더)
 
 ---
 

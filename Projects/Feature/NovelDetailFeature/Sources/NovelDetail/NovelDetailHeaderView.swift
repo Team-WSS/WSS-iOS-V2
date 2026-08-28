@@ -22,6 +22,8 @@ struct NovelDetailHeaderView: View {
     /// 커스텀 네비바 하단 y(= 안전영역 top + 네비바 높이). 표지는 네비바 바로 아래에서 시작한다.
     /// 디자인의 99는 특정 기기(상태바 54 + 네비 44) 값이라 안전영역이 다른 기기에서 어긋난다 → 실측값을 받는다.
     let topInset: CGFloat
+    /// ScrollView 좌표공간 이름 — 상단 오버스크롤(당겨서 내림)을 재 backdrop을 stretch시키는 데 쓴다.
+    let scrollSpaceName: String
     /// 표지 탭 콜백 — 대형 표지 오버레이 표시 여부는 화면(NovelDetailView)이 소유한다.
     let onCoverTapped: () -> Void
     /// 작가 이름 탭 콜백 — 전달값은 탭한 작가 한 명의 이름. 실제 화면 전환은 화면(NovelDetailView)을 거쳐 호출자가 수행한다.
@@ -41,33 +43,46 @@ struct NovelDetailHeaderView: View {
     // MARK: - Backdrop
 
     /// 커버를 크게 깔아 블러하고 그 위에 디자인의 radial gradient 에셋(#D2D3F8→#F4F5F8)을 덮는다
-    /// → 아래 회색(wssGray50) 영역으로 자연 연결.
-    /// ⚠️ 그라데이션 에셋의 알파는 85%(상단)~100%(하단) — 블러 표지는 상단에서만 은은히 비치고,
-    /// 표지가 없으면 그라데이션만 보인다. 그래서 블러 뒤에 깔 바탕색은 필요 없다.
+    /// → 아래 회색(wssGray50) 영역으로 자연 연결. 표지가 없으면 그라데이션만 보인다.
+    /// ⚠️ 그라데이션 에셋의 알파는 85%(상단)~100%(하단) — 블러 표지는 상단에서만 은은히 비친다.
+    /// - 블러를 radius 12→6으로만 완화해 표지 아트가 상단에서 더 또렷이 비치게 했다(#221 사용자 피드백).
+    ///   보라 그라데이션은 디자인대로 **full opacity로 커버 위에 그대로** 얹는다(opacity를 낮춰 보라가
+    ///   옅어지면 안 된다 — 사용자 지적). 제목은 backdropHeight 아래(gray50) 위라 가독성엔 영향 없다.
+    /// - 상단 오버스크롤(당겨서 내림) 시 blur 레이어를 그만큼 확대해 빈 영역을 메우는 순수 SwiftUI
+    ///   stretch. 예전엔 `TopBounceDisabler`(contentOffset KVO)로 상단 바운스를 막았으나, #200 컬렉션
+    ///   상세처럼 stretch로 교체해 KVO를 없앴다(#221 → Swift 6 mode 6 승격). anchor .top + offset(-stretch)로
+    ///   확대해도 하단 경계(gray50 접점)는 고정되고 위쪽으로만 번진다(`CollectionDetailView.heroSection`과 동일 계산).
     private var backdrop: some View {
         VStack(spacing: 0) {
-            ZStack {
-                AsyncImage(url: novel.thumbnailImage) { phase in
-                    if case .success(let image) = phase {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: backdropHeight, alignment: .top)
-                .clipped()
-                .blur(radius: 12, opaque: true)
+            GeometryReader { proxy in
+                let minY = proxy.frame(in: .named(scrollSpaceName)).minY
+                let stretch = max(0, minY)
+                let zoomScale = 1 + stretch / backdropHeight
 
-                WSSImage.imgDetailBackgroundGradation.swiftUIImage
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: backdropHeight)
+                ZStack {
+                    AsyncImage(url: novel.thumbnailImage) { phase in
+                        if case .success(let image) = phase {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        }
+                    }
+                    .frame(width: proxy.size.width, height: backdropHeight, alignment: .top)
                     .clipped()
+                    .blur(radius: 6, opaque: true)
+
+                    WSSImage.imgDetailBackgroundGradation.swiftUIImage
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: backdropHeight)
+                        .clipped()
+                }
+                .frame(width: proxy.size.width, height: backdropHeight)
+                .clipped()
+                .scaleEffect(zoomScale, anchor: .top)
+                .offset(y: -stretch)
             }
             .frame(height: backdropHeight)
-            .clipped()
 
             Color.wssGray50
         }

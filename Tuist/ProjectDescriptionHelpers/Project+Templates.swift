@@ -19,8 +19,9 @@ let configurations: [Configuration] = [
 ///     concurrency 위반이 warning이 아니라 **error**가 된다(별도 SWIFT_STRICT_CONCURRENCY 불필요).
 ///   - **왜 Sources 타깃 한정**(baseSetting/Project 전역이 아니라): #219는 프로덕션(Sources)만 청소했고
 ///     Demo/Testing/Tests는 아직 strict concurrency 미청소다. 전역에 얹으면 그쪽이 error로 깨진다.
-///   - **왜 Feature 제외**: `NovelDetailFeature`의 `TopBounceDisabler` KVO 3건이 남아 있고
-///     실기기 스크롤 검증이 필요해 자동으로 못 고친다(→ docs/TODO.md 4번). 정리 후 편입.
+///   - **Feature도 이 세팅을 쓴다**: `createFeatureModule`이 `enableSwift6`(기본 true) 플래그로 이 딕셔너리를
+///     Sources에 얹는다. 12개 Feature 전부 mode 6이다(#221에서 NovelDetail의 KVO를 stretch 헤더로 걷어내
+///     마지막까지 편입 완료 → docs/TODO.md 4번). 플래그는 특정 Feature를 일시적으로 빼기 위한 여지로 남겨둔다.
 let swift6SourcesSettings: SettingsDictionary = [
     "SWIFT_VERSION": "6"
 ]
