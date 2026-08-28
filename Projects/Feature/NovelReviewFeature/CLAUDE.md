@@ -5,9 +5,10 @@
 일반 패턴은 레이어 가이드를 따르고, 여기엔 이 모듈 고유의 함정·결정만 적는다.
 
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
-- **진입점: `NovelReviewFeatureFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:)`** (`logger`는 옵셔널·nil 기본값)
+- **진입점: `NovelReviewFeatureFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:keywordSearchSheet:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
   - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백(이 화면의 유일한 상위 위임 콜백). 화면 전환은 호출자(App)가 수행 — 현재 소비처는 Demo 로그뿐(실제 로그인 화면·App 라우팅 미구현, 후속).
+  - **`keywordSearchSheet: KeywordSearchSheetBuilder`**(`Sources/Navigation/`, public seam) — 키워드 탐색 시트 콘텐츠. 이 모듈은 `KeywordFeature`를 모르므로(Feature 간 직접 의존 금지) App이 `KeywordFeatureFactory.makeSearchKeywordView`로 조립한 `AnyView`를 값으로 넘긴다. `SearchFeature`의 `KeywordTabContentBuilder`와 같은 형태·같은 이유 — 자세한 건 아래 "주의사항" 참고.
 
 ### 파일 구조 — 화면(영역)별 그룹
 `Sources/`는 화면 단위로 폴더를 나눈다(타입별 View/ViewModel 분리 ❌). 각 화면 전용 컴포넌트는 그 폴더에 동거.
@@ -23,9 +24,9 @@
 
 ## 현재 범위
 
-**읽기 상태 + 독서 기간(sheet) + 평점(슬라이더) + 매력 포인트 토글 + 키워드(진입 버튼) + 진입 시 로드 + 완료 시 저장**. 저장 성공 시 `state.shouldDismiss = true`로 닫힘을 신호.
-- 키워드는 `WSSSearchBarButton`(검색바 룩 탭 버튼)만 배치 — **탭 액션은 TODO(키워드 탐색뷰 이동)**, draft.keywords 연결도 아직.
-- 미연결: 키워드 선택/탐색뷰, 삭제(`DeleteNovelReviewUseCase`).
+**읽기 상태 + 독서 기간(sheet) + 평점(슬라이더) + 매력 포인트 토글 + 키워드(sheet) + 진입 시 로드 + 완료 시 저장**. 저장 성공 시 `state.shouldDismiss = true`로 닫힘을 신호.
+- 키워드는 `WSSSearchBarButton` 탭 → `keywordSearchSheet`(App 주입)가 만드는 시트. 선택은 실시간으로 `draft.keywords`에 반영되고(`.setKeywords`), 칩(`WhiteRemovableKeywordChip` + `WSSFlowLayout`)으로 표시·개별 삭제(`.removeKeyword`) 가능.
+- 미연결: 삭제(`DeleteNovelReviewUseCase`).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -68,3 +69,10 @@
 
 #### Demo 빌드
 - `.demo` 타깃이 있어 `NovelReviewFeature` 스킴이 Demo 앱까지 함께 빌드한다. **검증은 시뮬레이터 대상 워크스페이스 스킴으로** 할 것 — 실기기(`generic/platform=iOS`)는 Demo 앱 코드 서명을 요구하고, 단일 `-target ...Demo`는 교차 모듈 의존을 못 풀어 실패한다.
+
+#### 키워드 탐색 시트 (2026-08, 과거 한 차례 되돌려졌다가 재설계)
+- **`SearchKeywordView`(App이 주입) 자신은 하단 액션바가 없다** — `onSelectionChanged`로 선택을 실시간 보고만 하고 확인/닫기 UI를 안 갖는다. 그래서 `NovelReviewView`가 그 콘텐츠를 감싸 하단에 `WSSCTAButton("완료")`를 직접 얹는다 — 이 "완료"는 **확정이 아니라 닫기 그 자체**다(선택은 이미 실시간으로 `draft.keywords`에 반영돼 있으므로, 시트를 스와이프로 내려도 선택은 그대로 유지된다).
+- **`.setKeywords`(전체 교체)와 `.removeKeyword`(단건 제거)를 용도로 나눠 쓴다** — 시트의 실시간 보고는 매번 선택 전체 배열을 주므로 `setKeywords`(도메인이 중복·최대개수를 검증), 화면에 그려진 칩의 X 삭제는 `removeKeyword`(단건, throw 없음)로 처리한다. 최대 개수(20)는 시트(`SearchKeywordViewModel.maxSelectionCount`)가 이미 막고 있어 `setKeywords`의 `tooManyKeywords` throw는 원래 도달하면 안 되는 경로 — 걸리면 `.unknown` 토스트 + 로그로만 남긴다(다른 에러들과 동일 정책).
+- **`Sources/Navigation/KeywordSearchSheetBuilder.swift`가 이 모듈의 유일한 조립 seam**이다(`SearchFeature`의 `KeywordTabContentBuilder`와 형태·이유 동일 — Feature 간 직접 의존 금지라 App이 `AnyView`로 조립해 값으로 건넨다). arch-lint `feature-exclusivity`가 이 폴더의 public만 `*Factory` 외 예외로 허용한다.
+- **Demo도 `KeywordFeature`를 알아야 시트를 실제로 띄워볼 수 있다** — `Project.swift`의 `demoDependencies`에 `.module(.feature(.keyword))`를 추가했다(Sources는 여전히 모른다). `NovelReviewFeatureDemoApp`은 Mock/실서버 두 모드 각각 별도 키워드 UseCase(Mock=인메모리 `DemoLoadTotalKeywordsUseCase`/`DemoSearchKeywordsUseCase`, 실서버=`KeywordDataFactory.makeRepository`)를 조립해 `keywordSearchSheet`로 넘긴다 — `SearchFeatureDemoApp`의 동일 패턴.
+- **App 쪽 조립은 `NovelReviewAssembly`(App/Sources/Novel/) 한 곳에서만** 한다 — 홈/피드/서재/마이 4개 탭 Root가 전부 이 Assembly를 통해 진입하므로, `keywordSearchSheet` 빌더를 Assembly 내부에 두면 호출부 4곳을 손대지 않고 한 번에 배선된다(`AppDependencies.keywordRepository` 재사용, Home 상세탐색 키워드 탭과 동일 UseCase).

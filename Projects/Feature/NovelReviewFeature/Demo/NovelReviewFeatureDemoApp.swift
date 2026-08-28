@@ -16,6 +16,10 @@ import NovelReviewData
 import Logger
 import Networking
 import DesignSystem
+// 키워드 탐색 시트(KeywordSearchSheetBuilder)를 여기서 실제로 조립한다(App 역할 대행 — Feature 간
+// 직접 의존은 Demo 타깃에서만 허용, NovelReviewFeature Sources는 KeywordFeature를 모른다. #185의
+// SearchFeatureDemoApp과 동일 패턴).
+import KeywordFeature
 
 @main
 struct NovelReviewFeatureDemoApp: App {
@@ -95,7 +99,11 @@ private struct DemoRootView: View {
                 loadUseCase: DemoLoadNovelReviewDraftUseCase(),
                 saveUseCase: DemoSaveNovelReviewUseCase(),
                 logger: consoleLogger,
-                onAuthenticationRequired: handleAuthenticationRequired
+                onAuthenticationRequired: handleAuthenticationRequired,
+                keywordSearchSheet: keywordSearchSheetBuilder(
+                    loadTotalKeywordsUseCase: DemoLoadTotalKeywordsUseCase(),
+                    searchKeywordsUseCase: DemoSearchKeywordsUseCase()
+                )
             )
         case .live:
             makeLiveView()
@@ -116,6 +124,10 @@ private struct DemoRootView: View {
             client: client,
             logger: DataLogger(moduleName: "NovelReviewData", underlying: consoleLogger)
         )
+        let keywordRepository = KeywordDataFactory.makeRepository(
+            client: client,
+            logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
+        )
         return NovelReviewFeatureFactory.makeView(
             novelID: novelID,
             title: title,
@@ -123,8 +135,31 @@ private struct DemoRootView: View {
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: repository),
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository),
             logger: consoleLogger,
-            onAuthenticationRequired: handleAuthenticationRequired
+            onAuthenticationRequired: handleAuthenticationRequired,
+            keywordSearchSheet: keywordSearchSheetBuilder(
+                loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: keywordRepository),
+                searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: keywordRepository)
+            )
         )
+    }
+
+    /// 키워드 탐색 시트 콘텐츠 조립 — `KeywordFeatureFactory.makeSearchKeywordView`는 자체 액션바가
+    /// 없어 그대로 반환한 뒤 `NovelReviewView`가 하단 "완료" 버튼을 얹는다(SearchFeatureDemoApp의 동일 패턴).
+    private func keywordSearchSheetBuilder(
+        loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase,
+        searchKeywordsUseCase: SearchKeywordsUseCase
+    ) -> KeywordSearchSheetBuilder {
+        { initialKeywords, onSelectionChanged in
+            AnyView(
+                KeywordFeatureFactory.makeSearchKeywordView(
+                    loadTotalKeywordsUseCase: loadTotalKeywordsUseCase,
+                    searchKeywordsUseCase: searchKeywordsUseCase,
+                    initialSelectedKeywords: initialKeywords,
+                    onSelectionChanged: onSelectionChanged,
+                    logger: consoleLogger
+                )
+            )
+        }
     }
 
     /// 인증 만료 콜백(로드/저장 등 서버 호출 공통). 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
@@ -150,5 +185,34 @@ private struct DemoLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
 private struct DemoSaveNovelReviewUseCase: SaveNovelReviewUseCase {
     func execute(draft: NovelReviewDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
+    }
+}
+
+// MARK: - Demo UseCases (키워드 탐색 시트, 인메모리)
+// SearchFeatureDemoApp의 동일 패턴 — 모듈이 달라 공유하지 않고 각자 최소 목록으로 흉내낸다.
+
+private struct DemoLoadTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
+    func execute() async throws(RepositoryError) -> [KeywordGroup] {
+        [
+            KeywordGroup(category: .worldview, keywords: ["이세계", "현대", "SF"].demoKeywords(offset: 0)),
+            KeywordGroup(category: .material, keywords: ["환생", "빙의", "회귀"].demoKeywords(offset: 10)),
+            KeywordGroup(category: .character, keywords: ["먼치킨", "천재", "악당"].demoKeywords(offset: 20)),
+            KeywordGroup(category: .relationship, keywords: ["친구", "라이벌", "첫사랑"].demoKeywords(offset: 30)),
+            KeywordGroup(category: .vibe, keywords: ["힐링되는", "반전있는", "탄탄한"].demoKeywords(offset: 40))
+        ]
+    }
+}
+
+private struct DemoSearchKeywordsUseCase: SearchKeywordsUseCase {
+    func execute(searchText: String) async throws(RepositoryError) -> [Keyword] {
+        guard !searchText.isEmpty else { return [] }
+        let allGroups = try await DemoLoadTotalKeywordsUseCase().execute()
+        return allGroups.flatMap(\.keywords).filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+}
+
+private extension [String] {
+    func demoKeywords(offset: Int) -> [Keyword] {
+        enumerated().map { index, name in Keyword(id: KeywordID(offset + index), name: name) }
     }
 }
