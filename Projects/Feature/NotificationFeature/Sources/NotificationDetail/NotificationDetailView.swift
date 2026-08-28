@@ -115,6 +115,7 @@ private extension NotificationDetailView {
                 Spacer().frame(height: Metric.bottomSpacing)
             }
         }
+        .scrollBounceBehavior(.basedOnSize)
     }
 }
 
