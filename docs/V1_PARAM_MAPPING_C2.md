@@ -33,7 +33,7 @@
 |---|---|---|---|---|---|
 | 1 | **검색 `isCompleted` 항상 전송** — 미선택도 `false`로 나가 완결작 90% 누락 | Search | ✅ **수정 완료** | 실서버 검증됨(2026-08-28) · **수정 적용·빌드 검증 완료** | `Bool?` 전환 + 매퍼 `.map`(3-1). 매퍼 테스트는 타깃 배선 후속 |
 | 2 | **내 피드 정렬 대소문자 불일치** — V1 `RECENT`/`OLD`(대문자) vs V2 `recent`/`old`(소문자) | Feed | 🟢 **실측 무해 → 대문자 통일 결정** | **본 C2 발견 → 실서버 검증(2026-08-28): 서버가 대소문자 무관 파싱**(`recent`==`RECENT`, `old`==`OLD` 순서 동일) | 회귀 아님. **일관성 위해 대문자 통일**(`DefaultFeedRepository:186`에 `.uppercased()`, CollectionData 패턴 — 사용자 확정) |
-| 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | 🟡 백엔드 확인 | 계약서 0-1 | 백엔드 확인 → [`PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 1번 |
+| 3 | **탈퇴 body `refreshToken` 제거** — V1 `{reason,refreshToken}` vs V2 `{reason}` | Setting | ✅ **정리 확정** | 계약서 0-1 | 사용자 확인(2026-08-28): body refreshToken 불요, 헤더 access 토큰 인증 — 현행 유지 |
 | 4 | **검색 필터 빈 배열 `?key=` 빈값 전송** — `genres`/`platformNames`/`keywordIds`가 non-optional 배열 | Search | 🟢 V1 parity(저위험) | **V1도 `joined(",")`로 빈값 전송** → 서버가 관용(상세검색 실동작이 방증). Library만 `Optional`로 생략 | 회귀 아님. isCompleted 수정 시 `Optional`로 통일하면 자연스러움(선택) |
 | 5 | **플랫폼 서버값 "리디"→"리디북스"** 변경 | Search | 🟡 백엔드 확인 | 의도됨(사용자 확정·#185) | 서버 수용 재확인 → [`PENDING_DECISIONS.md`](PENDING_DECISIONS.md) 2번 |
 | 6 | **리뷰 `keywordIds` 화면 미배선** — 현재 항상 `[]` | NovelReview | 🟢 배선 대기 | 계약서 7 | 키워드 선택 화면 연결(후속) |
@@ -96,7 +96,7 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 | **Library** | `isCompleted`=`publicationStatus.map{…}`(🔧, **올바른 Optional 모델**) · 그 외 필드 V1과 일치 |
 | **NovelReview** | `keywordIds` 화면 미배선→`[]`(🟢 0-6) · POST→PUT 폴백(🔧 의도) · 나머지 body 동일 |
 | **Notification** | 라우팅 `novelId` 신규·`feedId·novelId 無`→`unknown`(V1은 -1 push 깨짐)(🔧 개선) · 엔드포인트/읽음 전송조건 ✅ |
-| **Setting** | 탈퇴 body `refreshToken` 제거(🟡 0-3) · 알림설정 저장 낙관화(🔧 개선) · 로그아웃/공개설정/성별나이/차단해제 ✅ |
+| **Setting** | 탈퇴 body `refreshToken` 제거(✅ 0-3 확정) · 알림설정 저장 낙관화(🔧 개선) · 로그아웃/공개설정/성별나이/차단해제 ✅ |
 | **Onboarding** | 닉네임 실패사유 세분 로컬 흡수(🔧) · 프로필등록/약관 body 동일 ✅ |
 | **UserPage** | 피드 신고·좋아요 신규(V1 no-op)(🔧 개선) · 프로필/서재통계/취향/차단 ✅ · `getUserFeed`의 `filterOption`/`sortType`은 V1 죽은 파라미터 |
 | **Home** | 쿼리 없는 GET 4종 ✅ · 관심글 엔드포인트는 홈 미호출(🗑 1.3) |
@@ -121,9 +121,9 @@ V1은 같은 `/users/{id}/feeds`에 `sortCriteria=RECENT`/`OLD`(대문자)를 �
 - **결정(사용자 확정)**: 기능 문제는 없지만 타 모듈 패턴(`.rawValue.uppercased()`)과 **일관성을 위해 대문자로 통일**.
 - **위치(고칠 1곳)**: `DefaultFeedRepository.swift:186` — `sortCriteria: option.sortType.rawValue` → `option.sortType.rawValue.uppercased()`(call-site 패턴, `CollectionDetailQuery:19`와 동일 — enum rawValue는 안 건드려 다른 소비처 무영향).
 
-### 3-3 🟡 탈퇴 body `refreshToken` 제거 (백엔드 확인)
+### 3-3 ✅ 탈퇴 body `refreshToken` 제거 (확정 2026-08-28 — 불요)
 - **위치**: `WithdrawRequest = { reason }`(V2) vs V1 `{ reason, refreshToken }`. 경로 동일 `/auth/withdraw`, 인증은 access 헤더.
-- **판정 기준**: 백엔드 V2 스펙이 body의 refreshToken을 요구하지 않으면 ✅(정리). 요구하면 누락. → 사용자만 풀 수 있는 백엔드 확인.
+- **판정**: 사용자 확인(2026-08-28) — body의 refreshToken 불요(헤더 access 토큰 인증). ✅ 정리로 확정, 현행 유지.
 
 ### 3-4 🟢 검색 필터 빈 배열 `?key=` 빈값 (V1 parity — 회귀 아님)
 - **위치**: `DetailSearchQuery`의 `genres`/`platformNames`/`keywordIds`가 non-optional 배열 → 미선택 시 `?genres=`(빈 값).

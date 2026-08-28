@@ -42,8 +42,8 @@
 
 **판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
-1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. **백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.** → [7](#7-회원탈퇴-withdraw-flow--mypagedeleteid), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
-   - **⏳ 보류(외부 확인, 2026-08-28): 백엔드 스펙 확인 후 확정.** V2 `/auth/withdraw`가 body에 refreshToken을 요구하는지 서버팀 확인 필요(외부 의존). 헤더 access 토큰 인증이면 현행이 맞다.
+1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. ~~백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.~~ → 불요 확정(아래). → [7](#7-회원탈퇴-withdraw-flow--mypagedeleteid), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
+   - **✅ Keep 확정(2026-08-28, 사용자: 탈퇴 body에 refreshToken 불요 — 헤더 access 토큰 인증).** 현행 `{ reason }` 유지. (보류 해제 — PENDING_DECISIONS 1 닫힘)
 2. **연도 휠 상한** — V1 생년 휠은 `1900...2025`(126개), V2는 `BirthYear.minYear...maxYear = 1900...2024`. 2025가 사라진 게 의도인지(도메인 상한 정책) 단순 누락인지. → [3.2](#32-생년-선택-연도-휠)
    - **🔧 판정(2026-08-28, 조사): 하드코딩 상수 차이(경미).** `BirthYear.maxYear = 2024`(하드코딩, `ProfileDomain/…/BirthYear.swift:13`), V1도 `2025` 하드코딩 — **둘 다 dynamic 아님**(2026 기준 이미 과거라 도메인 상한 정책이라기보다 stale 상수). 소소한 개선(maxYear 현재연도 기반 dynamic)으로 `docs/TODO.md` 9에 묶음. 저우선.
 3. **성별/생년 로컬 캐싱 시점** — V1은 **계정정보 화면 진입 시** 서버 `getUserInfo`로 받은 `birth`를 `UserDefaults.userBirth`에 캐싱하고, 성별/나이 변경 화면이 그 캐시(+`userGender`)를 읽어 시작한다. V2 성별/나이 변경은 `LoadLocalGenderAndBirthUseCase`(로컬)로 시작하는데, **그 로컬값을 어디서 채우는지**(로그인·온보딩·다른 화면)가 이 모듈 밖이라 확인 필요 — 계정정보에 안 들렀다가 바로 변경 화면에 오면 최신이 아닐 수 있다. → [2.3](#23-부수-효과-생년-로컬-캐싱)
@@ -264,7 +264,7 @@
 |---|---|---|---|
 | 경로 | `/auth/withdraw` | `/auth/withdraw` | ✅ Keep |
 | body `reason` | 사유 문자열(프리셋 rawValue 또는 직접 입력 텍스트) | 동일(`AuthMapper.withdrawalReason`가 option→문자열 매핑) | ✅ Keep (오타 1건 7.3) |
-| body `refreshToken` | **포함** | **미포함** | ⏳ 보류 — 백엔드 확인([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 1 · 0절 1) |
+| body `refreshToken` | **포함** | **미포함** | ✅ Keep 확정(2026-08-28, 사용자: 불요 — 헤더 access 토큰 인증) |
 | 인증 | access 토큰 헤더(`tokenCheckURLSession`) | access 토큰 헤더(`.requireToken`) | ✅ Keep |
 | 성공 후 로컬 | UserDefaults(userId·nickname·gender·accessToken·refreshToken) 제거 | `tokenStore.clearTokens()`(도메인 계약이 토큰·개인정보 정리 책임) | ✅ Keep (정리 위치 이동) |
 
