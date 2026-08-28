@@ -171,7 +171,10 @@ final class CreateFeedViewModel {
             guard case .edit(let feedID) = mode, !hasLoadedForEdit, let loadFeedDetailUseCase else { break }
             hasLoadedForEdit = true
             newState.isLoadingForEdit = true
-            Task { await loadForEdit(feedID: feedID, using: loadFeedDetailUseCase) }
+            Task { [weak self] in
+                guard let self else { return }
+                await loadForEdit(feedID: feedID, using: loadFeedDetailUseCase)
+            }
 
         case .updateContent(let content):
             mutate(&newState) { try $0.updateContent(content) }
