@@ -8,10 +8,12 @@
   아니라 이 화면들이 직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관),
   `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점:
-  - `MypageFeatureFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:logger:onCollectionTapped:onEditProfileTapped:onSettingTapped:onLibraryTapped:)`
+  - `MypageFeatureFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:logger:onCollectionTapped:onCollectionItemTapped:onEditProfileTapped:onSettingTapped:onLibraryTapped:)`
     (내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집 — App이 `onEditProfileTapped` 콜백을 받아 조립),
     `.makeCharacterEditSheet(...)`(캐릭터 선택 시트, 예외적으로 Feature 내부에서 직접 연다)
-  - `UserPageFeatureFactory.makeView(...)`(유저 페이지), `.makeFeedListView(...)`(전체 피드 목록 — `UserPageView`의 "전체보기"가 내부적으로 호출)
+  - `UserPageFeatureFactory.makeView(...)`(유저 페이지) — "활동기록 더보기"도 `onFeedListTapped`
+    콜백만 올린다(#201부터, `UserPageView`가 더 이상 로컬로 push하지 않는다).
+    `.makeFeedListView(...)`(전체 피드 목록)는 그 콜백을 받은 App이 조립한다.
 
 ## MyPage
 
@@ -164,7 +166,7 @@
   `LibrarySection` 블록 전체) 모두 같은 콜백을 부른다 — 어느 쪽을 눌러도 같은 화면으로 간다.
 - **차단**: 툴바 threedots 드롭다운("차단하기") → `WSSAlertType.blockUser` 확인 알럿 → `BlockUserUseCase`. **성공하면 화면을 dismiss한다**(`state.shouldDismiss`) — 차단하면 상대 프로필을 다시 볼 수 없어 화면에 남아있을 이유가 없다는 판단(사용자 확정).
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
-- **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 push. **`SettingFeature`의 내부 네비게이션과 동일 패턴** — `UserPageView`가 VM이 아니라 View 자신의 `init`으로 필요한 UseCase(`loadUserFeedsUseCase` 등)를 직접 받아뒀다가 `.navigationDestination`에서 `UserPageFeatureFactory.makeFeedListView(...)`를 직접 호출(콜백을 App까지 올리지 않음).
+- **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onFeedListTapped(userID, nickname, profileImage)` 콜백만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 콜백을 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
 - **컬렉션 섹션(#200)의 타이틀 행은 컬렉션 개수와 무관하게 항상 노출된다**(사용자 확정, 2026-08-25 —
   **이전엔** `viewModel.state.collectionCount > 0`일 때만 섹션 전체를 보여줬다). 0개면 타이틀 행만

@@ -22,31 +22,38 @@ Sources/
 │   └── MainTabView.swift     # 온보딩 이후 루트 — 홈/피드/서재/My 4탭 TabView. 탭 아이콘은
 │                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등).
 ├── Home/    └── HomeRootView.swift      # "홈" 탭. HomeFactory 조립 + 작품 상세·피드 상세·일반 검색·
-│                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·마이페이지 편집
-│                                          # (NovelDetailAssembly/NovelReviewAssembly/FeedFeatureFactory/
-│                                          # UserPageAssembly/SearchAssembly/MypageFactory)까지 실제 push.
+│                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·그 전체 피드
+│                                          # 목록·마이페이지 편집(NovelDetailAssembly/NovelReviewAssembly/
+│                                          # FeedFeatureFactory/UserPageAssembly/SearchAssembly/
+│                                          # MypageFactory)까지 실제 push.
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
-│                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 프로필의 타유저
-│                                          # 서재·작가 이름 검색(makeFeedDetailView/NovelDetailAssembly/
-│                                          # NovelReviewAssembly/makeCreateFeedView/UserPageAssembly/
-│                                          # LibraryFactory.makeUserLibraryView/SearchAssembly)까지 push.
+│                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 전체 피드 목록·
+│                                          # 그 프로필의 타유저 서재·작가 이름 검색(makeFeedDetailView/
+│                                          # NovelDetailAssembly/NovelReviewAssembly/makeCreateFeedView/
+│                                          # UserPageAssembly/LibraryFactory.makeUserLibraryView/
+│                                          # SearchAssembly)까지 push.
 ├── Library/ └── LibraryRootView.swift   # "서재" 탭. LibraryFactory.makeMyLibraryView 조립 + 작품 상세·
-│                                          # 작품 평가·피드 작성·유저 프로필·일반 검색·알림 설정
-│                                          # (NovelDetailAssembly/NovelReviewAssembly/FeedFeatureFactory/
-│                                          # UserPageAssembly/SearchAssembly/SettingFactory.makeNotificationSettingView)까지 push.
+│                                          # 작품 평가·피드 작성·유저 프로필·전체 피드 목록·일반 검색·
+│                                          # 알림 설정+완결/휴재복귀 알림 목록(NovelDetailAssembly/
+│                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
+│                                          # SearchAssembly/SettingFeatureFactory의 makeNotificationSettingView·
+│                                          # makeCompletionNotificationListView·makeHiatusReturnNotificationListView,
+│                                          # #201)까지 push.
 ├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFactory.makeView 조립 +
-│                                          # 프로필 편집·설정(makeEditView/SettingFactory.makeView)·
+│                                          # 프로필 편집·설정 전체 트리(makeEditView/SettingFeatureFactory의
+│                                          # 8개 화면 — 계정정보·성별나이변경·차단유저목록·회원탈퇴·
+│                                          # 프로필공개설정·알림설정·완결/휴재복귀 알림목록, #201)·
 │                                          # 컬렉션 목록/생성/수정/상세/작품 추가/서재에서 추가
 │                                          # (CollectionFeatureFactory, #201 — 컬렉션 미리보기 개별
-│                                          # 항목 탭도 그 컬렉션 상세로 직행)까지 push, 서재 블록 탭은
-│                                          # push가 아니라 MainTabView 탭 전환으로
+│                                          # 항목 탭도 그 컬렉션 상세로 직행)·타유저 전체 피드 목록까지
+│                                          # push, 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로
 │                                          # 위임(모듈명과 Factory 이름이 다르니 혼동 주의).
 ├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
 │                                             # 3탭이 공유(#197).
 ├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
-└── UserPage/└── UserPageAssembly.swift     # 타유저 프로필 조립 공용 헬퍼 — 홈/피드/서재 3탭의 작품 상세와
-                                             # 피드 탭 자체가 공유(#197).
+└── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
+                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
 ```
 
 4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있다. 그 안에서 열리는 2차

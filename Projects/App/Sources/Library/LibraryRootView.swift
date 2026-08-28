@@ -34,11 +34,17 @@ struct LibraryRootView: View {
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
+        /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
+        case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         case search
         case authorSearch(String)
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case notificationSetting
+        // 알림 설정의 완결/휴재복귀 알림 목록(#201부터 이 루트가 직접 조립 — `SettingFeatureFactory`의
+        // 다중 `makeXxxView`와 동일하게 App이 화면 전환을 조립한다).
+        case completionNotificationList
+        case hiatusReturnNotificationList
     }
 
     let dependencies: AppDependencies
@@ -82,7 +88,20 @@ struct LibraryRootView: View {
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .userPage(let userID):
-                        UserPageAssembly.makeView(userID: userID, dependencies: dependencies)
+                        UserPageAssembly.makeView(
+                            userID: userID,
+                            dependencies: dependencies,
+                            onFeedListTapped: { userID, nickname, profileImage in
+                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            }
+                        )
+                    case .userFeedList(let userID, let nickname, let profileImage):
+                        UserPageAssembly.makeFeedListView(
+                            userID: userID,
+                            nickname: nickname,
+                            profileImage: profileImage,
+                            dependencies: dependencies
+                        )
                     case .search:
                         searchView()
                     case .authorSearch(let authorName):
@@ -99,6 +118,10 @@ struct LibraryRootView: View {
                         )
                     case .notificationSetting:
                         notificationSettingView
+                    case .completionNotificationList:
+                        completionNotificationListView
+                    case .hiatusReturnNotificationList:
+                        hiatusReturnNotificationListView
                     }
                 }
                 .toolbar(.hidden, for: .tabBar)
@@ -188,13 +211,35 @@ private extension LibraryRootView {
         SettingFeatureFactory.makeNotificationSettingView(
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
+            logger: dependencies.logger,
+            onCompletionListTapped: { path.append(Destination.completionNotificationList) },
+            onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) }
+        )
+    }
+
+    var completionNotificationListView: some View {
+        SettingFeatureFactory.makeCompletionNotificationListView(
             loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
                 repository: dependencies.novelNotificationRepository
             ),
             deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
                 repository: dependencies.novelNotificationRepository
             ),
-            logger: dependencies.logger
+            logger: dependencies.logger,
+            onBrowseNovels: { path.append(Destination.search) }
+        )
+    }
+
+    var hiatusReturnNotificationListView: some View {
+        SettingFeatureFactory.makeHiatusReturnNotificationListView(
+            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            logger: dependencies.logger,
+            onBrowseNovels: { path.append(Destination.search) }
         )
     }
 }

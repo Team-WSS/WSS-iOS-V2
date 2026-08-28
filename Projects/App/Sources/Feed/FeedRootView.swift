@@ -48,6 +48,8 @@ struct FeedRootView: View {
         case editFeed(FeedID)
         case userPage(UserID)
         case userLibrary(UserID)
+        /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
+        case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         case authorSearch(String)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
     }
@@ -106,10 +108,20 @@ struct FeedRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
-                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) }
+                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
+                            onFeedListTapped: { userID, nickname, profileImage in
+                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
+                    case .userFeedList(let userID, let nickname, let profileImage):
+                        UserPageAssembly.makeFeedListView(
+                            userID: userID,
+                            nickname: nickname,
+                            profileImage: profileImage,
+                            dependencies: dependencies
+                        )
                     case .authorSearch(let authorName):
                         authorSearchView(authorName)
                     case .novelReview(let novelID, let title, let status):

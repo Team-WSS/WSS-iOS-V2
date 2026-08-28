@@ -55,7 +55,18 @@ struct MypageRootView: View {
 
     private enum Destination: Hashable {
         case edit
+        // 설정(#201 — SettingFeature 내부 화면 전환도 전부 App이 조립한다. 예외는
+        // `settingWithdrawFlow` 하나뿐 — "확인→사유" 2단계는 그 화면 안에서 여전히 로컬로 진행된다,
+        // `SettingFeature/CLAUDE.md` 참고)
         case setting
+        case settingAccountInfo
+        case settingChangeGenderOrAge
+        case settingBlockUserList
+        case settingWithdrawFlow
+        case settingProfilePublic
+        case settingNotification
+        case settingCompletionNotificationList
+        case settingHiatusReturnNotificationList
         // 컬렉션(#201)
         case collectionList
         case createCollection
@@ -76,6 +87,8 @@ struct MypageRootView: View {
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
+        /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
+        case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case search
         case authorSearch(String)
@@ -93,6 +106,12 @@ struct MypageRootView: View {
     /// 프로필 편집 화면이 `onSaved`로 알려주면 세운다 — 그 화면이 아니라 복귀할 이 루트가 보여준다
     /// (편집 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로, `UserPageFeature/CLAUDE.md` 참고).
     @State private var showProfileSavedToast = false
+    /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 계정정보 화면에서 이 루트가 띄운다
+    /// (`SettingFeature/CLAUDE.md`의 "저장됨" 토스트 이관 참고 — #201부터 그 화면 자신이 아니라 App이 띄운다).
+    @State private var isChangeSavedToastPresented = false
+    /// 프로필 공개 설정 화면이 저장 성공으로 dismiss된 뒤, 돌아온 설정 목록 화면에서 이 루트가 띄운다.
+    @State private var isVisibilityChangedToastPresented = false
+    @State private var visibilityChangedToastType: WSSToastType = .changePublic
 
     /// "작품 추가"/"서재에서 추가" 확정 결과를 생성/수정 컬렉션 화면에 돌려주는 1회성 nil→값 채널
     /// (`CollectionFeatureFactory.makeCreateCollectionView` 문서 참고). 생성·수정이 동시에 열릴 일이
@@ -141,6 +160,22 @@ struct MypageRootView: View {
                         editProfileView
                     case .setting:
                         settingView
+                    case .settingAccountInfo:
+                        settingAccountInfoView
+                    case .settingChangeGenderOrAge:
+                        settingChangeGenderOrAgeView
+                    case .settingBlockUserList:
+                        settingBlockUserListView
+                    case .settingWithdrawFlow:
+                        settingWithdrawFlowView
+                    case .settingProfilePublic:
+                        settingProfilePublicView
+                    case .settingNotification:
+                        settingNotificationView
+                    case .settingCompletionNotificationList:
+                        settingCompletionNotificationListView
+                    case .settingHiatusReturnNotificationList:
+                        settingHiatusReturnNotificationListView
                     case .collectionList:
                         collectionListView
                     case .createCollection:
@@ -162,7 +197,20 @@ struct MypageRootView: View {
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
                     case .userPage(let userID):
-                        UserPageAssembly.makeView(userID: userID, dependencies: dependencies)
+                        UserPageAssembly.makeView(
+                            userID: userID,
+                            dependencies: dependencies,
+                            onFeedListTapped: { userID, nickname, profileImage in
+                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            }
+                        )
+                    case .userFeedList(let userID, let nickname, let profileImage):
+                        UserPageAssembly.makeFeedListView(
+                            userID: userID,
+                            nickname: nickname,
+                            profileImage: profileImage,
+                            dependencies: dependencies
+                        )
                     case .novelReview(let novelID, let title, let status):
                         NovelReviewAssembly.makeView(
                             novelID: novelID,
@@ -183,6 +231,8 @@ struct MypageRootView: View {
             }
         }
         .showWSSToast(isPresented: $showProfileSavedToast, type: .editProfile)
+        .showWSSToast(isPresented: $isChangeSavedToastPresented, type: .changeInfo)
+        .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
     }
 }
 
@@ -205,42 +255,115 @@ private extension MypageRootView {
     }
 }
 
-// MARK: - 설정
+// MARK: - 설정 (#201 — 화면 간 이동은 전부 이 루트가 조립한다. 예외는 `settingWithdrawFlowView`
+// 하나뿐, 그 안의 "확인→사유" 2단계는 여전히 `WithdrawFlowView`가 로컬로 진행한다)
 
 private extension MypageRootView {
     var settingView: some View {
         SettingFeatureFactory.makeView(
+            pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
+            logger: dependencies.logger,
+            onAccountInfoTapped: { path.append(Destination.settingAccountInfo) },
+            onProfilePublicTapped: { path.append(Destination.settingProfilePublic) },
+            onNotificationSettingTapped: { path.append(Destination.settingNotification) }
+        )
+    }
+
+    var settingAccountInfoView: some View {
+        SettingFeatureFactory.makeAccountInfoView(
+            loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: dependencies.profileRepository),
+            logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
+            logger: dependencies.logger,
+            // 로그아웃 성공 시 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
+            onLogoutSuccess: onAuthenticationRequired,
+            onChangeGenderOrAgeTapped: { path.append(Destination.settingChangeGenderOrAge) },
+            onBlockUserListTapped: { path.append(Destination.settingBlockUserList) },
+            onWithdrawTapped: { path.append(Destination.settingWithdrawFlow) }
+        )
+    }
+
+    var settingChangeGenderOrAgeView: some View {
+        SettingFeatureFactory.makeChangeGenderOrAgeView(
             loadLocalGenderAndBirthUseCase: DefaultLoadLocalGenderAndBirthUseCase(
                 repository: dependencies.profileRepository
             ),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: dependencies.profileRepository),
-            loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: dependencies.profileRepository),
+            logger: dependencies.logger,
+            onSaveSuccess: { isChangeSavedToastPresented = true }
+        )
+    }
+
+    var settingBlockUserListView: some View {
+        SettingFeatureFactory.makeBlockUserListView(
+            loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: dependencies.socialRepository),
+            unblockUserUseCase: DefaultUnblockUserUseCase(repository: dependencies.socialRepository),
+            logger: dependencies.logger
+        )
+    }
+
+    /// "확인→사유" 2단계는 `WithdrawFlowView` 안에서 여전히 로컬로 진행된다(사용자 확정) — 이 루트는
+    /// 진입점 하나만 push하면 된다.
+    var settingWithdrawFlowView: some View {
+        SettingFeatureFactory.makeWithdrawFlowView(
+            loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(
+                novelRepository: dependencies.novelRepository
+            ),
+            withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
+            logger: dependencies.logger,
+            // 탈퇴 성공 시 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
+            onWithdrawSuccess: onAuthenticationRequired
+        )
+    }
+
+    var settingProfilePublicView: some View {
+        SettingFeatureFactory.makeProfilePublicView(
             loadProfileVisibilityUseCase: DefaultLoadProfileVisibilityUseCase(repository: dependencies.profileRepository),
             updateProfileVisibilityUseCase: DefaultUpdateProfileVisibilityUseCase(
                 repository: dependencies.profileRepository
             ),
-            loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: dependencies.socialRepository),
-            unblockUserUseCase: DefaultUnblockUserUseCase(repository: dependencies.socialRepository),
+            logger: dependencies.logger,
+            onSaveSuccess: { isPublic in
+                visibilityChangedToastType = isPublic ? .changePublic : .changePrivate
+                isVisibilityChangedToastPresented = true
+            }
+        )
+    }
+
+    var settingNotificationView: some View {
+        SettingFeatureFactory.makeNotificationSettingView(
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(
                 repository: dependencies.pushSettingRepository
             ),
+            logger: dependencies.logger,
+            onCompletionListTapped: { path.append(Destination.settingCompletionNotificationList) },
+            onHiatusReturnListTapped: { path.append(Destination.settingHiatusReturnNotificationList) }
+        )
+    }
+
+    var settingCompletionNotificationListView: some View {
+        SettingFeatureFactory.makeCompletionNotificationListView(
             loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
                 repository: dependencies.novelNotificationRepository
             ),
             deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
                 repository: dependencies.novelNotificationRepository
             ),
-            withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
-            logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
-            loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(
-                novelRepository: dependencies.novelRepository
-            ),
-            pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: dependencies.logger,
-            // 회원탈퇴/로그아웃 둘 다 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
-            onWithdrawSuccess: onAuthenticationRequired,
-            onLogoutSuccess: onAuthenticationRequired
+            onBrowseNovels: { path.append(Destination.search) }
+        )
+    }
+
+    var settingHiatusReturnNotificationListView: some View {
+        SettingFeatureFactory.makeHiatusReturnNotificationListView(
+            loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(
+                repository: dependencies.novelNotificationRepository
+            ),
+            logger: dependencies.logger,
+            onBrowseNovels: { path.append(Destination.search) }
         )
     }
 }

@@ -38,46 +38,29 @@ struct UserPageView: View {
     @State private var feedMenuContext: FeedMenuContext?
     /// 각 피드 셀 상단의 화면 y(스크롤 좌표공간 실측) — threedots 앵커 계산용(NovelDetailFeedTab과 동일 방식).
     @State private var feedCellTopYs: [FeedID: CGFloat] = [:]
-    /// "전체보기" 버튼 탭 → 전체 피드 목록(무한스크롤) 화면 진입.
-    @State private var isFeedListPresented = false
 
     @Environment(\.dismiss) private var dismiss
 
     private let userID: UserID
-    private let logger: Logger?
-
-    // FeedDomain — "활동" 탭 미리보기와 "전체보기" 화면(`UserFeedListView`)이 함께 쓴다.
-    // `SettingFeature`의 내부 네비게이션(SettingFeatureFactory.makeXxxView 직접 호출)과 동일 패턴이라
-    // VM이 아니라 View가 UseCase를 들고 있다가 다음 화면 조립에 그대로 넘긴다.
-    private let loadUserFeedsUseCase: LoadUserFeedsUseCase
-    private let feedLikeUseCase: FeedLikeUseCase
-
-    // SocialDomain
-    private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
-    private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
     /// "서재" 블록(제목 옆 화살표 아이콘 + 통계 행) 탭 → 이 유저의 서재 진입 콜백. 실제 화면 전환
     /// (`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
     private let onLibraryTapped: () -> Void
+    /// "활동기록 더보기" 탭 → 전체 피드 목록(`UserFeedListView`) 진입 콜백. 실제 화면 전환
+    /// (`UserPageFeatureFactory.makeFeedListView` 조립)은 호출자(App)가 수행한다(#201) — 그 화면이
+    /// 필요로 하는 `nickname`/`profileImage`는 이 화면이 이미 로드해둔 프로필 값을 그대로 실어 보낸다.
+    private let onFeedListTapped: (UserID, String, URL?) -> Void
 
     init(
         viewModel: UserPageViewModel,
         userID: UserID,
-        loadUserFeedsUseCase: LoadUserFeedsUseCase,
-        feedLikeUseCase: FeedLikeUseCase,
-        reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
-        reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil,
-        onLibraryTapped: @escaping () -> Void = {}
+        onLibraryTapped: @escaping () -> Void = {},
+        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.userID = userID
-        self.loadUserFeedsUseCase = loadUserFeedsUseCase
-        self.feedLikeUseCase = feedLikeUseCase
-        self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
-        self.reportImproperFeedUseCase = reportImproperFeedUseCase
-        self.logger = logger
         self.onLibraryTapped = onLibraryTapped
+        self.onFeedListTapped = onFeedListTapped
     }
 
     var body: some View {
@@ -194,18 +177,6 @@ struct UserPageView: View {
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
         .showWSSToast(isPresented: noCollectionsToastBinding, type: .noCollections)
-        .navigationDestination(isPresented: $isFeedListPresented) {
-            UserPageFeatureFactory.makeFeedListView(
-                userID: userID,
-                nickname: viewModel.state.profile?.nickname ?? "",
-                profileImage: viewModel.state.profile?.characterImage,
-                loadUserFeedsUseCase: loadUserFeedsUseCase,
-                feedLikeUseCase: feedLikeUseCase,
-                reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
-                reportImproperFeedUseCase: reportImproperFeedUseCase,
-                logger: logger
-            )
-        }
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
@@ -511,7 +482,11 @@ struct UserPageView: View {
                     if viewModel.hasMoreFeeds {
                         Spacer().frame(height: 20)
                         Button {
-                            isFeedListPresented = true
+                            onFeedListTapped(
+                                userID,
+                                viewModel.state.profile?.nickname ?? "",
+                                viewModel.state.profile?.characterImage
+                            )
                         } label: {
                             Text("활동기록 더보기")
                                 .applyWSSFont(.title2)
@@ -784,11 +759,7 @@ private extension UserPageView {
                 reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
             ),
-            userID: UserID(1),
-            loadUserFeedsUseCase: PreviewLoadUserFeedsUseCase(),
-            feedLikeUseCase: PreviewFeedLikeUseCase(),
-            reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
-            reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
+            userID: UserID(1)
         )
     }
 }

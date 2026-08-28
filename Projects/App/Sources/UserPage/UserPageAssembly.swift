@@ -20,10 +20,14 @@ import UserPageFeature
 /// push하도록 공용으로 뽑았다(`FeedDetailAssembly`/`NovelDetailAssembly`와 같은 이유, #196).
 @MainActor
 enum UserPageAssembly {
+    /// - Parameter onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록 진입 콜백. `(userID, nickname,
+    ///   profileImage)`를 그대로 받아 호출자가 자기 `Destination`에 실어 push한다(#201) — 이 화면
+    ///   자신이 이미 로드해둔 프로필 값이라 App이 따로 조회할 필요가 없다.
     static func makeView(
         userID: UserID,
         dependencies: AppDependencies,
-        onLibraryTapped: @escaping () -> Void = {}
+        onLibraryTapped: @escaping () -> Void = {},
+        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in }
     ) -> some View {
         UserPageFeatureFactory.makeView(
             userID: userID,
@@ -47,7 +51,28 @@ enum UserPageAssembly {
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
             logger: dependencies.logger,
-            onLibraryTapped: onLibraryTapped
+            onLibraryTapped: onLibraryTapped,
+            onFeedListTapped: onFeedListTapped
+        )
+    }
+
+    /// "활동기록 더보기"로 진입하는 전체 피드 목록(`UserPageFeatureFactory.makeFeedListView`) 조립 —
+    /// `onFeedListTapped`를 받은 탭 Root가 자기 `Destination`에서 이 메서드로 push한다.
+    static func makeFeedListView(
+        userID: UserID,
+        nickname: String,
+        profileImage: URL?,
+        dependencies: AppDependencies
+    ) -> some View {
+        UserPageFeatureFactory.makeFeedListView(
+            userID: userID,
+            nickname: nickname,
+            profileImage: profileImage,
+            loadUserFeedsUseCase: DefaultLoadUserFeedsUseCase(feedRepository: dependencies.feedRepository),
+            feedLikeUseCase: DefaultLikeUseCase(feedRepository: dependencies.feedRepository),
+            reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
+            reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
+            logger: dependencies.logger
         )
     }
 }

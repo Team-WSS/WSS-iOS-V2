@@ -16,78 +16,42 @@ import NovelDomain
 import Logger
 import PushAuthorization
 
-/// 모듈의 유일한 public 진입점.
-/// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
+/// 모듈의 public 진입점 — 화면마다 `make<Screen>View`로 짓는다(#201부터, **화면 간 이동은 전부 App이
+/// 조립한다** — 예외는 성별/나이 변경 화면의 생년 선택 시트뿐, 그건 그 화면 자신의 draft를 채우는
+/// 로컬 값 선택기라서 그대로 둔다). `makeWithdrawFlowView`만 예외로 "확인→사유" 2단계를 여전히 내부적으로
+/// 로컬 push한다(사용자 확정) — App은 이 진입점 하나만 조립하면 된다.
 public enum SettingFeatureFactory {
 
-    /// 설정 진입점. `SettingView`(설정 목록) → `SettingAccountInfoView`(계정정보) → 성별/나이 변경·차단유저 목록,
-    /// 그리고 `SettingView` → 프로필 공개 설정·알림 설정까지, 모듈 내부 화면 전환을 전부 포함한 하나의 플로우다.
-    /// 하위 화면에 필요한 UseCase를 여기서 한 번에 주입받아 내부적으로 배선한다.
+    /// 설정 목록 진입점. 하위 화면(계정정보/프로필 공개 설정/알림 설정)은 여기서 만들지 않는다 —
+    /// 메뉴 탭 콜백만 올리고, 실제 조립은 호출자(App)가 각 `make<Screen>View`로 한다.
     @MainActor
     public static func makeView(
-        // ProfileDomain
-        loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
-        saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
-        loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
-        loadProfileVisibilityUseCase: LoadProfileVisibilityUseCase,
-        updateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase,
-        // SocialDomain
-        loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
-        unblockUserUseCase: UnblockUserUseCase,
-        // NotificationDomain
-        loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
-        updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
-        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
-        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
-        // AuthDomain
-        withdrawUseCase: WithdrawUseCase,
-        logoutUseCase: LogoutUseCase,
-        // NovelDomain
-        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
-        // PushAuthorization
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {},
-        onLogoutSuccess: @escaping () -> Void = {},
-        onBrowseNovels: @escaping () -> Void = {}
+        onAccountInfoTapped: @escaping () -> Void = {},
+        onProfilePublicTapped: @escaping () -> Void = {},
+        onNotificationSettingTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingViewModel(pushAuthorizationChecker: pushAuthorizationChecker, logger: logger)
         return SettingView(
             viewModel: viewModel,
-            loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
-            saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
-            loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
-            loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
-            updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
-            loadBlockedUsersUseCase: loadBlockedUsersUseCase,
-            unblockUserUseCase: unblockUserUseCase,
-            loadPushPreferenceUseCase: loadPushPreferenceUseCase,
-            updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
-            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
-            withdrawUseCase: withdrawUseCase,
-            logoutUseCase: logoutUseCase,
-            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-            logger: logger,
-            onWithdrawSuccess: onWithdrawSuccess,
-            onLogoutSuccess: onLogoutSuccess,
-            onBrowseNovels: onBrowseNovels
+            onAccountInfoTapped: onAccountInfoTapped,
+            onProfilePublicTapped: onProfilePublicTapped,
+            onNotificationSettingTapped: onNotificationSettingTapped
         )
     }
 
+    /// 계정정보 진입점. 하위 화면(성별/나이 변경·차단유저 목록·회원탈퇴)도 여기서 만들지 않는다 —
+    /// 메뉴 탭 콜백만 올리고, 실제 조립은 호출자(App)가 한다.
     @MainActor
     public static func makeAccountInfoView(
-        loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
-        saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
         loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
-        loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
-        unblockUserUseCase: UnblockUserUseCase,
-        withdrawUseCase: WithdrawUseCase,
-        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logoutUseCase: LogoutUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {},
-        onLogoutSuccess: @escaping () -> Void = {}
+        onLogoutSuccess: @escaping () -> Void = {},
+        onChangeGenderOrAgeTapped: @escaping () -> Void = {},
+        onBlockUserListTapped: @escaping () -> Void = {},
+        onWithdrawTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingAccountInfoViewModel(
             loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
@@ -96,15 +60,10 @@ public enum SettingFeatureFactory {
         )
         return SettingAccountInfoView(
             viewModel: viewModel,
-            loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
-            saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
-            loadBlockedUsersUseCase: loadBlockedUsersUseCase,
-            unblockUserUseCase: unblockUserUseCase,
-            withdrawUseCase: withdrawUseCase,
-            loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-            logger: logger,
-            onWithdrawSuccess: onWithdrawSuccess,
-            onLogoutSuccess: onLogoutSuccess
+            onLogoutSuccess: onLogoutSuccess,
+            onChangeGenderOrAgeTapped: onChangeGenderOrAgeTapped,
+            onBlockUserListTapped: onBlockUserListTapped,
+            onWithdrawTapped: onWithdrawTapped
         )
     }
 
@@ -196,14 +155,15 @@ public enum SettingFeatureFactory {
         return SettingProfilePublicView(viewModel: viewModel, onSaveSuccess: onSaveSuccess)
     }
 
+    /// 알림 설정 진입점. 하위 화면(완결/휴재복귀 알림 목록)도 여기서 만들지 않는다 — row 탭 콜백만
+    /// 올리고, 실제 조립은 호출자(App)가 `makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView`로 한다.
     @MainActor
     public static func makeNotificationSettingView(
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
-        loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
-        deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {}
+        onCompletionListTapped: @escaping () -> Void = {},
+        onHiatusReturnListTapped: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
@@ -212,10 +172,8 @@ public enum SettingFeatureFactory {
         )
         return NotificationSettingView(
             viewModel: viewModel,
-            loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
-            deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
-            logger: logger,
-            onBrowseNovels: onBrowseNovels
+            onCompletionListTapped: onCompletionListTapped,
+            onHiatusReturnListTapped: onHiatusReturnListTapped
         )
     }
 

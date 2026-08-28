@@ -10,9 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import ProfileDomain
-import SocialDomain
 import AuthDomain
-import NovelDomain
 import DesignSystem
 import WSSComponent
 import Logger
@@ -21,56 +19,32 @@ struct SettingAccountInfoView: View {
 
     @State private var viewModel: SettingAccountInfoViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var isChangeGenderOrAgePresented = false
-    @State private var isBlockUserListPresented = false
-    @State private var isWithdrawConfirmPresented = false
-    /// 성별/나이 변경 화면이 저장 성공으로 dismiss된 뒤, 돌아온 이 화면에서 띄운다.
-    @State private var isChangeSavedToastPresented = false
 
-    private let logger: Logger?
-    /// 탈퇴 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
-    /// 이 화면들을 모두 지나 호출자에게 성공 신호만 전달한다.
-    private let onWithdrawSuccess: () -> Void
     /// 로그아웃 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
     /// 이 화면은 성공 신호만 호출자에게 전달한다.
     private let onLogoutSuccess: () -> Void
-
-    // ProfileDomain
-    private let loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase
-    private let saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase
-
-    // SocialDomain
-    private let loadBlockedUsersUseCase: LoadBlockedUsersUseCase
-    private let unblockUserUseCase: UnblockUserUseCase
-
-    // AuthDomain
-    private let withdrawUseCase: WithdrawUseCase
-
-    // NovelDomain
-    private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
+    /// 성별/나이 변경 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeChangeGenderOrAgeView` 조립)
+    /// 은 호출자(App)가 수행한다 — "저장됨" 토스트도 그 전환을 조립하는 쪽이 `onSaveSuccess` 시점에 띄운다.
+    private let onChangeGenderOrAgeTapped: () -> Void
+    /// 차단유저 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeBlockUserListView` 조립)은
+    /// 호출자가 수행한다.
+    private let onBlockUserListTapped: () -> Void
+    /// 회원탈퇴 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeWithdrawFlowView` 조립)은
+    /// 호출자가 수행한다 — 확인→사유 2단계는 그 화면 안에서 여전히 로컬로 진행된다(`WithdrawFlowView` 참고).
+    private let onWithdrawTapped: () -> Void
 
     init(
         viewModel: SettingAccountInfoViewModel,
-        loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
-        saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
-        loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
-        unblockUserUseCase: UnblockUserUseCase,
-        withdrawUseCase: WithdrawUseCase,
-        loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
-        logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {},
-        onLogoutSuccess: @escaping () -> Void = {}
+        onLogoutSuccess: @escaping () -> Void = {},
+        onChangeGenderOrAgeTapped: @escaping () -> Void = {},
+        onBlockUserListTapped: @escaping () -> Void = {},
+        onWithdrawTapped: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
-        self.saveAccountInfoDraftUseCase = saveAccountInfoDraftUseCase
-        self.loadBlockedUsersUseCase = loadBlockedUsersUseCase
-        self.unblockUserUseCase = unblockUserUseCase
-        self.withdrawUseCase = withdrawUseCase
-        self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
-        self.logger = logger
-        self.onWithdrawSuccess = onWithdrawSuccess
         self.onLogoutSuccess = onLogoutSuccess
+        self.onChangeGenderOrAgeTapped = onChangeGenderOrAgeTapped
+        self.onBlockUserListTapped = onBlockUserListTapped
+        self.onWithdrawTapped = onWithdrawTapped
     }
 
     var body: some View {
@@ -93,31 +67,6 @@ struct SettingAccountInfoView: View {
         .onAppear {
             viewModel.handle(.load)
         }
-        .navigationDestination(isPresented: $isChangeGenderOrAgePresented) {
-            SettingFeatureFactory.makeChangeGenderOrAgeView(
-                loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
-                saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
-                logger: logger,
-                onSaveSuccess: { isChangeSavedToastPresented = true }
-            )
-        }
-        .navigationDestination(isPresented: $isBlockUserListPresented) {
-            SettingFeatureFactory.makeBlockUserListView(
-                loadBlockedUsersUseCase: loadBlockedUsersUseCase,
-                unblockUserUseCase: unblockUserUseCase,
-                logger: logger
-            )
-        }
-        .navigationDestination(isPresented: $isWithdrawConfirmPresented) {
-            SettingFeatureFactory.makeWithdrawFlowView(
-                loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
-                withdrawUseCase: withdrawUseCase,
-                logger: logger,
-                onWithdrawSuccess: onWithdrawSuccess
-            )
-        }
-        .showWSSToast(isPresented: $isChangeSavedToastPresented,
-                      type: .changeInfo)
         .showWSSAlert(
             isPresented: logoutAlertBinding,
                       type: .logout,
@@ -136,11 +85,11 @@ struct SettingAccountInfoView: View {
     private func select(_ menu: SettingMenu) {
         switch menu {
         case .changeGenderOrAge:
-            isChangeGenderOrAgePresented = true
+            onChangeGenderOrAgeTapped()
         case .blockUserList:
-            isBlockUserListPresented = true
+            onBlockUserListTapped()
         case .withdraw:
-            isWithdrawConfirmPresented = true
+            onWithdrawTapped()
         case .logout:
             viewModel.handle(.presentLogoutAlert)
         case .email:
@@ -228,13 +177,7 @@ private extension SettingAccountInfoView {
             viewModel: SettingAccountInfoViewModel(
                 loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
                 logoutUseCase: PreviewLogoutUseCase()
-            ),
-            loadLocalGenderAndBirthUseCase: PreviewLoadLocalGenderAndBirthUseCase(),
-            saveAccountInfoDraftUseCase: PreviewSaveAccountInfoDraftUseCase(),
-            loadBlockedUsersUseCase: PreviewLoadBlockedUsersUseCase(),
-            unblockUserUseCase: PreviewUnblockUserUseCase(),
-            withdrawUseCase: PreviewWithdrawUseCase(),
-            loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase()
+            )
         )
     }
 }
@@ -246,35 +189,5 @@ private struct PreviewLogoutUseCase: LogoutUseCase {
 private struct PreviewLoadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase {
     func execute() async throws(RepositoryError) -> AccountInfoDraft {
         AccountInfoDraft(email: "wss@websoso.kr", gender: .female, birth: try! BirthYear(2001))
-    }
-}
-
-private struct PreviewLoadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase {
-    func execute() async throws(RepositoryError) -> AccountInfoDraft {
-        AccountInfoDraft(email: nil, gender: .female, birth: try! BirthYear(2001))
-    }
-}
-
-private struct PreviewSaveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase {
-    func execute(_ info: AccountInfoDraft) async throws(RepositoryError) {}
-}
-
-private struct PreviewLoadBlockedUsersUseCase: LoadBlockedUsersUseCase {
-    func execute() async throws(RepositoryError) -> [BlockedUser] {
-        [BlockedUser(blockID: BlockID(1), userID: UserID(1), nickname: "구리스", profileImageURL: nil)]
-    }
-}
-
-private struct PreviewUnblockUserUseCase: UnblockUserUseCase {
-    func execute(id: BlockID) async throws(RepositoryError) {}
-}
-
-private struct PreviewWithdrawUseCase: WithdrawUseCase {
-    func execute(draft: WithdrawalReasonDraft) async throws(RepositoryError) {}
-}
-
-private struct PreviewLoadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase {
-    func execute() async throws(RepositoryError) -> RegisteredNovelStats {
-        RegisteredNovelStats(interest: 4, watching: 30, watched: 1312, quit: 24)
     }
 }

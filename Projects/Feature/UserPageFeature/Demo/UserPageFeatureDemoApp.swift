@@ -233,7 +233,10 @@ private enum DemoFactory {
                 blockUserUseCase: DemoBlockUserUseCase(),
                 reportSpoilerFeedUseCase: DemoReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
-                logger: consoleLogger
+                logger: consoleLogger,
+                onFeedListTapped: { userID, nickname, _ in
+                    consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
+                }
             )
         case .live:
             makeUserPageLiveView(userID: userID)
@@ -303,7 +306,10 @@ private enum DemoFactory {
             blockUserUseCase: DefaultBlockUserUseCase(repository: socialRepository),
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onFeedListTapped: { userID, nickname, _ in
+                consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
+            }
         )
     }
 
