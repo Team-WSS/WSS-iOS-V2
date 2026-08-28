@@ -17,9 +17,9 @@
 | ✅ **Keep** | V2가 **같은 관찰 동작**을 유지(구현·구조는 달라도 됨) | 맞으면 그대로 |
 | 🔧 **Improve** | V2가 V1의 버그·한계를 **의도적으로 고침**(근거 있음) | 근거 확인 |
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
-| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
+| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** — 2026-08-28 기준 **0건**(전부 판정 완료) |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- 회귀 후보였던 항목(판정 완료)과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/NovelReview/` = `WSSiOS/Source/Presentation/NovelReview/`.
 
@@ -123,7 +123,7 @@
 ### 2.4 저장 부수 작업(앱 리뷰 요청·노티피케이션·분석)
 
 - 🔧 **재도입 확정→TODO** (2026-08-28) — **저장 성공 후 App Store 리뷰 요청**. V1은 저장 성공 콜백에서 `AppReviewManager.shared.requestReview()`로 **iOS 앱 평점 요청 프롬프트**(StoreKit)를 띄웠다. **V2엔 없다.**
-  - **판정 포인트**: 앱 리뷰 요청을 되살릴지(리뷰 남긴 직후가 요청 적기) / 의도적으로 뺀 것인지. (분석·StoreKit 인프라 미이식으로 보이나 근거 미확인.)
+  - **판정 근거**: 되살리기로 확정(리뷰 남긴 직후가 요청 적기). 의도적 제외가 아니라 StoreKit 인프라 미이식 — `docs/TODO.md` 9절.
   - 근거: V1 `NovelReviewViewModel.swift:163`(`AppReviewManager.shared.requestReview()`) · V2 `NovelReviewViewModel.swift:257-267`(없음)
 - 🗑/✅ — **저장 성공 후 다른 화면 갱신**. V1은 `NotificationCenter.post(name: "NovelReviewed")`로 브로드캐스트해 작품 상세 등이 갱신하게 했다. V2는 노티 없이 **화면을 닫고, 복귀한 화면이 `onAppear` 재조회로 갱신**(탭 콘텐츠 갱신 계약)한다.
   - 관찰 동작(리뷰 저장 후 상세의 별점·읽기상태가 갱신됨)은 같은 결이나 **수단이 노티 → 재조회로 바뀌었다**. 상세가 실제로 갱신되는지는 상세 화면 계약과 함께 확인.
@@ -196,7 +196,7 @@
 - ✅ **Keep** — 라벨 문구 6종(세계관·소재·필력·캐릭터·관계·분위기)과 서버 토큰(`worldview`·`material`·`writingskill`·`character`·`relationship`·`vibe`)이 동일. (V2 표시명은 WSSComponent `DomainPresentation`.)
   - 근거: V1 `AttractivePoint.swift:10-40` · V2 `NovelReviewMapper.swift:193-204`(토큰), `NovelReviewView.swift:285`(`point.displayName`)
 - 🔨 **수정 확정→TODO** (2026-08-28: V1 순서로, 필력 3번째) — **가로 배열 순서가 다르다**. V1 `AttractivePoint.allCases` = `worldview·material·writingSkill(필력)·character·relationship·vibe`. V2 = `worldview·material·character·relationship·vibe·writingSkill(필력 마지막)`. 둘 다 `allCases`를 그대로 나열하므로 **6개 버튼의 나열 순서(특히 필력 위치)가 다르게 보인다**.
-  - **판정 포인트**: V2가 `AttractivePoint` enum을 재정렬(필력 마지막)한 결과가 리뷰 화면에도 반영된 것 — 의도된 순서인지(서재 필터는 "필력 마지막" 로컬 배열을 쓴다는 기록이 있으나 이 화면 순서에 대한 명문 근거는 없음) / 간과된 것인지.
+  - **판정 근거**: V2가 `AttractivePoint` enum을 재정렬(필력 마지막)한 결과가 리뷰 화면에 딸려온 것으로, 이 화면 순서에 대한 명문 근거가 없어 간과로 판정 → V1 순서(필력 3번째)로 되돌림.
   - 근거: V1 `AttractivePoint.swift:10-16`(allCases 순서), `NovelReviewAttractivePointView.swift:19-20`(allCases 나열) · V2 `BaseDomain/Sources/AttractivePoint.swift:12-17`, `NovelReviewView.swift:267`(allCases 나열)
 
 ---
@@ -252,7 +252,7 @@
 | `startDate` | 하차면 `nil`, 아니면 `yyyy-MM-dd` | `period?.start`를 `yyyy-MM-dd`(normalize가 하차 시작을 이미 제거) | ✅ Keep |
 | `endDate` | 보는중이면 `nil`, 아니면 `yyyy-MM-dd` | `period?.end`를 `yyyy-MM-dd`(normalize가 보는중 종료를 이미 제거) | ✅ Keep |
 | `attractivePoints` | 선택 `rawValue` 배열(최대 3) | `attractivePointString` 배열(동일 토큰) | ✅ Keep |
-| `keywordIds` | 선택 키워드 `keywordId` 배열(최대 20) | `keywords.map{$0.id.value}` — **화면 미연결이라 현재 항상 `[]`** | ❓ (7) |
+| `keywordIds` | 선택 키워드 `keywordId` 배열(최대 20) | `keywords.map{$0.id.value}` — **화면 미연결이라 현재 항상 `[]`** | 🔧 미배선 — 키워드 선택 화면 배선 대기 (7) |
 | POST vs PUT | 클라 추정(`status!=nil \|\| isInterest`) | POST 먼저 → `USER_NOVEL-002`면 PUT 폴백 | 🔧 Improve (2.3) |
 
 - 조회 응답 필드(`NovelReviewResult`): `novelTitle`·`status?`·`startDate?`·`endDate?`·`userNovelRating`·`attractivePoints`·`keywords`. V2 `NovelReviewResponse`와 동형이며 `status`가 nil이면 "초안 없음"(POST 대상)으로 본다. ✅ Keep.

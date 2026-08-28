@@ -17,9 +17,9 @@
 | ✅ **Keep** | V2가 **같은 관찰 동작**을 유지(구현·구조는 달라도 됨) | 맞으면 그대로 |
 | 🔧 **Improve** | V2가 V1의 버그·한계를 **의도적으로 고침**(근거 있음) | 근거 확인 |
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
-| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
+| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** — 2026-08-28 기준 **0건**(전부 판정 완료) |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- 회귀 후보였던 항목(판정 완료)과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/MyPageSetting/` = `WSSiOS/Source/Presentation/UserPage/MyPage/MyPageSetting/`.
 
@@ -40,7 +40,7 @@
 
 ## 0. 점검 대기 요약
 
-**회귀 후보 판정** — 각 항목 배지가 결과다(✅유지·🔧고치기·🗑삭제·⏳⏸보류). 배지 없는 항목은 `docs/TODO.md` 9·10절로 이관됐거나 아직 판정 대기다.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **탈퇴 요청 body에서 `refreshToken` 제거** — V1은 탈퇴 요청 body에 `{reason, refreshToken}`를 실었으나, V2는 `{reason}`만 싣는다(인증은 access 토큰 헤더로, 로컬 정리는 `clearTokens()`로). 경로는 둘 다 `/auth/withdraw`. **백엔드 V2 스펙이 body의 refreshToken을 요구하지 않는지 확인 필요.** → [7](#7-회원탈퇴-withdraw-flow--mypagedeleteid), [부록 A](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
    - **⏳ 보류(외부 확인, 2026-08-28): 백엔드 스펙 확인 후 확정.** V2 `/auth/withdraw`가 body에 refreshToken을 요구하는지 서버팀 확인 필요(외부 의존). 헤더 access 토큰 인증이면 현행이 맞다.
@@ -53,13 +53,13 @@
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 
-5. **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [4](#4-프로필-공개-설정-profilepublic--mypageprofilevisibility)
-6. **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [6.1](#61-활동-알림-토글)
-7. **V1은 로드/액션 실패에 사용자 피드백이 거의 없었다** — 계정정보 이메일 로드·차단목록 로드/해제·프로필 공개 로드·알림 로드·로그아웃·탈퇴 실패가 대부분 `print(error)`뿐이다. V2는 전면 `NetworkErrorView`(로드 실패) / 토스트(액션 실패)로 표현한다. → 각 화면 섹션.
+5. 🔧 **Improve** — **프로필 공개 저장 실패를 V1이 조용히 삼켰다** — V1은 공개 설정 저장(PATCH)이 실패해도 `.catch { .empty() }`로 삼키고 **성공한 것처럼 화면을 pop + `ChangeVisibility` 알림까지 발송**한다(실패 무피드백·상태 불일치 버그). V2는 실패 시 토스트를 띄우고 화면을 닫지 않는다. → [4](#4-프로필-공개-설정-profilepublic--mypageprofilevisibility)
+6. 🔧 **Improve** — **알림 토글이 V1은 서버 성공을 기다렸고 실패를 무시했다** — V1 활동 알림 토글은 **낙관 업데이트가 아니라** 서버 성공 응답을 받은 뒤에야 UI를 바꾸고, `onFailure` 처리가 없어 실패 시 아무 일도 안 일어난다. V2는 즉시 반영(낙관) + 실패 시 이전 값 롤백 + 토스트. → [6.1](#61-활동-알림-토글)
+7. 🔧 **Improve** — **V1은 로드/액션 실패에 사용자 피드백이 거의 없었다** — 계정정보 이메일 로드·차단목록 로드/해제·프로필 공개 로드·알림 로드·로그아웃·탈퇴 실패가 대부분 `print(error)`뿐이다. V2는 전면 `NetworkErrorView`(로드 실패) / 토스트(액션 실패)로 표현한다. → 각 화면 섹션.
 
 **🆕 V2 신규 (V1 대응 없음)**
 
-8. **완결 알림 / 휴재 복귀 알림 상세** — V2 알림 설정에 두 navigate 행(+`CompletionNotificationListView`·`HiatusReturnNotificationListView`)이 있으나 **아직 미배선 스텁**(`action: {}` TODO, 목록은 `ForEach(0..<10)` 하드코딩). V1엔 없다. Delete 아님 = 신규. → [6.2](#62-완결휴재-복귀-알림-행-신규-스텁)
+8. 🆕 **V2 신규(미배선 스텁)** — **완결 알림 / 휴재 복귀 알림 상세** — V2 알림 설정에 두 navigate 행(+`CompletionNotificationListView`·`HiatusReturnNotificationListView`)이 있으나 **아직 미배선 스텁**(`action: {}` TODO, 목록은 `ForEach(0..<10)` 하드코딩). V1엔 없다. Delete 아님 = 신규. → [6.2](#62-완결휴재-복귀-알림-행-신규-스텁)
 
 (나머지는 대부분 ✅ Keep — 구현 수단만 RxSwift·throttle·UINavigation → 구조적 동시성·guard 플래그·NavigationStack으로 바뀌고 관찰 동작은 같다.)
 
@@ -212,7 +212,7 @@
 
 - ✅ **Keep 확정** (2026-08-28, 조사: V1도 설정 메뉴 `MyPageSettingViewController`에서 띄움 = 동일 위치 — 0절 4) — V1 `StringLiterals.MyPage.PushNotification`에 기기 알림 유도 알럿 문구(`moveToSettingAlertTitle` "앱 알림을 켤까요?" 등)가 정의돼 있으나 **`MyPagePushNotificationViewController`는 이 문자열을 쓰지 않는다**(이 폴더 안에서 미사용). 실사용처는 설정 메뉴 목록 VC(`MyPageSettingViewController.swift:141`)로, V2 `SettingView`의 "알림 설정" 메뉴 탭 시점(#193)과 동일 위치 — 신규 배치 아님.
   - V2: 시스템 푸시 권한 확인·유도 알럿을 **`SettingView`가 "알림 설정" 메뉴 탭 순간** 처리한다(#193, `denied`면 이동 안 하고 `setAppNotification` 알럿만, `notDetermined`면 시스템 프롬프트 후 이동). `NotificationSettingView`는 자체 재확인을 하지 않는다(중복 방지). — 이 배치·계약은 `CLAUDE.md`에 명문화된 **의도된 설계**.
-  - 판정 포인트: V1이 이 알럿을 실제로 어디서(혹은 띄웠는지) — MyPage 호스트/홈 등 이 폴더 밖일 수 있어 대조 미완.
+  - **판정 근거**: 조사로 대조 완료 — V1은 `MyPageSettingViewController.swift:141`(설정 메뉴 목록)에서 띄웠고, V2 `SettingView` "알림 설정" 메뉴 탭 시점과 같은 위치다.
   - 근거: V1 `StringLiterals+MyPage.swift:138-146`(문구만, VC 미사용) · V2 `SettingViewModel.swift:80-93`, `SettingView.swift:146-163`, `CLAUDE.md`(#193 계약)
 
 ---
@@ -264,7 +264,7 @@
 |---|---|---|---|
 | 경로 | `/auth/withdraw` | `/auth/withdraw` | ✅ Keep |
 | body `reason` | 사유 문자열(프리셋 rawValue 또는 직접 입력 텍스트) | 동일(`AuthMapper.withdrawalReason`가 option→문자열 매핑) | ✅ Keep (오타 1건 7.3) |
-| body `refreshToken` | **포함** | **미포함** | ❓ (0-1) |
+| body `refreshToken` | **포함** | **미포함** | ⏳ 보류 — 백엔드 확인([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 1 · 0절 1) |
 | 인증 | access 토큰 헤더(`tokenCheckURLSession`) | access 토큰 헤더(`.requireToken`) | ✅ Keep |
 | 성공 후 로컬 | UserDefaults(userId·nickname·gender·accessToken·refreshToken) 제거 | `tokenStore.clearTokens()`(도메인 계약이 토큰·개인정보 정리 책임) | ✅ Keep (정리 위치 이동) |
 

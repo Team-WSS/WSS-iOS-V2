@@ -17,9 +17,9 @@
 | ✅ **Keep** | V2가 **같은 관찰 동작**을 유지(구현·구조는 달라도 됨) | 맞으면 그대로 |
 | 🔧 **Improve** | V2가 V1의 버그·한계를 **의도적으로 고침**(근거 있음) | 근거 확인 |
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
-| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
+| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** — 2026-08-28 기준 **0건**(전부 판정 완료) |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- 회귀 후보였던 항목(판정 완료)과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - 경로 접두사: V1 `…/NovelReview/` = `WSSiOS/Source/Presentation/NovelReview/`, V1 공용 `…/Base/KeywordLabel/` = `WSSiOS/Source/Presentation/Base/KeywordLabel/`. V2는 이 모듈 기준 상대경로.
 
@@ -40,18 +40,18 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 
 ## 0. 점검 대기 요약
 
-**회귀 후보 판정** — 각 항목 배지가 결과다(✅유지·🔧고치기·🗑삭제·⏳⏸보류). 배지 없는 항목은 `docs/TODO.md` 9·10절로 이관됐거나 아직 판정 대기다.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
-1. **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [5](#5-빈-화면-검색-결과-없음)
+1. 🔨 **오배선 수정 확정→TODO 9절** (2026-08-28: 범용 문의로 되돌림) — **빈 화면 "문의" 버튼의 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(노션 `…d0a0b0a`)를 여는데, 이 URL은 **V2에선 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab` — **다른 노션 페이지**)을 연다. V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의를 재사용"이라 적었으나, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지를 썼다** → 재사용 대상이 바뀐 셈. → [5](#5-빈-화면-검색-결과-없음)
 2. ✅ **Keep 확정** (2026-08-28: 사소, V2 유지 — 본문 4) — **선택할 때마다 키보드를 내리던 동작**(`endEditing`)이 V2엔 없다. V1은 트레이/검색결과/카테고리 어디서 키워드를 고르든 곧바로 키보드를 접었다. → [4](#4-선택)
-3. **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [9](#9-분석-analytics)
+3. 🔧 **횡단 이슈→TODO 9절** (Amplitude 재도입) — **Amplitude 분석 이벤트 미포팅.** V1은 문의 버튼 탭에 `AmplitudeEvent.Search.contactKeyword`를 기록했다. V2 이 모듈엔 분석 계층이 없다(앱 전반 미포팅 여부는 별개 확인). → [9](#9-분석-analytics)
 
 **🔧/🗑 눈에 띄는 의도적 변경 (의도 확인)**
 
-4. **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
-5. **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
-6. **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
-7. **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
+4. 🗑/🔧 **Delete(호출부 이관)·Improve(전달 방식)** — **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
+5. 🗑 **Delete(호출부 이관)** — **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
+6. 🔧 **Improve** — **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
+7. 🔧 **Improve** — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
 
 (나머지는 대부분 ✅ Keep — 수단만 RxSwift→구조적 동시성으로 바뀌고 관찰 동작은 같다.)
 
@@ -120,7 +120,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
   - V2: `isSearching && searchedKeywords.isEmpty`면 `WSSEmptyView(type: .keyword)`를 화면 정중앙(`maxHeight: .infinity`)에. V1은 `novelKeywordSelectEmptyView`(이미지+2줄 안내문+`contactButton`)를 `centerY`에.
   - 근거: V1 `…/NovelReviewAssistantView/NovelKeywordSelectEmptyView.swift:38-93`, `…/NovelKeywordSelectModalViewController.swift:134-139` · V2 `Sources/SearchKeywordView.swift:70-78`
 - 🔨 **오배선 수정 확정→TODO** (2026-08-28: 범용문의로 되돌림) — **문의 버튼 이동 URL이 다른 페이지다.** V1은 `ExternalLinks.inquiry`(`https://helpwebsoso.notion.site/…d0a0b0a`)를 열었는데, 이 URL은 **V2에서 `AppURL.errorReport`(오류 제보)** 와 동일 페이지다. V2 키워드 빈 화면은 대신 `AppURL.inquiryAddNovel`(작품 등록 문의, `…51edaab`)을 연다.
-  - **판정 포인트**: V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의 재사용"이라 하지만, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지**를 썼다 — 재사용 대상 페이지가 실제로 바뀌었다. 어느 페이지가 맞는지 확인 필요.
+  - **판정 근거**: V2 `CLAUDE.md`는 "키워드 전용 폼이 없어 작품 등록 문의 재사용"이라 하지만, **V1도 키워드 전용 폼이 아니라 범용 문의(≈오류 제보) 페이지**를 썼다 — 재사용 대상 페이지가 실제로 바뀐 오배선으로 판정 → 범용 문의로 되돌린다.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:215-223`(`ExternalLinks.inquiry` open), `WSSiOS/Resource/Constants/URLs/ExternalLinks.swift:12` · V2 `Sources/SearchKeywordView.swift:74-76`(`AppURL.inquiryAddNovel`), `Projects/Domain/BaseDomain/Sources/AppURL.swift:15,18`
 
 ## 6. 서치바 포커스·흰 배경
@@ -159,7 +159,7 @@ V2 `KeywordFeature`는 콘텐츠만 제공하고 이 껍데기를 전부 호출�
 ## 9. 분석 (Analytics)
 
 - 🔧 **횡단 이슈→TODO** (2026-08-28) — V1은 문의 버튼 탭에 **Amplitude 이벤트**(`AmplitudeEvent.Search.contactKeyword`)를 기록했다. V2 이 모듈엔 분석 계층이 없다.
-  - **판정 포인트**: V2 앱 전반에 분석이 (아직) 없어 생긴 일반적 미포팅인지, 이 지점만 누락인지. (앱 전체 정책이면 이 문서 범위 밖.)
+  - **판정 근거**: 앱 전반 애널리틱스 부재의 일부(이 지점만의 누락이 아님) → 이 문서 범위 밖, 횡단 재도입(`docs/TODO.md` 9절)으로 흡수.
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:217` · V2 `Sources/SearchKeywordView.swift:74-76`(분석 호출 없음)
 
 ---

@@ -17,9 +17,9 @@
 | ✅ **Keep** | V2가 **같은 관찰 동작**을 유지(구현·구조는 달라도 됨) | 맞으면 그대로 |
 | 🔧 **Improve** | V2가 V1의 버그·한계를 **의도적으로 고침**(근거 있음) | 근거 확인 |
 | 🗑 **Delete** | V2가 **의도적으로 제거**한 동작 | 정말 버릴지 확인 |
-| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** |
+| ❓ **Unknown** | 회귀일 수도, 의도일 수도 — **판정 대기** | **판정 필요** — 2026-08-28 기준 **0건**(전부 판정 완료) |
 
-- ❓ 항목과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
+- 회귀 후보였던 항목(판정 완료)과 눈에 띄는 🔧/🗑는 [0 점검 대기 요약](#0-점검-대기-요약)에 모아뒀다.
 - 근거는 **`repo@commit + 내부 경로`**로 남긴다(머신마다 다른 절대경로 금지). V1 스냅샷 기준 커밋: **`Team-WSS/WSS-iOS@eefcb9b2`**.
 - V1 경로 접두사 생략형: `…/NovelDetail/` = `WSSiOS/Source/Presentation/NovelDetail/`(하위 폴더가 깊어 파일명:줄로 인용 — 파일명은 유일).
   Data/Network는 `WSSiOS/Source/Data/…`·`WSSiOS/Network/…` 그대로.
@@ -44,14 +44,14 @@
 
 ## 0. 점검 대기 요약
 
-**회귀 후보 판정** — 각 항목 배지가 결과다(✅유지·🔧고치기·🗑삭제·⏳⏸보류). 배지 없는 항목은 `docs/TODO.md` 9·10절로 이관됐거나 아직 판정 대기다.
+**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 9절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **재진입 재조회 없음** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 `hasLoaded` 가드로 **1회만 로드**하고 재진입 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 V2가 직접 재로드하나, **다른 화면을 다녀온 뒤**(평가 작성·수정, 피드 수정, 피드 상세에서 좋아요)의 헤더 별점·읽기상태·키워드/그래프 집계 최신화가 사라졌을 수 있다. "1회 로드"는 V2 `CLAUDE.md`에 명문화됐으나 그 **부작용(외부 변경 후 stale)**은 별도 판정. → [1.1](#11-진입재조회생명주기)
    - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` 9.
 2. ✅ **Keep 확정** (2026-08-28: VM Task 슬롯 가드+NavigationStack로 해소, 순수 네비 중복만 App 몫 — 본문 6.1) — **더블탭 가드(throttle) 제거**: V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
 3. 🔧 **미배선(App 배선 대기·삭제 아님)** — **작가 검색 화면 라우팅 미구현**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
-4. **첫 감상평 안내 오버레이 제거** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
-5. **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
+4. 🔧 **재도입 검토→보류(디자인, [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 5)** — **첫 감상평 안내 오버레이 제거** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
+5. 🔧 **횡단 이슈→TODO 9절** (Amplitude 재도입) — **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
 
@@ -249,7 +249,7 @@
 - ✅ **Keep** (확정 2026-08-28: VM loadTask 가드+NavigationStack로 해소) — V1은 중복 발화를 막으려 곳곳에 **1초 throttle**을 걸었다: 관심 버튼, 피드작성/플로팅 버튼, 평가 결과 버튼, 피드 셀 선택, 피드 드롭다운, 뒤로가기.
   - V2: Task 슬롯 가드(`isSyncingInterest`·`feedsTask == nil`·`feedActionTask == nil`·`isClosing`)로 **서버 호출류의 중복은 막지만**, **순수 화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 빠른 더블탭 시 중복 push 방지는 App 배선에 달림.
   - 근거: V1 `NovelDetailViewModel.swift:280`,`290`,`310`,`320`,`382`,`407`, `NovelDetailViewController.swift:494` · V2 `NovelDetailViewModel.swift:241`,`254`,`293`,`301`(Task 가드), `NovelDetailView.swift`(전환 콜백 직접 발화)
-  - **판정 포인트**: 중복 push 가드가 App 네비게이션 계층에 있는지(서재·홈의 동일 ❓와 함께 볼 것).
+  - **판정 근거**: 서버 호출류는 VM Task 슬롯 가드, 화면 전환 중복은 `NavigationStack`이 막는다(서재·홈도 같은 결론으로 확정). 순수 네비 콜백의 중복 push 방지는 App 배선 몫.
 
 ### 6.2 작가 검색 진입
 
@@ -269,7 +269,7 @@
 - 🔧 **재도입 검토→TODO** (2026-08-28: 디자인 검토 대상) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
   - **V2엔 이 오버레이가 통째로 없다**(grep 0 — `firstReview`/`speechBalloon`/`showReviewFirst` 흔적 없음).
   - 근거: V1 `NovelDetailViewModel.swift:183-189`,`197-199`(hideFirstReviewDescription·UserDefaults), `NovelDetailView.swift:26-29`,`269-274`(오버레이 뷰) · V2 `Sources/**`(해당 코드 없음)
-  - **판정 포인트**: 온보딩 힌트를 되살릴지 / 없앤 게 의도인지(V2 디자인에서 제외됐을 가능성).
+  - **판정 근거**: 되살릴지는 디자인 판단 → 보류([`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 5). V2 디자인에서 제외됐을 가능성이 있어 개발 단독으로 닫지 않는다.
 
 ### 6.5 알림 관찰자 토스트
 
