@@ -63,16 +63,6 @@
     커버되는지 먼저 확인할 것.
 - **디자인**: [Figma — 업데이트 알럿](https://www.figma.com/design/QLYZA00K5EIozTroOTDYAU/%EC%9B%B9%EC%86%8C%EC%86%8C-%EB%94%94%EC%9E%90%EC%9D%B8?node-id=20238-24073&m=dev)
 
-### 3. `Info.plist`의 `KAKAO_API_KEY`(단수)가 정의되지 않은 채 남아있다
-
-- **무엇**: `Projects/App/Support/Info.plist`에 `KAKAO_API_KEY`(단수형) 키가 `$(KAKAO_API_KEY)`로 참조돼 있는데,
-  `Config/*.xcconfig` 어디에도 이 이름으로 정의된 값이 없다. #176에서 실제로 쓰는 건 별도로 추가한
-  `KAKAO_APP_KEY`(복수형, `Config_Shared.xcconfig`에 정의됨)다.
-- **결과**: 지금은 무해(빌드 시 빈 문자열로 치환될 뿐 크래시 없음)하지만, 이름이 비슷해 헷갈리기 쉽다.
-- **어디를 고치나**: `Projects/App/Support/Info.plist`에서 `KAKAO_API_KEY` 항목 제거(또는 실제로 필요한
-  용도가 있었는지 확인 후 `KAKAO_APP_KEY`로 통일).
-- **왜 지금 안 했나**: #176(온보딩 인트로) 범위 밖의 기존 잔재라 diff에 포함시키지 않았다(리뷰 중 발견, 2026-08).
-
 ### 4. 최종 이관(cutover) 시 운영 앱의 Bundle ID·서명 팀으로 교체해야 한다
 
 - **무엇**: WSS-iOS-V2는 지금 운영 중인 기존 앱을 **나중에 완전히 대체**할 새 프로젝트다(사용자 확정).
@@ -188,6 +178,20 @@
 - **놓치기 쉬운 것**: `onNovelTapped`는 VM을 거치지 않고 `CollectionDetailView`가 탭 즉시 직접
   호출한다(`NovelDetailFeature.onAuthorTapped`와 동일 패턴) — App 쪽에서 이 콜백을 받을 때도 VM
   상태를 개입시키려 하지 말 것.
+
+### 10. 콜드스타트 시 저장된 세션을 재사용하지 않는다
+
+- **무엇**: `ContentView.route`가 항상 `.onboarding`으로 시작한다(`@State private var route: Route = .onboarding`).
+  Keychain(`DefaultTokenStore`)에 유효한 토큰이 남아있어도 앱을 재실행하면 확인 없이 다시 인트로부터
+  시작한다.
+- **결과**: 로그인 성공 시 토큰이 저장되고 401 자동 갱신도 연결돼 있지만(#196), 그 지속성은 **같은
+  프로세스 안에서만** 유효하다 — 강제 종료 후 재실행하면 토큰이 살아있어도 도로 로그인해야 한다.
+- **어디를 고치나**: `ContentView.init` 또는 `body` 진입 시점에 `dependencies`가 들고 있는
+  `TokenStore`에서 기존 세션(access/refresh token) 유효 여부를 확인해, 있으면 `route`를 `.main`으로
+  시작하도록 분기를 추가한다.
+- **왜 지금 안 했나**: #196 체크리스트 범위 밖(사용자 확인, 2026-08) — `.main`이 여전히 placeholder라
+  세션을 복원해도 갈 곳이 없어 지금 체감 피해가 없다. 메인 탭이 실제로 생기는 후속 이슈에서 함께
+  다룬다.
 
 ## 열린 항목: AI 검증 체계(#205 축) 후속
 
