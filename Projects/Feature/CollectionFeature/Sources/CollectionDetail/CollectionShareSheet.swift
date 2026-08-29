@@ -32,6 +32,14 @@ struct CollectionSharePresenter: UIViewControllerRepresentable {
     let previewTitle: String
     let previewImage: UIImage?
 
+    /// 지금 떠 있는 컨테이너 — 중복 present 가드 + 완료 시 내리기용. `updateUIViewController`는 SwiftUI가
+    /// 여러 번 부르므로 호스트 VC가 아니라 여기서 "이미 떠 있음"을 판단한다.
+    final class Coordinator {
+        weak var presented: UIViewController?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeUIViewController(context: Context) -> UIViewController {
         let host = UIViewController()
         host.view.backgroundColor = .clear
@@ -41,17 +49,34 @@ struct CollectionSharePresenter: UIViewControllerRepresentable {
 
     func updateUIViewController(_ host: UIViewController, context: Context) {
         // 이미 떠 있거나(중복 present 방지) 아직 창에 안 붙었으면(present 불가) 건너뛴다.
-        guard isPresented, host.presentedViewController == nil, host.view.window != nil else { return }
+        guard isPresented, context.coordinator.presented == nil, host.view.window != nil else { return }
 
         let source = ShareItemSource(text: text, previewTitle: previewTitle, previewImage: previewImage)
-        let controller = UIActivityViewController(activityItems: [source], applicationActivities: nil)
+        let activity = UIActivityViewController(activityItems: [source], applicationActivities: nil)
         let isPresentedBinding = $isPresented
-        controller.completionWithItemsHandler = { _, _, _, _ in
+        let coordinator = context.coordinator
+        activity.completionWithItemsHandler = { _, _, _, _ in
             isPresentedBinding.wrappedValue = false
+            coordinator.presented = nil
         }
         // iPad는 popover로 뜨므로 anchor가 없으면 크래시한다.
-        controller.popoverPresentationController?.sourceView = host.view
-        host.present(controller, animated: true)
+        activity.popoverPresentationController?.sourceView = host.view
+
+        // ⚠️ 호스트 VC(SwiftUI 안에 묻힌 투명 child)에서 present하지 말고 **창의 최상위 VC**(루트 hosting
+        // controller, 그 위에 떠 있는 게 있으면 그것)에서 present한다 — 프레젠테이션 컨텍스트가 호스트가 되면
+        // 시트 모양·뒤 화면 처리가 어긋난다(실측). 시트 모양 자체(딤·그래버·detent)는 iOS 26 공유 시트가
+        // 스스로 정하며 우리 설정을 무시한다 — 컨테이너 VC에 child로 넣어 pageSheet로 강제하면 공유 시트가
+        // 창 전체를 흰 백드롭으로 덮어 앱 화면이 사라져 보인다(실측, `clipsToBounds`로도 못 막음). 그래서
+        // 모양은 시스템 기본에 맡긴다.
+        coordinator.presented = activity
+        topPresenter(from: host).present(activity, animated: true)
+    }
+
+    private func topPresenter(from host: UIViewController) -> UIViewController {
+        var presenter = host
+        while let parent = presenter.parent { presenter = parent }
+        while let presented = presenter.presentedViewController { presenter = presented }
+        return presenter
     }
 }
 

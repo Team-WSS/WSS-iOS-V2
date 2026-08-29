@@ -164,6 +164,12 @@
     시트 안의 X/완료가 UIKit 경로로 hosting 시트를 직접 내려 SwiftUI 표시 상태와 어긋나 **두 번째부터
     안 뜬다**(새 화면 인스턴스에서도, 앱 재시작 전까지). 표시 상태(`isSharePresented`)는 View 로컬
     `@State`, 종료는 프레젠터가 `completionWithItemsHandler`에서 내린다(안 내리면 다음 탭에 안 뜸).
+    - ⚠️ **시트 모양(딤·그래버·detent)은 iOS 26 공유 시트가 스스로 정하고 우리 설정을 무시한다** — 컴팩트
+      하단 패널이 시스템 기본이다(사용자는 "시트 같지 않다"고 느꼈지만 강제할 방법이 없었다, 2026-08-29 실측):
+      `activity.sheetPresentationController`에 detent를 줘도 무시되고, 컨테이너 VC에 child로 넣어 pageSheet로
+      띄우면 모양은 나오지만 **공유 시트가 창 전체를 흰 백드롭으로 덮어 앱 화면이 사라져 보인다**(빈 VC를
+      child로 넣으면 정상 → activity 고유 동작, `clipsToBounds`로도 못 막음). present는 호스트 VC가 아니라
+      `topPresenter(from:)`(창 최상위 VC)에서 한다. 옛 모양이 꼭 필요하면 iOS 버전별 분기부터 다시 볼 것.
     링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 본문에 앱스토어
     링크를 같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
     (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접
