@@ -74,8 +74,8 @@
   로그인해도 **다른 계정으로 인식**된다.
 - **결과**: 백엔드가 공유돼 있어 별도 계정 마이그레이션 로직은 필요 없지만, 아래 항목이 정확히 안 맞으면
   기존 유저의 Apple/Kakao 로그인이 "신규 가입"으로 잘못 처리된다.
-- **✅ 완료(2026-08-29, 코드 반영)**: V1(`/Users/seoyeon/Documents/Projects/WSS-iOS`)의 `project.pbxproj`를
-  직접 대조해 실제 값을 그대로 옮겼다.
+- **✅ 완료(2026-08-29, 코드 반영)**: V1 레포(별도 클론)의 `project.pbxproj`를 직접 대조해 실제 값을
+  그대로 옮겼다.
   - `Plugins/EnvironmentPlugin/ProjectDescriptionHelpers/ProjectEnvironment.swift`에
     `debugBundleId`/`releaseBundleId`/`appleDeveloperTeamID`(V1과 동일한 실제 값 — 값 자체는 `env`
     선언부 참고) 추가.
@@ -88,8 +88,7 @@
     서명 권한이 없음) — 평문 커밋 문제없음, V1도 동일하게 평문.
 - **어디를 고치나(남은 것, 컷오버 시점에)**:
   1. ~~Bundle ID 교체~~ ✅ 위에서 완료.
-  2. ~~`DEVELOPMENT_TEAM` 추가~~ ✅ 위에서 완료(단, **fastlane match는 아직 V2에 안 가져왔다** — 아래
-     참고).
+  2. ~~`DEVELOPMENT_TEAM` 추가~~ ✅ 위에서 완료(fastlane match도 이후 도입 완료 — 아래 참고).
   3. Apple Sign-in capability는 운영 Bundle ID의 App ID에 이미 켜져 있을 것 — 신규 등록 불필요, 확인만.
   4. Kakao Developers 콘솔의 해당 앱(App Key 그대로) → 플랫폼 → iOS에 운영 Bundle ID + **새로 서명한
      배포 인증서의 키해시**가 등록돼 있는지 확인/추가.

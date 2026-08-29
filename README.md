@@ -310,7 +310,7 @@ struct DefaultNotificationRepositoryTests {
 - `Architecture`: Clean Architecture 기반 멀티 모듈
 - `Test`: Swift Testing
 - `CI/CD`: GitHub Actions
-- `Dependencies`: 없음
+- `Dependencies`: 앱 런타임 의존성 없음(빌드 툴링 `fastlane`은 예외 — 루트 `CLAUDE.md` 참고)
 
 ```bash
 # Tuist 설치
