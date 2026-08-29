@@ -41,6 +41,14 @@ struct NovelDetailInfoTab: View {
 
     // MARK: - 작품 소개
 
+    /// 접힘 상태에서 보일 소개글 3줄의 실측 높이(펼침 애니메이션의 클램프 기준).
+    /// `lineLimit`을 애니메이션하면 접을 때 4번째 줄 이하가 뚝 사라져 부자연스럽다 —
+    /// KeywordFeature 카테고리 접기(`SearchKeywordView`)처럼 텍스트는 늘 전문을 그린 채
+    /// **프레임 높이만** 3줄↔전체로 애니메이션하고 `.clipped()`로 넘치는 줄을 부드럽게 여닫는다.
+    /// 3줄 높이는 Dynamic Type에 따라 달라져 고정하지 않고 숨은 3줄 사본을 GeometryReader로 실측한다
+    /// (초기값 67.5 = body2 줄높이 22.5 × 3 — 첫 프레임 깜빡임 방지용 seed, 실측이 곧 덮어쓴다).
+    @State private var collapsedDescriptionHeight: CGFloat = 67.5
+
     private var descriptionSection: some View {
         VStack(spacing: 0) {
             sectionTitle("작품 소개")
@@ -48,18 +56,43 @@ struct NovelDetailInfoTab: View {
             Text(information.description)
                 .applyWSSFont(.body2)
                 .foregroundStyle(Color.wssGray300.opacity(0.8))
-                .lineLimit(isDescriptionExpanded ? nil : 3)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: isDescriptionExpanded ? nil : collapsedDescriptionHeight, alignment: .top)
+                .clipped()
+                .background(alignment: .top) { descriptionHeightProbe }
                 .padding(.horizontal, 20)
-                .animation(.easeOut(duration: 0.2), value: isDescriptionExpanded)
             expandButton
         }
     }
 
-    /// 소개 펼침/접기. 접힘 상태는 3줄 제한 + 아래 방향 chevron(펼치면 반전).
+    /// 숨은 3줄 사본 — 보이는 소개글과 같은 폭·폰트로 그려 그 높이를 접힘 클램프 값으로 실측한다.
+    /// 소개글이 바뀌면(재진입 조용한 갱신 등) 높이가 달라져 `onChange`로 다시 잡는다.
+    private var descriptionHeightProbe: some View {
+        Text(information.description)
+            .applyWSSFont(.body2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { collapsedDescriptionHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in
+                            collapsedDescriptionHeight = height
+                        }
+                }
+            )
+            .hidden()
+    }
+
+    /// 소개 펼침/접기. 접힘 상태는 3줄 클램프 + 아래 방향 chevron(펼치면 반전).
+    /// 애니메이션은 `.animation(value:)`이 아니라 상태 변경을 `withAnimation`으로 감싸 건다
+    /// (KeywordFeature 접기와 동일 — 프레임 높이·chevron 회전이 한 트랜잭션에서 함께 움직인다).
     private var expandButton: some View {
         Button {
-            isDescriptionExpanded.toggle()
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isDescriptionExpanded.toggle()
+            }
         } label: {
             WSSImage.icChevronDown.swiftUIImage
                 .resizable()
@@ -68,7 +101,6 @@ struct NovelDetailInfoTab: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .contentShape(Rectangle())
-                .animation(.easeOut(duration: 0.2), value: isDescriptionExpanded)
         }
         .buttonStyle(.plain)
     }
