@@ -141,23 +141,20 @@
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
 
-### 8. 컬렉션 "공유하기" ✅구현됨(#228) / 남은 것: 타 탭에서 내 컬렉션 "수정" 무반응 + Universal Link
+### 8. 컬렉션 "공유하기" ✅구현됨(#228) / 남은 것: Universal Link(미설치자 랜딩)
 
 - **무엇(해소)**: "공유하기"가 **iOS 기본 공유 시트(`ShareLink`)** + `websoso://collections/{id}` 커스텀
   스킴 + 앱 내 라우팅(지금 선택된 탭 위에 push)으로 구현됐다(2026-08-29, 사용자 확정 — 처음 계획한
-  카카오 SDK 템플릿 공유는 폐기, SDK 추가 없음). 자세한 배선은 `App/CLAUDE.md` 딥링크 항목,
-  링크 형식은 `BaseDomain.DeepLink`.
-- **남은 것 ①**: 딥링크로 열린 컬렉션이 **내 것**이면 홈/피드/서재 탭에선 더보기 → "컬렉션 수정"이
-  무반응이다 — `CollectionDetailAssembly.onEditTapped` 기본값이 no-op이고 수정 트리는
-  `MypageRootView`에만 배선돼 있다(링크만으론 소유자를 몰라 탭을 미리 고를 수 없음). 선택지: (a) 세
-  탭에도 수정 트리(`editCollection`/`searchNovelForCollection`/`myLibrarySelectForCollection` +
-  `pendingCollectionNovelSelection`)를 배선, (b) `onEditTapped`가 nil이면 Feature가 메뉴에서 "수정"을
-  숨김, (c) 감수(내 링크를 내가 여는 건 드묾). 미결정.
-- **남은 것 ②**: 커스텀 스킴이라 **앱 미설치자는 링크를 열어도 아무것도 안 된다**(메시지 앱에 따라
-  링크로 인식조차 안 될 수 있음). 웹 랜딩 + Universal Link(`https://…`)는 백엔드/웹 몫이라
-  `docs/PENDING_DECISIONS.md` 후보.
-- **어디를 고치나**: ①은 `Projects/App/Sources/{Home,Feed,Library}/*RootView.swift`(+ (b)면
-  `CollectionDetailView`), ②는 `BaseDomain/DeepLink.swift` + App `Info.plist`/entitlements.
+  카카오 SDK 템플릿 공유는 폐기, SDK 추가 없음). 공유 미리보기엔 대표 표지(`WSSImageLoader`)가 붙고,
+  메시지 본문에 앱스토어 링크(`AppURL.appStore`)를 같이 실어 미설치자에게 설치 경로를 준다. 딥링크로
+  열린 "내" 컬렉션의 수정 트리는 4탭 전부 배선됐다(`CollectionEditAssembly`). 자세한 배선은
+  `App/CLAUDE.md` 딥링크 항목, 링크 형식은 `BaseDomain.DeepLink`.
+- **남은 것**: 커스텀 스킴이라 **앱 미설치자가 링크 자체를 탭하면 아무것도 안 된다**(메시지 앱에 따라
+  링크로 인식조차 안 될 수 있음) — 지금은 메시지에 딸린 앱스토어 링크가 유일한 설치 경로다. 한 링크로
+  "설치됨→앱, 미설치→스토어/웹"을 자동 분기하려면 웹 랜딩 + Universal Link(`https://…`, AASA 호스팅 +
+  Associated Domains entitlement)가 필요하고 이건 백엔드/웹 몫이라 `docs/PENDING_DECISIONS.md` 후보.
+- **어디를 고치나**: `BaseDomain/DeepLink.swift`(https 형식 추가) + App `Info.plist`/entitlements +
+  `CollectionDetailView.shareMessage(for:)`(앱스토어 줄 제거).
 
 ### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다(+ 로그아웃 상태에서 탭바가 순간 노출된다)
 

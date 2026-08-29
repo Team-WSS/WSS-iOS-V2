@@ -154,12 +154,18 @@
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
   - **"공유하기"는 iOS 기본 공유 시트(`ShareLink`)다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK
     템플릿 공유는 폐기)**. 공유 항목은 `BaseDomain.DeepLink.collectionDetail(id).url`
-    (`websoso://collections/{id}`) 하나 + 메시지 문구("웹소소에서 '{이름}' 컬렉션을 확인해보세요") +
-    `SharePreview(이름)`. 링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다
-    (미설치자는 아무것도 못 봄 — Universal Link는 별도 후속). 받는 쪽 라우팅은 App 몫
+    (`websoso://collections/{id}`) 하나 + 메시지 2줄("웹소소에서 '{이름}' 컬렉션을 확인해보세요" +
+    "앱이 없다면 여기서 설치: {`AppURL.appStore`}") + `SharePreview(이름, image: 대표 표지)`. 링크는 웹
+    랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 메시지에 앱스토어 링크를
+    같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
     (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접
     `ShareLink`를 그린다(`onNovelTapped`와 같은 위상). 카카오톡은 SDK 없이도 기기에 설치돼 있으면
     시트 안에 자동으로 나열된다.
+    - 미리보기 표지는 `heroImageURL`(히어로와 같은 대표 표지)을 `WSSComponent.WSSImageLoader`로 받아
+      `@State shareCoverImage: Image?`에 둔다(`.task(id: heroImageURL)` — detail 로드·수정 복귀마다 갱신).
+      **`SharePreview`는 image 유무로 이니셜라이저가 갈려**(제네릭 `Transferable`) `shareButton`이 두 분기를
+      갖는다 — 표지 로드 전/실패엔 제목만으로 미리보기한다. `AsyncImage`로 그리는 히어로와 캐시를 공유하진
+      않지만(히어로는 raw `AsyncImage`) 같은 URL이라 URLCache 히트로 빠르다.
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를

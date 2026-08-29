@@ -13,7 +13,7 @@
 - 공통 값 타입: `Rating`, `NovelGenre`, `Author`, `ReadingStatus`, `ReadingPeriod`, `SortType`, `AttractivePoint`, `ConnectedNovel`.
 - **Novel 서브도메인** (`Novel/`): `Novel` Entity(관심 등록 정책 포함) + `NovelPublicationStatus`. 원래 `NovelDomain` 소유였으나 `NovelDomain`(서재·상세)과 `SearchDomain`(작품 검색) 양쪽이 참조해야 해서 이곳으로 승격했다(작품 검색을 `SearchDomain`으로 옮긴 리팩토링, 관련 배경은 `SearchDomain/CLAUDE.md` 참고).
 - **Keyword 서브도메인** (`Keyword/`): `Keyword`, `KeywordCategory`(카테고리 enum), `KeywordGroup`(`category` + `keywords`), `PopularKeywords` Entity + `KeywordRepository` + `SearchKeywordsUseCase`/`LoadTotalKeywordsUseCase`(전부 `Keyword/` 하위로 통합됨).
-- **`AppURL`** — 앱 전역 외부 웹 링크 카탈로그(예: 작품 등록 문의, 오류 제보 노션 폼). Data가 아니라 여기 있는 이유: Feature는 Data를 import할 수 없어서(`App → Feature → Domain ← Data`), Feature가 직접 참조 가능한 곳이 BaseDomain뿐이다. 순수 `URL?` 상수 나열 — 네트워크 호출·설정 로딩 없음(그런 게 필요해지면 BaseData의 `NetworkingConfig`처럼 Data 레이어로 옮길 것).
+- **`AppURL`** — 앱 전역 외부 웹 링크 카탈로그(예: 작품 등록 문의, 오류 제보 노션 폼). Data가 아니라 여기 있는 이유: Feature는 Data를 import할 수 없어서(`App → Feature → Domain ← Data`), Feature가 직접 참조 가능한 곳이 BaseDomain뿐이다. 순수 `URL?` 상수 나열 — 네트워크 호출·설정 로딩 없음(그런 게 필요해지면 BaseData의 `NetworkingConfig`처럼 Data 레이어로 옮길 것). `appStore`(#228)는 앱스토어 ID 리터럴을 품는다 — `Config_Shared.xcconfig`의 `APPSTORE_ID`와 같은 값이지만 Feature는 App Info.plist를 못 읽고 Demo엔 그 키가 없어 여기 상수로 둔다(ID가 바뀌면 두 곳을 같이 고칠 것).
 - **`DeepLink`**(#228) — `websoso://` 커스텀 스킴 딥링크의 **생성(`url`)과 파싱(`init?(url:)`)을 한 타입에** 둔다. 만드는 쪽(Feature의 공유 버튼)과 받는 쪽(App `onOpenURL`)이 같은 규칙을 봐야 어긋나지 않아서다 — 새 딥링크 화면을 추가할 땐 case를 늘리고 **양쪽을 같은 커밋에서** 고칠 것(App의 4탭 Root `switch`가 exhaustive라 컴파일러가 잡아준다). `AppURL`과 같은 이유로 여기 있다(Feature가 참조 가능한 유일한 공통 자리). 형식은 `websoso://<host>/<정수 id>` 하나뿐이고 스킴·host는 대소문자 무시. 스킴 등록은 App `Info.plist`.
 
 ## 주의사항 (작업 중 발견 시 누적)

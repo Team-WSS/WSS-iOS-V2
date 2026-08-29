@@ -25,4 +25,10 @@ public enum AppURL: Sendable {
 
     /// 서비스 이용약관 노션 페이지.
     public static let serviceAgreement = URL(string: "https://websoso.notion.site/143600bd74688050be18f4da31d9403e?pvs=4")
+
+    /// 앱스토어 상품 페이지 — 공유 메시지의 "앱이 없다면 설치" 폴백(#228). 커스텀 스킴(`DeepLink`)은 미설치
+    /// 기기에서 아무 데도 못 가므로 메시지 본문에 이 링크를 함께 실어 설치 경로를 준다. ID는
+    /// `Config_Shared.xcconfig`의 `APPSTORE_ID`(운영 V1 앱)와 같은 값 — Feature는 App의 Info.plist를 못 읽고
+    /// Demo엔 그 키가 없어 상수로 둔다. 컷오버 후에도 같은 앱을 대체하므로 값은 유지된다(`docs/TODO.md` 4절).
+    public static let appStore = URL(string: "https://apps.apple.com/app/id6738299124")
 }

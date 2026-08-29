@@ -66,6 +66,9 @@ Sources/
 ├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
 │                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
 └── Collection/
+    ├── CollectionEditAssembly.swift    # 컬렉션 수정 트리(수정→작품 추가→서재에서 추가) 조립 공용 헬퍼 —
+    │                                     # 딥링크(#228)로 어느 탭에서든 내 컬렉션이 열려 4탭 전부 사용.
+    │                                     # pop 핸들러·pendingCollectionNovelSelection은 각 Root 소유.
     ├── CollectionDetailAssembly.swift  # 컬렉션 상세 조립 공용 헬퍼 — 마이페이지 "내 컬렉션" 목록뿐
     │                                     # 아니라 4탭의 타유저 프로필 컬렉션 미리보기도 공유(#201 후속).
     │                                     # onEditTapped 기본값은 no-op — 타유저 컬렉션은 항상
@@ -279,11 +282,12 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     열겠습니까?" 확인 다이얼로그를 먼저 띄우므로(커스텀 스킴 정책) `snapshot_ui`로 "열기"를 탭해야 앱에
     URL이 전달된다. 전달 여부는 시뮬레이터 로그 `Opening URL (websoso://…) with kr.websoso.app.WSS-iOS`
     로 확인(`xcrun simctl spawn <udid> log show --last 1m --predicate 'eventMessage CONTAINS "websoso://"'`).
-  - ⚠️ **딥링크로 열린 컬렉션이 "내" 컬렉션이면 홈/피드/서재 탭에선 더보기 → "컬렉션 수정"이 무반응이다** —
-    `CollectionDetailAssembly.onEditTapped` 기본값이 no-op이고(원래 그 세 탭은 타유저 컬렉션만 열려
-    `isMine == false`가 보장됐다), 수정 트리(수정→작품 추가→서재에서 추가 + `pendingCollectionNovelSelection`)는
-    `MypageRootView`에만 배선돼 있다. 링크만으론 소유자를 알 수 없어 탭을 미리 고를 수도 없다 — 미해결
-    (`docs/TODO.md` 8절).
+  - **딥링크로 열린 컬렉션이 "내" 컬렉션일 수 있으므로 4탭 전부 컬렉션 수정 트리를 갖는다** — 처음엔
+    `MypageRootView`에만 있었고 홈/피드/서재의 `CollectionDetailAssembly.onEditTapped`는 no-op 기본값이라
+    (그 세 탭은 타유저 컬렉션만 열려 `isMine == false`가 보장됐었다) 딥링크 도입 직후 "수정" 메뉴가 죽은
+    버튼이 됐다(사용자 확정으로 배선 선택, 2026-08-29). 조립은 `CollectionEditAssembly`로 뽑았고, 각 Root는
+    `Destination` 3케이스 + `pendingCollectionNovelSelection` + pop 핸들러(1단계/2단계)만 갖는다. **링크만으론
+    소유자를 알 수 없어 탭을 미리 고를 수 없다** — 그래서 "My 탭으로 보내기"가 아니라 4탭 배선이다.
 - **"다른 탭으로 전환"은 push가 아니라 `MainTabView`의 `TabView(selection:)`을 바꾸는 별개 경로다**
   (마이페이지 서재 블록 탭 → 서재 탭, #196) — `MainTabView`가 `private enum Tab`과
   `@State private var selectedTab`을 갖고 각 탭 콘텐츠에 `.tag(Tab.xxx)`를 건 뒤, 필요한 탭 Root에

@@ -423,14 +423,11 @@ private extension MypageRootView {
         )
     }
 
+    /// 수정 트리 조립은 `CollectionEditAssembly`(#228부터 4탭 공용 — 딥링크로 다른 탭에서도 내 컬렉션이 열린다).
     func editCollectionView(id: CollectionID) -> some View {
-        CollectionFeatureFactory.makeEditCollectionView(
+        CollectionEditAssembly.makeEditView(
             id: id,
-            updateCollectionUseCase: DefaultUpdateCollectionUseCase(collectionRepository: dependencies.collectionRepository),
-            loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(
-                collectionRepository: dependencies.collectionRepository
-            ),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             pendingNovelSelection: $pendingCollectionNovelSelection,
             onAddNovelTapped: handleCollectionAddNovelTapped,
             onAuthenticationRequired: onAuthenticationRequired
@@ -448,10 +445,9 @@ private extension MypageRootView {
     }
 
     func collectionSearchNovelView(initialSelection: [CollectionNovel]) -> some View {
-        CollectionFeatureFactory.makeSearchNovelView(
+        CollectionEditAssembly.makeSearchNovelView(
             initialSelection: initialSelection,
-            searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             onConfirm: handleCollectionSearchNovelConfirm,
             onLibrarySelectTapped: handleCollectionLibrarySelectTapped,
             onAuthenticationRequired: onAuthenticationRequired
@@ -459,13 +455,9 @@ private extension MypageRootView {
     }
 
     func collectionMyLibrarySelectView(initialSelection: [CollectionNovel]) -> some View {
-        CollectionFeatureFactory.makeMyLibrarySelectView(
+        CollectionEditAssembly.makeMyLibrarySelectView(
             initialSelection: initialSelection,
-            loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
-                novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
-            ),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             onConfirm: handleCollectionLibrarySelectConfirm,
             onAuthenticationRequired: onAuthenticationRequired
         )

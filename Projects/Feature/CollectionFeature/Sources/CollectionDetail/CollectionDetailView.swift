@@ -27,6 +27,9 @@ struct CollectionDetailView: View {
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
+    /// 공유 시트 미리보기(`SharePreview`)에 붙일 대표 표지 — 히어로와 같은 URL(`heroImageURL`)을
+    /// `WSSImageLoader`로 받아둔다(#228). 로드 전/실패면 제목만으로 미리보기한다(`shareButton` 참고).
+    @State private var shareCoverImage: Image?
     @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
@@ -132,6 +135,10 @@ struct CollectionDetailView: View {
                 hasAppearedOnce = true
                 viewModel.handle(.load)
             }
+        }
+        // 대표 표지가 정해지는(=detail 로드/수정 복귀) 시점마다 공유 미리보기용 이미지를 갱신한다.
+        .task(id: heroImageURL) {
+            shareCoverImage = await loadShareCoverImage()
         }
     }
 }
@@ -362,15 +369,44 @@ private extension CollectionDetailView {
     @ViewBuilder
     func shareButton(_ detail: CollectionDetail) -> some View {
         if let url = DeepLink.collectionDetail(detail.id).url {
-            ShareLink(
-                item: url,
-                message: Text("웹소소에서 '\(detail.name)' 컬렉션을 확인해보세요"),
-                preview: SharePreview(detail.name)
-            ) {
-                shareButtonLabel
+            // `SharePreview`는 image 유무로 이니셜라이저가 갈려(제네릭 Transferable) 분기가 둘이다 —
+            // 표지가 아직 안 왔거나 실패했으면 제목만으로 미리보기한다.
+            if let shareCoverImage {
+                ShareLink(
+                    item: url,
+                    message: shareMessage(for: detail),
+                    preview: SharePreview(detail.name, image: shareCoverImage)
+                ) {
+                    shareButtonLabel
+                }
+                .buttonStyle(.plain)
+            } else {
+                ShareLink(
+                    item: url,
+                    message: shareMessage(for: detail),
+                    preview: SharePreview(detail.name)
+                ) {
+                    shareButtonLabel
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    /// 커스텀 스킴(`websoso://`)은 앱이 없는 기기에선 아무 데도 못 가므로, 메시지 본문에 앱스토어 링크를
+    /// 함께 실어 설치 경로를 준다(#228, `AppURL.appStore`).
+    func shareMessage(for detail: CollectionDetail) -> Text {
+        var lines = ["웹소소에서 '\(detail.name)' 컬렉션을 확인해보세요"]
+        if let appStore = AppURL.appStore {
+            lines.append("앱이 없다면 여기서 설치: \(appStore.absoluteString)")
+        }
+        return Text(lines.joined(separator: "\n"))
+    }
+
+    /// 공유 미리보기용 대표 표지 — 히어로와 같은 URL을 `WSSImageLoader`(공유 캐시)로 받는다.
+    func loadShareCoverImage() async -> Image? {
+        guard let url = heroImageURL, let uiImage = await WSSImageLoader.load(url) else { return nil }
+        return Image(uiImage: uiImage)
     }
 
     var shareButtonLabel: some View {

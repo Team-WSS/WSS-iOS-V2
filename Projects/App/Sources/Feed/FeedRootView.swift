@@ -56,6 +56,11 @@ struct FeedRootView: View {
         /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`,
         /// "내 컬렉션" 탭만 보이는 모드).
         case collectionList(UserID)
+        /// 컬렉션 수정 트리(#228) — 딥링크로 "내" 컬렉션 상세가 이 탭 위에 열릴 수 있어 `MypageRootView`와
+        /// 같은 3케이스를 둔다(조립은 `CollectionEditAssembly`). 진입 선택 스냅샷은 반드시 path payload로.
+        case editCollection(CollectionID)
+        case searchNovelForCollection([CollectionNovel])
+        case myLibrarySelectForCollection([CollectionNovel])
         case authorSearch(String)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
     }
@@ -69,6 +74,9 @@ struct FeedRootView: View {
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+    /// "작품 추가"/"서재에서 추가" 확정 결과를 컬렉션 수정 화면에 돌려주는 1회성 nil→값 채널(#228,
+    /// `MypageRootView`와 동일 — 확정(return) 값이라 `Destination` 레이스 대상이 아니다).
+    @State private var pendingCollectionNovelSelection: [CollectionNovel]?
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -139,7 +147,8 @@ struct FeedRootView: View {
                             id: id,
                             dependencies: dependencies,
                             onAuthenticationRequired: onAuthenticationRequired,
-                            onNovelTapped: { path.append(Destination.novel($0)) }
+                            onNovelTapped: { path.append(Destination.novel($0)) },
+                            onEditTapped: { path.append(Destination.editCollection(id)) }
                         )
                     case .collectionList(let userID):
                         CollectionListAssembly.makeView(
@@ -148,6 +157,12 @@ struct FeedRootView: View {
                             onAuthenticationRequired: onAuthenticationRequired,
                             onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
                         )
+                    case .editCollection(let id):
+                        editCollectionView(id: id)
+                    case .searchNovelForCollection(let initialSelection):
+                        collectionSearchNovelView(initialSelection: initialSelection)
+                    case .myLibrarySelectForCollection(let initialSelection):
+                        collectionMyLibrarySelectView(initialSelection: initialSelection)
                     case .authorSearch(let authorName):
                         authorSearchView(authorName)
                     case .novelReview(let novelID, let title, let status):
@@ -171,6 +186,62 @@ struct FeedRootView: View {
             }
             onDeepLinkConsumed()
         }
+    }
+}
+
+// MARK: - 컬렉션 수정 (#228 — 딥링크로 "내" 컬렉션이 이 탭 위에 열릴 수 있어 4탭 공통. 조립은
+// `CollectionEditAssembly`, pop 핸들러만 이 Root가 갖는다 — `MypageRootView`와 동일 구조)
+
+private extension FeedRootView {
+    func editCollectionView(id: CollectionID) -> some View {
+        CollectionEditAssembly.makeEditView(
+            id: id,
+            dependencies: dependencies,
+            pendingNovelSelection: $pendingCollectionNovelSelection,
+            onAddNovelTapped: handleCollectionAddNovelTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func collectionSearchNovelView(initialSelection: [CollectionNovel]) -> some View {
+        CollectionEditAssembly.makeSearchNovelView(
+            initialSelection: initialSelection,
+            dependencies: dependencies,
+            onConfirm: handleCollectionSearchNovelConfirm,
+            onLibrarySelectTapped: handleCollectionLibrarySelectTapped,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    func collectionMyLibrarySelectView(initialSelection: [CollectionNovel]) -> some View {
+        CollectionEditAssembly.makeMyLibrarySelectView(
+            initialSelection: initialSelection,
+            dependencies: dependencies,
+            onConfirm: handleCollectionLibrarySelectConfirm,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// "작품 추가" 타일 탭 → 검색 화면으로 push. 현재 선택을 path payload로 그대로 실어 보낸다.
+    func handleCollectionAddNovelTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.searchNovelForCollection(currentSelection))
+    }
+
+    /// 검색 화면의 "완료" 확정 → 수정 화면까지 1단계 pop, 결과는 `pendingCollectionNovelSelection`으로.
+    func handleCollectionSearchNovelConfirm(_ novels: [CollectionNovel]) {
+        pendingCollectionNovelSelection = novels
+        path.removeLast(1)
+    }
+
+    /// 검색 화면의 "서재에서 추가" 탭 → 서재 선택 화면으로 push.
+    func handleCollectionLibrarySelectTapped(_ currentSelection: [CollectionNovel]) {
+        path.append(Destination.myLibrarySelectForCollection(currentSelection))
+    }
+
+    /// 서재 선택 화면의 "추가" 확정 → 수정 화면까지 2단계 pop(`CollectionFeature/CLAUDE.md` "2단계 pop" 정본).
+    func handleCollectionLibrarySelectConfirm(_ novels: [CollectionNovel]) {
+        pendingCollectionNovelSelection = novels
+        path.removeLast(2)
     }
 }
 
