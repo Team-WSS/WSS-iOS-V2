@@ -78,3 +78,15 @@ Tuist/.build
 # ArchLint(A2 아키텍처 검사기) 빌드 산출물 — Package.resolved는 핀 고정 위해 커밋한다.
 Tooling/ArchLint/.build
 Tooling/ArchLint/.swiftpm
+
+### fastlane (V1과 동일 관례 — 인증서·API 키 절대 커밋 금지)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+fastlane/FastlaneRunner
+fastlane/.env
+fastlane/*.p8
+
+# build_app(gym) 산출물 — 레포 루트에 생긴다(archive-debug/archive-release 스킬 실행 시 실측).
+*.ipa
