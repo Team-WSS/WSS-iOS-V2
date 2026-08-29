@@ -226,11 +226,19 @@ final class NovelDetailViewModel {
 
 private extension NovelDetailViewModel {
 
-    /// 진입 시 상세 로드. onAppear는 재진입마다 불리므로 성공 후에는 다시 로드하지 않되,
-    /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
+    /// 진입/재진입 상세 로드. onAppear는 재진입마다 불린다.
+    /// - **첫 로드**(`!hasLoaded`): 전면 스피너를 세우고 로드한다.
+    /// - **재진입**(`hasLoaded`): 스피너 없이 **조용히 재조회**해 `information`만 갈아끼운다 —
+    ///   평가 화면(push) 등에서 바뀐 유저 평가·별점·독자 평가 집계를 복귀 즉시 반영하기 위함.
+    ///   `loadNovel`이 `information`/`novel`만 교체하고 피드·페이지네이션·스크롤은 안 건드리며,
+    ///   `isLoading`을 올리지 않아 기존 화면이 유지된 채 새 데이터가 오면 갈아끼워진다(깜빡임 없음).
+    ///   재조회가 실패해도 기존 화면을 그대로 두고 전면 실패 뷰로 덮지 않는다(백그라운드 갱신이므로).
+    /// 실패는 가드(`hasLoaded`)를 소진하지 않아 재진입 시 재시도가 열려 있다.
     func load() {
-        guard !hasLoaded, loadTask == nil, !isClosing else { return }
-        state.isLoading = true
+        guard loadTask == nil, !isClosing else { return }
+        if !hasLoaded {
+            state.isLoading = true
+        }
         loadTask = Task { await loadNovel() }
     }
 
