@@ -61,6 +61,10 @@ struct FeedRootView: View {
     }
 
     let dependencies: AppDependencies
+    /// 앱 밖에서 들어온 딥링크(#228) — `MainTabView`가 이 탭이 선택돼 있을 때만 값을 준다. 받으면 스택
+    /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(`HomeRootView`와 동일 규칙).
+    let deepLink: DeepLink?
+    let onDeepLinkConsumed: () -> Void
     /// 이 화면이 push하는 작품 상세의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다.
     let onAuthenticationRequired: () -> Void
 
@@ -158,6 +162,14 @@ struct FeedRootView: View {
                 }
                 .toolbar(.hidden, for: .tabBar)
             }
+        }
+        .onChange(of: deepLink, initial: true) { _, deepLink in
+            guard let deepLink else { return }
+            switch deepLink {
+            case .collectionDetail(let id):
+                path.append(Destination.collectionDetail(id))
+            }
+            onDeepLinkConsumed()
         }
     }
 }

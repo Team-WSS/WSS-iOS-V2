@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+import BaseDomain
 import DesignSystem
 
 /// 온보딩(로그인~가입) 완료 후 진입하는 메인 화면 — 홈 / 피드 / 서재 / My, 4개 탭.
@@ -22,6 +23,11 @@ struct MainTabView: View {
     }
 
     let dependencies: AppDependencies
+    /// 앱 밖에서 들어온 딥링크(`WSSIOSV2App.onOpenURL`, #228) — **지금 선택된 탭**의 스택 위에 바로 push한다
+    /// (사용자 확정 — 앱을 쓰던 중이면 보던 화면에서 곧장 넘어가고, 콜드 스타트면 기본 탭인 홈 위).
+    /// `TabView`는 4탭 Root를 전부 동시에 mount하므로 값을 전부에게 주면 4번 push된다 — 선택된 탭에만
+    /// 건네고(`deepLink(for:)`), 그 탭이 소비하면 nil로 되돌린다.
+    @Binding var pendingDeepLink: DeepLink?
     /// 어느 탭에서 발생했든 인증 만료는 같은 곳(온보딩 루트)으로 되돌린다 — idempotent해야 한다
     /// (여러 탭이 동시에 API를 호출 중이면 시간차로 여러 번 불릴 수 있음, `HomeFeature`/`LibraryFeature`와 동일 계약).
     let onAuthenticationRequired: () -> Void
@@ -30,26 +36,56 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeRootView(dependencies: dependencies, onAuthenticationRequired: onAuthenticationRequired)
-                .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome) }
-                .tag(Tab.home)
+            HomeRootView(
+                dependencies: dependencies,
+                deepLink: deepLink(for: .home),
+                onDeepLinkConsumed: consumeDeepLink,
+                onAuthenticationRequired: onAuthenticationRequired
+            )
+            .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome) }
+            .tag(Tab.home)
 
-            FeedRootView(dependencies: dependencies, onAuthenticationRequired: onAuthenticationRequired)
-                .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed) }
-                .tag(Tab.feed)
+            FeedRootView(
+                dependencies: dependencies,
+                deepLink: deepLink(for: .feed),
+                onDeepLinkConsumed: consumeDeepLink,
+                onAuthenticationRequired: onAuthenticationRequired
+            )
+            .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed) }
+            .tag(Tab.feed)
 
-            LibraryRootView(dependencies: dependencies, onAuthenticationRequired: onAuthenticationRequired)
-                .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary) }
-                .tag(Tab.library)
+            LibraryRootView(
+                dependencies: dependencies,
+                deepLink: deepLink(for: .library),
+                onDeepLinkConsumed: consumeDeepLink,
+                onAuthenticationRequired: onAuthenticationRequired
+            )
+            .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary) }
+            .tag(Tab.library)
 
             MypageRootView(
                 dependencies: dependencies,
+                deepLink: deepLink(for: .my),
+                onDeepLinkConsumed: consumeDeepLink,
                 onLibraryTapped: { selectedTab = .library },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .tabItem { tabLabel("My", icon: WSSImage.icNavigateMy) }
             .tag(Tab.my)
         }
+    }
+}
+
+// MARK: - 딥링크
+
+private extension MainTabView {
+    /// `Tab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`private extension`의 기본은 fileprivate).
+    private func deepLink(for tab: Tab) -> DeepLink? {
+        selectedTab == tab ? pendingDeepLink : nil
+    }
+
+    func consumeDeepLink() {
+        pendingDeepLink = nil
     }
 }
 

@@ -103,6 +103,10 @@ struct MypageRootView: View {
     }
 
     let dependencies: AppDependencies
+    /// 앱 밖에서 들어온 딥링크(#228) — `MainTabView`가 이 탭이 선택돼 있을 때만 값을 준다. 받으면 스택
+    /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(`HomeRootView`와 동일 규칙).
+    let deepLink: DeepLink?
+    let onDeepLinkConsumed: () -> Void
     /// 서재 블록 탭 → "서재" 탭으로 전환(`MainTabView`가 내려준다).
     let onLibraryTapped: () -> Void
     /// 설정의 회원탈퇴/로그아웃 성공, 또는 다른 탭과 동일한 401 만료 시 발화 — idempotent해야 한다
@@ -252,6 +256,14 @@ struct MypageRootView: View {
         .showWSSToast(isPresented: $showProfileSavedToast, type: .editProfile)
         .showWSSToast(isPresented: $isChangeSavedToastPresented, type: .changeInfo)
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)
+        .onChange(of: deepLink, initial: true) { _, deepLink in
+            guard let deepLink else { return }
+            switch deepLink {
+            case .collectionDetail(let id):
+                path.append(Destination.collectionDetail(id))
+            }
+            onDeepLinkConsumed()
+        }
     }
 }
 

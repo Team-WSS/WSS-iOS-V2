@@ -35,6 +35,14 @@
 				<string>kakao$(KAKAO_APP_KEY)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>kr.websoso.app.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>websoso</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

@@ -151,8 +151,15 @@
     동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201, `docs/TODO.md` 9번
     해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
-    유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다. "공유하기"는 카카오톡
-    공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+    유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
+  - **"공유하기"는 iOS 기본 공유 시트(`ShareLink`)다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK
+    템플릿 공유는 폐기)**. 공유 항목은 `BaseDomain.DeepLink.collectionDetail(id).url`
+    (`websoso://collections/{id}`) 하나 + 메시지 문구("웹소소에서 '{이름}' 컬렉션을 확인해보세요") +
+    `SharePreview(이름)`. 링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다
+    (미설치자는 아무것도 못 봄 — Universal Link는 별도 후속). 받는 쪽 라우팅은 App 몫
+    (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접
+    `ShareLink`를 그린다(`onNovelTapped`와 같은 위상). 카카오톡은 SDK 없이도 기기에 설치돼 있으면
+    시트 안에 자동으로 나열된다.
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를

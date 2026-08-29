@@ -66,6 +66,11 @@ struct HomeRootView: View {
     }
 
     let dependencies: AppDependencies
+    /// 앱 밖에서 들어온 딥링크(#228) — `MainTabView`가 이 탭이 선택돼 있을 때만 값을 준다. 받으면 스택
+    /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(아래 `.onChange(initial:)` — mount 전에 도착한
+    /// 링크도 잡는다).
+    let deepLink: DeepLink?
+    let onDeepLinkConsumed: () -> Void
     /// 홈의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다(`HomeFeature/CLAUDE.md`).
     let onAuthenticationRequired: () -> Void
 
@@ -195,6 +200,14 @@ struct HomeRootView: View {
                 }  // "설정하러 가기"
             ]
         )
+        .onChange(of: deepLink, initial: true) { _, deepLink in
+            guard let deepLink else { return }
+            switch deepLink {
+            case .collectionDetail(let id):
+                path.append(Destination.collectionDetail(id))
+            }
+            onDeepLinkConsumed()
+        }
     }
 }
 

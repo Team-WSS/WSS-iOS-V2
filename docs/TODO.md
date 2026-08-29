@@ -141,26 +141,23 @@
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
 
-### 8. 컬렉션 "공유하기"가 아직 착수되지 않았다(TODO 스텁 유지)
+### 8. 컬렉션 "공유하기" ✅구현됨(#228) / 남은 것: 타 탭에서 내 컬렉션 "수정" 무반응 + Universal Link
 
-- **무엇**: `CollectionDetailView`의 "공유하기" 버튼(`shareTapped`)이 여전히 TODO 스텁이다. 카카오톡
-  공유(`KakaoSDKShare`/`KakaoSDKTemplate`)로 착수할 계획은 세워뒀다 — 스코프는 **카카오톡 공유만**(일반
-  iOS 공유시트·링크 복사, 딥링크는 별도 후속)로 사용자와 확정했고, 상세 구현 계획(파일별 변경 지점,
-  `Tuist/Package.swift`의 `.framework` 강제 필요성, Demo 앱 `KakaoSDK.initSDK` 초기화 필요성 등)이
-  세션 기록에 남아있다.
-- **결과**: "공유하기"를 눌러도 아무 반응이 없다(공개 컬렉션에서만 버튼이 보임).
-- **어디를 고치나**: `Projects/Feature/CollectionFeature/Sources/CollectionDetail/CollectionDetailView.swift`/
-  `CollectionDetailViewModel.swift`, `Tuist/Package.swift`(`KakaoSDKShare`/`KakaoSDKTemplate`
-  `.framework` 등록), `Projects/Feature/CollectionFeature/Project.swift`,
-  `Projects/Domain/BaseDomain/Sources/AppURL.swift`(임시 공유 링크 상수).
-- **왜 지금 안 했나**: 사용자 결정 — 같은 세션에서 컬렉션 "수정" 기능을 먼저 넣기로 하고 공유는
-  후속으로 미뤘다(2026-08).
-- **놓치기 쉬운 것**: 착수 시 `KakaoSDK*`는 반드시 `Tuist/Package.swift`의 `productTypes`에서
-  `.framework`(dynamic)로 강제해야 한다 — 안 그러면 `OnboardingFeature`가 이미 겪은 것과 같은
-  `SdkError.ClientFailed(.MustInitAppKey)` 크래시가 난다(`OnboardingFeature/CLAUDE.md` 참고). Demo
-  앱도 App과 별개 프로세스라 `KakaoSDK.initSDK`를 자체 호출해야 한다(`OnboardingFeatureDemoApp.swift`
-  선례). 카카오 공유 카드의 `Content.imageUrl`은 필수 필드라 대표 작품 표지가 없는 컬렉션을 위한
-  원격 기본 이미지 URL을 먼저 정해야 한다.
+- **무엇(해소)**: "공유하기"가 **iOS 기본 공유 시트(`ShareLink`)** + `websoso://collections/{id}` 커스텀
+  스킴 + 앱 내 라우팅(지금 선택된 탭 위에 push)으로 구현됐다(2026-08-29, 사용자 확정 — 처음 계획한
+  카카오 SDK 템플릿 공유는 폐기, SDK 추가 없음). 자세한 배선은 `App/CLAUDE.md` 딥링크 항목,
+  링크 형식은 `BaseDomain.DeepLink`.
+- **남은 것 ①**: 딥링크로 열린 컬렉션이 **내 것**이면 홈/피드/서재 탭에선 더보기 → "컬렉션 수정"이
+  무반응이다 — `CollectionDetailAssembly.onEditTapped` 기본값이 no-op이고 수정 트리는
+  `MypageRootView`에만 배선돼 있다(링크만으론 소유자를 몰라 탭을 미리 고를 수 없음). 선택지: (a) 세
+  탭에도 수정 트리(`editCollection`/`searchNovelForCollection`/`myLibrarySelectForCollection` +
+  `pendingCollectionNovelSelection`)를 배선, (b) `onEditTapped`가 nil이면 Feature가 메뉴에서 "수정"을
+  숨김, (c) 감수(내 링크를 내가 여는 건 드묾). 미결정.
+- **남은 것 ②**: 커스텀 스킴이라 **앱 미설치자는 링크를 열어도 아무것도 안 된다**(메시지 앱에 따라
+  링크로 인식조차 안 될 수 있음). 웹 랜딩 + Universal Link(`https://…`)는 백엔드/웹 몫이라
+  `docs/PENDING_DECISIONS.md` 후보.
+- **어디를 고치나**: ①은 `Projects/App/Sources/{Home,Feed,Library}/*RootView.swift`(+ (b)면
+  `CollectionDetailView`), ②는 `BaseDomain/DeepLink.swift` + App `Info.plist`/entitlements.
 
 ### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다(+ 로그아웃 상태에서 탭바가 순간 노출된다)
 

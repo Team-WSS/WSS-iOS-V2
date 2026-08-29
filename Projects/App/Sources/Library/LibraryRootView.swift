@@ -56,6 +56,10 @@ struct LibraryRootView: View {
     }
 
     let dependencies: AppDependencies
+    /// 앱 밖에서 들어온 딥링크(#228) — `MainTabView`가 이 탭이 선택돼 있을 때만 값을 준다. 받으면 스택
+    /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(`HomeRootView`와 동일 규칙).
+    let deepLink: DeepLink?
+    let onDeepLinkConsumed: () -> Void
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
@@ -153,6 +157,14 @@ struct LibraryRootView: View {
                 }
                 .toolbar(.hidden, for: .tabBar)
             }
+        }
+        .onChange(of: deepLink, initial: true) { _, deepLink in
+            guard let deepLink else { return }
+            switch deepLink {
+            case .collectionDetail(let id):
+                path.append(Destination.collectionDetail(id))
+            }
+            onDeepLinkConsumed()
         }
     }
 }

@@ -9,9 +9,11 @@
 
 ```
 Sources/
-├── WSSIOSV2App.swift        # @main. 폰트 등록·KakaoSDK 초기화 등 앱 시작 시 1회 처리.
+├── WSSIOSV2App.swift        # @main. 폰트 등록·KakaoSDK 초기화 등 앱 시작 시 1회 처리 + onOpenURL
+│                             # (카카오 로그인 콜백은 SDK로, websoso:// 딥링크는 pendingDeepLink로, #228).
 ├── ContentView.swift        # 앱 루트. AppDependencies를 한 번 만들어 두 플로우에 내려주고,
 │                             # Route(.onboarding/.main)로 전환한다(로그인 상태 분기는 여기).
+│                             # 딥링크 Binding은 MainTabView로만 내려간다(온보딩 중엔 그대로 대기).
 ├── DI/
 │   └── AppDependencies.swift  # 유일한 조립 지점 — NetworkingClient·TokenStore·Repository 조립.
 ├── Onboarding/
@@ -20,7 +22,8 @@ Sources/
 │                                  # 어디로 갈지는 정하지 않고 ContentView에 위임.
 ├── Main/
 │   └── MainTabView.swift     # 온보딩 이후 루트 — 홈/피드/서재/My 4탭 TabView. 탭 아이콘은
-│                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등).
+│                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등). 딥링크는
+│                              # **선택된 탭 Root에만** 건네고 소비되면 nil로 되돌린다(아래 주의사항).
 ├── Home/    └── HomeRootView.swift      # "홈" 탭. HomeFactory 조립 + 작품 상세·피드 상세·일반 검색·
 │                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·그 전체 피드
 │                                          # 목록·마이페이지 편집·상세탐색 필터/결과(SearchFeatureFactory.
@@ -258,6 +261,29 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   둘 다 같은 `SearchAssembly`(일반 검색)로 push된다**(사용자 확정, #196) — 서재엔 전용 "작품 등록"
   화면이 없고, 검색해서 찾은 작품을 작품 상세에서 등록하는 흐름이다. 나중에 전용 등록 화면이 생기면
   `onRegisterTapped` 쪽만 그 화면으로 바꾸면 된다(`onSearchTapped`와 분리해서 갈 이유가 생기면).
+- **딥링크(`websoso://…`, #228)는 `WSSIOSV2App.onOpenURL` → `pendingDeepLink`(@State) →
+  `ContentView`(Binding) → `MainTabView` → **지금 선택된 탭 Root**의 `path.append` 순으로 흐른다**
+  (사용자 확정 — 앱을 쓰던 중이면 보던 화면 위에 바로 push, 콜드 스타트면 기본 탭인 홈 위). 파싱은
+  `BaseDomain.DeepLink(url:)`이 하고(형식은 그 파일이 정본), 형식에 안 맞는 URL은 조용히 버린다.
+  - ⚠️ **`TabView`는 4탭 Root를 전부 동시에 mount하므로 딥링크 값을 4탭에 다 주면 4번 push된다** —
+    `MainTabView.deepLink(for:)`가 `selectedTab`과 같은 탭에만 값을 주고 나머지는 nil. 각 Root는
+    `.onChange(of: deepLink, initial: true)`로 받아 push한 뒤 `onDeepLinkConsumed()`로 nil로 되돌린다
+    (`initial: true`라 Root가 mount되기 전에 도착한 링크 — 콜드 스타트, 온보딩 중 수신 — 도 잡는다).
+  - **온보딩(로그아웃) 상태로 링크를 열면 `ContentView`가 `.main`으로 바뀔 때까지 `pendingDeepLink`에
+    남아 있다가 로그인 뒤 이어서 처리된다** — 서버는 공개 컬렉션의 비로그인 조회를 허용하지만, 앱 게이트가
+    `MainTabView`를 온보딩으로 되돌리므로(위 "로그인 안 된 상태로 `MainTabView`를 열면" 항목) 그 전에
+    push해봐야 소용없다.
+  - `onOpenURL`에서 카카오 로그인 콜백(`kakao{APP_KEY}://…`)은 `AuthApi.isKakaoTalkLoginUrl`로 먼저
+    걸러 SDK에 넘긴다 — 순서를 바꾸면 `DeepLink(url:)`이 nil을 돌려주긴 하지만 카카오 콜백이 안 먹는다.
+  - **시뮬레이터 실측은 `xcrun simctl openurl <udid> "websoso://collections/4"`** — 시스템이 "'Websoso'에서
+    열겠습니까?" 확인 다이얼로그를 먼저 띄우므로(커스텀 스킴 정책) `snapshot_ui`로 "열기"를 탭해야 앱에
+    URL이 전달된다. 전달 여부는 시뮬레이터 로그 `Opening URL (websoso://…) with kr.websoso.app.WSS-iOS`
+    로 확인(`xcrun simctl spawn <udid> log show --last 1m --predicate 'eventMessage CONTAINS "websoso://"'`).
+  - ⚠️ **딥링크로 열린 컬렉션이 "내" 컬렉션이면 홈/피드/서재 탭에선 더보기 → "컬렉션 수정"이 무반응이다** —
+    `CollectionDetailAssembly.onEditTapped` 기본값이 no-op이고(원래 그 세 탭은 타유저 컬렉션만 열려
+    `isMine == false`가 보장됐다), 수정 트리(수정→작품 추가→서재에서 추가 + `pendingCollectionNovelSelection`)는
+    `MypageRootView`에만 배선돼 있다. 링크만으론 소유자를 알 수 없어 탭을 미리 고를 수도 없다 — 미해결
+    (`docs/TODO.md` 8절).
 - **"다른 탭으로 전환"은 push가 아니라 `MainTabView`의 `TabView(selection:)`을 바꾸는 별개 경로다**
   (마이페이지 서재 블록 탭 → 서재 탭, #196) — `MainTabView`가 `private enum Tab`과
   `@State private var selectedTab`을 갖고 각 탭 콘텐츠에 `.tag(Tab.xxx)`를 건 뒤, 필요한 탭 Root에

@@ -319,7 +319,7 @@ private extension CollectionDetailView {
             if detail.isPrivate {
                 privateBadge
             } else {
-                shareButton
+                shareButton(detail)
             }
         }
     }
@@ -355,27 +355,40 @@ private extension CollectionDetailView {
         .buttonStyle(.plain)
     }
 
-    var shareButton: some View {
-        Button {
-            viewModel.handle(.shareTapped)
-        } label: {
-            HStack(spacing: 10) {
-                WSSImage.icShare.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .foregroundStyle(Color.wssWhite)
-                    .frame(width: 24, height: 24)
-
-                Text("공유하기")
-                    .applyWSSFont(.body4)
-                    .foregroundStyle(Color.wssWhite)
+    /// 공유는 iOS 기본 공유 시트(`ShareLink`)로 한다(사용자 확정, #228 — 카카오 SDK 없이도 시트가
+    /// 카카오톡·메시지·링크 복사를 알아서 나열한다). 공유 대상은 `DeepLink.collectionDetail(id).url`
+    /// (`websoso://collections/{id}`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
+    /// 순수 표현이라 VM을 거치지 않는다(`onNovelTapped`와 같은 위상).
+    @ViewBuilder
+    func shareButton(_ detail: CollectionDetail) -> some View {
+        if let url = DeepLink.collectionDetail(detail.id).url {
+            ShareLink(
+                item: url,
+                message: Text("웹소소에서 '\(detail.name)' 컬렉션을 확인해보세요"),
+                preview: SharePreview(detail.name)
+            ) {
+                shareButtonLabel
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 40)
-            .background(Color.wssPrimary100)
-            .clipShape(RoundedRectangle(cornerRadius: 15))
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+    }
+
+    var shareButtonLabel: some View {
+        HStack(spacing: 10) {
+            WSSImage.icShare.swiftUIImage
+                .renderingMode(.template)
+                .resizable()
+                .foregroundStyle(Color.wssWhite)
+                .frame(width: 24, height: 24)
+
+            Text("공유하기")
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssWhite)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .background(Color.wssPrimary100)
+        .clipShape(RoundedRectangle(cornerRadius: 15))
     }
 
     /// 나만 보는 컬렉션은 소유자만 볼 수 있어 항상 소유자 시점에서만 그려진다(사용자 확정 근거:
