@@ -27,9 +27,11 @@ struct CollectionDetailView: View {
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
-    /// 공유 시트 미리보기(`SharePreview`)에 붙일 대표 표지 — 히어로와 같은 URL(`heroImageURL`)을
-    /// `WSSImageLoader`로 받아둔다(#228). 로드 전/실패면 제목만으로 미리보기한다(`shareButton` 참고).
-    @State private var shareCoverImage: Image?
+    /// 공유 시트 미리보기(`LPLinkMetadata`)에 붙일 대표 표지 — 히어로와 같은 URL(`heroImageURL`)을
+    /// `WSSImageLoader`로 받아둔다(#228). 로드 전/실패면 제목만으로 미리보기한다(`CollectionShareSheet` 참고).
+    @State private var shareCoverImage: UIImage?
+    /// 공유 시트 표시 — 순수 표시 상태라 View가 소유한다(VM 처리 없음).
+    @State private var isSharePresented = false
     @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
@@ -139,6 +141,18 @@ struct CollectionDetailView: View {
         // 대표 표지가 정해지는(=detail 로드/수정 복귀) 시점마다 공유 미리보기용 이미지를 갱신한다.
         .task(id: heroImageURL) {
             shareCoverImage = await loadShareCoverImage()
+        }
+        .sheet(isPresented: $isSharePresented) {
+            if let detail = viewModel.state.detail, let shareText = shareText(for: detail) {
+                CollectionShareSheet(
+                    text: shareText,
+                    previewTitle: detail.name,
+                    previewImage: shareCoverImage,
+                    onFinished: { isSharePresented = false }
+                )
+                .presentationDetents([.medium, .large])
+                .ignoresSafeArea()
+            }
         }
     }
 }
@@ -362,32 +376,20 @@ private extension CollectionDetailView {
         .buttonStyle(.plain)
     }
 
-    /// 공유는 iOS 기본 공유 시트(`ShareLink`)로 한다(사용자 확정, #228 — 카카오 SDK 없이도 시트가
-    /// 카카오톡·메시지·링크 복사를 알아서 나열한다). 공유 대상은 `DeepLink.collectionDetail(id).url`
-    /// (`websoso://collections/{id}`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
+    /// 공유는 iOS 기본 공유 시트로 한다(사용자 확정, #228 — 카카오 SDK 없이도 시트가 카카오톡·메시지·복사를
+    /// 알아서 나열한다). 공유 대상은 `DeepLink.collectionDetail(id).url`(`websoso://collections/{id}`)을 품은
+    /// 문자열(`shareText(for:)`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
     /// 순수 표현이라 VM을 거치지 않는다(`onNovelTapped`와 같은 위상).
     ///
-    /// ⚠️ **공유 항목은 `URL` + `message:`가 아니라 딥링크를 본문에 품은 문자열 하나다** — `item: url,
-    /// message:` 조합은 "Copy"가 URL(`public.url`)과 메시지(plain-text)를 **별개 pasteboard 항목**으로
-    /// 넣어, 카카오톡처럼 plain-text만 붙여넣는 입력창엔 메시지만 들어가고 `websoso://…`가 통째로 빠진다
-    /// (실측, 2026-08-29). 문자열 하나면 어느 앱에 붙여넣어도 링크가 같이 간다.
-    @ViewBuilder
+    /// ⚠️ 시트는 `ShareLink`가 아니라 `CollectionShareSheet`(`UIActivityViewController`)다 — `ShareLink`는
+    /// URL+message 조합이면 카톡 붙여넣기에서 링크가 빠지고, String이면 "복사"가 아예 안 뜬다(그 파일 주석 참고).
     func shareButton(_ detail: CollectionDetail) -> some View {
-        if let shareText = shareText(for: detail) {
-            // `SharePreview`는 image 유무로 이니셜라이저가 갈려(제네릭 Transferable) 분기가 둘이다 —
-            // 표지가 아직 안 왔거나 실패했으면 제목만으로 미리보기한다.
-            if let shareCoverImage {
-                ShareLink(item: shareText, preview: SharePreview(detail.name, image: shareCoverImage)) {
-                    shareButtonLabel
-                }
-                .buttonStyle(.plain)
-            } else {
-                ShareLink(item: shareText, preview: SharePreview(detail.name)) {
-                    shareButtonLabel
-                }
-                .buttonStyle(.plain)
-            }
+        Button {
+            isSharePresented = true
+        } label: {
+            shareButtonLabel
         }
+        .buttonStyle(.plain)
     }
 
     /// 공유 본문 — 안내 문구 + 딥링크 + 앱스토어 링크를 한 문자열로. 커스텀 스킴(`websoso://`)은 앱이 없는
@@ -405,9 +407,9 @@ private extension CollectionDetailView {
     }
 
     /// 공유 미리보기용 대표 표지 — 히어로와 같은 URL을 `WSSImageLoader`(공유 캐시)로 받는다.
-    func loadShareCoverImage() async -> Image? {
-        guard let url = heroImageURL, let uiImage = await WSSImageLoader.load(url) else { return nil }
-        return Image(uiImage: uiImage)
+    func loadShareCoverImage() async -> UIImage? {
+        guard let url = heroImageURL else { return nil }
+        return await WSSImageLoader.load(url)
     }
 
     var shareButtonLabel: some View {

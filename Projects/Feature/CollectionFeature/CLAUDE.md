@@ -152,14 +152,17 @@
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201, `docs/TODO.md` 9번
     해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
-  - **"공유하기"는 iOS 기본 공유 시트(`ShareLink`)다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK
-    템플릿 공유는 폐기)**. 공유 항목은 **문자열 하나**(`shareText(for:)` — "웹소소에서 '{이름}' 컬렉션을
-    확인해보세요" / `websoso://collections/{id}`(`BaseDomain.DeepLink`) / "앱이 없다면 여기서 설치:
-    {`AppURL.appStore`}" 3줄) + `SharePreview(이름, image: 대표 표지)`. ⚠️ **`ShareLink(item: URL,
-    message:)` 조합으로 짜지 말 것** — "Copy"가 URL과 메시지를 별개 pasteboard 항목으로 넣어 카카오톡처럼
-    plain-text만 붙여넣는 입력창엔 `websoso://…`가 통째로 빠진다(실측, 2026-08-29 — 처음 그렇게 짰다가
-    고침). 링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 본문에
-    앱스토어 링크를 같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
+  - **"공유하기"는 iOS 기본 공유 시트다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK 템플릿 공유는
+    폐기)**. 공유 항목은 **문자열 하나**(`shareText(for:)` — "웹소소에서 '{이름}' 컬렉션을 확인해보세요" /
+    `websoso://collections/{id}`(`BaseDomain.DeepLink`) / "앱이 없다면 여기서 설치: {`AppURL.appStore`}"
+    3줄) + 상단 미리보기(제목 + 대표 표지). ⚠️ **시트는 `ShareLink`가 아니라 `CollectionShareSheet`
+    (`UIActivityViewController` + `UIActivityItemSource` + `LPLinkMetadata`)다** — `ShareLink`는 두 조합
+    다 실측에서 깨졌다(iOS 26.5, 2026-08-29): `item: URL, message:`는 "복사"가 URL과 메시지를 별개
+    pasteboard 항목으로 넣어 카카오톡(plain-text만 붙여넣음)에 `websoso://…`가 통째로 빠지고, `item: String`은
+    시트가 문자열을 파일로 취급해 "파일에 저장"만 뜨고 **"복사"가 아예 없다**. 표시 상태(`isSharePresented`)는
+    View 로컬 `@State`, 종료는 `completionWithItemsHandler` → `onFinished`로 내린다(안 내리면 다음 탭에 안 뜸).
+    링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 본문에 앱스토어
+    링크를 같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
     (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접
     `ShareLink`를 그린다(`onNovelTapped`와 같은 위상). 카카오톡은 SDK 없이도 기기에 설치돼 있으면
     시트 안에 자동으로 나열된다.
