@@ -141,23 +141,25 @@
     서버 장애면 다시 로그인해도 실패하므로 "잠시 후 다시" 쪽이 옳을 수 있는데, **뷰가 갈리지 않은 상태에서 갈래만 바꾸면**
     "네트워크 연결에 실패했어요"라는 틀린 문구를 보게 된다. **뷰 분기가 먼저이고, 그때 이 갈래도 함께 결정한다.**
 
-### 8. 컬렉션 "공유하기" ✅구현됨(#228, 카카오톡 공유 카드) / 남은 것: Universal Link(카톡 외 채널의 미설치자 랜딩)
+### 8. 컬렉션 "공유하기" ✅구현됨(#228, 카카오 공유 카드) / 남은 것: Universal Link(카카오 외 채널 공유)
 
-- **무엇(해소)**: "공유하기"가 **카카오톡 공유 카드(`KakaoSDKShare`/`KakaoSDKTemplate`, "앱에서 보기" →
+- **무엇(해소)**: "공유하기"가 **카카오 공유 카드(`KakaoSDKShare`/`KakaoSDKTemplate`, "앱에서 보기" →
   `kakao{APP_KEY}://kakaolink?collectionId={id}`)** + 앱 내 라우팅(지금 선택된 탭 위에 push)으로 구현됐다
-  (2026-08-29, 사용자 확정). 처음엔 iOS 기본 공유 시트 + `websoso://collections/{id}`만으로 갔다가, **카카오톡이
-  커스텀 스킴을 링크로 인식하지 않아 수신자가 진입 못 하는 것**이 실기기에서 드러나 카카오 SDK를 다시 들였다.
-  그 공유 시트(`CollectionSharePresenter`, 대표 표지 미리보기 + 앱스토어 링크 본문)는 **카카오톡이 없는
-  기기의 폴백**으로 남아 있다. 앱 미설치 수신자는 카카오가 App Store로 보낸다(콘솔 iOS 플랫폼 등록 전제).
-  딥링크로 열린 "내" 컬렉션의 수정 트리는 4탭 전부 배선됐다(`CollectionEditAssembly`). 자세한 배선은
-  `App/CLAUDE.md` 딥링크 항목, 링크 형식은 `BaseDomain.DeepLink`, 카드 구성은 `CollectionFeature/CLAUDE.md`.
-- **남은 것**: 폴백 시트(문자·복사 등)로 나간 `websoso://` 링크는 여전히 **앱 미설치자가 탭하면 아무것도
-  안 되고**(메시지 앱에 따라 링크로 인식조차 안 됨) 본문의 앱스토어 링크가 유일한 설치 경로다. 한 링크로
-  "설치됨→앱, 미설치→스토어/웹"을 자동 분기하려면 웹 랜딩 + Universal Link(`https://…`, AASA 호스팅 +
-  Associated Domains entitlement)가 필요하고 이건 백엔드/웹 몫이라 `docs/PENDING_DECISIONS.md` 후보.
-  Universal Link가 생기면 카카오 카드의 `Link.webUrl`/`mobileWebUrl`에도 같은 URL을 실을 것.
+  (2026-08-29, 사용자 확정). 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari, SDK 권장 폴백).
+  처음엔 iOS 기본 공유 시트 + `websoso://collections/{id}`만으로 갔다가, **카카오톡이 커스텀 스킴을 링크로
+  인식하지 않아 수신자가 진입 못 하는 것**이 실기기에서 드러나 카카오 SDK를 다시 들였고, 그 시트도 걷어냈다
+  (폐기 이력은 `CollectionFeature/CLAUDE.md`). 앱 미설치 수신자는 카카오가 App Store로 보낸다(콘솔 iOS
+  플랫폼 등록 전제). 딥링크로 열린 "내" 컬렉션의 수정 트리는 4탭 전부 배선됐다(`CollectionEditAssembly`).
+  자세한 배선은 `App/CLAUDE.md` 딥링크 항목, 링크 형식은 `BaseDomain.DeepLink`, 카드 구성은
+  `CollectionFeature/CLAUDE.md`.
+- **남은 것**: 카카오 밖(문자·복사·다른 메신저)으로는 공유할 수 없다 — 커스텀 스킴(`websoso://`)은 메시지
+  앱에서 링크로 인식조차 안 돼 시스템 공유 시트에 실어봐야 무의미해서 뺐다. 한 링크로 "설치됨→앱,
+  미설치→스토어/웹"을 자동 분기하려면 웹 랜딩 + Universal Link(`https://…`, AASA 호스팅 + Associated
+  Domains entitlement)가 필요하고 이건 백엔드/웹 몫이라 `docs/PENDING_DECISIONS.md` 후보. 그게 생기면
+  ① 시스템 공유 시트를 그 링크로 되살리고(폐기 이력의 함정 참고) ② 카카오 카드의 `Link.webUrl`/
+  `mobileWebUrl`에도 같은 URL을 실을 것.
 - **어디를 고치나**: `BaseDomain/DeepLink.swift`(https 형식 추가) + App `Info.plist`/entitlements +
-  `CollectionDetailView.shareText(for:)`(앱스토어 줄 제거) + `CollectionKakaoShare.makeTemplate`(`webUrl`).
+  `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.makeTemplate`(`webUrl`).
 
 ### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다(+ 로그아웃 상태에서 탭바가 순간 노출된다)
 
