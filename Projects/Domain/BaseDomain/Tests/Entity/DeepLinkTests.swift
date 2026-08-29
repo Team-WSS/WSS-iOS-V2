@@ -82,6 +82,54 @@ struct DeepLinkTests {
 
         #expect(DeepLink(url: url) == nil)
     }
+
+    // MARK: - kakaoExecutionParameters (카카오톡 공유 카드)
+
+    @Test("컬렉션 상세 딥링크의 카카오 execution params는 collectionId 키에 id 문자열 하나다")
+    func kakaoExecutionParametersFormat() {
+        let deepLink = DeepLink.collectionDetail(CollectionID(31))
+
+        #expect(deepLink.kakaoExecutionParameters == ["collectionId": "31"])
+    }
+
+    @Test("카카오톡이 여는 kakaolink host URL의 collectionId 쿼리를 파싱하면 그 id의 컬렉션 상세 딥링크가 된다")
+    func parseKakaoLink() {
+        let url = makeURL("kakaoabc123://kakaolink?collectionId=31")
+
+        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
+    }
+
+    @Test("카카오 execution params를 kakaolink URL 쿼리로 되돌려 파싱하면 원래 딥링크와 같다")
+    func kakaoRoundTrip() throws {
+        let original = DeepLink.collectionDetail(CollectionID(7))
+        var components = try #require(URLComponents(string: "kakaoabc123://kakaolink"))
+        components.queryItems = original.kakaoExecutionParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
+
+        let url = try #require(components.url)
+
+        #expect(DeepLink(url: url) == original)
+    }
+
+    @Test("kakaolink host는 스킴이 무엇이든 파싱한다")
+    func parseKakaoLinkIgnoresScheme() {
+        let url = makeURL("KAKAOXYZ://KakaoLink?collectionId=31")
+
+        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
+    }
+
+    @Test("kakaolink host인데 collectionId 쿼리가 없으면 nil이다")
+    func nilWhenKakaoLinkMissingCollectionID() {
+        let url = makeURL("kakaoabc123://kakaolink?novelId=31")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
+    @Test("kakaolink host의 collectionId가 정수가 아니면 nil이다")
+    func nilWhenKakaoLinkCollectionIDNotInteger() {
+        let url = makeURL("kakaoabc123://kakaolink?collectionId=abc")
+
+        #expect(DeepLink(url: url) == nil)
+    }
 }
 
 private extension DeepLinkTests {

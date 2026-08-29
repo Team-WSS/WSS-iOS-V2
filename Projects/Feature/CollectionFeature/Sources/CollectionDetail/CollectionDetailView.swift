@@ -32,6 +32,8 @@ struct CollectionDetailView: View {
     @State private var shareCoverImage: UIImage?
     /// 공유 시트 표시 — 순수 표시 상태라 View가 소유한다(VM 처리 없음). 시트가 끝나면 프레젠터가 스스로 내린다.
     @State private var isSharePresented = false
+    /// 카카오톡 공유 카드 전송 실패 토스트 — 공유는 VM을 거치지 않는 순수 표현이라 View가 소유한다.
+    @State private var isShareErrorToastPresented = false
     @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
@@ -119,6 +121,7 @@ struct CollectionDetailView: View {
             ]
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: $isShareErrorToastPresented, type: .unknownError)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
@@ -376,21 +379,36 @@ private extension CollectionDetailView {
         .buttonStyle(.plain)
     }
 
-    /// 공유는 iOS 기본 공유 시트로 한다(사용자 확정, #228 — 카카오 SDK 없이도 시트가 카카오톡·메시지·복사를
-    /// 알아서 나열한다). 공유 대상은 `DeepLink.collectionDetail(id).url`(`websoso://collections/{id}`)을 품은
-    /// 문자열(`shareText(for:)`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
-    /// 순수 표현이라 VM을 거치지 않는다(`onNovelTapped`와 같은 위상).
+    /// 공유는 **카카오톡 공유 카드**(`CollectionKakaoShare`, 사용자 확정 2026-08-29, #228)가 기본이다 — 받는
+    /// 사람이 카드의 "앱에서 보기"로 이 화면에 들어온다(앱이 없으면 카카오가 App Store로). 카카오톡이 없는
+    /// 기기에서만 iOS 기본 공유 시트(`CollectionSharePresenter`, 문자·복사 등)로 폴백한다. 순수 표현이라 VM을
+    /// 거치지 않는다(`onNovelTapped`와 같은 위상).
     ///
-    /// ⚠️ 시트는 `ShareLink`도 SwiftUI `.sheet`도 아니라 `CollectionSharePresenter`(호스트 VC가 직접 present하는
-    /// `UIActivityViewController`)다 — `ShareLink`는 URL+message면 카톡 붙여넣기에서 링크가 빠지고 String이면
+    /// ⚠️ 폴백 시트는 `ShareLink`도 SwiftUI `.sheet`도 아니라 호스트 VC가 직접 present하는
+    /// `UIActivityViewController`다 — `ShareLink`는 URL+message면 카톡 붙여넣기에서 링크가 빠지고 String이면
     /// "복사"가 안 뜨며, `.sheet`에 넣으면 두 번째부터 안 뜬다(그 파일 주석 참고).
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
-            isSharePresented = true
+            if CollectionKakaoShare.isAvailable {
+                shareToKakaoTalk(detail)
+            } else {
+                isSharePresented = true
+            }
         } label: {
             shareButtonLabel
         }
         .buttonStyle(.plain)
+    }
+
+    /// 카카오톡을 여는 것까지가 성공 — 템플릿 검증·앱 열기 실패는 사용자 액션 실패라 토스트로 알린다.
+    func shareToKakaoTalk(_ detail: CollectionDetail) {
+        Task {
+            do {
+                try await CollectionKakaoShare.share(detail, coverImageURL: heroImageURL)
+            } catch {
+                isShareErrorToastPresented = true
+            }
+        }
     }
 
     /// 공유 본문 — 안내 문구 + 딥링크 + 앱스토어 링크를 한 문자열로. 커스텀 스킴(`websoso://`)은 앱이 없는

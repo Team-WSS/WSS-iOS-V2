@@ -35,8 +35,10 @@ struct WSSIOSV2App: App {
         WindowGroup {
             ContentView(pendingDeepLink: $pendingDeepLink)
                 .onOpenURL { url in
-                    // 카카오 로그인 콜백(`kakao{APP_KEY}://…`)은 SDK에 넘기고, 나머지는 우리 딥링크로
-                    // 해석한다 — 형식에 안 맞는 URL은 조용히 무시한다(`DeepLink.init?(url:)`).
+                    // 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)은 SDK에 넘기고, 나머지는 우리 딥링크로
+                    // 해석한다 — `websoso://…`와 카카오톡 공유 카드의 "앱에서 보기"
+                    // (`kakao{APP_KEY}://kakaolink?collectionId=…`, #228) 둘 다 `DeepLink.init?(url:)`이
+                    // 풀고, 형식에 안 맞는 URL은 조용히 무시한다.
                     if AuthApi.isKakaoTalkLoginUrl(url) {
                         _ = AuthController.handleOpenUrl(url: url)
                         return

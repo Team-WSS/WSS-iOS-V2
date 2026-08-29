@@ -175,6 +175,14 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   `CFBundleIdentifier`/`CFBundleExecutable`이 **없으면 시뮬레이터 설치 자체가 실패**한다
   (`Missing bundle ID` → `missing or invalid CFBundleExecutable`, #196에서 실측). 이 plist에 새 키를
   추가할 땐 표준 키가 여전히 살아있는지 함께 확인할 것 — 지우면 조용히 안 죽고 빌드는 되는데 설치가 깨진다.
+  - ⚠️ **`CFBundleShortVersionString`/`CFBundleVersion`도 같은 이유로 여기 직접 적혀 있다**(값은
+    `Project.swift` App 타깃 settings의 `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, #228 — `Config/*.xcconfig`는
+    gitignore된 비밀값 파일이라 거기 두면 다른 머신엔 안 간다). 이 둘이 없어도 빌드·설치는
+    되지만 **카카오 SDK가 `CFBundleShortVersionString`을 `kakaolink://send`의 필수 파라미터 `appver`로 보내고
+    nil이면 파라미터를 통째로 빼버려**(`ShareApi`의 `.filterNil()`) 카카오톡이 "전달하려는 메시지의 필수 정보에
+    오류가 있습니다 [(Core parameter(s) missing)]"로 카드를 거부한다(실기기 실측, 2026-08-29). Demo 앱들은
+    Tuist 기본 plist(`.extendingDefault`)라 1.0/1이 자동으로 들어가 같은 문제가 안 보인다 — **App에서만 나는
+    차이**이니 카카오 공유가 Demo에선 되고 App에서만 안 되면 이 키부터 볼 것.
 - **Apple 로그인 버튼은 시뮬레이터에 Apple ID가 로그인돼 있으면 시스템 계정 선택/Face ID 시트로,
   없으면 설정 앱의 "Apple 계정" 화면으로 튄다**(둘 다 정상 — `OnboardingFeature/CLAUDE.md` 참고).
   Kakao 로그인은 `kauth.kakao.com` `ASWebAuthenticationSession` 동의 시트가 뜨는 게 정상(실측,
@@ -276,8 +284,15 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     남아 있다가 로그인 뒤 이어서 처리된다** — 서버는 공개 컬렉션의 비로그인 조회를 허용하지만, 앱 게이트가
     `MainTabView`를 온보딩으로 되돌리므로(위 "로그인 안 된 상태로 `MainTabView`를 열면" 항목) 그 전에
     push해봐야 소용없다.
-  - `onOpenURL`에서 카카오 로그인 콜백(`kakao{APP_KEY}://…`)은 `AuthApi.isKakaoTalkLoginUrl`로 먼저
+  - `onOpenURL`에서 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)은 `AuthApi.isKakaoTalkLoginUrl`로 먼저
     걸러 SDK에 넘긴다 — 순서를 바꾸면 `DeepLink(url:)`이 nil을 돌려주긴 하지만 카카오 콜백이 안 먹는다.
+  - **카카오톡 공유 카드의 "앱에서 보기"도 같은 경로다** — 카카오톡이 앱을
+    `kakao{APP_KEY}://kakaolink?collectionId={id}`로 열면(`isKakaoTalkLoginUrl`은 `…://oauth` prefix만 봐서
+    안 걸린다) `DeepLink(url:)`이 `kakaolink` host를 `.collectionDetail`로 풀어 위와 똑같이 push된다. App은
+    스킴을 따로 분기하지 않는다. 카드 전송 쪽 전제(`LSApplicationQueriesSchemes`의 `kakaolink`, 카카오 콘솔
+    iOS 플랫폼의 Bundle ID·App Store ID)는 `CollectionFeature/CLAUDE.md` 공유 항목 참고 — 시뮬레이터엔
+    카카오톡이 없어 수신 경로는 `xcrun simctl openurl <udid> "kakao<APP_KEY>://kakaolink?collectionId=4"`로만
+    흉내낼 수 있다.
   - **시뮬레이터 실측은 `xcrun simctl openurl <udid> "websoso://collections/4"`** — 시스템이 "'Websoso'에서
     열겠습니까?" 확인 다이얼로그를 먼저 띄우므로(커스텀 스킴 정책) `snapshot_ui`로 "열기"를 탭해야 앱에
     URL이 전달된다. 전달 여부는 시뮬레이터 로그 `Opening URL (websoso://…) with kr.websoso.app.WSS-iOS`
