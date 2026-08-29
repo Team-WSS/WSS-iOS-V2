@@ -155,12 +155,15 @@
   - **"공유하기"는 iOS 기본 공유 시트다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK 템플릿 공유는
     폐기)**. 공유 항목은 **문자열 하나**(`shareText(for:)` — "웹소소에서 '{이름}' 컬렉션을 확인해보세요" /
     `websoso://collections/{id}`(`BaseDomain.DeepLink`) / "앱이 없다면 여기서 설치: {`AppURL.appStore`}"
-    3줄) + 상단 미리보기(제목 + 대표 표지). ⚠️ **시트는 `ShareLink`가 아니라 `CollectionShareSheet`
-    (`UIActivityViewController` + `UIActivityItemSource` + `LPLinkMetadata`)다** — `ShareLink`는 두 조합
-    다 실측에서 깨졌다(iOS 26.5, 2026-08-29): `item: URL, message:`는 "복사"가 URL과 메시지를 별개
-    pasteboard 항목으로 넣어 카카오톡(plain-text만 붙여넣음)에 `websoso://…`가 통째로 빠지고, `item: String`은
-    시트가 문자열을 파일로 취급해 "파일에 저장"만 뜨고 **"복사"가 아예 없다**. 표시 상태(`isSharePresented`)는
-    View 로컬 `@State`, 종료는 `completionWithItemsHandler` → `onFinished`로 내린다(안 내리면 다음 탭에 안 뜸).
+    3줄) + 상단 미리보기(제목 + 대표 표지). ⚠️ **시트는 `ShareLink`도 SwiftUI `.sheet`도 아니라
+    `CollectionSharePresenter`(`.background`에 깐 투명 호스트 VC가 `UIActivityViewController`를 직접 present,
+    `UIActivityItemSource` + `LPLinkMetadata`)다** — 셋 다 실측에서 깨졌다(iOS 26.5, 2026-08-29):
+    `ShareLink(item: URL, message:)`는 "복사"가 URL과 메시지를 별개 pasteboard 항목으로 넣어 카카오톡
+    (plain-text만 붙여넣음)에 `websoso://…`가 통째로 빠지고, `ShareLink(item: String)`은 시트가 문자열을
+    파일로 취급해 "파일에 저장"만 뜨고 **"복사"가 아예 없으며**, `.sheet { UIActivityViewController }`는
+    시트 안의 X/완료가 UIKit 경로로 hosting 시트를 직접 내려 SwiftUI 표시 상태와 어긋나 **두 번째부터
+    안 뜬다**(새 화면 인스턴스에서도, 앱 재시작 전까지). 표시 상태(`isSharePresented`)는 View 로컬
+    `@State`, 종료는 프레젠터가 `completionWithItemsHandler`에서 내린다(안 내리면 다음 탭에 안 뜸).
     링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 본문에 앱스토어
     링크를 같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
     (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접

@@ -28,9 +28,9 @@ struct CollectionDetailView: View {
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
     /// 공유 시트 미리보기(`LPLinkMetadata`)에 붙일 대표 표지 — 히어로와 같은 URL(`heroImageURL`)을
-    /// `WSSImageLoader`로 받아둔다(#228). 로드 전/실패면 제목만으로 미리보기한다(`CollectionShareSheet` 참고).
+    /// `WSSImageLoader`로 받아둔다(#228). 로드 전/실패면 제목만으로 미리보기한다(`CollectionSharePresenter` 참고).
     @State private var shareCoverImage: UIImage?
-    /// 공유 시트 표시 — 순수 표시 상태라 View가 소유한다(VM 처리 없음).
+    /// 공유 시트 표시 — 순수 표시 상태라 View가 소유한다(VM 처리 없음). 시트가 끝나면 프레젠터가 스스로 내린다.
     @State private var isSharePresented = false
     @Environment(\.dismiss) private var dismiss
 
@@ -142,16 +142,16 @@ struct CollectionDetailView: View {
         .task(id: heroImageURL) {
             shareCoverImage = await loadShareCoverImage()
         }
-        .sheet(isPresented: $isSharePresented) {
+        // 공유 시트는 SwiftUI `.sheet`가 아니라 투명 호스트 VC가 직접 present한다 — `.sheet` 안에 넣으면
+        // 두 번째부터 안 뜨는 실측 버그가 있다(`CollectionShareSheet.swift` 주석 참고).
+        .background {
             if let detail = viewModel.state.detail, let shareText = shareText(for: detail) {
-                CollectionShareSheet(
+                CollectionSharePresenter(
+                    isPresented: $isSharePresented,
                     text: shareText,
                     previewTitle: detail.name,
-                    previewImage: shareCoverImage,
-                    onFinished: { isSharePresented = false }
+                    previewImage: shareCoverImage
                 )
-                .presentationDetents([.medium, .large])
-                .ignoresSafeArea()
             }
         }
     }
@@ -381,8 +381,9 @@ private extension CollectionDetailView {
     /// 문자열(`shareText(for:)`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
     /// 순수 표현이라 VM을 거치지 않는다(`onNovelTapped`와 같은 위상).
     ///
-    /// ⚠️ 시트는 `ShareLink`가 아니라 `CollectionShareSheet`(`UIActivityViewController`)다 — `ShareLink`는
-    /// URL+message 조합이면 카톡 붙여넣기에서 링크가 빠지고, String이면 "복사"가 아예 안 뜬다(그 파일 주석 참고).
+    /// ⚠️ 시트는 `ShareLink`도 SwiftUI `.sheet`도 아니라 `CollectionSharePresenter`(호스트 VC가 직접 present하는
+    /// `UIActivityViewController`)다 — `ShareLink`는 URL+message면 카톡 붙여넣기에서 링크가 빠지고 String이면
+    /// "복사"가 안 뜨며, `.sheet`에 넣으면 두 번째부터 안 뜬다(그 파일 주석 참고).
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
             isSharePresented = true
