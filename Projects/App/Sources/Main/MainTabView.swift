@@ -52,7 +52,7 @@ struct MainTabView: View {
                 onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .home) },
                 onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
-            .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome) }
+            .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome, isSelected: selectedTab == .home) }
             .tag(Tab.home)
 
             FeedRootView(
@@ -62,7 +62,7 @@ struct MainTabView: View {
                 onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
                 onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
-            .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed) }
+            .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed, isSelected: selectedTab == .feed) }
             .tag(Tab.feed)
 
             LibraryRootView(
@@ -72,7 +72,7 @@ struct MainTabView: View {
                 onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .library) },
                 onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
-            .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary) }
+            .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary, isSelected: selectedTab == .library) }
             .tag(Tab.library)
 
             MypageRootView(
@@ -84,7 +84,7 @@ struct MainTabView: View {
                 onSessionEnded: onAuthenticationRequired,
                 onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
-            .tabItem { tabLabel("My", icon: WSSImage.icNavigateMy) }
+            .tabItem { tabLabel("My", icon: WSSImage.icNavigateMy, isSelected: selectedTab == .my) }
             .tag(Tab.my)
         }
     }
@@ -126,15 +126,20 @@ private extension MainTabView {
     /// 기본 번들(App)만 뒤져 **완전히 새로 설치한 상태에서는 조용히 빈 아이콘**이 된다(#196에서 실측 —
     /// 이전 빌드가 남아있는 상태에선 우연히 다르게 보여 처음엔 못 잡았다). 번들을 이미 아는
     /// `WSSImage.icXxx.swiftUIImage`(전 Feature가 쓰는 정본 경로)로 직접 그린다.
-    func tabLabel(_ title: String, icon: DesignSystemImages) -> some View {
-        Label {
+    func tabLabel(_ title: String, icon: DesignSystemImages, isSelected: Bool) -> some View {
+        // iOS 26 새(Liquid Glass) 탭바는 template 이미지를 자기 틴트로 덮어써(비선택=검정)
+        // `UITabBarAppearance.normal`을 무시한다(실측 — appearance/`foregroundStyle`/`.tint` 모두 비선택은
+        // 검정으로 남았고, tint를 아예 빼도 커스텀 이미지라 자동 회색 처리를 못 받았다). 그래서 틴트에
+        // 맡기지 않고 **색을 미리 구운 `.alwaysOriginal` 이미지**를 선택 상태별로 바꿔 끼운다 —
+        // `.alwaysOriginal`이면 탭바가 재틴트를 못 해 우리가 칠한 색이 그대로 남는다(iOS 버전 무관).
+        // 글씨 색은 어피어런스가 담당(`WSSIOSV2App.configureTabBarAppearance`) — iOS 26 비선택 글씨는
+        // 거기서도 검정으로 남지만(플랫폼 제약, 아이콘만 회색으로 구분), iOS 18 이하는 글씨도 gray200.
+        let color = UIColor(isSelected ? Color.wssBlack : Color.wssGray200)
+        let tinted = icon.image.withTintColor(color, renderingMode: .alwaysOriginal)
+        return Label {
             Text(title)
         } icon: {
-            // .template이어야 UITabBarAppearance의 iconColor(선택 wssBlack/비선택 wssGray200,
-            // WSSIOSV2App.configureTabBarAppearance)가 실제로 먹는다 — 이 에셋 자체는
-            // template-rendering-intent가 "original"이라 여기서 명시하지 않으면 원색 그대로 나간다.
-            icon.swiftUIImage
-                .renderingMode(.template)
+            Image(uiImage: tinted)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 24, height: 24)
