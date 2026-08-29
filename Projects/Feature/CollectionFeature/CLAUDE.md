@@ -153,11 +153,13 @@
     해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
   - **"공유하기"는 iOS 기본 공유 시트(`ShareLink`)다(#228, 사용자 확정 — 처음 계획했던 카카오 SDK
-    템플릿 공유는 폐기)**. 공유 항목은 `BaseDomain.DeepLink.collectionDetail(id).url`
-    (`websoso://collections/{id}`) 하나 + 메시지 2줄("웹소소에서 '{이름}' 컬렉션을 확인해보세요" +
-    "앱이 없다면 여기서 설치: {`AppURL.appStore`}") + `SharePreview(이름, image: 대표 표지)`. 링크는 웹
-    랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 메시지에 앱스토어 링크를
-    같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
+    템플릿 공유는 폐기)**. 공유 항목은 **문자열 하나**(`shareText(for:)` — "웹소소에서 '{이름}' 컬렉션을
+    확인해보세요" / `websoso://collections/{id}`(`BaseDomain.DeepLink`) / "앱이 없다면 여기서 설치:
+    {`AppURL.appStore`}" 3줄) + `SharePreview(이름, image: 대표 표지)`. ⚠️ **`ShareLink(item: URL,
+    message:)` 조합으로 짜지 말 것** — "Copy"가 URL과 메시지를 별개 pasteboard 항목으로 넣어 카카오톡처럼
+    plain-text만 붙여넣는 입력창엔 `websoso://…`가 통째로 빠진다(실측, 2026-08-29 — 처음 그렇게 짰다가
+    고침). 링크는 웹 랜딩이 없는 커스텀 스킴이라 **앱이 설치된 기기에서만** 열린다 — 그래서 본문에
+    앱스토어 링크를 같이 싣는다(Universal Link는 별도 후속, `docs/TODO.md` 8절). 받는 쪽 라우팅은 App 몫
     (`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라 View가 직접
     `ShareLink`를 그린다(`onNovelTapped`와 같은 위상). 카카오톡은 SDK 없이도 기기에 설치돼 있으면
     시트 안에 자동으로 나열된다.

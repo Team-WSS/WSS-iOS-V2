@@ -366,26 +366,23 @@ private extension CollectionDetailView {
     /// 카카오톡·메시지·링크 복사를 알아서 나열한다). 공유 대상은 `DeepLink.collectionDetail(id).url`
     /// (`websoso://collections/{id}`) — 받는 쪽 앱이 이 링크로 같은 화면을 다시 연다(App `onOpenURL`).
     /// 순수 표현이라 VM을 거치지 않는다(`onNovelTapped`와 같은 위상).
+    ///
+    /// ⚠️ **공유 항목은 `URL` + `message:`가 아니라 딥링크를 본문에 품은 문자열 하나다** — `item: url,
+    /// message:` 조합은 "Copy"가 URL(`public.url`)과 메시지(plain-text)를 **별개 pasteboard 항목**으로
+    /// 넣어, 카카오톡처럼 plain-text만 붙여넣는 입력창엔 메시지만 들어가고 `websoso://…`가 통째로 빠진다
+    /// (실측, 2026-08-29). 문자열 하나면 어느 앱에 붙여넣어도 링크가 같이 간다.
     @ViewBuilder
     func shareButton(_ detail: CollectionDetail) -> some View {
-        if let url = DeepLink.collectionDetail(detail.id).url {
+        if let shareText = shareText(for: detail) {
             // `SharePreview`는 image 유무로 이니셜라이저가 갈려(제네릭 Transferable) 분기가 둘이다 —
             // 표지가 아직 안 왔거나 실패했으면 제목만으로 미리보기한다.
             if let shareCoverImage {
-                ShareLink(
-                    item: url,
-                    message: shareMessage(for: detail),
-                    preview: SharePreview(detail.name, image: shareCoverImage)
-                ) {
+                ShareLink(item: shareText, preview: SharePreview(detail.name, image: shareCoverImage)) {
                     shareButtonLabel
                 }
                 .buttonStyle(.plain)
             } else {
-                ShareLink(
-                    item: url,
-                    message: shareMessage(for: detail),
-                    preview: SharePreview(detail.name)
-                ) {
+                ShareLink(item: shareText, preview: SharePreview(detail.name)) {
                     shareButtonLabel
                 }
                 .buttonStyle(.plain)
@@ -393,14 +390,18 @@ private extension CollectionDetailView {
         }
     }
 
-    /// 커스텀 스킴(`websoso://`)은 앱이 없는 기기에선 아무 데도 못 가므로, 메시지 본문에 앱스토어 링크를
-    /// 함께 실어 설치 경로를 준다(#228, `AppURL.appStore`).
-    func shareMessage(for detail: CollectionDetail) -> Text {
-        var lines = ["웹소소에서 '\(detail.name)' 컬렉션을 확인해보세요"]
+    /// 공유 본문 — 안내 문구 + 딥링크 + 앱스토어 링크를 한 문자열로. 커스텀 스킴(`websoso://`)은 앱이 없는
+    /// 기기에선 아무 데도 못 가므로 앱스토어 링크(`AppURL.appStore`)로 설치 경로를 같이 준다(#228).
+    func shareText(for detail: CollectionDetail) -> String? {
+        guard let deepLinkURL = DeepLink.collectionDetail(detail.id).url else { return nil }
+        var lines = [
+            "웹소소에서 '\(detail.name)' 컬렉션을 확인해보세요",
+            deepLinkURL.absoluteString
+        ]
         if let appStore = AppURL.appStore {
             lines.append("앱이 없다면 여기서 설치: \(appStore.absoluteString)")
         }
-        return Text(lines.joined(separator: "\n"))
+        return lines.joined(separator: "\n")
     }
 
     /// 공유 미리보기용 대표 표지 — 히어로와 같은 URL을 `WSSImageLoader`(공유 캐시)로 받는다.
