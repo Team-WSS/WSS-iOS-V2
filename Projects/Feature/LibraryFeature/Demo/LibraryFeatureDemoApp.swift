@@ -452,11 +452,13 @@ private enum DemoLibraryNovels {
     private static let demoKeywordNames = ["빙의", "후회", "궁중암투", "웹툰화"]
 
     /// 셀이 값 조합에 따라 어떻게 보이는지 한 화면에서 확인하려고 축을 서로 다른 주기로 돌린다 —
-    /// 제목 줄 수(2) · 표지 유무(5) · 읽기 상태(3) · 별점 유무(4) · 기간 유무(4) · 매력포인트 수(4) · 키워드 수(5).
+    /// 제목 줄 수(2) · 표지 유무(5) · 읽기 상태(3) · 내 별점 유무(4) · 전체 별점 유무(3) · 기간 유무(4) · 매력포인트 수(4) · 키워드 수(5).
     /// 그리드 행이 어긋나거나 특정 조합이 깨지면 여기서 바로 드러난다.
     private static let baseNovels: [LibraryNovel] = (1...25).map { index in
         let isLongTitle = index.isMultiple(of: 2)
         let hasRating = index % 4 != 0
+        // 전체 별점 0.0 = "아직 평가 없음" → 리스트 셀에서 감춰지되 자리는 유지된다(내 별점 유무와 교차 확인).
+        let hasNovelRating = index % 3 != 0
         let hasPeriod = index % 4 != 1
 
         let status = ReadingStatus.allCases[index % ReadingStatus.allCases.count]
@@ -491,7 +493,7 @@ private enum DemoLibraryNovels {
             thumbnailImage: index.isMultiple(of: 5)
                 ? nil
                 : URL(string: "https://picsum.photos/seed/wss\(index)/216/320"),
-            rating: 4.2,
+            rating: hasNovelRating ? 4.2 : 0.0,
             isInterested: index.isMultiple(of: 3),
             userReview: review,
             writtenFeeds: []
