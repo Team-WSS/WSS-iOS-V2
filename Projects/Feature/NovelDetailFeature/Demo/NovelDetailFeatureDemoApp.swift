@@ -551,6 +551,21 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                 },
                 URL(string: "https://page.kakao.com").map {
                     NovelPlatform(name: "카카오페이지", image: nil, url: $0)
+                },
+                URL(string: "https://ridibooks.com").map {
+                    NovelPlatform(name: "리디북스", image: nil, url: $0)
+                },
+                URL(string: "https://series.naver.com").map {
+                    NovelPlatform(name: "문피아", image: nil, url: $0)
+                },
+                URL(string: "https://novelpia.com").map {
+                    NovelPlatform(name: "노벨피아", image: nil, url: $0)
+                },
+                URL(string: "https://booktoon.com").map {
+                    NovelPlatform(name: "북툰", image: nil, url: $0)
+                },
+                URL(string: "https://tocsoda.com").map {
+                    NovelPlatform(name: "톡소다", image: nil, url: $0)
                 }
             ].compactMap { $0 },
             // 아래 셋은 각각 독립으로 숨겨지고, 전부 비면 감상평 영역이 빈 상태로 대체된다
