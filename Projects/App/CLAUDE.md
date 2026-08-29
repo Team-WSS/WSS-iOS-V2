@@ -351,3 +351,36 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   V1은 이걸 전역 `NotificationCenter.blockUser`를 피드 탭 하나만 캐치해 띄웠는데, V2는 차단한 그 탭에서 뜬다(더
   정확). ⚠️ **이 4벌은 임시** — `feedEdited`·`novelReviewed`까지 합쳐 통합 크로스스크린 채널로 재설계할 때
   걷어낼 예정이니(`docs/TODO.md` 12절), "화면 전환 완료 피드백"을 새로 만들 때 이 4벌을 정식 패턴으로 복제하지 말 것.
+- **⚠️ 앱 아이콘·버전 정보는 시뮬레이터 빌드만으론 검증되지 않는다 — 실제 아카이브(`archive-debug`/
+  `archive-release` 스킬)를 처음 돌려봐야 드러난다(2026-08-29 실측).** 이 프로젝트가 발견 당시 처음
+  겪은 순서 그대로 기록:
+  1. `Projects/App/Project.swift`의 App 타깃에 `resources:`가 없으면 `Resources/Assets.xcassets`
+     (앱 아이콘 포함)가 빌드에 아예 안 들어간다 — 시뮬레이터는 아이콘 없이도 통과해 안 드러나고,
+     App Store Connect 업로드 검증(`altool`)에서야 "Missing required icon file"로 처음 걸린다.
+  2. **Debug/Release가 서로 다른 앱 아이콘을 쓴다**(홈 화면에서 운영 앱과 구분용, 사용자 확정) —
+     `Resources/Assets.xcassets/AppIcon.appiconset`(Release, V1과 동일 아이콘)와
+     `AppIcon-Debug.appiconset`(Debug, 별도 이미지) 두 세트를 두고, `Project.swift`의 Debug/Release
+     `Configuration.settings`에서 `ASSETCATALOG_COMPILER_APPICON_NAME`을 각각 다르게 지정한다.
+     둘 다 Xcode 최신 방식(단일 1024×1024 PNG, `idiom: universal`)만 쓴다 — 사이즈별 개별 PNG 불필요.
+  3. **`TARGETED_DEVICE_FAMILY = "1"`(iPhone 전용)를 App 타깃 설정에 명시해야 한다** — V1(운영 앱)도
+     동일(`project.pbxproj`에서 확인). 없으면 App Store Connect가 iPad용 아이콘·방향 키까지 요구해서
+     실패한다(iPad 지원 자체가 없는 앱인데 검증만 걸리는 상황).
+  4. `Support/Info.plist`에 `CFBundlePackageType`(`APPL`)·`UISupportedInterfaceOrientations`
+     (`UIInterfaceOrientationPortrait`만, 세로 고정)가 없으면 각각 별도 업로드 실패 사유가 된다 —
+     V1은 `GENERATE_INFOPLIST_FILE = YES` + `INFOPLIST_KEY_*` 빌드 설정으로 이 키들을 자동 주입받는
+     구조라 V1 Info.plist엔 이 키들이 안 보인다(V2와 전략이 다름, 헷갈리지 말 것) — V2는 `Support/Info.plist`가
+     리터럴 `.file(path:)`라 이 키들을 **직접** 파일에 적어야 한다.
+  5. **`agvtool`(fastlane `increment_build_number`) 기반 빌드 번호 자동 증가가 동작하려면 Apple
+     Generic Versioning이 필요하다** — `Project.swift`의 App 타깃 전용 `appBaseSettings`에
+     `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`/`VERSIONING_SYSTEM: "apple-generic"`를 두고,
+     `Support/Info.plist`의 `CFBundleShortVersionString`/`CFBundleVersion`이 각각
+     `$(MARKETING_VERSION)`/`$(CURRENT_PROJECT_VERSION)`을 참조하게 한다(`env.baseSetting`은 전
+     모듈 공유라 여기 안 넣고 App 타깃 전용 딕셔너리로 분리).
+     ⚠️ **`agvtool`은 아카이브를 돌릴 때마다 `Support/Info.plist`의 `CFBundleVersion`에 플레이스홀더
+     대신 실제 빌드 번호를 리터럴로 직접 써넣는다** — 로컬에서 `archive-debug`/`archive-release`를
+     돌린 뒤 `git status`로 이 파일이 바뀌어 있으면, 커밋 전에 `$(CURRENT_PROJECT_VERSION)`으로
+     되돌려놓을 것(안 그러면 다음 빌드 번호 계산과 어긋나는 값이 레포에 고정 커밋된다).
+  6. `fastlane/Fastfile`에서 `increment_build_number`에 `xcodeproj:` 경로를 상대경로로 주면
+     (`"../Projects/App/WSS-iOS.xcodeproj"`) `match` 실행 이후 어떤 이유로 작업 디렉토리가 달라져
+     "Could not find Xcode project"로 실패할 수 있었다(정확한 원인 미확인) — `File.expand_path(...,
+     __dir__)`로 절대경로를 계산해 cwd에 안 흔들리게 고정했다(`Fastfile` 상단 `XCODEPROJ_PATH` 상수).

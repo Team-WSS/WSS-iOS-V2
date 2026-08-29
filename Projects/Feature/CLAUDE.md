@@ -129,7 +129,7 @@ public enum XxxFeatureFactory {         // 유일한 public 진입점. opaque �
 
 화면을 띄워 확인할 땐 **Feature 모듈 스킴**으로 Demo 앱을 실행한다(자세히 → [docs/BUILD_AND_TEST.md](../../docs/BUILD_AND_TEST.md)).
 - **실행 스킴은 `XxxFeature`** (별도 `XxxFeatureDemo` 스킴은 없다). 이 스킴의 LaunchAction이 `XxxFeatureDemo.app`을 띄운다 → `build_run_sim(scheme: "NovelReviewFeature")`.
-- **`launch_app_sim`용 bundleId는 `kr.websoso.app.XxxFeatureDemo`** — `build_run_sim`이 보고하는 건 framework(`...XxxFeature`)라 그대로 launch하면 실패.
+- **`launch_app_sim`용 bundleId는 `<env.organizationName>.XxxFeatureDemo`**(`ProjectEnvironment.swift`의 `organizationName` 참고) — `build_run_sim`이 보고하는 건 framework(`...XxxFeature`)라 그대로 launch하면 실패.
 - **별점 등 커스텀 드로잉은 접근성 tap 타겟으로 안 잡힌다** → `snapshot_ui`에 안 뜨면 좌표 탭. 표준 버튼/세그먼트/매력포인트는 `elementRef`로 잡힌다.
 - **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 - **`build_run_sim`은 이 스킴에서 install이 framework를 잡아 실패**할 수 있다("installable app 없음") → `build_sim`(컴파일) 후 `install_app_sim`+`launch_app_sim`(bundleId `...XxxFeatureDemo`)이 안정적.
