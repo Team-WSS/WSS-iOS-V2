@@ -207,11 +207,20 @@
 - `WSSAlertView`의 버튼은 접근성 트리에 안 잡힌다 — UI 자동화(XcodeBuildMCP `tap`)로 알럿이 뜨는 것까지만 검증 가능, 버튼 탭 이후 동작은 코드 리뷰로 대체(WSSComponent 공용 컴포넌트라 이 모듈 범위 밖).
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).
-- **존재하지 않는/탈퇴한 유저(`USER-018`)는 "존재하지 않는 유저예요" 전용 화면으로 분기한다**(#222 V1 parity) —
+- **없는 유저(`USER-018`)는 "존재하지 않는 유저예요" 전용 화면으로 분기한다**(#222 V1 parity) —
   `fetchUserProfile`이 `USER-018`을 `RepositoryError.notFound`로 던지고(→ [ProfileData](../../Data/ProfileData/CLAUDE.md)),
   `UserPageViewModel.presentError`가 `.notFound`를 `isUserNotFound`로 잡아(`hasLoadError`와 분리) `userNotFoundView`를
   띄운다. **재시도 버튼 없음**(존재하지 않는 유저는 재시도해도 동일 — `privateProfileView`와 같은 결). 이 분기가 없으면
-  018이 일반 로드 실패(`NetworkErrorView`)로 떨어져 재시도만 반복된다(회귀). Demo는 userID `998`로 시연.
+  018이 일반 로드 실패(`NetworkErrorView`)로 떨어져 재시도만 반복된다(회귀). Demo는 "특수 상태 데모" 바로가기(또는 userID `998`)로 시연.
+  - ⚠️ **이건 "탈퇴 유저 탭-차단"과 다른 케이스다(혼동 주의 — #222에서 실제로 헷갈렸다).** 탈퇴 유저
+    (`Author.userId == -1` 센티널)는 피드/댓글/작품상세에서 프로필을 탭하는 **그 순간** `Author.accessibleUserId == nil`로
+    걸러 "웹소소를 떠난 유저예요"(`WSSToastType.unknownUser`) 토스트만 띄우고 **애초에 UserPage에 진입시키지 않는다**
+    (`SosoFeedView`·`FeedDetailView`·`NovelDetailFeedTab` 3곳 — V1 `FeedDetailViewModel:277,457`/`NovelDetailViewModel:516`/
+    `FeedPageContentViewModel:139`의 `showToast(.unknownUser)` parity). 반면 `USER-018`은 userID로 **실제 조회를 해봐야**
+    서버가 주는 값이라 탭 시점엔 알 수 없고, 이미 진입한 뒤의 **방어 폴백**이다(V1도 `UserPageViewModel:311-326`이 빈
+    프로필로 폴백하며 "현재 로직상 진입 불가능하지만 대응" 주석을 달았다). 즉 실사용에서 이 화면에 닿을 경로는 사실상
+    없고(모든 진입점이 탈퇴 가드로 이미 막힘, 없는 userID로 들어갈 방법이 없음), Demo의 `998`은 그 방어 경로를 인위적으로
+    트리거한 것이다. → 탈퇴 유저 처리를 "여기서 토스트+뒤로가기"로 바꾸려 하지 말 것(그건 탭 시점 ①의 몫이고 이미 됨).
 - **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
   컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200)도 서재 통계와 같은 이유로 대상 밖이다 — `DefaultCollectionRepository.fetchCollectionPreviews`가 `code` 문자열 분기 없이 `NetworkingError.toRepositoryError()`로만 넘겨 `.privateProfile`을 던지지 못한다(`CollectionData/CLAUDE.md` 참고). 이 호출이 실패하면 `loadUserPage()`의 같은 `catch`에서 `presentError`가 일반 `hasLoadError`로 처리한다 — 컬렉션만 골라 조용히 숨기는 동작이 아니다.
 - **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)·미리보기 개별 항목 탭 둘 다 #201 후속(2026-08-28)으로
