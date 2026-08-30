@@ -205,6 +205,11 @@ private extension LibraryFilterSheet {
         }
     }
 
+    /// 읽기상태 항목 — 선택 시 아이콘 fill + 보라. **색 전환 애니메이션 없이 즉시** 반영한다(`handleWithoutAnimation`).
+    /// ⚠️ #221에서 "색만 애니메이트 + 위치는 스냅"을 시도했다가 **사용자 결정으로 걷어냈다** — 이 항목의 아이콘은
+    /// ① 템플릿 tint라 `foregroundStyle` 색이 `.animation`으로 보간되지 않고 스냅하고(칩이 되는 건 `.background`라서),
+    /// ② `Button`이라 `.animation(value:)`를 라벨 안에 걸어야만 먹는 등 함정이 겹쳐 opacity 크로스페이드까지 동원해야
+    /// 했는데, 그만한 값어치가 없다고 판단해 **즉시 전환으로 되돌렸다.** 되살릴 거면 이 모듈 CLAUDE.md의 그 항목부터 읽을 것.
     func readingStatusItem(_ status: ReadingStatus) -> some View {
         let isSelected = viewModel.state.filter.readingStatus.contains(status)
         return Button {
@@ -224,8 +229,6 @@ private extension LibraryFilterSheet {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // ⚠️ 색 전환 애니메이션(`.animation(value: isSelected)`)을 걸지 않는다 — 위치 변화까지 함께 애니메이트돼,
-        // 첫 선택으로 선택 칩 행이 생겨 아래가 밀릴 때 **방금 누른 버튼만** 뒤늦게 미끄러져 내려온다.
     }
 
     var genreContent: some View {
@@ -307,6 +310,7 @@ private extension LibraryFilterSheet {
         .padding(.horizontal, 20)
     }
 
+    /// 매력포인트 항목 — 선택 시 보라. 읽기상태와 같은 이유로 **색 애니메이션 없이 즉시** 반영(위 `readingStatusItem` 주석 참고).
     func attractivePointItem(_ point: AttractivePoint) -> some View {
         let isSelected = viewModel.state.filter.attractivePoint.contains(point)
         return Button {
@@ -325,7 +329,6 @@ private extension LibraryFilterSheet {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // ⚠️ 애니메이션 금지 — 이유는 `readingStatusItem` 주석 참고(선택 칩 행 등장 시 이 버튼만 늦게 내려온다).
     }
 
     /// 키워드 — 카운트는 고정하고, 가변 길이인 칩 영역만 남은 높이 안에서 스크롤한다.
@@ -426,6 +429,8 @@ private extension LibraryFilterSheet {
         }
     }
 }
+
+// MARK: - Selectable Items
 
 // MARK: - Preview
 
