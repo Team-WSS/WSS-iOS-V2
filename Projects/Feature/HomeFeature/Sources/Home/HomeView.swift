@@ -136,8 +136,10 @@ private extension HomeView {
                     )
                 }
 
-                if let preferenceGenreNovelState = state.preferenceGenreNovelState,
-                   !isEmptyNovels(preferenceGenreNovelState) {
+                // 선호장르 섹션은 0건(설정했으나 추천 0건)이어도 숨기지 않고 설정 유도 카드를 띄운다
+                // (#222 V1 parity — 빈 자리보다 행동 유도가 낫다). 빈 그리드 vs 유도 카드 분기는
+                // PreferenceGenreSection이 상태로 판단한다. nil(로드 전)일 때만 섹션을 안 그린다.
+                if let preferenceGenreNovelState = state.preferenceGenreNovelState {
                     Spacer().frame(height: Metric.trendingToPreference)
                     PreferenceGenreSection(
                         state: preferenceGenreNovelState,
@@ -174,19 +176,6 @@ private extension HomeView {
             }
         }
     }
-}
-
-// MARK: - Presentation
-
-private extension HomeView {
-
-    /// 선호장르 **미설정**은 빈 상태가 아니라 설정 유도 카드를 띄우는 분기라, 숨김 대상은
-    /// "설정은 했는데 추천이 0건"인 경우뿐이다.
-    func isEmptyNovels(_ state: PreferenceGenreNovelState) -> Bool {
-        if case .novels(let novels) = state { return novels.isEmpty }
-        return false
-    }
-
 }
 
 // MARK: - Preview
