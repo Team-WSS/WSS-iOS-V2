@@ -7,9 +7,9 @@
 
 import SwiftUI
 
+import CollectionFeature
 import BaseDomain
 import CollectionDomain
-import CollectionFeature
 import NovelDomain
 import SearchDomain
 

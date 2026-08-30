@@ -77,10 +77,14 @@ struct HomeRootView: View {
     /// 링크도 잡는다).
     let deepLink: DeepLink?
     let onDeepLinkConsumed: () -> Void
+    /// 딥링크로 push한 화면이 스택에서 빠지면(뒤로가기·pop) 발화 — `MainTabView`가 401 복원 창을 닫는다(#228).
+    let onDeepLinkDestinationDismissed: () -> Void
     /// 홈의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다(`HomeFeature/CLAUDE.md`).
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+    /// 딥링크 화면이 놓인 스택 깊이 — `path.count`가 이보다 작아지면 그 화면이 빠진 것(아래 `.onChange(of: path.count)`).
+    @State private var deepLinkDestinationDepth: Int?
     /// 알림 목록으로 이동한 뒤, 그 화면 위에 기기 설정 유도 알럿을 띄워야 하는지(#193) — `.overlay` 기반
     /// `showWSSAlert`가 push 전환과 동시에 뜨면 전환에 밀려 사라지므로(`HomeFeature/CLAUDE.md` 참고),
     /// `HomeFeature`가 아니라 여기(`NavigationStack` 컨테이너)에 붙여 push가 끝난 뒤에도 살아남게 한다.
@@ -222,7 +226,13 @@ struct HomeRootView: View {
             case .collectionDetail(let id):
                 path.append(Destination.collectionDetail(id))
             }
+            deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
+        }
+        .onChange(of: path.count) { _, count in
+            guard let depth = deepLinkDestinationDepth, count < depth else { return }
+            deepLinkDestinationDepth = nil
+            onDeepLinkDestinationDismissed()
         }
     }
 }

@@ -53,8 +53,9 @@ public enum DeepLink: Hashable, Sendable {
         }
     }
 
-    /// 형식에 안 맞으면(모르는 host·정수가 아닌 ID·ID 없음·경로 초과·`websoso` 형식인데 다른 스킴) nil.
-    /// 스킴·host는 대소문자를 가리지 않는다(URL 규격).
+    /// 형식에 안 맞으면(모르는 host·양의 정수가 아닌 ID·ID 없음·경로 초과·`websoso` 형식인데 다른 스킴) nil.
+    /// 스킴·host는 대소문자를 가리지 않는다(URL 규격). ID는 서버 발급 양수라 `0`·음수는 형식 위반으로 본다 —
+    /// 통과시키면 존재할 수 없는 ID로 상세를 열어 404 실패 화면부터 보게 된다.
     public init?(url: URL) {
         guard let host = url.host?.lowercased() else { return nil }
 
@@ -62,17 +63,23 @@ public enum DeepLink: Hashable, Sendable {
         case Host.collections:
             guard url.scheme?.lowercased() == Self.scheme else { return nil }
             let pathComponents = url.pathComponents.filter { $0 != "/" }
-            guard pathComponents.count == 1, let rawID = Int(pathComponents[0]) else { return nil }
-            self = .collectionDetail(CollectionID(rawID))
+            guard pathComponents.count == 1, let id = Self.parseID(pathComponents[0]) else { return nil }
+            self = .collectionDetail(CollectionID(id))
         case Host.kakaoLink:
             // 스킴(`kakao{APP_KEY}`)은 검사하지 않는다 — 앱 키는 App 설정(Info.plist)에만 있고, 어차피
             // `CFBundleURLTypes`에 등록된 스킴만 앱에 도착한다.
             let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             guard let rawID = queryItems.first(where: { $0.name == KakaoParameter.collectionID })?.value,
-                  let id = Int(rawID) else { return nil }
+                  let id = Self.parseID(rawID) else { return nil }
             self = .collectionDetail(CollectionID(id))
         default:
             return nil
         }
+    }
+
+    /// 양의 정수만 ID로 인정한다.
+    private static func parseID(_ raw: String) -> Int? {
+        guard let id = Int(raw), id > 0 else { return nil }
+        return id
     }
 }

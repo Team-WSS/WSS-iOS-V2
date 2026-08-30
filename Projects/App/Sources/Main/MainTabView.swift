@@ -33,6 +33,15 @@ struct MainTabView: View {
     let onAuthenticationRequired: () -> Void
 
     @State private var selectedTab: Tab = .home
+    /// 선택된 탭 Root가 소비해 push한 딥링크 — **그 화면이 스택에 남아 있는 동안만** 값이 있다. 인증 만료(401)로
+    /// 온보딩에 되돌아가면 이 탭 트리째 파괴돼 push했던 화면도 함께 사라지므로, 그 시점에 `pendingDeepLink`로
+    /// 되살려 로그인 뒤 새 `MainTabView`가 다시 처리한다 — 토큰 없는 콜드 스타트(세션 복원 전까진 매번
+    /// `.main`으로 시작했다가 몇 초 안에 401로 튕긴다)에서 카드의 "앱에서 보기"가 통째로 유실되던 문제(#228 리뷰).
+    /// 사용자가 그 화면을 벗어나면(Root의 `onDeepLinkDestinationDismissed`) 지운다 — 안 지우면 한참 뒤 무관한
+    /// 401에도 옛 컬렉션이 재로그인 후 다시 떠버린다. 로그아웃·탈퇴(`MypageRootView.onSessionEnded`)는 사용자가
+    /// 세션을 끝낸 것이라 되살리지 않는다. 어느 탭이 소비했는지도 같이 들어, 다른 탭의 딥링크 화면이 빠질 때
+    /// 이 값이 지워지지 않게 한다(탭마다 스택이 따로라 홈의 링크 A와 피드의 링크 B가 동시에 살아 있을 수 있다).
+    @State private var deliveredDeepLink: (tab: Tab, link: DeepLink)?
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -40,7 +49,8 @@ struct MainTabView: View {
                 dependencies: dependencies,
                 deepLink: deepLink(for: .home),
                 onDeepLinkConsumed: consumeDeepLink,
-                onAuthenticationRequired: onAuthenticationRequired
+                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .home) },
+                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
             .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome) }
             .tag(Tab.home)
@@ -49,7 +59,8 @@ struct MainTabView: View {
                 dependencies: dependencies,
                 deepLink: deepLink(for: .feed),
                 onDeepLinkConsumed: consumeDeepLink,
-                onAuthenticationRequired: onAuthenticationRequired
+                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
+                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
             .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed) }
             .tag(Tab.feed)
@@ -58,7 +69,8 @@ struct MainTabView: View {
                 dependencies: dependencies,
                 deepLink: deepLink(for: .library),
                 onDeepLinkConsumed: consumeDeepLink,
-                onAuthenticationRequired: onAuthenticationRequired
+                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .library) },
+                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
             .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary) }
             .tag(Tab.library)
@@ -67,8 +79,10 @@ struct MainTabView: View {
                 dependencies: dependencies,
                 deepLink: deepLink(for: .my),
                 onDeepLinkConsumed: consumeDeepLink,
+                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .my) },
                 onLibraryTapped: { selectedTab = .library },
-                onAuthenticationRequired: onAuthenticationRequired
+                onSessionEnded: onAuthenticationRequired,
+                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
             )
             .tabItem { tabLabel("My", icon: WSSImage.icNavigateMy) }
             .tag(Tab.my)
@@ -84,8 +98,25 @@ private extension MainTabView {
         selectedTab == tab ? pendingDeepLink : nil
     }
 
+    /// 소비자는 항상 지금 선택된 탭이다(`deepLink(for:)`가 그 탭에만 값을 주므로).
     func consumeDeepLink() {
+        deliveredDeepLink = pendingDeepLink.map { (tab: selectedTab, link: $0) }
         pendingDeepLink = nil
+    }
+
+    /// `Tab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`deepLink(for:)`와 같은 이유).
+    private func clearDeliveredDeepLink(for tab: Tab) {
+        guard deliveredDeepLink?.tab == tab else { return }
+        deliveredDeepLink = nil
+    }
+
+    /// 401 만료 경로(4탭 공통) — 딥링크 화면이 아직 스택에 있으면 되살린 뒤 온보딩으로 되돌린다. 여러 탭이
+    /// 시간차로 불러도 같은 값을 다시 쓸 뿐이라 idempotent 계약은 그대로다.
+    func restoreDeepLinkAndRequireAuthentication() {
+        if let deliveredDeepLink {
+            pendingDeepLink = deliveredDeepLink.link
+        }
+        onAuthenticationRequired()
     }
 }
 

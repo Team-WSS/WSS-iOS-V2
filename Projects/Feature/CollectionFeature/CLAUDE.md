@@ -169,7 +169,10 @@
       없으면 `ShareApi.shared.makeDefaultUrl`(로컬 조립, 서버 검증 없음)의 카카오 웹 공유 URL을
       `UIApplication.shared.open`으로 연다 — 카카오톡의 받는 사람 선택 화면 또는 Safari의 카카오 웹 공유가 뜨는
       **여기까지가 성공**이고 실제 전송 여부는 알 수 없다(카카오 안의 일). 실패는 사용자 액션 실패라
-      토스트(`isShareErrorToastPresented`, View 로컬 — 공유는 VM을 안 거친다).
+      토스트(`isShareErrorToastPresented`, View 로컬 — 공유는 VM을 안 거친다). ⚠️ `open`의 `Bool` 결과를 버리면
+      열기 거부가 조용히 삼켜져 "눌러도 아무 일 없음"이 된다 — `false`는 `Failure.openFailed`로 throw. 그리고
+      템플릿 서버 검증을 기다리는 사이 연타하면 카카오톡이 두 번 열리므로 View 로컬 `isSharing` 가드가 막는다
+      (VM의 진행 중 Task 가드를 View로 옮긴 것, 둘 다 리뷰 반영).
     - ⚠️ **카카오톡 설치 판정(`ShareApi.isKakaoTalkSharingAvailable()`)은 `canOpenURL("kakaolink://")`라
       `Info.plist`의 `LSApplicationQueriesSchemes`에 `kakaolink`가 없으면 카카오톡이 깔려 있어도 항상 false**
       (→ 웹 공유로만 나간다). App `Support/Info.plist`와 `ModuleInfoPlist.featureDemo` 둘 다 등록돼 있다.

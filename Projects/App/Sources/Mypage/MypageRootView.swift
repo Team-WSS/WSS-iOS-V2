@@ -53,7 +53,8 @@ import WSSComponent
 /// ⚠️ **`MypageFeatureFactory.makeView` 자체가 받는 `onAuthenticationRequired`는 없다** — 로드 401은
 /// 여전히 조용히 빈 상태로 남는다(FeedFeature와 같은 사정, App 쪽에서 고칠 수 있는 부분이 아님). 다만
 /// 여기서 push하는 **설정(`SettingFeatureFactory.makeView`)의 회원탈퇴/로그아웃 성공은 세션 자체를 끝내는
-/// 이벤트**라, 다른 탭의 401 처리와 같은 경로(`onAuthenticationRequired` → 온보딩으로 라우팅)를 탄다.
+/// 이벤트**라 `onSessionEnded`로 온보딩까지 되돌린다 — push 화면의 401(`onAuthenticationRequired`)과 결과는
+/// 같지만 `MainTabView`가 후자에만 딥링크 복원을 걸어서 콜백을 분리했다(#228).
 struct MypageRootView: View {
 
     private enum Destination: Hashable {
@@ -107,13 +108,19 @@ struct MypageRootView: View {
     /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(`HomeRootView`와 동일 규칙).
     let deepLink: DeepLink?
     let onDeepLinkConsumed: () -> Void
+    /// 딥링크로 push한 화면이 스택에서 빠지면 발화(`HomeRootView`와 동일 규칙).
+    let onDeepLinkDestinationDismissed: () -> Void
     /// 서재 블록 탭 → "서재" 탭으로 전환(`MainTabView`가 내려준다).
     let onLibraryTapped: () -> Void
-    /// 설정의 회원탈퇴/로그아웃 성공, 또는 다른 탭과 동일한 401 만료 시 발화 — idempotent해야 한다
-    /// (`MainTabView`/`HomeFeature`/`LibraryFeature`와 동일 계약).
+    /// 설정의 회원탈퇴/로그아웃 **성공** — 사용자가 세션을 끝낸 것. 온보딩으로 되돌리는 결과는 401과 같지만
+    /// `MainTabView`가 딥링크 복원을 걸지 않도록 401(`onAuthenticationRequired`)과 분리했다(#228 리뷰).
+    let onSessionEnded: () -> Void
+    /// 이 탭 위에 push된 화면(컬렉션 상세 등)의 401 만료 시 발화 — idempotent해야 한다
+    /// (`MainTabView`/`HomeFeature`/`LibraryFeature`와 동일 계약). 마이페이지 콘텐츠 자체는 이 콜백을 모른다.
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+    @State private var deepLinkDestinationDepth: Int?
     /// 프로필 편집 화면이 `onSaved`로 알려주면 세운다 — 그 화면이 아니라 복귀할 이 루트가 보여준다
     /// (편집 화면에서 sleep으로 노출 시간을 벌면 닫힘이 부자연스럽게 지연되므로, `UserPageFeature/CLAUDE.md` 참고).
     @State private var showProfileSavedToast = false
@@ -262,7 +269,13 @@ struct MypageRootView: View {
             case .collectionDetail(let id):
                 path.append(Destination.collectionDetail(id))
             }
+            deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
+        }
+        .onChange(of: path.count) { _, count in
+            guard let depth = deepLinkDestinationDepth, count < depth else { return }
+            deepLinkDestinationDepth = nil
+            onDeepLinkDestinationDismissed()
         }
     }
 }
@@ -305,8 +318,8 @@ private extension MypageRootView {
             loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: dependencies.profileRepository),
             logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
             logger: dependencies.logger,
-            // 로그아웃 성공 시 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
-            onLogoutSuccess: onAuthenticationRequired,
+            // 로그아웃 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
+            onLogoutSuccess: onSessionEnded,
             onChangeGenderOrAgeTapped: { path.append(Destination.settingChangeGenderOrAge) },
             onBlockUserListTapped: { path.append(Destination.settingBlockUserList) },
             onWithdrawTapped: { path.append(Destination.settingWithdrawFlow) }
@@ -341,8 +354,8 @@ private extension MypageRootView {
             ),
             withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
             logger: dependencies.logger,
-            // 탈퇴 성공 시 세션을 끝낸다 — 다른 탭의 401 만료와 같은 경로로 온보딩까지 되돌린다.
-            onWithdrawSuccess: onAuthenticationRequired
+            // 탈퇴 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
+            onWithdrawSuccess: onSessionEnded
         )
     }
 

@@ -65,9 +65,12 @@ struct LibraryRootView: View {
     /// 위에 push하고 `onDeepLinkConsumed`로 돌려준다(`HomeRootView`와 동일 규칙).
     let deepLink: DeepLink?
     let onDeepLinkConsumed: () -> Void
+    /// 딥링크로 push한 화면이 스택에서 빠지면 발화(`HomeRootView`와 동일 규칙).
+    let onDeepLinkDestinationDismissed: () -> Void
     let onAuthenticationRequired: () -> Void
 
     @State private var path = NavigationPath()
+    @State private var deepLinkDestinationDepth: Int?
     /// "작품 추가"/"서재에서 추가" 확정 결과를 컬렉션 수정 화면에 돌려주는 1회성 nil→값 채널(#228,
     /// `MypageRootView`와 동일 — 확정(return) 값이라 `Destination` 레이스 대상이 아니다).
     @State private var pendingCollectionNovelSelection: [CollectionNovel]?
@@ -179,7 +182,13 @@ struct LibraryRootView: View {
             case .collectionDetail(let id):
                 path.append(Destination.collectionDetail(id))
             }
+            deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
+        }
+        .onChange(of: path.count) { _, count in
+            guard let depth = deepLinkDestinationDepth, count < depth else { return }
+            deepLinkDestinationDepth = nil
+            onDeepLinkDestinationDismissed()
         }
     }
 }

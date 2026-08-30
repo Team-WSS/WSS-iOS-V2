@@ -225,21 +225,20 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   쪽에서는 이동 신호만 올리도록 단순화). `SettingFeature`의 알림 설정 메뉴는 반대로 "먼저 알럿 →
   denied면 아예 이동 안 함" 패턴으로 같은 함정을 피한다(`HomeFeature/CLAUDE.md` 참고) — 이동이 항상
   일어나야 하는 화면이면 전자, 조건부로 막아도 되는 화면이면 후자를 쓸 것.
-- ⚠️ **My(`MypageRootView`)는 `onAuthenticationRequired`를 받지만, 다른 탭과 발화 경로가 다르다.**
-  `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 그 콜백을 모른다 — 즉 마이페이지 로드(프로필·
-  장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠 수 있는 게 아니라
-  `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약" 참고). 다만
-  `MainTabView`는 `MypageRootView`에도 이 콜백을 내려주는데, **용도는 401이 아니라 설정 화면의
-  회원탈퇴/로그아웃 성공**이다 — `MypageRootView`가 push하는 `SettingFactory.makeView`의
-  `onWithdrawSuccess`/`onLogoutSuccess`를 그대로 이 콜백에 물려, 세션을 끝내는 두 이벤트가 다른 탭의
-  401 만료와 같은 경로(온보딩으로 라우팅)를 타게 한다. **Home·Feed·서재 세 탭은 여전히 401 경로로만
-  쓴다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만, 거기서 push하는 작품 상세
-  (`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
+- ⚠️ **My(`MypageRootView`)는 세션을 끝내는 콜백이 둘이다(#228부터).** `onSessionEnded`는 설정 화면의
+  회원탈퇴/로그아웃 **성공**(`SettingFactory`의 `onWithdrawSuccess`/`onLogoutSuccess`) — 사용자가 세션을 끝낸
+  것. `onAuthenticationRequired`는 그 탭 위에 push된 화면(컬렉션 상세·작품 상세 등)의 401 — 다른 탭과 같은
+  계약. 둘 다 결과는 온보딩 복귀지만 `MainTabView`가 후자에만 딥링크 복원을 거는 차이가 있어(아래 딥링크
+  항목) 예전처럼 하나로 합치지 말 것. `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 어느 콜백도
+  모른다 — 즉 마이페이지 로드(프로필·장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠
+  수 있는 게 아니라 `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약"
+  참고). **Home·Feed·서재 세 탭은 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
+  거기서 push하는 작품 상세(`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
 - **`onAuthenticationRequired`는 메인→온보딩으로 라우팅을 되돌리는 것까지만 하고, 로그아웃 처리
   (토큰 삭제 등)는 하지 않는다** — 401을 받은 시점에 이미 서버가 세션을 무효화한 상태라 재로그인하면
   새 토큰으로 덮어써진다. 별도 로그아웃 로직이 필요해지면 `AuthRepository.logout()`을 여기서 호출할지
-  검토할 것. 어느 탭에서 발생했든(`MainTabView`가 Home/Feed/Library 세 곳의 콜백을 같은 클로저로 받음)
-  idempotent해야 한다는 계약은 그대로 유지.
+  검토할 것. 어느 탭에서 발생했든(`MainTabView`가 4탭의 `onAuthenticationRequired`를 같은 클로저
+  `restoreDeepLinkAndRequireAuthentication`으로 받음) idempotent해야 한다는 계약은 그대로 유지.
 - ⚠️ **`DesignSystem` 에셋을 탭바 아이콘처럼 이름 문자열로 참조하면(`Label(_:image:)`) 완전히 새로
   설치한 상태에서 아이콘이 조용히 안 보인다** — 그 이미지는 App이 아니라 `DesignSystem.framework`
   자체의 리소스 번들에 있는데, `Label(_:image:)`/`Image(_:)`(이름 문자열 버전)는 기본적으로
@@ -280,15 +279,32 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     `MainTabView.deepLink(for:)`가 `selectedTab`과 같은 탭에만 값을 주고 나머지는 nil. 각 Root는
     `.onChange(of: deepLink, initial: true)`로 받아 push한 뒤 `onDeepLinkConsumed()`로 nil로 되돌린다
     (`initial: true`라 Root가 mount되기 전에 도착한 링크 — 콜드 스타트, 온보딩 중 수신 — 도 잡는다).
-  - **온보딩(로그아웃) 상태로 링크를 열면 `ContentView`가 `.main`으로 바뀔 때까지 `pendingDeepLink`에
+  - **이미 온보딩(로그아웃) 화면일 때 링크를 열면 `ContentView`가 `.main`으로 바뀔 때까지 `pendingDeepLink`에
     남아 있다가 로그인 뒤 이어서 처리된다** — 서버는 공개 컬렉션의 비로그인 조회를 허용하지만, 앱 게이트가
     `MainTabView`를 온보딩으로 되돌리므로(위 "로그인 안 된 상태로 `MainTabView`를 열면" 항목) 그 전에
     push해봐야 소용없다.
-  - `onOpenURL`에서 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)은 `AuthApi.isKakaoTalkLoginUrl`로 먼저
-    걸러 SDK에 넘긴다 — 순서를 바꾸면 `DeepLink(url:)`이 nil을 돌려주긴 하지만 카카오 콜백이 안 먹는다.
+    - ⚠️ **토큰 없는 콜드 스타트는 위 대기가 안 걸린다** — `route`가 `.main`으로 시작해 홈 Root가 링크를 즉시
+      소비·push하고, 몇 초 뒤 401 바운스가 `MainTabView`째 파괴해 링크가 통째로 사라졌다(카드 수신자의 주
+      시나리오 — 앱 꺼진 상태에서 "앱에서 보기", #228 리뷰에서 발견). 그래서 `MainTabView`가 소비한 링크를
+      `deliveredDeepLink`에 들고 있다가 **4탭의 401 경로(`restoreDeepLinkAndRequireAuthentication`)에서
+      `pendingDeepLink`로 되살린다** — 로그인 뒤 새 `MainTabView`가 다시 소비한다.
+      - 복원 창은 **딥링크 화면이 스택에 남아 있는 동안만**이다 — 각 Root가 push 시 `deepLinkDestinationDepth`
+        (= 그때의 `path.count`)를 기억하고 `path.count`가 그 아래로 내려가면 `onDeepLinkDestinationDismissed`로
+        알려 `MainTabView`가 지운다. 안 지우면 한참 뒤 무관한 401에도 옛 컬렉션이 재로그인 후 다시 뜬다(2라운드 리뷰).
+        슬롯은 탭별 하나(`(tab, link)`)라 **같은 탭에 링크 A 화면을 둔 채 링크 B가 또 도착해 위에 쌓이면 A는 추적에서
+        빠진다**(B를 pop하면 슬롯이 비어 A 화면의 401은 복원 안 됨) — 극단 케이스라 감수(리뷰에서 인지, 3라운드).
+      - ⚠️ **My 탭은 콜백이 둘이다** — `onSessionEnded`(설정 로그아웃·탈퇴 성공 = 사용자가 세션을 끝냄, 복원 ❌)와
+        `onAuthenticationRequired`(그 탭 위 push 화면의 401, 복원 ⭕). 예전엔 하나로 합쳐져 있었는데 My 탭에서
+        딥링크 화면이 401을 만나면 복원이 안 됐다. 결과(온보딩 복귀)가 같다고 다시 합치지 말 것.
+      - 세션 복원(`docs/TODO.md` 9절)이 들어오면 콜드 스타트 401 자체가 사라지지만 "보던 중 만료" 바운스엔
+        여전히 유효하니 지우지 말 것.
+  - `onOpenURL`은 **`DeepLink(url:)`를 먼저** 보고, nil이면 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)인지
+    `AuthApi.isKakaoTalkLoginUrl`로 물어 SDK에 넘긴다 — 카카오 콜백은 host가 `oauth`라 `DeepLink`가 nil을
+    돌려주니 순서를 뒤집어도 동작은 같지만, `isKakaoTalkLoginUrl`은 앱 키 미설정 시 `try!`로 죽는 SDK 경로라
+    순수 파서를 앞에 둔다.
   - **카카오톡 공유 카드의 "앱에서 보기"도 같은 경로다** — 카카오톡이 앱을
-    `kakao{APP_KEY}://kakaolink?collectionId={id}`로 열면(`isKakaoTalkLoginUrl`은 `…://oauth` prefix만 봐서
-    안 걸린다) `DeepLink(url:)`이 `kakaolink` host를 `.collectionDetail`로 풀어 위와 똑같이 push된다. App은
+    `kakao{APP_KEY}://kakaolink?collectionId={id}`로 열면 `DeepLink(url:)`이 `kakaolink` host를
+    `.collectionDetail`로 풀어 위와 똑같이 push된다. App은
     스킴을 따로 분기하지 않는다. 카드 전송 쪽 전제(`LSApplicationQueriesSchemes`의 `kakaolink`, 카카오 콘솔
     iOS 플랫폼의 Bundle ID·App Store ID)는 `CollectionFeature/CLAUDE.md` 공유 항목 참고 — 시뮬레이터엔
     카카오톡이 없어 수신 경로는 `xcrun simctl openurl <udid> "kakao<APP_KEY>://kakaolink?collectionId=4"`로만

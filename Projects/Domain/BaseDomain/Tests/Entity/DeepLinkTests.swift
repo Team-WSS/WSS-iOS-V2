@@ -83,6 +83,20 @@ struct DeepLinkTests {
         #expect(DeepLink(url: url) == nil)
     }
 
+    @Test("id가 0이거나 음수면 nil이다 — 서버 발급 ID는 양수뿐이다", arguments: ["0", "-1"])
+    func nilWhenIDNotPositive(rawID: String) {
+        let url = makeURL("websoso://collections/\(rawID)")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
+    @Test("host가 없으면 nil이다")
+    func nilWhenHostEmpty() {
+        let url = makeURL("websoso:///31")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
     // MARK: - kakaoExecutionParameters (카카오톡 공유 카드)
 
     @Test("컬렉션 상세 딥링크의 카카오 execution params는 collectionId 키에 id 문자열 하나다")
@@ -127,6 +141,13 @@ struct DeepLinkTests {
     @Test("kakaolink host의 collectionId가 정수가 아니면 nil이다")
     func nilWhenKakaoLinkCollectionIDNotInteger() {
         let url = makeURL("kakaoabc123://kakaolink?collectionId=abc")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
+    @Test("kakaolink host의 collectionId가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
+    func nilWhenKakaoLinkCollectionIDNotPositive(rawID: String) {
+        let url = makeURL("kakaoabc123://kakaolink?collectionId=\(rawID)")
 
         #expect(DeepLink(url: url) == nil)
     }

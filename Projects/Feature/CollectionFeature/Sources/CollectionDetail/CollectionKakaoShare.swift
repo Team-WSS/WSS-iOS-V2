@@ -35,6 +35,9 @@ enum CollectionKakaoShare {
         case emptyResult
         /// 웹 공유 URL 조립 실패(템플릿 직렬화 실패) — 정상 경로에선 안 온다.
         case webShareURLUnavailable
+        /// 카카오톡/Safari 열기 자체가 거부된 경우(`UIApplication.open`이 false) — 삼키면 버튼을 눌러도
+        /// 아무 일이 없는 것처럼 보이므로 토스트로 알린다.
+        case openFailed
     }
 
     /// 카드를 만들어 카카오톡(받는 사람 선택 화면) 또는 카카오 웹 공유(Safari)를 연다. 열리면 성공이고,
@@ -46,7 +49,9 @@ enum CollectionKakaoShare {
         } else {
             try makeWebShareURL(template)
         }
-        await UIApplication.shared.open(url)
+        guard await UIApplication.shared.open(url) else {
+            throw Failure.openFailed
+        }
     }
 
     /// 카카오톡이 설치돼 있어 앱으로 보낼 수 있는지. `Info.plist`의 `LSApplicationQueriesSchemes`에

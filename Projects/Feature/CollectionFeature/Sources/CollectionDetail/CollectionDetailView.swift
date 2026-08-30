@@ -29,6 +29,9 @@ struct CollectionDetailView: View {
     @State private var hasAppearedOnce = false
     /// 카카오 공유 카드 전송 실패 토스트 — 공유는 VM을 거치지 않는 순수 표현이라 View가 소유한다.
     @State private var isShareErrorToastPresented = false
+    /// 공유 진행 중 가드 — 템플릿 서버 검증을 기다리는 동안 연타하면 카카오톡이 두 번 열린다(VM의 진행 중
+    /// Task 가드와 같은 역할을 View 로컬로).
+    @State private var isSharing = false
     @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
@@ -365,7 +368,10 @@ private extension CollectionDetailView {
     /// 사용자 액션 실패라 토스트로 알린다.
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
+            guard !isSharing else { return }
+            isSharing = true
             Task {
+                defer { isSharing = false }
                 do {
                     try await CollectionKakaoShare.share(detail, coverImageURL: heroImageURL)
                 } catch {
