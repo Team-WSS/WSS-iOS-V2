@@ -278,24 +278,15 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   ("수정 완료"·"평가 완료"·"차단했어요"). V2엔 이 배관이 없다. 위 push 재진입 재조회 복원과 **같은 App 배선 자리**에서
   콜백/이벤트로 재설계한다(싱글톤 NotificationCenter 답습 금지). 근거: `FeedFeature` 0절 15 / `NovelDetailFeature`
   6.5·0절 11 / `UserPageFeature` 4.6(소소 묶음 ①과 합류). → App + 다수 Feature.
-- **알림 상세 본문 URL 자동 링크 복원 (사용자 확정 2026-08-28)** — V1 상세 본문은 `UITextView`
-  `dataDetectorTypes=.link`라 평문 URL이 탭 가능했으나, V2 순수 `Text`는 평문 URL을 링크로 렌더하지 않는다.
-  `AttributedString` 링크 감지로 복원. **선행 확인**: 서버 알림 본문에 실제 링크가 실리는지. 근거:
-  `NotificationFeature` 2.3·0-2. → `NotificationFeature`.
-- **타유저 USER-018('알 수 없는 유저') 전용 처리 복원 (사용자 확정 2026-08-28)** — V1은 `USER-018` 서버
-  에러를 잡아 빈 프로필로 폴백했으나, V2는 `USER-015`(비공개)만 처리하고 018은 일반 로드 실패
-  (`NetworkErrorView`)로 떨어져 재시도만 반복된다(잠재 회귀). 018 전용 "없는 유저" 처리를 복원한다. 근거:
-  `UserPageFeature` 4.7·0-4. → `UserPageFeature`.
 - **홈 선호장르 "설정했으나 추천 0건"도 설정 유도 카드로 (사용자 확정 2026-08-28)** — V2는 `PreferenceGenreNovelState`를
   `.noGenreSettings`(유도 카드) / `.novels([])`(섹션 숨김)로 나눴으나, 0건일 때도 V1처럼 유도 카드를 띄우기로(빈 자리보다
   행동 유도가 낫다). `.novels([])` 분기를 유도 카드로 합치거나 별도 케이스로 같은 카드 렌더. 근거: `HomeFeature` 2.5·0절 7.
   → `HomeFeature`.
-- **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ① 타유저 차단 성공 시 "차단했어요"
-  안내(토스트) 복원(`UserPageFeature` 4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
-  (`UserPageFeature` 1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
-  하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
-  공용). ④ 작품 상세 피드 셀의 **탈퇴 유저(`userId == -1`) 프로필 탭 토스트** 복원(`NovelDetailFeature` 4.3 —
-  Feed 0절 8·USER-018 폴백과 통일; V2 매퍼가 `-1`을 nil로 안 접는 함정은 계약서 4.3 참고). → `UserPageFeature`·`ProfileDomain`·`NovelDetailFeature`.
+- **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ①만 남음. ① 타유저 차단 성공 시
+  "차단했어요" 안내(토스트) 복원(`UserPageFeature` 4.6) — UserPage가 차단 성공 시 dismiss되므로 **복귀 화면에
+  토스트**를 띄우는 크로스스크린 성격이라 위 "크로스스크린 완료 피드백 재설계"(App 배선)와 함께 처리한다.
+  (②마이페이지 네비 타이틀·③생년 상한 dynamic·④작품상세 탈퇴유저 토스트는 완료 — ②④는 기존 구현 확인,
+  ③은 #221에서 `BirthYear.maxYear` 현재연도 계산으로 변경.) → App(①).
 
 ### 13. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 
