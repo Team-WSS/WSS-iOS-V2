@@ -35,11 +35,6 @@ struct LibraryFilterSheet: View {
         .mystery, .drama, .lightNovel, .BL
     ]
 
-    /// 매력포인트 표시 순서(디자인 정본) — `AttractivePoint.allCases` 순서와 다르다(필력이 3번째).
-    private static let attractivePointOrder: [AttractivePoint] = [
-        .worldview, .material, .writingSkill, .character, .relationship, .vibe
-    ]
-
     init(
         filter: MyLibraryFilter,
         initialTab: LibraryFilterTab,
@@ -301,7 +296,7 @@ private extension LibraryFilterSheet {
     /// 매력포인트 — 6개 균등, 아이콘 36 + 라벨. 선택 시 보라.
     var attractivePointContent: some View {
         HStack(spacing: 0) {
-            ForEach(Self.attractivePointOrder, id: \.self) { point in
+            ForEach(AttractivePoint.displayOrder, id: \.self) { point in
                 attractivePointItem(point)
                     .frame(maxWidth: .infinity)
             }

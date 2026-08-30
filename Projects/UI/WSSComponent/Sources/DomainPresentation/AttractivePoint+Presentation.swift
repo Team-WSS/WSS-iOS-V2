@@ -11,6 +11,13 @@ import SwiftUI
 import DesignSystem
 
 public extension AttractivePoint {
+    /// 매력포인트 화면 표시 순서(디자인 정본) — `allCases`(enum 선언 순서)와 달리 **필력이 3번째**다.
+    /// 매력포인트를 나열하는 모든 화면(감상평 작성·서재 필터)이 이 순서를 공유한다. `NovelGenre.myFeedFilter`
+    /// 같은 화면별 표시 순서 배열과 동일한 이유로 순수 enum(BaseDomain)이 아니라 여기(Presentation)에 둔다.
+    static let displayOrder: [AttractivePoint] = [
+        .worldview, .material, .writingSkill, .character, .relationship, .vibe
+    ]
+
     var displayName: String {
         switch self {
         case .worldview:    "세계관"

@@ -282,7 +282,7 @@ private extension NovelReviewView {
             Spacer().frame(height: 14)
 
             HStack(spacing: 0) {
-                ForEach(AttractivePoint.allCases, id: \.self) { point in
+                ForEach(AttractivePoint.displayOrder, id: \.self) { point in
                     let isSelected = viewModel.state.draft.attractivePoints.contains(point)
                     let imageColor = isSelected ? Color.wssPrimary100 : Color.wssGray80
                     let textColor = isSelected ? Color.wssPrimary100 : Color.wssGray200
