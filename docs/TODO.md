@@ -252,21 +252,12 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 - **감상평 첫 진입 온보딩 힌트 재도입 (사용자 확정 2026-08-28)** — V1의 1회성 오버레이(딤 + 평가 상태바 미리보기 + 말풍선 힌트,
   닫으면 `UserDefaults`로 재노출 방지)를 되살린다. 디자인 시안은 구현 시 V1 구성을 재료로 요청. 근거: `NovelDetailFeature` 6.4·0절 4.
   → `NovelDetailFeature`.
-- **매력포인트 버튼 순서 V1로 정렬** — 결정: `worldview·material·필력(writingSkill)·character·relationship·vibe`
-  (**필력 3번째**). 현재 V2는 필력이 맨 끝(둘 다 `allCases` 나열이라 우연히 다름). → `NovelReviewFeature`.
-- **키워드 빈 화면 문의 버튼 목적지 되돌림(오배선)** — 빈 검색결과의 "문의" 버튼이 V2에서 `AppURL.inquiryAddNovel`
-  (작품 등록 문의)로 잘못 연결됐다. V1은 **범용 문의**(`ExternalLinks.inquiry` = V2 `AppURL.errorReport`와 동일 URL).
-  **범용 문의로 되돌릴 것**. (`KeywordFeature/CLAUDE.md`의 "전용 폼 없어 재사용" 설명은 정정 완료.) → `KeywordFeature`.
 - **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
 - ✅ **[완료 2026-08-28] 상세검색 연재상태 회귀 + 내 피드 정렬 대소문자** — 둘 다 C2에서 수정·빌드 검증
   완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) 3-1·3-2). `isCompleted`는 `Bool?` +
   매퍼 `.map`으로 미선택 시 쿼리 생략(완결작 90% 누락 회귀 해소), 내 피드 정렬은 `.uppercased()`로 통일(서버는
   대소문자 무관이나 표기 일관성). **잔여: `isCompleted` 매퍼 회귀 테스트**(SearchData `.tests` 타깃 미배선이라 후속).
-- **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
-  포커스 없음(실측 — `@FocusState`만 있고 진입 시 true로 안 켬). 진입 시 `isFocused = true` 복원. → `SearchFeature`.
-- **검색어 30자 제한 복원** — V1은 검색어 30자 초과 입력을 막았다(`shouldChangeCharactersIn`). V2는 제한 없음
-  (실측). 서버 제약 가능성. → `SearchFeature`.
 - **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,
   상세검색 진입경로 부재. 전부 App 라우터/네비게이션 배선 대기 — **App 모듈에서 처리**(사용자 확정 2026-08-28). → `App`.
 - **서재(내 서재) 필터·정렬 영속화 복원 (사용자 확정 2026-08-28)** — V1은 필터·정렬을 UserDefaults에
