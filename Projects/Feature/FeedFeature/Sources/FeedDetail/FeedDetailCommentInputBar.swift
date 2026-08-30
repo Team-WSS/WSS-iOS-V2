@@ -16,6 +16,9 @@ struct FeedDetailCommentInputBar: View {
     let profileImageURL: URL?
     let sendAction: () -> Void
     var isSubmitting: Bool = false
+    /// 전송 버튼 활성 여부 — 호출자가 "내용이 비어있지 않고(수정 모드면) 원본과 다르다"를 계산해 넘긴다.
+    /// 입력바는 이 값 하나로 아이콘 색·`disabled`를 정한다(무변경 재전송 가드 복원, #222).
+    var isSendEnabled: Bool = true
     var externalFocus: FocusState<Bool>.Binding? = nil
 
     @FocusState private var internalFocus: Bool
@@ -84,12 +87,12 @@ struct FeedDetailCommentInputBar: View {
                 } else {
                     WSSImage.icCommentRegister.swiftUIImage
                         .renderingMode(.template)
-                        .foregroundStyle(text.isEmpty ? WSSColor.wssGray100.swiftUIColor : WSSColor.wssPrimary100.swiftUIColor)
+                        .foregroundStyle(isSendEnabled ? WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
                         .frame(width: 42, height: 42)
                 }
             }
             .buttonStyle(.plain)
-            .disabled(text.isEmpty || isSubmitting)
+            .disabled(!isSendEnabled || isSubmitting)
         }
         .padding(.leading, 20)
         .padding(.trailing, 7)

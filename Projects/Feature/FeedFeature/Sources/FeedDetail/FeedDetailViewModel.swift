@@ -44,6 +44,11 @@ final class FeedDetailViewModel {
         /// 안내 토스트(`WSSToastType.unknownUser`) — 둘 다 같은 화면·같은 의미라 상태를 공유한다
         /// (`SosoFeedViewModel.isUnavailableUserToastPresented`와 동일 패턴).
         var isUnavailableUserToastPresented = false
+        /// 댓글 작성/수정/삭제·피드 삭제가 실패했을 때 뜨는 "네트워크 지연" 토스트(`WSSToastType.networkDelay`).
+        /// V1은 이 실패들을 조용히 삼키지 않고 토스트로 알리고 전송 버튼을 재활성했다(#222 회귀 복원) —
+        /// 콘텐츠는 멀쩡하고 그 행동만 실패한 "사용자 액션 실패"라 전면 뷰가 아니라 토스트로 표현한다
+        /// ([Feature CLAUDE.md](../CLAUDE.md)의 로드 실패 표현 계약).
+        var isActionFailedToastPresented = false
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -159,6 +164,8 @@ final class FeedDetailViewModel {
         /// 댓글 프로필 둘 다 같은 액션을 쓴다.
         case userProfileUnavailableTapped
         case dismissUnavailableUserToast
+
+        case dismissActionFailedToast
     }
 
     public func handle(_ action: Action) async {
@@ -174,12 +181,19 @@ final class FeedDetailViewModel {
         case .submitComment:
             guard !state.commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             state.isSubmittingComment = true
+            let didSucceed: Bool
             if let editingID = state.editingCommentID {
-                await editComment(commentID: editingID)
+                didSucceed = await editComment(commentID: editingID)
             } else {
-                await createComment()
+                didSucceed = await createComment()
             }
             state.isSubmittingComment = false
+            // 실패 시 입력 내용·수정 모드를 그대로 두어(=전송 버튼 재활성) 재시도하게 하고 토스트로 알린다.
+            // 성공했을 때만 입력을 비우고 목록을 갱신한다(V1 parity, #222).
+            guard didSucceed else {
+                state.isActionFailedToastPresented = true
+                return
+            }
             state.editingCommentID = nil
             state.commentText = ""
             Task { await loadComments() }
@@ -208,6 +222,9 @@ final class FeedDetailViewModel {
 
         case .dismissUnavailableUserToast:
             state.isUnavailableUserToastPresented = false
+
+        case .dismissActionFailedToast:
+            state.isActionFailedToastPresented = false
         }
     }
 
@@ -309,18 +326,22 @@ final class FeedDetailViewModel {
             try await deleteFeedUseCase.execute(feedID: feedID)
             state.didDeleteFeed = true
         } catch {
-
+            logger?.error("FeedDetail deleteFeed 실패: \(String(describing: error))")
+            state.isActionFailedToastPresented = true
         }
     }
 
-    private func createComment() async {
+    /// 성공하면 true. 실패 시 로그 + false를 돌려줘 호출부(`submitComment`)가 입력을 보존하고 토스트를 띄운다.
+    private func createComment() async -> Bool {
         let draft = CommentDraft(content: state.commentText)
 
         do {
             try await createCommentUseCase.execute(feedID: feedID, draft)
             state.detail?.addCommentCount()
+            return true
         } catch {
-
+            logger?.error("FeedDetail createComment 실패: \(String(describing: error))")
+            return false
         }
     }
 
@@ -339,17 +360,21 @@ final class FeedDetailViewModel {
             state.comments.removeAll { $0.id == commentID }
             state.detail?.removeCommentCount()
         } catch {
-
+            logger?.error("FeedDetail deleteComment 실패: \(String(describing: error))")
+            state.isActionFailedToastPresented = true
         }
     }
-    
-    private func editComment(commentID: CommentID) async {
+
+    /// 성공하면 true. 실패 시 로그 + false를 돌려줘 호출부(`submitComment`)가 입력을 보존하고 토스트를 띄운다.
+    private func editComment(commentID: CommentID) async -> Bool {
         do {
             let draft = CommentDraft(content: state.commentText)
             try await editCommentUseCase.execute(commentID: commentID,
                                              feedID: feedID, draft)
+            return true
         } catch {
-            
+            logger?.error("FeedDetail editComment 실패: \(String(describing: error))")
+            return false
         }
     }
 

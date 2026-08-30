@@ -27,6 +27,11 @@ struct FeedDetailView: View {
 
     @FocusState private var isCommentFocused: Bool
 
+    /// 댓글 입력 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 버퍼를 거친다 — 500자 clamp를
+    /// `Binding.set`에서 바로 하면 네이티브 필드가 초과분을 화면에 그대로 들고 있는 함정이 있어서다
+    /// (Feature/UserPageFeature CLAUDE.md의 글자수 제한 TextField 2단계 패턴, #222 복원).
+    @State private var commentDraft: String = ""
+
     // 이미지 확대 뷰
     @State private var selectedImage: SelectedImage?
 
@@ -107,6 +112,7 @@ struct FeedDetailView: View {
             buttonActions: alertActions
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
+        .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
     }
     
     @ViewBuilder
@@ -268,11 +274,7 @@ struct FeedDetailView: View {
             // MARK: - 댓글 입력
             
             FeedDetailCommentInputBar(
-                text:
-                    Binding(
-                        get: { viewModel.state.commentText },
-                        set: { value in Task { await viewModel.handle(.updateCommentText(value)) }}
-                    ),
+                text: $commentDraft,
                 profileImageURL: viewModel.state.currentUserProfileImageURL,
                 sendAction: {
                     Task {
@@ -284,8 +286,23 @@ struct FeedDetailView: View {
                     }
                 },
                 isSubmitting: viewModel.state.isSubmittingComment,
+                isSendEnabled: isCommentSendEnabled,
                 externalFocus: $isCommentFocused
             )
+            // 로컬 버퍼 → clamp → (초과면 로컬 재대입해 네이티브 필드 되돌림 / 아니면 VM 전달)의 2단계.
+            .onChange(of: commentDraft) { _, newValue in
+                let clamped = String(newValue.prefix(CommentDraft.maxContentCount))
+                if clamped != newValue {
+                    commentDraft = clamped
+                    return
+                }
+                Task { await viewModel.handle(.updateCommentText(clamped)) }
+            }
+            // 수정 진입(본문 채움)·전송 후 비우기·취소처럼 VM이 텍스트를 바꾸면 로컬 버퍼를 맞춘다.
+            .onChange(of: viewModel.state.commentText) { _, newValue in
+                guard commentDraft != newValue else { return }
+                commentDraft = newValue
+            }
         }
     }
 
@@ -426,6 +443,20 @@ struct FeedDetailView: View {
         }
     }
 
+    //MARK: - 댓글 전송 활성 조건
+
+    /// 전송 버튼 활성 조건: 내용이 비어있지 않고, **수정 모드면** 원본 댓글과 달라야 한다
+    /// (무변경 재전송 방지, V1 parity #222). 작성 모드는 비어있지 않으면 항상 활성.
+    private var isCommentSendEnabled: Bool {
+        let trimmed = commentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if let editingID = viewModel.state.editingCommentID,
+           let original = viewModel.state.comments.first(where: { $0.id == editingID })?.content {
+            return commentDraft != original
+        }
+        return true
+    }
+
     //MARK: - 알럿 Presentation
 
     /// VM의 의미 알럿(`state.alert`) → 표시 여부. "취소" 없이 확인 한 번뿐인 알럿(`feedUnavailable` 등)도
@@ -442,6 +473,16 @@ struct FeedDetailView: View {
             get: { viewModel.state.isUnavailableUserToastPresented },
             set: { newValue in
                 if !newValue { Task { await viewModel.handle(.dismissUnavailableUserToast) } }
+            }
+        )
+    }
+
+    /// 댓글 작성/수정/삭제·피드 삭제 실패 시 뜨는 "네트워크 지연" 토스트(#222 조용한 실패 복원).
+    private var actionFailedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isActionFailedToastPresented },
+            set: { newValue in
+                if !newValue { Task { await viewModel.handle(.dismissActionFailedToast) } }
             }
         )
     }
