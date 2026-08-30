@@ -7,6 +7,15 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
+  초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계
+  (clamp → 초과면 로컬 재대입 / 아니면 VM 전달)로 처리한다([상위/UserPageFeature CLAUDE.md]의 글자수 제한
+  TextField 함정과 동일 패턴, #222 복원). 전송 버튼 활성(`FeedDetailCommentInputBar.isSendEnabled`)은 "비어있지
+  않고 수정 모드면 원본과 다름"을 View(`isCommentSendEnabled`)가 계산해 넘긴다 — 무변경 재전송 가드.
+- **댓글 작성/수정/삭제·피드 삭제 실패는 조용히 삼키지 않는다**(#222 회귀 복원) — `FeedDetailViewModel`이
+  `isActionFailedToastPresented`로 `WSSToastType.networkDelay` 토스트를 띄우고, 전송 실패 시 입력 내용·수정
+  모드를 보존해 재시도하게 한다(성공했을 때만 입력 비우고 목록 재조회). `create/editComment`가 성공 여부를
+  `Bool`로 돌려주는 이유. "사용자 액션 실패"라 전면 뷰가 아니라 토스트([상위 CLAUDE.md] 로드 실패 표현 계약).
 - **`CreateFeedConnectNovelSheet`(작품 연결 검색)의 결과 영역은 `searchedNovels`가 아니라
   `CreateFeedViewModel.state.hasSearchedNovel` 플래그로 가른다** — `WSSSearchBar.onSearch`는 제출
   (엔터/검색 버튼)에만 발화하고 타이핑 자체는 매 글자마다 `updateConnectedNovelSearchText`로 바로

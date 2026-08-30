@@ -249,21 +249,9 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 
 - **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
   평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
-- **피드 댓글/삭제 조용한 실패 표면화(회귀 확정)** — `FeedDetailViewModel`의 `createComment`·`editComment`·
-  `deleteComment`·`deleteFeed`가 **빈 `catch {}` 4곳**으로 실패를 삼킨다(실측 확인). V1은 "네트워크 지연" 토스트 +
-  전송버튼 재활성. 최소 에러 표면화 필요. → `FeedFeature`.
 - **감상평 첫 진입 온보딩 힌트 재도입 (사용자 확정 2026-08-28)** — V1의 1회성 오버레이(딤 + 평가 상태바 미리보기 + 말풍선 힌트,
   닫으면 `UserDefaults`로 재노출 방지)를 되살린다. 디자인 시안은 구현 시 V1 구성을 재료로 요청. 근거: `NovelDetailFeature` 6.4·0절 4.
   → `NovelDetailFeature`.
-- **피드 좋아요 햅틱 복원** — V1 좋아요에 light impact 햅틱. V2 목록 좋아요엔 없다(정렬 토글엔 있음). → `FeedFeature`.
-- **피드 댓글 500자 제한 복원** — V1은 500자 하드컷. V2는 제한 없음(실측 확인). 무제한이면 서버가 긴 댓글 거부 시
-  조용한 실패 위험. → `FeedFeature`.
-- **내 피드 개수 표시 = 서버 `feedsCount` 사용 (사용자 확정 2026-08-28)** — V2는 로드된 배열 길이(`myFeeds.count`)라
-  페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가
-  실재하므로 매퍼/상태로 노출해 표시(V1 parity). → `FeedFeature`·`FeedData`.
-- **피드 수정 "변경 감지" 게이트 복원 (사용자 확정 2026-08-28)** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경
-  재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 활성
-  (`isInitialFeedChanged`). 겸사 **댓글 전송 버튼**도 무변경 재전송 가드 복원(초기값과 다를 때만 활성, 사소). → `FeedFeature`.
 - **매력포인트 버튼 순서 V1로 정렬** — 결정: `worldview·material·필력(writingSkill)·character·relationship·vibe`
   (**필력 3번째**). 현재 V2는 필력이 맨 끝(둘 다 `allCases` 나열이라 우연히 다름). → `NovelReviewFeature`.
 - **키워드 빈 화면 문의 버튼 목적지 되돌림(오배선)** — 빈 검색결과의 "문의" 버튼이 V2에서 `AppURL.inquiryAddNovel`
