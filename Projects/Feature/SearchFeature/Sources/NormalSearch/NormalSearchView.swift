@@ -22,6 +22,13 @@ struct NormalSearchView: View {
 
     @FocusState var isFocused: Bool
 
+    /// 진입 시 검색창 자동 포커스를 최초 1회만 걸기 위한 가드(작품 상세 등에서 복귀 시 재발화 방지, #222 V1 parity).
+    @State private var didAutoFocus = false
+
+    /// 검색어 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 버퍼를 거친다 — 30자 clamp를 `Binding.set`에서
+    /// 바로 하면 네이티브 필드가 초과분을 화면에 들고 있는 함정이 있어서다(글자수 제한 TextField 2단계 패턴, #222).
+    @State private var searchDraft: String
+
     /// 검색 결과 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onNovelSelected: (NovelID) -> Void
     /// 장르 탭·인기 키워드 칩 탭 → 상세탐색 결과(`DetailSearchResultView`) 진입 콜백. 실제 화면 전환은
@@ -37,16 +44,10 @@ struct NormalSearchView: View {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelSelected = onNovelSelected
         self.onDetailSearchRequested = onDetailSearchRequested
+        // initialQuery로 진입 시 VM이 init에서 이미 searchText를 채워두므로 로컬 버퍼도 그 값으로 시작한다.
+        self._searchDraft = State(initialValue: viewModel.state.searchText)
     }
-    
-    /// 검색어는 VM이 소유(입력마다 자동완성 조회를 트리거)하므로 View는 Binding으로 중계만 한다.
-    private var searchTextBinding: Binding<String> {
-        Binding(
-            get: { viewModel.state.searchText },
-            set: { viewModel.handle(.updateSearchText($0)) }
-        )
-    }
-    
+
     var body: some View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
@@ -112,6 +113,18 @@ struct NormalSearchView: View {
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
             viewModel.handle(.loadPopularKeywords)
+            // V1 parity: 진입 시 검색창에 자동 포커스(키보드 바로 뜸). 단 initialQuery로 이미 검색이
+            // 실행된 경우(작가명 탭 등)엔 결과 화면을 보여줘야 하므로 포커스하지 않는다. 최초 1회만,
+            // push 애니메이션이 끝난 뒤(포커스가 씹히지 않게) 건다.
+            if !didAutoFocus, !viewModel.state.isSearchExecuted {
+                didAutoFocus = true
+                // @MainActor 명시 필수 — 평범한 Task {}는 메인 액터를 상속하지 않아 @FocusState(main-actor)
+                // 설정이 무시돼 포커스가 안 걸린다(시뮬레이터 실측).
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    isFocused = true
+                }
+            }
         }
     }
     
@@ -132,13 +145,27 @@ struct NormalSearchView: View {
             
             Spacer().frame(width: 6)
             
-            WSSSearchBar(text: searchTextBinding,
+            WSSSearchBar(text: $searchDraft,
                          placeholder: "작품 제목, 작가를 검색하세요",
                          isFocused: $isFocused,
                          onSearch: {
                 isFocused = false
                 viewModel.handle(.executeSearch(viewModel.state.searchText))
             })
+            // 로컬 버퍼 → 30자 clamp → (초과면 로컬 재대입해 네이티브 필드 되돌림 / 아니면 VM 전달)의 2단계.
+            .onChange(of: searchDraft) { _, newValue in
+                let clamped = String(newValue.prefix(NormalSearchViewModel.maxSearchTextCount))
+                if clamped != newValue {
+                    searchDraft = clamped
+                    return
+                }
+                viewModel.handle(.updateSearchText(clamped))
+            }
+            // 검색 실행 시 trim·최근 검색어/제안어 탭처럼 VM이 검색어를 바꾸면 로컬 버퍼를 맞춘다.
+            .onChange(of: viewModel.state.searchText) { _, newValue in
+                guard searchDraft != newValue else { return }
+                searchDraft = newValue
+            }
         }
     }
     

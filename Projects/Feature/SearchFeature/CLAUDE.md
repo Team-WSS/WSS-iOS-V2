@@ -49,6 +49,20 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **진입 시 검색창 자동 포커스(#222 V1 parity)는 `Task { @MainActor in … isFocused = true }`로 건다** —
+  ⚠️ `@MainActor`를 빼면 안 걸린다. `onAppear` 클로저는 메인에서 돌지만 정적 `@MainActor`가 아니라, 그 안의
+  평범한 `Task {}`는 메인 액터를 상속하지 않고 글로벌 executor에서 실행돼 `@FocusState`(main-actor) 설정이
+  조용히 무시된다(시뮬레이터 실측 — 키보드 안 뜸). push 애니메이션이 포커스를 씹지 않게 350ms 지연 후 걸고,
+  `initialQuery`로 이미 검색이 실행된 경우(작가명 탭)엔 결과를 보여줘야 하므로 포커스하지 않는다. 최초 1회
+  가드(`didAutoFocus`)로 작품 상세 등에서 복귀 시 재발화 방지. **시뮬레이터에서 소프트 키보드가 안 보여도
+  포커스는 됐을 수 있다**(Mac HW 키보드 연결 시 iOS가 소프트 키보드를 숨김) — 탭 없이 HW 키를 보내 필드에
+  들어가는지로 확인.
+- **검색어는 30자 clamp**(#222 V1 parity, `NormalSearchViewModel.maxSearchTextCount`) — `WSSSearchBar`가
+  `TextField`에 바인딩을 직접 물려서, 로컬 `@State searchDraft` 버퍼 + `.onChange` 2단계(clamp → 초과면 로컬
+  재대입 / 아니면 `updateSearchText` 전달)로 처리한다(Binding.set에서 바로 clamp하면 네이티브 필드가 초과분을
+  들고 있는 함정 — Feature CLAUDE.md). VM이 검색어를 바꾸는 경로(executeSearch trim·최근 검색어/제안어 탭)는
+  `.onChange(of: state.searchText)`로 버퍼를 되맞춘다.
+
 - ⚠️ **`NavigationPath` 기반 push(App)와 로컬 `@State` + `.navigationDestination(item:)` 기반 push(Feature)를 섞으면, 그 로컬로 push된 화면이 나중에 통째로 사라진다.** `DetailSearchResultView`가 실제로 이 버그였다(#196) — `NormalSearchView`가 로컬 상태로 자신을 push했는데, 그 화면 안에서 `onNovelSelected`가 App의 `path.append(...)`를 호출하는 순간(작품 상세 진입), SwiftUI가 **App의 `path` 배열만을 기준으로 스택을 다시 계산**해 로컬로 얹혀 있던 `DetailSearchResultView`가 스택에서 빠졌다 — 증상은 "작품 상세에서 뒤로가기를 누르면 상세탐색 결과가 아니라 그 이전 화면(검색 브라우즈)으로 바로 튕김"으로 나타났다(겉보기엔 작품 상세로 정상 진입하는 것처럼 보여서 뒤로가기를 눌러봐야 드러난다). **고친 방법**: `DetailSearchResultView`의 push 자체를 Feature 로컬에서 App으로 옮겨(`onDetailSearchRequested` 콜백 + `SearchFeatureFactory.makeDetailSearchResultView` 독립 진입점), 그 화면에 이르는 전체 경로가 **하나의 `NavigationPath`만** 쓰도록 통일했다. **어떤 화면이 "그 안에서 또 다른(특히 다른 모듈) 화면으로 더 넘어가야 하는" 중간 화면이라면, 그 화면 자체의 push도 처음부터 App의 `NavigationPath`를 타야 한다** — Feature가 로컬로 직접 push해도 되는 건 그 화면이 스택의 "막다른 끝"일 때(더 이상 다른 모듈로 안 뻗어나갈 때)뿐이다.
 - **`WSSSearchBar.onSearch`가 키보드를 내릴 때 텍스트 바인딩을 한 번 더 커밋한다** — `dismissKeyboard()` 이후의 이 커밋이 비동기로(같은 런루프가 아니라 다음 사이클에) 들어와, `executeSearch`가 `isSearchExecuted = true`로 세운 직후 `updateSearchText`가 그걸 다시 `false`로 되돌리는 버그가 있었다(검색 버튼을 눌러도 결과 화면이 안 뜨고 브라우즈로 돌아감). **`updateSearchText`는 반드시 `text != state.searchText`일 때만 동작**하도록 가드해야 한다 — 이 가드를 지우면 같은 버그가 재발한다.
 - **키보드 return 키로 제출해도 `WSSSearchBar`는 스스로 키보드를 안 내린다**(검색 아이콘 버튼만 `dismissKeyboard()`를 호출). 그래서 `NormalSearchView`의 `onSearch` 클로저와 자동완성 `onSelect` 클로저 양쪽에서 **직접 `isFocused = false`를 먼저 설정**한 뒤 액션을 처리한다 — 검색 제출(아이콘 탭/키보드 return)과 제안어 선택 모두 키보드가 내려가야 하므로. 새 검색 실행 경로(최근 검색어 칩 등)를 추가할 때도 같은 패턴을 잊지 말 것.
