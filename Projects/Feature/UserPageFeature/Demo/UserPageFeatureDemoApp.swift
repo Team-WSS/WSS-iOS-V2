@@ -134,6 +134,24 @@ private struct DemoScreenSelectionView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+
+                Divider().padding(.vertical, 8)
+
+                // 특수 상태(없는 유저·비공개 프로필)는 예약 userID로 Mock 응답을 분기한다 — 키보드 입력 없이
+                // 바로 진입하도록 바로가기로 둔다(userID 입력칸 + 이동으로도 같은 값을 넣을 수 있다).
+                Text("특수 상태 데모 (UserPage)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                NavigationLink("없는 유저 (998 · USER-018)") {
+                    DemoFactory.makeUserPageView(dataSource: dataSource, userID: demoNotFoundProfileUserID)
+                }
+                .buttonStyle(.bordered)
+
+                NavigationLink("비공개 프로필 (999)") {
+                    DemoFactory.makeUserPageView(dataSource: dataSource, userID: demoPrivateProfileUserID)
+                }
+                .buttonStyle(.bordered)
             }
         }
         .padding()
