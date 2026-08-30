@@ -93,7 +93,15 @@ let targets: [Target] = [
             .module(.feature(.collection))
         ],
         settings: .settings(
-            base: env.baseSetting,
+            // App 타깃 전용 버전(Support/Info.plist의 CFBundleShortVersionString/CFBundleVersion이 참조).
+            // env.baseSetting은 전 모듈이 공유해서 여기서만 병합한다. ⚠️ 카카오 SDK가
+            // CFBundleShortVersionString을 kakaolink 필수 파라미터(appver)로 보내므로, 비면 카카오톡 공유가
+            // "Core parameter(s) missing"으로 거부된다(#228 실기기 실측). 값 자체는 #231(fastlane·서명)이
+            // 같은 자리에 두는 것과 맞춘다 — 정식 버전업은 그쪽 흐름에서.
+            base: env.baseSetting.merging([
+                "MARKETING_VERSION": "1.9.4",
+                "CURRENT_PROJECT_VERSION": "1",
+            ]) { _, new in new },
             configurations: configurations),
     ),
     .target(

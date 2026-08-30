@@ -56,7 +56,6 @@ final class CollectionDetailViewModel {
         case dismissDeleteAlert
         case confirmDelete
         case dismissActionErrorToast
-        case shareTapped
         /// 뒤로가기 버튼 탭 — `dismiss()` 직전에 View가 함께 호출한다. `.onDisappear`로는 못 쓴다
         /// — 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하는데, push되는 순간 부모도
         /// `.onDisappear`가 발화해(SwiftUI 표준 동작) `isClosing`이 영구히 굳어버린다(실측 확인,
@@ -132,9 +131,6 @@ final class CollectionDetailViewModel {
             confirmDelete()
         case .dismissActionErrorToast:
             state.hasActionError = false
-        case .shareTapped:
-            // TODO: - 공유하기(이번 범위 밖 — 공유 URL/딥링크 체계 없음)
-            break
         case .backTapped:
             close()
         }

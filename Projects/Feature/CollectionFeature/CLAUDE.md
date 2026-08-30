@@ -151,8 +151,47 @@
     동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201, `docs/TODO.md` 9번
     해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
-    유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다. "공유하기"는 카카오톡
-    공유만 별도로 계획돼 있다(`docs/TODO.md` 참고 — 착수 전).
+    유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
+  - **"공유하기"는 카카오 공유 카드 하나다 — 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari).
+    시스템 공유 시트는 쓰지 않는다**(#228, 사용자 확정 2026-08-29). 목표가 "받은 사람이 카톡에서 탭해 앱의 이
+    화면으로 들어오는 것"인데, 커스텀 스킴(`websoso://…`)을 텍스트로 보내면 **카카오톡이 링크로 인식하지 않아**
+    수신자가 진입할 수 없었다(실기기 실측) — 그래서 처음 폐기했던 카카오 SDK(`KakaoSDKShare`/`KakaoSDKTemplate`)를
+    다시 들였고, 같은 이유로 시스템 공유 시트(문자·복사)도 걷어냈다(거기로 나가는 커스텀 스킴 링크는 어디서도
+    탭이 안 돼 무의미 — Universal Link가 생기면 그때 의미 있는 시트로 다시 검토, `docs/TODO.md` 8절).
+    - 카드(`CollectionKakaoShare`, `@MainActor enum`): `FeedTemplate` = 제목(`name`) + 설명(`description`,
+      없으면 "작품 N개") + 대표 표지(`heroImageURL`, **옵셔널이라 표지 없으면 이미지 없는 카드** — 기본 이미지
+      URL 불필요) + "앱에서 보기" 버튼. 버튼·본문 `Link`는 `webUrl` 없이 `iosExecutionParams`/
+      `androidExecutionParams`에 `DeepLink.kakaoExecutionParameters`(`collectionId={id}`)만 싣는다 → 받는 앱엔
+      `kakao{APP_KEY}://kakaolink?collectionId={id}`로 도착하고 App `onOpenURL`이 `DeepLink(url:)`로 푼다.
+      앱 미설치자는 카카오가 App Store로 보낸다(카카오 콘솔 iOS 플랫폼에 Bundle ID·App Store ID 등록 필요 —
+      Demo 번들 `kr.websoso.app.CollectionFeatureDemo`는 등록돼 있지 않으면 템플릿 검증에서 거부될 수 있다).
+    - 카카오톡이 있으면 `ShareApi.shared.shareDefault`(템플릿 서버 검증)가 돌려준 `kakaolink://send?…` URL을,
+      없으면 `ShareApi.shared.makeDefaultUrl`(로컬 조립, 서버 검증 없음)의 카카오 웹 공유 URL을
+      `UIApplication.shared.open`으로 연다 — 카카오톡의 받는 사람 선택 화면 또는 Safari의 카카오 웹 공유가 뜨는
+      **여기까지가 성공**이고 실제 전송 여부는 알 수 없다(카카오 안의 일). 실패는 사용자 액션 실패라
+      토스트(`isShareErrorToastPresented`, View 로컬 — 공유는 VM을 안 거친다). ⚠️ `open`의 `Bool` 결과를 버리면
+      열기 거부가 조용히 삼켜져 "눌러도 아무 일 없음"이 된다 — `false`는 `Failure.openFailed`로 throw. 그리고
+      템플릿 서버 검증을 기다리는 사이 연타하면 카카오톡이 두 번 열리므로 View 로컬 `isSharing` 가드가 막는다
+      (VM의 진행 중 Task 가드를 View로 옮긴 것, 둘 다 리뷰 반영).
+    - ⚠️ **카카오톡 설치 판정(`ShareApi.isKakaoTalkSharingAvailable()`)은 `canOpenURL("kakaolink://")`라
+      `Info.plist`의 `LSApplicationQueriesSchemes`에 `kakaolink`가 없으면 카카오톡이 깔려 있어도 항상 false**
+      (→ 웹 공유로만 나간다). App `Support/Info.plist`와 `ModuleInfoPlist.featureDemo` 둘 다 등록돼 있다.
+      시뮬레이터엔 카카오톡이 없어 **앱 경로는 실기기에서만 확인 가능**(시뮬레이터는 항상 웹 공유).
+    - SDK는 `KakaoSDK.initSDK(appKey:)`가 먼저 불려 있어야 하고 — App은 `WSSIOSV2App.init`, Demo는
+      `CollectionFeatureDemoApp.init`(`NetworkingConfig.kakaoAppKey`) — **호출 앱의 `Info.plist`에
+      `CFBundleShortVersionString`이 있어야 한다**(SDK가 `appver` 필수 파라미터로 보냄, 없으면 카카오톡이
+      "Core parameter(s) missing"으로 거부 — App은 커스텀 plist라 실제로 빠져 있었다, `App/CLAUDE.md`). `Tuist/Package.swift` `productTypes`에
+      `.framework` 강제 필수(안 하면 `MustInitAppKey` 크래시, `OnboardingFeature/CLAUDE.md`).
+    - 받는 쪽 라우팅은 App 몫(`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라
+      View가 직접 처리한다(`onNovelTapped`와 같은 위상).
+    - **폐기 이력(시스템 공유 시트, 커밋 `0cd2f144`·`bffdbe1e`·`5d1e0b78`에 구현이 남아 있다)** — 나중에 Universal
+      Link로 시트를 되살릴 때 같은 함정을 다시 밟지 않도록 요점만: `ShareLink(item: URL, message:)`는 "복사"가
+      URL과 메시지를 별개 pasteboard 항목으로 넣어 plain-text 입력창(카카오톡)에 URL이 빠지고,
+      `ShareLink(item: String)`은 문자열을 파일로 취급해 "복사"가 아예 없으며, `.sheet { UIActivityViewController }`는
+      시트 안의 X/완료가 SwiftUI 표시 상태와 어긋나 **두 번째부터 안 뜬다** → 투명 호스트 VC가 창 최상위 VC에서
+      직접 present하고 `completionWithItemsHandler`로 상태를 내리는 프레젠터가 답이었다. 시트 모양(detent 등)은
+      iOS 26 공유 시트가 우리 설정을 무시하며, 컨테이너 child로 강제하면 흰 백드롭이 앱을 덮는다(전부 iOS 26.5
+      실측, 2026-08-29). 미리보기 표지 로드용으로 만든 `WSSComponent.WSSImageLoader`는 `WSSAsyncImage`가 쓰므로 남아 있다.
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를

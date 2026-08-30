@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+import KakaoSDKCommon
+
 import CollectionFeature
 import BaseDomain
 import CollectionDomain
@@ -27,6 +29,10 @@ struct CollectionFeatureDemoApp: App {
         // 커스텀 폰트(Pretendard) 등록. 없으면 applyWSSFont의 UIFont(name:)! 가 nil → 크래시.
         // 프리뷰는 이 Demo 앱을 호스트로 띄우므로 여기서 등록하면 프리뷰도 함께 해결된다.
         DesignSystemFontFamily.registerAllCustomFonts()
+
+        // 컬렉션 상세 "공유하기"(카카오톡 공유 카드, #228)를 Demo 단독으로 확인하려면 앱 진입점 초기화가
+        // 필요하다(`OnboardingFeatureDemoApp`과 동일 — App과 별개 프로세스라 App의 초기화를 못 물려받는다).
+        KakaoSDK.initSDK(appKey: NetworkingConfig.kakaoAppKey)
     }
 
     var body: some Scene {

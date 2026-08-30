@@ -9,9 +9,11 @@
 
 ```
 Sources/
-├── WSSIOSV2App.swift        # @main. 폰트 등록·KakaoSDK 초기화 등 앱 시작 시 1회 처리.
+├── WSSIOSV2App.swift        # @main. 폰트 등록·KakaoSDK 초기화 등 앱 시작 시 1회 처리 + onOpenURL
+│                             # (카카오 로그인 콜백은 SDK로, websoso:// 딥링크는 pendingDeepLink로, #228).
 ├── ContentView.swift        # 앱 루트. AppDependencies를 한 번 만들어 두 플로우에 내려주고,
 │                             # Route(.onboarding/.main)로 전환한다(로그인 상태 분기는 여기).
+│                             # 딥링크 Binding은 MainTabView로만 내려간다(온보딩 중엔 그대로 대기).
 ├── DI/
 │   └── AppDependencies.swift  # 유일한 조립 지점 — NetworkingClient·TokenStore·Repository 조립.
 ├── Onboarding/
@@ -20,7 +22,8 @@ Sources/
 │                                  # 어디로 갈지는 정하지 않고 ContentView에 위임.
 ├── Main/
 │   └── MainTabView.swift     # 온보딩 이후 루트 — 홈/피드/서재/My 4탭 TabView. 탭 아이콘은
-│                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등).
+│                              # DesignSystem의 Icons/Tabbar 에셋(icNavigateHome 등). 딥링크는
+│                              # **선택된 탭 Root에만** 건네고 소비되면 nil로 되돌린다(아래 주의사항).
 ├── Home/    └── HomeRootView.swift      # "홈" 탭. HomeFactory 조립 + 작품 상세·피드 상세·일반 검색·
 │                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·그 전체 피드
 │                                          # 목록·마이페이지 편집·상세탐색 필터/결과(SearchFeatureFactory.
@@ -63,6 +66,9 @@ Sources/
 ├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
 │                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
 └── Collection/
+    ├── CollectionEditAssembly.swift    # 컬렉션 수정 트리(수정→작품 추가→서재에서 추가) 조립 공용 헬퍼 —
+    │                                     # 딥링크(#228)로 어느 탭에서든 내 컬렉션이 열려 4탭 전부 사용.
+    │                                     # pop 핸들러·pendingCollectionNovelSelection은 각 Root 소유.
     ├── CollectionDetailAssembly.swift  # 컬렉션 상세 조립 공용 헬퍼 — 마이페이지 "내 컬렉션" 목록뿐
     │                                     # 아니라 4탭의 타유저 프로필 컬렉션 미리보기도 공유(#201 후속).
     │                                     # onEditTapped 기본값은 no-op — 타유저 컬렉션은 항상
@@ -169,6 +175,14 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   `CFBundleIdentifier`/`CFBundleExecutable`이 **없으면 시뮬레이터 설치 자체가 실패**한다
   (`Missing bundle ID` → `missing or invalid CFBundleExecutable`, #196에서 실측). 이 plist에 새 키를
   추가할 땐 표준 키가 여전히 살아있는지 함께 확인할 것 — 지우면 조용히 안 죽고 빌드는 되는데 설치가 깨진다.
+  - ⚠️ **`CFBundleShortVersionString`/`CFBundleVersion`도 같은 이유로 여기 직접 적혀 있다**(값은
+    `Project.swift` App 타깃 settings의 `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, #228 — `Config/*.xcconfig`는
+    gitignore된 비밀값 파일이라 거기 두면 다른 머신엔 안 간다). 이 둘이 없어도 빌드·설치는
+    되지만 **카카오 SDK가 `CFBundleShortVersionString`을 `kakaolink://send`의 필수 파라미터 `appver`로 보내고
+    nil이면 파라미터를 통째로 빼버려**(`ShareApi`의 `.filterNil()`) 카카오톡이 "전달하려는 메시지의 필수 정보에
+    오류가 있습니다 [(Core parameter(s) missing)]"로 카드를 거부한다(실기기 실측, 2026-08-29). Demo 앱들은
+    Tuist 기본 plist(`.extendingDefault`)라 1.0/1이 자동으로 들어가 같은 문제가 안 보인다 — **App에서만 나는
+    차이**이니 카카오 공유가 Demo에선 되고 App에서만 안 되면 이 키부터 볼 것.
 - **Apple 로그인 버튼은 시뮬레이터에 Apple ID가 로그인돼 있으면 시스템 계정 선택/Face ID 시트로,
   없으면 설정 앱의 "Apple 계정" 화면으로 튄다**(둘 다 정상 — `OnboardingFeature/CLAUDE.md` 참고).
   Kakao 로그인은 `kauth.kakao.com` `ASWebAuthenticationSession` 동의 시트가 뜨는 게 정상(실측,
@@ -211,21 +225,20 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   쪽에서는 이동 신호만 올리도록 단순화). `SettingFeature`의 알림 설정 메뉴는 반대로 "먼저 알럿 →
   denied면 아예 이동 안 함" 패턴으로 같은 함정을 피한다(`HomeFeature/CLAUDE.md` 참고) — 이동이 항상
   일어나야 하는 화면이면 전자, 조건부로 막아도 되는 화면이면 후자를 쓸 것.
-- ⚠️ **My(`MypageRootView`)는 `onAuthenticationRequired`를 받지만, 다른 탭과 발화 경로가 다르다.**
-  `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 그 콜백을 모른다 — 즉 마이페이지 로드(프로필·
-  장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠 수 있는 게 아니라
-  `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약" 참고). 다만
-  `MainTabView`는 `MypageRootView`에도 이 콜백을 내려주는데, **용도는 401이 아니라 설정 화면의
-  회원탈퇴/로그아웃 성공**이다 — `MypageRootView`가 push하는 `SettingFactory.makeView`의
-  `onWithdrawSuccess`/`onLogoutSuccess`를 그대로 이 콜백에 물려, 세션을 끝내는 두 이벤트가 다른 탭의
-  401 만료와 같은 경로(온보딩으로 라우팅)를 타게 한다. **Home·Feed·서재 세 탭은 여전히 401 경로로만
-  쓴다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만, 거기서 push하는 작품 상세
-  (`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
+- ⚠️ **My(`MypageRootView`)는 세션을 끝내는 콜백이 둘이다(#228부터).** `onSessionEnded`는 설정 화면의
+  회원탈퇴/로그아웃 **성공**(`SettingFactory`의 `onWithdrawSuccess`/`onLogoutSuccess`) — 사용자가 세션을 끝낸
+  것. `onAuthenticationRequired`는 그 탭 위에 push된 화면(컬렉션 상세·작품 상세 등)의 401 — 다른 탭과 같은
+  계약. 둘 다 결과는 온보딩 복귀지만 `MainTabView`가 후자에만 딥링크 복원을 거는 차이가 있어(아래 딥링크
+  항목) 예전처럼 하나로 합치지 말 것. `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 어느 콜백도
+  모른다 — 즉 마이페이지 로드(프로필·장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠
+  수 있는 게 아니라 `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약"
+  참고). **Home·Feed·서재 세 탭은 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
+  거기서 push하는 작품 상세(`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
 - **`onAuthenticationRequired`는 메인→온보딩으로 라우팅을 되돌리는 것까지만 하고, 로그아웃 처리
   (토큰 삭제 등)는 하지 않는다** — 401을 받은 시점에 이미 서버가 세션을 무효화한 상태라 재로그인하면
   새 토큰으로 덮어써진다. 별도 로그아웃 로직이 필요해지면 `AuthRepository.logout()`을 여기서 호출할지
-  검토할 것. 어느 탭에서 발생했든(`MainTabView`가 Home/Feed/Library 세 곳의 콜백을 같은 클로저로 받음)
-  idempotent해야 한다는 계약은 그대로 유지.
+  검토할 것. 어느 탭에서 발생했든(`MainTabView`가 4탭의 `onAuthenticationRequired`를 같은 클로저
+  `restoreDeepLinkAndRequireAuthentication`으로 받음) idempotent해야 한다는 계약은 그대로 유지.
 - ⚠️ **`DesignSystem` 에셋을 탭바 아이콘처럼 이름 문자열로 참조하면(`Label(_:image:)`) 완전히 새로
   설치한 상태에서 아이콘이 조용히 안 보인다** — 그 이미지는 App이 아니라 `DesignSystem.framework`
   자체의 리소스 번들에 있는데, `Label(_:image:)`/`Image(_:)`(이름 문자열 버전)는 기본적으로
@@ -258,6 +271,54 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   둘 다 같은 `SearchAssembly`(일반 검색)로 push된다**(사용자 확정, #196) — 서재엔 전용 "작품 등록"
   화면이 없고, 검색해서 찾은 작품을 작품 상세에서 등록하는 흐름이다. 나중에 전용 등록 화면이 생기면
   `onRegisterTapped` 쪽만 그 화면으로 바꾸면 된다(`onSearchTapped`와 분리해서 갈 이유가 생기면).
+- **딥링크(`websoso://…`, #228)는 `WSSIOSV2App.onOpenURL` → `pendingDeepLink`(@State) →
+  `ContentView`(Binding) → `MainTabView` → **지금 선택된 탭 Root**의 `path.append` 순으로 흐른다**
+  (사용자 확정 — 앱을 쓰던 중이면 보던 화면 위에 바로 push, 콜드 스타트면 기본 탭인 홈 위). 파싱은
+  `BaseDomain.DeepLink(url:)`이 하고(형식은 그 파일이 정본), 형식에 안 맞는 URL은 조용히 버린다.
+  - ⚠️ **`TabView`는 4탭 Root를 전부 동시에 mount하므로 딥링크 값을 4탭에 다 주면 4번 push된다** —
+    `MainTabView.deepLink(for:)`가 `selectedTab`과 같은 탭에만 값을 주고 나머지는 nil. 각 Root는
+    `.onChange(of: deepLink, initial: true)`로 받아 push한 뒤 `onDeepLinkConsumed()`로 nil로 되돌린다
+    (`initial: true`라 Root가 mount되기 전에 도착한 링크 — 콜드 스타트, 온보딩 중 수신 — 도 잡는다).
+  - **이미 온보딩(로그아웃) 화면일 때 링크를 열면 `ContentView`가 `.main`으로 바뀔 때까지 `pendingDeepLink`에
+    남아 있다가 로그인 뒤 이어서 처리된다** — 서버는 공개 컬렉션의 비로그인 조회를 허용하지만, 앱 게이트가
+    `MainTabView`를 온보딩으로 되돌리므로(위 "로그인 안 된 상태로 `MainTabView`를 열면" 항목) 그 전에
+    push해봐야 소용없다.
+    - ⚠️ **토큰 없는 콜드 스타트는 위 대기가 안 걸린다** — `route`가 `.main`으로 시작해 홈 Root가 링크를 즉시
+      소비·push하고, 몇 초 뒤 401 바운스가 `MainTabView`째 파괴해 링크가 통째로 사라졌다(카드 수신자의 주
+      시나리오 — 앱 꺼진 상태에서 "앱에서 보기", #228 리뷰에서 발견). 그래서 `MainTabView`가 소비한 링크를
+      `deliveredDeepLink`에 들고 있다가 **4탭의 401 경로(`restoreDeepLinkAndRequireAuthentication`)에서
+      `pendingDeepLink`로 되살린다** — 로그인 뒤 새 `MainTabView`가 다시 소비한다.
+      - 복원 창은 **딥링크 화면이 스택에 남아 있는 동안만**이다 — 각 Root가 push 시 `deepLinkDestinationDepth`
+        (= 그때의 `path.count`)를 기억하고 `path.count`가 그 아래로 내려가면 `onDeepLinkDestinationDismissed`로
+        알려 `MainTabView`가 지운다. 안 지우면 한참 뒤 무관한 401에도 옛 컬렉션이 재로그인 후 다시 뜬다(2라운드 리뷰).
+        슬롯은 탭별 하나(`(tab, link)`)라 **같은 탭에 링크 A 화면을 둔 채 링크 B가 또 도착해 위에 쌓이면 A는 추적에서
+        빠진다**(B를 pop하면 슬롯이 비어 A 화면의 401은 복원 안 됨) — 극단 케이스라 감수(리뷰에서 인지, 3라운드).
+      - ⚠️ **My 탭은 콜백이 둘이다** — `onSessionEnded`(설정 로그아웃·탈퇴 성공 = 사용자가 세션을 끝냄, 복원 ❌)와
+        `onAuthenticationRequired`(그 탭 위 push 화면의 401, 복원 ⭕). 예전엔 하나로 합쳐져 있었는데 My 탭에서
+        딥링크 화면이 401을 만나면 복원이 안 됐다. 결과(온보딩 복귀)가 같다고 다시 합치지 말 것.
+      - 세션 복원(`docs/TODO.md` 9절)이 들어오면 콜드 스타트 401 자체가 사라지지만 "보던 중 만료" 바운스엔
+        여전히 유효하니 지우지 말 것.
+  - `onOpenURL`은 **`DeepLink(url:)`를 먼저** 보고, nil이면 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)인지
+    `AuthApi.isKakaoTalkLoginUrl`로 물어 SDK에 넘긴다 — 카카오 콜백은 host가 `oauth`라 `DeepLink`가 nil을
+    돌려주니 순서를 뒤집어도 동작은 같지만, `isKakaoTalkLoginUrl`은 앱 키 미설정 시 `try!`로 죽는 SDK 경로라
+    순수 파서를 앞에 둔다.
+  - **카카오톡 공유 카드의 "앱에서 보기"도 같은 경로다** — 카카오톡이 앱을
+    `kakao{APP_KEY}://kakaolink?collectionId={id}`로 열면 `DeepLink(url:)`이 `kakaolink` host를
+    `.collectionDetail`로 풀어 위와 똑같이 push된다. App은
+    스킴을 따로 분기하지 않는다. 카드 전송 쪽 전제(`LSApplicationQueriesSchemes`의 `kakaolink`, 카카오 콘솔
+    iOS 플랫폼의 Bundle ID·App Store ID)는 `CollectionFeature/CLAUDE.md` 공유 항목 참고 — 시뮬레이터엔
+    카카오톡이 없어 수신 경로는 `xcrun simctl openurl <udid> "kakao<APP_KEY>://kakaolink?collectionId=4"`로만
+    흉내낼 수 있다.
+  - **시뮬레이터 실측은 `xcrun simctl openurl <udid> "websoso://collections/4"`** — 시스템이 "'Websoso'에서
+    열겠습니까?" 확인 다이얼로그를 먼저 띄우므로(커스텀 스킴 정책) `snapshot_ui`로 "열기"를 탭해야 앱에
+    URL이 전달된다. 전달 여부는 시뮬레이터 로그 `Opening URL (websoso://…) with kr.websoso.app.WSS-iOS`
+    로 확인(`xcrun simctl spawn <udid> log show --last 1m --predicate 'eventMessage CONTAINS "websoso://"'`).
+  - **딥링크로 열린 컬렉션이 "내" 컬렉션일 수 있으므로 4탭 전부 컬렉션 수정 트리를 갖는다** — 처음엔
+    `MypageRootView`에만 있었고 홈/피드/서재의 `CollectionDetailAssembly.onEditTapped`는 no-op 기본값이라
+    (그 세 탭은 타유저 컬렉션만 열려 `isMine == false`가 보장됐었다) 딥링크 도입 직후 "수정" 메뉴가 죽은
+    버튼이 됐다(사용자 확정으로 배선 선택, 2026-08-29). 조립은 `CollectionEditAssembly`로 뽑았고, 각 Root는
+    `Destination` 3케이스 + `pendingCollectionNovelSelection` + pop 핸들러(1단계/2단계)만 갖는다. **링크만으론
+    소유자를 알 수 없어 탭을 미리 고를 수 없다** — 그래서 "My 탭으로 보내기"가 아니라 4탭 배선이다.
 - **"다른 탭으로 전환"은 push가 아니라 `MainTabView`의 `TabView(selection:)`을 바꾸는 별개 경로다**
   (마이페이지 서재 블록 탭 → 서재 탭, #196) — `MainTabView`가 `private enum Tab`과
   `@State private var selectedTab`을 갖고 각 탭 콘텐츠에 `.tag(Tab.xxx)`를 건 뒤, 필요한 탭 Root에

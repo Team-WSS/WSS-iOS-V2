@@ -27,6 +27,11 @@ struct CollectionDetailView: View {
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
+    /// 카카오 공유 카드 전송 실패 토스트 — 공유는 VM을 거치지 않는 순수 표현이라 View가 소유한다.
+    @State private var isShareErrorToastPresented = false
+    /// 공유 진행 중 가드 — 템플릿 서버 검증을 기다리는 동안 연타하면 카카오톡이 두 번 열린다(VM의 진행 중
+    /// Task 가드와 같은 역할을 View 로컬로).
+    @State private var isSharing = false
     @Environment(\.dismiss) private var dismiss
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
@@ -114,6 +119,7 @@ struct CollectionDetailView: View {
             ]
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: $isShareErrorToastPresented, type: .unknownError)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
@@ -319,7 +325,7 @@ private extension CollectionDetailView {
             if detail.isPrivate {
                 privateBadge
             } else {
-                shareButton
+                shareButton(detail)
             }
         }
     }
@@ -355,27 +361,45 @@ private extension CollectionDetailView {
         .buttonStyle(.plain)
     }
 
-    var shareButton: some View {
+    /// 공유는 **카카오 공유 카드**(`CollectionKakaoShare`, 사용자 확정 2026-08-29, #228) 하나다 — 카카오톡이 있으면
+    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 받는 사람이 카드의 "앱에서 보기"로 이 화면에 들어온다(앱이 없으면
+    /// 카카오가 App Store로). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력). 순수 표현이라 VM을
+    /// 거치지 않는다(`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는
+    /// 사용자 액션 실패라 토스트로 알린다.
+    func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
-            viewModel.handle(.shareTapped)
-        } label: {
-            HStack(spacing: 10) {
-                WSSImage.icShare.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .foregroundStyle(Color.wssWhite)
-                    .frame(width: 24, height: 24)
-
-                Text("공유하기")
-                    .applyWSSFont(.body4)
-                    .foregroundStyle(Color.wssWhite)
+            guard !isSharing else { return }
+            isSharing = true
+            Task {
+                defer { isSharing = false }
+                do {
+                    try await CollectionKakaoShare.share(detail, coverImageURL: heroImageURL)
+                } catch {
+                    isShareErrorToastPresented = true
+                }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 40)
-            .background(Color.wssPrimary100)
-            .clipShape(RoundedRectangle(cornerRadius: 15))
+        } label: {
+            shareButtonLabel
         }
         .buttonStyle(.plain)
+    }
+
+    var shareButtonLabel: some View {
+        HStack(spacing: 10) {
+            WSSImage.icShare.swiftUIImage
+                .renderingMode(.template)
+                .resizable()
+                .foregroundStyle(Color.wssWhite)
+                .frame(width: 24, height: 24)
+
+            Text("공유하기")
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssWhite)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .background(Color.wssPrimary100)
+        .clipShape(RoundedRectangle(cornerRadius: 15))
     }
 
     /// 나만 보는 컬렉션은 소유자만 볼 수 있어 항상 소유자 시점에서만 그려진다(사용자 확정 근거:

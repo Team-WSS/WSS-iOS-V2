@@ -3,10 +3,15 @@ import SwiftUI
 import KakaoSDKAuth
 import KakaoSDKCommon
 
+import BaseDomain
 import DesignSystem
 
 @main
 struct WSSIOSV2App: App {
+
+    /// 앱 밖에서 들어온 딥링크(`websoso://…`, #228)를 `MainTabView`가 소비할 때까지 들고 있는다 —
+    /// 로그아웃 상태(온보딩 루트)로 링크를 열면 로그인이 끝나 메인 탭이 뜨는 순간 이어서 처리된다.
+    @State private var pendingDeepLink: DeepLink?
 
     init() {
         // 커스텀 폰트(Pretendard) 등록. 없으면 applyWSSFont의 UIFont(name:)! 가 nil → 크래시.
@@ -28,9 +33,20 @@ struct WSSIOSV2App: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(pendingDeepLink: $pendingDeepLink)
                 .onOpenURL { url in
-                    _ = AuthController.handleOpenUrl(url: url)
+                    // 우리 딥링크(`websoso://…`, 카카오톡 공유 카드의 "앱에서 보기"
+                    // `kakao{APP_KEY}://kakaolink?collectionId=…`, #228)를 먼저 `DeepLink.init?(url:)`로 풀고,
+                    // 아니면 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)인지 SDK에 묻는다. 카카오 콜백은 host가
+                    // `oauth`라 `DeepLink`가 nil을 돌려주니 순서는 어느 쪽이든 동작하지만, `isKakaoTalkLoginUrl`이
+                    // 앱 키 미설정 시 `try!`로 죽는 SDK 경로라 순수 파서를 앞에 둔다. 둘 다 아니면 조용히 무시.
+                    if let deepLink = DeepLink(url: url) {
+                        pendingDeepLink = deepLink
+                        return
+                    }
+                    if AuthApi.isKakaoTalkLoginUrl(url) {
+                        _ = AuthController.handleOpenUrl(url: url)
+                    }
                 }
         }
     }

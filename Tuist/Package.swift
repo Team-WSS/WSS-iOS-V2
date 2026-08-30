@@ -14,10 +14,14 @@ import PackageDescription
         // KakaoSDK.initSDK(appKey:)가 다른 쪽 사본엔 반영되지 않는다(objc 클래스 중복 경고 +
         // "initSDK(appKey:) must be initialized" 런타임 크래시로 실측). Alamofire는 KakaoSDK의
         // 전이 의존성이라 함께 dynamic으로 맞춰야 완전히 해소된다.
+        // Share/Template(컬렉션 카카오톡 공유 카드, #228)도 같은 이유로 dynamic — CollectionFeature.framework가
+        // 호출하고 App/Demo가 초기화한다.
         productTypes: [
             "KakaoSDKCommon": .framework,
             "KakaoSDKAuth": .framework,
             "KakaoSDKUser": .framework,
+            "KakaoSDKShare": .framework,
+            "KakaoSDKTemplate": .framework,
             "Alamofire": .framework
         ]
     )

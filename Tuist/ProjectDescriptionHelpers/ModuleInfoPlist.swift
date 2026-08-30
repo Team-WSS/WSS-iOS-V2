@@ -43,6 +43,9 @@ public enum ModuleInfoPlist {
                     "CFBundleURLSchemes": .array([.string("kakao$(KAKAO_APP_KEY)")])
                 ])
             ])
+            // 카카오톡 공유 가능 여부 판별용(CollectionFeatureDemo, #228) — `ShareApi.isKakaoTalkSharingAvailable()`이
+            // `canOpenURL("kakaolink://")`라 이 등록이 없으면 카카오톡이 깔려 있어도 항상 false다.
+            entries["LSApplicationQueriesSchemes"] = .array([.string("kakaolink")])
             return entries
         case .domain:
             return commonEntries

@@ -101,3 +101,6 @@ public final class MockNovelRepository: NovelRepository {
 - ⚠️ **`tuist test`의 `Executed 0 tests, with 0 failures`는 테스트가 안 돌았다는 뜻이 아니다.** 그 줄은 XCTest 카운터라
   Swift Testing(`@Test`)을 세지 않는다. 실제 실패는 `Failing tests:` + `** TEST FAILED **`로, 성공은 `Test Succeeded`로 나온다.
   의심되면 일부러 실패하는 테스트를 하나 넣어 러너가 잡는지 확인하면 된다(카나리) — `0 tests`만 보고 러너가 죽었다고 판단하지 말 것.
+- ⚠️ **`@Test("…")` 설명에 `/`를 넣지 말 것** — XcodeBuildMCP `test_sim` 리포터가 `/`를 스위트 구분자로 읽어 이름을 쪼갠다
+  (`"websoso://collections/{id}를 파싱하면…"` → 스위트 `websoso:/collections` + 테스트 `{id}를 파싱하면…`으로 보고됨, #228 실측).
+  URL·경로가 들어가는 명세는 "websoso 스킴에 collections host와 id가 붙은 URL"처럼 말로 풀어 쓴다.

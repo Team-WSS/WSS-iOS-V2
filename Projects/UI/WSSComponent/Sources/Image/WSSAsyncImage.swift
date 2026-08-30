@@ -79,14 +79,10 @@ public struct WSSAsyncImage<Content: View, Placeholder: View>: View {
             return
         }
         image = nil  // 옛 url의 이미지를 지우고 placeholder로 되돌린다.
-        guard
-            let (data, _) = try? await URLSession.shared.data(from: url),
-            let loaded = UIImage(data: data),
-            // 취소는 await 재개 뒤에도 확인해야 한다 — 안 그러면 취소된 옛 요청이 새 url의 그림을 덮고,
-            // 그 뒤 새 요청까지 막아버린다.
-            !Task.isCancelled
-        else { return }
-        WSSImageCache.shared.insert(loaded, for: url)
+        // 실제 fetch+캐시 삽입은 `WSSImageLoader`(#228, 뷰 없는 호출부와 공유). 취소는 await 재개 뒤에도
+        // 확인해야 한다 — 안 그러면 취소된 옛 요청이 새 url의 그림을 덮고, 그 뒤 새 요청까지 막아버린다.
+        // (로더가 캐시엔 이미 넣었더라도 괜찮다 — 유효한 이미지라 다음 조회가 히트할 뿐이다.)
+        guard let loaded = await WSSImageLoader.load(url), !Task.isCancelled else { return }
         image = loaded
         loadedURL = url
     }
