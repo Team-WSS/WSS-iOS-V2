@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 import BaseDomain
 import NotificationDomain
@@ -107,8 +108,11 @@ private extension NotificationDetailView {
 
                 Spacer().frame(height: Metric.separatorBodySpacing)
 
-                Text(detail.body)
+                // 평문 URL을 탭 가능한 링크로 렌더한다(V1 UITextView dataDetectorTypes=.link parity, #222).
+                // 링크가 없으면 순수 텍스트와 동일 — 서버 본문에 링크가 실리지 않아도 무해하다.
+                Text(bodyWithDetectedLinks(detail.body))
                     .applyWSSFont(.body2, color: .wssBlack, alignment: .leading)
+                    .tint(Color.wssPrimary100)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Metric.horizontalPadding)
 
@@ -116,6 +120,21 @@ private extension NotificationDetailView {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// 본문의 평문 URL을 `NSDataDetector`로 찾아 `.link` 속성을 붙인다 — SwiftUI `Text`가 이를 탭 가능한
+    /// 링크로 렌더하고 탭 시 `openURL`로 연다(링크 색은 `.tint`가 정함). 링크가 없으면 원문 그대로.
+    func bodyWithDetectedLinks(_ text: String) -> AttributedString {
+        let mutable = NSMutableAttributedString(string: text)
+        let fullRange = NSRange(location: 0, length: (text as NSString).length)
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            for match in detector.matches(in: text, options: [], range: fullRange) {
+                if let url = match.url {
+                    mutable.addAttribute(.link, value: url, range: match.range)
+                }
+            }
+        }
+        return AttributedString(mutable)
     }
 }
 

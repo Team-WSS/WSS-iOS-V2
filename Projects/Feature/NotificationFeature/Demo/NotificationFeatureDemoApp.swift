@@ -259,7 +259,7 @@ private struct DemoLoadNotificationDetailUseCase: LoadNotificationDetailUseCase 
                 title: "웹소소 이용약관 개정 안내",
                 createdAtText: "2026.08.05",
                 body: "안녕하세요, 웹소소입니다.\n\n서비스 이용약관이 아래와 같이 개정되어 안내드립니다. "
-                    + "개정된 약관은 2026년 8월 20일부터 적용되며, 자세한 내용은 앱 내 설정 > 약관에서 확인하실 수 있습니다.\n\n"
+                    + "개정된 약관은 2026년 8월 20일부터 적용되며, 자세한 내용은 https://help.websoso.kr 에서 확인하실 수 있습니다.\n\n"
                     + "앞으로도 더 나은 서비스로 보답하겠습니다. 감사합니다."
             )
         }

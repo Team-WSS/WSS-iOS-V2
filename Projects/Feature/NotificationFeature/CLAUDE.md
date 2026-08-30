@@ -60,6 +60,12 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **알림 상세 본문의 평문 URL은 탭 가능한 링크로 렌더한다**(#222 V1 `UITextView dataDetectorTypes=.link` parity) —
+  `NotificationDetailView.bodyWithDetectedLinks`가 `NSDataDetector`로 URL을 찾아 `.link` 속성을 붙인 `AttributedString`을
+  만들고 SwiftUI `Text`가 이를 렌더한다(링크 색은 `.tint(Color.wssPrimary100)`, 탭 시 `openURL`). 링크가 없으면
+  원문 그대로라 서버 본문에 링크가 실리지 않아도 무해하다. ⚠️ **선행 확인 미완**: 실서버 알림 본문에 실제 링크가
+  실리는지는 아직 확인 못 했다(테스트 계정 알림이 전부 링크 없는 공지) — 실제 링크 알림이 오면 눈으로 확인할 것.
+
 - ⚠️ **`NotificationID`·`FeedID`·`NovelID`는 셋 다 `IDWrapper<Int>`의 typealias라 컴파일러에겐 같은 타입이다** —
   딥링크 세 갈래를 라우팅할 때 `navigationDestination(for: NotificationID.self)`·`FeedID.self`·`NovelID.self`를
   나란히 두면 **먼저 등록된 쪽이 나머지를 다 삼켜** 엉뚱한 화면으로 간다. 호출자는 반드시 **세 경로 모두**
