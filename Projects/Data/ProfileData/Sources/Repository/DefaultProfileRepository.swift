@@ -207,6 +207,11 @@ struct DefaultProfileRepository: ProfileRepository {
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
+            // 존재하지 않는/탈퇴한 유저 — 서버 비즈니스 코드로 식별(HTTP 상태 코드 아님). "없는 유저"
+            // 폴백을 위해 일반 네트워크 오류와 구분되게 .notFound로 던진다(USER-015→privateProfile 패턴과 대칭, #222).
+            if case .responseFailure(_, let body) = error, body?.code == "USER-018" {
+                throw .notFound
+            }
             logger?.logNetworkError(action: action.name, error: error)
             throw error.toRepositoryError()
         } catch let error as MappingError {

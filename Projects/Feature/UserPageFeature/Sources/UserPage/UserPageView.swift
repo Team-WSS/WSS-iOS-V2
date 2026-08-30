@@ -75,7 +75,11 @@ struct UserPageView: View {
 
     var body: some View {
         Group {
-            if viewModel.state.hasLoadError {
+            if viewModel.state.isUserNotFound {
+                // 존재하지 않는/탈퇴한 유저(USER-018) — 프로필 자체가 없어 헤더·탭도 못 그리므로 body 전체를
+                // 안내로 대체한다. 재시도 버튼 없음(존재하지 않는 유저는 재시도해도 동일, #222 V1 parity).
+                userNotFoundView
+            } else if viewModel.state.hasLoadError {
                 NetworkErrorView {
                     viewModel.handle(.load)
                 }
@@ -521,6 +525,22 @@ struct UserPageView: View {
                 }
             }
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    /// 존재하지 않는/탈퇴한 유저(USER-018 → `.notFound`) — 재시도 없이 안내만(privateProfileView와 같은 톤).
+    private var userNotFoundView: some View {
+        VStack(spacing: 20) {
+            WSSImage.imgEmptyCatEyes.swiftUIImage
+                .resizable()
+                .scaledToFit()
+                .frame(width: 166, height: 160)
+
+            Text("존재하지 않는 유저예요")
+                .applyWSSFont(.body2)
+                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WSSColor.wssWhite.swiftUIColor)
     }
 

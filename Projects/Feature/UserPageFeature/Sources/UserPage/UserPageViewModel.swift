@@ -41,6 +41,9 @@ final class UserPageViewModel {
         /// 상대가 프로필을 비공개로 설정해 접근할 수 없는 경우(`RepositoryError.privateProfile`) —
         /// 일반 로드 실패(`hasLoadError`)와 분리해 전용 화면("비공개 프로필이에요")으로 표현한다.
         var isProfilePrivate = false
+        /// 존재하지 않는/탈퇴한 유저(서버 `USER-018` → `RepositoryError.notFound`) — 일반 로드 실패와 분리해
+        /// "없는 유저" 안내 화면으로 표현한다(재시도 무의미, V1 parity #222). 없으면 재시도만 반복되는 회귀.
+        var isUserNotFound = false
 
         var feeds: [TotalFeed] = []
         var hasNextFeeds = true
@@ -410,6 +413,12 @@ private extension UserPageViewModel {
     func presentError(_ error: Error) {
         guard (error as? RepositoryError) != .privateProfile else {
             state.isProfilePrivate = true
+            return
+        }
+        // 존재하지 않는/탈퇴한 유저(USER-018 → .notFound)는 "없는 유저" 안내로 — 재시도해도 소용없어
+        // NetworkErrorView(재시도)로 떨어뜨리지 않는다(V1 parity #222).
+        guard (error as? RepositoryError) != .notFound else {
+            state.isUserNotFound = true
             return
         }
         logger?.error("UserPage 로드 실패: \(String(describing: error))")

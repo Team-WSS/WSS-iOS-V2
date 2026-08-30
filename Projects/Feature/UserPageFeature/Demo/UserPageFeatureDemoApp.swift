@@ -400,6 +400,10 @@ private struct DemoLoadProfileUseCase: LoadProfileUseCase {
 private struct DemoLoadOtherUserProfileUseCase: LoadProfileUseCase {
     func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         try? await Task.sleep(nanoseconds: 500_000_000)
+        // userID 998 = "없는 유저"(USER-018 → .notFound) 시연 — 데모 메뉴 userID 입력칸에 998 입력.
+        if case .user(demoNotFoundProfileUserID) = target {
+            throw .notFound
+        }
         return Profile(
             nickname: "구리구리스",
             introduction: "백덕수 작가입니다. 반갑습니다.백덕수 작가입니다. 반갑습니다.",
@@ -453,6 +457,10 @@ private struct DemoUpdateProfileUseCase: UpdateProfileUseCase {
 /// 유저 ID `999`는 "비공개 프로필" 데모 시나리오(`RepositoryError.privateProfile`) 확인용 —
 /// `USER-015` 응답을 이 세 UseCase(장르·작품 취향, 피드) 각각에서 흉내낸다.
 private let demoPrivateProfileUserID = UserID(999)
+
+/// 유저 ID `998`은 "없는 유저"(USER-018 → `RepositoryError.notFound`) 데모 시나리오 확인용 —
+/// `DemoLoadOtherUserProfileUseCase`가 이 userID에 `.notFound`를 던져 "존재하지 않는 유저예요" 화면을 낸다.
+private let demoNotFoundProfileUserID = UserID(998)
 
 private struct DemoLoadGenrePreferencesUseCase: LoadGenrePreferencesUseCase {
     func execute(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {
