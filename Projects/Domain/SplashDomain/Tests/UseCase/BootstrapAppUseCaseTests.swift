@@ -160,6 +160,21 @@ struct BootstrapAppUseCaseTests {
         #expect(outcome == .main(needsTermsAgreement: false))
     }
 
+    // 예산은 게이트당이 아니라 부트스트랩 전체에 하나다 — 이미 소진됐으면
+    // 남은 게이트는 조회를 시작조차 하지 않고 "판정 불가 → 통과"로 떨어져야 한다.
+    @Test("예산이 소진되면 남은 게이트는 조회 없이 통과시킨다")
+    func exhaustedBudgetSkipsRemainingGates() async {
+        let gate = MockLaunchGateRepository()
+        gate.checkForceUpdateRequiredResult = .success(true)   // 조회됐다면 forceUpdate로 차단됐을 값
+        let sut = makeSUT(gate: gate, gateBudget: .zero)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+        #expect(gate.checkForceUpdateRequiredCallCount == 0)
+        #expect(gate.isRequiredTermsAgreedCallCount == 0)
+    }
+
     // MARK: - 세션 소실
 
     @Test("약관 조회가 세션 소실로 실패하면 intro로 보낸다")
@@ -238,6 +253,7 @@ extension BootstrapAppUseCaseTests {
         gate: LaunchGateRepository = MockLaunchGateRepository(),
         task: MockLaunchTaskRepository = MockLaunchTaskRepository(),
         spy: BackgroundWorkSpy = BackgroundWorkSpy(),
+        gateBudget: Duration = DefaultBootstrapAppUseCase.defaultGateBudget,
         waitGateBudget: (@Sendable (Duration) async -> Void)? = nil
     ) -> DefaultBootstrapAppUseCase {
         // 예산 시임을 안 주면 프로덕션 기본값(실제 타이머)을 쓴다 — 게이트가 즉시 답하는
@@ -246,6 +262,7 @@ extension BootstrapAppUseCaseTests {
             return DefaultBootstrapAppUseCase(
                 gateRepository: gate,
                 taskRepository: task,
+                gateBudget: gateBudget,
                 launchInBackground: { spy.capture($0) },
                 waitGateBudget: waitGateBudget
             )
@@ -253,6 +270,7 @@ extension BootstrapAppUseCaseTests {
         return DefaultBootstrapAppUseCase(
             gateRepository: gate,
             taskRepository: task,
+            gateBudget: gateBudget,
             launchInBackground: { spy.capture($0) }
         )
     }

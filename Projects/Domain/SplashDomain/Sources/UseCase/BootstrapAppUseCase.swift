@@ -28,8 +28,8 @@ public protocol BootstrapAppUseCase: Sendable {
 
 public final class DefaultBootstrapAppUseCase: BootstrapAppUseCase {
 
-    /// 게이트 하나가 응답을 기다리는 상한. 스플래시 최소 노출(1초)보다 넉넉하되,
-    /// 넘기면 사용자가 "앱이 멈췄다"고 느끼기 시작하는 구간 앞에서 끊는다.
+    /// **부트스트랩 전체**가 게이트 응답을 기다리는 상한(게이트당이 아니다).
+    /// 스플래시 최소 노출(1초)보다 넉넉하되, 넘기면 사용자가 "앱이 멈췄다"고 느끼기 시작하는 구간 앞에서 끊는다.
     /// (`public`인 건 `init`의 기본 인자로 쓰기 위함 — 기본값은 호출자 쪽에서 평가된다.)
     public static let defaultGateBudget: Duration = .seconds(4)
 
@@ -62,9 +62,13 @@ public final class DefaultBootstrapAppUseCase: BootstrapAppUseCase {
     }
 
     public func execute() async -> BootstrapOutcome {
+        // 예산은 **게이트마다가 아니라 부트스트랩 전체에 한 번** 준다 — 게이트별로 주면 최악 대기가
+        // 게이트 수만큼 곱해져(2개면 8초) 스플래시가 그만큼 잠긴다. 두 게이트가 이 마감을 나눠 쓴다.
+        let deadline = ContinuousClock.now.advanced(by: gateBudget)
+
         // 1. 강제 업데이트 게이트 — 세션 유무와 무관하게 최우선.
         //    조회 실패도 예산 초과도 통과(판정할 수 없으면 막지 않는다).
-        let forceUpdate = await withinBudget { [self] in await loadForceUpdateRequired() }
+        let forceUpdate = await withinBudget(until: deadline) { [self] in await loadForceUpdateRequired() }
         if case .success(true) = forceUpdate { return .forceUpdate }
 
         // 2. 세션 게이트 — 없으면 인트로로, 부수 태스크는 시작하지 않는다.
@@ -81,7 +85,7 @@ public final class DefaultBootstrapAppUseCase: BootstrapAppUseCase {
         }
 
         // 4. 약관 게이트 — 조회 실패·예산 초과는 동의로 간주해 진입을 막지 않는다.
-        let terms = await withinBudget { [self] in await loadTermsAgreed() }
+        let terms = await withinBudget(until: deadline) { [self] in await loadTermsAgreed() }
         switch terms {
         case .success(let agreed):
             return .main(needsTermsAgreement: !agreed)
@@ -111,17 +115,28 @@ private extension DefaultBootstrapAppUseCase {
         catch { return .failure(error) }
     }
 
-    /// 게이트 호출을 예산 안에서 기다린다. 예산을 넘기면 `nil` —
+    /// 게이트 호출을 **공유 마감(`deadline`)까지** 기다린다. 넘기면 `nil` —
     /// 호출자는 `nil`과 `.failure`를 똑같이 "판정 불가 → 통과"로 다룬다.
+    /// 앞 게이트가 예산을 다 썼으면 뒤 게이트는 기다리지 않고 곧장 `nil`이 된다.
     ///
-    /// 예산이 먼저 끝나면 그룹을 취소해 매달린 요청도 함께 푼다(`URLSession`은 취소에 반응한다).
+    /// 예산이 먼저 끝나면 그룹을 취소해 매달린 요청도 함께 푼다.
+    ///
+    /// ⚠️ **이건 하드 타임아웃이 아니라 "게이트가 취소에 반응한다"는 전제 위의 예산이다** —
+    /// `withTaskGroup`은 `cancelAll()` 뒤에도 자식이 실제로 끝나야 스코프를 빠져나간다.
+    /// 현재 두 게이트는 `URLSession`을 타므로 취소에 반응하지만, **취소를 무시하는 대기**
+    /// (아무도 resume하지 않는 `withCheckedContinuation`, 취소 비협조 SDK)를 게이트 구현에
+    /// 끼워 넣으면 예산이 무력해지고 스플래시가 그대로 잠긴다.
     func withinBudget<T: Sendable>(
+        until deadline: ContinuousClock.Instant,
         _ operation: @escaping @Sendable () async -> Result<T, RepositoryError>
     ) async -> Result<T, RepositoryError>? {
-        await withTaskGroup(of: Result<T, RepositoryError>?.self) { group in
+        let remaining = ContinuousClock.now.duration(to: deadline)
+        guard remaining > .zero else { return nil }
+
+        return await withTaskGroup(of: Result<T, RepositoryError>?.self) { group in
             group.addTask { await operation() }
-            group.addTask { [waitGateBudget, gateBudget] in
-                await waitGateBudget(gateBudget)
+            group.addTask { [waitGateBudget] in
+                await waitGateBudget(remaining)
                 return nil
             }
 
