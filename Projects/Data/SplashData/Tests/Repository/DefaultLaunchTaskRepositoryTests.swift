@@ -19,6 +19,10 @@ import ProfileDomainTesting
 import RecommendationDomain
 import RecommendationDomainTesting
 
+/// 부수 태스크 4종(users/me 동기화·FCM 토큰 등록·키워드 동기화·홈 프리페치)을
+/// **각 도메인 Repository에 어떻게 위임하는지** 명세. 여기 있는 분기는 둘뿐이다 —
+/// 토큰 소스가 없으면 FCM 등록을 조용히 건너뛰는 것, 프리페치 두 슬롯을 병렬로 채우되
+/// 실패한 쪽만 비워 두는 것. "언제 던지고 언제 기다리는지"는 `BootstrapAppUseCaseTests`가 명세한다.
 @Suite
 struct DefaultLaunchTaskRepositoryTests {
 

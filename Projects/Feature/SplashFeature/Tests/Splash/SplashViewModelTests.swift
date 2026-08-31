@@ -13,6 +13,10 @@ import SplashDomain
 import SplashDomainTesting
 @testable import SplashFeature
 
+/// 스플래시 **화면의 계약** 명세 — 부트스트랩 정책 자체는 `BootstrapAppUseCaseTests`(SplashDomain)가
+/// 명세하고, 이 화면은 그 결과를 **언제 알리는지**만 책임진다:
+/// load 1회 → 부트스트랩과 최소 노출 타이머(1초)를 **병렬**로 → **둘 다** 끝나야 `state.outcome` 노출
+/// (View가 이를 onFinish 콜백으로 App에 올리고, 화면 전환은 App 몫).
 @MainActor
 @Suite("SplashViewModel")
 struct SplashViewModelTests {

@@ -12,6 +12,10 @@ import Testing
 @testable import RecommendationDomain
 import BaseDomain
 
+/// 런치 프리페치 저장소의 **저장·소비 규칙** 명세 — 부트스트랩(SplashData)이 채우고
+/// 홈 레포(`DefaultRecommendationRepositoryTests`)가 소비하는 사이의 계약이다.
+/// 핵심 두 규칙: **single-shot**(소비는 1회, TTL 캐시 아님 — 홈의 "탭 복귀마다 갱신" 계약 보호)과
+/// **소비 창**(첫 consume 시도에 창이 닫혀, 늦게 착지한 프리페치가 나중 갱신을 stale로 덮지 못한다).
 @Suite
 struct HomePrefetchStoreTests {
 

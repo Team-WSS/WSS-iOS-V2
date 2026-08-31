@@ -14,6 +14,10 @@ import RecommendationDomain
 import BaseDomain
 import BaseData
 
+/// 프리페치의 **소비하는 쪽** 배선 명세 — 홈 로드가 네트워크보다 먼저 `HomePrefetchStore`를 본다:
+/// 슬롯에 값이 있으면 네트워크 없이 그 값을 쓰고(1회뿐), 없거나 store 미주입이면 평소처럼 네트워크로 간다.
+/// 저장·소비 창 규칙 자체는 `HomePrefetchStoreTests`(RecommendationDomain)가,
+/// 채우는 쪽은 `DefaultLaunchTaskRepositoryTests`(SplashData)가 명세한다.
 @Suite
 struct DefaultRecommendationRepositoryTests {
 

@@ -15,6 +15,10 @@ import Networking
 import SettingDomain
 import SettingDomainTesting
 
+/// 게이트 **판정 질문 3개의 답을 어디서 어떻게 구하는지** 명세 — 세션(키체인 토큰 존재),
+/// 강제 업데이트(서버 최소 버전 vs 현재 버전), 약관(필수 약관 draft).
+/// 이 구현은 **위임뿐이고 정책이 없다** — 실패를 통과시킬지 같은 결정은 전부
+/// `BootstrapAppUseCaseTests`(SplashDomain)가 명세하므로, 여기서는 에러를 그대로 던지는 것까지가 계약이다.
 @Suite
 struct DefaultLaunchGateRepositoryTests {
 

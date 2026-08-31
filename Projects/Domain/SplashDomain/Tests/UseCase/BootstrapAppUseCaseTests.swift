@@ -13,10 +13,17 @@ import Testing
 import SplashDomainTesting
 import BaseDomain
 
+/// 런치 부트스트랩의 **전체 정책 명세** — 위에서 아래로 읽으면 `execute()`의 실행 순서 그대로다:
+/// **1. 강제 업데이트 → 2. 세션 → 3. 부수 태스크(던지고 진입) → 4. 약관**.
+/// 마지막 "게이트 예산"은 1·4 게이트에 공통으로 걸리는 횡단 정책(응답 없는 망에서 스플래시가 잠기지 않게).
+///
+/// 이어 읽기: 게이트의 실제 답(토큰·버전·약관)을 어디서 구하는지는 SplashData의
+/// `DefaultLaunchGate/TaskRepositoryTests`가, 화면이 이 결과를 언제 알리는지는 SplashFeature의
+/// `SplashViewModelTests`가, 프리페치 저장·소비 규칙은 `HomePrefetchStoreTests`가 명세한다.
 @Suite
 struct BootstrapAppUseCaseTests {
 
-    // MARK: - 강제 업데이트 게이트
+    // MARK: - 1. 강제 업데이트 게이트 — 세션보다 먼저, 조회 실패는 통과
 
     @Test("최소 버전 미달이면 forceUpdate를 반환해 진입을 차단한다")
     func forceUpdateBlocksEntry() async {
@@ -64,7 +71,7 @@ struct BootstrapAppUseCaseTests {
         #expect(spy.capturedCount == 0)
     }
 
-    // MARK: - 세션 게이트
+    // MARK: - 2. 세션 게이트 — 없으면 인트로로, 그 뒤 일은 아무것도 시작하지 않는다
 
     @Test("세션이 없으면 intro를 반환한다")
     func noSessionRoutesToIntro() async {
@@ -100,94 +107,6 @@ struct BootstrapAppUseCaseTests {
         #expect(gate.isRequiredTermsAgreedCallCount == 0)
     }
 
-    // MARK: - 약관 게이트
-
-    @Test("필수 약관에 모두 동의한 유저는 약관 시트 없이 main으로 진입한다")
-    func allTermsAgreedEntersMainWithoutSheet() async {
-        let gate = MockLaunchGateRepository()
-        gate.isRequiredTermsAgreedResult = .success(true)
-        let sut = makeSUT(gate: gate)
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: false))
-    }
-
-    @Test("필수 약관 미동의 유저는 main 진입 시 약관 시트를 함께 띄운다")
-    func unagreedTermsEntersMainWithSheet() async {
-        let gate = MockLaunchGateRepository()
-        gate.isRequiredTermsAgreedResult = .success(false)
-        let sut = makeSUT(gate: gate)
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: true))
-    }
-
-    @Test("약관 조회가 실패하면 동의로 간주해 진입을 막지 않는다")
-    func termsCheckFailureIsTreatedAsAgreed() async {
-        let gate = MockLaunchGateRepository()
-        gate.isRequiredTermsAgreedResult = .failure(.networkUnavailable)
-        let sut = makeSUT(gate: gate)
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: false))
-    }
-
-    // MARK: - 게이트 예산 (응답이 오지 않는 망)
-
-    // "조회 실패는 통과" 정책은 에러가 돌아와야 작동한다 — 응답 자체가 안 오면
-    // URLSession 기본 타임아웃(60초)에 걸릴 때까지 스플래시가 잠기므로 예산으로 끊는다.
-    @Test("강제 업데이트 조회가 예산을 넘기면 차단하지 않고 통과시킨다")
-    func forceUpdateBudgetExpiryPassesThrough() async {
-        // 게이트는 끝내 "차단"이라 답할 참이지만, 예산이 먼저 끝나 그 답은 쓰이지 않는다.
-        let gate = HangingLaunchGateRepository(hangsForceUpdate: true, forceUpdateRequired: true)
-        let sut = makeSUT(gate: gate, waitGateBudget: { _ in })
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: false))
-    }
-
-    @Test("약관 조회가 예산을 넘겨도 진입을 막지 않는다")
-    func termsBudgetExpiryEntersMain() async {
-        let gate = HangingLaunchGateRepository(hangsTerms: true)
-        let sut = makeSUT(gate: gate, waitGateBudget: { _ in })
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: false))
-    }
-
-    // 예산은 게이트당이 아니라 부트스트랩 전체에 하나다 — 이미 소진됐으면
-    // 남은 게이트는 조회를 시작조차 하지 않고 "판정 불가 → 통과"로 떨어져야 한다.
-    @Test("예산이 소진되면 남은 게이트는 조회 없이 통과시킨다")
-    func exhaustedBudgetSkipsRemainingGates() async {
-        let gate = MockLaunchGateRepository()
-        gate.checkForceUpdateRequiredResult = .success(true)   // 조회됐다면 forceUpdate로 차단됐을 값
-        let sut = makeSUT(gate: gate, gateBudget: .zero)
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .main(needsTermsAgreement: false))
-        #expect(gate.checkForceUpdateRequiredCallCount == 0)
-        #expect(gate.isRequiredTermsAgreedCallCount == 0)
-    }
-
-    // MARK: - 세션 소실
-
-    @Test("약관 조회가 세션 소실로 실패하면 intro로 보낸다")
-    func termsAuthenticationFailureRoutesToIntro() async {
-        let gate = MockLaunchGateRepository()
-        gate.isRequiredTermsAgreedResult = .failure(.authenticationRequired)
-        let sut = makeSUT(gate: gate)
-
-        let outcome = await sut.execute()
-
-        #expect(outcome == .intro)
-    }
-
     @Test("강제 업데이트 조회가 실패해도 세션이 없으면 intro다")
     func forceUpdateFailureWithNoSessionRoutesToIntro() async {
         let gate = MockLaunchGateRepository()
@@ -200,7 +119,7 @@ struct BootstrapAppUseCaseTests {
         #expect(outcome == .intro)
     }
 
-    // MARK: - 부수 태스크 (fire-and-forget)
+    // MARK: - 3. 부수 태스크 4종 — 던지고 진입(fire-and-forget), 실패·지연이 진입을 막지 않는다
 
     @Test("세션이 있으면 부수 태스크 4종을 모두 시작한다")
     func sessionStartsAllLaunchTasks() async {
@@ -242,6 +161,94 @@ struct BootstrapAppUseCaseTests {
         await spy.runAll()
 
         #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
+    // MARK: - 4. 약관 게이트 — 조회 실패는 동의 간주, 세션 소실만 인트로로
+
+    @Test("필수 약관에 모두 동의한 유저는 약관 시트 없이 main으로 진입한다")
+    func allTermsAgreedEntersMainWithoutSheet() async {
+        let gate = MockLaunchGateRepository()
+        gate.isRequiredTermsAgreedResult = .success(true)
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
+    @Test("필수 약관 미동의 유저는 main 진입 시 약관 시트를 함께 띄운다")
+    func unagreedTermsEntersMainWithSheet() async {
+        let gate = MockLaunchGateRepository()
+        gate.isRequiredTermsAgreedResult = .success(false)
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: true))
+    }
+
+    @Test("약관 조회가 실패하면 동의로 간주해 진입을 막지 않는다")
+    func termsCheckFailureIsTreatedAsAgreed() async {
+        let gate = MockLaunchGateRepository()
+        gate.isRequiredTermsAgreedResult = .failure(.networkUnavailable)
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
+    // 세션이 소실된 상태로 main에 보내면 메인 탭이 401을 맞고 온보딩으로 되돌려 화면이 번쩍인다 —
+    // "실패는 통과" 정책의 유일한 예외.
+    @Test("약관 조회가 세션 소실로 실패하면 intro로 보낸다")
+    func termsAuthenticationFailureRoutesToIntro() async {
+        let gate = MockLaunchGateRepository()
+        gate.isRequiredTermsAgreedResult = .failure(.authenticationRequired)
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .intro)
+    }
+
+    // MARK: - 게이트 예산 (횡단 정책) — 응답이 오지 않는 망에서도 스플래시가 잠기지 않는다
+
+    // "조회 실패는 통과" 정책은 에러가 돌아와야 작동한다 — 응답 자체가 안 오면
+    // URLSession 기본 타임아웃(60초)에 걸릴 때까지 스플래시가 잠기므로 예산으로 끊는다.
+    @Test("강제 업데이트 조회가 예산을 넘기면 차단하지 않고 통과시킨다")
+    func forceUpdateBudgetExpiryPassesThrough() async {
+        // 게이트는 끝내 "차단"이라 답할 참이지만, 예산이 먼저 끝나 그 답은 쓰이지 않는다.
+        let gate = HangingLaunchGateRepository(hangsForceUpdate: true, forceUpdateRequired: true)
+        let sut = makeSUT(gate: gate, waitGateBudget: { _ in })
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
+    @Test("약관 조회가 예산을 넘겨도 진입을 막지 않는다")
+    func termsBudgetExpiryEntersMain() async {
+        let gate = HangingLaunchGateRepository(hangsTerms: true)
+        let sut = makeSUT(gate: gate, waitGateBudget: { _ in })
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
+    // 예산은 게이트당이 아니라 부트스트랩 전체에 하나다 — 이미 소진됐으면
+    // 남은 게이트는 조회를 시작조차 하지 않고 "판정 불가 → 통과"로 떨어져야 한다.
+    @Test("예산이 소진되면 남은 게이트는 조회 없이 통과시킨다")
+    func exhaustedBudgetSkipsRemainingGates() async {
+        let gate = MockLaunchGateRepository()
+        gate.checkForceUpdateRequiredResult = .success(true)   // 조회됐다면 forceUpdate로 차단됐을 값
+        let sut = makeSUT(gate: gate, gateBudget: .zero)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+        #expect(gate.checkForceUpdateRequiredCallCount == 0)
+        #expect(gate.isRequiredTermsAgreedCallCount == 0)
     }
 }
 
