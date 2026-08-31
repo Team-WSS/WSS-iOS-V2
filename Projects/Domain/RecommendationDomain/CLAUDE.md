@@ -14,6 +14,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`HomePrefetchStore`(actor)는 single-shot이지 TTL 캐시가 아니다**(#225) — 홈은 "탭 복귀마다 갱신" 계약이라
+  TTL이면 복귀 때 stale이 나온다. consume이 슬롯을 비우는 걸 "버그 같다"고 고치지 말 것. 채우는 쪽은
+  런치 부트스트랩(SplashData), 소비하는 쪽은 `DefaultRecommendationRepository`, 단일 인스턴스는 App DI가 만든다.
+
 - ⚠️ **관심글(`fetchInterestFeeds`)은 `LoadHomeDataUseCase`가 일부러 호출하지 않는다**(#179). 홈 디자인에
   관심글 섹션이 없어서다 — 구 WSSiOS 홈에서도 이미 미사용이었다. Entity·Repository·DTO는 남겨뒀으니
   섹션이 부활하면 되살려 쓰면 된다. **"4개 다 부르는 게 자연스럽다"고 되돌리지 말 것**: 하나라도 실패하면
