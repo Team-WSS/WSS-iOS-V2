@@ -54,8 +54,7 @@
 1. 🔧 **미배선(App 배선 — 서재 이동)** — **서재 통계 → 서재 이동이 V2에 미배선**. V1은 마이페이지의 읽기상태 버튼(관심/보는중/봤어요/하차) **각각**을 탭하면 그 읽기상태로 필터된 서재로 이동하고(마이페이지=탭 전환 notification, 타유저=UserLibrary push, **pageIndex 동반**), 타유저 프로필은 "서재" 타이틀 탭으로도 이동한다. **V2는 `LibrarySection` 전체가 버튼 하나이고 그 action이 `//TODO: - 서재 뷰로 이동`(마이·타유저 둘 다)** → 아직 안 눌린다. 읽기상태별 진입(pageIndex) 세분도 사라졌다. → [1.3](#13-서재-통계--서재-이동), [4.8](#48-서재-통계--네비게이션)
 2. **타유저 프로필·전체 피드 목록의 재진입 재조회 없음**. V1은 `viewWillAppear`마다 프로필·피드를 다시 받는다(전체 피드 목록은 목록을 **비우고** 처음부터 다시 로드). V2 `UserPageViewModel.load()`·`UserFeedListViewModel.load()`는 **`!hasLoaded`/`!hasLoadedFirstPage` 1회 가드**라 push에서 돌아와도 재조회하지 않는다. → [4.1](#41-진입생명주기), [5.2](#52-진입생명주기)
    - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원.** push 복귀 시 재조회하기로 결정(횡단 — 알림·작품상세와 함께, `docs/TODO.md` 9). 전체 피드 목록의 "비우고 처음부터"는 스크롤·상태 보존 위해 재검토.
-3. **차단 성공 알림(토스트) 누락 가능성**. V1은 차단 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 **직전 화면에서 "차단했어요" 류 안내**를 띄우게 한다. V2는 차단 성공 시 화면만 `dismiss`하고 그런 신호가 없다. → [4.6](#46-차단)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(소소).** 차단 성공 시 직전 화면에 "차단했어요" 안내 복원(V1 parity). 저우선 — `docs/TODO.md` 9 소소 묶음.
+3. 🔧 **차단 토스트 복원·개선 완료(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser`(닉네임)를 전역 post했지만 **관찰자는 피드 탭(`FeedViewController`) 하나뿐**이라 어디서 차단하든 토스트가 피드 탭에서만 떴다. V2는 #221에서 복원 — `UserPageView.onUserBlocked(nickname)` seam(→ Factory → `UserPageAssembly`) + 4탭 Root의 `.showWSSToast(.blockUser)`. 각 탭 `NavigationStack` 오버레이라 pop 후 **직전 뷰** 위에 뜬다(V1의 "피드 탭 고정"보다 정확 — 차단한 그 탭에서). 4탭 배선은 interim(통합 채널 재설계 시 정리, `docs/TODO.md` 12절). → [4.6](#46-차단)
 4. **타유저 "알 수 없는 유저"(USER-018) 처리 없음**. V1 UserPage는 `USER-018` 서버 에러를 잡아 **빈 프로필로 폴백**한다. V2는 `privateProfile`(USER-015)만 특별 처리하고 USER-018은 일반 로드 실패(`hasLoadError`)로 떨어진다. → [4.7](#47-비공개알-수-없는-프로필)
    - **🔧 확정(2026-08-28, 사용자): 전용 처리 복원.** USER-018 = "없는 유저" 폴백(탈퇴·삭제된 유저 진입 시). 지금은 "네트워크 오류"로 잘못 떨어져 재시도만 반복되는 잠재 회귀. `docs/TODO.md` 9.
 5. ✅ **V2 유지 확정** (2026-08-29, 사용자: 통째로 가림 — PENDING 4 닫힘) — **비공개 프로필에서 서재 통계 노출 여부**. V1은 비공개여도 서재 통계 조회(`getUserNovelStatus`)가 private 게이팅 밖이라 값이 바인딩된다. V2는 `isProfilePrivate`가 서면 **통계 탭 콘텐츠 전체(서재 섹션 포함)를** "비공개" 안내로 덮는다. → [4.7](#47-비공개알-수-없는-프로필)
@@ -288,9 +287,9 @@
 - ✅ **Keep** — 차단 성공 시 화면을 떠난다(상대 프로필을 더 볼 이유 없음).
   - **수단 차이**: V1은 `popViewController`(pop), V2는 `state.shouldDismiss` → `dismiss()`.
   - 근거: V1 `UserPageViewModel.swift:206-211` · V2 `UserPageViewModel.swift:336-344`, `UserPageView.swift:186-188`, `CLAUDE.md`(성공하면 dismiss)
-- 🔧 **복원 확정→TODO** (되살린다 소소 — 12절) — 차단 성공 **알림(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 post해 직전 화면에서 "차단했어요" 류 피드백을 띄우게 한다.
-  - **V2: 화면 dismiss만** — 부모에게 차단 완료를 알리는 신호(토스트 등)가 없다.
-  - 근거: V1 `UserPageViewModel.swift:207-210` · V2 `UserPageViewModel.swift:340`(shouldDismiss만)
+- 🔧 **차단 토스트 복원·개선 완료(#221)** — 차단 성공 **안내(토스트)**. V1은 성공 시 `NotificationCenter.blockUser`(닉네임)를 전역 post했으나 **관찰자는 피드 탭 `FeedViewController` 하나뿐**(`FeedViewController.swift:137-143`)이라 어디서 차단하든 피드 탭에서만 "차단했어요"가 떴다.
+  - **V2: #221에서 복원**했다 — `UserPageView`가 `shouldDismiss` 전이(=차단 성공)에서 `dismiss()` 직전 `onUserBlocked(nickname)`을 부르고(→ `UserPageFeatureFactory.makeView` → `UserPageAssembly.makeView`), 4탭 Root가 그 콜백으로 `.showWSSToast(.blockUser(nickname:))`(이미 존재하는 카피 "{nickname}님을 차단했어요")를 띄운다. 각 탭 `NavigationStack` 컨테이너 오버레이라 pop 후 최상단이 된 직전 뷰 위에 뜬다 — V1의 "피드 탭 고정"과 달리 **차단한 그 탭**에서. 4탭 배선은 의도적 interim(통합 채널 재설계 시 정리, `docs/TODO.md` 12절).
+  - 근거: V1 `UserPageViewModel.swift:209`(전역 post)·`FeedViewController.swift:137-143`(유일 관찰자) · V2 `UserPageView.swift`(`shouldDismiss` onChange → `onUserBlocked`)·`UserPageAssembly.swift`·4탭 `*RootView.swift`(`.showWSSToast(.blockUser)`)
 - ✅ **Keep** — 차단 진입점은 네비바 우측 드롭다운(threedots) "차단하기".
   - 근거: V1 `UserPageViewController.swift:384-400` · V2 `UserPageView.swift:541-551`,`568-583`
 - ✅ **Keep** — 차단/신고 실패는 에러 토스트(공용).

@@ -341,3 +341,13 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   바로 진입한다**(사용자 확정, #196) — 서재 맥락에서 필요한 건 알림 설정뿐이라 `SettingFactory.makeView`
   (설정 메인 목록)를 거치지 않고 그 하위 화면으로 직행한다. `AppDependencies.pushSettingRepository`
   (`NotificationDataFactory.makePushSettingRepository`)가 이 화면 전용으로 새로 추가됐다.
+- ⚠️ **타유저 차단 성공 "차단했어요" 토스트는 4탭 Root가 각자 띄운다(#221, 의도적 interim 4벌 복붙)** —
+  `UserPageAssembly.makeView(onUserBlocked:)` seam이 차단한 상대 닉네임을 올려주면, 4탭 Root
+  (`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`)가 각자 `@State`(`isUserBlockedToastPresented`·
+  `blockedNickname`)로 받아 자기 `NavigationStack`에 `.showWSSToast(.blockUser(nickname:))`로 띄운다. UserPage는
+  차단 성공과 **동시에 pop**되므로 토스트는 그 화면이 아니라 **복귀할 스택 컨테이너**가 띄워야 하고(마이페이지
+  "저장됨"(`onSaved`) 토스트와 같은 크로스스크린 패턴), `NavigationStack`에 얹은 오버레이라 pop 후 최상단이 된
+  **직전 뷰** 위에 뜬다("Root뷰로 복귀"가 아니라 스택 최상단 위 — 진입 경로에 따라 소소피드/피드상세/작품상세 등).
+  V1은 이걸 전역 `NotificationCenter.blockUser`를 피드 탭 하나만 캐치해 띄웠는데, V2는 차단한 그 탭에서 뜬다(더
+  정확). ⚠️ **이 4벌은 임시** — `feedEdited`·`novelReviewed`까지 합쳐 통합 크로스스크린 채널로 재설계할 때
+  걷어낼 예정이니(`docs/TODO.md` 12절), "화면 전환 완료 피드백"을 새로 만들 때 이 4벌을 정식 패턴으로 복제하지 말 것.

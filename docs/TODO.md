@@ -264,13 +264,13 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
 - **크로스스크린 완료 피드백 재설계 (App 조정 계층, 사용자 확정 2026-08-28)** — V1은 `NotificationCenter` 배관
   (`feedEdited`·`NovelReviewed`·`BlockUser`)으로 다른 화면에서 끝난 일의 결과를 복귀 화면에 토스트로 알렸다
-  ("수정 완료"·"평가 완료"·"차단했어요"). V2엔 이 배관이 없다. 위 push 재진입 재조회 복원과 **같은 App 배선 자리**에서
-  콜백/이벤트로 재설계한다(싱글톤 NotificationCenter 답습 금지). 근거: `FeedFeature` 0절 15 / `NovelDetailFeature`
-  6.5·0절 11 / `UserPageFeature` 4.6(소소 묶음 ①과 합류). → App + 다수 Feature.
-- **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ①만 남음. ① 타유저 차단 성공 시
-  "차단했어요" 안내(토스트) 복원(`UserPageFeature` 4.6) — UserPage가 차단 성공 시 dismiss되므로 **복귀 화면에
-  토스트**를 띄우는 크로스스크린 성격이라 위 "크로스스크린 완료 피드백 재설계"(App 배선)와 함께 처리한다.
-  → App(①).
+  ("수정 완료"·"평가 완료"·"차단했어요"). V2는 셋 중 **`BlockUser`("차단했어요")만 #221에서 먼저 복원**했다 —
+  `UserPageView.onUserBlocked` seam(→ Factory → `UserPageAssembly`) + 4탭 Root의 `.showWSSToast(.blockUser)`
+  (각 탭 `NavigationStack` 오버레이 → pop 후 직전 뷰 위, `UserPageFeature/CLAUDE.md`·`V1_BEHAVIOR_CONTRACT.md` 4.6).
+  **단 이 4탭 배선은 의도적 interim**(4벌 복붙) — `feedEdited`·`novelReviewed`까지 합쳐 위 push 재진입 재조회 복원과
+  **같은 App 배선 자리**에서 콜백/이벤트 기반 **통합 채널**로 재설계하고(싱글톤 NotificationCenter 답습 금지), 그때
+  이 블록토스트 4벌도 그 채널로 흡수한다. 근거: `FeedFeature` 0절 15 / `NovelDetailFeature` 6.5·0절 11 /
+  `UserPageFeature` 4.6. → App + 다수 Feature.
 
 ### 13. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 

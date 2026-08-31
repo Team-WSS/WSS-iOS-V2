@@ -32,6 +32,10 @@ public enum UserPageFeatureFactory {
     ///   - onCollectionListTapped: 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 그 유저의 컬렉션 목록 진입
     ///     콜백. 실제 화면 전환(`CollectionFeature`의 목록 화면, "내 컬렉션" 탭만 보이는 모드)은
     ///     호출자(App)가 수행한다.
+    ///   - onUserBlocked: 차단 성공(이 화면 dismiss) 직전 → 차단한 상대 닉네임을 실어 올리는 콜백.
+    ///     이 화면은 곧 pop되므로 "차단했어요" 토스트(`WSSToastType.blockUser(nickname:)`)는 복귀할
+    ///     화면(App 조정 계층)이 띄운다 — 지금은 도관만 뚫어둔 seam이고 실제 표시 배선은 크로스스크린
+    ///     완료 피드백 재설계 때 채운다(`docs/TODO.md` 12절).
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -49,7 +53,8 @@ public enum UserPageFeatureFactory {
         onLibraryTapped: @escaping () -> Void = {},
         onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
         onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
-        onCollectionListTapped: @escaping () -> Void = {}
+        onCollectionListTapped: @escaping () -> Void = {},
+        onUserBlocked: @escaping (String) -> Void = { _ in }
     ) -> some View {
         let viewModel = UserPageViewModel(
             userID: userID,
@@ -71,7 +76,8 @@ public enum UserPageFeatureFactory {
             onLibraryTapped: onLibraryTapped,
             onFeedListTapped: onFeedListTapped,
             onCollectionItemTapped: onCollectionItemTapped,
-            onCollectionListTapped: onCollectionListTapped
+            onCollectionListTapped: onCollectionListTapped,
+            onUserBlocked: onUserBlocked
         )
     }
 
