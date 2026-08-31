@@ -7,6 +7,8 @@
 - 진입점 2개 (둘 다 `DefaultSettingService` 공유):
   - `SettingDataFactory.makeAppUpdateRepository(client:logger:)`
   - `SettingDataFactory.makeTermsAgreementRepository(client:logger:)`
+- `AppVersionProviding` 실구현은 **`BundleAppVersionProvider`**(#225, TODO 2절의 "실구현체 없음" 해소).
+  파싱 실패 폴백은 `.zero`가 아니라 **절대 강제되지 않는 방향**(max 버전) — `.zero`면 앱이 업데이트 알럿에 잠긴다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
