@@ -26,6 +26,9 @@
 - `SplashViewModel.init`의 `waitMinimumDisplayTime` 파라미터는 **테스트 시임(seam)** — 프로덕션 조립에서는
   절대 넘기지 말 것(기본값 1.0초가 정답). `bootstrapTask`가 internal인 것도 테스트가 완료를 폴링 없이
   기다리기 위함(`await bootstrapTask?.value`). SplashDomain `launchInBackground`와 같은 철학.
+- **App 배선 시: `onFinish`가 불리기 전까지 스플래시 뷰를 계층에서 빼지 말 것** — 완료 신호가
+  `onChange(of: state.outcome)`라 뷰가 떼어진 사이 세팅된 outcome은 감지되지 않아 `onFinish`가 영영 안 불린다.
+  (런치 루트로 상시 마운트하는 정상 배선에선 문제없음 — 리뷰 지적, #225.)
 - **Demo는 실서버 조립이 없다(Mock 시나리오 방식)** — `SplashData` 실서버 조립은 도메인 6종 Repository
   인스턴스가 전부 필요해 사실상 App DI 복제라, `MockBootstrapAppUseCase`(SplashDomainTesting)로 outcome
   분기·지연만 재현한다. "다른 Feature Demo와 다르다"고 실서버 모드를 채워 넣지 말 것.
