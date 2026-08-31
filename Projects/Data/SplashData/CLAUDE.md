@@ -13,3 +13,12 @@
 - `deviceTokenProvider`가 nil을 주면 FCM 등록은 **조용히 건너뛴다** — 푸시 인프라(APNs/FCM SDK)가 App에 아직 없어서(2026-08-31 기준) 의도된 동작. 인프라가 생기면 App 조립에서 실제 provider만 꽂으면 된다.
 - `checkForceUpdateRequired`는 조회 실패를 **그대로 던진다** — "실패는 통과" 정책은 `BootstrapAppUseCase`(SplashDomain)가 한 곳에서 결정한다. 여기서 삼키지 말 것.
 - `hasValidSession`은 토큰 **존재 여부만** 본다 — 만료 검증은 401 자동 재발급 경로(#184) 담당.
+- ⚠️ **App 배선 때: `makeLaunchTaskRepository(recommendationRepository:)`에 넘길 인스턴스는 프리페치 store를
+  주입하지 않은 쪽이어야 한다**(#225 리뷰). App에는 조립된 `RecommendationRepository`가 하나뿐이라 그대로
+  넘기면 **프리페치가 스스로를 무효화한다**: `prefetchHomeData()`가 부르는 `fetchTodayDiscoveries()`가
+  빈 슬롯에 **consume을 시도해 소비 창을 닫아 버리고**, 그 직후의 `fill`은 `isClosed`에 걸려 폐기된다.
+  결과는 **store가 영영 안 채워지고 런치마다 추천 API 2개만 버려지는 것** — 홈은 늘 네트워크를 타므로
+  "느려지지 않았다"가 증상이라 아무도 못 알아챈다. store는 **소비하는 쪽에만** 주입한다.
+- ⚠️ 같은 이유로 **주입은 짝으로만 의미가 있다** — `SplashDataFactory`에만 store를 넘기고
+  `RecommendationDataFactory`에 안 넘기면 런치마다 추천 API 2개를 더 때리고 결과는 아무도 안 쓴다.
+  타입이 막아주지 않으니(한쪽은 non-optional, 한쪽은 기본 nil) App DI에서 두 조립을 붙여 둘 것.
