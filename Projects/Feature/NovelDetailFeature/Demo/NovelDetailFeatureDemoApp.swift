@@ -355,6 +355,7 @@ private struct DemoRootView: View {
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
                 loadNotificationSettingUseCase: DemoLoadNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 updateNotificationSettingUseCase: DemoUpdateNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
+                onboardingHintUseCase: DemoOnboardingHintUseCase(),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
@@ -430,6 +431,7 @@ private struct DemoRootView: View {
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
             loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationRepository),
+            onboardingHintUseCase: DemoOnboardingHintUseCase(),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
@@ -691,6 +693,15 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
             imageCount: mirrorsRealData ? 5 : 0
         )
     }
+}
+
+/// Demo용 인메모리 온보딩 힌트 — 진입(detailView의 `.id`)마다 새로 만들어져 항상 "아직 안 봄"으로 시작한다.
+/// 실제 앱은 UserDefaults라 앱 전역 1회지만, Demo는 오버레이를 **매 진입마다** 확인할 수 있게 인메모리로 둔다
+/// (닫으면 그 진입 동안엔 다시 안 뜬다). MainActor UI에서만 접근하므로 `@unchecked Sendable`로 계약만 만족시킨다.
+private final class DemoOnboardingHintUseCase: OnboardingHintUseCase, @unchecked Sendable {
+    private var seen: Set<OnboardingHint> = []
+    func hasSeen(_ hint: OnboardingHint) -> Bool { seen.contains(hint) }
+    func markSeen(_ hint: OnboardingHint) { seen.insert(hint) }
 }
 
 // MARK: - Demo Mock (작품 알림 설정)

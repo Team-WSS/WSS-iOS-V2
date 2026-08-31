@@ -49,6 +49,7 @@ enum NovelDetailAssembly {
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
             loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: dependencies.novelNotificationRepository),
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: dependencies.novelNotificationRepository),
+            onboardingHintUseCase: DefaultOnboardingHintUseCase(repository: dependencies.onboardingHintRepository),
             logger: dependencies.logger,
             onReviewTapped: onReviewTapped,
             onCreateFeedTapped: onCreateFeedTapped,

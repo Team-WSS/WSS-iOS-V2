@@ -48,6 +48,7 @@ public enum NovelDetailFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
+        onboardingHintUseCase: OnboardingHintUseCase,
         logger: Logger? = nil,
         onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
         onCreateFeedTapped: @escaping (ConnectedNovel) -> Void,
@@ -70,6 +71,7 @@ public enum NovelDetailFeatureFactory {
                 deleteNovelReviewUseCase: deleteNovelReviewUseCase,
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
+                onboardingHintUseCase: onboardingHintUseCase,
                 logger: logger
             ),
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,

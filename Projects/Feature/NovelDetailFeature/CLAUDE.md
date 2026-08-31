@@ -100,4 +100,19 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 - **`NovelNotificationSettingSheetViewModel`의 `isSyncing`은 반드시 액션 핸들러(동기 코드)에서 Task 스폰 *전에* 세운다.** `sync()`(비동기 함수) 안에서 세우면, 토글 두 개가 Task 스케줄링 틈새(같은 런루프 틱)에 연달아 들어왔을 때 **둘 다 `guard !state.isSyncing`을 통과**해 PUT이 겹쳐 나간다 — `NovelDetailViewModel`의 `isSyncingInterest = true` → `Task { }` 순서와 같은 이유(리뷰에서 실제 발견).
 - **이 시트는 명시적 닫기 버튼이 없다**(스와이프로만 닫힘) — 그래서 화면 다른 곳의 `requestClose` 액션 + `isClosing` 패턴을 못 쓰고, 대신 View의 **`.onDisappear`가 `.disappear` 액션을 발화**해 `isClosing` 세팅 + 진행 중 Task 취소를 대신한다. 닫기 버튼이 없는 서버 호출 화면(시트 등)을 새로 만들 때 이 변형을 참고할 것 — `requestClose`를 억지로 만들 필요 없다.
 - **네비바 우측 아이콘 버튼(종·threedots)은 뒤로가기와 달리 44×44 확장 탭 타깃이 없다** — 아이콘 실제 크기(`.frame(width:24/20,height:24/20)`) 그대로에 `.contentShape`만 얹는다(디자인 지정값, 뒤로가기 버튼만 명시적 `.frame(width:44,height:44)`를 추가로 둔 예외). 우측 클러스터 전체 폭은 종(24)+간격(16)+threedots(20)+trailing 간격(20) = **80pt**다.
+- **첫 진입 평가 온보딩 오버레이(#221, V1 parity 복원)**: 첫 상세를 **앱 전역 1회**만, 화면을 딤 처리하되
+  **평가 상태바 자리만 뚫어**(스포트라이트) 실제 상태바가 밝게 비치게 하고 그 아래 말풍선으로 "평가해보세요"
+  힌트를 띄운다. 저장은 `BaseDomain.OnboardingHintUseCase`(`.novelDetailReview`) — VM이 **첫 로드 성공 시에만**
+  `hasSeen`이 false면 `state.showReviewOnboarding`을 세우고(재진입 조용한 갱신에선 안 뜸), 닫으면 `markSeen`.
+  ⚠️ **구현 함정 4가지**:
+  - **스포트라이트는 실제 상태바를 딤에서 뚫는다**(복제본 아님) — `reverseMask`(딤에서 상태바 사각형을
+    `destinationOut`으로 빼 그 자리 알파 0). 상태바 프레임은 `NovelDetailReviewSection`이 `scrollSpaceName`
+    좌표(= 화면 좌상단 기준, ScrollView가 상태바까지 확장돼서)로 실측해 `onReviewBoxFrameChange`로 올린다.
+  - **오버레이 ZStack에 `.ignoresSafeArea()` 필수** — 그래야 오버레이 좌표 원점이 화면 좌상단이 돼 실측
+    프레임(scrollSpaceName)과 `.position`/`reverseMask`가 정렬된다. 빼면 안전영역 top만큼 구멍이 어긋난다.
+  - **최상단 투명 탭 레이어(`Color.wssBlack.opacity(0.001)`)가 필수** — 구멍(실제 상태바)은 딤이 없어
+    그대로 두면 상태바 탭이 **평가 화면으로 새어나간다**. 이 레이어가 어디를 탭하든 먼저 받아 닫기로 돌린다
+    (딤·말풍선은 `allowsHitTesting(false)`). iPhone 17 Pro 실측 — 스포트라이트 안 "보는 중"을 탭해도 평가로
+    안 가고 오버레이만 닫힘 확인.
+  - **`reviewBoxFrame.height > 0`으로 게이트** — 상태바 실측 전(첫 프레임)엔 오버레이를 안 띄운다(엉뚱한 위치에 구멍 방지).
 - **스크롤 반응형 네비 타이틀은 화면 정중앙에 오도록 좌우 `.padding`을 대칭(양쪽 다 80pt 기준)으로 맞춘다** — 우측 클러스터(80pt)가 좌측(뒤로가기 44pt + 이 `HStack` 전체에 걸린 `.padding(.leading, 6)` = 화면 기준 실제 50pt)보다 넓어서다. 대칭을 맞추려면 **양쪽 다 더 넓은 쪽(80)을 기준**으로 삼아야 하는데, `Text`의 `.padding(.leading,)`은 이 `.padding(.leading, 6)`으로 이미 6pt만큼 밀린 로컬 좌표 위에서 계산되므로 **코드에는 74를 적는다**(74+6=80). `.padding(.leading, 44)`처럼 뒤로가기 실측값을 그대로 쓰면 좌측 여백이 6pt 부족해 타이틀이 더 넓은 우측으로 밀려 정중앙에서 벗어난다 — 좌우 버튼 폭이 바뀌면 두 값(`leading`은 `-6` 보정 포함, `trailing`은 그대로) 모두 "더 넓은 쪽 폭" 기준으로 다시 맞출 것.

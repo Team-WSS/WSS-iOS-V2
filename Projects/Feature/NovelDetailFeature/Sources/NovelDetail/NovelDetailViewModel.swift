@@ -50,6 +50,9 @@ final class NovelDetailViewModel {
         /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
         /// 작품 본체 로드 실패는 전면 실패 뷰(`information == nil && !isLoading`)가 표현하므로 여기 없다.
         var presentedToast: DetailToast?
+        /// 첫 진입 평가 온보딩 오버레이 표시 여부(#221, V1 parity). 앱 전역 1회 — 첫 로드 성공 시
+        /// 아직 안 봤으면 세우고, 닫으면 `markSeen` 후 내린다. 스포트라이트 좌표는 View가 상태바를 실측한다.
+        var showReviewOnboarding = false
     }
 
     enum Tab: CaseIterable, Equatable {
@@ -111,6 +114,8 @@ final class NovelDetailViewModel {
         /// 부르지 않고 여기서 그친다. `NovelDetailFeedTab`이 판정(`Author.accessibleUserId == nil`)해서
         /// `onUnavailableUserProfileTapped()`를 부르면 여기까지 이어진다.
         case userProfileUnavailable
+        /// 첫 진입 평가 온보딩 오버레이를 닫는다(어디를 탭하든) — 봤음을 기록해 다시 뜨지 않게 한다.
+        case dismissReviewOnboarding
     }
 
     // MARK: - Output
@@ -153,6 +158,9 @@ final class NovelDetailViewModel {
     private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
     private let reportImproperFeedUseCase: ReportImproperFeedUseCase
 
+    // BaseDomain — 첫 진입 평가 온보딩 힌트 1회성 판정/기록(#221).
+    private let onboardingHintUseCase: OnboardingHintUseCase
+
     // MARK: - Init
 
     init(
@@ -165,6 +173,7 @@ final class NovelDetailViewModel {
         deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
+        onboardingHintUseCase: OnboardingHintUseCase,
         logger: Logger? = nil
     ) {
         self.novelID = novelID
@@ -176,6 +185,7 @@ final class NovelDetailViewModel {
         self.deleteNovelReviewUseCase = deleteNovelReviewUseCase
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
+        self.onboardingHintUseCase = onboardingHintUseCase
         self.logger = logger
         self.state = State()
     }
@@ -218,6 +228,8 @@ final class NovelDetailViewModel {
             state.presentedToast = nil
         case .userProfileUnavailable:
             state.presentedToast = .unavailableUser
+        case .dismissReviewOnboarding:
+            dismissReviewOnboarding()
         }
     }
 }
@@ -357,6 +369,13 @@ private extension NovelDetailViewModel {
         feedActionTask?.cancel()
         state.shouldDismiss = true
     }
+
+    /// 첫 진입 평가 온보딩 오버레이 닫기 — 봤음을 기록해 앱 전역에서 다시 뜨지 않게 한다.
+    func dismissReviewOnboarding() {
+        guard state.showReviewOnboarding else { return }
+        onboardingHintUseCase.markSeen(.novelDetailReview)
+        state.showReviewOnboarding = false
+    }
 }
 
 // MARK: - UseCase Handling
@@ -371,9 +390,14 @@ private extension NovelDetailViewModel {
         do {
             let information = try await loadNovelUseCase.execute(id: novelID)
             guard !isClosing, !Task.isCancelled else { return }
+            let isFirstLoad = !hasLoaded
             state.information = information
             state.novel = information.novel
             hasLoaded = true
+            // 첫 로드 성공 시에만 온보딩을 판정한다(재진입 조용한 갱신에선 다시 뜨지 않게).
+            if isFirstLoad, !onboardingHintUseCase.hasSeen(.novelDetailReview) {
+                state.showReviewOnboarding = true
+            }
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화한다(이 catch는 presentError를 안 거치므로 직접 감지).

@@ -63,6 +63,8 @@ final class AppDependencies {
     let commentRepository: CommentRepository
     let searchRepository: any RecentSearchRepository & SearchAutoCompletionRepository & SearchNovelRepository
     let pushSettingRepository: PushSettingRepository
+    /// 1회성 온보딩 힌트 플래그(#221) — 순수 로컬(UserDefaults)이라 네트워크 client 없이 조립한다.
+    let onboardingHintRepository: OnboardingHintRepository
 
     init() {
         let logger = ConsoleLogger()
@@ -154,6 +156,7 @@ final class AppDependencies {
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: logger)
         )
+        self.onboardingHintRepository = DefaultOnboardingHintRepository(appStorage: UserDefaultsStorage())
 
         // 키워드는 로컬 파일 캐시(`KeywordCache`)를 여러 도메인(서재 필터·프로필 취향·검색 등)이
         // 그대로 읽어 쓰는 구조라(BaseData/CLAUDE.md), 캐시가 비어있으면 그 화면들이 전부 빈 목록으로

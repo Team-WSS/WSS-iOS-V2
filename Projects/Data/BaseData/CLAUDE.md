@@ -9,6 +9,7 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 
 - **에러 변환의 본진**: `NetworkingError.toRepositoryError()` — 401→`authenticationRequired`, 403→`forbidden`, 404→`notFound`, 5xx→`serverUnavailable`, decoding→`invalidData`, unknown→`networkUnavailable`. (전 Data 모듈이 이걸 씀)
 - **로컬 저장**: `AppStorage` 프로토콜 + `UserDefaultsStorage` 구현 + `StorageKey<V>`(타입 안전 키). 예: `appStorage.get(.userID)`.
+- **온보딩 힌트 저장**(`Onboarding/`, #221): `DefaultOnboardingHintRepository`가 `BaseDomain.OnboardingHintRepository`를 구현 — 힌트별 키를 `onboardingHint.<rawValue>`로 네임스페이스해 `Bool`로 저장한다. ⚠️ **네트워크가 없어(순수 로컬) Factory 없이 App(DI)이 `DefaultOnboardingHintRepository(appStorage:)`로 직접 조립**한다(BaseData는 `factory-exclusivity` 예외라 public struct를 그대로 열어도 됨 — `UserDefaultsStorage`와 같은 결).
 - **로깅**: `DataLogger` (모듈명 + underlying `Logger`).
 - **에러 타입**: `MappingError`, `CacheError`.
 - **Keyword 전체 스택**: `DefaultKeywordRepository`/`Service`/`Mapper`/`Endpoint`/`Factory` + `KeywordCache`. → BaseDomain `KeywordRepository`의 실제 구현이 여기 있다. `KeywordRepository.fetchPopularKeywords`(실시간 인기 키워드)만 캐시를 안 거치고 **매번 서버 직접 호출** — 나머지(`fetchKeywords`/`searchKeywords`)는 캐시 경유이니 혼동 말 것.

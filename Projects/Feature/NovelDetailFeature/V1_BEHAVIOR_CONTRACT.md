@@ -50,7 +50,7 @@
    - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` 9.
 2. ✅ **Keep 확정** (2026-08-28: VM Task 슬롯 가드+NavigationStack로 해소, 순수 네비 중복만 App 몫 — 본문 6.1) — **더블탭 가드(throttle) 제거**: V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
 3. 🔧 **미배선(App 배선 대기·삭제 아님)** — **작가 검색 화면 라우팅 미구현**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
-4. 🔧 **재도입 확정→TODO 12절** (2026-08-28, 사용자: 되살린다 — PENDING 5 닫힘) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2엔 이 오버레이가 통째로 없다**(grep 0). → [6.4](#64-첫-감상평-안내-오버레이)
+4. ✅ **구현 완료** (2026-08-31 — 되살림) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2에 재도입**했다 — 복제본 대신 **실제 상태바를 딤에서 뚫는 스포트라이트**로 개선(사용자 선택). 저장은 `BaseDomain.OnboardingHintUseCase`(범용 온보딩 플래그, UserDefaults). → [6.4](#64-첫-감상평-안내-오버레이)
 5. 🔧 **횡단 이슈→TODO 12절** (Amplitude 재도입) — **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
 
 **🔧 / 🗑 눈에 띄는 변경 (의도 확인)**
@@ -267,10 +267,10 @@
 
 ### 6.4 첫 감상평 안내 오버레이
 
-- 🔧 **재도입 확정→TODO 12절** (2026-08-28, 사용자: 되살린다 — PENDING_DECISIONS 5 닫힘) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
-  - **V2엔 이 오버레이가 통째로 없다**(grep 0 — `firstReview`/`speechBalloon`/`showReviewFirst` 흔적 없음).
-  - 근거: V1 `NovelDetailViewModel.swift:183-189`,`197-199`(hideFirstReviewDescription·UserDefaults), `NovelDetailView.swift:26-29`,`269-274`(오버레이 뷰) · V2 `Sources/**`(해당 코드 없음)
-  - **판정 근거**: 사용자 확정(2026-08-28) — 되살린다. 디자인 시안은 구현 시 V1 오버레이 구성(딤·상태바 미리보기·말풍선)을 재료로 요청.
+- ✅ **구현 완료** (2026-08-31 — 되살림, 스포트라이트 방식으로 개선) — V1은 감상평을 처음 볼 때 **1회성 온보딩 오버레이**를 띄웠다: 딤(`wssBlack60`) + 상태바 미리보기(`NovelDetailHeaderReviewResultView` 비활성 복제) + 말풍선 힌트 라벨. 오버레이(또는 배경)를 탭하면 닫히고 `UserDefaults.showReviewFirstDescription = true`로 저장해 **다시 뜨지 않는다**. viewWillAppear마다 저장값을 읽어 표시 여부를 정했다.
+  - **V2 재도입**: V1의 "빈 복제본" 대신 **실제 상태바를 딤에서 뚫는 스포트라이트**(`reverseMask`)로 개선했다(사용자 선택) — 이미 평가한 유저에게 어긋난 셀렉터가 뜨던 V1 허점을 없앤다. 앱 전역 1회 트리거·말풍선·딤·탭 닫기는 V1 그대로. 저장은 **범용 온보딩 플래그**(`BaseDomain.OnboardingHintUseCase`/`.novelDetailReview`, UserDefaults `onboardingHint.novelDetailReview` 키) — V1의 단일 bool 키를 화면이 늘어도 재사용 가능한 계약으로 재설계.
+  - 근거: V1 `NovelDetailViewModel.swift:183-189`,`197-199`(hideFirstReviewDescription·UserDefaults), `NovelDetailView.swift:26-29`,`269-274`(오버레이 뷰) · V2 `NovelDetailView.swift`(`reviewOnboardingOverlay`·`reverseMask`·`speechBalloonHint`), `NovelDetailViewModel.swift`(`showReviewOnboarding`·`dismissReviewOnboarding`), `NovelDetailReviewSection.swift`(상태바 프레임 실측), `BaseDomain/Sources/Onboarding/**`, `BaseData/Sources/Onboarding/DefaultOnboardingHintRepository.swift`
+  - **구현 함정은 모듈 `CLAUDE.md`의 "첫 진입 평가 온보딩 오버레이" 항목이 정본**(reverseMask·ignoresSafeArea 좌표 정렬·최상단 탭 레이어·실측 게이트).
 
 ### 6.5 알림 관찰자 토스트
 

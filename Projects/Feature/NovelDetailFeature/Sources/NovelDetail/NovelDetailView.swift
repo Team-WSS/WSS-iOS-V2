@@ -54,6 +54,9 @@ struct NovelDetailView: View {
     /// 탭 콘텐츠 최소 높이 계산용 — 탭바 높이와 스크롤 뷰포트 높이(둘 다 실측).
     @State private var tabBarHeight: CGFloat = 0
     @State private var scrollViewHeight: CGFloat = 0
+    /// 평가 상태바(reviewBox)의 화면 좌표 프레임 — 첫 진입 온보딩 스포트라이트가 이 자리만 딤에서 뚫는다.
+    /// height가 0이면 아직 미실측이라 오버레이를 띄우지 않는다(엉뚱한 위치에 구멍이 나지 않게).
+    @State private var reviewBoxFrame: CGRect = .zero
     @Environment(\.dismiss) private var dismiss
     /// 오류 제보 링크(외부 브라우저) 열기용.
     @Environment(\.openURL) private var openURL
@@ -199,6 +202,11 @@ struct NovelDetailView: View {
             if isLargeCoverPresented {
                 largeCoverOverlay
             }
+
+            // 첫 진입 평가 온보딩 — 상태바 프레임이 실측된 뒤에만 띄운다(엉뚱한 위치에 구멍 방지).
+            if viewModel.state.showReviewOnboarding, reviewBoxFrame.height > 0 {
+                reviewOnboardingOverlay(reviewBoxFrame)
+            }
         }
     }
 
@@ -219,9 +227,11 @@ struct NovelDetailView: View {
                     NovelDetailReviewSection(
                         information: information,
                         novel: viewModel.state.novel ?? information.novel,
+                        scrollSpaceName: scrollSpaceName,
                         onSelectStatus: { onReviewTapped(information, $0) },
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
-                        onCreateFeedTapped: { onCreateFeedTapped(connectedNovel(from: information.novel)) }
+                        onCreateFeedTapped: { onCreateFeedTapped(connectedNovel(from: information.novel)) },
+                        onReviewBoxFrameChange: { reviewBoxFrame = $0 }
                     )
                     // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
                     // 네비바 하단에 닿는 순간부터는 상단 오버레이의 탭바가 이 자리를 그대로 덮는다.
@@ -511,6 +521,49 @@ private extension NovelDetailView {
         largeCoverUIImage = UIImage(data: data)
     }
 
+    /// 첫 진입 평가 온보딩 오버레이(#221, V1 parity) — 화면을 딤 처리하되 **평가 상태바 자리만 뚫어**
+    /// (스포트라이트) 그 아래의 실제 상태바가 밝게 비치게 하고, 바로 아래 말풍선으로 "평가해보세요" 힌트를 띄운다.
+    /// 어디를 탭하든 닫히며(딤 구멍 위 탭이 실제 상태바로 새지 않게 최상단 투명 레이어가 먼저 받는다),
+    /// 닫으면 `markSeen`으로 앱 전역에서 다시 뜨지 않는다.
+    /// - `spotlight`: 상태바의 화면 좌표 프레임(scrollSpaceName 좌표 = ScrollView가 상태바까지 확장돼 화면 좌상단 기준).
+    ///   ZStack에 `ignoresSafeArea`를 걸어 오버레이 좌표 원점도 화면 좌상단에 맞춰 이 프레임과 일치시킨다.
+    func reviewOnboardingOverlay(_ spotlight: CGRect) -> some View {
+        ZStack(alignment: .topLeading) {
+            // 딤 — 상태바 사각형만 역마스크로 뚫어, 그 아래의 실제 상태바가 밝게 보인다.
+            Color.wssBlack60
+                .reverseMask {
+                    RoundedRectangle(cornerRadius: 15)
+                        .frame(width: spotlight.width, height: spotlight.height)
+                        .position(x: spotlight.midX, y: spotlight.midY)
+                }
+                .allowsHitTesting(false)
+
+            // 말풍선 힌트 — 상태바 바로 아래 6pt, 화면 가로 중앙(= 상태바 midX, 상태바가 화면폭을 꽉 채워서다).
+            // 꼬리가 위(상태바)를 가리킨다. V1 배치(reviewButton.bottom+6, centerX)와 동일.
+            speechBalloonHint
+                .position(x: spotlight.midX, y: spotlight.maxY + 6 + onboardingBalloonSize.height / 2)
+                .allowsHitTesting(false)
+
+            // 어디를 탭하든 닫힘 — 구멍(실제 상태바) 위 탭도 이 레이어가 먼저 받아 평가 화면으로 새지 않게 한다.
+            Color.wssBlack.opacity(0.001)
+                .onTapGesture { viewModel.handle(.dismissReviewOnboarding) }
+        }
+        .ignoresSafeArea()
+    }
+
+    /// 온보딩 말풍선 — 연보라 말풍선(위 꼬리) 위에 2줄 힌트 문구. 문구는 말풍선 하단에 붙인다(V1과 동일).
+    var speechBalloonHint: some View {
+        WSSImage.imgSpeechBalloon.swiftUIImage
+            .resizable()
+            .scaledToFit()
+            .frame(width: onboardingBalloonSize.width, height: onboardingBalloonSize.height)
+            .overlay(alignment: .bottom) {
+                Text("읽기 상태를 체크하여\n작품을 평가해보세요!")
+                    .applyWSSFont(.body3, color: .wssPrimary100)
+                    .padding(.bottom, 8)
+            }
+    }
+
     var tabBar: some View {
         HStack(spacing: 0) {
             ForEach(NovelDetailViewModel.Tab.allCases, id: \.self) { tab in
@@ -715,6 +768,26 @@ private extension NovelDetailView {
 /// 스크롤 오프셋 측정용 ScrollView 좌표공간 이름.
 private let scrollSpaceName = "novelDetailScroll"
 
+/// 온보딩 말풍선 크기(V1 `imgSpeechBalloon` 147×64 그대로). 말풍선 위치 계산에도 이 값을 쓴다.
+private let onboardingBalloonSize = CGSize(width: 147, height: 64)
+
+// MARK: - Reverse mask (spotlight)
+
+private extension View {
+    /// 지정한 모양만큼 자신을 **뚫는** 역마스크 — 딤에 구멍을 내 스포트라이트를 만드는 데 쓴다.
+    /// `Rectangle`(불투명)에서 모양을 `destinationOut`으로 빼 그 자리의 알파를 0으로 만든 걸 마스크로 쓴다.
+    func reverseMask<Mask: View>(@ViewBuilder _ mask: () -> Mask) -> some View {
+        self.mask {
+            Rectangle()
+                .overlay {
+                    mask()
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
+        }
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -730,7 +803,8 @@ private let scrollSpaceName = "novelDetailScroll"
                 deleteFeedUseCase: PreviewDeleteFeedUseCase(),
                 deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase(),
                 reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
-                reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
+                reportImproperFeedUseCase: PreviewReportImproperFeedUseCase(),
+                onboardingHintUseCase: PreviewOnboardingHintUseCase()
             ),
             loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
             updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
@@ -813,4 +887,10 @@ private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
 
 private struct PreviewReportImproperFeedUseCase: ReportImproperFeedUseCase {
     func execute(id: FeedID) async throws(RepositoryError) {}
+}
+
+/// Preview는 온보딩을 항상 "봤음"으로 둬 오버레이가 뜨지 않게 한다(레이아웃 확인이 목적).
+private struct PreviewOnboardingHintUseCase: OnboardingHintUseCase {
+    func hasSeen(_ hint: OnboardingHint) -> Bool { true }
+    func markSeen(_ hint: OnboardingHint) {}
 }
