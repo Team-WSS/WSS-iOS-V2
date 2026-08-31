@@ -65,7 +65,9 @@ struct SplashViewModelTests {
         )
 
         sut.handle(.load)
-        await display.waitUntilStarted()
+        let displayStarted = await display.waitUntilStarted(within: .seconds(5))
+        #expect(displayStarted)
+        guard displayStarted else { return }
         await yieldMainActor()
 
         #expect(sut.state.outcome == nil)
@@ -82,7 +84,9 @@ struct SplashViewModelTests {
         let sut = makeViewModel(useCase: useCase)
 
         sut.handle(.load)
-        await useCase.waitUntilStarted()
+        let bootstrapStarted = await useCase.waitUntilStarted(within: .seconds(5))
+        #expect(bootstrapStarted)
+        guard bootstrapStarted else { return }
         await yieldMainActor()
 
         #expect(sut.state.outcome == nil)
@@ -174,7 +178,11 @@ private final class SuspendedBootstrapAppUseCase: BootstrapAppUseCase, @unchecke
     }
 
     func waitUntilStarted() async {
-        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: { self.startContinuation = $0 }, take: {
+        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: {
+            // 덮어쓰면 앞 대기자가 영원히 resume되지 않아 조용히 행이 된다 — 행 대신 즉시 드러나게 한다.
+            precondition(self.startContinuation == nil, "시작 대기자는 한 번에 하나만 지원한다")
+            self.startContinuation = $0
+        }, take: {
             defer { self.startContinuation = nil }
             return self.startContinuation
         })
@@ -215,7 +223,11 @@ private final class SuspendedMinimumDisplay: @unchecked Sendable {
     }
 
     func waitUntilStarted() async {
-        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: { self.startContinuation = $0 }, take: {
+        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: {
+            // 덮어쓰면 앞 대기자가 영원히 resume되지 않아 조용히 행이 된다 — 행 대신 즉시 드러나게 한다.
+            precondition(self.startContinuation == nil, "시작 대기자는 한 번에 하나만 지원한다")
+            self.startContinuation = $0
+        }, take: {
             defer { self.startContinuation = nil }
             return self.startContinuation
         })

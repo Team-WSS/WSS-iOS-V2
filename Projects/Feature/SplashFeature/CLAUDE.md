@@ -32,3 +32,14 @@
 - **Demo는 실서버 조립이 없다(Mock 시나리오 방식)** — `SplashData` 실서버 조립은 도메인 6종 Repository
   인스턴스가 전부 필요해 사실상 App DI 복제라, `MockBootstrapAppUseCase`(SplashDomainTesting)로 outcome
   분기·지연만 재현한다. "다른 Feature Demo와 다르다"고 실서버 모드를 채워 넣지 말 것.
+- ⚠️ **아직 App에 배선되지 않았다**(2026-08-31 기준) — `Projects/App`에 Splash 참조가 0건이고 `ContentView`는
+  여전히 `route = .main`으로 시작한다. 즉 **앱을 실행해도 이 화면은 뜨지 않고 게이트도 돌지 않는다**.
+  배선은 별도 PR 몫(사용자 확정) — "왜 안 뜨지"를 코드 버그로 오진하지 말 것.
+- ⚠️ **"병렬 시작"을 검증하는 테스트는 상한 없이 짜면 실패가 아니라 행(hang)이 된다**(실측, #225 리뷰).
+  두 fake의 `waitUntilStarted()`를 그냥 `await`하면 직렬 구현일 때 한쪽이 영영 시작되지 않아 테스트가
+  120초를 넘겨도 안 끝난다. 두 겹으로 막아 뒀으니 걷어내지 말 것:
+  1. 시작 대기를 `withTaskCancellationHandler`로 **취소 반응형**으로 만들고 `raceStart`로 5초 상한을 건다
+     (취소를 무시하는 continuation이면 상한 래퍼의 task group 자체가 안 끝난다).
+  2. **둘 다 시작됐을 때만** 완료 경로로 진행하는 `guard` — 없으면 시작 안 된 쪽을 `complete()`해도 풀
+     continuation이 없어 뒤의 `await bootstrapTask?.value`에서 다시 매달린다.
+  검증법: `bootstrap()`을 직렬로 바꿔 보면 이 테스트만 실패해야 한다(나머지 5개는 직렬에서도 통과한다).
