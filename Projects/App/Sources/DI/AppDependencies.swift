@@ -56,6 +56,8 @@ final class AppDependencies {
     let feedRepository: FeedRepository
     let socialRepository: SocialRepository
     let novelRepository: NovelRepository
+    /// 내 서재 필터·정렬 로컬 영속화(#221) — 서버 조회(`novelRepository`)와 별개 계약이라 따로 조립한다.
+    let myLibraryFilterRepository: MyLibraryFilterRepository
     let keywordRepository: KeywordRepository
     let novelReviewRepository: NovelReviewRepository
     let commentRepository: CommentRepository
@@ -125,6 +127,10 @@ final class AppDependencies {
         )
         self.novelRepository = NovelDataFactory.makeNovelRepository(
             client: client,
+            appStorage: UserDefaultsStorage(),
+            logger: DataLogger(moduleName: "NovelData", underlying: logger)
+        )
+        self.myLibraryFilterRepository = NovelDataFactory.makeMyLibraryFilterRepository(
             appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "NovelData", underlying: logger)
         )

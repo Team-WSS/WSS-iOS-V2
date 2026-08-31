@@ -199,6 +199,8 @@ private struct DemoRootView: View {
             LibraryFeatureFactory.makeMyLibraryView(
                 loadMyLibraryUseCase: DemoLoadMyLibraryUseCase(),
                 loadMyLibraryKeywordsUseCase: DemoLoadMyLibraryKeywordsUseCase(),
+                loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(repository: makeFilterRepository()),
+                saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(repository: makeFilterRepository()),
                 logger: consoleLogger,
                 onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
                 onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },
@@ -226,6 +228,16 @@ private struct DemoRootView: View {
         NetworkingClient(
             logger: DefaultNetworkLogger(base: consoleLogger),
             tokenStore: DemoSessionTokenStore()
+        )
+    }
+
+    /// 내 서재 필터·정렬 영속화(#221) Repository — Demo도 **실제** Repository(UserDefaults)를 쓴다.
+    /// 네트워크가 없어 Mock 모드에서도 그대로 동작하며, 앱을 껐다 켜면 마지막 필터·정렬이 복원되는지
+    /// 시뮬레이터에서 바로 확인할 수 있다. (stateless라 load/save용으로 두 번 만들어도 무방.)
+    private func makeFilterRepository() -> MyLibraryFilterRepository {
+        NovelDataFactory.makeMyLibraryFilterRepository(
+            appStorage: UserDefaultsStorage(),
+            logger: DataLogger(moduleName: "NovelData", underlying: consoleLogger)
         )
     }
 
@@ -277,6 +289,8 @@ private struct DemoRootView: View {
                 keywordRepository: keywordRepository
             ),
             loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(novelRepository: repository),
+            loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(repository: makeFilterRepository()),
+            saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(repository: makeFilterRepository()),
             logger: consoleLogger,
             onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
             onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },

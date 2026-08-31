@@ -40,6 +40,20 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **내 서재 필터·정렬은 앱 실행을 넘겨 영속화된다(#221) — 복원은 `init`에서 반드시 *동기*로 한다.**
+  `LibraryViewModel`이 `init`에서 `LoadMyLibraryFilterUseCase.execute()`로 마지막 필터·정렬을 읽어
+  `State(filter:)`에 넣는다. **동기 복원인 이유**: 첫 `onAppear → .load`보다 body 첫 평가가 먼저라, 비동기로
+  복원하면 **첫 조회가 기본 필터로 새어 나갔다가** 복원 필터로 다시 로드돼 화면이 한 번 깜빡인다(초기값
+  `isLoading=true`가 같은 결의 교훈). 그래서 UseCase·Repository를 async가 아니라 **동기·비-throwing**으로
+  뒀다(복원 실패 = nil → 기본 필터). 저장은 필터·정렬이 바뀌는 **3경로**(`toggleInterestFilter`·
+  `selectSortType`·`applyFilter`)가 공통으로 `persistFilter()`를 부른다 — 시트 "초기화"도 결국 `applyFilter`로
+  들어와 함께 커버된다. best-effort라 저장 실패는 삼킨다(다음 실행 복원만 놓칠 뿐 현재 세션엔 영향 없음).
+  - ⚠️ **저장/복원 코드는 `LibraryFeature`가 아니라 `NovelDomain`(계약 `MyLibraryFilterRepository` + `Load/
+    SaveMyLibraryFilterUseCase`) + `NovelData`(`UserDefaults` 구현·JSON 스냅샷 코덱)에 산다** — Feature는
+    Data를 import할 수 없어서다(arch-lint). **LibraryDomain/LibraryData는 없다**(서재 도메인 전체가
+    `NovelDomain`/`NovelData` — 루트 규칙). `MyLibraryFilterRepository`는 서버 조회 계약 `NovelRepository`와
+    **일부러 분리**했다(순수 로컬·userID 무관이라 SRP + `NovelRepository` 목킹 6곳을 안 건드림).
+  - **표시 모드(그리드/리스트)는 영속화 대상이 아니다**(세션 상태) — V1도 안 했다. 필터·정렬만 저장한다.
 - ⚠️ **"무효해진 로드 == 취소된 로드"가 두 서재 VM의 동시성 전제다** — 늦게 도착한 옛 결과는 세대(generation) 카운터가 아니라 `Task.isCancelled`만으로 걸러낸다. 이게 성립하는 조건이 둘 있고, **둘 중 하나만 깨져도 세대 카운터가 다시 필요해진다**:
   1. **로드는 항상 `loadTask` 한 슬롯에만 살고, 시작하는 모든 경로가 `loadTask == nil`을 확인하거나 이전 로드를 취소하고 곧바로 재대입한다.** ⚠️ 한때 이 조건을 "목록을 갈아엎는 경로는 전부 `reloadFromScratch()`를 거친다"로 적었는데 **틀린 문장이다** — `.refresh`는 거치지 않고 목록을 교체하는 **예외**이고, 그게 안전한 이유는 `load()`의 `loadTask == nil` 가드뿐이다. **그 가드를 완화하면 세대 카운터가 다시 필요해진다.** 반대로 취소만 하고 재대입하지 않는 경로(`onDisappear`에서 `cancel()`만 부르는 류)를 만들면 슬롯이 non-nil로 굳어 `load()`가 영구 차단된다.
   2. `@MainActor`라 `guard !Task.isCancelled` 뒤 `state` 대입까지 suspension이 없다 — 그 사이에 `await`를 끼워 넣지 말 것.

@@ -18,6 +18,8 @@ enum NovelAction {
     case fetchUserLibrary
     case fetchRegisteredStats
     case fetchUserRegisteredStats
+    case loadMyLibraryFilter
+    case saveMyLibraryFilter
 
     public var text: String {
         switch self {
@@ -29,6 +31,8 @@ enum NovelAction {
         case .fetchUserLibrary:                 return "유저 서재 조회"
         case .fetchRegisteredStats:             return "등록 작품 통계 조회"
         case .fetchUserRegisteredStats:         return "유저 등록 작품 통계 조회"
+        case .loadMyLibraryFilter:              return "내 서재 필터 복원"
+        case .saveMyLibraryFilter:              return "내 서재 필터 저장"
         }
     }
 }

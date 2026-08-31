@@ -91,6 +91,12 @@ struct LibraryRootView: View {
                 loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(
                     novelRepository: dependencies.novelRepository
                 ),
+                loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(
+                    repository: dependencies.myLibraryFilterRepository
+                ),
+                saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(
+                    repository: dependencies.myLibraryFilterRepository
+                ),
                 logger: dependencies.logger,
                 onNovelSelected: { path.append(Destination.novel($0)) },
                 onSearchTapped: { path.append(Destination.search) },

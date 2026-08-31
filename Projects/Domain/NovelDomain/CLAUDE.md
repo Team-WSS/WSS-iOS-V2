@@ -28,6 +28,13 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **내 서재 필터·정렬 로컬 영속화(#221)는 `NovelRepository`가 아니라 별도 계약 `MyLibraryFilterRepository`**
+  (`Load/SaveMyLibraryFilterUseCase`가 감싼다)에 있다. **분리한 이유**: ① 순수 로컬 저장이라 서버·userID와
+  무관해 `NovelRepository`(네트워크)와 관심사가 다르고, ② 큰 `NovelRepository`에 얹으면 그걸 목킹하는 6곳
+  (Testing Mock·Demo 4곳·App)이 전부 새 메서드를 구현해야 한다 — 별 계약이면 새 목 하나(`MockMyLibraryFilterRepository`)만
+  추가된다. ⚠️ **이 두 UseCase/Repository는 `async throws`가 아니라 동기·비-throwing이다** — 복원을
+  ViewModel `init`에서 동기로 해야 첫 로드가 복원된 필터로 나가서다(이유 정본은 [LibraryFeature](../../Feature/LibraryFeature/CLAUDE.md)).
+  Sendable 프로토콜이라 `Default*UseCase`는 `final class`(다른 UseCase와 동일 규칙). 구현·저장 포맷은 `NovelData`.
 - `fetchMyLibraryNovels`/`fetchRegisteredNovelStats`는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` / `fetchUserRegisteredNovelStats(id:)` 별도 — Repository에 "내" 버전과 "유저" 버전이 쌍으로 존재하는 게 이 모듈의 고정 패턴이니, 서재 관련 조회를 새로 추가할 땐 이 쌍을 먼저 따라간다.
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
 - ⚠️ **`KeywordRepository.fetchKeywords()`는 네트워크를 타지 않고 로컬 캐시만 읽는다** — 캐시를 채우는 건 `syncKeywords()` 뿐이다. 즉 **App 조립에서 `syncKeywords()`를 선행하지 않으면 서재·작품 상세의 키워드가 화면상 아무 오류 없이 통째로 빈다**(UseCase의 `try?` + `?? []` 폴백이 실패를 삼킨다 — 목록 자체를 막지 않으려는 의도된 설계. 단, Data 레이어에는 `logger?.logCacheError`가 남으므로 **원인 추적은 로그로** 한다). `LoadNovelUseCase`·`LoadMyLibraryUseCase` 둘 다 해당하며, 서재는 목록 전체가 영향받아 체감이 크다. Demo 앱들이 화면을 띄우기 전에 `await ...syncKeywords()`를 부르는 게 이 때문이다.

@@ -538,7 +538,9 @@ private extension LibraryView {
     LibraryView(
         viewModel: LibraryViewModel(
             loadMyLibraryUseCase: PreviewLoadMyLibraryUseCase(),
-            loadMyLibraryKeywordsUseCase: PreviewLoadMyLibraryKeywordsUseCase()
+            loadMyLibraryKeywordsUseCase: PreviewLoadMyLibraryKeywordsUseCase(),
+            loadMyLibraryFilterUseCase: PreviewLoadMyLibraryFilterUseCase(),
+            saveMyLibraryFilterUseCase: PreviewSaveMyLibraryFilterUseCase()
         ),
         onNovelSelected: { print("작품 상세: \($0)") },
         onSearchTapped: { print("웹소설 찾기") },
@@ -546,6 +548,14 @@ private extension LibraryView {
         onNotificationTapped: { print("알림 관리") },
         onAuthenticationRequired: { print("로그인 유도") }
     )
+}
+
+private struct PreviewLoadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase {
+    func execute() -> MyLibraryFilter? { nil }
+}
+
+private struct PreviewSaveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase {
+    func execute(_ filter: MyLibraryFilter) {}
 }
 
 private struct PreviewLoadMyLibraryUseCase: LoadMyLibraryUseCase {

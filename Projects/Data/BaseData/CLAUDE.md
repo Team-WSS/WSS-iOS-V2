@@ -22,4 +22,5 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 - `KeywordCache`는 **파일 기반**(캐시 디렉토리의 `keywords.json` JSON). "로컬 DB"라 부르지만 실제론 파일 캐시. 실패는 `CacheError`.
 - 키워드는 `syncKeywords()`로 서버→파일 동기화 후, 다른 도메인이 캐시에서 읽어 주입받는 구조.
 - `StorageKey` 추가 시 타입(`V`)을 정확히 — `UserDefaultsStorage`는 `as? V` 캐스팅이라 타입 불일치는 조용히 nil.
+  - 대부분 스칼라 키지만 `myLibraryFilter`(#221)는 **`StorageKey<Data>`**(JSON 스냅샷 직렬화) — 저장/조회 값도 항상 `Data`여야 한다(구조체를 직접 넣으면 `as? Data`에 걸려 조용히 nil). 복잡한 값은 이렇게 Data로 감싸 넣는다.
 - **`KeywordEndpoint`의 토큰 정책은 케이스마다 다르다**: `searchKeywords`는 `.requireToken`, `getPopularKeywords`는 `.usesTokenIfAvailable`(#165 전후로 분리) — 인기 키워드는 비로그인도 봐야 하는 화면이라 토큰 없이도 호출되지만, 로그인 상태면 토큰을 붙여야 서버가 유저 문맥이 필요한 응답(개인화 등)을 줄 수 있다. 새 케이스 추가 시 한 값으로 뭉뚱그리지 말고 화면 성격별로 정책을 나눠 볼 것 — `NovelData`의 검색 API도 `.withoutToken`으로 뭉쳐놨다가 최근 검색어 미기록 버그가 났었다(#165).
