@@ -9,9 +9,9 @@
 import Foundation
 
 import BaseDomain
-import Networking
 import SettingDomain
 import SplashDomain
+import Networking
 
 /// `LaunchGateRepository` 구현 — 로직 없이 기존 저장소·정책에 위임만 한다.
 struct DefaultLaunchGateRepository: LaunchGateRepository {
@@ -35,7 +35,7 @@ struct DefaultLaunchGateRepository: LaunchGateRepository {
 
     /// 저장된 액세스 토큰의 존재 여부만 본다 — 만료 검증은 401 자동 재발급 경로(#184)가 담당.
     func hasValidSession() -> Bool {
-        ((try? tokenStore.accessToken()) ?? nil) != nil
+        (try? tokenStore.accessToken()) != nil
     }
 
     /// 조회 실패 시 통과시킬지는 여기서 정하지 않는다(에러 그대로 전파) — 그 정책은 `BootstrapAppUseCase` 몫.

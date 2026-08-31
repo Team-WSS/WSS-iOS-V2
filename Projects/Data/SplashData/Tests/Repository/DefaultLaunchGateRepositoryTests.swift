@@ -103,6 +103,19 @@ struct DefaultLaunchGateRepositoryTests {
 
         #expect(try await sut.isRequiredTermsAgreed() == false)
     }
+
+    // 여기서 에러를 삼키면 UseCase는 "동의함"과 구별할 수 없게 되고,
+    // 세션 소실(.authenticationRequired)을 인트로로 보내는 정책도 함께 죽는다.
+    @Test("약관 조회 실패는 에러를 그대로 던진다 — 통과 여부 판단은 UseCase 몫이다")
+    func termsLoadFailurePropagatesError() async {
+        let terms = MockTermsAgreementRepository()
+        terms.loadResult = .failure(.authenticationRequired)
+        let sut = makeSUT(termsAgreementRepository: terms)
+
+        await #expect(throws: RepositoryError.authenticationRequired) {
+            try await sut.isRequiredTermsAgreed()
+        }
+    }
 }
 
 // MARK: - Helper

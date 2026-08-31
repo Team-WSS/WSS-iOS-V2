@@ -41,8 +41,10 @@ struct HomePrefetchStoreTests {
         #expect(feeds == nil)
     }
 
-    @Test("소비한 뒤 다시 채우면 다시 한 번 소비할 수 있다")
-    func refillAfterConsumeAllowsAnotherConsume() async {
+    // MARK: - 소비 창(window)
+
+    @Test("소비한 뒤 도착한 fill은 폐기한다")
+    func refillAfterConsumeIsDiscarded() async {
         let store = HomePrefetchStore()
         let feeds = [makeTrendingFeed()]
         await store.fillTrendingFeeds(feeds)
@@ -51,7 +53,21 @@ struct HomePrefetchStoreTests {
         await store.fillTrendingFeeds(feeds)
         let second = await store.consumeTrendingFeeds()
 
-        #expect(second?.map(\.feedID) == feeds.map(\.feedID))
+        #expect(second == nil)
+    }
+
+    // 프리페치가 홈 첫 로드보다 늦게 착지하는 상황 — 창을 닫지 않으면 이 값이
+    // 다음 탭 복귀 갱신에서 소비돼 런치 시점 데이터가 뒤늦게 뜬다.
+    @Test("빈 슬롯을 소비하려 한 뒤 늦게 도착한 fill도 폐기한다")
+    func lateFillAfterEmptyConsumeIsDiscarded() async {
+        let store = HomePrefetchStore()
+
+        let first = await store.consumeTodayDiscoveries()   // 홈 첫 로드 → 슬롯이 아직 비어 있어 네트워크로 감
+        await store.fillTodayDiscoveries([makeTodayDiscovery()])  // 늦게 착지한 프리페치
+        let second = await store.consumeTodayDiscoveries()   // 탭 복귀 갱신
+
+        #expect(first == nil)
+        #expect(second == nil)
     }
 
     // MARK: - 슬롯 독립성

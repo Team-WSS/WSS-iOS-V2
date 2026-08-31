@@ -92,6 +92,41 @@ struct SplashViewModelTests {
 
         #expect(sut.state.outcome == .intro)
     }
+
+    // 위 두 테스트는 한쪽만 매달아서, 직렬 구현(`await execute()` 다음 `await wait()`)으로 바꿔도
+    // 전부 통과한다 — 계약("병렬로 돌려 둘 다 끝나야 완료")을 잡는 그물은 이 테스트다.
+    @Test("부트스트랩과 최소 노출 타이머를 동시에 시작한다")
+    func startsBootstrapAndMinimumDisplayTogether() async {
+        let useCase = SuspendedBootstrapAppUseCase()
+        let display = SuspendedMinimumDisplay()
+        let sut = makeViewModel(
+            useCase: useCase,
+            waitMinimumDisplayTime: { await display.wait() }
+        )
+
+        sut.handle(.load)
+
+        // 부트스트랩을 매달아 둔 채로 타이머도 시작돼 있어야 병렬이다.
+        // 직렬이면 둘 중 하나가 영영 시작되지 않아 `false`로 떨어진다(행이 아니라 실패로).
+        let bootstrapStarted = await useCase.waitUntilStarted(within: .seconds(5))
+        let displayStarted = await display.waitUntilStarted(within: .seconds(5))
+
+        #expect(bootstrapStarted)
+        #expect(displayStarted)
+
+        // 둘 다 시작됐을 때만 완료 경로로 넘어간다 — 직렬 구현이면 위 단언이 이미 실패했고,
+        // 시작조차 안 된 쪽을 `complete()`해도 풀 continuation이 없어 아래 `bootstrapTask` 대기가
+        // 영원히 매달린다(실측: 테스트가 실패 대신 행으로 굳어 CI를 막는다).
+        guard bootstrapStarted, displayStarted else { return }
+
+        #expect(sut.state.outcome == nil)
+
+        useCase.complete(with: .forceUpdate)
+        display.complete()
+        await sut.bootstrapTask?.value
+
+        #expect(sut.state.outcome == .forceUpdate)
+    }
 }
 
 // MARK: - Helper
@@ -139,14 +174,16 @@ private final class SuspendedBootstrapAppUseCase: BootstrapAppUseCase, @unchecke
     }
 
     func waitUntilStarted() async {
-        await withCheckedContinuation { continuation in
-            let alreadyStarted = lock.withLock {
-                if hasStarted { return true }
-                startContinuation = continuation
-                return false
-            }
-            if alreadyStarted { continuation.resume() }
-        }
+        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: { self.startContinuation = $0 }, take: {
+            defer { self.startContinuation = nil }
+            return self.startContinuation
+        })
+    }
+
+    /// 시작 신호를 상한 안에서 기다린다 — 신호가 끝내 오지 않을 수 있는 검증(병렬 시작)에서
+    /// 테스트가 행에 빠져 CI를 막는 대신 `false`로 떨어지게 한다.
+    func waitUntilStarted(within timeout: Duration) async -> Bool {
+        await raceStart(timeout: timeout) { await self.waitUntilStarted() }
     }
 
     func complete(with outcome: BootstrapOutcome) {
@@ -178,14 +215,14 @@ private final class SuspendedMinimumDisplay: @unchecked Sendable {
     }
 
     func waitUntilStarted() async {
-        await withCheckedContinuation { continuation in
-            let alreadyStarted = lock.withLock {
-                if hasStarted { return true }
-                startContinuation = continuation
-                return false
-            }
-            if alreadyStarted { continuation.resume() }
-        }
+        await waitForStart(lock: lock, isStarted: { self.hasStarted }, store: { self.startContinuation = $0 }, take: {
+            defer { self.startContinuation = nil }
+            return self.startContinuation
+        })
+    }
+
+    func waitUntilStarted(within timeout: Duration) async -> Bool {
+        await raceStart(timeout: timeout) { await self.waitUntilStarted() }
     }
 
     func complete() {
@@ -194,5 +231,54 @@ private final class SuspendedMinimumDisplay: @unchecked Sendable {
             return displayContinuation
         }
         pendingDisplay?.resume()
+    }
+}
+
+// MARK: - 두 fake가 공유하는 시작 대기
+
+/// 시작 신호를 기다린다. **취소에 반응한다** — 상한을 건 래퍼(`raceStart`)가 진 쪽 태스크를 취소했을 때
+/// 이 대기가 안 풀리면 task group이 종료를 못 기다려 결국 행이 되기 때문이다.
+private func waitForStart(
+    lock: NSLock,
+    isStarted: @escaping () -> Bool,
+    store: @escaping (CheckedContinuation<Void, Never>) -> Void,
+    take: @escaping () -> CheckedContinuation<Void, Never>?
+) async {
+    await withTaskCancellationHandler {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let alreadyStarted = lock.withLock {
+                if isStarted() { return true }
+                store(continuation)
+                return false
+            }
+
+            if alreadyStarted {
+                continuation.resume()
+            } else if Task.isCancelled {
+                // 등록 전에 취소가 지나갔으면 onCancel이 우리를 못 봤다 — 직접 회수해 푼다.
+                // `take`가 nil로 비우므로 onCancel·execute와 이중 resume이 나지 않는다.
+                lock.withLock { take() }?.resume()
+            }
+        }
+    } onCancel: {
+        lock.withLock { take() }?.resume()
+    }
+}
+
+/// 시작 대기와 타이머를 레이스시켜, 신호가 오면 `true` 상한을 넘기면 `false`를 준다.
+private func raceStart(timeout: Duration, _ waitUntilStarted: @escaping @Sendable () async -> Void) async -> Bool {
+    await withTaskGroup(of: Bool.self) { group in
+        group.addTask {
+            await waitUntilStarted()
+            return true
+        }
+        group.addTask {
+            try? await Task.sleep(for: timeout)
+            return false
+        }
+
+        let first = await group.next() ?? false
+        group.cancelAll()
+        return first
     }
 }

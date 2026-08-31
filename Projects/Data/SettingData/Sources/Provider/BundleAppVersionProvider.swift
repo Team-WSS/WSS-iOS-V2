@@ -12,12 +12,13 @@ import SettingDomain
 
 /// `AppVersionProviding` 실구현 — 번들의 `CFBundleShortVersionString`(MARKETING_VERSION)을 파싱한다 (#225).
 ///
-/// TODO 2절이 지적한 "실구현체 없음" 함정의 해소. 프로덕션은 `init(bundle:)` 기본값을 쓴다.
-public struct BundleAppVersionProvider: AppVersionProviding {
+/// TODO 2절이 지적한 "실구현체 없음" 함정의 해소.
+/// 조립은 `SettingDataFactory.makeAppVersionProvider(bundle:)`로만 — Data 모듈은 팩토리만 public이다(ArchLint `factory-exclusivity`).
+struct BundleAppVersionProvider: AppVersionProviding {
 
-    public let currentVersion: AppVersion
+    let currentVersion: AppVersion
 
-    public init(bundle: Bundle = .main) {
+    init(bundle: Bundle = .main) {
         self.init(versionString: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
     }
 

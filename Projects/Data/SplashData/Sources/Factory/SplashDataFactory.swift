@@ -9,12 +9,12 @@
 import Foundation
 
 import BaseDomain
-import Networking
 import NotificationDomain
 import ProfileDomain
 import RecommendationDomain
 import SettingDomain
 import SplashDomain
+import Networking
 
 /// SplashData 진입점 — 다른 Data 팩토리와 달리 네트워크 클라이언트가 아니라
 /// **이미 조립된 도메인 Repository들**을 받는다(composite 모듈이라 자기 네트워크 호출이 없다).
