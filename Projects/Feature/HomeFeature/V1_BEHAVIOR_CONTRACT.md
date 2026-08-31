@@ -120,7 +120,7 @@
   **개정(2026-08-31, 사용자): today·trending·taste 3종.** 홈 첫 페인트는 세 호출을 한꺼번에 기다리는
   원자적 렌더라, 제일 느린 taste를 안 데우면 첫 페인트가 그 왕복에 붙잡혀 2종 프리페치의 이득이 0이 된다.
   개인화 프리페치의 전제는 "비로그인 진입 불가"(+ taste `requireToken`이라 죽은 세션에선 슬롯이 안 채워지는
-  fail-closed). **알림 배지는 여전히 프리페치 제외** — 대신 VM이 콘텐츠·배지를 따로 수확해 배지 왕복이
+  fail-closed — 같은 날 today/trending도 `requireToken`으로 전환해 3종 모두 fail-closed). **알림 배지는 여전히 프리페치 제외** — 대신 VM이 콘텐츠·배지를 따로 수확해 배지 왕복이
   첫 페인트를 붙잡지 않는다(→ HomeFeature `CLAUDE.md`).
 
 ---

@@ -223,12 +223,12 @@
   - ⚠️ **`onFinish`가 불리기 전까지 스플래시 뷰를 계층에서 빼지 말 것** — 완료 신호가
     `onChange(of: state.outcome)`라 뷰가 떼어진 사이 세팅된 outcome은 감지되지 않는다.
   - 강제 업데이트 알럿·약관 시트 **UI 자체가 App에 아직 없다** — 배선 PR이 함께 만들어야 한다.
-  - ⚠️ **세션 전환(로그아웃·재로그인·`.intro` 낙착) 때 `HomePrefetchStore`를 새 인스턴스로 교체할 것.**
-    부트스트랩은 `.intro`로 갈라져도 이미 던진 프리페치를 되돌리지 않고, `/novels/popular`·`/feeds/popular`는
-    `.usesTokenIfAvailable`이라 익명으로도 성공해 슬롯을 채운다 → 재로그인 뒤 첫 홈 로드가 런치 시점 데이터를
-    소비한다. (부수 태스크를 약관 게이트 뒤로 미루는 해법은 프리페치 이득을 죽여서 채택하지 않았다.)
-    taste 슬롯만은 `requireToken`이라 이 경로에서 안 채워진다(fail-closed) — 그래도 store 교체는
-    today/trending 때문에 여전히 필요하다.
+  - **세션 전환(로그아웃·재로그인·`.intro` 낙착) 때 `HomePrefetchStore`를 새 인스턴스로 교체할 것**(권장).
+    부트스트랩은 `.intro`로 갈라져도 이미 던진 프리페치를 되돌리지 않는다. 프리페치 3종이 전부
+    `requireToken`이 된 뒤로는(2026-08-31, today/trending 전환 포함) 죽은 세션에선 슬롯이 안 채워져
+    (fail-closed), 과거의 "익명 200이 슬롯을 채워 재로그인 뒤 묵은 데이터가 소비되는" 일상 함정은 닫혔다 —
+    남은 건 "유효 토큰으로 채워진 뒤 소비 전에 세션이 바뀌는" 좁은 레이스뿐이라 교체는 belt-and-suspenders다.
+    (부수 태스크를 약관 게이트 뒤로 미루는 해법은 프리페치 이득을 죽여서 채택하지 않았다.)
   - ⚠️ **예산이 401 재발급 대기에는 안 걸린다** — `SessionRefreshCoordinator`가 공유 갱신을
     `try await task.value`(취소 비반응)로 기다려서, 만료 토큰 + 느린 망이면 약관 게이트가 예산 4초를 넘겨
     `URLSession` 기본 60초까지 스플래시에 고정될 수 있다. 근본 해결은 Core(Networking) 몫 — refresh 대기를

@@ -23,6 +23,6 @@
   `RecommendationDataFactory`에 안 넘기면 런치마다 추천 API 3개를 더 때리고 결과는 아무도 안 쓴다.
   타입이 막아주지 않으니(한쪽은 non-optional, 한쪽은 기본 nil) App DI에서 두 조립을 붙여 둘 것.
 - 프리페치 슬롯은 **today·trending·taste 3개**다(taste는 2026-08-31 추가 — 홈의 원자적 첫 페인트가
-  제일 느린 taste에 붙잡혀 2종만 데워선 이득이 0이라서). **taste만 `requireToken`이라 유효 세션 없인
-  실패해 슬롯이 안 채워진다**(fail-closed) — `SplashDomain` 문서의 "`.intro` 낙착 후에도 익명으로
-  store가 채워진다" 함정은 today/trending 얘기지 taste엔 해당 없다.
+  제일 느린 taste에 붙잡혀 2종만 데워선 이득이 0이라서). **3종 모두 `requireToken`이라 유효 세션 없인
+  실패해 슬롯이 안 채워진다**(fail-closed — today/trending도 2026-08-31 전환). 죽은 세션의 프리페치가
+  익명 200으로 슬롯을 채우던 세션 전환 함정은 이로써 닫혔다(→ `SplashDomain` 문서·TODO 11절).
