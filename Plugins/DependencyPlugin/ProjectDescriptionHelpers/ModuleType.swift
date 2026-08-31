@@ -50,6 +50,7 @@ public enum DomainModule: String, ModuleSpec {
     case social
     case search
     case collection
+    case splash
 }
 
 public enum DataModule: String, ModuleSpec {
