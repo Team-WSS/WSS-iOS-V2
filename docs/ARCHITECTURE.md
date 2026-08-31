@@ -71,8 +71,9 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 모듈 개수·이름은 [`ModuleType.swift`](../Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift)가
 단일 진실 소스다. 여기엔 **코드만 봐선 모르는 구현 단계**만 남긴다:
 
-- **Feature**: 레지스트리의 10개(`home`/`feed`/`novelReview`/`novelDetail`/`mypage`/`setting`/`search`/`keyword`/`library`/`notification`)가
-  **모두 디스크에 구현되어 있다.** 각 모듈은 Demo 앱으로 단독 실행되며, 화면 간 이동·탭바 조립은 아직 App 몫으로 남아 있다.
+- **Feature**: 레지스트리의 13개가 **모두 디스크에 구현되어 있다.** 각 모듈은 Demo 앱으로 단독 실행된다.
+  - 단 **`SplashFeature`(#225)는 아직 App에 배선되지 않았다** — 모듈·Demo는 있지만 `Projects/App`에 참조가 없어
+    실제 앱 실행 경로에서는 스플래시가 뜨지 않고 런치 게이트(강제 업데이트·세션·약관)도 돌지 않는다. 배선은 별도 PR.
 - **App**: `AppDependencies`(DI 조립 — Auth/Setting/Profile Repository, 2-client `NetworkingClient`)와
   `OnboardingRootView`(온보딩 플로우 실배선: 인트로→약관동의→닉네임/성별출생년도/장르선택)가 #196에서
   들어왔다. `ContentView`는 `.onboarding`/`.main` 두 Route를 전환하지만 `.main`은 여전히 placeholder —

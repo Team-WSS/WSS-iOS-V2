@@ -47,12 +47,12 @@
   `SettingDataFactory.makeAppUpdateRepository(client:logger:)`)는 **테스트까지 완비돼 있는데 부르는 쪽이 없다.**
 - **결과**: 서버가 최소 버전을 올려도 구버전 앱이 그대로 굴러간다. 비교 로직은 이미 있으니 남은 건 배선뿐이다.
 - **어디를 고치나**: `Projects/App/` — 조립(`NetworkingClient` → Repository → UseCase) + 앱 진입 게이트.
-  ⚠️ **`AppVersionProviding` 실구현체가 없다**(`Testing/Mock/MockAppVersionProvider`만 존재) —
-  `Bundle`의 `CFBundleShortVersionString` → `AppVersion` 파싱을 새로 써야 한다. 프로토콜만 보고
-  "구현체가 어딘가 있겠지" 하기 쉬운 자리다.
-- **왜 지금 안 했나**: #179는 홈 화면 범위였다. #196에서 App의 첫 실전 조립(온보딩 플로우 배선)은
-  끝났지만, 메인 탭바·라우팅 구조가 아직 없어(`ContentView`의 `.main`은 여전히 placeholder) 강제
-  업데이트 게이트를 정확히 어느 지점에 걸지는 그 구조가 잡혀야 확정된다.
+  ✅ **`AppVersionProviding` 실구현은 #225에서 생겼다** — `SettingDataFactory.makeAppVersionProvider(bundle:)`
+  (`BundleAppVersionProvider`, internal). 파싱 실패 폴백은 **절대 강제되지 않는 방향**(max 버전)이라
+  번들이 깨져도 앱이 업데이트 알럿에 잠기지 않는다. 남은 건 App 조립·게이트 배선뿐.
+- **게이트 위치는 확정됐다** — #225의 `BootstrapAppUseCase`가 강제 업데이트를 **첫 게이트**로 판정하고
+  `BootstrapOutcome.forceUpdate`를 올린다. 즉 이 항목의 남은 몫은 **알럿 UI + App 배선**뿐이고,
+  아래 11절 "App 배선"과 **같은 PR에서 함께** 처리한다.
 - **놓치기 쉬운 것**:
   - ⚠️ **HomeFeature에 넣지 말 것.** 홈은 탭 복귀마다 `.load`가 도는 화면이라 탭을 옮길 때마다 재체크되고,
     딥링크·알림·온보딩으로 다른 화면에 바로 진입하는 경로는 아예 안 걸린다. 앱 전역 게이트라 App 몫이다.
@@ -200,42 +200,46 @@
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
 
-### 11. 런치 부트스트랩(Splash)을 신설해 "앱 진입 시 할 일"을 한곳에 모은다 — 홈 프리페치 포함
+### 11. 런치 부트스트랩 ✅모듈 구현됨(#225) / 남은 것: **App 배선**
 
-- **허브 결정(사용자, 2026-08-28)**: V1 `Presentation/Splash`처럼 V2도 **`SplashFeature`(런치 부트스트랩)**를 두고, C1 판정에서
-  "App 부트스트랩 몫"으로 밀어둔 작업을 전부 여기서 처리한다. **이슈 #225**로 승격(2026-08-28). 모을 작업:
-  | 작업 | 출처 판정 |
-  |---|---|
-  | 유저 정보(`/users/me`) 조회 → 로컬 캐시(userId·nickname·gender·birth) 갱신 — **앱 진입마다** | Home 계약 6.2 (0절 9) |
-  | 홈 프리페치(오늘의 발견·지금 뜨는 글) — 아래 본문 | Home 계약 1.5 (0절 3) |
-  | 앱 최소 버전 조회 → 강제 업데이트 알럿(인프라 `SettingData`) | Home 계약 0절 5 · 위 기능 2번 |
-  | 필수 약관 동의 게이팅(미동의 유저만 약관 시트) | Onboarding 계약 3.1 (0절 1) |
-  | FCM 토큰 등록(`RegisterDeviceTokenUseCase`, 세션 있을 때) | Onboarding 계약 1.6 (0절 4) |
-  | 로그인 세션 유무 라우팅(인트로 vs 홈) | 기존 App 골격 |
-  | 키워드 로컬 캐시 동기화(`syncKeywords`) — 검색·카테고리가 로컬 캐시 기반이라 진입 시 갱신 | Keyword 계약 3 (0절 7) |
-
-- **무엇**: V1은 `HomePrefetchService`로 오늘의 인기작·지금 뜨는 글을 **Splash 단계에서 미리 받아** 홈 진입 시
-  소비해 첫 홈 표시 지연을 줄였다. V2엔 이 프리페치가 없다(홈 진입마다 새로 로드). 되살리기로 확정(사용자, 2026-08-27).
-- **전제(선행 작업)**: **V2에 런치 부트스트랩 단계를 둔다**(사용자 확정). 현재 App이 스켈레톤이라 Splash/부트스트랩이
-  없어(`grep Splash`=디자인시스템 에셋뿐) 프리페치를 얹을 자리가 없다. **프리페치 이득은 "런치→홈 표시 사이 dwell"에
-  전적으로 달렸다** — 부트스트랩 없이 홈이 런치 즉시 뜨면 프리페치 착지 전에 홈 로드가 네트워크를 먼저 때려 이득이 0이다.
-  즉 이 항목은 **부트스트랩 단계 신설에 종속**된다(강제 업데이트 게이트·토큰 검증 등과 같은 자리 → 위 기능 2번과 함께 볼 것).
-- **어디를 고치나(할 때)**:
-  1. **`HomePrefetchStore`(actor)** 신설 — `today`·`trending` 단발성(single-shot) 슬롯. `consume…()`은 값을 돌려주고
-     슬롯을 비운다. (Data 또는 Core.)
-  2. `DefaultRecommendationRepository`(현재 `struct`)가 이 actor **참조**를 보유 → `fetchTodayDiscoveries()`/
-     `fetchTrendingFeeds()`가 store에 있으면 소비, 없으면 네트워크.
-  3. 부트스트랩이 `PrefetchHomeDataUseCase`(또는 레포 fetch)를 fire-and-forget으로 호출해 store를 채운다.
-  4. App DI가 `HomePrefetchStore` **단일 인스턴스**를 만들어 부트스트랩 트리거와 레포에 같이 주입.
-- **왜 지금 안 했나**: C1(#222)은 V1 동작 계약 **추출·분류**만이 범위다. 구현은 부트스트랩 신설(App 첫 실전 조립)에
-  종속돼 별건이다.
-- **놓치기 쉬운 것**:
-  - ⚠️ **V1의 `HomePrefetchService.shared` 싱글톤 방식 금지**(레포 철학). struct 레포엔 캐시 필드를 못 둔다(복사되어
-    공유 불가) — actor store 참조 공유가 그 회피책.
-  - ⚠️ **TTL 캐시 금지, single-shot이 정답** — 홈은 "탭 복귀마다 갱신" 계약이라 TTL이면 복귀 때 stale이 나온다.
-    single-shot이면 프리페치가 슬롯 1회 채움 → 첫 홈 로드가 비움 → 이후 복귀 갱신은 전부 네트워크(V1과 정확히 일치).
-  - **범위는 today·trending 2종만**(V1도 그랬음). taste(선호장르)는 느린 개인화라 제외, 알림 배지도 제외.
-  - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
+- **끝난 것**(#225): `SplashDomain`(게이트 순서·실패 분기·예산 정책) / `SplashData`(도메인 6종에 위임하는
+  composite) / `SplashFeature`(스플래시 화면, 결과를 `onFinish`로 App에 위임) / `HomePrefetchStore`(actor,
+  single-shot + 소비 창) / `BundleAppVersionProvider`(`AppVersionProviding` 실구현) / 홈 레포의 프리페치 소비 배선.
+- **남은 것 — App 배선(별도 PR, 사용자 확정 2026-08-31)**: 지금은 `Projects/App`에 Splash 참조가 0건이라
+  **앱을 실행해도 스플래시가 뜨지 않고 게이트가 하나도 돌지 않는다**. 배선에 필요한 것:
+  1. `Projects/App/Project.swift` 의존에 `.feature(.splash)`·`.domain(.splash)`·`.data(.splash)` 추가.
+  2. `AppDependencies`에 `HomePrefetchStore` **단일 인스턴스** + `appUpdateRepository`(현재 미조립) +
+     `LaunchGateRepository`·`LaunchTaskRepository`·`DefaultBootstrapAppUseCase` 조립.
+  3. `ContentView`에 `.splash` Route를 추가해 **초기 route로** 두고, `onFinish`에서
+     `.forceUpdate`(닫기 불가 알럿)·`.intro`(온보딩)·`.main(needsTermsAgreement:)`(홈+약관 시트)를 라우팅.
+- **배선할 때 놓치기 쉬운 것** (전부 #225 리뷰에서 나온 실제 함정):
+  - ⚠️ **프리페치용 추천 레포와 소비용 추천 레포를 분리해야 한다.** App엔 조립된 `RecommendationRepository`가
+    하나뿐이라 그대로 `makeLaunchTaskRepository(recommendationRepository:)`에 넘기면 **프리페치가 스스로를
+    무효화한다** — 프리페치가 부르는 `fetchTodayDiscoveries()`가 빈 슬롯에 consume을 시도해 **소비 창을
+    닫아 버리고**, 그 직후 `fill`이 폐기된다. store는 영영 안 채워지고 런치마다 추천 API 3개만 버려지는데,
+    증상이 "느려지지 않았다"라 발견이 어렵다. store는 **소비하는 쪽에만** 주입할 것.
+  - ⚠️ **store 주입은 짝으로만 의미가 있다** — 한쪽(`SplashDataFactory`)에만 넘기면 런치마다 추천 API 3개를
+    더 때리고 결과는 아무도 안 쓴다. 타입이 안 막아주니(한쪽 non-optional, 한쪽 기본 nil) 두 조립을 붙여 둘 것.
+  - ⚠️ **`onFinish`가 불리기 전까지 스플래시 뷰를 계층에서 빼지 말 것** — 완료 신호가
+    `onChange(of: state.outcome)`라 뷰가 떼어진 사이 세팅된 outcome은 감지되지 않는다.
+  - 강제 업데이트 알럿·약관 시트 **UI 자체가 App에 아직 없다** — 배선 PR이 함께 만들어야 한다.
+  - **세션 전환(로그아웃·재로그인·`.intro` 낙착) 때 `HomePrefetchStore`를 새 인스턴스로 교체할 것**(권장).
+    부트스트랩은 `.intro`로 갈라져도 이미 던진 프리페치를 되돌리지 않는다. 프리페치 3종이 전부
+    `requireToken`이 된 뒤로는(2026-08-31, today/trending 전환 포함) 죽은 세션에선 슬롯이 안 채워져
+    (fail-closed), 과거의 "익명 200이 슬롯을 채워 재로그인 뒤 묵은 데이터가 소비되는" 일상 함정은 닫혔다 —
+    남은 건 "유효 토큰으로 채워진 뒤 소비 전에 세션이 바뀌는" 좁은 레이스뿐이라 교체는 belt-and-suspenders다.
+    (부수 태스크를 약관 게이트 뒤로 미루는 해법은 프리페치 이득을 죽여서 채택하지 않았다.)
+  - ⚠️ **예산이 401 재발급 대기에는 안 걸린다** — `SessionRefreshCoordinator`가 공유 갱신을
+    `try await task.value`(취소 비반응)로 기다려서, 만료 토큰 + 느린 망이면 약관 게이트가 예산 4초를 넘겨
+    `URLSession` 기본 60초까지 스플래시에 고정될 수 있다. 근본 해결은 Core(Networking) 몫 — refresh 대기를
+    취소 가능하게 하거나 request timeout을 두는 것. 배선 전에 판단할 것.
+- **범위는 today·trending·taste 3종**(2026-08-31 taste 추가 — 처음엔 V1처럼 2종만이었고 "taste는 느린
+  개인화라 제외"였으나, 홈 첫 페인트는 세 호출을 한꺼번에 기다리는 **원자적 렌더**라 하필 제일 느린 taste를
+  안 데우면 첫 페인트가 그 왕복에 붙잡혀 **2종 프리페치의 이득이 0**이 됨을 확인하고 뒤집었다. 개인화
+  프리페치의 전제는 "비로그인 진입 불가" + taste가 `requireToken`이라 죽은 세션에선 슬롯이 안 채워지는
+  fail-closed 성질). **알림 배지는 여전히 프리페치 제외** — 대신 `HomeViewModel`이 콘텐츠와 배지를 따로
+  수확해 배지 왕복이 첫 페인트를 붙잡지 않는다(→ HomeFeature `CLAUDE.md`).
+- 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
 
 ### 12. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들
 

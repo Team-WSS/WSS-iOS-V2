@@ -32,6 +32,7 @@ public enum FeatureModule: String, ModuleSpec {
     case onboarding
     case notification
     case collection
+    case splash
 }
 
 public enum DomainModule: String, ModuleSpec {
@@ -50,6 +51,7 @@ public enum DomainModule: String, ModuleSpec {
     case social
     case search
     case collection
+    case splash
 }
 
 public enum DataModule: String, ModuleSpec {
@@ -68,6 +70,7 @@ public enum DataModule: String, ModuleSpec {
     case novel
     case search
     case collection
+    case splash
 }
 
 public enum CoreModule: String, ModuleSpec {
