@@ -154,7 +154,10 @@ private extension HomeViewModel {
 
 private extension HomeViewModel {
 
-    /// 추천 3종과 알림 배지를 한 흐름으로 본다 — 하나라도 실패하면 홈 전체가 실패다.
+    /// 추천 3종(콘텐츠)과 알림 배지를 **따로** 수확한다 — 한 do/catch로 묶으면 프리페치로 즉시
+    /// 끝나는 콘텐츠가 배지 네트워크 왕복까지 기다렸다가 그려진다(첫 런치의 프리페치 이득이 죽는다).
+    /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지 실패는 조용히 무시(로그만 — 이유는 아래
+    /// `presentBadgeFailure` 주석).
     func loadHome() async {
         state.isLoading = true
         // 재시도·재진입 시작 시점에 함께 내린다 — 성공할 때만 내리면 "페이지 다시 불러오기"를 눌러도
@@ -162,30 +165,40 @@ private extension HomeViewModel {
         state.loadFailed = false
         defer { state.isLoading = false }
 
-        do {
-            // 둘은 서로 독립이라 동시에 부른다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
-            // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
-            async let homeData = loadHomeDataUseCase.execute()
-            async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
+        // 둘은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
+        // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
+        async let homeData = loadHomeDataUseCase.execute()
+        async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
 
+        // 1) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
+        do {
             let loadedHomeData = try await homeData
-            let loadedNotificationStatus = try await notificationStatus
 
             // 플래그를 state보다 **먼저** 올린다 — 관찰 대상이 아니라 갱신을 스스로 트리거하지 않으므로,
-            // 뷰를 깨우는 state 대입 시점에 이미 최신값이어야 한다(아래 실패 경로도 같은 이유로 먼저 내린다).
+            // 뷰를 깨우는 state 대입 시점에 이미 최신값이어야 한다(실패 경로도 같은 이유로 먼저 내린다).
             hasLoadedContent = true
 
             state.nickname = loadedHomeData.nickname
             state.todayDiscoveries = loadedHomeData.todayDiscoveries
             state.trendingFeeds = loadedHomeData.trendingFeeds
             state.preferenceGenreNovelState = loadedHomeData.preferenceGenreNovelState
-            state.hasUnreadNotifications = loadedNotificationStatus.hasUnreadNotifications
         } catch let error as RepositoryError {
             presentLoadFailure(error)
         } catch {
             // ⚠️ `async let`이 UseCase의 타입 지정 throw를 `any Error`로 지워서 분기가 필요하다.
             // 두 UseCase 모두 RepositoryError만 던지므로 여기는 실제로는 도달하지 않는다.
             presentLoadFailure(.unknown)
+        }
+
+        // 2) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
+        //    await해야 하고, 콘텐츠가 실패했다고 배지 요청을 버릴 이유도 없다).
+        do {
+            let loadedNotificationStatus = try await notificationStatus
+            state.hasUnreadNotifications = loadedNotificationStatus.hasUnreadNotifications
+        } catch let error as RepositoryError {
+            presentBadgeFailure(error)
+        } catch {
+            presentBadgeFailure(.unknown)
         }
     }
 }
@@ -205,6 +218,17 @@ private extension HomeViewModel {
         // 그쪽은 실패 뷰를 세우지 않으니 콘텐츠가 남아도 맞다.)
         hasLoadedContent = false
         state.loadFailed = true
+    }
+
+    /// 배지는 부수 데이터라 실패해도 홈 콘텐츠를 지우지 않는다 — **사용자에겐 아무것도 띄우지 않고
+    /// 로그만 남긴다**(사용자 확정 2026-08-31). #195의 부수 데이터 토스트 lane도 일부러 안 쓴다:
+    /// 배지는 실패해도 화면에 "보이는 고장"이 없어서, 멀쩡한 홈 위의 에러 토스트는 무엇이 실패했는지
+    /// 설명하지 못한 채 탭 복귀 갱신마다 반복 노출만 된다. 다음 탭 복귀가 자동 재시도한다(self-healing).
+    /// 인증 만료만은 배지 경로에서도 로그인 라우팅을 태운다(`onAuthenticationRequired`는 idempotent 계약).
+    func presentBadgeFailure(_ error: RepositoryError) {
+        guard !routeToLoginIfAuthenticationRequired(error) else { return }
+
+        logger?.error("알림 배지 로드 실패: \(error)")
     }
 
     func routeToLoginIfAuthenticationRequired(_ error: RepositoryError) -> Bool {
