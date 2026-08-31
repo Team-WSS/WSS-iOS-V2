@@ -32,6 +32,7 @@ public enum FeatureModule: String, ModuleSpec {
     case onboarding
     case notification
     case collection
+    case splash
 }
 
 public enum DomainModule: String, ModuleSpec {
