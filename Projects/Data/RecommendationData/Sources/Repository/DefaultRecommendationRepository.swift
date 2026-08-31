@@ -18,16 +18,25 @@ struct DefaultRecommendationRepository: RecommendationRepository {
     private let service: RecommendationService
     private let appStorage: AppStorage
     private let logger: DataLogger?
+    /// 런치 부트스트랩이 채워두는 single-shot 프리페치 저장고(#225). 주입 안 되면(nil) 항상 네트워크.
+    private let prefetchStore: HomePrefetchStore?
 
     public init(service: RecommendationService,
                 appStorage: AppStorage,
-                logger: DataLogger?) {
+                logger: DataLogger?,
+                prefetchStore: HomePrefetchStore? = nil) {
         self.service = service
         self.appStorage = appStorage
         self.logger = logger
+        self.prefetchStore = prefetchStore
     }
 
     public func fetchTodayDiscoveries() async throws(RepositoryError) -> [TodayDiscovery] {
+        // 부트스트랩 프리페치가 착지해 있으면 소비(single-shot — 이후 호출은 전부 네트워크).
+        if let prefetched = await prefetchStore?.consumeTodayDiscoveries() {
+            return prefetched
+        }
+
         let action = RecommendationAction.fetchTodayDiscoveries
 
         do {
@@ -46,8 +55,13 @@ struct DefaultRecommendationRepository: RecommendationRepository {
     }
     
     public func fetchTrendingFeeds() async throws(RepositoryError) -> [TrendingFeed] {
+        // 부트스트랩 프리페치가 착지해 있으면 소비(single-shot — 이후 호출은 전부 네트워크).
+        if let prefetched = await prefetchStore?.consumeTrendingFeeds() {
+            return prefetched
+        }
+
         let action = RecommendationAction.fetchTrendingFeeds
-        
+
         do {
             let response = try await service.getTrendingFeeds()
             return try RecommendationMapper.trendingFeeds(from: response)

@@ -9,6 +9,9 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - Factory 파라미터명이 `client`가 아니라 **`network:`** (다른 모듈과 네이밍 불일치). 조립 코드 작성 시 주의.
+- **`prefetchStore:`는 App 조립에서만 주입한다**(#225, 기본 nil) — 주입되면 `fetchTodayDiscoveries`/
+  `fetchTrendingFeeds`가 부트스트랩 프리페치를 **1회만** 소비하고 이후엔 전부 네트워크(홈 "탭 복귀마다 갱신"
+  계약 유지). Demo·테스트에서 nil이면 기존과 완전히 동일하게 동작한다.
 - 홈 데이터 합성은 Domain의 `LoadHomeDataUseCase` 책임 — 여기선 개별 fetch만 구현.
 - ⚠️ **홈 응답의 장르는 영문 케이스명**(`romanceFantasy`·`BL`·`modernFantasy`)으로 온다 — 작품 상세
   응답이 한글(`로판`·`판타지`)이라 **`NovelMapper`의 장르 매핑을 재사용할 수 없다**(값 자체가 다름).
