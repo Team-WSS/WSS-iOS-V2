@@ -32,11 +32,24 @@ struct SplashView: View {
             }
     }
 
+    // V1 SplashView 파리티 — 배경 전면 위에,
+    // 로고는 "safe area 상단 ~ 워드마크" 사이 공간의 세로 중앙, 워드마크는 safe area 하단 inset 30.
     private var content: some View {
-        // ③단계(V1 대조)에서 로고·워드마크 레이아웃을 채운다 — 골격은 배경 전면만.
-        WSSImage.imgSplashBackground.swiftUIImage
-            .resizable()
-            .ignoresSafeArea()
+        VStack(spacing: 0) {
+            WSSImage.imgSplashIcon.swiftUIImage
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            WSSImage.imgSplashType.swiftUIImage
+            Spacer().frame(height: 30)
+        }
+        // 배경은 ZStack 형제가 아니라 background로 — scaledToFill의 오버플로 크기가
+        // 레이아웃에 오염되면 하단 워드마크가 화면 밖으로 밀린다(시뮬레이터 실측).
+        .background {
+            WSSImage.imgSplashBackground.swiftUIImage
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+        }
     }
 }
 
