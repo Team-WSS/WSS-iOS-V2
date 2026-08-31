@@ -247,8 +247,9 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
 서버 요청 파라미터 매핑의 V1↔V2 교차 종합(C2)은 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md)가 정본.
 
-- **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
-  평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
+- ~~**앱 리뷰 요청(StoreKit) 재도입**~~ ✅ **완료(#221)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입.
+  BaseDomain `AppReviewRequestUseCase` + BaseData(UserDefaults+Bundle 버전) repo를 피드·감상평이 공유하고,
+  프롬프트는 각 View가 `@Environment(\.requestReview)`(StoreKit)로 띄운다. 상세는 두 모듈 `V1_BEHAVIOR_CONTRACT.md`.
 - **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
 - **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,

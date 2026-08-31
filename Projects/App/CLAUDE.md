@@ -156,6 +156,7 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **CreateFeed에 새 UseCase를 주입하려면 조립 지점이 5곳이다** — 작성 경로는 각 탭 Root의 `createFeedView(connectedNovel:)` 헬퍼 **4곳**(`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`, 동일 코드 복제)에서 `FeedFeatureFactory.makeCreateFeedView`를 직접 호출하고, 수정 경로는 `FeedDetailAssembly.makeEditFeedView` **1곳**이다(NovelReview는 `NovelReviewAssembly` 1곳으로 공용화된 것과 대비 — 작성 헬퍼는 아직 공용 Assembly로 안 뽑힘). #221 앱 리뷰 UseCase 주입 때 이 5곳 + NovelReviewAssembly를 모두 손댔다. 순수 로컬(UserDefaults) repo(온보딩·앱리뷰)는 `AppDependencies`에 `let ...Repository` 선언 + init 끝에서 `Default...Repository(appStorage: UserDefaultsStorage())`로 조립(네트워크 client 불필요)한 뒤, 각 조립 지점이 `Default...UseCase(repository: dependencies.xxxRepository)`로 감싸 주입한다.
 - ⚠️ **push할 화면에 "진입 파라미터"를 넘길 땐 별도 `@State` 스크래치 변수에 먼저 써두고 그 값을
   읽어 destination view를 만들지 말 것 — `NavigationPath`의 `Destination` payload로 직접 실어
   보내야 한다.** `scratchState = value; path.append(Destination.xxx)`처럼 같은 액션 안에서 `@State`

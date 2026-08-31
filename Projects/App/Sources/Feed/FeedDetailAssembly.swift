@@ -73,7 +73,8 @@ enum FeedDetailAssembly {
             feedID: feedID,
             editFeedUseCase: DefaultEditFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
-            loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository)
+            loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository),
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository)
         )
     }
 }

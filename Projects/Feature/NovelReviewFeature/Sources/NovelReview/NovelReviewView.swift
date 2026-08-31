@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 import BaseDomain
 import NovelReviewDomain
@@ -25,6 +26,8 @@ struct NovelReviewView: View {
     /// 다시 시딩된다(최초 1회만 시딩되는 SwiftUI 함정, `SearchFeature`의 `keywordContentResetToken`과 동일 이유).
     @State private var keywordSheetResetToken = UUID()
     @Environment(\.dismiss) private var dismiss
+    /// 앱스토어 평점 프롬프트(StoreKit) — VM이 게이트를 통과시키면(`shouldRequestReview`) 저장 성공 시 호출.
+    @Environment(\.requestReview) private var requestReview
 
     /// 네비게이션 타이틀. 진입 이전 화면이 Factory를 통해 주입한다.
     private let title: String
@@ -98,6 +101,8 @@ struct NovelReviewView: View {
         )
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             guard shouldDismiss else { return }
+            // 리뷰 프롬프트는 화면이 pop되기 전에 띄운다(저장 성공 경로에서만 게이트가 켜진다).
+            if viewModel.state.shouldRequestReview { requestReview() }
             dismiss()
         }
         // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
@@ -442,7 +447,8 @@ private extension NovelReviewView {
                 novelID: NovelID(1),
                 status: .watching,
                 loadUseCase: PreviewLoadNovelReviewDraftUseCase(),
-                saveUseCase: PreviewSaveNovelReviewUseCase()
+                saveUseCase: PreviewSaveNovelReviewUseCase(),
+                appReviewUseCase: PreviewAppReviewRequestUseCase()
             ),
             title: "당신의 이해를 돕기 위하여",
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
@@ -456,6 +462,12 @@ private struct PreviewLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUseCase {
         print("로드됨!")
         return nil
     }
+}
+
+private struct PreviewAppReviewRequestUseCase: AppReviewRequestUseCase {
+    func recordEngagement() {}
+    func shouldRequestReview() -> Bool { false }
+    func markReviewRequested() {}
 }
 
 private struct PreviewSaveNovelReviewUseCase: SaveNovelReviewUseCase {

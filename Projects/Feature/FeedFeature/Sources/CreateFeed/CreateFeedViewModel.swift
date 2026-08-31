@@ -29,6 +29,8 @@ final class CreateFeedViewModel {
 
         var attachedImageDatas: [AttachedImageID: Data] = [:]
         var submitState: SubmitState = .idle
+        /// 저장 성공 순간 앱 리뷰 게이트를 통과했는지 — View가 `onChange`로 소비해 `requestReview()`를 부른다.
+        var shouldRequestReview = false
         var validationError: FeedDraft.ValidationError?
         /// 수정 모드 진입 직후, 대상 피드의 내용을 불러오는 중 — 화면은 바로 뜨고(빠른 전환) 이 값이
         /// true인 동안만 내용이 비어 보인다. 이미지 없는 글은 거의 즉시 사라진다.
@@ -128,6 +130,8 @@ final class CreateFeedViewModel {
     private let searchNovelUseCase: SearchNovelUseCase
     /// 수정 모드 진입 시 대상 피드 상세를 불러오는 용도(`.load`) — 작성 모드에선 쓰지 않는다.
     private let loadFeedDetailUseCase: LoadFeedDetailUseCase?
+    /// 앱스토어 평점 프롬프트 게이팅(피드·감상평 공유). 저장 성공 시 참여를 기록하고 요청 여부를 판정한다.
+    private let appReviewUseCase: AppReviewRequestUseCase
 
     /// 수정 모드 로드는 한 번만 — `.onAppear`가 재진입마다 불려도 재요청하지 않는다.
     private var hasLoadedForEdit = false
@@ -144,6 +148,7 @@ final class CreateFeedViewModel {
         editFeedUseCase: EditFeedUseCase? = nil,
         searchNovelUseCase: SearchNovelUseCase,
         loadFeedDetailUseCase: LoadFeedDetailUseCase? = nil,
+        appReviewUseCase: AppReviewRequestUseCase,
         initialDraft: FeedDraft
     ) {
         self.mode = mode
@@ -151,6 +156,7 @@ final class CreateFeedViewModel {
         self.editFeedUseCase = editFeedUseCase
         self.searchNovelUseCase = searchNovelUseCase
         self.loadFeedDetailUseCase = loadFeedDetailUseCase
+        self.appReviewUseCase = appReviewUseCase
         self.originalDraft = initialDraft
         self.state = State(draft: initialDraft)
     }
@@ -311,9 +317,19 @@ private extension CreateFeedViewModel {
                 try await editFeedUseCase.execute(feedID: feedID, editedFeed: draft, imageDatas: imageDatas)
             }
             state.submitState = .submitted
+            recordEngagementAndGateReview()
         } catch let error {
             state.submitState = .failed(error)
         }
+    }
+
+    /// 저장 성공(작성·수정 공통)을 긍정 완료로 기록하고, 앱 리뷰 게이트(누적 참여·버전)를 통과하면
+    /// `shouldRequestReview`를 세운다 — 실제 프롬프트는 View가 `@Environment(\.requestReview)`로 띄운다.
+    private func recordEngagementAndGateReview() {
+        appReviewUseCase.recordEngagement()
+        guard appReviewUseCase.shouldRequestReview() else { return }
+        appReviewUseCase.markReviewRequested()
+        state.shouldRequestReview = true
     }
 
     /// 수정 모드 진입 직후 대상 피드를 불러와 `draft`/`attachedImageDatas`를 채운다. 첨부 이미지는

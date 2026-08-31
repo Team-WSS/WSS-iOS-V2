@@ -55,7 +55,7 @@
 3. 🔨 **댓글 전송/삭제 조용한 실패 표면화** (회귀 확정) — `createComment`/`editComment`/`deleteComment`/`deleteFeed`의 빈 `catch {}` 4곳. "네트워크 지연" 토스트+버튼 재활성 복원. → [3.4](#34-댓글-작성수정삭제)
 4. 🔧 **댓글 500자 제한 복원** — V1 하드컷, V2 무제한(서버 거부 위험). → [3.4](#34-댓글-작성수정삭제)
 5. 🔧 **피드 좋아요 햅틱 복원** — V1 목록 좋아요에 light impact, V2 없음(정렬 토글엔 있음). → [1.5](#15-좋아요리액션)
-6. 🔧 **작성/수정 성공 후 앱 리뷰 요청 재도입** — V1 성공 시 `AppReviewManager.requestReview()`. 타이밍 재설계 전제(dismiss·목록 갱신은 아래 미배선). → [4.3](#43-작성수정-완료저장)
+6. ✅ **작성/수정 성공 후 앱 리뷰 요청 재도입 (#221 구현 완료)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입(감상평과 공유). → [4.3](#43-작성수정-완료저장)
 
 **미배선 (App/Feature 배선 대기 · V2 WIP · 삭제 아님)**
 
@@ -321,9 +321,9 @@
 - ✅ **Keep** — 뒤로가기 시 **"작성 중단" 확인 알럿**을 띄운다.
   - V2: back 탭 → `showDismissAlert`(`.stopWritingFeed`), 확인 시 `dismiss`.
   - 근거: V1 `FeedEditViewModel.swift:160-165`,`276-280`(stopEditButton) · V2 `CreateFeedView.swift:174-176`,`139-146`
-- 🔧 **부분 확정→TODO** (2026-08-28: 앱 리뷰 요청 재도입) — **작성/수정 성공 후 처리**. V1은 성공 시 `NotificationName.feedEdited` 브로드캐스트(→ 피드 탭 "수정됨" 토스트) + `AppReviewManager.requestReview()`(앱 리뷰 요청) + pop.
-  - V2 `CreateFeedView`는 `state.submitState == .submitted`에 **아무 반응이 없다** — dismiss·목록 갱신·리뷰 요청이 View에 배선돼 있지 않다(App 조정 계층 몫일 수 있으나 확인 필요).
-  - 근거: V1 `FeedEditViewModel.swift:188-197` · V2 `CreateFeedView.swift`(submitState 반응 없음), `CreateFeedViewModel.swift:277`(state만 `.submitted`)
+- ✅ **앱 리뷰 요청: 구현 완료 (#221)** — **작성/수정 성공 후 처리**. V1은 성공마다 무조건 `AppReviewManager.requestReview()`를 호출했다(작성+수정, 앱측 억제 없음).
+  - V2: `submit()` 성공 시 `AppReviewRequestUseCase`(감상평과 공유, **참여 임계치+버전 게이트**)를 통과하면 `CreateFeedView`가 `@Environment(\.requestReview)`(StoreKit)로 프롬프트를 dismiss 직전에 띄운다. "무분별 호출 금지"로 V1의 매번 호출을 게이트로 대체. 목록 갱신은 V2가 탭 복귀마다 재조회하므로 V1의 `NotificationName.feedEdited` 브로드캐스트는 불필요(별도 배선 없음), dismiss는 `.submitted` onChange가 이미 처리(#197).
+  - 근거: V1 `FeedEditViewModel.swift:188-197` · V2 `CreateFeedViewModel.swift`(submit 성공 → `recordEngagementAndGateReview`), `CreateFeedView.swift`(submitState onChange: requestReview→dismiss)
 - 🔧 **복원 확정→TODO** (2026-08-28: 무변경 재저장 차단) — **수정 "변경 감지" 게이트**. V1 수정 모드는 내용·스포일러·공개·연결작품·이미지 중 **하나라도 바뀌어야** 완료 버튼 활성(`isInitialFeedChanged`). V2 `canSubmit`은 "내용 비어있지 않음"만 봐 무변경 재저장이 가능하다 → V1처럼 실제 변경 시만 활성으로 복원(불필요 PUT·이미지 재업로드 방지).
   - 근거: V1 `FeedEditViewModel.swift:322-330` · V2 `CreateFeedViewModel.swift:53-56`
 

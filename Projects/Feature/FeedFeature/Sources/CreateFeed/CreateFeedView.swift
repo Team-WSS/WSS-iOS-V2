@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import StoreKit
 
 import BaseDomain
 import FeedDomain
@@ -29,7 +30,9 @@ struct CreateFeedView: View {
     @FocusState private var isKeyboardFocused: Bool
     
     @Environment(\.dismiss) private var dismiss
-    
+    /// 앱스토어 평점 프롬프트(StoreKit) — VM이 게이트를 통과시키면(`shouldRequestReview`) 저장 성공 시 호출.
+    @Environment(\.requestReview) private var requestReview
+
     public init(viewModel: CreateFeedViewModel) {
         self._viewModel = State(initialValue: viewModel)
         self._contentFieldText = State(initialValue: viewModel.state.draft.content)
@@ -170,6 +173,8 @@ struct CreateFeedView: View {
                 // 뒤로가기를 누를 필요 없이 원래 화면으로 돌아간다).
                 .onChange(of: viewModel.state.submitState) { _, newValue in
                     if newValue == .submitted {
+                        // 리뷰 프롬프트는 화면이 pop되기 전에 띄운다(밑 화면 위로 표시되게).
+                        if viewModel.state.shouldRequestReview { requestReview() }
                         dismiss()
                     }
                 }
@@ -461,6 +466,7 @@ struct CreateFeedView: View {
             viewModel: CreateFeedViewModel(
                 createFeedUseCase: PreviewCreateFeedUseCase(),
                 searchNovelUseCase: PreviewSearchNovelUseCase(),
+                appReviewUseCase: PreviewAppReviewRequestUseCase(),
                 initialDraft: FeedDraft(
                     content: "",
                     isSpoiler: false,
@@ -474,6 +480,12 @@ struct CreateFeedView: View {
 
 private struct PreviewCreateFeedUseCase: CreateFeedUseCase {
     func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) { }
+}
+
+private struct PreviewAppReviewRequestUseCase: AppReviewRequestUseCase {
+    func recordEngagement() {}
+    func shouldRequestReview() -> Bool { false }
+    func markReviewRequested() {}
 }
 
 private struct PreviewSearchNovelUseCase: SearchNovelUseCase {

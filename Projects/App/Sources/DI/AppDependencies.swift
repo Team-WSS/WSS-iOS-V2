@@ -65,6 +65,8 @@ final class AppDependencies {
     let pushSettingRepository: PushSettingRepository
     /// 1회성 온보딩 힌트 플래그(#221) — 순수 로컬(UserDefaults)이라 네트워크 client 없이 조립한다.
     let onboardingHintRepository: OnboardingHintRepository
+    /// 앱스토어 평점 요청 게이팅(#221, 피드·감상평 공유) — 순수 로컬(UserDefaults + Bundle 버전).
+    let appReviewRequestRepository: AppReviewRequestRepository
 
     init() {
         let logger = ConsoleLogger()
@@ -157,6 +159,7 @@ final class AppDependencies {
             logger: DataLogger(moduleName: "NotificationData", underlying: logger)
         )
         self.onboardingHintRepository = DefaultOnboardingHintRepository(appStorage: UserDefaultsStorage())
+        self.appReviewRequestRepository = DefaultAppReviewRequestRepository(appStorage: UserDefaultsStorage())
 
         // 키워드는 로컬 파일 캐시(`KeywordCache`)를 여러 도메인(서재 필터·프로필 취향·검색 등)이
         // 그대로 읽어 쓰는 구조라(BaseData/CLAUDE.md), 캐시가 비어있으면 그 화면들이 전부 빈 목록으로

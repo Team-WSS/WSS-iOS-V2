@@ -571,6 +571,7 @@ private extension MypageRootView {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel
         )
     }
