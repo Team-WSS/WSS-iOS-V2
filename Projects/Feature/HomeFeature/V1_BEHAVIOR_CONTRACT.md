@@ -73,13 +73,13 @@
 
 - ✅ **Keep** — `viewWillAppear`마다 홈 데이터를 다시 조회한다(재진입·탭 복귀 시 최신화). 최초 1회 가드 없음.
   - V2: `onAppear`마다 `.load`. "1회 가드를 두지 않는 게 의도"라고 명문화됨(밖에서 바뀐 값을 다시 비춰야 함).
-  - 근거: V1 `HomeViewController.swift:46-54`,`HomeViewModel.swift:107` · V2 `HomeView.swift:68-71`, `HomeViewModel.swift:131-138`, `CLAUDE.md`("탭 복귀마다 갱신")
+  - 근거: V1 `HomeViewController.swift:46-54`,`HomeViewModel.swift:107` · V2 `HomeView.swift:68-71`, `HomeViewModel.swift:129-136`, `CLAUDE.md`("탭 복귀마다 갱신")
 
 ### 1.2 동시 호출 구조
 
-- 🔧 **Improve** — **N개 요청을 한 흐름으로 묶는 방식**. V1은 RxSwift **독립 스트림 여러 개**로 쪼갰다: (a) 오늘의 인기작+지금 뜨는 글을 `zip`으로 묶어 상단 로딩 스피너를 제어, (b) 취향추천은 **별도 구독**(느린 개인화라 상단 표시를 막지 않음), (c) 알림 미확인·앱 버전도 각각 독립. V2는 추천 3종을 UseCase 안에서 `async let`으로, 알림 배지를 VM에서 `async let`으로 **한 흐름**에 합친다.
-  - V2: 진입 시 **총 4건이 한꺼번에** 나가고 **하나라도 실패하면 홈 전체가 실패**다(아래 4.1과 연결). 관찰상 "동시에 받아 그린다"는 같지만, **실패·로딩 결합 방식이 달라졌다**(V1은 섹션별로 독립, V2는 전부 한 몸).
-  - 근거: V1 `HomeViewModel.swift:107-198`(스트림 4개) · V2 `HomeViewModel.swift:182-214`, `LoadHomeDataUseCase.swift:28-51`, `RecommendationDomain/CLAUDE.md`(async let 동시)
+- 🔧 **Improve** — **N개 요청을 한 흐름으로 묶는 방식**. V1은 RxSwift **독립 스트림 여러 개**로 쪼갰다: (a) 오늘의 인기작+지금 뜨는 글을 `zip`으로 묶어 상단 로딩 스피너를 제어, (b) 취향추천은 **별도 구독**(느린 개인화라 상단 표시를 막지 않음), (c) 알림 미확인·앱 버전도 각각 독립. V2는 추천 3종을 UseCase 안에서 `async let`으로, 알림 배지를 VM에서 `async let`으로 **동시에 발사**하되(4건), **수확은 콘텐츠 3종과 배지를 따로** 한다(2026-08-31 분리 — 프리페치로 즉시 끝나는 콘텐츠의 첫 페인트를 배지 왕복이 붙잡지 않게).
+  - V2: 진입 시 **총 4건이 한꺼번에** 나가지만, **콘텐츠 3종 실패만 홈 전체 실패**이고 **배지 실패는 조용히 무시**된다(4.1·5). 관찰상 "동시에 받아 그린다"는 같지만, V1은 섹션별로 독립, V2는 **콘텐츠 3종이 한 몸·배지는 분리**다.
+  - 근거: V1 `HomeViewModel.swift:107-198`(스트림 4개) · V2 `HomeViewModel.swift:170-202`, `LoadHomeDataUseCase.swift:28-51`, `RecommendationDomain/CLAUDE.md`(async let 동시)
 - ✅ **Keep** — 오늘의 인기작·지금 뜨는 글·취향추천을 **동시에** 받아 온다(순차 대기 아님).
   - V2: 수단 변경(RxSwift `zip`/독립 구독 → 구조적 동시성 `async let`). 병렬성 자체는 `issuesThreeCallsConcurrently` 테스트로 고정.
   - 근거: V1 `HomeViewModel.swift:111-124`,`149-160` · V2 `LoadHomeDataUseCase.swift:29-31`, `RecommendationDomain/CLAUDE.md`(퇴행 방지 테스트)
@@ -94,7 +94,7 @@
 
 - 🔧 **Improve** — V1 홈 VM엔 **화면 단위 인증 만료 분기가 없다**. 각 스트림이 `.catch`로 빈 값 폴백만 하고, 토큰 재발급은 `tokenCheckURLSession` 네트워크 계층이 담당한다.
   - V2: `authenticationRequired`를 화면에서 걸러 `onAuthenticationRequired`로 라우팅한다(탭 콘텐츠라 신호를 `.consumeAuthenticationRequired`로 소진). 홈은 동시 요청 4건이라 401이 동시에 나므로 `SessionRefreshCoordinator`(재발급 직렬화)가 전제(#184).
-  - 근거: V1 `HomeViewModel.swift:113-121`(catch → 빈 값) · V2 `HomeViewModel.swift:223-239`, `Feature/CLAUDE.md`(인증 만료 처리 계약), `CLAUDE.md`(동시 요청 4건·401 4건)
+  - 근거: V1 `HomeViewModel.swift:113-121`(catch → 빈 값) · V2 `HomeViewModel.swift:212-239`, `Feature/CLAUDE.md`(인증 만료 처리 계약), `CLAUDE.md`(동시 요청 4건·401 4건)
 
 ### 1.5 프리페치
 
@@ -211,8 +211,8 @@
 ### 4.1 에러 표현
 
 - 🔧 **전면 실패 일원화 확정 (2026-08-27, 사용자)** — **부분 실패 처리**. V1은 오늘의 인기작·지금 뜨는 글·취향추천·알림 조회를 **각각 `.catch`로 빈 값 폴백**한다 → 한 섹션이 실패해도 **그 섹션만 비고 나머지 홈은 정상 표시**되며, **전면 에러 화면이 없다**(바깥 `onError`는 스피너만 끈다).
-  - **V2: 하나라도 실패하면 홈 전체가 전면 실패 뷰**(`NetworkErrorView` + 재시도, 헤더만 남김)다. 전면 실패 뷰로 통일한 것 자체는 #179에서 문서화된 의도(사용자가 실패를 알고 재시도할 수 있어야 함, 서재·갱신 규칙과 정렬).
-  - 근거: V1 `HomeViewModel.swift:113-121`,`140-143`,`156-159`,`180-183`(섹션별 catch → 빈 값) · V2 `HomeView.swift:116-126`, `HomeViewModel.swift:223-232`, `CLAUDE.md`(로딩·전면 실패는 헤더만 남기고 전면 대체)
+  - **V2: 콘텐츠 3종은 하나라도 실패하면 홈 전체가 전면 실패 뷰**(`NetworkErrorView` + 재시도, 헤더만 남김)다. **단 알림 배지는 예외** — 2026-08-31 분리 뒤로 배지 실패는 홈을 지우지 않고 조용히 무시된다(5 참조). 전면 실패 뷰로 통일한 것 자체는 #179에서 문서화된 의도(사용자가 실패를 알고 재시도할 수 있어야 함, 서재·갱신 규칙과 정렬).
+  - 근거: V1 `HomeViewModel.swift:113-121`,`140-143`,`156-159`,`180-183`(섹션별 catch → 빈 값) · V2 `HomeView.swift:116-126`, `HomeViewModel.swift:212-221`, `CLAUDE.md`(로딩·전면 실패는 헤더만 남기고 전면 대체)
   - **판정(2026-08-27, 사용자): 전면 실패 일원화가 맞음.** 부분 성공을 안 보여주는 효과를 수용한다 — 사용자가 실패를 알고 재시도하는 쪽 우선(#195 로드 실패 표현 계약·#179와 정렬). 그레이스풀 저하 되살리지 않는다. (2026-08-28 재확인.)
 - ✅ **Keep** — 실패 표현은 **헤더만 남기고 그 아래(검색바·배너 포함)를 통째로 대체**한다.
   - V2: `content(for:)`가 `loadFailed`면 `NetworkErrorView`로 헤더 아래 전면 대체. 갱신(탭 복귀) 실패도 같게 다룸.
@@ -222,7 +222,7 @@
 
 - 🔧 **Improve / ⏸ 보류(스켈레톤 부분 — 2026-08-28, 사용자: 실측 후 재검토, [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 7)** — **로딩 표시 세분화**. V1은 (a) 상단 2종(오늘의 인기작+지금 뜨는 글) `zip`이 **전면 로딩 스피너**(`WSSLoadingView`)를 제어하고, (b) 취향추천은 **자체 shimmer 스켈레톤**(항상, 개인화가 느려서)을 따로 띄웠다 — 상단이 뜬 뒤에도 취향추천만 스켈레톤이 남을 수 있다.
   - V2: 홈 전체가 한 로드라 **단일 전면 로딩**만 있고, 그마저 **`isInitialLoading`(보여줄 게 없을 때만)**으로 좁혔다(탭 복귀 갱신 시 이미 그린 화면을 로딩으로 갈아치우지 않음). **섹션 단위 스켈레톤은 사라졌다.**
-  - 근거: V1 `HomeViewModel.swift:108-110`,`154`,`162`,`showLoadingView`, `HomeTasteRecommendView.swift:111-127`(setLoading 스켈레톤) · V2 `HomeViewModel.swift:52-54`,`183-187`, `HomeView.swift:111-126`, `CLAUDE.md`(isInitialLoading)
+  - 근거: V1 `HomeViewModel.swift:108-110`,`154`,`162`,`showLoadingView`, `HomeTasteRecommendView.swift:111-127`(setLoading 스켈레톤) · V2 `HomeViewModel.swift:52-54`,`161-166`, `HomeView.swift:111-126`, `CLAUDE.md`(isInitialLoading)
 - ✅ **Keep** — **초기 진입엔 전면 로딩, 갱신(탭 복귀)엔 로딩 표시를 세우지 않는다**(콘텐츠 우선). 로딩과 실패의 기준이 일부러 다르다.
   - V2: `isInitialLoading`은 `!hasLoadedContent`일 때만 true. 실패는 갱신도 전면 대체(4.1)라 두 분기 기준이 의도적으로 갈림(#179).
   - 근거: V1 `HomeViewModel.swift:108`(viewWillAppear마다 spinner true지만 상단 도착 즉시 false) · V2 `HomeViewModel.swift:49-54`, `CLAUDE.md`(로딩은 콘텐츠 우선, 실패는 첫 로드와 동일 — 기준이 일부러 다름)
@@ -235,8 +235,8 @@
   - V2: 헤더 벨 → `onNotificationTapped`. 안 읽은 알림은 **점 박힌 벨 에셋 variant**(`icAnnouncementDotted`)로 표현.
   - 근거: V1 `HomeViewController.swift:189-193`, `HomeHeaderView.checkNotificationUnread` · V2 `HomeHeaderView.swift:41-55`, `HomeView.swift:100-104`
 - ✅ **Keep** — 알림 미확인 배지 표시(안 읽은 알림 있으면 벨에 표시).
-  - V2: `hasUnreadNotifications` → 점 박힌 벨. **조회 방식이 달라짐**: V1은 독립 스트림(실패해도 홈 무사), V2는 `LoadUnreadNotificationStatusUseCase`를 **결합 로드**(실패 시 홈 전체 실패, 4.1)로.
-  - 근거: V1 `HomeViewModel.swift:174-188`,`252-257` · V2 `HomeViewModel.swift:193`,`206`, `HomeHeaderView.swift:43-45`
+  - V2: `hasUnreadNotifications` → 점 박힌 벨. **배지도 콘텐츠와 독립으로 수확한다**(2026-08-31 분리) — `LoadUnreadNotificationStatusUseCase`를 콘텐츠와 따로 await하고, 실패해도 홈은 안 죽고 조용히 무시·다음 탭 복귀가 자동 재시도한다(**V1의 '독립 스트림, 실패해도 홈 무사'와 같은 결로 회귀** — 과거 잠시 결합 로드였다가 되돌림). 단 인증 만료만은 배지 경로에서도 로그인 라우팅을 태운다.
+  - 근거: V1 `HomeViewModel.swift:174-188`,`252-257` · V2 `HomeViewModel.swift:195-202`,`228-232`, `HomeHeaderView.swift:43-45`
 - ✅ **Keep** — 모든 화면 전환을 **상위(App)에 위임**한다(홈은 스스로 push하지 않음).
   - V2: 선택 결과 전부 콜백(`onNovelSelected`/`onFeedSelected`/`onSearchTapped`/`onDetailSearchTapped`/`onNotificationTapped`/`onPreferenceGenreSettingTapped`). V1도 VM이 `PublishRelay`로 올려 VC가 push — 같은 결.
   - 근거: V1 `HomeViewModel.swift:276-293`(Output relay), `HomeViewController.swift:153-218` · V2 `HomeView.swift:27-33`, `HomeFeatureFactory`
