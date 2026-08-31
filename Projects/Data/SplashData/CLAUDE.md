@@ -17,8 +17,12 @@
   주입하지 않은 쪽이어야 한다**(#225 리뷰). App에는 조립된 `RecommendationRepository`가 하나뿐이라 그대로
   넘기면 **프리페치가 스스로를 무효화한다**: `prefetchHomeData()`가 부르는 `fetchTodayDiscoveries()`가
   빈 슬롯에 **consume을 시도해 소비 창을 닫아 버리고**, 그 직후의 `fill`은 `isClosed`에 걸려 폐기된다.
-  결과는 **store가 영영 안 채워지고 런치마다 추천 API 2개만 버려지는 것** — 홈은 늘 네트워크를 타므로
+  결과는 **store가 영영 안 채워지고 런치마다 추천 API 3개만 버려지는 것** — 홈은 늘 네트워크를 타므로
   "느려지지 않았다"가 증상이라 아무도 못 알아챈다. store는 **소비하는 쪽에만** 주입한다.
 - ⚠️ 같은 이유로 **주입은 짝으로만 의미가 있다** — `SplashDataFactory`에만 store를 넘기고
-  `RecommendationDataFactory`에 안 넘기면 런치마다 추천 API 2개를 더 때리고 결과는 아무도 안 쓴다.
+  `RecommendationDataFactory`에 안 넘기면 런치마다 추천 API 3개를 더 때리고 결과는 아무도 안 쓴다.
   타입이 막아주지 않으니(한쪽은 non-optional, 한쪽은 기본 nil) App DI에서 두 조립을 붙여 둘 것.
+- 프리페치 슬롯은 **today·trending·taste 3개**다(taste는 2026-08-31 추가 — 홈의 원자적 첫 페인트가
+  제일 느린 taste에 붙잡혀 2종만 데워선 이득이 0이라서). **taste만 `requireToken`이라 유효 세션 없인
+  실패해 슬롯이 안 채워진다**(fail-closed) — `SplashDomain` 문서의 "`.intro` 낙착 후에도 익명으로
+  store가 채워진다" 함정은 today/trending 얘기지 taste엔 해당 없다.

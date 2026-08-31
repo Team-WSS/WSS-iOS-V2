@@ -21,7 +21,7 @@ import RecommendationDomainTesting
 
 /// 부수 태스크 4종(users/me 동기화·FCM 토큰 등록·키워드 동기화·홈 프리페치)을
 /// **각 도메인 Repository에 어떻게 위임하는지** 명세. 여기 있는 분기는 둘뿐이다 —
-/// 토큰 소스가 없으면 FCM 등록을 조용히 건너뛰는 것, 프리페치 두 슬롯을 병렬로 채우되
+/// 토큰 소스가 없으면 FCM 등록을 조용히 건너뛰는 것, 프리페치 세 슬롯을 병렬로 채우되
 /// 실패한 쪽만 비워 두는 것. "언제 던지고 언제 기다리는지"는 `BootstrapAppUseCaseTests`가 명세한다.
 @Suite
 struct DefaultLaunchTaskRepositoryTests {
@@ -74,11 +74,12 @@ struct DefaultLaunchTaskRepositoryTests {
 
     // MARK: - 홈 프리페치
 
-    @Test("프리페치가 성공하면 두 슬롯을 모두 채운다")
-    func prefetchFillsBothSlots() async {
+    @Test("프리페치가 성공하면 세 슬롯을 모두 채운다")
+    func prefetchFillsAllSlots() async {
         let recommendation = MockRecommendationRepository()
         recommendation.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
         recommendation.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
+        recommendation.fetchRecommendedNovelsResult = .success(.noGenreSettings)
         let store = HomePrefetchStore()
         let sut = makeSUT(recommendationRepository: recommendation, prefetchStore: store)
 
@@ -86,6 +87,7 @@ struct DefaultLaunchTaskRepositoryTests {
 
         #expect(await store.consumeTodayDiscoveries() != nil)
         #expect(await store.consumeTrendingFeeds() != nil)
+        #expect(await store.consumePreferenceGenreNovels() != nil)
     }
 
     @Test("프리페치가 실패한 슬롯은 비워두고 성공한 슬롯만 채운다")
@@ -93,6 +95,8 @@ struct DefaultLaunchTaskRepositoryTests {
         let recommendation = MockRecommendationRepository()
         recommendation.fetchTodayDiscoveriesResult = .failure(.serverUnavailable)
         recommendation.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
+        // 선호장르는 `requireToken`이라 유효 세션이 없으면 이 실패 경로가 표준이다(fail-closed).
+        recommendation.fetchRecommendedNovelsResult = .failure(.authenticationRequired)
         let store = HomePrefetchStore()
         let sut = makeSUT(recommendationRepository: recommendation, prefetchStore: store)
 
@@ -100,6 +104,7 @@ struct DefaultLaunchTaskRepositoryTests {
 
         #expect(await store.consumeTodayDiscoveries() == nil)
         #expect(await store.consumeTrendingFeeds() != nil)
+        #expect(await store.consumePreferenceGenreNovels() == nil)
     }
 }
 

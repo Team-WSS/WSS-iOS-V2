@@ -40,6 +40,7 @@ public actor HomePrefetchStore {
 
     private var todayDiscoveries = Slot<[TodayDiscovery]>()
     private var trendingFeeds = Slot<[TrendingFeed]>()
+    private var preferenceGenreNovels = Slot<PreferenceGenreNovelState>()
 
     public init() {}
 
@@ -51,11 +52,19 @@ public actor HomePrefetchStore {
         trendingFeeds.fill(feeds)
     }
 
+    public func fillPreferenceGenreNovels(_ state: PreferenceGenreNovelState) {
+        preferenceGenreNovels.fill(state)
+    }
+
     public func consumeTodayDiscoveries() -> [TodayDiscovery]? {
         todayDiscoveries.consume()
     }
 
     public func consumeTrendingFeeds() -> [TrendingFeed]? {
         trendingFeeds.consume()
+    }
+
+    public func consumePreferenceGenreNovels() -> PreferenceGenreNovelState? {
+        preferenceGenreNovels.consume()
     }
 }

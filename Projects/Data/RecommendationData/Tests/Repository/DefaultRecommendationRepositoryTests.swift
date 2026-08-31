@@ -62,6 +62,19 @@ struct DefaultRecommendationRepositoryTests {
         #expect(service.getTrendingFeedsCallCount == 0)
     }
 
+    @Test("store에 프리페치된 선호장르가 있으면 네트워크를 부르지 않고 그 값을 반환한다")
+    func preferenceGenreNovelsConsumesPrefetchWithoutNetwork() async throws {
+        let service = MockRecommendationService()
+        let store = HomePrefetchStore()
+        await store.fillPreferenceGenreNovels(.noGenreSettings)
+        let sut = makeSUT(service: service, prefetchStore: store)
+
+        let result = try await sut.fetchPreferenceGenreNovels()
+
+        if case .noGenreSettings = result {} else { Issue.record("프리페치된 상태 그대로 돌아와야 한다") }
+        #expect(service.getPreferenceGenreNovelsCallCount == 0)
+    }
+
     @Test("store가 주입되지 않으면 항상 네트워크로 간다")
     func withoutStoreAlwaysGoesToNetwork() async throws {
         let service = MockRecommendationService()
@@ -141,6 +154,7 @@ private final class MockRecommendationService: RecommendationService, @unchecked
 
     private(set) var getTodayDiscoveryCallCount = 0
     private(set) var getTrendingFeedsCallCount = 0
+    private(set) var getPreferenceGenreNovelsCallCount = 0
 
     func getTodayDiscovery() async throws -> TodayDiscoveryNovelsResponse {
         getTodayDiscoveryCallCount += 1
@@ -183,7 +197,8 @@ private final class MockRecommendationService: RecommendationService, @unchecked
     }
 
     func getPreferenceGenreNovels() async throws -> PreferenceGenreNovelsResponse {
-        fatalError("이 테스트에서 호출되면 안 된다")
+        getPreferenceGenreNovelsCallCount += 1
+        return PreferenceGenreNovelsResponse(tasteNovels: [])
     }
 
     func getSosopickNovels() async throws -> SosopickNovelsResponse {

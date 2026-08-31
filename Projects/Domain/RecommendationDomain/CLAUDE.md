@@ -17,6 +17,10 @@
 - **`HomePrefetchStore`(actor)는 single-shot이지 TTL 캐시가 아니다**(#225) — 홈은 "탭 복귀마다 갱신" 계약이라
   TTL이면 복귀 때 stale이 나온다. consume이 슬롯을 비우는 걸 "버그 같다"고 고치지 말 것. 채우는 쪽은
   런치 부트스트랩(SplashData), 소비하는 쪽은 `DefaultRecommendationRepository`, 단일 인스턴스는 App DI가 만든다.
+  - 슬롯은 **today·trending·taste 3개**다(taste는 2026-08-31 추가 — 처음엔 "느린 개인화라 제외"였으나,
+    홈 첫 페인트가 세 호출을 **한꺼번에 기다리는 원자적 렌더**라 하필 제일 느린 taste를 안 데우면
+    첫 페인트가 그 왕복에 붙잡혀 **프리페치 이득이 0**이 된다는 게 확인돼 뒤집었다. 개인화 프리페치가
+    허용되는 전제는 "비로그인 진입 불가" — 상세는 `SplashData`/`RecommendationData` 문서와 TODO 11절).
 - ⚠️ **소비 창은 "첫 consume 시도"까지만 열려 있다 — 빈 슬롯을 소비하려 한 경우에도 닫힌다**(#225 리뷰).
   프리페치는 fire-and-forget이라 홈 첫 로드보다 **늦게 착지할 수 있는데**, 창을 안 닫으면 그 값이 남아 있다가
   다음 탭 복귀 갱신에서 소비돼 **런치 시점 데이터가 뒤늦게 화면에 뜬다**. `Slot.isClosed`를 "쓸데없는 플래그"로

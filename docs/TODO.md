@@ -216,9 +216,9 @@
   - ⚠️ **프리페치용 추천 레포와 소비용 추천 레포를 분리해야 한다.** App엔 조립된 `RecommendationRepository`가
     하나뿐이라 그대로 `makeLaunchTaskRepository(recommendationRepository:)`에 넘기면 **프리페치가 스스로를
     무효화한다** — 프리페치가 부르는 `fetchTodayDiscoveries()`가 빈 슬롯에 consume을 시도해 **소비 창을
-    닫아 버리고**, 그 직후 `fill`이 폐기된다. store는 영영 안 채워지고 런치마다 추천 API 2개만 버려지는데,
+    닫아 버리고**, 그 직후 `fill`이 폐기된다. store는 영영 안 채워지고 런치마다 추천 API 3개만 버려지는데,
     증상이 "느려지지 않았다"라 발견이 어렵다. store는 **소비하는 쪽에만** 주입할 것.
-  - ⚠️ **store 주입은 짝으로만 의미가 있다** — 한쪽(`SplashDataFactory`)에만 넘기면 런치마다 추천 API 2개를
+  - ⚠️ **store 주입은 짝으로만 의미가 있다** — 한쪽(`SplashDataFactory`)에만 넘기면 런치마다 추천 API 3개를
     더 때리고 결과는 아무도 안 쓴다. 타입이 안 막아주니(한쪽 non-optional, 한쪽 기본 nil) 두 조립을 붙여 둘 것.
   - ⚠️ **`onFinish`가 불리기 전까지 스플래시 뷰를 계층에서 빼지 말 것** — 완료 신호가
     `onChange(of: state.outcome)`라 뷰가 떼어진 사이 세팅된 outcome은 감지되지 않는다.
@@ -227,11 +227,18 @@
     부트스트랩은 `.intro`로 갈라져도 이미 던진 프리페치를 되돌리지 않고, `/novels/popular`·`/feeds/popular`는
     `.usesTokenIfAvailable`이라 익명으로도 성공해 슬롯을 채운다 → 재로그인 뒤 첫 홈 로드가 런치 시점 데이터를
     소비한다. (부수 태스크를 약관 게이트 뒤로 미루는 해법은 프리페치 이득을 죽여서 채택하지 않았다.)
+    taste 슬롯만은 `requireToken`이라 이 경로에서 안 채워진다(fail-closed) — 그래도 store 교체는
+    today/trending 때문에 여전히 필요하다.
   - ⚠️ **예산이 401 재발급 대기에는 안 걸린다** — `SessionRefreshCoordinator`가 공유 갱신을
     `try await task.value`(취소 비반응)로 기다려서, 만료 토큰 + 느린 망이면 약관 게이트가 예산 4초를 넘겨
     `URLSession` 기본 60초까지 스플래시에 고정될 수 있다. 근본 해결은 Core(Networking) 몫 — refresh 대기를
     취소 가능하게 하거나 request timeout을 두는 것. 배선 전에 판단할 것.
-- **범위는 today·trending 2종만**(V1도 그랬음). taste(선호장르)는 느린 개인화라 제외, 알림 배지도 제외.
+- **범위는 today·trending·taste 3종**(2026-08-31 taste 추가 — 처음엔 V1처럼 2종만이었고 "taste는 느린
+  개인화라 제외"였으나, 홈 첫 페인트는 세 호출을 한꺼번에 기다리는 **원자적 렌더**라 하필 제일 느린 taste를
+  안 데우면 첫 페인트가 그 왕복에 붙잡혀 **2종 프리페치의 이득이 0**이 됨을 확인하고 뒤집었다. 개인화
+  프리페치의 전제는 "비로그인 진입 불가" + taste가 `requireToken`이라 죽은 세션에선 슬롯이 안 채워지는
+  fail-closed 성질). **알림 배지는 여전히 프리페치 제외** — 대신 `HomeViewModel`이 콘텐츠와 배지를 따로
+  수확해 배지 왕복이 첫 페인트를 붙잡지 않는다(→ HomeFeature `CLAUDE.md`).
 - 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
 
 ### 12. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들

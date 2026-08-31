@@ -34,15 +34,30 @@ struct HomePrefetchStoreTests {
         #expect(second == nil)
     }
 
+    @Test("선호장르 슬롯도 같은 규칙이다 — consume은 값을 돌려주고 슬롯을 비운다")
+    func preferenceGenreSlotIsAlsoSingleShot() async {
+        let store = HomePrefetchStore()
+        await store.fillPreferenceGenreNovels(.noGenreSettings)
+
+        let first = await store.consumePreferenceGenreNovels()
+        let second = await store.consumePreferenceGenreNovels()
+
+        #expect(first != nil)
+        if case .noGenreSettings = first {} else { Issue.record("채운 상태 그대로 돌아와야 한다") }
+        #expect(second == nil)
+    }
+
     @Test("채우지 않은 슬롯을 consume하면 nil을 돌려준다")
     func consumeEmptySlotReturnsNil() async {
         let store = HomePrefetchStore()
 
         let discoveries = await store.consumeTodayDiscoveries()
         let feeds = await store.consumeTrendingFeeds()
+        let preference = await store.consumePreferenceGenreNovels()
 
         #expect(discoveries == nil)
         #expect(feeds == nil)
+        #expect(preference == nil)
     }
 
     // MARK: - 소비 창(window)

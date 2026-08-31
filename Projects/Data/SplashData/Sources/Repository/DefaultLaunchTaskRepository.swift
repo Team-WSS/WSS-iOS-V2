@@ -56,10 +56,13 @@ struct DefaultLaunchTaskRepository: LaunchTaskRepository {
     }
 
     func prefetchHomeData() async {
-        // 두 슬롯을 병렬로 채운다. 실패한 쪽은 비워둔다(홈이 네트워크로 폴백).
+        // 세 슬롯을 병렬로 채운다. 실패한 쪽은 비워둔다(홈이 네트워크로 폴백).
+        // 홈 첫 페인트는 세 호출을 한꺼번에 기다리는 원자적 렌더라, 하나라도 안 데우면
+        // 그 호출이 첫 페인트를 붙잡아 프리페치 이득이 사라진다 — 그래서 taste까지 셋 다 데운다.
         async let today: Void = prefetchTodayDiscoveries()
         async let trending: Void = prefetchTrendingFeeds()
-        _ = await (today, trending)
+        async let preference: Void = prefetchPreferenceGenreNovels()
+        _ = await (today, trending, preference)
     }
 
     private func prefetchTodayDiscoveries() async {
@@ -70,5 +73,13 @@ struct DefaultLaunchTaskRepository: LaunchTaskRepository {
     private func prefetchTrendingFeeds() async {
         guard let feeds = try? await recommendationRepository.fetchTrendingFeeds() else { return }
         await prefetchStore.fillTrendingFeeds(feeds)
+    }
+
+    /// taste는 개인화 응답이지만 `/novels/taste`가 `requireToken`이라 유효 토큰 없이는 실패해
+    /// 슬롯이 안 채워진다(fail-closed) — 세션 전환 시 익명 데이터가 남는 today/trending의
+    /// 함정(`docs/TODO.md` 11절)이 이 슬롯엔 없다.
+    private func prefetchPreferenceGenreNovels() async {
+        guard let state = try? await recommendationRepository.fetchPreferenceGenreNovels() else { return }
+        await prefetchStore.fillPreferenceGenreNovels(state)
     }
 }

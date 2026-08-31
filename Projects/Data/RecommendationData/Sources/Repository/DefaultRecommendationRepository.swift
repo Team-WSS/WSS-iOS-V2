@@ -96,8 +96,13 @@ struct DefaultRecommendationRepository: RecommendationRepository {
     }
     
     public func fetchPreferenceGenreNovels() async throws(RepositoryError) -> PreferenceGenreNovelState {
+        // 부트스트랩 프리페치가 착지해 있으면 소비(single-shot — 이후 호출은 전부 네트워크).
+        if let prefetched = await prefetchStore?.consumePreferenceGenreNovels() {
+            return prefetched
+        }
+
         let action = RecommendationAction.fetchPreferenceGenreNovels
-        
+
         do {
             let response = try await service.getPreferenceGenreNovels()
             return RecommendationMapper.preferenceGenreNovels(from: response)
