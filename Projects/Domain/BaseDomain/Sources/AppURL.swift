@@ -25,4 +25,8 @@ public enum AppURL: Sendable {
 
     /// 서비스 이용약관 노션 페이지.
     public static let serviceAgreement = URL(string: "https://websoso.notion.site/143600bd74688050be18f4da31d9403e?pvs=4")
+
+    /// 앱스토어 상세 페이지(강제 업데이트 알럿 → 이동). V1과 같은 앱 레코드 ID이며,
+    /// 컷오버도 같은 레코드로 업로드하는 계획이라(docs/TODO.md 4절) ID가 유지된다.
+    public static let appStore = URL(string: "itms-apps://itunes.apple.com/kr/app/id6738299124")
 }

@@ -150,7 +150,11 @@ let targets: [Target] = [
             // 화면 전환(#201, MypageRootView가 조립).
             .module(.domain(.collection)),
             .module(.data(.collection)),
-            .module(.feature(.collection))
+            .module(.feature(.collection)),
+            // 런치 스플래시(부트스트랩 게이트: 강제 업데이트→세션→약관) 조립(#236).
+            .module(.feature(.splash)),
+            .module(.domain(.splash)),
+            .module(.data(.splash))
         ],
         settings: .settings(
             // App 타깃 전용 서명·버전 설정(appSigningConfigurations/appBaseSettings, 위 정의 참고).
