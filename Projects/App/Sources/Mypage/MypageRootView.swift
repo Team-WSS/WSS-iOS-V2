@@ -47,7 +47,7 @@ import WSSComponent
 /// **컬렉션(#201)**: "컬렉션 N개" 행 탭 → 컬렉션 목록(`collectionListView`)까지 push하고, 그 안의 생성·
 /// 수정·상세·"작품 추가"/"서재에서 추가"까지 전부 이 루트가 조립한다(`CollectionFeatureFactory`는
 /// 화면 간 이동을 스스로 하지 않는다 — 모듈 CLAUDE.md 참고). 컬렉션 상세의 작품 탭은 다른 탭과 동일하게
-/// 작품 상세(`NovelDetailAssembly`)까지 이어진다(#201 `docs/TODO.md` 9번의 후속 조치) — 그 상세가 다시
+/// 작품 상세(`NovelDetailAssembly`)까지 이어진다(#201에서 해소된 옛 TODO 항목의 후속 조치) — 그 상세가 다시
 /// 여는 리뷰·피드 작성·피드 상세·유저 프로필·일반 검색까지 `LibraryRootView`와 동일한 구조로 이 루트에도
 /// 옮겨왔다(마이페이지에서 진입했다고 그 하위 흐름이 달라질 이유가 없어서).
 ///
@@ -520,7 +520,7 @@ private extension MypageRootView {
     }
 }
 
-// MARK: - 작품 상세 (컬렉션 상세 작품 탭 → #201 `docs/TODO.md` 9번의 후속 조치)
+// MARK: - 작품 상세 (컬렉션 상세 작품 탭 → #201에서 해소된 옛 TODO 항목의 후속 조치)
 
 private extension MypageRootView {
     func novelDetailView(_ novelID: NovelID) -> some View {

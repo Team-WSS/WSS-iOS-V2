@@ -134,7 +134,7 @@ private extension ContentView {
     /// 세션이 끝나는 모든 경로(부트스트랩 `.intro` 낙착·401 만료·로그아웃/탈퇴)의 단일 수렴점.
     /// 온보딩으로 되돌리면서 `AppDependencies`를 **새로 조립**한다 — 런치 프리페치가 유효 토큰으로
     /// 채운 `HomePrefetchStore` 슬롯이 소비 전에 세션이 바뀌면 다음 사용자에게 새는 좁은 레이스를
-    /// (`docs/TODO.md` 11절) 인스턴스 교체로 닫는다. 여러 탭이 시간차로 불러도(401 idempotent 계약)
+    /// 인스턴스 교체로 닫는다(#236에서 해소). 여러 탭이 시간차로 불러도(401 idempotent 계약)
     /// 재조립은 1회만 한다. 토큰 삭제는 하지 않는다 — 401은 이미 서버가 세션을 무효화한 상태고,
     /// 로그아웃/탈퇴는 `DefaultAuthRepository`가 성공 시 스스로 지운다.
     func resetToOnboarding() {

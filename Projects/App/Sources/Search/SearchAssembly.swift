@@ -55,7 +55,7 @@ enum SearchAssembly {
     }
 
     /// 상세탐색 필터 화면 조립(#236에서 `HomeRootView` 로컬 조립을 승격) — 홈 배너뿐 아니라 일반 검색의
-    /// "더보기" 헤더(장르 → 정보 탭, 키워드 → 키워드 탭)로 3탭 어디서든 진입할 수 있어 공용으로 뽑았다.
+    /// "더보기" 헤더(장르 → 정보 탭, 키워드 → 키워드 탭)로 4탭 어디서든 진입할 수 있어 공용으로 뽑았다.
     /// "키워드" 탭 콘텐츠는 `SearchFeature`가 `KeywordFeature`를 모르므로 여기서 조립해 값으로 건넨다
     /// (`KeywordTabContentBuilder`). 확정("작품 찾기") 후 pop/push 판단은 호출부(`onSearch`) 책임 —
     /// 각 Root는 자기 `Destination.detailSearch(filter)`를 push하고 필터 화면은 스택에 남긴다.

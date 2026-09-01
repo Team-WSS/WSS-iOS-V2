@@ -30,7 +30,9 @@ public enum FeedFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
         connectedNovel: ConnectedNovel? = nil,
-        onSubmitted: @escaping () -> Void = {}
+        // 기본값을 일부러 두지 않는다 — 작성 조립은 탭 Root 4곳에 복제돼 있어(App/CLAUDE.md "5곳" 경고),
+        // 기본 no-op이 있으면 새 조립 지점이 완료 토스트를 말없이 빼먹어도 컴파일이 통과한다(#236 리뷰).
+        onSubmitted: @escaping () -> Void
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
@@ -53,7 +55,7 @@ public enum FeedFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         loadFeedDetailUseCase: LoadFeedDetailUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
-        onSubmitted: @escaping () -> Void = {}
+        onSubmitted: @escaping () -> Void
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
@@ -74,7 +76,8 @@ public enum FeedFeatureFactory {
     public static func makeCreateFeedPreviewView() -> some View {
         makeCreateFeedView(createFeedUseCase: StubCreateFeedUseCase(),
                            searchNovelUseCase: StubSearchNovelUseCase(),
-                           appReviewUseCase: StubAppReviewRequestUseCase())
+                           appReviewUseCase: StubAppReviewRequestUseCase(),
+                           onSubmitted: {})
     }
 
     /// 실제 UseCase를 주입해 FeedDetailView를 생성한다.

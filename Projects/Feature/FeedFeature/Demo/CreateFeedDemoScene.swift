@@ -48,7 +48,8 @@ struct CreateFeedDemoScene: View {
             FeedFeatureFactory.makeCreateFeedView(
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
-                appReviewUseCase: appReviewUseCase
+                appReviewUseCase: appReviewUseCase,
+                onSubmitted: { print("피드 작성 완료 — 실앱은 크로스스크린 토스트") }
             )
         }
     }

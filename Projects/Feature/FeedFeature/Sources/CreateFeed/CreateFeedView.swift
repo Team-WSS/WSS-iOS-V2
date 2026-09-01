@@ -37,13 +37,13 @@ struct CreateFeedView: View {
     /// dismiss되므로 "작성 완료" 토스트는 복귀 스택(App 크로스스크린 피드백 채널)이 띄운다(V1 `feedEdited` parity).
     private let onSubmitted: () -> Void
 
-    public init(viewModel: CreateFeedViewModel, onSubmitted: @escaping () -> Void = {}) {
+    init(viewModel: CreateFeedViewModel, onSubmitted: @escaping () -> Void = {}) {
         self._viewModel = State(initialValue: viewModel)
         self._contentFieldText = State(initialValue: viewModel.state.draft.content)
         self.onSubmitted = onSubmitted
     }
     
-    public var body: some View {
+    var body: some View {
         ZStack {
                 VStack(spacing: 0) {
                     privateSection
