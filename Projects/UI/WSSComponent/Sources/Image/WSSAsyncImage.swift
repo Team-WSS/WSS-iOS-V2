@@ -89,9 +89,10 @@ public struct WSSAsyncImage<Content: View, Placeholder: View>: View {
         }
         image = nil  // 옛 url의 이미지를 지우고 placeholder로 되돌린다.
         // 여기서부터가 진짜 네트워크 요청 구간 — `defer`로 성공/실패/취소 어느 경로로 빠져나가든
-        // isLoading을 반드시 false로 되돌린다(중간에 `guard`로 일찍 return해도 빠짐없이 걸리게).
+        // isLoading을 되돌린다(중간에 `guard`로 일찍 return해도 빠짐없이 걸리게). 단 취소된 경우는
+        // 제외 — 취소된 옛 태스크가 뒤늦게 깨어나 새 태스크가 세운 `true`를 덮지 않게 한다.
         isLoading = true
-        defer { isLoading = false }
+        defer { if !Task.isCancelled { isLoading = false } }
         // 실제 fetch+캐시 삽입은 `WSSImageLoader`(#228, 뷰 없는 호출부와 공유). 취소는 await 재개 뒤에도
         // 확인해야 한다 — 안 그러면 취소된 옛 요청이 새 url의 그림을 덮고, 그 뒤 새 요청까지 막아버린다.
         // (로더가 캐시엔 이미 넣었더라도 괜찮다 — 유효한 이미지라 다음 조회가 히트할 뿐이다.)
