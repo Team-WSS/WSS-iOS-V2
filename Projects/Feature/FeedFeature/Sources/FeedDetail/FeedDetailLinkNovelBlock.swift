@@ -10,6 +10,7 @@ import SwiftUI
 
 import BaseDomain
 import DesignSystem
+import WSSComponent
 
 struct FeedDetailLinkNovelBlock: View {
     
@@ -24,19 +25,8 @@ struct FeedDetailLinkNovelBlock: View {
     var body: some View {
         HStack(spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
-                AsyncImage(url: imageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .frame(width: 86)
-                .scaledToFit()
+                WSSNovelCoverImage(url: imageURL, contentMode: .fit)
+                    .frame(width: 86)
                 
                 genre.markImage
                     .resizable()
