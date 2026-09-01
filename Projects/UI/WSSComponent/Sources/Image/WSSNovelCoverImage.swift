@@ -20,6 +20,9 @@ import DesignSystem
 ///   따라가야 할 때). 넘친 그림은 컴포넌트가 잘라낸다.
 /// - **아무것도 안 넘기고 밖에서 `.frame(width:height:)`** — 크기가 고정인 자리(추천글 행 썸네일 등).
 ///
+/// ⚠️ **밖에서 `.aspectRatio`를 직접 걸지 말 것** — 표지는 `scaledToFill`(= `aspectRatio(.fill)`)이라
+/// 둘이 충돌해 표지가 좁아진다. 그래서 비율을 **파라미터로 받는다**.
+///
 /// 모서리 클립(`clipShape`)·오버레이(뱃지·하트)는 자리마다 달라 호출자가 바깥에서 얹는다.
 public struct WSSNovelCoverImage: View {
 
@@ -39,11 +42,22 @@ public struct WSSNovelCoverImage: View {
     private let url: URL?
     private let aspectRatio: CGFloat?
     private let placeholderStyle: PlaceholderStyle
+    /// 표지 표준은 `.fill`(꽉 채워 자름)이라 기본값이다. `aspectRatio` 모드는 내부적으로 `.fill`
+    /// 전제로 크기를 계산하므로(비율 상자에 overlay로 채움), `.fit`은 **`aspectRatio`를 안 쓰는
+    /// 자리에서만** 의미 있게 동작한다 — 원본을 자르지 않고 보여줘야 하는 예외적인 자리(연결 작품
+    /// 배너 등)에 한해 명시로 넘길 것.
+    private let contentMode: ContentMode
 
-    public init(url: URL?, aspectRatio: CGFloat? = nil, placeholderStyle: PlaceholderStyle = .default) {
+    public init(
+        url: URL?,
+        aspectRatio: CGFloat? = nil,
+        placeholderStyle: PlaceholderStyle = .default,
+        contentMode: ContentMode = .fill
+    ) {
         self.url = url
         self.aspectRatio = aspectRatio
         self.placeholderStyle = placeholderStyle
+        self.contentMode = contentMode
     }
 
     public var body: some View {
@@ -65,7 +79,7 @@ public struct WSSNovelCoverImage: View {
         WSSAsyncImage(url: url) { image in
             image
                 .resizable()
-                .scaledToFill()
+                .aspectRatio(contentMode: contentMode)
         } placeholder: { isLoading in
             placeholderView(isLoading: isLoading)
         }
@@ -93,6 +107,6 @@ public struct WSSNovelCoverImage: View {
     private var defaultCover: some View {
         WSSImage.imgLoadingThumbnail.swiftUIImage
             .resizable()
-            .scaledToFill()
+            .aspectRatio(contentMode: contentMode)
     }
 }
