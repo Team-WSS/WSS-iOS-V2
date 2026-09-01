@@ -237,11 +237,24 @@ final class UserPageViewModel {
 // MARK: - Action Handling
 
 private extension UserPageViewModel {
+    /// 진입/재진입 로드. onAppear는 재진입마다 불린다(#236, push 재진입 재조회 복원 — V1 parity).
+    /// - **첫 로드**(`!hasLoaded`): 전면 로딩과 함께 로드. 실패는 가드를 소진하지 않아 재시도가 열려 있다.
+    /// - **재진입**(`hasLoaded`): 로딩 없이 **조용히 재조회**해 프로필 묶음을 제자리 교체한다 — 이
+    ///   화면 위에 push된 피드 상세 등에서 바뀐 것(좋아요·차단·프로필 변경)을 복귀 즉시 반영하기 위함.
+    ///   활동 탭 미리보기도 이미 로드된 적 있으면 첫 페이지를 같이 재조회한다(V1은 피드까지 전부 재로드).
+    ///   실패해도 기존 화면을 그대로 둔다(`NovelDetailViewModel.load` 정본).
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
-        state.isLoading = true
-        state.hasLoadError = false
-        loadTask = Task { await loadUserPage() }
+        guard loadTask == nil else { return }
+        if hasLoaded {
+            loadTask = Task { await loadUserPage(isSilentRefresh: true) }
+            if hasLoadedFirstFeeds, feedsTask == nil, !state.isProfilePrivate {
+                feedsTask = Task { await loadFirstFeedsPage(isSilentRefresh: true) }
+            }
+        } else {
+            state.isLoading = true
+            state.hasLoadError = false
+            loadTask = Task { await loadUserPage() }
+        }
     }
 
     /// "활동" 탭 첫 진입 시 지연 로드(`NovelDetailFeature` 피드 탭과 동일 패턴). 미리보기라 첫 페이지만
@@ -314,10 +327,12 @@ private extension UserPageViewModel {
     /// 목록 API는 대상 사용자를 명시로 받는 계약이라 "본인 조회"와 달리 이 화면이 직접 userID를 넘긴다
     /// (`CollectionDomain/CLAUDE.md` 참고). 하나가 실패해도(구조적 동시성으로 나머지 자식 태스크는
     /// 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
-    func loadUserPage() async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 전면 로딩을 세우지 않고, 실패해도 기존
+    /// 화면을 그대로 둔다(비공개 전환·탈퇴 같은 의미 상태 변화도 다음 fresh 진입에서 반영).
+    func loadUserPage(isSilentRefresh: Bool = false) async {
         defer { loadTask = nil }
-        state.isLoading = true
-        defer { state.isLoading = false }
+        if !isSilentRefresh { state.isLoading = true }
+        defer { if !isSilentRefresh { state.isLoading = false } }
 
         do {
             async let profile = loadProfileUseCase.execute(target: .user(userID))
@@ -335,11 +350,17 @@ private extension UserPageViewModel {
             state.collectionCount = loadedCollectionCount
             hasLoaded = true
         } catch {
-            presentError(error)
+            if isSilentRefresh {
+                logger?.error("UserPage 재조회 실패(기존 화면 유지): \(String(describing: error))")
+            } else {
+                presentError(error)
+            }
         }
     }
 
-    func loadFirstFeedsPage() async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 실패해도 기존 미리보기를 실패 뷰로 덮지 않는다.
+    /// 비공개 전환(`privateProfile`)만은 두 모드 모두 반영한다 — 서버가 접근 자체를 막은 의미 상태라서.
+    func loadFirstFeedsPage(isSilentRefresh: Bool = false) async {
         defer {
             feedsTask = nil
             state.isLoadingFeeds = false
@@ -360,8 +381,12 @@ private extension UserPageViewModel {
         } catch RepositoryError.privateProfile {
             state.isProfilePrivate = true
         } catch {
-            state.feedsLoadFailed = true
-            logger?.error("UserPage 피드 로드 실패: \(String(describing: error))")
+            if isSilentRefresh {
+                logger?.error("UserPage 피드 재조회 실패(기존 목록 유지): \(String(describing: error))")
+            } else {
+                state.feedsLoadFailed = true
+                logger?.error("UserPage 피드 로드 실패: \(String(describing: error))")
+            }
         }
     }
 

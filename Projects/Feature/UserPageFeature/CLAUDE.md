@@ -168,6 +168,12 @@
 
 ### 핵심 시나리오
 
+- **재진입(push 복귀)은 조용한 재조회다**(#236, V1 parity 복원 — `NovelDetailViewModel.load` 정본 패턴):
+  `UserPageViewModel.load()`가 `hasLoaded` 후에도 재진입마다 프로필 묶음을 스피너 없이 제자리 교체하고,
+  활동 탭 미리보기도 이미 로드된 적 있으면 첫 페이지를 같이 재조회한다(실패 시 기존 화면 유지 —
+  비공개 전환(`privateProfile`)만은 재조회에서도 반영). **전체 피드 목록(`UserFeedListViewModel`)도 동일** —
+  재진입 시 첫 페이지 조용한 교체(페이지네이션 리셋, V1의 "비우고 처음부터 + 로딩뷰" 대신). 모든 로드가
+  단일 Task 가드(`loadTask`/`feedsTask == nil`)로 직렬화돼 취소 장치 없이 안전하다.
 - **서재 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입은 App 몫**(#196) — `UserPageView`는
   `onLibraryTapped()` 콜백만 부르고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +
