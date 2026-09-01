@@ -65,16 +65,20 @@ enum FeedDetailAssembly {
 
     /// `feedID`만 받아 수정 화면(`makeEditFeedView`)을 조립한다 — 대상 피드 로드는 그 화면 자신이 하므로
     /// App은 UseCase만 물리면 된다(#197, 빠른 화면 전환 우선 — 이전 화면에서 미리 준비해두지 않는다).
+    /// - Parameter onSubmitted: 수정 제출 **성공**으로 닫힐 때 dismiss 직전 발화(#236) — 호출자(탭 Root)가
+    ///   크로스스크린 피드백 채널로 "작성 완료" 토스트를 복귀 화면 위에 띄운다.
     static func makeEditFeedView(
         feedID: FeedID,
-        dependencies: AppDependencies
+        dependencies: AppDependencies,
+        onSubmitted: @escaping () -> Void
     ) -> some View {
         FeedFeatureFactory.makeEditFeedView(
             feedID: feedID,
             editFeedUseCase: DefaultEditFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository),
-            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository)
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
+            onSubmitted: onSubmitted
         )
     }
 }

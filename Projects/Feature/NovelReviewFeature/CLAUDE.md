@@ -7,7 +7,8 @@
 - 식별자: `ModuleType.feature(.novelReview)` / 의존: `BaseDomain`, `NovelReviewDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - **진입점: `NovelReviewFeatureFactory.makeView(novelID:title:status:loadUseCase:saveUseCase:logger:onAuthenticationRequired:keywordSearchSheet:)`** (`logger`는 옵셔널·nil 기본값)
   - **`title`(네비게이션 타이틀)·`status`(초기 읽기 상태)는 진입 이전 화면이 주입**한다 — 이 화면은 네비게이션으로만 진입하므로 호출자가 아는 값(작품명·진입 시점의 읽기 상태)을 넘긴다(Feature가 자체 보유 ❌). `status`는 `NovelReviewDraft`의 초기 상태를 seed한다.
-  - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백(이 화면의 유일한 상위 위임 콜백). 화면 전환은 호출자(App)가 수행 — 현재 소비처는 Demo 로그뿐(실제 로그인 화면·App 라우팅 미구현, 후속).
+  - **`onAuthenticationRequired()`**: 인증 만료 시 로그인 유도 콜백. 화면 전환은 호출자(App)가 수행.
+  - **`onSaved()`**(#236, 기본 no-op): 저장 **성공**으로 닫힐 때 dismiss 직전 발화 — 취소(그만하기·뒤로가기)로 닫힐 땐 안 부른다(`state.didSaveReview`로 가른다, `shouldRequestReview`와 같은 이유). "평가 완료!" 토스트는 이 화면이 pop되므로 App의 크로스스크린 피드백 채널이 복귀 화면 위에 띄운다(V1 `NovelReviewed` 알림 parity).
   - **`keywordSearchSheet: KeywordSearchSheetBuilder`**(`Sources/Navigation/`, public seam) — 키워드 탐색 시트 콘텐츠. 이 모듈은 `KeywordFeature`를 모르므로(Feature 간 직접 의존 금지) App이 `KeywordFeatureFactory.makeSearchKeywordView`로 조립한 `AnyView`를 값으로 넘긴다. `SearchFeature`의 `KeywordTabContentBuilder`와 같은 형태·같은 이유 — 자세한 건 아래 "주의사항" 참고.
 
 ### 파일 구조 — 화면(영역)별 그룹

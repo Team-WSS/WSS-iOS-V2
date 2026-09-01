@@ -79,11 +79,9 @@ struct LibraryRootView: View {
     /// "작품 추가"/"서재에서 추가" 확정 결과를 컬렉션 수정 화면에 돌려주는 1회성 nil→값 채널(#228,
     /// `MypageRootView`와 동일 — 확정(return) 값이라 `Destination` 레이스 대상이 아니다).
     @State private var pendingCollectionNovelSelection: [CollectionNovel]?
-    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀 화면 위에 띄우는 "차단했어요" 토스트(#221, V1 parity).
-    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 이 루트가 표시한다 — 4탭 공통
-    /// 패턴이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절 크로스스크린 완료 피드백).
-    @State private var isUserBlockedToastPresented = false
-    @State private var blockedNickname = ""
+    /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
+    /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
+    @State private var crossScreenFeedback = CrossScreenFeedbackState()
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -125,7 +123,11 @@ struct LibraryRootView: View {
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
-                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                        FeedDetailAssembly.makeEditFeedView(
+                            feedID: feedID,
+                            dependencies: dependencies,
+                            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+                        )
                     case .userPage(let userID):
                         UserPageAssembly.makeView(
                             userID: userID,
@@ -136,10 +138,7 @@ struct LibraryRootView: View {
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
-                            onUserBlocked: { nickname in
-                                blockedNickname = nickname
-                                isUserBlockedToastPresented = true
-                            }
+                            onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -185,7 +184,8 @@ struct LibraryRootView: View {
                             title: title,
                             status: status,
                             dependencies: dependencies,
-                            onAuthenticationRequired: onAuthenticationRequired
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onSaved: { crossScreenFeedback.present(.novelReviewed) }
                         )
                     case .notificationSetting:
                         notificationSettingView
@@ -212,7 +212,7 @@ struct LibraryRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
-        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
+        .showCrossScreenFeedbackToast($crossScreenFeedback)
     }
 }
 
@@ -341,7 +341,8 @@ private extension LibraryRootView {
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
-            connectedNovel: connectedNovel
+            connectedNovel: connectedNovel,
+            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
         )
     }
 }

@@ -21,12 +21,15 @@ import KeywordFeature
 /// `NovelReviewFeatureFactory`가 새로 조회하지 않는다).
 @MainActor
 enum NovelReviewAssembly {
+    /// - Parameter onSaved: 저장 **성공**으로 닫힐 때 dismiss 직전 발화(#236) — 호출자(탭 Root)가
+    ///   크로스스크린 피드백 채널로 "평가 완료" 토스트를 복귀 화면 위에 띄운다.
     static func makeView(
         novelID: NovelID,
         title: String,
         status: ReadingStatus,
         dependencies: AppDependencies,
-        onAuthenticationRequired: @escaping () -> Void
+        onAuthenticationRequired: @escaping () -> Void,
+        onSaved: @escaping () -> Void
     ) -> some View {
         NovelReviewFeatureFactory.makeView(
             novelID: novelID,
@@ -37,6 +40,7 @@ enum NovelReviewAssembly {
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             logger: dependencies.logger,
             onAuthenticationRequired: onAuthenticationRequired,
+            onSaved: onSaved,
             keywordSearchSheet: keywordSearchSheet(dependencies: dependencies)
         )
     }

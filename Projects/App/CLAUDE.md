@@ -348,16 +348,17 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   바로 진입한다**(사용자 확정, #196) — 서재 맥락에서 필요한 건 알림 설정뿐이라 `SettingFactory.makeView`
   (설정 메인 목록)를 거치지 않고 그 하위 화면으로 직행한다. `AppDependencies.pushSettingRepository`
   (`NotificationDataFactory.makePushSettingRepository`)가 이 화면 전용으로 새로 추가됐다.
-- ⚠️ **타유저 차단 성공 "차단했어요" 토스트는 4탭 Root가 각자 띄운다(#221, 의도적 interim 4벌 복붙)** —
-  `UserPageAssembly.makeView(onUserBlocked:)` seam이 차단한 상대 닉네임을 올려주면, 4탭 Root
-  (`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`)가 각자 `@State`(`isUserBlockedToastPresented`·
-  `blockedNickname`)로 받아 자기 `NavigationStack`에 `.showWSSToast(.blockUser(nickname:))`로 띄운다. UserPage는
-  차단 성공과 **동시에 pop**되므로 토스트는 그 화면이 아니라 **복귀할 스택 컨테이너**가 띄워야 하고(마이페이지
-  "저장됨"(`onSaved`) 토스트와 같은 크로스스크린 패턴), `NavigationStack`에 얹은 오버레이라 pop 후 최상단이 된
-  **직전 뷰** 위에 뜬다("Root뷰로 복귀"가 아니라 스택 최상단 위 — 진입 경로에 따라 소소피드/피드상세/작품상세 등).
-  V1은 이걸 전역 `NotificationCenter.blockUser`를 피드 탭 하나만 캐치해 띄웠는데, V2는 차단한 그 탭에서 뜬다(더
-  정확). ⚠️ **이 4벌은 임시** — `feedEdited`·`novelReviewed`까지 합쳐 통합 크로스스크린 채널로 재설계할 때
-  걷어낼 예정이니(`docs/TODO.md` 12절), "화면 전환 완료 피드백"을 새로 만들 때 이 4벌을 정식 패턴으로 복제하지 말 것.
+- **크로스스크린 완료 피드백은 통합 채널(`Sources/Main/CrossScreenFeedback.swift`)로 띄운다**(#236 —
+  #221의 blockUser 4벌 복붙을 흡수하며 `feedEdited`("작성 완료!")·`novelReviewed`("평가 완료!")를 복원).
+  발화 화면(UserPage 차단·CreateFeed 제출·NovelReview 저장)은 pop 직전 완료 콜백(`onUserBlocked`/
+  `onSubmitted`/`onSaved`)만 올리고, 각 탭 Root가 `CrossScreenFeedbackState` 하나를 들고
+  `crossScreenFeedback.present(...)` + 자기 `NavigationStack` **컨테이너**의 `.showCrossScreenFeedbackToast`로
+  띄운다 — pop 후 최상단이 된 **직전 뷰** 위에 뜬다(진입 경로에 따라 소소피드/피드상세/작품상세 등).
+  V1은 전역 `NotificationCenter` 배관을 피드 탭 하나만 캐치했지만 V2는 발화한 그 탭에서 뜬다(더 정확).
+  새 완료 피드백이 필요하면 `CrossScreenFeedback`에 케이스를 더하고 seam 콜백을 그 자리에서 present로
+  연결할 것 — Root마다 별도 `@State` 쌍을 새로 만들지 말 것(#221의 4벌 복붙이 그 함정이었다).
+  ⚠️ **콜백은 저장/차단 "성공" 경로에서만 발화해야 한다** — 취소로 닫힐 때도 부르면 완료 안 한 일이
+  완료로 안내된다(NovelReview는 `didSaveReview`, CreateFeed는 `.submitted`로 성공을 가른다).
 - **⚠️ 앱 아이콘·버전 정보는 시뮬레이터 빌드만으론 검증되지 않는다 — 실제 아카이브(`archive-debug`/
   `archive-release` 스킬)를 처음 돌려봐야 드러난다(2026-08-29 실측).** 이 프로젝트가 발견 당시 처음
   겪은 순서 그대로 기록:

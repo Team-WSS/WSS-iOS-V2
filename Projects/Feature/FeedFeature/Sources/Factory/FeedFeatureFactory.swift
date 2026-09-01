@@ -29,7 +29,8 @@ public enum FeedFeatureFactory {
         createFeedUseCase: CreateFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
-        connectedNovel: ConnectedNovel? = nil
+        connectedNovel: ConnectedNovel? = nil,
+        onSubmitted: @escaping () -> Void = {}
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
@@ -37,7 +38,8 @@ public enum FeedFeatureFactory {
                 searchNovelUseCase: searchNovelUseCase,
                 appReviewUseCase: appReviewUseCase,
                 initialDraft: emptyDraft(connectedNovel: connectedNovel)
-            )
+            ),
+            onSubmitted: onSubmitted
         )
     }
 
@@ -50,7 +52,8 @@ public enum FeedFeatureFactory {
         editFeedUseCase: EditFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase,
         loadFeedDetailUseCase: LoadFeedDetailUseCase,
-        appReviewUseCase: AppReviewRequestUseCase
+        appReviewUseCase: AppReviewRequestUseCase,
+        onSubmitted: @escaping () -> Void = {}
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
@@ -60,7 +63,8 @@ public enum FeedFeatureFactory {
                 loadFeedDetailUseCase: loadFeedDetailUseCase,
                 appReviewUseCase: appReviewUseCase,
                 initialDraft: emptyDraft()
-            )
+            ),
+            onSubmitted: onSubmitted
         )
     }
 

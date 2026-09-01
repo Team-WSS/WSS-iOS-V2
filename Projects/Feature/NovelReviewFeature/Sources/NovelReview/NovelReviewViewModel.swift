@@ -27,6 +27,10 @@ final class NovelReviewViewModel {
         var loadFailed = false
         var isSaving = false
         var shouldDismiss = false
+        /// 저장 성공으로 닫히는가 — `shouldDismiss`는 취소에도 켜지므로, 저장 성공 경로에서만 세우는
+        /// 별도 플래그(`shouldRequestReview`와 같은 이유). View가 dismiss 직전 "평가 완료" 크로스스크린
+        /// 피드백(`onSaved`)을 올릴지 판단하는 데 쓴다(#236).
+        var didSaveReview = false
         /// 저장 성공 순간 앱 리뷰 게이트를 통과했는지 — View가 `onChange`로 소비해 `requestReview()`를 부른다.
         /// `shouldDismiss`는 취소에도 켜지므로, 리뷰 신호는 저장 성공 경로에서만 세우는 별도 플래그로 둔다.
         var shouldRequestReview = false
@@ -290,6 +294,7 @@ private extension NovelReviewViewModel {
 
         do {
             try await saveUseCase.execute(draft: state.draft)
+            state.didSaveReview = true
             state.shouldDismiss = true
             recordEngagementAndGateReview()
         } catch {
