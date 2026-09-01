@@ -25,13 +25,11 @@ import WSSComponent
 /// App/Demo가 조립해 값으로 건네받는다. 자세한 계약은 `Navigation/KeywordTabContentBuilder.swift` 참고.
 struct DetailSearchFilterView: View {
 
-    private enum Tab {
-        case info
-        case keyword
-    }
+    /// 탭 모델은 public seam(`Navigation/DetailSearchFilterTab.swift`) — 진입 탭을 호출자가 지정한다(#236).
+    private typealias Tab = DetailSearchFilterTab
 
     @State private var viewModel: DetailSearchFilterViewModel
-    @State private var selectedTab: Tab = .info
+    @State private var selectedTab: Tab
     /// 플랫폼 옆 안내 아이콘 탭으로 열고 닫는 툴팁(항상 떠 있는 배지 아님) — 사용자 확정.
     @State private var isPlatformBetaTooltipPresented = false
     /// 탭 밑줄이 슬라이드하며 이동하는 애니메이션용 — `FeedFeature`의 `SosoFeedView` 탭바와 동일 패턴
@@ -55,10 +53,12 @@ struct DetailSearchFilterView: View {
 
     init(
         filter: SearchFilter,
+        initialTab: DetailSearchFilterTab = .info,
         keywordTabContent: @escaping KeywordTabContentBuilder,
         onSearch: @escaping (SearchFilter) -> Void
     ) {
         self._viewModel = State(initialValue: DetailSearchFilterViewModel(filter: filter))
+        self._selectedTab = State(initialValue: initialTab)
         self.keywordTabContent = keywordTabContent
         self.onSearch = onSearch
     }

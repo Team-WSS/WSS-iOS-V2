@@ -17,6 +17,7 @@ import LibraryFeature
 import NotificationDomain
 import NovelDomain
 import SearchDomain
+import SearchFeature
 import SettingFeature
 import WSSComponent
 
@@ -52,6 +53,9 @@ struct LibraryRootView: View {
         case myLibrarySelectForCollection([CollectionNovel])
         case search
         case authorSearch(String)
+        /// 일반 검색의 장르/키워드 "더보기" 헤더 → 상세탐색 필터 화면(#236 — 진입점이 열 탭을 payload로
+        /// 지정, `HomeRootView`와 동일 규칙). 확정 시 필터 화면은 스택에 남고 `detailSearch`가 위로 push된다.
+        case detailSearchFilter(DetailSearchFilterTab)
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case notificationSetting
@@ -171,6 +175,8 @@ struct LibraryRootView: View {
                         searchView()
                     case .authorSearch(let authorName):
                         searchView(initialQuery: authorName)
+                    case .detailSearchFilter(let initialTab):
+                        detailSearchFilterView(initialTab: initialTab)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     case .novelReview(let novelID, let title, let status):
@@ -350,7 +356,16 @@ private extension LibraryRootView {
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
             onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
             initialQuery: initialQuery
+        )
+    }
+
+    func detailSearchFilterView(initialTab: DetailSearchFilterTab) -> some View {
+        SearchAssembly.makeDetailSearchFilterView(
+            initialTab: initialTab,
+            dependencies: dependencies,
+            onSearch: { filter in path.append(Destination.detailSearch(filter)) }
         )
     }
 

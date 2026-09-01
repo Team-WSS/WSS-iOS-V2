@@ -4,8 +4,11 @@
 - `NormalSearchView` — 일반 검색 진입점. 브라우즈/자동완성/검색 결과가 **같은 화면 안에서** 콘텐츠만 스왑.
 - `DetailSearchResultView` — 장르 탭·키워드 탭에서 **진짜 push**되는 필터 검색 결과 그리드.
 - `DetailSearchFilterView`(#185) — "정보"/"키워드" 탭바, UseCase 없는 순수 입력 화면. **App은 홈 탭의
-  "뭐 읽을지 고민될 때?" 배너(`onDetailSearchTapped`)에서 이 화면을 push한다**(#201부터 —
-  `HomeRootView`가 유일한 실사용처, 아래 "필터 화면 진입·복귀" 참고). "키워드" 탭은 `KeywordFeature`의
+  "뭐 읽을지 고민될 때?" 배너(`onDetailSearchTapped`, #201)와 일반 검색의 장르/키워드 "더보기" 헤더
+  (`onDetailSearchFilterRequested`, #236 — 4탭 전부)에서 이 화면을 push한다**(조립은 App `SearchAssembly.
+  makeDetailSearchFilterView`로 공용화, 아래 "필터 화면 진입·복귀" 참고). 진입 탭은
+  `initialTab: DetailSearchFilterTab`(`Sources/Navigation/`의 public seam)으로 호출자가 지정한다 —
+  장르 더보기 `.info`, 키워드 더보기 `.keyword`(V1 parity). "키워드" 탭은 `KeywordFeature`의
   키워드 선택 화면을 **콘텐츠 주입(`KeywordTabContentBuilder`)으로 재사용**한다(아래 참고) — 이 모듈
   안에 그 화면이 없다.
 
@@ -15,10 +18,11 @@
 - 진입점: `SearchFeatureFactory.makeNormalSearchView(...)`(실제 앱 진입점) + `makeDetailSearchResultView(filter:searchNovelUseCase:logger:onNovelSelected:)`(`DetailSearchResultView`, #196부터 App도 실사용하는 독립 진입점 — 아래 "화면 간 이동" 참고) + `makeDetailSearchFilterView(filter:keywordTabContent:onSearch:)`(#185, #201부터 App(`HomeRootView`)도 실사용). `NormalSearchResultView`(props-only 서브뷰)는 여전히 `NormalSearchView`가 내부에서 조립해서 별도 Factory 메서드가 없다. `keywordTabContent`는 `makeDetailSearchFilterView`에만 있다 — `makeNormalSearchView`/`makeDetailSearchResultView`는 더 이상 받지 않는다(아래 참고).
   - `onNovelSelected: (NovelID) -> Void = { _ in }`(#196에서 추가, 이후 소소픽·상세탐색 결과까지 확장) — **일반 검색 결과**(`NormalSearchResultView`)·**소소픽**(`sosoPickSection`)·**상세탐색 결과**(`DetailSearchResultView`) 세 곳의 작품 셀이 이 콜백을 쓴다. 단 `DetailSearchResultView`는 `makeNormalSearchView`가 아니라 `makeDetailSearchResultView`가 별도로 받는 자기 것 — 호출자(App)가 두 화면 모두에 "같은" 콜백을 넘겨줄 수도 있고 다르게 줄 수도 있다(아래 "화면 간 이동" 참고, App은 보통 같은 걸 재사용함).
   - `onDetailSearchRequested: (SearchFilter) -> Void = { _ in }`(#196에서 추가) — 장르 탭·인기 키워드 칩 탭 → 상세탐색 결과 진입 콜백. **`NormalSearchView`는 더 이상 `DetailSearchResultView`를 직접 push하지 않는다** — 호출자(App)가 이 콜백을 받아 자기 `NavigationPath`에 `makeDetailSearchResultView`를 push해야 한다(이유는 아래 주의사항 "화면이 안 쌓이는 버그" 참고).
+  - `onDetailSearchFilterRequested: (DetailSearchFilterTab) -> Void = { _ in }`(#236에서 추가) — 장르·키워드 섹션 **"더보기" 헤더** → 상세탐색 **필터 화면** 진입 콜백(장르 더보기 `.info` / 키워드 더보기 `.keyword`, V1 parity). 위와 같은 이유로 push는 호출자(App) 몫.
   - `initialQuery: String? = nil`(#197, `NovelDetailFeature`의 "작가 이름 탭" → 사전 검색된 결과로 진입하기 위해 추가) — 비어있지 않으면 `NormalSearchViewModel.init`이 **끝에서 바로** `executeSearch(initialQuery)`를 호출해 화면이 뜨자마자 검색 결과부터 보여준다. 별도 UseCase 없이 기존 텍스트 검색(`searchByText`)을 그대로 재사용한다 — 이 검색은 애초에 제목/작가를 구분하지 않는 단일 텍스트 검색이라(검색바 placeholder도 "작품 제목, 작가를 검색하세요") 작가 이름을 그냥 검색어로 흘려보내면 된다. `onAppear`가 아니라 **`init`에서 1회성으로 처리**하는 이유: `init`은 그 ViewModel 인스턴스 생애주기에서 정확히 한 번만 실행되므로, 화면이 스택에 남아있는 동안 `onAppear`가 재발화돼도(작품 상세로 갔다 돌아오는 등) 검색이 다시 실행되며 사용자가 그 사이 입력한 텍스트를 덮어쓸 걱정이 없다 — `hasLoaded`류 가드가 아예 필요 없다.
 
 **필터 화면 진입·복귀(#185)** — 확정 후 pop할지 push할지는 화면마다 다를 수 있어, `DetailSearchFilterView`는 그 판단을 스스로 하지 않는다:
-- ⚠️ **`DetailSearchFilterView`는 "작품 찾기" 확정 시 `onSearch` 콜백만 호출하고 자기 자신을 pop하지 않는다.** pop·push 여부는 **항상 호출부 책임**이다 — 새 호출부를 추가할 때 반드시 직접 결정할 것. 실사용처인 `HomeRootView`(#201)는 확정 시 자기 `Destination.detailSearch(filter)`로 결과 화면을 **앞으로 push**한다(필터 화면은 스택에 그대로 남는다) — Demo의 `DetailSearchDemoFlow`도 같은 패턴.
+- ⚠️ **`DetailSearchFilterView`는 "작품 찾기" 확정 시 `onSearch` 콜백만 호출하고 자기 자신을 pop하지 않는다.** pop·push 여부는 **항상 호출부 책임**이다 — 새 호출부를 추가할 때 반드시 직접 결정할 것. 실사용처인 4탭 Root(#201 홈 배너 → #236부터 4탭 "더보기")는 확정 시 자기 `Destination.detailSearch(filter)`로 결과 화면을 **앞으로 push**한다(필터 화면은 스택에 그대로 남는다) — Demo의 `DetailSearchDemoFlow`도 같은 패턴.
 - **`DetailSearchResultView`의 필터 요약 pill은 Filter를 push하지 않는다 — 그냥 뒤로가기(`dismiss()`)다**(사용자 확정). 결과 화면 자체엔 필터 편집 기능이 없다 — 필터를 다시 조정하려면 뒤로 가서 이전 화면(장르/키워드 탭 진입이면 `NormalSearchView`, 상세탐색 진입 흐름이면 그 Filter 화면)에서 다시 시작해야 한다. 예전엔 pill이 `FilterEditorNavigation`으로 `DetailSearchFilterView`를 push해 같은 화면의 필터만 교체하는 방식이었으나(#185 초반) 걷어냈다.
 
 ## 핵심 시나리오

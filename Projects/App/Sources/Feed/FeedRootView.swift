@@ -17,6 +17,7 @@ import LibraryFeature
 import NovelDomain
 import ProfileDomain
 import SearchDomain
+import SearchFeature
 import SocialDomain
 import WSSComponent
 
@@ -63,6 +64,10 @@ struct FeedRootView: View {
         case searchNovelForCollection([CollectionNovel])
         case myLibrarySelectForCollection([CollectionNovel])
         case authorSearch(String)
+        /// 작가 이름 검색 화면에서 검색어를 지우면 브라우즈(장르·키워드 섹션)로 돌아가므로, 이 탭도
+        /// 상세탐색 결과·필터로 갈 수 있다(#236 — 예전엔 placeholder였다. `HomeRootView`와 동일 규칙).
+        case detailSearchFilter(DetailSearchFilterTab)
+        case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
     }
 
@@ -178,6 +183,10 @@ struct FeedRootView: View {
                         collectionMyLibrarySelectView(initialSelection: initialSelection)
                     case .authorSearch(let authorName):
                         authorSearchView(authorName)
+                    case .detailSearchFilter(let initialTab):
+                        detailSearchFilterView(initialTab: initialTab)
+                    case .detailSearch(let filter):
+                        detailSearchResultView(filter)
                     case .novelReview(let novelID, let title, let status):
                         NovelReviewAssembly.makeView(
                             novelID: novelID,
@@ -312,14 +321,31 @@ private extension FeedRootView {
 
 private extension FeedRootView {
     /// 피드 탭엔 일반 검색 진입점(검색 버튼)이 없어 `.search` 케이스가 아예 없다 — 작가 이름 검색
-    /// 전용으로만 이 화면을 조립한다. `onDetailSearchRequested`(장르·키워드 칩 탭)는 이 탭에 상세탐색
-    /// 결과로 갈 `Destination`이 없어 아직 placeholder(다른 탭의 미구현 콜백과 같은 패턴).
+    /// 전용으로만 이 화면을 조립한다. 단 검색어를 지우면 브라우즈(장르·키워드 섹션)로 돌아가므로
+    /// 상세탐색 결과·필터 경로는 다른 탭과 동일하게 배선한다(#236 — 예전 placeholder를 해소).
     func authorSearchView(_ authorName: String) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { _ in dependencies.logger.info("상세탐색 결과 진입(미구현) — 피드 탭") },
+            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
             initialQuery: authorName
+        )
+    }
+
+    func detailSearchFilterView(initialTab: DetailSearchFilterTab) -> some View {
+        SearchAssembly.makeDetailSearchFilterView(
+            initialTab: initialTab,
+            dependencies: dependencies,
+            onSearch: { filter in path.append(Destination.detailSearch(filter)) }
+        )
+    }
+
+    func detailSearchResultView(_ filter: SearchFilter) -> some View {
+        SearchAssembly.makeDetailSearchResultView(
+            filter: filter,
+            dependencies: dependencies,
+            onNovelSelected: { path.append(Destination.novel($0)) }
         )
     }
 }

@@ -28,11 +28,10 @@ Sources/
 │                              # **선택된 탭 Root에만** 건네고 소비되면 nil로 되돌린다(아래 주의사항).
 ├── Home/    └── HomeRootView.swift      # "홈" 탭. HomeFactory 조립 + 작품 상세·피드 상세·일반 검색·
 │                                          # 작가 이름 검색·작품 평가·피드 작성·유저 프로필·그 전체 피드
-│                                          # 목록·마이페이지 편집·상세탐색 필터/결과(SearchFeatureFactory.
-│                                          # makeDetailSearchFilterView, #201 — "키워드" 탭 콘텐츠는
-│                                          # KeywordFeatureFactory.makeSearchKeywordView를 이 루트가
-│                                          # KeywordTabContentBuilder로 감싸 조립. 지금은 홈 탭에만
-│                                          # 있는 진입점이라 SearchAssembly로 안 뽑음)까지(NovelDetailAssembly/
+│                                          # 목록·마이페이지 편집·상세탐색 필터/결과(#201 홈 배너 →
+│                                          # #236부터 검색 "더보기"로 4탭 공용이 되어 필터 조립·키워드 탭
+│                                          # 콘텐츠(KeywordTabContentBuilder)를 SearchAssembly.
+│                                          # makeDetailSearchFilterView로 승격)까지(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
 │                                          # LibraryFactory.makeUserLibraryView(타유저 서재)/SearchAssembly/
 │                                          # MypageFactory) 실제 push.
@@ -199,10 +198,9 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   보낼 이유가 아직 없어서 일부러 하나로 합쳤다. 나중에 갈림이 필요해지면(예: 신규 유저만 튜토리얼)
   `onFinished`를 매개변수 있는 콜백으로 바꿀 것.
 - **각 탭 Root의 화면 전환 콜백 중 상당수는 이미 실제 push로 뚫려 있다**(작품 상세·피드 상세·일반
-  검색·프로필 편집·설정·타유저 프로필·알림 설정·알림 목록/상세·홈의 상세탐색 필터/결과, #201) — 남은
-  건 대상 Feature 모듈이 App에 아직 안 붙어 있어 로그만 남기는 placeholder다(예: `FeedRootView`의
-  `onDetailSearchRequested` — 피드 탭엔 상세탐색 결과로 갈 `Destination`이 아직 없다).
-  그 모듈을 붙일 때 해당 콜백 하나만 실제 화면 전환으로 바꾸면 된다(전부 한 번에 바꿀 필요 없음). **`SosoFeedView`의 피드
+  검색·프로필 편집·설정·타유저 프로필·알림 설정·알림 목록/상세·상세탐색 필터/결과 — 필터/결과는
+  #236부터 4탭 전부, 검색 화면의 장르·키워드 "더보기" 헤더 포함) — 남는 placeholder가 생기면 그
+  모듈을 붙일 때 해당 콜백 하나만 실제 화면 전환으로 바꾸면 된다(전부 한 번에 바꿀 필요 없음). **`SosoFeedView`의 피드
   셀은 연결 작품 배너(`onNovelTapped`)·작성자 프로필(`onUserProfileTapped`)까지 전부 실제 push다**
   (#196) — `FeedRootView`가 전자는 같은 `Destination.novel`로, 후자는 `Destination.userPage` →
   `UserPageAssembly`로 연결한다.
