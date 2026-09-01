@@ -24,6 +24,9 @@ let appSigningConfigurations: [Configuration] = [
                // Debug 빌드는 홈 화면에서 운영 앱과 구분되도록 별도 아이콘 세트를 쓴다
                // (Resources/Assets.xcassets/AppIcon-Debug.appiconset, 사용자가 실제 이미지 교체 예정).
                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon-Debug",
+               // 홈 화면 표시 이름(Info.plist의 CFBundleDisplayName이 참조) — 운영 앱과 구분되도록 별도
+               // 문구. PRODUCT_NAME(내부 CFBundleName·실행파일명)은 그대로 두고 이 키만 Debug/Release로 나눈다.
+               "APP_DISPLAY_NAME": "웹소소 개발용",
            ],
            xcconfig: .relativeToXCConfig(type: .dev, name: env.targetName)),
     .release(name: .release,
@@ -38,6 +41,8 @@ let appSigningConfigurations: [Configuration] = [
                "PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]": .string("match AppStore \(env.releaseBundleId)"),
                // 운영 아이콘(V1과 동일, Resources/Assets.xcassets/AppIcon.appiconset).
                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+               // 홈 화면 표시 이름(Info.plist의 CFBundleDisplayName이 참조) — 운영 앱 정식 이름.
+               "APP_DISPLAY_NAME": "웹소소",
            ],
            xcconfig: .relativeToXCConfig(type: .prod, name: env.targetName))
 ]
