@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import AuthData
 @testable import AuthDataTesting
@@ -16,14 +17,37 @@ struct DefaultAuthRepositoryTests {
         service: MockAuthService = MockAuthService(),
         tokenStore: MockTokenStore = MockTokenStore(),
         deviceIdentifierStore: MockDeviceIdentifierStore = MockDeviceIdentifierStore(),
+        appStorage: MockAppStorage = MockAppStorage(),
         logger: DataLogger? = nil
     ) -> DefaultAuthRepository {
         DefaultAuthRepository(
             service: service,
             tokenStore: tokenStore,
             deviceIdentifierStore: deviceIdentifierStore,
+            appStorage: appStorage,
             logger: logger
         )
+    }
+
+    /// 로그아웃·탈퇴가 지워야 하는 사용자 스코프 캐시를 미리 채운 저장소를 만든다.
+    private func makeAppStorageWithUserCache() -> MockAppStorage {
+        let appStorage = MockAppStorage()
+        appStorage.set(.userID, 1)
+        appStorage.set(.nickname, "이전사용자")
+        appStorage.set(.characterID, 2)
+        appStorage.set(.gender, "F")
+        appStorage.set(.birthYear, 1999)
+        appStorage.set(.myLibraryFilter, Data())
+        return appStorage
+    }
+
+    private func expectUserScopedCacheCleared(_ appStorage: MockAppStorage) {
+        #expect(appStorage.get(.userID) == nil)
+        #expect(appStorage.get(.nickname) == nil)
+        #expect(appStorage.get(.characterID) == nil)
+        #expect(appStorage.get(.gender) == nil)
+        #expect(appStorage.get(.birthYear) == nil)
+        #expect(appStorage.get(.myLibraryFilter) == nil)
     }
 
     private func makeDataLogger(underlying: Logger) -> DataLogger {
@@ -140,6 +164,46 @@ struct DefaultAuthRepositoryTests {
         #expect(logger.debugMessages.contains { $0.contains("logout succeeded") })
     }
 
+    @Test("로그아웃 성공 시 사용자 스코프 캐시(userID·닉네임·캐릭터·성별·출생년도·서재 필터)를 모두 지운다")
+    func logoutClearsUserScopedCache() async throws {
+        let tokenStore = MockTokenStore()
+        try tokenStore.saveRefreshToken("refresh")
+        let appStorage = makeAppStorageWithUserCache()
+
+        let sut = makeRepository(
+            tokenStore: tokenStore,
+            deviceIdentifierStore: MockDeviceIdentifierStore(deviceIdentifier: "device"),
+            appStorage: appStorage
+        )
+
+        try await sut.logout()
+
+        expectUserScopedCacheCleared(appStorage)
+    }
+
+    @Test("로그아웃 요청 실패 시 사용자 스코프 캐시를 보존한다")
+    func logoutFailureKeepsUserScopedCache() async {
+        let service = MockAuthService()
+        service.postLogoutResult = .failure(NetworkingError.responseFailure(code: 500, body: nil))
+        let tokenStore = MockTokenStore()
+        try? tokenStore.saveRefreshToken("refresh")
+        let appStorage = makeAppStorageWithUserCache()
+
+        let sut = makeRepository(
+            service: service,
+            tokenStore: tokenStore,
+            deviceIdentifierStore: MockDeviceIdentifierStore(deviceIdentifier: "device"),
+            appStorage: appStorage
+        )
+
+        await #expect(throws: RepositoryError.serverUnavailable) {
+            try await sut.logout()
+        }
+
+        #expect(appStorage.get(.nickname) == "이전사용자")
+        #expect(appStorage.removedKeys.isEmpty)
+    }
+
     @Test("로그아웃 요청 실패 시 성공 로그를 남기지 않는다")
     func logoutFailureDoesNotLogSuccess() async {
         let service = MockAuthService()
@@ -179,6 +243,16 @@ struct DefaultAuthRepositoryTests {
         #expect(logger.debugMessages.contains { $0.contains("withdraw succeeded") })
     }
 
+    @Test("회원 탈퇴 성공 시 사용자 스코프 캐시를 모두 지운다")
+    func withdrawClearsUserScopedCache() async throws {
+        let appStorage = makeAppStorageWithUserCache()
+        let sut = makeRepository(appStorage: appStorage)
+
+        try await sut.withdraw(draft: WithdrawalReasonDraft())
+
+        expectUserScopedCacheCleared(appStorage)
+    }
+
     // MARK: - syncAppleCredential
 
     @Test("Apple 계정 연동 성공 시 성공 로그를 남긴다")
@@ -199,6 +273,30 @@ struct DefaultAuthRepositoryTests {
         #expect(service.requestedAppleSync?.authorizationCode == "code")
         #expect(service.requestedAppleSync?.idToken == "idToken")
         #expect(logger.debugMessages.contains { $0.contains("syncAppleCredential succeeded") })
+    }
+}
+
+/// remove 호출까지 추적하는 인메모리 저장소 — 로그아웃·탈퇴의 사용자 캐시 정리 검증용.
+/// `set(nil)`도 삭제로 다뤄 `UserDefaultsStorage`의 실제 의미와 맞춘다(BaseData/CLAUDE.md 주의사항).
+private final class MockAppStorage: AppStorage, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+    private(set) var removedKeys: [String] = []
+
+    func get<V>(_ key: StorageKey<V>) -> V? {
+        values[key.rawValue] as? V
+    }
+
+    func set<V>(_ key: StorageKey<V>, _ value: V?) {
+        if let value {
+            values[key.rawValue] = value
+        } else {
+            values.removeValue(forKey: key.rawValue)
+        }
+    }
+
+    func remove<V>(_ key: StorageKey<V>) {
+        values.removeValue(forKey: key.rawValue)
+        removedKeys.append(key.rawValue)
     }
 }
 

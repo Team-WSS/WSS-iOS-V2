@@ -111,6 +111,7 @@ final class AppDependencies {
             client: client,
             tokenStore: tokenStore,
             deviceIdentifierStore: DefaultDeviceIdentifierStore(),
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "AuthData", underlying: logger)
         )
         self.termsAgreementRepository = SettingDataFactory.makeTermsAgreementRepository(

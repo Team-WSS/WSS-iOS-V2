@@ -16,6 +16,7 @@ public enum AuthDataFactory {
         client: NetworkingRequestable,
         tokenStore: TokenStore,
         deviceIdentifierStore: DeviceIdentifierStore,
+        appStorage: AppStorage = UserDefaultsStorage(),
         logger: DataLogger? = nil
     ) -> AuthRepository {
         let service = DefaultAuthService(client: client)
@@ -24,6 +25,7 @@ public enum AuthDataFactory {
             service: service,
             tokenStore: tokenStore,
             deviceIdentifierStore: deviceIdentifierStore,
+            appStorage: appStorage,
             logger: logger
         )
     }
