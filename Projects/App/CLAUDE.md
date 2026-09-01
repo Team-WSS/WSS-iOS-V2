@@ -242,7 +242,7 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
 - **`onAuthenticationRequired`(→ `ContentView.resetToOnboarding`)는 온보딩 라우팅 + `AppDependencies`
   재조립까지 하고, 토큰 삭제는 하지 않는다**(#236) — 401을 받은 시점에 이미 서버가 세션을 무효화한
   상태라 재로그인하면 새 토큰으로 덮어써진다. 재조립을 하는 이유는 **이전 세션에서 채워졌을 수 있는
-  `HomePrefetchStore` 슬롯을 인스턴스째 버리기 위함**(TODO 11절의 좁은 레이스 — 유효 토큰으로 채워진
+  `HomePrefetchStore` 슬롯을 인스턴스째 버리기 위함**(#225 리뷰의 좁은 레이스 — 유효 토큰으로 채워진
   뒤 소비 전에 세션이 바뀌는 경우). 어느 탭에서 발생했든(`MainTabView`가 4탭의 `onAuthenticationRequired`를
   같은 클로저 `restoreDeepLinkAndRequireAuthentication`으로 받음) idempotent해야 한다는 계약은 그대로
   유지 — 재조립은 `route != .onboarding` 가드로 1회만 된다.

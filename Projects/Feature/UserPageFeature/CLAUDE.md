@@ -210,7 +210,7 @@
   develop 라인 #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo가 컴파일이 안
   되게 어긋났던 걸 rebase 중 최소 수정으로 되살렸다(2026-08-28). 실제 push/무시 여부는 아직 미설계 —
   Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))상 완전하진 않다는 것만 기록
-  ([docs/TODO.md](../../../docs/TODO.md) 11번).
+  ([docs/TODO.md](../../../docs/TODO.md) 10절 — 절 번호는 정리로 밀릴 수 있으니 Demo 항목을 찾을 것).
 - `WSSAlertView`의 버튼은 접근성 트리에 안 잡힌다 — UI 자동화(XcodeBuildMCP `tap`)로 알럿이 뜨는 것까지만 검증 가능, 버튼 탭 이후 동작은 코드 리뷰로 대체(WSSComponent 공용 컴포넌트라 이 모듈 범위 밖).
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).

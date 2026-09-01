@@ -22,48 +22,6 @@
 
 기능 작업(화면·기능 PR)에서 발견했으나 그 범위를 벗어나 미룬 제품/기능 결함·배선.
 
-### 1. 로그인 세션이 끝나도 로컬 프로필 캐시가 남는다
-
-- **무엇**: `DefaultAuthRepository`의 `logout()`·`withdraw()`가 `tokenStore.clearTokens()`만 호출하고
-  `UserDefaults`(`UserDefaultsStorage`)에 쌓인 **사용자 값 5개를 그대로 남긴다** —
-  `userID`·`nickname`·`characterID`·`gender`·`birthYear`(`StorageKey.swift`). Auth 쪽엔 `appStorage` 의존 자체가 없다.
-- **결과**: 계정을 갈아타면 **이전 사용자의 값이 다음 사용자 화면에 비칠 수 있다.** 로그인 직후 프로필 조회가
-  캐시를 덮기 전에 화면이 먼저 뜨면 드러난다.
-- **어떻게 드러났나**: #179(홈)에서 이 캐시를 **읽는 첫 소비자**가 생겼다 — 추천글 섹션 제목이
-  "{닉네임}님을 위한 추천글"이라 이전 사용자의 닉네임이 그대로 노출된다. 캐시를 쓰는 쪽은 이전부터
-  `ProfileData`(프로필 조회·수정 시 저장)였으나 읽는 화면이 없어 가려져 있었다.
-- **어디를 고치나**: `Projects/Data/AuthData/Sources/Repository/DefaultAuthRepository.swift`의 두 경로 +
-  `Projects/Data/BaseData/Sources/LocalStorage/UserDefaultsStorage.swift`.
-  ⚠️ **일괄 삭제 API가 없다** — 현재 프로토콜은 `get`/`set`뿐이라 `remove`(또는 세션 스코프 초기화)를 먼저 얹어야 한다.
-- **왜 지금 안 했나**: #179는 홈 화면 범위였다. Auth·Profile까지 넓히면 그쪽 리뷰·테스트를 다시 돌려야 해서 분리했다.
-- **놓치기 쉬운 것**: 닉네임만 지우면 반쪽이다. 위 5개가 **모두 사용자 개인 값**이라 함께 다뤄야 하고,
-  로그아웃뿐 아니라 **탈퇴**에도 같은 처리가 필요하다.
-
-### 2. 강제 업데이트 알럿이 아직 아무 데서도 호출되지 않는다
-
-- **무엇**: 서버가 주는 최소 버전과 현재 앱 버전을 비교해 **업데이트 필요 알럿**을 띄우는 흐름 —
-  Domain(`SettingDomain/Sources/AppUpdate/`: `AppVersion`·`AppUpdatePolicy.requiresForceUpdate(current:)`·
-  `AppUpdateRepository`·`CheckForceUpdateRequirementUseCase`)과 Data(`DefaultAppUpdateRepository` +
-  `SettingDataFactory.makeAppUpdateRepository(client:logger:)`)는 **테스트까지 완비돼 있는데 부르는 쪽이 없다.**
-- **결과**: 서버가 최소 버전을 올려도 구버전 앱이 그대로 굴러간다. 비교 로직은 이미 있으니 남은 건 배선뿐이다.
-- **어디를 고치나**: `Projects/App/` — 조립(`NetworkingClient` → Repository → UseCase) + 앱 진입 게이트.
-  ✅ **`AppVersionProviding` 실구현은 #225에서 생겼다** — `SettingDataFactory.makeAppVersionProvider(bundle:)`
-  (`BundleAppVersionProvider`, internal). 파싱 실패 폴백은 **절대 강제되지 않는 방향**(max 버전)이라
-  번들이 깨져도 앱이 업데이트 알럿에 잠기지 않는다. 남은 건 App 조립·게이트 배선뿐.
-- **게이트 위치는 확정됐다** — #225의 `BootstrapAppUseCase`가 강제 업데이트를 **첫 게이트**로 판정하고
-  `BootstrapOutcome.forceUpdate`를 올린다. 즉 이 항목의 남은 몫은 **알럿 UI + App 배선**뿐이고,
-  아래 11절 "App 배선"과 **같은 PR에서 함께** 처리한다.
-- **놓치기 쉬운 것**:
-  - ⚠️ **HomeFeature에 넣지 말 것.** 홈은 탭 복귀마다 `.load`가 도는 화면이라 탭을 옮길 때마다 재체크되고,
-    딥링크·알림·온보딩으로 다른 화면에 바로 진입하는 경로는 아예 안 걸린다. 앱 전역 게이트라 App 몫이다.
-    (덤으로 홈이 `SettingDomain` 의존을 새로 물게 된다.)
-  - **정책 조회가 실패하면 통과시켜야 한다** — 서버 장애로 앱을 통째로 못 쓰게 만들면 안 된다.
-    **이 분기는 디자인 시안에 없으니** 구현 시 명시적으로 정할 것.
-  - `WSSAlert`는 **버튼 탭이 표시 상태를 자동으로 닫지 않는다**(모든 `buttonActions`가 스스로 되돌려야 함).
-    강제 업데이트는 "닫기 불가 + 앱스토어 이동"이라 이 계약과 정면으로 맞물린다 — 기존 컴포넌트로
-    커버되는지 먼저 확인할 것.
-- **디자인**: [Figma — 업데이트 알럿](https://www.figma.com/design/QLYZA00K5EIozTroOTDYAU/%EC%9B%B9%EC%86%8C%EC%86%8C-%EB%94%94%EC%9E%90%EC%9D%B8?node-id=20238-24073&m=dev)
-
 ### 4. 최종 이관(cutover) 시 운영 앱의 Bundle ID·서명 팀으로 교체해야 한다
 
 - **무엇**: WSS-iOS-V2는 지금 운영 중인 기존 앱을 **나중에 완전히 대체**할 새 프로젝트다(사용자 확정).
@@ -189,31 +147,6 @@
 - **어디를 고치나**: `BaseDomain/DeepLink.swift`(https 형식 추가) + App `Info.plist`/entitlements +
   `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.makeTemplate`(`webUrl`).
 
-### 9. 콜드스타트 시 저장된 세션을 재사용하지 않는다(+ 로그아웃 상태에서 탭바가 순간 노출된다)
-
-- **무엇**: `ContentView.route`의 기본값이 #197부터 `.main`이다(`@State private var route: Route = .main`,
-  구 `.onboarding`). 세션 복원 로직 자체는 여전히 없다 — Keychain(`DefaultTokenStore`)에 유효한 토큰이
-  남아있는지 확인해 분기하는 게 아니라, 무조건 메인 탭부터 그린다.
-- **결과**: 로그인 성공 시 토큰이 저장되고 401 자동 갱신도 연결돼 있지만(#196), 그 지속성은 **같은
-  프로세스 안에서만** 유효하다 — 강제 종료 후 재실행하면 토큰이 살아있어도 도로 로그인해야 한다.
-  **게다가 #197부터는 로그아웃 상태(또는 토큰이 아예 없는 상태)로 앱을 켜도 몇 초간 `MainTabView`
-  (탭바)가 먼저 보였다가 401로 온보딩에 튕겨 돌아간다** — `App/CLAUDE.md`의 "로그인 안 된 상태로
-  `MainTabView`를 열면 몇 초 안에 온보딩으로 튕겨 돌아간다" 항목이 그 증상이다. `.onboarding` 기본값
-  시절엔 이 노출 자체가 없었다는 점에서 체감상 회귀지만, **사용자 확정으로 지금은 그대로 둔다**(4탭이
-  실제 화면으로 다 채워진 지금 상태를 UI 기준으로 유지하기로 함, 2026-08-28) — 세션 복원이 이 회귀의
-  근본 해법이라 아래 작업과 함께 다룬다.
-  **딥링크(#228)도 이 회귀에 걸린다** — 토큰 없는 콜드스타트로 카드 "앱에서 보기"를 열면 홈이 링크를 소비해
-  push한 뒤 401 바운스로 통째로 사라졌다. #228은 `MainTabView.deliveredDeepLink`(401 시 `pendingDeepLink`로
-  되살림)로 막아뒀다(`App/CLAUDE.md` 딥링크 항목). 세션 복원이 들어오면 이 콜드스타트 401 자체가 사라지지만
-  **그 복원 로직은 "보던 중 만료" 바운스에 여전히 필요하니 지우지 말 것**.
-- **어디를 고치나**: `ContentView.init` 또는 `body` 진입 시점에서 기존 세션(access/refresh token)
-  유효 여부를 확인해, 없으면 `route`를 `.onboarding`으로 시작하도록 분기를 추가한다(있으면 지금처럼
-  `.main`). ⚠️ `tokenStore`는 현재 `AppDependencies.init()` 내부 지역 변수라 `dependencies.tokenStore`로
-  바로 못 꺼낸다 — 착수 시 먼저 인스턴스 프로퍼티로 승격해야 한다.
-- **왜 지금 안 했나**: #196 체크리스트 범위 밖(사용자 확인, 2026-08)이었고, #197(메인 탭이 실제로
-  생기는 이슈)에서도 범위 밖으로 재확인됐다(2026-08-28) — 세션 복원 자체가 별도 작업 단위라 이 PR에
-  묶지 않기로 함.
-
 ### 10. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
 
 - **무엇**: `Projects/Feature/UserPageFeature/Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`가
@@ -228,77 +161,17 @@
 - **왜 지금 안 했나**: 이번 rebase는 컴파일 회복이 목적이라 최소 수정(no-op)만 했다 — 실제 Demo 내비게이션
   설계는 별개 작업이라 분리했다.
 
-### 11. 런치 부트스트랩 ✅모듈 구현됨(#225) / 남은 것: **App 배선**
-
-- **끝난 것**(#225): `SplashDomain`(게이트 순서·실패 분기·예산 정책) / `SplashData`(도메인 6종에 위임하는
-  composite) / `SplashFeature`(스플래시 화면, 결과를 `onFinish`로 App에 위임) / `HomePrefetchStore`(actor,
-  single-shot + 소비 창) / `BundleAppVersionProvider`(`AppVersionProviding` 실구현) / 홈 레포의 프리페치 소비 배선.
-- **남은 것 — App 배선(별도 PR, 사용자 확정 2026-08-31)**: 지금은 `Projects/App`에 Splash 참조가 0건이라
-  **앱을 실행해도 스플래시가 뜨지 않고 게이트가 하나도 돌지 않는다**. 배선에 필요한 것:
-  1. `Projects/App/Project.swift` 의존에 `.feature(.splash)`·`.domain(.splash)`·`.data(.splash)` 추가.
-  2. `AppDependencies`에 `HomePrefetchStore` **단일 인스턴스** + `appUpdateRepository`(현재 미조립) +
-     `LaunchGateRepository`·`LaunchTaskRepository`·`DefaultBootstrapAppUseCase` 조립.
-  3. `ContentView`에 `.splash` Route를 추가해 **초기 route로** 두고, `onFinish`에서
-     `.forceUpdate`(닫기 불가 알럿)·`.intro`(온보딩)·`.main(needsTermsAgreement:)`(홈+약관 시트)를 라우팅.
-- **배선할 때 놓치기 쉬운 것** (전부 #225 리뷰에서 나온 실제 함정):
-  - ⚠️ **프리페치용 추천 레포와 소비용 추천 레포를 분리해야 한다.** App엔 조립된 `RecommendationRepository`가
-    하나뿐이라 그대로 `makeLaunchTaskRepository(recommendationRepository:)`에 넘기면 **프리페치가 스스로를
-    무효화한다** — 프리페치가 부르는 `fetchTodayDiscoveries()`가 빈 슬롯에 consume을 시도해 **소비 창을
-    닫아 버리고**, 그 직후 `fill`이 폐기된다. store는 영영 안 채워지고 런치마다 추천 API 3개만 버려지는데,
-    증상이 "느려지지 않았다"라 발견이 어렵다. store는 **소비하는 쪽에만** 주입할 것.
-  - ⚠️ **store 주입은 짝으로만 의미가 있다** — 한쪽(`SplashDataFactory`)에만 넘기면 런치마다 추천 API 3개를
-    더 때리고 결과는 아무도 안 쓴다. 타입이 안 막아주니(한쪽 non-optional, 한쪽 기본 nil) 두 조립을 붙여 둘 것.
-  - ⚠️ **`onFinish`가 불리기 전까지 스플래시 뷰를 계층에서 빼지 말 것** — 완료 신호가
-    `onChange(of: state.outcome)`라 뷰가 떼어진 사이 세팅된 outcome은 감지되지 않는다.
-  - 강제 업데이트 알럿·약관 시트 **UI 자체가 App에 아직 없다** — 배선 PR이 함께 만들어야 한다.
-  - **세션 전환(로그아웃·재로그인·`.intro` 낙착) 때 `HomePrefetchStore`를 새 인스턴스로 교체할 것**(권장).
-    부트스트랩은 `.intro`로 갈라져도 이미 던진 프리페치를 되돌리지 않는다. 프리페치 3종이 전부
-    `requireToken`이 된 뒤로는(2026-08-31, today/trending 전환 포함) 죽은 세션에선 슬롯이 안 채워져
-    (fail-closed), 과거의 "익명 200이 슬롯을 채워 재로그인 뒤 묵은 데이터가 소비되는" 일상 함정은 닫혔다 —
-    남은 건 "유효 토큰으로 채워진 뒤 소비 전에 세션이 바뀌는" 좁은 레이스뿐이라 교체는 belt-and-suspenders다.
-    (부수 태스크를 약관 게이트 뒤로 미루는 해법은 프리페치 이득을 죽여서 채택하지 않았다.)
-  - ⚠️ **예산이 401 재발급 대기에는 안 걸린다** — `SessionRefreshCoordinator`가 공유 갱신을
-    `try await task.value`(취소 비반응)로 기다려서, 만료 토큰 + 느린 망이면 약관 게이트가 예산 4초를 넘겨
-    `URLSession` 기본 60초까지 스플래시에 고정될 수 있다. 근본 해결은 Core(Networking) 몫 — refresh 대기를
-    취소 가능하게 하거나 request timeout을 두는 것. 배선 전에 판단할 것.
-- **범위는 today·trending·taste 3종**(2026-08-31 taste 추가 — 처음엔 V1처럼 2종만이었고 "taste는 느린
-  개인화라 제외"였으나, 홈 첫 페인트는 세 호출을 한꺼번에 기다리는 **원자적 렌더**라 하필 제일 느린 taste를
-  안 데우면 첫 페인트가 그 왕복에 붙잡혀 **2종 프리페치의 이득이 0**이 됨을 확인하고 뒤집었다. 개인화
-  프리페치의 전제는 "비로그인 진입 불가" + taste가 `requireToken`이라 죽은 세션에선 슬롯이 안 채워지는
-  fail-closed 성질). **알림 배지는 여전히 프리페치 제외** — 대신 `HomeViewModel`이 콘텐츠와 배지를 따로
-  수확해 배지 왕복이 첫 페인트를 붙잡지 않는다(→ HomeFeature `CLAUDE.md`).
-- 전체 설계·근거의 정본: [`Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md`](../Projects/Feature/HomeFeature/V1_BEHAVIOR_CONTRACT.md) 1.5.
-
 ### 12. V1 parity 판정(#222 C1)에서 "되살리기/고치기로" 결정됐으나 미룬 것들
 
 C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이 판정한 결과, **되살리거나 고치기로 결정됐지만**
 추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
 서버 요청 파라미터 매핑의 V1↔V2 교차 종합(C2)은 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md)가 정본.
 
-- ~~**앱 리뷰 요청(StoreKit) 재도입**~~ ✅ **완료(#221)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입.
-  BaseDomain `AppReviewRequestUseCase` + BaseData(UserDefaults+Bundle 버전) repo를 피드·감상평이 공유하고,
-  프롬프트는 각 View가 `@Environment(\.requestReview)`(StoreKit)로 띄운다. 상세는 두 모듈 `V1_BEHAVIOR_CONTRACT.md`.
 - **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
-- **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,
-  상세검색 진입경로 부재. 전부 App 라우터/네비게이션 배선 대기 — **App 모듈에서 처리**(사용자 확정 2026-08-28). → `App`.
-- **push 화면 재진입 재조회 복원 (횡단, 사용자 확정 2026-08-28)** — V1은 push 화면도 `viewWillAppear`마다
-  서버 재조회했으나 V2는 `hasLoaded` 1회 가드로 성공 후 재조회하지 않는다. **push→pop→복귀 창에서 서버가
-  바뀐 것(새 알림·다른 기기 읽음·외부 변경)이 미반영**되는 걸 없애기로 결정 — 복귀 시 재조회를 복원한다.
-  대상은 **알림 목록/상세·타유저 프로필·전체 피드 목록·작품 상세** 등 push 계열. 단 스크롤 위치·낙관 반영
-  보존을 깨지 않게 화면별로 조정(전체 피드 목록처럼 "비우고 처음부터"는 재검토). 근거: `NotificationFeature`
-  1.1·0-1 / `UserPageFeature` 4.1·5.2·0-2 / `NovelDetailFeature` 0(1회 로드).
-  ⚠️ **작품 상세는 실측 회귀 확인**(사용자 보고 2026-08-28: 작품 평가 후 상세 복귀 시 헤더 별점·집계 미갱신) —
-  parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
-- **크로스스크린 완료 피드백 재설계 (App 조정 계층, 사용자 확정 2026-08-28)** — V1은 `NotificationCenter` 배관
-  (`feedEdited`·`NovelReviewed`·`BlockUser`)으로 다른 화면에서 끝난 일의 결과를 복귀 화면에 토스트로 알렸다
-  ("수정 완료"·"평가 완료"·"차단했어요"). V2는 셋 중 **`BlockUser`("차단했어요")만 #221에서 먼저 복원**했다 —
-  `UserPageView.onUserBlocked` seam(→ Factory → `UserPageAssembly`) + 4탭 Root의 `.showWSSToast(.blockUser)`
-  (각 탭 `NavigationStack` 오버레이 → pop 후 직전 뷰 위, `UserPageFeature/CLAUDE.md`·`V1_BEHAVIOR_CONTRACT.md` 4.6).
-  **단 이 4탭 배선은 의도적 interim**(4벌 복붙) — `feedEdited`·`novelReviewed`까지 합쳐 위 push 재진입 재조회 복원과
-  **같은 App 배선 자리**에서 콜백/이벤트 기반 **통합 채널**로 재설계하고(싱글톤 NotificationCenter 답습 금지), 그때
-  이 블록토스트 4벌도 그 채널로 흡수한다. 근거: `FeedFeature` 0절 15 / `NovelDetailFeature` 6.5·0절 11 /
-  `UserPageFeature` 4.6. → App + 다수 Feature.
+
+(검색 네비게이션 5경로·push 재진입 재조회·크로스스크린 완료 피드백은 **#236에서 해소**돼 지웠다 —
+현재 동작의 정본은 각 모듈 `CLAUDE.md`와 `App/CLAUDE.md`의 크로스스크린 피드백 채널 항목.)
 
 ### 13. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 
