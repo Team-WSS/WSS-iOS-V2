@@ -44,10 +44,10 @@
 
 ## 0. 점검 대기 요약
 
-**판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
+**판정 상태(2026-09-01 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 또는 구현 완료 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
-1. **재진입 재조회 없음** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 `hasLoaded` 가드로 **1회만 로드**하고 재진입 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 V2가 직접 재로드하나, **다른 화면을 다녀온 뒤**(평가 작성·수정, 피드 수정, 피드 상세에서 좋아요)의 헤더 별점·읽기상태·키워드/그래프 집계 최신화가 사라졌을 수 있다. "1회 로드"는 V2 `CLAUDE.md`에 명문화됐으나 그 **부작용(외부 변경 후 stale)**은 별도 판정. → [1.1](#11-진입재조회생명주기)
-   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음.** ⚠️ **실측 회귀(사용자 보고): 작품을 평가한 뒤 상세로 복귀해도 헤더 별점·집계가 갱신되지 않는다** — parity 복원이 아니라 **관측된 확정 회귀**다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함. 단 화면이 무거우니(header·info·feed) 전체 재로드 강제가 아니라 **외부 변경 최신화(헤더 집계 등) 목적의 가벼운 갱신**으로 조정. `docs/TODO.md` 9.
+1. ✅ **구현 완료(#236 — 재조회 복원)** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2도 이제 재진입마다 **조용한 재조회**로 같은 범위를 최신화한다: `loadNovel`(header·info 상당) + 피드를 세운 뒤라면 `refreshFeeds`(V1과 같은 `lastFeedId 0 + size=보던 개수` 통째 교체 — V1 `NovelDetailViewModel.swift:595-600` 방식 그대로, 상한 100은 `NovelFeedPageSizePolicy`). V1과 달리 전면 스피너 없이 제자리 교체라 스크롤·화면이 유지된다. → [1.1](#11-진입재조회생명주기)
+   - 경위: **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원 — 종전 'Keep(1회 로드)' 판정을 뒤집음**(실측 회귀: 평가 후 복귀 시 헤더 집계 미갱신). #236에서 헤더 조용한 재조회를 먼저 복원했고, "가벼운 갱신"으로 조정하며 피드를 뺐더니 **피드 작성 후 복귀 시 목록 미갱신이 실측**돼(2026-09-01, 사용자 보고) 피드 재조회까지 복원해 완결.
 2. ✅ **Keep 확정** (2026-08-28: VM Task 슬롯 가드+NavigationStack로 해소, 순수 네비 중복만 App 몫 — 본문 6.1) — **더블탭 가드(throttle) 제거**: V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
 3. 🔧 **미배선(App 배선 대기·삭제 아님)** — **작가 검색 화면 라우팅 미구현**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
 4. ✅ **구현 완료** (2026-08-31 — 되살림) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2에 재도입**했다 — 복제본 대신 **실제 상태바를 딤에서 뚫는 스포트라이트**로 개선(사용자 선택). 저장은 `BaseDomain.OnboardingHintUseCase`(범용 온보딩 플래그, UserDefaults). → [6.4](#64-첫-감상평-안내-오버레이)
@@ -60,7 +60,7 @@
 8. 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
 9. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
 10. 🔧 **복원 확정→TODO 12절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
-11. 🔧 **복원 확정→App 크로스스크린 피드백 재설계(Feed 15와 묶음, TODO 12절)** (2026-08-28, 사용자) — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2엔 이 알림 관찰자·토스트가 없다. → [6.5](#65-알림-관찰자-토스트)
+11. ✅ **구현 완료(#236 — App 크로스스크린 피드백 채널, Feed 15와 한 묶음)** — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2는 App의 `CrossScreenFeedback` 채널(`feedEdited`·`novelReviewed` 케이스)이 복귀 화면 위에 띄운다(싱글톤 NotificationCenter 대신 콜백 seam). → [6.5](#65-알림-관찰자-토스트)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -72,10 +72,10 @@
 
 ### 1.1 진입·재조회·생명주기
 
-- 🔧 **재조회 복원으로 변경** (2026-08-28, 사용자 — 종전 'Keep(1회 로드)' 판정을 뒤집음) — V1은 `viewWillAppear`마다 `reloadData`를 쏴 **header·info·feed 3종을 전부 다시 조회**한다(재진입 시 최신 집계 반영). 최초 1회 가드 없음.
-  - **V2: `hasLoaded` 가드로 1회만 로드**하고 재진입(onAppear 재발화) 시 재조회하지 않는다. 화면 **내부** 변경(평가 삭제·피드 삭제)은 `hasLoaded = false` 후 `loadNovel()`로 직접 재동기화하지만, **평가 작성/수정·피드 수정·피드 상세 좋아요처럼 다른 화면을 다녀온 결과**는 재진입해도 반영되지 않을 수 있다(V1은 반영됐다).
-  - 근거: V1 `NovelDetailViewController.swift:71-77`(viewWillAppear→event), `NovelDetailViewModel.swift:191-204`(reloadData→get 3종) · V2 `NovelDetailViewModel.swift:219-223`(load, `guard !hasLoaded`), `396-411`·`432-446`(내부 삭제만 재로드), `CLAUDE.md`("LoadNovelUseCase 1회(hasLoaded 가드)")
-  - **판정(2026-08-28, 사용자): 재진입 재조회 복원.** ⚠️ **실측 회귀(사용자 보고): 작품 평가 후 상세로 복귀하면 헤더 별점·집계가 갱신되지 않는다** — "1회 로드"의 부작용이 실제로 드러난 확정 회귀다. 횡단 push 재조회 결정(알림·타유저 프로필과 함께)에 작품상세 포함 — 외부 변경(평가·피드 수정 후 복귀) 최신화를 되살린다. 무거운 화면이라 전체 재로드보다 **헤더 집계 등 외부 변경분 위주의 가벼운 갱신**으로 조정 권장. `docs/TODO.md` 9. (종전 'Keep(1회 로드)' 판정을 뒤집은 것 — `CLAUDE.md`의 "1회 로드" 명문은 구현 시 함께 갱신.)
+- ✅ **구현 완료(#236 — 재조회 복원, 종전 'Keep(1회 로드)' 판정을 뒤집은 것)** — V1은 `viewWillAppear`마다 `reloadData`를 쏴 **header·info·feed 3종을 전부 다시 조회**한다(재진입 시 최신 집계 반영). 최초 1회 가드 없음.
+  - **V2(현행): 재진입마다 조용한 재조회로 같은 범위를 복원했다** — `load()`가 `hasLoaded` 후에도 스피너 없이 `loadNovel`(header·info 상당)을 다시 태우고, 피드를 한 번이라도 세운 뒤라면(`hasLoadedFirstFeeds`) `refreshFeeds`가 **V1과 같은 `lastFeedId 0 + size=보던 개수`로 피드를 통째 교체**한다(V1 `NovelDetailViewModel.swift:595-600` 방식, 상한 100 클램프는 `FeedDomain.NovelFeedPageSizePolicy`). V1과의 차이는 표현뿐 — 전면 로딩 없이 제자리 교체라 스크롤·화면이 유지되고, 실패 시 기존 화면 유지(V1은 전면 에러 뷰).
+  - 근거: V1 `NovelDetailViewController.swift:71-77`(viewWillAppear→event), `NovelDetailViewModel.swift:191-204`(reloadData→get 3종)·`595-600`(feed size=보던 개수) · V2 `NovelDetailViewModel.swift`(`load`→`loadNovel`+`refreshFeedsIfNeeded`), `CLAUDE.md`("로드" 절)
+  - 경위: **판정(2026-08-28, 사용자): 재진입 재조회 복원**(실측 회귀 — 평가 후 복귀 시 헤더 집계 미갱신). #236에서 헤더 조용한 재조회를 먼저 복원하며 "가벼운 갱신"으로 조정해 피드를 뺐는데, **피드 작성 후 복귀 시 목록 미갱신이 다시 실측**돼(2026-09-01, 사용자 보고) 피드 재조회까지 복원해 완결.
 - ✅ **Keep** — 뒤로가기 = 이전 화면으로 pop(back 버튼). 몰입형 헤더라 시스템 네비바를 숨기고 커스텀 back 버튼 + 스와이프 뒤로가기를 함께 쓴다.
   - V2: `.requestClose` → `shouldDismiss` → `dismiss()`. 커스텀 네비바 + `.enableSwipeBack()`(네비바 숨기면 스와이프백이 꺼져 되살린다 — 두 레포 공통 함정). V1도 `swipeBackGesture()`를 viewWillAppear에서 걸었다.
   - 근거: V1 `NovelDetailViewController.swift:76`(swipeBackGesture),`493-499`(back 1s throttle→pop) · V2 `NovelDetailView.swift:100-102`,`285-296`, `CLAUDE.md`(몰입형 헤더=시스템 네비바 숨김/enableSwipeBack)
@@ -274,9 +274,9 @@
 
 ### 6.5 알림 관찰자 토스트
 
-- 🔧 **복원 확정→App 크로스스크린 피드백 재설계(TODO 12절)** (2026-08-28, 사용자: 재진입 재조회 복원과 별개로 완료 피드백은 유지 — Feed 15·UserPage 차단 토스트와 한 묶음) — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
-  - V2엔 이 알림 관찰자·토스트가 없다(피드 수정/평가는 콜백으로 위임, 복귀 후 토스트 없음).
-  - 근거: V1 `NovelDetailViewModel.swift:506-512`, `NovelDetailViewController.swift:455-459`,`470-474`,`561-562` · V2 `NovelDetailView`(해당 관찰자 없음)
+- ✅ **구현 완료(#236 — App 크로스스크린 피드백 채널)** (경위: 2026-08-28 복원 확정 — 재진입 재조회 복원과 별개로 완료 피드백 유지, Feed 15·UserPage 차단 토스트와 한 묶음) — V1은 `NotificationCenter`로 **피드 수정 완료**(`feedEdited`)·**평가 완료**(`NovelReviewed`)를 관찰해 복귀 시 각각 토스트("수정 완료"·"평가 완료")를 띄웠다.
+  - V2(현행): App의 `CrossScreenFeedback` 채널이 담당 — 작성/수정 화면의 `onSubmitted`·평가 화면의 `onSaved` 콜백이 dismiss 직전 발화하면 복귀 스택 위에 "작성 완료!"·"평가 완료!" 토스트를 띄운다(싱글톤 NotificationCenter 답습 대신 콜백 seam, 차단 토스트 4벌도 같은 채널로 흡수).
+  - 근거: V1 `NovelDetailViewModel.swift:506-512`, `NovelDetailViewController.swift:455-459`,`470-474`,`561-562` · V2 `App/Sources/Main/CrossScreenFeedback.swift`, `App/CLAUDE.md`(크로스스크린 피드백 채널)
 
 ### 6.6 스티키 탭바·스크롤 트릭 (구현 수단 — 관찰 동작 동일)
 

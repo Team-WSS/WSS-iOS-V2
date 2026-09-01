@@ -42,10 +42,9 @@
 
 **판정 상태(2026-08-29 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
-1. **재진입 시 서버 재동기화 상실** — V1 목록/상세는 **`viewWillAppear`마다 전체를 처음부터 재조회**한다(로딩뷰 포함). V2는 `hasLoaded` 1회 가드로 **성공 후 재조회하지 않는다**. 낙관 읽음 반영이 "방금 탭한 알림 읽음 표시"는 대체하지만, **상세/피드에서 목록으로 복귀하는 사이 서버에서 바뀐 것**(새로 온 알림·다른 기기 읽음)은 반영되지 않는다. push 화면이라 홈 벨로 새로 진입할 땐 매번 fresh VM이라 무해하나, 복귀 창은 미반영. → [1.1](#11-진입생명주기)
-   - **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원.** push 복귀 시에도 서버 재조회하기로 결정(횡단 — 타유저 프로필·작품상세와 함께). C1 범위 밖 구현이라 `docs/TODO.md` 9. 스크롤·낙관 반영 보존은 화면별 조정.
-2. **상세 본문 링크 자동 감지 상실** — V1 상세 본문은 `UITextView` + `dataDetectorTypes = .link`라 **본문 안 URL이 탭 가능한 링크**로 뜬다. V2는 순수 `Text(detail.body)`라 평문 URL이 자동 링크되지 않는다(SwiftUI `Text`는 마크다운 링크만 렌더). 공지·이벤트 알림 본문에 링크가 실리면 차이가 드러난다. 없앤 근거를 못 찾음. → [2.3](#23-콘텐츠-표현)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(자동 링크).** `AttributedString` 링크 감지로 복원. 선행 확인: 서버 알림 본문에 실제 링크가 실리는지. `docs/TODO.md` 9.
+1. ✅ **구현 완료(#236 — 재진입 조용한 재조회)** — V1 목록/상세는 **`viewWillAppear`마다 전체를 처음부터 재조회**한다(로딩뷰 포함). V2도 이제 복귀마다 재조회한다 — 단 로딩뷰 없이 **조용한 재조회**(제자리 교체, 실패 시 기존 화면 유지)로 스크롤·낙관 반영을 보존한다. → [1.1](#11-진입생명주기)
+   - 경위: **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원**(횡단 — 타유저 프로필·작품상세와 함께). #236에서 구현 완료.
+2. ✅ **구현 완료(#222 — 자동 링크 복원)** — V1 상세 본문은 `UITextView` + `dataDetectorTypes = .link`로 URL이 탭 가능했다. V2도 복원됨 — `NotificationDetailView.bodyWithDetectedLinks`가 `NSDataDetector`로 평문 URL을 찾아 `AttributedString` `.link` 속성을 붙인다(2026-08-28 되살리기 확정 후 #222 구현 — 계약서 미갱신분을 2026-09-01 코드 대조로 정정). → [2.3](#23-콘텐츠-표현)
 
 **🔧 눈에 띄는 의도적 변경 (근거 확인)**
 
@@ -65,11 +64,10 @@
 
 ### 1.1 진입·생명주기
 
-- 🔧 **복원 확정→TODO** (push 재진입 재조회 복원 — 12절) — V1은 **`viewWillAppear`마다** `isLoadable=false`·`isFetching=false`·`lastNotificationId=0`으로 리셋하고 로딩뷰를 세운 뒤 **첫 페이지부터 전체 재조회**한다. 최초 1회 가드 없음.
-  - **V2: `hasLoaded` 1회 가드 — 성공 시에만 소진하고 재진입해도 재조회하지 않는다.** push 화면이라 홈 벨 재진입 시엔 새 VM으로 fresh하지만, 상세/피드에서 이 목록으로 복귀할 땐 재조회가 없다. V2 CLAUDE.md에 "목록 로드: 진입 1회(hasLoaded 가드, 성공 시만 소진)"로 명문화.
-  - **관찰 동작 차이 3가지**: (i) 복귀 시 로딩 스피너가 뜨지 않는다(V2 개선), (ii) 방금 탭한 알림 읽음 표시는 **낙관 반영**으로 유지(V1은 재조회로 반영 — [1.3](#13-셀-탭--읽음-처리--딥링크-핵심)), (iii) 그 사이 서버에서 바뀐 것은 반영 안 됨(V1은 반영).
-  - 근거: V1 `HomeNotificationViewController.swift:41-50`, `HomeNotificationViewModel.swift:55-76` · V2 `NotificationListViewModel.swift:120-123`(hasLoaded 가드), `CLAUDE.md`(진입 1회), `NotificationListView.swift:68`(onAppear→.load)
-  - **판정 근거**: 되살리기로 확정(횡단 push 재진입 재조회 결정). 낙관 반영은 유지하되 복귀 시 서버 재동기화를 더한다. (참고: 알림 목록은 **탭 콘텐츠가 아니라 push 화면**이라 Feature CLAUDE.md의 "탭 복귀마다 갱신" 계약 대상이 아니었다 — 그래서 별도 결정이 필요했다.)
+- ✅ **구현 완료(#236 — 재진입 조용한 재조회)** — V1은 **`viewWillAppear`마다** `isLoadable=false`·`isFetching=false`·`lastNotificationId=0`으로 리셋하고 로딩뷰를 세운 뒤 **첫 페이지부터 전체 재조회**한다. 최초 1회 가드 없음.
+  - **V2(현행)**: 복귀마다 조용한 재조회 — V1과 달리 로딩뷰 없이 첫 페이지를 다시 받아 제자리 교체한다(실패 시 기존 목록 유지, 인증 만료는 로그인 라우팅 합류). 방금 탭한 알림의 낙관 읽음 반영은 성공한 재조회의 서버 값이 자연히 대체한다.
+  - 근거: V1 `HomeNotificationViewController.swift:41-50`, `HomeNotificationViewModel.swift:55-76` · V2 `NotificationListViewModel`(silent refresh 분기), 모듈 `CLAUDE.md`
+  - 경위: 2026-08-28 되살리기 확정(횡단 push 재진입 재조회 결정) → #236 구현. (참고: 알림 목록은 **탭 콘텐츠가 아니라 push 화면**이라 Feature CLAUDE.md의 "탭 복귀마다 갱신" 계약 대상이 아니었다 — 그래서 별도 결정이 필요했다.)
 
 ### 1.2 목록 로드·페이지네이션
 
@@ -166,9 +164,9 @@ V1은 셀 탭을 `isNotice` → `isRead` 3분기로 라우팅한다. **딥링크
 
 - ✅ **Keep** — 상세 레이아웃: 제목(headline1, 다중 줄, `hangulWordPriority`) → 작성시각(body5·gray200) → 구분선(gray50, 1pt, 좌우 여백 없이 풀폭) → 본문(body2·black). 순서·폰트·색·구분선 풀폭이 동일.
   - 근거: V1 `HomeNotificationDetailContentView.swift:65-99` · V2 `NotificationDetailView.swift:84-118`
-- 🔧 **복원 확정→TODO** (자동 링크 복원 — 12절) — **본문 링크 자동 감지 상실**. V1 본문은 `UITextView` + `dataDetectorTypes = .link`(`isEditable=false`, `isScrollEnabled=false`)라 **본문 안 URL이 탭 가능한 링크**로 렌더된다. V2는 순수 `Text(detail.body)`라 평문 URL이 자동 링크되지 않는다(SwiftUI `Text`는 `AttributedString`/마크다운 링크만 인식). 공지·이벤트 알림 본문에 링크가 실리면 차이가 드러난다.
-  - 근거: V1 `HomeNotificationDetailContentView.swift:50-55`(dataDetectorTypes = .link) · V2 `NotificationDetailView.swift:110-113`(plain Text)
-  - **판정 근거**: 되살리기로 확정(누락된 유지). 선행 확인: 서버 알림 본문에 실제 링크가 실리는지.
+- ✅ **구현 완료(#222 — 자동 링크 복원)** — **본문 링크 자동 감지**. V1 본문은 `UITextView` + `dataDetectorTypes = .link`(`isEditable=false`, `isScrollEnabled=false`)라 **본문 안 URL이 탭 가능한 링크**로 렌더된다.
+  - **V2(현행)**: `bodyWithDetectedLinks(detail.body)` — `NSDataDetector`로 평문 URL을 찾아 `AttributedString`에 `.link` 속성을 붙여 `Text`가 탭 가능한 링크로 렌더한다.
+  - 근거: V1 `HomeNotificationDetailContentView.swift:50-55`(dataDetectorTypes = .link) · V2 `NotificationDetailView.swift`(`bodyWithDetectedLinks`)
 
 ### 2.4 뒤로가기·네비게이션
 

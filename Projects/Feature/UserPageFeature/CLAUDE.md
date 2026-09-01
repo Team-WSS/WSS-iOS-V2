@@ -171,9 +171,19 @@
 - **재진입(push 복귀)은 조용한 재조회다**(#236, V1 parity 복원 — `NovelDetailViewModel.load` 정본 패턴):
   `UserPageViewModel.load()`가 `hasLoaded` 후에도 재진입마다 프로필 묶음을 스피너 없이 제자리 교체하고,
   활동 탭 미리보기도 이미 로드된 적 있으면 첫 페이지를 같이 재조회한다(실패 시 기존 화면 유지 —
-  비공개 전환(`privateProfile`)만은 재조회에서도 반영). **전체 피드 목록(`UserFeedListViewModel`)도 동일** —
-  재진입 시 첫 페이지 조용한 교체(페이지네이션 리셋, V1의 "비우고 처음부터 + 로딩뷰" 대신). 모든 로드가
-  단일 Task 가드(`loadTask`/`feedsTask == nil`)로 직렬화돼 취소 장치 없이 안전하다.
+  단 비공개 전환(`privateProfile`) 반영은 **활동 피드 조회 경로에만** 있다: `loadFirstFeedsPage`가 두 모드
+  모두 `isProfilePrivate`를 세우고, 프로필 묶음 silent 실패는 전부 조용히 유지된다). **전체 피드 목록
+  (`UserFeedListViewModel`)도 동일** — 재진입 시 첫 페이지 조용한 교체(페이지네이션 리셋, V1의 "비우고
+  처음부터 + 로딩뷰" 대신). 모든 로드가 단일 Task 가드(`loadTask`/`feedsTask == nil`)로 직렬화돼 취소 장치
+  없이 안전하다.
+  - **깊이 스크롤 후 복귀 시 목록이 첫 페이지로 줄어드는 건 판정된 절충이다**(#236 리뷰에서 인지) —
+    NovelDetail 피드는 `size = 보던 개수` 정책(`NovelFeedPageSizePolicy`)으로 window를 보존하지만, 이
+    화면(과 알림 목록)은 push 복귀의 목적이 "최신순 맨 위 갱신"이고 `LoadUserFeedsUseCase`에 size 배관이
+    없어 비용 대비 이득이 작아 1페이지 리셋을 감수한다. 되살리려면 피드 쪽과 같은 Repository size 배관이 선행.
+  - **통째 교체는 진행 중 낙관 좋아요를 되덮을 수 있어 병합으로 보호한다**(#236) — 첫 페이지 교체 직전
+    "요청 시작 시 in-flight + 요청 중 토글"(`syncingLikeFeedIDs` ∪ `likeToggledDuringRefresh`) 셀만
+    `TotalFeed.preservingLikeState`(좋아요 두 필드만 로컬 우선)로 병합한다. `NovelDetailViewModel.refreshFeeds`가
+    정본 패턴 — 셀 전체를 로컬로 되돌리면 그 사이 서버 변경(본문 수정 등)까지 버리므로 두 필드만.
 - **서재 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입은 App 몫**(#196) — `UserPageView`는
   `onLibraryTapped()` 콜백만 부르고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +
@@ -250,3 +260,12 @@
   - `onEditTapped`(`CollectionDetailAssembly`)는 기본값 no-op으로 둔다 — 타유저 프로필에서 여는
     컬렉션은 항상 남의 것이라(`detail.isMine == false`) "컬렉션 수정" 버튼 자체가 안 뜬다(마이페이지만
     실제 `onEditTapped`를 채워 자기 컬렉션 편집 진입점으로 쓴다).
+- ⚠️ **조용한 재조회(`load()`→`loadUserPage(isSilentRefresh:)`)는 병렬(`async let`) 5개 결과를 로컬
+  변수로 다 받은 뒤 `state`에 일괄 대입한다(#236)** — 받는 족족 `state`에 대입하면 중간 하나가 실패했을 때
+  실패 지점 앞의 값만 새로 교체돼 프로필 묶음이 부분 갱신된 채 남고(닉네임은 새 값·통계는 옛 값 등),
+  "실패해도 기존 화면 유지"라는 조용한 재조회 계약이 깨진다. fresh 경로는 실패 시 `presentError`로 전면
+  덮여 안 보이지만 silent는 그대로 드러난다. `MypageViewModel.loadMypage`도 같은 5개 병렬 로드 구조라,
+  조용한 재조회를 얹을 땐 동일하게 일괄 대입해야 한다.
+  - 알려진 절충(#236 리뷰에서 수용): 재조회 중 프로필 조회와 활동 피드 조회가 병렬이라, 그 사이 상대가
+    프로필을 바꾸면 피드 author 닉네임(응답에 없어 호출 측 프로필 값으로 채움)이 한 박자 옛 값일 수 있다 —
+    창이 매우 좁고 다음 재진입에 자가 치유되므로 순차화하지 않는다.

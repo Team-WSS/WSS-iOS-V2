@@ -76,10 +76,11 @@
   위한 파라미터다. 값이 있으면 초기 draft(`FeedFeatureFactory.emptyDraft(connectedNovel:)`)가 그 작품이
   이미 연결된 상태로 시작한다 — `CreateFeedConnectNovelSheet`로 나중에 연결하는 흐름과 달리 화면이 뜨는
   시점부터 연결돼 있다. 우상단 연필 아이콘처럼 특정 작품 맥락이 없는 진입점은 `nil`(기본값)을 그대로 둔다.
-- **`onSubmitted()`**(#236, `makeCreateFeedView`/`makeEditFeedView` 공통, 기본 no-op) — 작성/수정 제출
+- **`onSubmitted()`**(#236, `makeCreateFeedView`/`makeEditFeedView` 공통, **필수 파라미터 — 기본값 없음**) — 작성/수정 제출
   **성공**으로 닫힐 때 dismiss 직전 발화(취소로 닫힐 땐 안 부른다 — `.submitted` 전이에서만). "작성 완료!"
   토스트는 이 화면이 dismiss되므로 App의 크로스스크린 피드백 채널이 복귀 화면 위에 띄운다(V1 `feedEdited`
-  알림 parity — V1처럼 작성·수정 모두 발화한다).
+  알림 parity — V1처럼 작성·수정 모두 발화한다). 기본 no-op을 일부러 안 둔 이유: 작성 조립이 탭 Root 4곳에
+  복제돼 있어 기본값이 있으면 새 조립 지점이 완료 토스트를 말없이 빼먹어도 컴파일이 통과한다(#236 리뷰).
 - **"수정" 계열 드롭다운(피드 상세 "수정"·목록 셀 "수정하기")은 전부 대상 `FeedID`만 콜백으로 넘긴다**(`onEditFeedTapped: (FeedID) -> Void`) — 이전 화면에서 데이터를 미리 준비하지 않고, App이 `FeedDetailAssembly.makeEditFeedView(feedID:dependencies:)`로 곧장 화면을 전환한다(#197, 빠른 전환 우선 — "누르자마자 로딩 화면이 잠깐 보였다 수정 화면으로 또 전환"되는 이전 방식은 화면이 두 번 깜빡여 UX상 되돌렸다). 실제 로드는 `CreateFeedViewModel` 자신이 한다(아래 항목).
 - **`CreateFeedViewModel`은 `mode == .edit`이면 `.load`(View `onAppear`) 시 스스로 대상 피드를 불러온다** — `loadFeedDetailUseCase: LoadFeedDetailUseCase?`(작성 모드에선 `nil`)로 `FeedDetail`을 조회하고, 첨부 이미지는 URL만 있어(서버가 바이트를 안 돌려줌) `URLSession`으로 미리 받아 `draft`/`attachedImageDatas`를 채운다(`loadForEdit`, 서버 수정 API가 전체 교체 방식이라 기존 이미지를 유지하려면 필요 — `FeedDomain/CLAUDE.md`의 `EditFeedUseCase` 항목 참고). 로드 중엔 `state.isLoadingForEdit`로 `CreateFeedView`가 로딩 오버레이 + `allowsHitTesting(false)`를 걸어 **사용자가 로드 완료 전에 draft를 건드릴 수 없게 막는다** — 이 가드가 없으면 로드가 사용자의 진행 중 편집을 덮어쓸 수 있다. `hasLoadedForEdit` 가드로 재진입 시 재요청하지 않는다.
   ⚠️ **`.load`가 스폰하는 `Task`는 `[weak self]`로 감싼다**(#197 PR 리뷰에서 발견 — 처음엔 강한 캡처였다) — 없으면 화면이 로드 완료 전에 닫혀도 `Task`가 VM을 계속 붙잡고 있다가 완료 시점에 이미 죽은 화면의 `state`에 쓰게 된다. `CollectionFeature.CreateCollectionViewModel.loadForEdit`(동일 패턴이라 서로 참조하는 사이)가 처음부터 이 가드를 갖고 있었다 — 두 화면 중 하나만 고칠 게 아니라 앞으로도 짝을 맞출 것.
