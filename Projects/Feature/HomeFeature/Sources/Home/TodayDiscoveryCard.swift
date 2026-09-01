@@ -213,7 +213,7 @@ private extension TodayDiscoveryCard {
             HStack(spacing: 10) {
                 WSSAsyncImage(url: user.profileImage) { image in
                     image.resizable().scaledToFill()
-                } placeholder: {
+                } placeholder: { _ in
                     Color.wssGray50
                 }
                 .frame(width: Metric.profileSize, height: Metric.profileSize)

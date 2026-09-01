@@ -85,7 +85,7 @@ struct MypageCharacterEditSheet: View {
             WSSAsyncImage(url: selectedCharacter?.representativeImage) { image in
                 image.resizable()
                     .scaledToFit()
-            } placeholder: {
+            } placeholder: { _ in
                 ProgressView()
             }
             .frame(width: 250, height: 250)
@@ -227,7 +227,7 @@ private struct CharacterSelectionCell: View {
             WSSAsyncImage(url: imageURL) { image in
                 image.resizable()
                     .scaledToFill()
-            } placeholder: {
+            } placeholder: { _ in
                 ProgressView()
             }
             .frame(width: size, height: size)
