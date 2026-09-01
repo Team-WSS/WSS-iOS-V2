@@ -132,7 +132,7 @@ struct MypageView: View {
             WSSProfileImage(url: viewModel.state.profile?.characterImage)
                 .clipShape(Circle())
                 .frame(width: 86, height: 86)
-            .overlay(alignment: .bottomTrailing) {
+                .overlay(alignment: .bottomTrailing) {
                 Button(action: onEditProfileTapped) {
                     WSSImage.icEditProfileMypage.swiftUIImage
                 }

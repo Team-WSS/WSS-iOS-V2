@@ -135,7 +135,7 @@ struct MyPageEditView: View {
             WSSProfileImage(url: viewModel.selectedCharacterImage)
                 .clipShape(Circle())
                 .frame(width: 94, height: 94)
-            .overlay(alignment: .bottomTrailing) {
+                .overlay(alignment: .bottomTrailing) {
                 Button {
                     characterEditContext = CharacterEditSheetContext(
                         characterID: viewModel.state.draft.characterID,
