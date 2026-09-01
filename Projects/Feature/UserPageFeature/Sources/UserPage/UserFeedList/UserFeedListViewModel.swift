@@ -63,6 +63,8 @@ final class UserFeedListViewModel {
     @ObservationIgnored private var hasLoadedFirstPage = false
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
+    /// 마지막 첫 페이지(재조회) 요청 이후 좋아요를 토글한 셀 — 재조회 병합 보호용(`NovelDetailViewModel`과 동일, #236).
+    @ObservationIgnored private var likeToggledDuringRefresh: Set<FeedID> = []
     @ObservationIgnored private var feedActionTask: Task<Void, Never>?
 
     // MARK: - Dependency
@@ -167,6 +169,7 @@ private extension UserFeedListViewModel {
 
         state.feeds[index] = feed
         syncingLikeFeedIDs.insert(feedID)
+        likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
     }
 
@@ -201,6 +204,9 @@ private extension UserFeedListViewModel {
             feedsTask = nil
             state.isLoadingFeeds = false
         }
+        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글) — 첫 페이지 교체에서만 쓴다(#236).
+        var likeProtectedIDs = syncingLikeFeedIDs
+        if lastFeedID == nil { likeToggledDuringRefresh = [] }
 
         do {
             let page = try await loadUserFeedsUseCase.execute(
@@ -211,7 +217,17 @@ private extension UserFeedListViewModel {
             )
             // 첫 페이지는 교체, 다음 페이지는 append — 재조회(교체)가 이전 방문의 목록 위에 겹치지 않게.
             if lastFeedID == nil {
-                state.feeds = page.items
+                likeProtectedIDs.formUnion(likeToggledDuringRefresh)
+                var items = page.items
+                // 보호 셀은 좋아요 두 필드만 로컬 우선(`preservingLikeState`) — 통째 교체가 낙관 토글을 되덮지 않게.
+                if !likeProtectedIDs.isEmpty {
+                    for index in items.indices where likeProtectedIDs.contains(items[index].feedId) {
+                        if let local = state.feeds.first(where: { $0.feedId == items[index].feedId }) {
+                            items[index] = items[index].preservingLikeState(of: local)
+                        }
+                    }
+                }
+                state.feeds = items
                 hasLoadedFirstPage = true
             } else {
                 state.feeds.append(contentsOf: page.items)
@@ -233,7 +249,8 @@ private extension UserFeedListViewModel {
             }
         } catch {
             if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
-                state.feeds[index] = before
+                // 좋아요 두 필드만 되돌림 — 재조회가 가져온 최신 본문을 이전 스냅샷으로 물리지 않게(병합과 대칭).
+                state.feeds[index] = state.feeds[index].preservingLikeState(of: before)
             }
             logger?.error("UserFeedList 좋아요 동기화 실패: \(String(describing: error))")
         }

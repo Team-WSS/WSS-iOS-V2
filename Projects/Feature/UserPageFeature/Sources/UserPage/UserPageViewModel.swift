@@ -142,6 +142,9 @@ final class UserPageViewModel {
     @ObservationIgnored private var hasLoadedFirstFeeds = false
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
+    /// 마지막 피드 재조회 요청 이후 좋아요를 토글한 셀 — 재조회 응답 병합의 보호 대상 계산용
+    /// (좋아요 POST가 목록 GET보다 먼저 끝나면 in-flight 집합만으론 놓친다 — `NovelDetailViewModel`과 동일, #236).
+    @ObservationIgnored private var likeToggledDuringRefresh: Set<FeedID> = []
     /// 피드 신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다(`NovelDetailFeature`와 동일).
     @ObservationIgnored private var feedActionTask: Task<Void, Never>?
 
@@ -278,6 +281,7 @@ private extension UserPageViewModel {
 
         state.feeds[index] = feed
         syncingLikeFeedIDs.insert(feedID)
+        likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
     }
 
@@ -341,11 +345,18 @@ private extension UserPageViewModel {
             async let registeredNovelStats = loadUserRegisteredNovelStatsUseCase.execute(id: userID)
             async let collectionPreviews = loadCollectionPreviewsUseCase.execute(userID: userID, size: Self.collectionPreviewSize)
 
-            state.profile = try await profile
-            state.genrePreferences = try await genrePreferences
-            state.novelPreference = try await novelPreference
-            state.registeredNovelStats = try await registeredNovelStats
+            // 병렬 로드 결과를 로컬 변수로 모두 수급한 뒤 일괄 반영한다 — 중간 하나가 실패하면
+            // 어떤 state도 바꾸지 않아, 조용한 재조회의 "실패해도 기존 화면 유지" 계약을 정확히 지킨다
+            // (즉시 대입은 실패 지점 앞의 값만 교체돼 프로필 묶음이 부분 갱신된 채 남는다).
+            let loadedProfile = try await profile
+            let loadedGenrePreferences = try await genrePreferences
+            let loadedNovelPreference = try await novelPreference
+            let loadedRegisteredNovelStats = try await registeredNovelStats
             let (loadedCollectionPreviews, loadedCollectionCount) = try await collectionPreviews
+            state.profile = loadedProfile
+            state.genrePreferences = loadedGenrePreferences
+            state.novelPreference = loadedNovelPreference
+            state.registeredNovelStats = loadedRegisteredNovelStats
             state.collectionPreviews = loadedCollectionPreviews
             state.collectionCount = loadedCollectionCount
             hasLoaded = true
@@ -365,6 +376,9 @@ private extension UserPageViewModel {
             feedsTask = nil
             state.isLoadingFeeds = false
         }
+        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글) — NovelDetail refreshFeeds와 동일 규칙(#236).
+        var likeProtectedIDs = syncingLikeFeedIDs
+        likeToggledDuringRefresh = []
 
         do {
             // 유저 피드 조회는 이 화면(유저 페이지)에서만 일어나므로, 이미 로드된 프로필의
@@ -375,7 +389,17 @@ private extension UserPageViewModel {
                 profileImage: state.profile?.characterImage,
                 lastFeedID: FeedID(0)
             )
-            state.feeds = page.items
+            likeProtectedIDs.formUnion(likeToggledDuringRefresh)
+            var items = page.items
+            // 보호 셀은 좋아요 두 필드만 로컬 우선(`preservingLikeState`) — 통째 교체가 낙관 토글을 되덮지 않게.
+            if !likeProtectedIDs.isEmpty {
+                for index in items.indices where likeProtectedIDs.contains(items[index].feedId) {
+                    if let local = state.feeds.first(where: { $0.feedId == items[index].feedId }) {
+                        items[index] = items[index].preservingLikeState(of: local)
+                    }
+                }
+            }
+            state.feeds = items
             state.hasNextFeeds = page.hasNext
             hasLoadedFirstFeeds = true
         } catch RepositoryError.privateProfile {
@@ -400,7 +424,8 @@ private extension UserPageViewModel {
             }
         } catch {
             if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
-                state.feeds[index] = before
+                // 좋아요 두 필드만 되돌림 — 재조회가 가져온 최신 본문을 이전 스냅샷으로 물리지 않게(병합과 대칭).
+                state.feeds[index] = state.feeds[index].preservingLikeState(of: before)
             }
             logger?.error("UserPage 피드 좋아요 동기화 실패: \(String(describing: error))")
         }
