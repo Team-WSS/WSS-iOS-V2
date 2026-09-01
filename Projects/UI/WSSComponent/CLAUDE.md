@@ -57,7 +57,7 @@
   — 호출부에서 `Color.clear.aspectRatio(...).overlay { ... }` 트릭을 다시 쓰지 말 것(그 트릭이 불편해서 컴포넌트로 넣었다).
   크기가 고정인 자리(추천글 행 썸네일 등)는 파라미터 없이 밖에서 `.frame(width:height:)`를 쓰면 된다.
   - `clipped()`는 **그리기만 자르고 hit-test 영역은 남긴다** → 탭이 필요한 표지는 호출부가 `.contentShape`를 얹어야 한다.
-- **목록 표지·프로필처럼 반복 렌더되는 원격 이미지엔 `AsyncImage`를 직접 쓰지 말고 `WSSAsyncImage`(또는 표지 편의 래퍼 `WSSNovelCoverImage`)를 쓴다** — `AsyncImage`는 뷰 정체성이 바뀔 때마다 `.empty` phase부터 다시 시작해 **캐시 히트여도** placeholder가 한 프레임 번쩍인다(목록 셀 모드 전환·스크롤 재활용에서 매번 도짐). URLCache는 **응답 데이터**만 갖고 있어 재디코딩 틈이 남는다. `WSSAsyncImage`는 **디코딩된 `UIImage`를 인메모리 캐시(`WSSImageCache`, 화면 간 공유)에 두고 렌더 경로(`displayedImage`)에서 동기 조회** → 히트면 첫 프레임부터 실제 이미지(placeholder 프레임 자체가 안 생김). NovelDetail 대형 표지가 같은 함정을 prefetch로 풀었던 것을 컴포넌트로 일반화(#166).
+- **목록 표지·프로필처럼 반복 렌더되는 원격 이미지엔 `AsyncImage`를 직접 쓰지 말고 `WSSAsyncImage`(또는 편의 래퍼 — 표지는 `WSSNovelCoverImage`, 프로필은 `WSSProfileImage`)를 쓴다** — `AsyncImage`는 뷰 정체성이 바뀔 때마다 `.empty` phase부터 다시 시작해 **캐시 히트여도** placeholder가 한 프레임 번쩍인다(목록 셀 모드 전환·스크롤 재활용에서 매번 도짐). URLCache는 **응답 데이터**만 갖고 있어 재디코딩 틈이 남는다. `WSSAsyncImage`는 **디코딩된 `UIImage`를 인메모리 캐시(`WSSImageCache`, 화면 간 공유)에 두고 렌더 경로(`displayedImage`)에서 동기 조회** → 히트면 첫 프레임부터 실제 이미지(placeholder 프레임 자체가 안 생김). NovelDetail 대형 표지가 같은 함정을 prefetch로 풀었던 것을 컴포넌트로 일반화(#166).
   - ⚠️ **캐시 동기 조회는 `init`이 아니라 렌더 경로(`displayedImage`)에 있어야 한다.** `@State`는 저장소가 처음 만들어질 때만 초기값이 적용되고 `.task`는 **첫 렌더 뒤에** 도므로, 뷰 정체성이 유지된 채 url만 바뀌면(프로필 사진 교체 등) 첫 프레임에 **옛 이미지/placeholder가 한 번 스친다.** 그래서 `image`와 짝으로 `loadedURL`을 들고, `loadedURL != url`이면 렌더 시점에 캐시를 직접 조회한다 — 이 짝이 없으면 "캐시 히트면 첫 프레임부터 실제 이미지" 보장이 url 변경 케이스에서 깨진다(#166 2라운드 리뷰에서 발견).
   - ⚠️ "캐시 히트면 네트워크 안 감"을 `guard image == nil` 조기 리턴으로 구현하면 **새 url이 영영 로드되지 않는다** — 히트 판정은 `image`가 아니라 반드시 **`WSSImageCache` 조회 결과**로 할 것. 또한 취소 검사(`!Task.isCancelled`)를 `await` **재개 뒤에** 둬야 취소된 옛 요청이 새 url의 그림을 덮지 않는다.
   - ⚠️ **`loadedURL`은 이미지를 실제로 확보했을 때만 찍는다.** 네트워크 시작 전에 미리 찍으면 실패·취소 시 `loadedURL == url && image == nil`로 굳어, 다른 인스턴스가 나중에 같은 url을 공유 캐시에 넣어도 **placeholder에 갇힌다**(`.task`는 url이 바뀌어야 재실행되므로 스스로 못 빠져나온다). 실패 상태에선 `loadedURL != url`을 유지해 캐시 폴백 경로를 열어두는 게 안전하다.
@@ -65,6 +65,27 @@
   - ⚠️ **`placeholder`는 `() -> Placeholder`가 아니라 `(_ isLoading: Bool) -> Placeholder`다**(#237, 이미지 로딩 UX 개선) — "지금 진짜 `WSSImageLoader`가 네트워크에 나가 있는 중"과 "이미지가 없고 더 받아올 것도 없음(URL nil·로딩 실패)"을 호출부가 다르게 그릴 수 있게 하기 위해서다. **`isLoading`은 캐시 미스로 실제 fetch가 도는 구간에만 `true`** — URL이 `nil`이거나 캐시 히트거나 로딩이 끝났으면(성공/실패/취소 불문) `false`로, `load()`가 `defer`로 모든 탈출 경로에서 되돌린다. `WSSAsyncImage(url:content:placeholder:)`를 직접 호출하는 4곳(`NotificationListView`·`MypageCharacterEditSheet` 2곳·`TodayDiscoveryCard`)은 전부 기존 시각 동작을 유지한 채(`{ _ in ... }`로 인자만 무시) 이 시그니처에 맞춰 갱신됐다 — 로딩 중과 아닌 경우를 실제로 구분하고 싶은 새 호출부만 이 인자로 분기하면 된다.
   - **`WSSNovelCoverImage`는 이 `isLoading`을 받아 `placeholderStyle`(`.default`/`.grid`)로 로딩 중 표시를 가른다**(#237) — `.default`(기본값)는 로딩 중 배경 없이 `ProgressView`만, `.grid`는 `wssGray50` 배경 위에 `ProgressView`를 얹는다(스피너 여러 개가 겹쳐 산만해지는 걸 피함). 둘 다 로딩 중이 아니면(URL nil·실패) 기존 기본 표지(`imgLoadingThumbnail`)로 똑같이 폴백한다. **`aspectRatio` 유무로 자동 추론하지 않고 호출부가 명시로 고른다** — 크기 결정 축(`aspectRatio`)과 로딩 표시 축(`placeholderStyle`)을 분리해뒀으니 새 그리드 화면을 만들 때 `placeholderStyle: .grid`를 빠뜨리지 말 것. **작품 상세 표지(`NovelDetailHeaderView.coverImage`)·컬렉션 히어로 배경(`CollectionDetailView.heroImage`)처럼 큰 이미지는 이 컴포넌트를 안 거치고 raw `AsyncImage`를 직접 쓴다** — 로딩 중에도 스피너 없이 기존 표시(기본 표지/배경색)를 그대로 유지하는 의도적 예외라, 이 컴포넌트로 통합하려 하지 말 것.
   - **현재 `.grid`는 `LazyVGrid`로 여러 셀이 동시에 뜨는 다섯 곳**(`WSSNovelGridCell`·`WSSLibraryGridCell`·`CollectionPreviewRow`·`CreateCollectionView`·`CollectionDetailView`의 작품 그리드)**에만 적용돼 있다**(#237) — 새 그리드 화면을 추가하면 여기에도 `.grid`를 명시할 것.
+- **`WSSProfileImage`(`Sources/Image/`)는 유저 프로필 이미지 전용 편의 래퍼다**(#237 후속) — `WSSNovelCoverImage`와
+  같은 결로 `WSSAsyncImage`의 `isLoading`을 받아 로딩 중엔 `ProgressView`, 그 외(URL nil·실패)엔
+  `defaultImage`(기본값 `imgEmptyCover`)로 폴백한다. 이전엔 프로필 이미지 렌더 지점 10곳 중 **`TodayDiscoveryCard`
+  한 곳만** `WSSAsyncImage`를 썼고 나머지(`WSSFeadHeaderView`·`CommentRow`·`FeedDetailCommentInputBar`·
+  `UserPageView`·`MyPageEditView`·`MypageView`·`MypageCharacterEditSheet`·`BlockUserRow`·`CollectionDetailView`의 프로필/캐릭터 이미지)는 이 모듈
+  문서 상단의 "raw `AsyncImage` 금지" 원칙을 어기고 직접 `AsyncImage`를 쓰고 있었다 — 전부 이 컴포넌트로
+  옮겼다. **크기·모서리는 `WSSNovelCoverImage`의 "아무것도 안 넘기고 밖에서 프레임" 모드와 동일하게
+  호출부가 바깥에서 얹는다**(프로필 이미지는 열 너비를 따라가는 그리드 자리가 없어 `aspectRatio`/`.grid`
+  스타일 자체가 없다 — 필요해지면 그때 추가할 것). **`contentMode`는 기본 `.fill`**(대부분의 아바타처럼
+  꽉 채워 자름) — `MypageCharacterEditSheet`의 큰 대표 캐릭터 이미지(250×250, 원본을 자르지 않고 그대로
+  보여줘야 함)만 `.fit`을 명시로 넘긴다.
+  ⚠️ **이 김에 기본 이미지 에셋도 `imgEmptyCover`로 통일했다** — `CommentRow`/`MypageView`/`BlockUserRow`는 원래
+  실패 시 `imgLoadingThumbnail`(소설 표지용 방패 아이콘)을 보여주고 있었는데, 프로필 자리에 표지
+  아이콘이 뜨는 건 명백한 오용이었다(과거 복붙 흔적으로 추정). `WSSFeadHeaderView`는 실패 시 회색
+  단색(`wssGray200`)만 보여주던 것도 같이 `imgEmptyCover`로 바꿨다.
+  ⚠️ **`FeedDetailCommentInputBar`는 이 리팩터로 실제 버그 하나가 고쳐졌다** — 기존엔 `AsyncImage(url:content:placeholder:)`
+  2-클로저 오버로드를 써서 로딩 중과 로딩 **실패** 둘 다 같은 `placeholder`(bare `ProgressView()`)를
+  탔다 — 즉 프로필 URL이 유효하지 않으면 스피너가 영원히 돈다(성공 케이스만 `content`를 타고, SwiftUI가
+  실패를 별도 phase로 안 주는 오버로드라서). `WSSProfileImage`(→ `WSSAsyncImage`의 3-상태 분기)로 옮기며
+  자연히 고쳐졌다 — 같은 2-클로저 `AsyncImage` 오버로드를 다른 곳에서 새로 쓰지 말 것(실패 상태가 없다는
+  게 이 함정의 근본 원인).
 - **커스텀 헤더는 `.toolbar(.hidden, for: .navigationBar)`로 만든다** — `.navigationBarBackButtonHidden(true)`로 만들면 아래 `hidesBackButton` 가드에 걸려 **`.enableSwipeBack()`이 조용히 안 먹는다**(증상은 "modifier를 걸었는데 스와이프백이 안 됨", 원인은 컴포넌트 안쪽이라 추적이 오래 걸린다).
 - **커스텀 헤더 화면의 스와이프 뒤로가기는 `.enableSwipeBack()`(`Sources/Navigation/`)으로 되살린다** — 시스템 네비바를 숨기면(`.toolbar(.hidden, for: .navigationBar)`) iOS가 `interactivePopGestureRecognizer`도 함께 끄기 때문. 원래 `NovelDetailFeature`·`LibraryFeature`에 각각 복제돼 있었고, **한쪽만 고쳐져 갈라진 게 사고 원인이 됐다**(#166) → 여기로 통합.
   - ⚠️ **제스처 delegate는 반드시 `UINavigationController` 자신에게 맡긴다 — 별도 Coordinator에 맡기지 말 것.** `UIGestureRecognizer.delegate`는 **약한 참조**라 그 객체가 해제되면 nil이 되는데, UIKit은 nav controller를 만들 때 한 번만 delegate를 꽂으므로 **스스로 돌아오지 않는다** → `shouldBegin` 기본값(YES)이 적용돼 **되돌아갈 화면이 없는 루트에서도 pop 전환이 시작되고 내비게이션이 얼어붙는다**(앱 재시작 외 복구 불가).
