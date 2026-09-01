@@ -384,10 +384,3 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
      (`"../Projects/App/WSS-iOS.xcodeproj"`) `match` 실행 이후 어떤 이유로 작업 디렉토리가 달라져
      "Could not find Xcode project"로 실패할 수 있었다(정확한 원인 미확인) — `File.expand_path(...,
      __dir__)`로 절대경로를 계산해 cwd에 안 흔들리게 고정했다(`Fastfile` 상단 `XCODEPROJ_PATH` 상수).
-  7. **`CFBundleName`이 없거나 `CFBundleDisplayName`이 빈 값이면 App Store Connect 업로드가
-     "Missing bundle name"(오류 90784)으로 거부된다**(2026-08-29 실제 TestFlight 업로드에서 실측) —
-     `Support/Info.plist`가 `.file(path:)`라 Xcode가 이 키들을 자동으로 채워주지 않는데, 기존
-     `CFBundleDisplayName`이 참조하던 `$(APP_DISPLAY_NAME)`이 정의되지 않은 빌드 변수라 빈 문자열로
-     치환되고 있었다. `CFBundleName`/`CFBundleDisplayName` 둘 다 Tuist가 `productName:`으로 자동
-     세팅해주는 `$(PRODUCT_NAME)`을 참조하도록 고쳤다 — 없는 커스텀 변수(`APP_DISPLAY_NAME` 류)를
-     만들어 쓰지 말고 표준 Xcode 빌드 변수를 우선 의심할 것.
