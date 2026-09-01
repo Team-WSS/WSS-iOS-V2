@@ -82,7 +82,7 @@ struct MypageCharacterEditSheet: View {
 
     private var thumbnailSection: some View {
         VStack(spacing: 0) {
-            WSSProfileImage(url: selectedCharacter?.representativeImage, contentMode: .fit)
+            WSSProfileImage(url: selectedCharacter?.representativeImage)
                 .frame(width: 250, height: 250)
 
             Spacer().frame(height: 18)

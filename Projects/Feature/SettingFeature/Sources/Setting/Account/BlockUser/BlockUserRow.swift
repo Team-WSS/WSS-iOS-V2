@@ -21,7 +21,7 @@ struct BlockUserRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                WSSProfileImage(url: user.profileImageURL, contentMode: .fit)
+                WSSProfileImage(url: user.profileImageURL)
                     .frame(width: 50, height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 

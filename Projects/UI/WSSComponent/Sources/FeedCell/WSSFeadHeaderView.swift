@@ -119,7 +119,7 @@ public struct WSSFeadHeaderView: View {
 
     private var profileContent: some View {
         HStack(spacing: 0) {
-            WSSProfileImage(url: header.profileImageURL, contentMode: .fit)
+            WSSProfileImage(url: header.profileImageURL)
                 .frame(width: 32, height: 32)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 

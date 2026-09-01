@@ -26,32 +26,27 @@ public struct WSSProfileImage: View {
     // 표현식의 *타입*은 `DesignSystemImages`이지 `WSSImage` 자신이 아니다(네임스페이스 enum은 인스턴스가
     // 없다).
     private let defaultImage: DesignSystemImages
-    /// 대부분의 프로필 자리(원형·둥근 사각형 아바타)는 `.fill`로 꽉 채워 자른다. 크롭 없이 원본 비율을
-    /// 그대로 보여줘야 하는 자리(예: 캐릭터 선택 시트의 큰 대표 이미지)만 `.fit`을 넘긴다.
-    private let contentMode: ContentMode
 
     public init(
         url: URL?,
-        defaultImage: DesignSystemImages = WSSImage.imgEmptyCover,
-        contentMode: ContentMode = .fill
+        defaultImage: DesignSystemImages = WSSImage.imgEmptyCover
     ) {
         self.url = url
         self.defaultImage = defaultImage
-        self.contentMode = contentMode
     }
 
     public var body: some View {
         WSSAsyncImage(url: url) { image in
             image
                 .resizable()
-                .aspectRatio(contentMode: contentMode)
+                .aspectRatio(contentMode: .fill)
         } placeholder: { isLoading in
             if isLoading {
                 ProgressView()
             } else {
                 defaultImage.swiftUIImage
                     .resizable()
-                    .aspectRatio(contentMode: contentMode)
+                    .aspectRatio(contentMode: .fill)
             }
         }
     }
