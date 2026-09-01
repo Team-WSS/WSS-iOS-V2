@@ -508,7 +508,7 @@ struct FeedDataDemoView: View {
         novelIDText = ""
         isLoading = true; defer { isLoading = false }
         do {
-            let result = try await repository.fetchNovelFeeds(id: NovelID(novelIDValue), lastFeedID: lastFeedID)
+            let result = try await repository.fetchNovelFeeds(id: NovelID(novelIDValue), lastFeedID: lastFeedID, size: nil)
             log = "endpoint: .getNovelFeeds(novelID: \(novelIDValue))\n[GET] \(url)\n파라미터: lastFeedId=\(lastFeedID.value)\n\n\(formatFeeds(result))"
         } catch {
             log = "endpoint: .getNovelFeeds(novelID: \(novelIDValue))\n[GET] \(url)\n\n소설 피드 조회 실패\n\(error)"

@@ -647,18 +647,21 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
     let scenario: DemoScenario
 
     func execute(novelID: NovelID,
-                 lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+                 lastFeedID: FeedID,
+                 size: Int?) async throws(RepositoryError) -> Paginated<TotalFeed> {
         try? await Task.sleep(nanoseconds: 500_000_000)
         if scenario == .feedLoadFailure {
             throw .networkUnavailable
         }
         // 커서 0 = 첫 페이지, 이후 커서 = 마지막 피드 ID(피드 번호와 동일).
-        // 페이지 크기 10으로 시나리오의 feedCount까지 잘라 낸다 — 5개(1페이지)·15개(2페이지)·45개(5페이지).
+        // 기본 페이지 크기 10으로 시나리오의 feedCount까지 잘라 낸다 — 5개(1페이지)·15개(2페이지)·45개(5페이지).
+        // 재진입 조용한 재조회는 size = 보던 개수로 오므로 그 값을 그대로 존중한다(실서버와 같은 계약).
         let start = lastFeedID.value == 0 ? 1 : lastFeedID.value + 1
         guard start <= scenario.feedCount else {
             return Paginated(items: [], hasNext: false)
         }
-        let end = min(start + 9, scenario.feedCount)
+        // size 0 방어 — 현재 정책상 도달 불가지만 Demo/Preview는 트랩이 곧 프리뷰 사망이라 한 겹 깐다.
+        let end = min(start + max(1, size ?? 10) - 1, scenario.feedCount)
         return Paginated(items: (start...end).map(makeFeed), hasNext: end < scenario.feedCount)
     }
 

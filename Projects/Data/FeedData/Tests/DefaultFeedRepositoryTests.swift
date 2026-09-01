@@ -176,10 +176,21 @@ struct DefaultFeedRepositoryTests {
         let (sut, service) = makeRepository()
         service.getNovelFeedsResult = .success(makeNovelFeedListResponse(count: 1, isLoadable: false))
 
-        _ = try await sut.fetchNovelFeeds(id: NovelID(7), lastFeedID: FeedID(0))
+        _ = try await sut.fetchNovelFeeds(id: NovelID(7), lastFeedID: FeedID(0), size: nil)
 
         #expect(service.fetchedNovelIDs == [7])
         #expect(service.getNovelFeedsCallCount == 1)
+        #expect(service.fetchedNovelQueries.last?.size == 20)
+    }
+
+    @Test("fetchNovelFeeds에 size를 명시하면 기본 페이지 크기 대신 그 값으로 요청한다")
+    func fetchNovelFeeds_withExplicitSize_overridesDefaultPageSize() async throws {
+        let (sut, service) = makeRepository()
+        service.getNovelFeedsResult = .success(makeNovelFeedListResponse(count: 1, isLoadable: false))
+
+        _ = try await sut.fetchNovelFeeds(id: NovelID(7), lastFeedID: FeedID(0), size: 37)
+
+        #expect(service.fetchedNovelQueries.last?.size == 37)
     }
 
     // MARK: - addLike

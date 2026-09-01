@@ -53,6 +53,31 @@ public struct TotalFeed: Equatable, Sendable {
         }
         isLiked.toggle()
     }
+
+    /// 재조회로 받은 서버 항목(self)에 **로컬 항목의 좋아요 상태(isLiked·likeCount)만** 얹은 사본.
+    ///
+    /// 재진입 조용한 재조회의 통째 교체가 낙관 좋아요 토글과 겹칠 때 쓴다 — 서버 응답이 토글 이전
+    /// 스냅샷일 수 있어 그대로 교체하면 방금 누른 좋아요가 시각적으로 풀린다. 좋아요 두 필드만
+    /// 로컬 우선으로 보존하고 **본문·댓글수·수정 여부 등 나머지는 서버 값을 따른다**(셀 전체를
+    /// 로컬로 되돌리면 그 사이 서버에서 바뀐 다른 값까지 버리게 된다 — #236 리뷰).
+    public func preservingLikeState(of local: TotalFeed) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: content,
+            author: author,
+            likeCount: local.likeCount,
+            isLiked: local.isLiked,
+            commentCount: commentCount,
+            connectedNovel: connectedNovel,
+            isSpoiler: isSpoiler,
+            isModified: isModified,
+            isPublic: isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: thumbnailImageURL,
+            imageCount: imageCount
+        )
+    }
     
     public init(
         feedId: FeedID,
