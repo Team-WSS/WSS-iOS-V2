@@ -474,7 +474,7 @@ private extension CollectionDetailView {
             onNovelTapped(novel.id)
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio)
+                WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio, placeholderStyle: .grid)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Spacer().frame(height: 6)

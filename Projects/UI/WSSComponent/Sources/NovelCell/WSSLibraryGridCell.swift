@@ -110,7 +110,7 @@ private extension WSSLibraryGridCell {
     /// 우상단 선택 서클(있으면)을 얹는다. 표지 로드·캐시·빈 표지 폴백은 `WSSNovelCoverImage`가 담당.
     /// ⚠️ 비율은 **파라미터로 넘긴다** — 밖에서 `.aspectRatio`를 걸면 `scaledToFill`과 충돌해 표지가 좁아진다.
     var thumbnail: some View {
-        WSSNovelCoverImage(url: thumbnailImage, aspectRatio: Metric.thumbnailAspectRatio)
+        WSSNovelCoverImage(url: thumbnailImage, aspectRatio: Metric.thumbnailAspectRatio, placeholderStyle: .grid)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             // 잘린 그림 밖 원본 크기로 hit-test 영역이 남지 않게 명시(스크롤·셀 탭 간섭 예방).
             .contentShape(RoundedRectangle(cornerRadius: 8))

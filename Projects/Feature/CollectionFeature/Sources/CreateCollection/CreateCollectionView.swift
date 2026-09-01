@@ -384,7 +384,7 @@ private extension CreateCollectionView {
                 viewModel.handle(.selectRepresentativeNovel(novel.id))
             } label: {
                 ZStack(alignment: .topTrailing) {
-                    WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio)
+                    WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio, placeholderStyle: .grid)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay {
                             if isRepresentative {
