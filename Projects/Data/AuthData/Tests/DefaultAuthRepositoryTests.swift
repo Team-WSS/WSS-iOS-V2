@@ -107,6 +107,31 @@ struct DefaultAuthRepositoryTests {
         #expect(result == NeedOnboarding(value: false))
     }
 
+    @Test("로그인 성공 시 이전 세션의 사용자 스코프 캐시를 먼저 지운다")
+    func loginClearsStaleUserScopedCache() async throws {
+        let service = MockAuthService()
+        service.postKakaoLoginResult = .success(makeLoginSuccessResponse())
+        let appStorage = makeAppStorageWithUserCache()
+
+        let sut = makeRepository(service: service, appStorage: appStorage)
+        _ = try await sut.login(with: .kakao(accessToken: "kakaoToken"))
+
+        expectUserScopedCacheCleared(appStorage)
+    }
+
+    @Test("로그인 실패 시 사용자 스코프 캐시를 보존한다")
+    func loginFailureKeepsUserScopedCache() async {
+        let service = MockAuthService()
+        service.postKakaoLoginResult = .failure(NetworkingError.responseFailure(code: 500, body: nil))
+        let appStorage = makeAppStorageWithUserCache()
+
+        let sut = makeRepository(service: service, appStorage: appStorage)
+        _ = try? await sut.login(with: .kakao(accessToken: "kakaoToken"))
+
+        #expect(appStorage.get(.nickname) == "이전사용자")
+        #expect(appStorage.removedKeys.isEmpty)
+    }
+
     @Test("NetworkingError를 AuthError로 올바르게 변환한다")
     func translatesNetworkingErrorToAuthError() async {
         let cases: [(error: NetworkingError, expected: AuthError)] = [
