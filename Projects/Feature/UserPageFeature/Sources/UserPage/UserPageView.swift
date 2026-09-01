@@ -244,20 +244,9 @@ struct UserPageView: View {
         VStack(spacing: 0) {
             Spacer().frame(height: 30)
 
-            AsyncImage(url: viewModel.state.profile?.characterImage) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                default:
-                    WSSImage.imgEmptyCover.swiftUIImage
-                        .resizable()
-                        .scaledToFill()
-                }
-            }
-            .clipShape(Circle())
-            .frame(width: 94, height: 94)
+            WSSProfileImage(url: viewModel.state.profile?.characterImage)
+                .clipShape(Circle())
+                .frame(width: 94, height: 94)
 
             Spacer().frame(height: 20)
 

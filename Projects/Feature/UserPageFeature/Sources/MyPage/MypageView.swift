@@ -129,22 +129,9 @@ struct MypageView: View {
     
     private var myProfileSection: some View {
         HStack(alignment: .top, spacing: 24) {
-            AsyncImage(url: viewModel.state.profile?.characterImage) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                case .failure:
-                    WSSImage.imgLoadingThumbnail.swiftUIImage
-                        .resizable()
-                default:
-                    ProgressView()
-                }
-            }
-            .scaledToFill()
-            .clipShape(Circle())
-            .frame(width: 86, height: 86)
+            WSSProfileImage(url: viewModel.state.profile?.characterImage)
+                .clipShape(Circle())
+                .frame(width: 86, height: 86)
             .overlay(alignment: .bottomTrailing) {
                 Button(action: onEditProfileTapped) {
                     WSSImage.icEditProfileMypage.swiftUIImage
