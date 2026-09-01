@@ -46,9 +46,11 @@ struct PreferenceGenreSection: View {
             Spacer().frame(height: Metric.sectionSpacing)
 
             switch state {
-            case .novels(let novels):
+            case .novels(let novels) where !novels.isEmpty:
                 novelGrid(novels)
-            case .noGenreSettings:
+            // 설정했으나 추천 0건(.novels([]))도 미설정(.noGenreSettings)과 똑같이 설정 유도 카드를 띄운다
+            // (#222 V1 parity — 빈 그리드보다 행동 유도).
+            case .novels, .noGenreSettings:
                 settingInduceCard
             }
         }

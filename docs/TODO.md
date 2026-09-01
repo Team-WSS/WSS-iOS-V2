@@ -247,45 +247,13 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
 추출 PR 범위(문서화)를 벗어나 미룬 것. 상세·근거·인용은 각 모듈 `V1_BEHAVIOR_CONTRACT.md`. (판정 세션 2026-08-28)
 서버 요청 파라미터 매핑의 V1↔V2 교차 종합(C2)은 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md)가 정본.
 
-- **앱 리뷰 요청(StoreKit) 재도입** — V1은 피드 작성/감상평 저장 성공 후 `AppReviewManager.requestReview()`로 앱
-  평점 프롬프트를 띄웠다. V2 없음. 되살리되 **호출 타이밍은 재설계**(무분별 호출 금지). → `FeedFeature`·`NovelReviewFeature`.
-- **피드 댓글/삭제 조용한 실패 표면화(회귀 확정)** — `FeedDetailViewModel`의 `createComment`·`editComment`·
-  `deleteComment`·`deleteFeed`가 **빈 `catch {}` 4곳**으로 실패를 삼킨다(실측 확인). V1은 "네트워크 지연" 토스트 +
-  전송버튼 재활성. 최소 에러 표면화 필요. → `FeedFeature`.
-- **감상평 첫 진입 온보딩 힌트 재도입 (사용자 확정 2026-08-28)** — V1의 1회성 오버레이(딤 + 평가 상태바 미리보기 + 말풍선 힌트,
-  닫으면 `UserDefaults`로 재노출 방지)를 되살린다. 디자인 시안은 구현 시 V1 구성을 재료로 요청. 근거: `NovelDetailFeature` 6.4·0절 4.
-  → `NovelDetailFeature`.
-- **피드 좋아요 햅틱 복원** — V1 좋아요에 light impact 햅틱. V2 목록 좋아요엔 없다(정렬 토글엔 있음). → `FeedFeature`.
-- **피드 댓글 500자 제한 복원** — V1은 500자 하드컷. V2는 제한 없음(실측 확인). 무제한이면 서버가 긴 댓글 거부 시
-  조용한 실패 위험. → `FeedFeature`.
-- **내 피드 개수 표시 = 서버 `feedsCount` 사용 (사용자 확정 2026-08-28)** — V2는 로드된 배열 길이(`myFeeds.count`)라
-  페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가
-  실재하므로 매퍼/상태로 노출해 표시(V1 parity). → `FeedFeature`·`FeedData`.
-- **피드 수정 "변경 감지" 게이트 복원 (사용자 확정 2026-08-28)** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경
-  재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 활성
-  (`isInitialFeedChanged`). 겸사 **댓글 전송 버튼**도 무변경 재전송 가드 복원(초기값과 다를 때만 활성, 사소). → `FeedFeature`.
-- **매력포인트 버튼 순서 V1로 정렬** — 결정: `worldview·material·필력(writingSkill)·character·relationship·vibe`
-  (**필력 3번째**). 현재 V2는 필력이 맨 끝(둘 다 `allCases` 나열이라 우연히 다름). → `NovelReviewFeature`.
-- **키워드 빈 화면 문의 버튼 목적지 되돌림(오배선)** — 빈 검색결과의 "문의" 버튼이 V2에서 `AppURL.inquiryAddNovel`
-  (작품 등록 문의)로 잘못 연결됐다. V1은 **범용 문의**(`ExternalLinks.inquiry` = V2 `AppURL.errorReport`와 동일 URL).
-  **범용 문의로 되돌릴 것**. (`KeywordFeature/CLAUDE.md`의 "전용 폼 없어 재사용" 설명은 정정 완료.) → `KeywordFeature`.
+- ~~**앱 리뷰 요청(StoreKit) 재도입**~~ ✅ **완료(#221)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입.
+  BaseDomain `AppReviewRequestUseCase` + BaseData(UserDefaults+Bundle 버전) repo를 피드·감상평이 공유하고,
+  프롬프트는 각 View가 `@Environment(\.requestReview)`(StoreKit)로 띄운다. 상세는 두 모듈 `V1_BEHAVIOR_CONTRACT.md`.
 - **Amplitude 애널리틱스 횡단 재도입** — V1은 홈·작품상세·검색·키워드 등 곳곳에 이벤트를 심었다. V2 전무. 화면별
   계약이 아니라 **횡단 인프라**라 별도 이슈로 승격 대상. → 다수 모듈.
-- ✅ **[완료 2026-08-28] 상세검색 연재상태 회귀 + 내 피드 정렬 대소문자** — 둘 다 C2에서 수정·빌드 검증
-  완료(상세는 [`docs/V1_PARAM_MAPPING_C2.md`](V1_PARAM_MAPPING_C2.md) 3-1·3-2). `isCompleted`는 `Bool?` +
-  매퍼 `.map`으로 미선택 시 쿼리 생략(완결작 90% 누락 회귀 해소), 내 피드 정렬은 `.uppercased()`로 통일(서버는
-  대소문자 무관이나 표기 일관성). **잔여: `isCompleted` 매퍼 회귀 테스트**(SearchData `.tests` 타깃 미배선이라 후속).
-- **검색창 자동 포커스 복원** — V1은 검색 화면 진입 시 키보드를 바로 띄웠다(becomeFirstResponder). V2는 자동
-  포커스 없음(실측 — `@FocusState`만 있고 진입 시 true로 안 켬). 진입 시 `isFocused = true` 복원. → `SearchFeature`.
-- **검색어 30자 제한 복원** — V1은 검색어 30자 초과 입력을 막았다(`shouldChangeCharactersIn`). V2는 제한 없음
-  (실측). 서버 제약 가능성. → `SearchFeature`.
 - **검색→작품상세·상세검색 네비게이션 배선(5경로)** — 소소픽·결과 셀→작품상세, 장르·키워드 더보기→상세검색,
   상세검색 진입경로 부재. 전부 App 라우터/네비게이션 배선 대기 — **App 모듈에서 처리**(사용자 확정 2026-08-28). → `App`.
-- **서재(내 서재) 필터·정렬 영속화 복원 (사용자 확정 2026-08-28)** — V1은 필터·정렬을 UserDefaults에
-  저장하고 앱 재실행 후 복원했다(`libraryFilterOption`·`librarySortOption`). V2는 저장/복원이 전무해 앱을
-  껐다 켜면 초기화된다(Feature·App grep 0). 매 실행 초기화는 UX 후퇴라 **되살리기로 결정** — 경량
-  영속화(UserDefaults 등)로 저장/복원하되 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). 근거·상세는
-  `LibraryFeature/V1_BEHAVIOR_CONTRACT.md` 1.5·0-1. → `LibraryFeature`.
 - **push 화면 재진입 재조회 복원 (횡단, 사용자 확정 2026-08-28)** — V1은 push 화면도 `viewWillAppear`마다
   서버 재조회했으나 V2는 `hasLoaded` 1회 가드로 성공 후 재조회하지 않는다. **push→pop→복귀 창에서 서버가
   바뀐 것(새 알림·다른 기기 읽음·외부 변경)이 미반영**되는 걸 없애기로 결정 — 복귀 시 재조회를 복원한다.
@@ -296,27 +264,13 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   parity 복원이 아니라 관측된 회귀라 우선순위가 높다. → 다수 Feature.
 - **크로스스크린 완료 피드백 재설계 (App 조정 계층, 사용자 확정 2026-08-28)** — V1은 `NotificationCenter` 배관
   (`feedEdited`·`NovelReviewed`·`BlockUser`)으로 다른 화면에서 끝난 일의 결과를 복귀 화면에 토스트로 알렸다
-  ("수정 완료"·"평가 완료"·"차단했어요"). V2엔 이 배관이 없다. 위 push 재진입 재조회 복원과 **같은 App 배선 자리**에서
-  콜백/이벤트로 재설계한다(싱글톤 NotificationCenter 답습 금지). 근거: `FeedFeature` 0절 15 / `NovelDetailFeature`
-  6.5·0절 11 / `UserPageFeature` 4.6(소소 묶음 ①과 합류). → App + 다수 Feature.
-- **알림 상세 본문 URL 자동 링크 복원 (사용자 확정 2026-08-28)** — V1 상세 본문은 `UITextView`
-  `dataDetectorTypes=.link`라 평문 URL이 탭 가능했으나, V2 순수 `Text`는 평문 URL을 링크로 렌더하지 않는다.
-  `AttributedString` 링크 감지로 복원. **선행 확인**: 서버 알림 본문에 실제 링크가 실리는지. 근거:
-  `NotificationFeature` 2.3·0-2. → `NotificationFeature`.
-- **타유저 USER-018('알 수 없는 유저') 전용 처리 복원 (사용자 확정 2026-08-28)** — V1은 `USER-018` 서버
-  에러를 잡아 빈 프로필로 폴백했으나, V2는 `USER-015`(비공개)만 처리하고 018은 일반 로드 실패
-  (`NetworkErrorView`)로 떨어져 재시도만 반복된다(잠재 회귀). 018 전용 "없는 유저" 처리를 복원한다. 근거:
-  `UserPageFeature` 4.7·0-4. → `UserPageFeature`.
-- **홈 선호장르 "설정했으나 추천 0건"도 설정 유도 카드로 (사용자 확정 2026-08-28)** — V2는 `PreferenceGenreNovelState`를
-  `.noGenreSettings`(유도 카드) / `.novels([])`(섹션 숨김)로 나눴으나, 0건일 때도 V1처럼 유도 카드를 띄우기로(빈 자리보다
-  행동 유도가 낫다). `.novels([])` 분기를 유도 카드로 합치거나 별도 케이스로 같은 카드 렌더. 근거: `HomeFeature` 2.5·0절 7.
-  → `HomeFeature`.
-- **소소한 V1 parity 복원 묶음 (사용자 확정 2026-08-28, 저우선)** — ① 타유저 차단 성공 시 "차단했어요"
-  안내(토스트) 복원(`UserPageFeature` 4.6). ② 마이페이지 스크롤>0 시 네비바 "마이페이지" 타이틀 복원
-  (`UserPageFeature` 1.8). ③ 생년 휠 상한 dynamic화 — 현재 `BirthYear.maxYear=2024` 하드코딩(V1도 2025
-  하드코딩)이라 현재연도 기반으로(`ProfileDomain/BirthYear.swift`, `SettingFeature` 3.2·`OnboardingFeature`
-  공용). ④ 작품 상세 피드 셀의 **탈퇴 유저(`userId == -1`) 프로필 탭 토스트** 복원(`NovelDetailFeature` 4.3 —
-  Feed 0절 8·USER-018 폴백과 통일; V2 매퍼가 `-1`을 nil로 안 접는 함정은 계약서 4.3 참고). → `UserPageFeature`·`ProfileDomain`·`NovelDetailFeature`.
+  ("수정 완료"·"평가 완료"·"차단했어요"). V2는 셋 중 **`BlockUser`("차단했어요")만 #221에서 먼저 복원**했다 —
+  `UserPageView.onUserBlocked` seam(→ Factory → `UserPageAssembly`) + 4탭 Root의 `.showWSSToast(.blockUser)`
+  (각 탭 `NavigationStack` 오버레이 → pop 후 직전 뷰 위, `UserPageFeature/CLAUDE.md`·`V1_BEHAVIOR_CONTRACT.md` 4.6).
+  **단 이 4탭 배선은 의도적 interim**(4벌 복붙) — `feedEdited`·`novelReviewed`까지 합쳐 위 push 재진입 재조회 복원과
+  **같은 App 배선 자리**에서 콜백/이벤트 기반 **통합 채널**로 재설계하고(싱글톤 NotificationCenter 답습 금지), 그때
+  이 블록토스트 4벌도 그 채널로 흡수한다. 근거: `FeedFeature` 0절 15 / `NovelDetailFeature` 6.5·0절 11 /
+  `UserPageFeature` 4.6. → App + 다수 Feature.
 
 ### 13. 판정 보류(논의 대기) → `docs/PENDING_DECISIONS.md`로 이관 (#222 C1/C2)
 
@@ -378,26 +332,23 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
 - **덤(별개 정리감)**: `BlockdUser`는 `BlockedUser` **오타**(e 누락, `SocialData/DTO/Response/BlockedUserResponse.swift`).
   접미사 규칙 대상은 아니나 함께 손볼 때 고칠 것.
 
-### 4. A4 Swift 6 — 잔여 concurrency 경고 3건 + Feature @MainActor 완주
+### 4. A4 Swift 6 — 잔여 concurrency 경고 3건 ✅완료(#221) / Feature @MainActor 완주 대기
 
-- **무엇**: #219(A4 1~4단계)에서 프로덕션 strict concurrency 경고를 **249→3**으로 줄였다(Domain·Core·UI·Data=0).
-  남은 **3건은 전부 `NovelDetailFeature`의 `TopBounceDisabler`**(`NovelDetail/NovelDetailView.swift:685·687·688`):
-  `UIScrollView.observe(\.contentOffset)` KVO 클로저가 main-actor 격리 프로퍼티(`contentOffset`)에 key path를
-  걸고 읽고/쓴다.
-- **왜 이번에 안 했나**: 이 클램프 로직은 **서브틀한 버그 이력이 있고 시뮬레이터 자동화로 검증이 안 되는**
-  스크롤 동작(모듈 `CLAUDE.md`의 `TopBounceDisabler`·`enableSwipeBack` 항목 참고)이라, `MainActor.assumeIsolated`
-  래핑이 동작을 바꾸지 않는지 **사람이 기기에서 직접 밀어** 확인해야 안전하다. 자동 세션에서 블라인드로 손대지 않았다.
-- **시도 결과(2026-08-27, 실측 — `assumeIsolated`는 실패로 판명)**: 클로저 본문을 `MainActor.assumeIsolated`로
-  감싸고 `Coordinator`를 `@MainActor`로 올려 **경고 3→0·빌드 성공**까지 갔으나, **실기기에서 상단 클램프가
-  깨졌다**(하단 bounce만 정상, 상단 over-scroll이 안 잡힘). 진단 로그상 `y=0` 쓰기는 매 프레임 반영되는데도
-  UIScrollView bounce 애니메이션이 덮었다 — `assumeIsolated`가 KVO 콜백 동기 실행 순서를 바꾼 것으로 추정.
-  **되돌렸다**(원본 비격리 유지, 경고 3건 감수). 재현·상세는
-  [NovelDetailFeature CLAUDE.md](../Projects/Feature/NovelDetailFeature/CLAUDE.md)의 `TopBounceDisabler` 항목.
-- **다음 시도 방향(보류)**: `assumeIsolated` 없이 mode 6 경고를 없애는 길을 찾아야 한다 — `@preconcurrency`/
-  `nonisolated` 우회 검토, 또는 이 KVO를 UIKit 컨테이너로 옮겨 SwiftUI 경계 밖에서 처리, 최후엔 이 모듈만
-  mode 6 예외. Feature mode 6 승격(5번 6단계) 착수 시 이 화면을 별도로 다룬다. 경고 3건은 report-only라 빌드 무해.
+- **경고 3건 = 해결(#221, 2026-08-29)**: 남아 있던 3건은 전부 `NovelDetailFeature`의 `TopBounceDisabler`
+  (`UIScrollView.observe(\.contentOffset)` KVO)였다. #219에서 `MainActor.assumeIsolated` 래핑은 **경고는
+  없애지만 상단 클램프가 실기기에서 깨져** 되돌렸었다. #221에서 **KVO 클램프를 아예 걷어내고 #200 컬렉션
+  상세식 순수 SwiftUI stretch 헤더로 교체**했다(당겨서 내리면 배경을 그만큼 확대해 빈 영역을 메움) → KVO
+  소멸 → `enableSwift6: true`로 승격. 실기 대신 시뮬레이터 stretch probe(고정 stretch 값 주입)로 채움·경계
+  고정을 실측하고, 스크롤/스티키 탭/네비 타이틀 무회귀 확인.
+  - **덤(mode 6가 드러낸 추가 결함)**: 승격 시 `NovelNotificationSettingSheetViewModel`에서 data-race error가
+    떴다 — `NovelNotificationSetting`(NotificationDomain Entity)만 `Sendable`이 빠져 있었다(형제 엔티티는 전부
+    Sendable). 값 타입이라 `Sendable` 추가로 해결. 이슈가 "KVO가 유일한 잔여"라 한 것은 #189(알림 시트)가
+    그 뒤 들어와 stale했던 것.
+- **남은 것 — Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending"
+  경고를 cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올린 지금, VM에 `@MainActor`를 명시하는 게
+  정석이므로 12개 Feature VM에 @MainActor를 붙이고 화면별로 검증하는 일이 남는다(로드맵 3단계 본래 취지).
 
-### 5. A4 Swift 6 — 경고 0 레이어 mode 6 승격 ✅완료 / Feature·App은 대기 (5·6단계)
+### 5. A4 Swift 6 — 경고 0 레이어·Feature mode 6 승격 ✅완료 / App·Demo·Tests 대기 (5·6단계)
 
 - **완료(5단계)**: 경고 0을 달성한 **Core·Domain·Data·UI 32개 모듈**의 Sources 타깃을 **Swift 6 language
   mode**(`SWIFT_VERSION = 6`)로 승격했다 — concurrency 위반이 이제 warning이 아니라 **컴파일 error**다
@@ -408,17 +359,17 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
     미청소라, 전역/프로젝트 세팅에 얹으면 그쪽이 error로 깨진다. Sources 타깃 한정으로 회피.
   - **왜 scan.sh --strict CI가 아니라 pbxproj 직접 승격인가**: 컴파일러 error가 report-only CI 게이트보다
     강하고 빠르다(로컬 빌드에서 즉시, 전 모듈 재컴파일하는 무거운 CI job 불필요). 승격된 레이어만큼 그
-    존재 이유가 사라져 → **43모듈 승격 후 `Tooling/StrictConcurrency/`와 `strict-concurrency` CI job을 제거함**(아래).
-- **6단계 진행 — Feature 11개 승격 완료 (NovelDetail 제외)**: `createFeatureModule`에 `enableSwift6: Bool = true`
-  파라미터를 추가해 11개 Feature Sources를 mode 6으로 올렸다. **NovelDetailFeature만 `enableSwift6: false`**
-  (TopBounceDisabler KVO 3건 미해결 → 위 4번). 검증: 11개 전부 **Demo 포함 BUILD SUCCEEDED·Sources error 0**
-  실측(fresh DD) + Home·Library·Search Demo 시뮬레이터 스모크 정상(런타임 무회귀 — 코드 무변경 승격이라 예상대로).
-- **남은 것**: ① **NovelDetailFeature**(위 4번 KVO 해결 후 `enableSwift6: true`) ② **App(WSS-iOS)**(Feature 전부가
-  mode 6이 된 뒤 마지막) ③ **각 모듈 Demo/Testing/Tests**(별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라
-  mode 6 오버라이드 시 error. Sources 승격엔 무관하나 Demo까지 올리려면 정리 필요).
+    존재 이유가 사라져 → **44모듈 승격 후 `Tooling/StrictConcurrency/`와 `strict-concurrency` CI job을 제거함**(아래).
+- **6단계 진행 — Feature 12개 전부 승격 완료**: `createFeatureModule`에 `enableSwift6: Bool = true` 파라미터를
+  추가해 Feature Sources를 mode 6으로 올렸다. 처음엔 NovelDetailFeature만 KVO 미해결로 `false`였으나 **#221에서
+  TopBounceDisabler를 stretch 헤더로 교체하며 승격**(위 4번). 검증: 전부 **BUILD SUCCEEDED·Sources error 0**
+  실측(fresh DD) + NovelDetail·Home·Library·Search Demo 시뮬레이터 스모크 정상.
+- **남은 것**: ① **App(WSS-iOS)**(Feature 전부가 mode 6이 된 지금 마지막 승격 대상) ② **각 모듈 Demo/Testing/Tests**
+  (별건 — 예: Demo Mock UseCase의 `store`가 non-Sendable이라 mode 6 오버라이드 시 error. Sources 승격엔 무관하나
+  Demo까지 올리려면 정리 필요).
 - **정리 완료(6단계와 함께)**: `Tooling/StrictConcurrency/scan.sh`·`README.md`와 `test.yml`의
-  `strict-concurrency`(Swift 6 Readiness) job·주간 `schedule` cron을 **제거함**. 근거: 43모듈이 mode 6라
-  컴파일러가 회귀를 error로 막고(report-only 스캐너보다 강함), 남은 mode 5(NovelDetail·App·Demo/Tests) 승격은
+  `strict-concurrency`(Swift 6 Readiness) job·주간 `schedule` cron을 **제거함**. 근거: 44모듈이 mode 6라
+  컴파일러가 회귀를 error로 막고(report-only 스캐너보다 강함), 남은 mode 5(App·Demo/Tests) 승격은
   "그 스킴을 mode 6으로 직접 빌드"가 scan.sh의 `complete`-warning 집계보다 정확하다(warning 0 ≠ mode 6 error 0).
 - **Feature @MainActor 완주(선택)**: #219는 UseCase/Entity를 Sendable로 만들어 Feature "sending" 경고를
   cascade로 없앴다(@MainActor 없이). Feature를 mode 6으로 올릴 때 VM을 `@MainActor`로 명시하는 게 정석이므로

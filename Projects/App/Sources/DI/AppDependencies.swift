@@ -56,11 +56,17 @@ final class AppDependencies {
     let feedRepository: FeedRepository
     let socialRepository: SocialRepository
     let novelRepository: NovelRepository
+    /// 내 서재 필터·정렬 로컬 영속화(#221) — 서버 조회(`novelRepository`)와 별개 계약이라 따로 조립한다.
+    let myLibraryFilterRepository: MyLibraryFilterRepository
     let keywordRepository: KeywordRepository
     let novelReviewRepository: NovelReviewRepository
     let commentRepository: CommentRepository
     let searchRepository: any RecentSearchRepository & SearchAutoCompletionRepository & SearchNovelRepository
     let pushSettingRepository: PushSettingRepository
+    /// 1회성 온보딩 힌트 플래그(#221) — 순수 로컬(UserDefaults)이라 네트워크 client 없이 조립한다.
+    let onboardingHintRepository: OnboardingHintRepository
+    /// 앱스토어 평점 요청 게이팅(#221, 피드·감상평 공유) — 순수 로컬(UserDefaults + Bundle 버전).
+    let appReviewRequestRepository: AppReviewRequestRepository
 
     init() {
         let logger = ConsoleLogger()
@@ -128,6 +134,10 @@ final class AppDependencies {
             appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "NovelData", underlying: logger)
         )
+        self.myLibraryFilterRepository = NovelDataFactory.makeMyLibraryFilterRepository(
+            appStorage: UserDefaultsStorage(),
+            logger: DataLogger(moduleName: "NovelData", underlying: logger)
+        )
         self.keywordRepository = KeywordDataFactory.makeRepository(
             client: client,
             logger: DataLogger(moduleName: "BaseData", underlying: logger)
@@ -148,6 +158,8 @@ final class AppDependencies {
             client: client,
             logger: DataLogger(moduleName: "NotificationData", underlying: logger)
         )
+        self.onboardingHintRepository = DefaultOnboardingHintRepository(appStorage: UserDefaultsStorage())
+        self.appReviewRequestRepository = DefaultAppReviewRequestRepository(appStorage: UserDefaultsStorage())
 
         // 키워드는 로컬 파일 캐시(`KeywordCache`)를 여러 도메인(서재 필터·프로필 취향·검색 등)이
         // 그대로 읽어 쓰는 구조라(BaseData/CLAUDE.md), 캐시가 비어있으면 그 화면들이 전부 빈 목록으로

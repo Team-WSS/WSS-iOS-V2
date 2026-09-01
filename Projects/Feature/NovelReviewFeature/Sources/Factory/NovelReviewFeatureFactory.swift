@@ -33,6 +33,7 @@ public enum NovelReviewFeatureFactory {
         status: ReadingStatus,
         loadUseCase: LoadNovelReviewDraftUseCase,
         saveUseCase: SaveNovelReviewUseCase,
+        appReviewUseCase: AppReviewRequestUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         keywordSearchSheet: @escaping KeywordSearchSheetBuilder
@@ -42,6 +43,7 @@ public enum NovelReviewFeatureFactory {
             status: status,
             loadUseCase: loadUseCase,
             saveUseCase: saveUseCase,
+            appReviewUseCase: appReviewUseCase,
             logger: logger
         )
         return NovelReviewView(

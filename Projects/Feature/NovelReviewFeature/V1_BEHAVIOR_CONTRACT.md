@@ -39,7 +39,7 @@
 
 **되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 12절)**
 
-1. 🔧 **저장 성공 후 App Store 리뷰 요청 재도입** — V1은 저장 성공 시 `AppReviewManager.requestReview()`로 평점 프롬프트. V2 없음. **되살리되 호출 타이밍 재설계**(무분별 호출 금지, 피드와 공용). → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
+1. ✅ **저장 성공 후 App Store 리뷰 요청 재도입 (#221 구현 완료)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입(피드와 공용). → [2.4](#24-저장-부수-작업앱-리뷰-요청노티피케이션분석)
 2. 🔧 **매력포인트 버튼 순서 V1로 정렬** — V1 `worldview·material·필력·character·relationship·vibe`(필력 3번째), V2는 필력이 맨 끝. 둘 다 `allCases` 나열이라 우연히 다름. **V1 순서로 맞춘다.** → [6](#6-매력-포인트)
 
 **미배선 (배선 대기 · 삭제 아님)**
@@ -122,9 +122,9 @@
 
 ### 2.4 저장 부수 작업(앱 리뷰 요청·노티피케이션·분석)
 
-- 🔧 **재도입 확정→TODO** (2026-08-28) — **저장 성공 후 App Store 리뷰 요청**. V1은 저장 성공 콜백에서 `AppReviewManager.shared.requestReview()`로 **iOS 앱 평점 요청 프롬프트**(StoreKit)를 띄웠다. **V2엔 없다.**
-  - **판정 근거**: 되살리기로 확정(리뷰 남긴 직후가 요청 적기). 의도적 제외가 아니라 StoreKit 인프라 미이식 — `docs/TODO.md` 12절.
-  - 근거: V1 `NovelReviewViewModel.swift:163`(`AppReviewManager.shared.requestReview()`) · V2 `NovelReviewViewModel.swift:257-267`(없음)
+- ✅ **구현 완료 (#221)** — **저장 성공 후 App Store 리뷰 요청**. V1은 저장 성공 콜백에서 `AppReviewManager.shared.requestReview()`로 **iOS 앱 평점 요청 프롬프트**(StoreKit)를 띄웠다(매번, 앱측 억제 없음).
+  - V2: `saveDraft()` 성공 시 `AppReviewRequestUseCase`(피드와 공유, **참여 임계치+버전 게이트**)를 통과하면 `NovelReviewView`가 `@Environment(\.requestReview)`(StoreKit)로 프롬프트를 dismiss 직전에 띄운다. ⚠️ `shouldDismiss`는 취소에도 켜지므로 리뷰는 저장 성공에서만 세우는 `shouldRequestReview` 별도 플래그로 발동. "무분별 호출 금지"로 V1의 매번 호출을 게이트로 대체(시뮬레이터로 저장→프롬프트/취소→없음 실측).
+  - 근거: V1 `NovelReviewViewModel.swift:163` · V2 `NovelReviewViewModel.swift`(saveDraft 성공 → `recordEngagementAndGateReview`), `NovelReviewView.swift`(shouldDismiss onChange: requestReview→dismiss)
 - 🗑/✅ — **저장 성공 후 다른 화면 갱신**. V1은 `NotificationCenter.post(name: "NovelReviewed")`로 브로드캐스트해 작품 상세 등이 갱신하게 했다. V2는 노티 없이 **화면을 닫고, 복귀한 화면이 `onAppear` 재조회로 갱신**(탭 콘텐츠 갱신 계약)한다.
   - 관찰 동작(리뷰 저장 후 상세의 별점·읽기상태가 갱신됨)은 같은 결이나 **수단이 노티 → 재조회로 바뀌었다**. 상세가 실제로 갱신되는지는 상세 화면 계약과 함께 확인.
   - 근거: V1 `NovelReviewViewModel.swift:161`(`"NovelReviewed"` post) · V2 `NovelReviewViewModel.swift:262-263`, `Feature/CLAUDE.md`(탭 복귀마다 갱신)

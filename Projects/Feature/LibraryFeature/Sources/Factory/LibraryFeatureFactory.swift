@@ -30,6 +30,8 @@ public enum LibraryFeatureFactory {
     public static func makeMyLibraryView(
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
+        loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase,
+        saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase,
         logger: Logger? = nil,
         onNovelSelected: @escaping (NovelID) -> Void,
         onSearchTapped: @escaping () -> Void,
@@ -40,6 +42,8 @@ public enum LibraryFeatureFactory {
         let viewModel = LibraryViewModel(
             loadMyLibraryUseCase: loadMyLibraryUseCase,
             loadMyLibraryKeywordsUseCase: loadMyLibraryKeywordsUseCase,
+            loadMyLibraryFilterUseCase: loadMyLibraryFilterUseCase,
+            saveMyLibraryFilterUseCase: saveMyLibraryFilterUseCase,
             logger: logger
         )
         return LibraryView(

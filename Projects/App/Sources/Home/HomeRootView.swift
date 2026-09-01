@@ -85,6 +85,11 @@ struct HomeRootView: View {
     @State private var path = NavigationPath()
     /// 딥링크 화면이 놓인 스택 깊이 — `path.count`가 이보다 작아지면 그 화면이 빠진 것(아래 `.onChange(of: path.count)`).
     @State private var deepLinkDestinationDepth: Int?
+    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀 화면 위에 띄우는 "차단했어요" 토스트(#221, V1 parity).
+    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 이 루트가 표시한다 — 4탭 공통
+    /// 패턴이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절 크로스스크린 완료 피드백).
+    @State private var isUserBlockedToastPresented = false
+    @State private var blockedNickname = ""
     /// 알림 목록으로 이동한 뒤, 그 화면 위에 기기 설정 유도 알럿을 띄워야 하는지(#193) — `.overlay` 기반
     /// `showWSSAlert`가 push 전환과 동시에 뜨면 전환에 밀려 사라지므로(`HomeFeature/CLAUDE.md` 참고),
     /// `HomeFeature`가 아니라 여기(`NavigationStack` 컨테이너)에 붙여 push가 끝난 뒤에도 살아남게 한다.
@@ -148,7 +153,11 @@ struct HomeRootView: View {
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) }
+                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
+                            onUserBlocked: { nickname in
+                                blockedNickname = nickname
+                                isUserBlockedToastPresented = true
+                            }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -234,6 +243,7 @@ struct HomeRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
+        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
     }
 }
 
@@ -361,6 +371,7 @@ private extension HomeRootView {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel
         )
     }

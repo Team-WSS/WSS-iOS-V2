@@ -33,6 +33,10 @@ final class SosoFeedViewModel {
         var myFeeds: [TotalFeed] = []
         var sosoFeeds: [TotalFeed] = []
 
+        /// 내 피드 전체 개수(서버 `feedsCount`). "n개의 기록" 표시에 로드된 배열 길이 대신 쓴다 —
+        /// 페이지네이션 전엔 배열이 최대 20까지라 실제 총량과 어긋나기 때문(V1 parity, #222). 로드 전엔 nil.
+        var myFeedsTotalCount: Int?
+
         /// 실제 fetch에 사용되는 커밋된 필터.
         var myFeedOption: MyFeedOption = MyFeedOption(
             genres: NovelGenre.allCases,
@@ -251,6 +255,7 @@ final class SosoFeedViewModel {
             let items = page.items.map { applying(profile, to: $0) }
             state.myFeeds = refresh ? items : state.myFeeds + items
             state.hasMoreMyFeeds = page.hasNext
+            state.myFeedsTotalCount = page.totalCount
         } catch {
             state.errorMessage = "내 피드를 불러오지 못했어요."
         }

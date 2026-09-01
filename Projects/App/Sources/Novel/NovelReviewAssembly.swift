@@ -34,6 +34,7 @@ enum NovelReviewAssembly {
             status: status,
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: dependencies.novelReviewRepository),
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: dependencies.novelReviewRepository),
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             logger: dependencies.logger,
             onAuthenticationRequired: onAuthenticationRequired,
             keywordSearchSheet: keywordSearchSheet(dependencies: dependencies)

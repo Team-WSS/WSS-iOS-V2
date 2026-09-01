@@ -173,6 +173,7 @@
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +
   `LibrarySection` 블록 전체) 모두 같은 콜백을 부른다 — 어느 쪽을 눌러도 같은 화면으로 간다.
 - **차단**: 툴바 threedots 드롭다운("차단하기") → `WSSAlertType.blockUser` 확인 알럿 → `BlockUserUseCase`. **성공하면 화면을 dismiss한다**(`state.shouldDismiss`) — 차단하면 상대 프로필을 다시 볼 수 없어 화면에 남아있을 이유가 없다는 판단(사용자 확정).
+  - **차단했어요 크로스스크린 안내 seam(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser(nickname)`를 post해 **복귀 화면**이 "차단했어요" 토스트를 띄웠다(V2 parity 대상, `V1_BEHAVIOR_CONTRACT.md` 4.6). 이 화면은 차단 성공과 동시에 pop되므로 토스트는 자기가 못 띄운다 — `UserPageView.onUserBlocked(nickname)` 콜백을 `shouldDismiss` 전이에서 `dismiss()` **직전**에 부르는 것까지만 뚫어뒀다(Factory·`UserPageAssembly`까지 전달, 전부 기본 no-op). `shouldDismiss`가 **차단 성공에서만** 켜지므로(뒤로가기는 툴바 버튼이 직접 `dismiss`) 이 전이 = 차단 성공으로 봐도 된다. **실제 토스트(`WSSToastType.blockUser(nickname:)` = "{nickname}님을 차단했어요", 이미 존재)는 4탭 Root(App, `FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`)가 `onUserBlocked`를 받아 `.showWSSToast(.blockUser)`로 띄운다** — 각 탭의 `NavigationStack` **컨테이너**에 얹은 오버레이라, pop 후 최상단이 된 **직전 뷰**(소소피드/피드상세/작품상세 등) 위에 뜬다. V1은 전역 `NotificationCenter.blockUser`를 **피드 탭 하나(`FeedViewController`)만** 캐치해 띄웠던 것과 달리, V2는 **차단한 바로 그 탭**에서 뜬다(더 정확). ⚠️ **이 4탭 배선은 의도적 4벌 복붙(interim)** — `feedEdited`·`novelReviewed`까지 합쳐 App 조정 계층의 **통합 크로스스크린 채널**로 재설계할 때 걷어낼 예정이라(`docs/TODO.md` 12절), 이 4벌을 "화면 전환 완료 피드백"의 정식 패턴으로 확대 복제하지 말 것.
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
 - **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onFeedListTapped(userID, nickname, profileImage)` 콜백만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 콜백을 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
@@ -207,6 +208,20 @@
 - `WSSAlertView`의 버튼은 접근성 트리에 안 잡힌다 — UI 자동화(XcodeBuildMCP `tap`)로 알럿이 뜨는 것까지만 검증 가능, 버튼 탭 이후 동작은 코드 리뷰로 대체(WSSComponent 공용 컴포넌트라 이 모듈 범위 밖).
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).
+- **없는 유저(`USER-018`)는 "존재하지 않는 유저예요" 전용 화면으로 분기한다**(#222 V1 parity) —
+  `fetchUserProfile`이 `USER-018`을 `RepositoryError.notFound`로 던지고(→ [ProfileData](../../Data/ProfileData/CLAUDE.md)),
+  `UserPageViewModel.presentError`가 `.notFound`를 `isUserNotFound`로 잡아(`hasLoadError`와 분리) `userNotFoundView`를
+  띄운다. **재시도 버튼 없음**(존재하지 않는 유저는 재시도해도 동일 — `privateProfileView`와 같은 결). 이 분기가 없으면
+  018이 일반 로드 실패(`NetworkErrorView`)로 떨어져 재시도만 반복된다(회귀). Demo는 "특수 상태 데모" 바로가기(또는 userID `998`)로 시연.
+  - ⚠️ **이건 "탈퇴 유저 탭-차단"과 다른 케이스다(혼동 주의 — #222에서 실제로 헷갈렸다).** 탈퇴 유저
+    (`Author.userId == -1` 센티널)는 피드/댓글/작품상세에서 프로필을 탭하는 **그 순간** `Author.accessibleUserId == nil`로
+    걸러 "웹소소를 떠난 유저예요"(`WSSToastType.unknownUser`) 토스트만 띄우고 **애초에 UserPage에 진입시키지 않는다**
+    (`SosoFeedView`·`FeedDetailView`·`NovelDetailFeedTab` 3곳 — V1 `FeedDetailViewModel:277,457`/`NovelDetailViewModel:516`/
+    `FeedPageContentViewModel:139`의 `showToast(.unknownUser)` parity). 반면 `USER-018`은 userID로 **실제 조회를 해봐야**
+    서버가 주는 값이라 탭 시점엔 알 수 없고, 이미 진입한 뒤의 **방어 폴백**이다(V1도 `UserPageViewModel:311-326`이 빈
+    프로필로 폴백하며 "현재 로직상 진입 불가능하지만 대응" 주석을 달았다). 즉 실사용에서 이 화면에 닿을 경로는 사실상
+    없고(모든 진입점이 탈퇴 가드로 이미 막힘, 없는 userID로 들어갈 방법이 없음), Demo의 `998`은 그 방어 경로를 인위적으로
+    트리거한 것이다. → 탈퇴 유저 처리를 "여기서 토스트+뒤로가기"로 바꾸려 하지 말 것(그건 탭 시점 ①의 몫이고 이미 됨).
 - **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
   컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200)도 서재 통계와 같은 이유로 대상 밖이다 — `DefaultCollectionRepository.fetchCollectionPreviews`가 `code` 문자열 분기 없이 `NetworkingError.toRepositoryError()`로만 넘겨 `.privateProfile`을 던지지 못한다(`CollectionData/CLAUDE.md` 참고). 이 호출이 실패하면 `loadUserPage()`의 같은 `catch`에서 `presentError`가 일반 `hasLoadError`로 처리한다 — 컬렉션만 골라 조용히 숨기는 동작이 아니다.
 - **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)·미리보기 개별 항목 탭 둘 다 #201 후속(2026-08-28)으로

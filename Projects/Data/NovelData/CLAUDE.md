@@ -15,6 +15,15 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **내 서재 필터·정렬 영속화(#221)**: `DefaultMyLibraryFilterRepository`(네트워크 없음 — `appStorage`만 의존,
+  `NovelDataFactory.makeMyLibraryFilterRepository(appStorage:logger:)`)가 `MyLibraryFilter`를 JSON 스냅샷으로
+  `UserDefaults`(`StorageKey.myLibraryFilter: StorageKey<Data>`)에 저장한다. ⚠️ **`MyLibraryFilterSnapshot`
+  코덱의 토큰은 서버 매퍼(`myLibraryV2Query`의 영문 장르·`created_desc` 정렬 등)와 *일부러 공유하지 않는다*** —
+  영속 포맷을 서버 스펙에 묶으면 서버 문자열이 바뀔 때 사용자 로컬 저장이 조용히 깨진다. 그래서 rawValue 없는
+  enum(`NovelGenre`·`AttractivePoint`·`LibrarySortType`)은 코덱이 자체 안정 토큰(case 이름)을 `switch`로 명시한다
+  (enum에 케이스를 추가하면 저장 방향 `switch`가 컴파일 에러로 강제 — 토큰 누락 방지). **복원은 관대하다**:
+  알 수 없는 토큰은 조용히 건너뛰고, 정렬을 못 읽으면 기본값(`.registeredNewest`)으로 떨어진다(디코딩 실패
+  전체는 `logUnknownError` 남기고 nil → 화면은 기본 필터). 라운드트립은 `MyLibraryFilterSnapshotTests`가 고정한다.
 - **내 서재·타유저 서재 둘 다 V2 엔드포인트(`/users/{id}/novels/v2`)를 쓴다**(#166). ⚠️ **두 조회의 유일한 차이는 경로에 넣는 userID뿐** — `fetchMyLibraryNovels`는 `appStorage.get(.userID)`로 내 ID를 채우고, `fetchUserLibraryNovels`는 인자로 받은 `UserID`를 넣는다. 쿼리·응답·매퍼(`libraryNovelsV2`)는 완전히 공유한다.
   - ⚠️ **구 V1 경로(`/users/{id}/novels`)는 이제 아무 데서도 호출되지 않는다** — `getUserLibraryNovels`·`UserLibraryQuery`·`UserLibraryNovelsResponse`·`libraryNovels(from:)`가 통째로 미사용이다(#166에서 타유저 서재를 V2로 옮기며 마지막 호출자가 사라짐). V1은 `lastUserNovelId: 0` 하드코딩이라 애초에 첫 페이지 고정·필터 무시였다. 되살려 쓰지 말고, 정리는 별도로 다룰 것.
   - V2 쿼리(`UserLibraryV2Query`) 함정 — 아래 4가지는 **양쪽 조회에 공통**이다:

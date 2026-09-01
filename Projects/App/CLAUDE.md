@@ -156,6 +156,7 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **CreateFeed에 새 UseCase를 주입하려면 조립 지점이 5곳이다** — 작성 경로는 각 탭 Root의 `createFeedView(connectedNovel:)` 헬퍼 **4곳**(`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`, 동일 코드 복제)에서 `FeedFeatureFactory.makeCreateFeedView`를 직접 호출하고, 수정 경로는 `FeedDetailAssembly.makeEditFeedView` **1곳**이다(NovelReview는 `NovelReviewAssembly` 1곳으로 공용화된 것과 대비 — 작성 헬퍼는 아직 공용 Assembly로 안 뽑힘). #221 앱 리뷰 UseCase 주입 때 이 5곳 + NovelReviewAssembly를 모두 손댔다. 순수 로컬(UserDefaults) repo(온보딩·앱리뷰)는 `AppDependencies`에 `let ...Repository` 선언 + init 끝에서 `Default...Repository(appStorage: UserDefaultsStorage())`로 조립(네트워크 client 불필요)한 뒤, 각 조립 지점이 `Default...UseCase(repository: dependencies.xxxRepository)`로 감싸 주입한다.
 - ⚠️ **push할 화면에 "진입 파라미터"를 넘길 땐 별도 `@State` 스크래치 변수에 먼저 써두고 그 값을
   읽어 destination view를 만들지 말 것 — `NavigationPath`의 `Destination` payload로 직접 실어
   보내야 한다.** `scratchState = value; path.append(Destination.xxx)`처럼 같은 액션 안에서 `@State`
@@ -247,16 +248,25 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   `WSSImage.icXxx.swiftUIImage`(제네레이터가 `Bundle.module`로 만든 `Image`)로 참조할 것**,
   이름 문자열 기반 API는 쓰지 않는다. 검증할 땐 `xcrun simctl uninstall`로 완전히 지운 뒤 재설치해서
   볼 것 — 증분 재설치는 이 종류의 버그를 가린다.
-- **탭바 선택/비선택 색(아이콘+글씨, wssBlack/wssGray200)은 `WSSIOSV2App.configureTabBarAppearance()`
-  (`UITabBar.appearance()`)에서 앱 시작 시 1회 설정한다** — SwiftUI `TabView`가 iOS 17 기준 비선택
-  색을 지정하는 공개 API를 안 줘서 UIKit 어피어런스 프록시가 유일한 방법이다. `MainTabView`의 아이콘은
-  `.renderingMode(.template)`을 걸어야 이 `iconColor` 틴트가 실제로 적용된다(에셋 자체의
-  `template-rendering-intent`가 "original"이라 안 걸면 원색 그대로 나간다) — 이 둘은 짝이라 하나만
-  고치면 깨진다.
-  - ⚠️ **`UITabBarAppearance`의 `iconColor`/`titleTextAttributes`만으론 비선택 탭이 계속 기본색(검정)으로
-    남는 경우가 실측됐다** — 원인 미상(iOS 버전별 편차로 추정). 더 오래된 레거시 프로퍼티
-    `UITabBar.appearance().tintColor`/`.unselectedItemTintColor`를 같이 걸어야 비선택 색이 안정적으로
-    적용된다. 이 계열 문제가 재발하면 새 API보다 이 레거시 프로퍼티부터 의심할 것.
+- **탭바 색은 두 곳으로 갈라져 있다(#221 실측으로 재정리) — 아이콘=`MainTabView`, 글씨=`WSSIOSV2App`.**
+  ⚠️ **iOS 26 새(Liquid Glass) 탭바는 `UITabBarAppearance`의 비선택(`normal`) 채널을 통째로 무시한다** —
+  `normal.iconColor`/`normal.titleTextAttributes`/`unselectedItemTintColor`에 빨강을 넣어도 비선택 탭이
+  계속 기본 label색(검정)으로 그려졌다(iPhone 17 Pro / iOS 26.5 실측, **선택 채널만 먹음**). 그래서:
+  - **아이콘 색은 `MainTabView.tabLabel`이 `isSelected`로 갈라 색을 구운 `.alwaysOriginal` 이미지
+    (`icon.image.withTintColor(_:renderingMode:.alwaysOriginal)`)를 직접 그린다** — `.alwaysOriginal`이라
+    탭바가 재틴트를 못 해 우리가 칠한 색(선택 wssBlack / 비선택 wssGray200)이 그대로 남는다. **더 이상
+    `.renderingMode(.template)` + 어피어런스 `iconColor` 틴트에 의존하지 않는다**(그 방식은 iOS 26 비선택에서
+    깨졌다). 이 baked 방식은 iOS 버전 무관하게 동작한다.
+  - **글씨(제목) 색은 `WSSIOSV2App.configureTabBarAppearance()`가 어피어런스 `titleTextAttributes`로
+    정한다** — 선택 wssBlack은 iOS 26·18 모두 먹지만, **비선택 글씨는 iOS 26에선 검정으로 남는다**(위
+    `normal` 무시 때문, 플랫폼 제약). iOS 18 이하에선 `normal`이 정상 동작해 아이콘·글씨 모두 gray200.
+  - **비선택 글씨까지 gray200으로 맞추는 유일한 방법은 `UIDesignRequiresCompatibility`(Info.plist)로 앱
+    전체를 iOS 18 외형으로 되돌리는 것**인데(실측으로 아이콘+글씨 둘 다 해결 확인), 탭바만이 아니라 앱
+    전역(네비바·시트 등)에 영향이라 채택하지 않았다(사용자 확정 — 아이콘 구분만으로 충분). Liquid Glass를
+    정식 도입하기로 하면 그때 이 플래그/전략을 다시 볼 것.
+  - 어피어런스의 `iconColor`/레거시 `tintColor`·`unselectedItemTintColor`는 코드에 남아 있으나, 아이콘은
+    baked 이미지에 밀려 iOS 18 이하 폴백 의미뿐이다(색이 같아 충돌 없음). 이 계열 문제가 재발하면 먼저
+    "iOS 26 탭바가 비선택 채널을 죽였다"는 위 사실부터 떠올릴 것.
 - ⚠️ **로그인 안 된 상태(유효 토큰 없음)로 `MainTabView`를 열면 몇 초 안에 온보딩으로 튕겨 돌아간다**
   (#196 실측) — SwiftUI `TabView`는 현재 보고 있는 탭뿐 아니라 **4탭을 전부 즉시 로드**해서, 홈을 보는
   중에도 백그라운드에서 서재(`LoadMyLibraryUseCase`)가 같이 호출된다. 서버가 미인증 요청에 404
@@ -331,3 +341,13 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   바로 진입한다**(사용자 확정, #196) — 서재 맥락에서 필요한 건 알림 설정뿐이라 `SettingFactory.makeView`
   (설정 메인 목록)를 거치지 않고 그 하위 화면으로 직행한다. `AppDependencies.pushSettingRepository`
   (`NotificationDataFactory.makePushSettingRepository`)가 이 화면 전용으로 새로 추가됐다.
+- ⚠️ **타유저 차단 성공 "차단했어요" 토스트는 4탭 Root가 각자 띄운다(#221, 의도적 interim 4벌 복붙)** —
+  `UserPageAssembly.makeView(onUserBlocked:)` seam이 차단한 상대 닉네임을 올려주면, 4탭 Root
+  (`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`)가 각자 `@State`(`isUserBlockedToastPresented`·
+  `blockedNickname`)로 받아 자기 `NavigationStack`에 `.showWSSToast(.blockUser(nickname:))`로 띄운다. UserPage는
+  차단 성공과 **동시에 pop**되므로 토스트는 그 화면이 아니라 **복귀할 스택 컨테이너**가 띄워야 하고(마이페이지
+  "저장됨"(`onSaved`) 토스트와 같은 크로스스크린 패턴), `NavigationStack`에 얹은 오버레이라 pop 후 최상단이 된
+  **직전 뷰** 위에 뜬다("Root뷰로 복귀"가 아니라 스택 최상단 위 — 진입 경로에 따라 소소피드/피드상세/작품상세 등).
+  V1은 이걸 전역 `NotificationCenter.blockUser`를 피드 탭 하나만 캐치해 띄웠는데, V2는 차단한 그 탭에서 뜬다(더
+  정확). ⚠️ **이 4벌은 임시** — `feedEdited`·`novelReviewed`까지 합쳐 통합 크로스스크린 채널로 재설계할 때
+  걷어낼 예정이니(`docs/TODO.md` 12절), "화면 전환 완료 피드백"을 새로 만들 때 이 4벌을 정식 패턴으로 복제하지 말 것.

@@ -95,7 +95,9 @@ struct LibraryListCell: View {
         }
     }
 
-    /// 내 별점(빨강·Medium) + 전체 별점(회색·Regular). 내 별점 없으면 전체 별점만.
+    /// 내 별점(빨강·Medium)·전체 별점(회색·Regular). 두 별점 다 "없음(0.0)"이면 자리는 지키되 감춘다 —
+    /// 내 별점은 매핑에서 이미 nil(`Rating`이 0.5 미만을 거부)이라 `if let`으로 빠지고,
+    /// 전체 별점(`Float` 평균)은 0.0을 여기서 `opacity`로 숨긴다(레이아웃 유지가 목적이라 제거가 아님).
     private var ratingRow: some View {
         HStack(spacing: 10) {
             if let rating = novel.userReview?.rating {
@@ -126,9 +128,15 @@ struct LibraryListCell: View {
                 Text("전체 별점")
                     .applyWSSFont(.body5, color: .wssGray200)
             }
+            .opacity(hasNovelRating ? 1 : 0)
+            .accessibilityHidden(!hasNovelRating)
         }
         .frame(height: 17)
     }
+
+    /// 전체 별점 0.0 = "아직 아무도 평가 안 함" → 내 별점(userNovelRating 0.0이 매핑에서 nil로 걸러짐)이
+    /// 숨는 것과 같은 취급. 평균값이 `Float`라 `Rating`(0.5 단위)으로 못 올려 표기 판정만 View가 한다.
+    private var hasNovelRating: Bool { novel.rating > 0 }
 
     /// 매력포인트 — 아이콘 12px + 이름, 항목 사이 2px 점 구분자.
     private func attractivePointRow(_ points: [AttractivePoint]) -> some View {
@@ -201,15 +209,33 @@ struct LibraryListCell: View {
                 writtenFeeds: []
             )
         )
-        // 평가 없는 작품 — 뱃지·별점·매력포인트·키워드 행이 숨는다.
+        // 평가 없는 작품 — 뱃지·매력포인트·키워드 행이 숨고, 전체 별점(0.0)도 감춰져 별점 행이 빈 채 자리만 남는다.
         LibraryListCell(
             novel: LibraryNovel(
                 id: NovelID(2),
                 title: "전지적 독자 시점",
                 thumbnailImage: nil,
-                rating: 4.2,
+                rating: 0.0,
                 isInterested: true,
                 userReview: nil,
+                writtenFeeds: []
+            )
+        )
+        // 내 별점은 있지만 전체 별점(0.0)만 없는 작품 — 왼쪽 내 별점만 보이고 전체 별점 자리는 비워둔다.
+        LibraryListCell(
+            novel: LibraryNovel(
+                id: NovelID(3),
+                title: "재혼 황후",
+                thumbnailImage: nil,
+                rating: 0.0,
+                isInterested: false,
+                userReview: UserNovelReview(
+                    readingStatus: .watched,
+                    rating: try? Rating(4.5),
+                    attractivePoint: [.relationship],
+                    period: nil,
+                    keywords: []
+                ),
                 writtenFeeds: []
             )
         )

@@ -56,6 +56,12 @@ struct UserPageView: View {
     /// 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 이 유저의 컬렉션 목록으로 이동. 실제 화면 전환
     /// (`CollectionFeature`의 목록 화면 조립, "내 컬렉션" 탭만 보이는 모드)은 호출자(App)가 수행한다.
     private let onCollectionListTapped: () -> Void
+    /// 차단 성공(이 화면 dismiss) 직전에 차단한 상대의 닉네임을 실어 올리는 콜백 — V1의 "차단했어요"
+    /// 크로스스크린 안내(`NotificationCenter.blockUser`) 재도입용 seam. 이 화면은 곧 pop되므로 실제
+    /// 토스트(`WSSToastType.blockUser(nickname:)`)는 **복귀할 화면(App 조정 계층)**이 띄운다 — 지금은
+    /// 도관만 뚫어두고(기본 no-op) 실제 표시 배선은 `feedEdited`·`novelReviewed` 등과 함께 크로스스크린
+    /// 완료 피드백을 재설계할 때 채운다(`docs/TODO.md` 12절).
+    private let onUserBlocked: (String) -> Void
 
     init(
         viewModel: UserPageViewModel,
@@ -63,7 +69,8 @@ struct UserPageView: View {
         onLibraryTapped: @escaping () -> Void = {},
         onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
         onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
-        onCollectionListTapped: @escaping () -> Void = {}
+        onCollectionListTapped: @escaping () -> Void = {},
+        onUserBlocked: @escaping (String) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.userID = userID
@@ -71,11 +78,16 @@ struct UserPageView: View {
         self.onFeedListTapped = onFeedListTapped
         self.onCollectionItemTapped = onCollectionItemTapped
         self.onCollectionListTapped = onCollectionListTapped
+        self.onUserBlocked = onUserBlocked
     }
 
     var body: some View {
         Group {
-            if viewModel.state.hasLoadError {
+            if viewModel.state.isUserNotFound {
+                // 존재하지 않는/탈퇴한 유저(USER-018) — 프로필 자체가 없어 헤더·탭도 못 그리므로 body 전체를
+                // 안내로 대체한다. 재시도 버튼 없음(존재하지 않는 유저는 재시도해도 동일, #222 V1 parity).
+                userNotFoundView
+            } else if viewModel.state.hasLoadError {
                 NetworkErrorView {
                     viewModel.handle(.load)
                 }
@@ -188,7 +200,13 @@ struct UserPageView: View {
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
         .showWSSToast(isPresented: noCollectionsToastBinding, type: .noCollections)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
-            if shouldDismiss { dismiss() }
+            if shouldDismiss {
+                // shouldDismiss는 차단 성공에서만 켜진다(뒤로가기는 툴바 버튼이 직접 dismiss라 이
+                // 플래그를 안 거친다) — 이 화면이 pop되기 전에 차단한 상대 닉네임을 실어 올린다.
+                // 실제 "차단했어요" 토스트는 복귀 화면(App)이 띄운다(위 onUserBlocked 주석 참고).
+                onUserBlocked(viewModel.state.profile?.nickname ?? "")
+                dismiss()
+            }
         }
         .onAppear {
             viewModel.handle(.load)
@@ -521,6 +539,22 @@ struct UserPageView: View {
                 }
             }
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    /// 존재하지 않는/탈퇴한 유저(USER-018 → `.notFound`) — 재시도 없이 안내만(privateProfileView와 같은 톤).
+    private var userNotFoundView: some View {
+        VStack(spacing: 20) {
+            WSSImage.imgEmptyCatEyes.swiftUIImage
+                .resizable()
+                .scaledToFit()
+                .frame(width: 166, height: 160)
+
+            Text("존재하지 않는 유저예요")
+                .applyWSSFont(.body2)
+                .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WSSColor.wssWhite.swiftUIColor)
     }
 

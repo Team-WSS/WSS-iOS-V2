@@ -39,9 +39,7 @@ let project = Project.createFeatureModule(
         .module(.data(.notification)),
         .module(.data(.base)),
         .module(.core(.networking))
-    ],
-    // TopBounceDisabler의 contentOffset KVO 경고 3건이 assumeIsolated로 해결되지 않는다
-    // (경고는 없어지지만 상단 클램프 동작이 깨짐 → docs/TODO.md 4번). 그래서 이 모듈만
-    // mode 6 승격에서 제외한다. 나머지 11개 Feature는 기본값(enableSwift6: true).
-    enableSwift6: false
+    ]
+    // #221에서 TopBounceDisabler(contentOffset KVO)를 순수 SwiftUI stretch 헤더로 대체해
+    // mode 6 승격을 막던 잔여를 없앴다 → 기본값(enableSwift6: true)으로 편입.
 )

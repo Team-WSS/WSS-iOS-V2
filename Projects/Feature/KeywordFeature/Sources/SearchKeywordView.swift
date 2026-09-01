@@ -72,7 +72,9 @@ struct SearchKeywordView: View {
                     // ScrollView 안에 두면 콘텐츠 크기만큼만 차지해 상단에 붙어버린다 — 화면을 다 차지하는
                     // 뷰로 빼서 화면 정중앙에 오도록 한다(스크롤도 불필요한 상태).
                     WSSEmptyView(type: .keyword, action: {
-                        if let url = AppURL.inquiryAddNovel { openURL(url) }
+                        // 범용 문의(errorReport)로 연다 — V1도 키워드 전용 폼이 아니라 범용 문의였다.
+                        // 작품 등록 문의(inquiryAddNovel)로 연결됐던 건 V1 대비 오배선(#222 parity 복원).
+                        if let url = AppURL.errorReport { openURL(url) }
                     })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {

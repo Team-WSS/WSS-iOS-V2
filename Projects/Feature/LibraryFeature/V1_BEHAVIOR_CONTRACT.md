@@ -38,7 +38,8 @@
 **판정 상태(2026-08-28 갱신)** — 모든 항목에 배지가 달려 있고 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건.** 배지: ✅유지 · 🔧개선/고치기/미배선(되살리기·수정은 `docs/TODO.md` 12절에 구현 대기, 미배선은 App 배선 시 해소) · 🔨회귀 수정 · 🗑삭제 · ⏳⏸보류(`docs/PENDING_DECISIONS.md`) · 🆕V2 신규.
 
 1. **필터·정렬 영속화** — V1은 내 서재의 필터·정렬을 **UserDefaults에 저장하고 앱 재실행 후 복원**한다. **V2엔 이 저장/복원이 전혀 없다**(Feature·App 모두 grep 0) → 앱을 껐다 켜면 필터·정렬이 초기화된다. → [1.5](#15-영속화-userdefaults)
-   - **🔧 확정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 UX 후퇴 — 경량 영속화(UserDefaults 등)로 저장/복원. C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) 9에 부활 대기로 올림.
+   - **🔧 확정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 UX 후퇴 — 경량 영속화(UserDefaults 등)로 저장/복원.
+   - **✅ 구현 완료(#221, 2026-08-31).** `NovelDomain`(`MyLibraryFilterRepository` + `Load/SaveMyLibraryFilterUseCase`) + `NovelData`(UserDefaults JSON 스냅샷, 단일 키 `myLibraryFilter`로 재설계 — V1의 두 키 미복사). VM이 `init`에서 동기 복원, 필터·정렬 변경 3경로에서 저장.
 2. **타유저 서재 읽기상태 탭** — V1 타유저 서재는 **읽기상태별 탭 페이저**(`UIPageViewController` + `UserLibraryPageBar`). V2엔 **탭이 없다**(단일 리스트, 필터 UI 없음). → [3.1](#31-화면-구조-탭-페이저)
    - **🗑 확정(2026-08-28, 사용자): 단일 리스트가 의도.** V2는 필터 시트 패러다임으로 통일 — 탭 페이저(구버전 UI) 되살리지 않음.
 3. ✅ **Keep 확정** (2026-08-28: NavigationStack+loadTask 가드로 해소) — **셀 선택 더블탭 가드** — V1은 작품 셀 선택에 throttle(내 서재 1s·타유저 2s)을 걸어 중복 push를 막는다. V2는 `onNovelSelected` 콜백으로 위임하며 **명시적 throttle이 안 보인다**. → [1.7](#17-상호작용네비게이션)
@@ -114,7 +115,8 @@
 - 🔧 **되살리기로 결정 (2026-08-28, 사용자)** — V1은 **필터·정렬을 UserDefaults에 저장**하고 **재진입 시 복원**한다. `libraryFilterOption`(JSON 인코딩된 `LibraryFilterOption`)·`librarySortOption`(정렬의 한글 텍스트)로 저장하며, 값이 바뀔 때마다 저장하고 `viewWillAppear`의 `applySavedOption()`에서 읽어 반영한다. 저장값이 현재와 다르면 reload, 같으면 refresh를 낸다.
   - **V2: 이 저장/복원이 전혀 없다.** VM이 매번 `MyLibraryFilter()` 기본값으로 시작하고, Feature·App 어디에도 `libraryFilterOption`/`librarySortOption` 저장이 없다(grep 0). → **앱을 껐다 켜면 필터·정렬이 초기화**된다. 탭 콘텐츠라 앱 세션 내에서는 메모리로 유지되지만, 세션을 넘겨 살아남지 않는다.
   - 근거: V1 `MyLibraryViewModel.swift:297-365`(applySavedOption·save/load) · V2 `LibraryViewModel.swift:22-23`(기본값 시작, 영속화 코드 없음)
-  - **판정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 명백한 UX 후퇴 — V1처럼 마지막 필터·정렬을 경량 영속화(UserDefaults 등)로 저장/복원한다. 단 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계). C1 범위 밖 구현이라 [`docs/TODO.md`](../../../docs/TODO.md) 9에 부활 대기로 올림.
+  - **판정(2026-08-28, 사용자): 되살린다(회귀 수정).** 매 실행 초기화는 명백한 UX 후퇴 — V1처럼 마지막 필터·정렬을 경량 영속화(UserDefaults 등)로 저장/복원한다. 단 V1의 저장 키·구조를 그대로 복사하진 않는다(재설계).
+  - **✅ 구현 완료(#221, 2026-08-31).** `MyLibraryFilterRepository`(NovelDomain 계약) + `DefaultMyLibraryFilterRepository`(NovelData, `UserDefaults`에 JSON 스냅샷 — 단일 키 `myLibraryFilter`로 재설계) + `Load/SaveMyLibraryFilterUseCase`. `LibraryViewModel`이 `init`에서 **동기 복원**(첫 로드가 복원 필터로 나가게), 관심·정렬·시트 적용 3경로에서 저장. 저장 코드는 `LibraryFeature`가 아니라 Domain/Data에 산다(Feature는 Data import 불가). 표시 모드는 영속화 대상 아님(세션 상태). 상세: [`CLAUDE.md`](CLAUDE.md) 주의사항.
 
 ### 1.6 빈 화면·에러
 

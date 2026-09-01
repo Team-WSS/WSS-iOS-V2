@@ -98,6 +98,7 @@ private struct DemoRootView: View {
                 status: .watching,
                 loadUseCase: DemoLoadNovelReviewDraftUseCase(),
                 saveUseCase: DemoSaveNovelReviewUseCase(),
+                appReviewUseCase: DemoAppReviewRequestUseCase(),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired,
                 keywordSearchSheet: keywordSearchSheetBuilder(
@@ -134,6 +135,7 @@ private struct DemoRootView: View {
             status: .watched,
             loadUseCase: DefaultLoadNovelReviewDraftUseCase(repository: repository),
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: repository),
+            appReviewUseCase: DemoAppReviewRequestUseCase(),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
             keywordSearchSheet: keywordSearchSheetBuilder(
@@ -186,6 +188,15 @@ private struct DemoSaveNovelReviewUseCase: SaveNovelReviewUseCase {
     func execute(draft: NovelReviewDraft) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 800_000_000)
     }
+}
+
+/// 데모용 인메모리 리뷰 게이트 — 첫 저장 성공에 바로 프롬프트가 뜨도록 임계치 1(실앱은 3).
+private final class DemoAppReviewRequestUseCase: AppReviewRequestUseCase, @unchecked Sendable {
+    private var count = 0
+    private var requested = false
+    func recordEngagement() { count += 1 }
+    func shouldRequestReview() -> Bool { count >= 1 && !requested }
+    func markReviewRequested() { requested = true }
 }
 
 // MARK: - Demo UseCases (키워드 탐색 시트, 인메모리)

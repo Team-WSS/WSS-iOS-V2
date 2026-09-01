@@ -24,6 +24,7 @@ struct CreateFeedDemoScene: View {
 
     private let createFeedUseCase: CreateFeedUseCase
     private let searchNovelUseCase: SearchNovelUseCase
+    private let appReviewUseCase: AppReviewRequestUseCase = DemoAppReviewRequestUseCase()
 
     init() {
         let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
@@ -46,8 +47,18 @@ struct CreateFeedDemoScene: View {
         NavigationStack {
             FeedFeatureFactory.makeCreateFeedView(
                 createFeedUseCase: createFeedUseCase,
-                searchNovelUseCase: searchNovelUseCase
+                searchNovelUseCase: searchNovelUseCase,
+                appReviewUseCase: appReviewUseCase
             )
         }
     }
+}
+
+/// 데모용 인메모리 리뷰 게이트 — 첫 저장 성공에 바로 프롬프트가 뜨도록 임계치 1(실앱은 3).
+private final class DemoAppReviewRequestUseCase: AppReviewRequestUseCase, @unchecked Sendable {
+    private var count = 0
+    private var requested = false
+    func recordEngagement() { count += 1 }
+    func shouldRequestReview() -> Bool { count >= 1 && !requested }
+    func markReviewRequested() { requested = true }
 }

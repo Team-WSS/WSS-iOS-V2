@@ -223,7 +223,8 @@ struct SosoFeedView: View {
                     showMyFeedFilterSheet.toggle()
                 } label: {
                     HStack(spacing: 4) {
-                        Text("\(viewModel.state.myFeeds.count)개의 기록")
+                        // 서버 전체 개수(feedsCount) 우선, 로드 전(nil)엔 현재 배열 길이로 폴백.
+                        Text("\(viewModel.state.myFeedsTotalCount ?? viewModel.state.myFeeds.count)개의 기록")
                             .applyWSSFont(.body4)
                             .fixedSize()
                             .foregroundStyle(WSSColor.wssWhite.swiftUIColor)
@@ -386,7 +387,12 @@ struct SosoFeedView: View {
                 commentCount: feed.commentCount
             ),
             isLiked: feed.isLiked,
-            likeButtonTapped: { viewModel.handle(.toggleLike(feed.feedId)) },
+            // V1 목록 좋아요의 light impact 햅틱 복원(정렬 토글의 HapticManager.selection()과 같은 결
+            // — VM이 아니라 탭 지점인 View에서 발화). 좋아요/해제 방향 무관하게 탭 자체의 촉각 피드백.
+            likeButtonTapped: {
+                HapticManager.impact(.light)
+                viewModel.handle(.toggleLike(feed.feedId))
+            },
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
         )

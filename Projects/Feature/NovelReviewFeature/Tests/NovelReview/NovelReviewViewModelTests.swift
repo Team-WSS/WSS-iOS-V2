@@ -100,7 +100,8 @@ private extension NovelReviewViewModelTests {
             novelID: NovelID(1),
             status: status,
             loadUseCase: loadUseCase,
-            saveUseCase: MockSaveNovelReviewUseCase()
+            saveUseCase: MockSaveNovelReviewUseCase(),
+            appReviewUseCase: StubAppReviewRequestUseCase()
         )
     }
 
@@ -147,4 +148,11 @@ private final class SuspendedLoadNovelReviewDraftUseCase: LoadNovelReviewDraftUs
         resultContinuation?.resume(returning: result)
         resultContinuation = nil
     }
+}
+
+// 이 테스트들은 저장 성공 경로를 검증하지 않으므로(닫기/알럿 흐름 전용) 리뷰 게이트는 no-op 스텁으로 둔다.
+private struct StubAppReviewRequestUseCase: AppReviewRequestUseCase {
+    func recordEngagement() {}
+    func shouldRequestReview() -> Bool { false }
+    func markReviewRequested() {}
 }

@@ -355,6 +355,7 @@ private struct DemoRootView: View {
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
                 loadNotificationSettingUseCase: DemoLoadNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 updateNotificationSettingUseCase: DemoUpdateNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
+                onboardingHintUseCase: DemoOnboardingHintUseCase(),
                 logger: consoleLogger,
                 onReviewTapped: handleReviewTapped,
                 onCreateFeedTapped: handleCreateFeedTapped,
@@ -430,6 +431,7 @@ private struct DemoRootView: View {
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
             loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationRepository),
+            onboardingHintUseCase: DemoOnboardingHintUseCase(),
             logger: consoleLogger,
             onReviewTapped: handleReviewTapped,
             onCreateFeedTapped: handleCreateFeedTapped,
@@ -543,7 +545,7 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
             },
             description: isMinimal
                 ? "아직 소개가 짧은 작품입니다."
-                : "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기. 라고 할 뻔 \n\n\n 과연 어디까지 늘어나는지 봅시다 한 번",
+                : "왕실에는 막대한 빚이 있었고, 그들은 빚을 갚기 위해 왕녀인 바이올렛을 막대한 돈을 지녔지만 공작의 사생아인 윈터에게 시집보낸다. 계약 결혼으로 시작된 두 사람의 이야기. 처음엔 서로를 경계했지만, 겨울 왕궁의 긴 밤을 함께 지새우며 조금씩 마음을 열어간다. 바이올렛은 윈터의 냉정한 겉모습 뒤에 숨은 상처를 발견하고, 윈터는 바이올렛의 당당함에 흔들린다. 왕실의 음모와 공작가의 비밀이 얽히며 두 사람의 계약은 시험대에 오른다. 과연 이 결혼은 거래로 끝날 것인가, 아니면 진짜 사랑이 될 것인가. \n\n\n 접기 애니메이션이 아주 긴 소개글에서도 매끄러운지 확인하기 위한 아주 긴 문단입니다. 여러 줄에 걸쳐 늘어나도 열고 닫을 때 글이 뚝 사라지지 않고 부드럽게 여닫혀야 합니다. 과연 어디까지 늘어나는지 봅시다 한 번 두 번 세 번.",
             // 플랫폼이 비면 "작품 보러가기" 섹션 자체가 사라진다.
             platforms: isMinimal ? [] : [
                 URL(string: "https://novel.naver.com").map {
@@ -551,6 +553,21 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
                 },
                 URL(string: "https://page.kakao.com").map {
                     NovelPlatform(name: "카카오페이지", image: nil, url: $0)
+                },
+                URL(string: "https://ridibooks.com").map {
+                    NovelPlatform(name: "리디북스", image: nil, url: $0)
+                },
+                URL(string: "https://series.naver.com").map {
+                    NovelPlatform(name: "문피아", image: nil, url: $0)
+                },
+                URL(string: "https://novelpia.com").map {
+                    NovelPlatform(name: "노벨피아", image: nil, url: $0)
+                },
+                URL(string: "https://booktoon.com").map {
+                    NovelPlatform(name: "북툰", image: nil, url: $0)
+                },
+                URL(string: "https://tocsoda.com").map {
+                    NovelPlatform(name: "톡소다", image: nil, url: $0)
                 }
             ].compactMap { $0 },
             // 아래 셋은 각각 독립으로 숨겨지고, 전부 비면 감상평 영역이 빈 상태로 대체된다
@@ -676,6 +693,15 @@ private struct DemoLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
             imageCount: mirrorsRealData ? 5 : 0
         )
     }
+}
+
+/// Demo용 인메모리 온보딩 힌트 — 진입(detailView의 `.id`)마다 새로 만들어져 항상 "아직 안 봄"으로 시작한다.
+/// 실제 앱은 UserDefaults라 앱 전역 1회지만, Demo는 오버레이를 **매 진입마다** 확인할 수 있게 인메모리로 둔다
+/// (닫으면 그 진입 동안엔 다시 안 뜬다). MainActor UI에서만 접근하므로 `@unchecked Sendable`로 계약만 만족시킨다.
+private final class DemoOnboardingHintUseCase: OnboardingHintUseCase, @unchecked Sendable {
+    private var seen: Set<OnboardingHint> = []
+    func hasSeen(_ hint: OnboardingHint) -> Bool { seen.contains(hint) }
+    func markSeen(_ hint: OnboardingHint) { seen.insert(hint) }
 }
 
 // MARK: - Demo Mock (작품 알림 설정)

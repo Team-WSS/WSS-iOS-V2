@@ -30,6 +30,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+#### 저장 성공 시 앱스토어 평점 요청 (#221 재도입)
+- `saveDraft()` 성공 직후 `recordEngagementAndGateReview()`가 `AppReviewRequestUseCase`(BaseDomain, **피드와 공유** → 앱 전역 게이트)에 참여를 기록하고, 게이트(누적 참여 ≥ 임계치 AND 이번 버전 미요청) 통과 시 `state.shouldRequestReview = true`. 실제 프롬프트는 `NovelReviewView`가 `import StoreKit` + `@Environment(\.requestReview)`로 띄운다.
+- ⚠️ **`shouldDismiss`를 리뷰 트리거로 쓰면 안 된다** — `close()`(취소/뒤로가기)에도 켜지므로, 저장 성공 경로에서만 세우는 **별도 `shouldRequestReview` 플래그**를 둔다. `NovelReviewView`의 `shouldDismiss` onChange에서 `dismiss()`보다 먼저 `if shouldRequestReview { requestReview() }`를 부른다(pop 후에도 정상 표시, 시뮬레이터로 저장→프롬프트 / 취소→프롬프트 없음 양쪽 실측 확인). V1은 성공마다 무조건 호출했으나 "무분별 호출 금지"로 게이트를 얹었다.
+
 #### 에러 처리 정책 (표현이 셋으로 분화됨)
 에러 종류마다 표현이 다르다 — 한 catch가 다 받지 않는다:
 - **초안 로드 실패(`loadDraft`) → 전면 실패 뷰**(`NetworkErrorView`, 재시도). `state.loadFailed` 플래그를 세우고 View가 overlay로 띄운다. 로드 실패는 `presentError`(토스트)를 **거치지 않는다** — 토스트까지 띄우면 시그널 이중화. "초안 없음(nil)=정상"과 구별해야 해서 draft 유무가 아니라 별도 플래그로 판단(NovelDetail의 `information==nil` 대신). 실패 뷰가 뜬 동안 툴바 "완료"는 disabled(빈/초기 draft 저장 차단).

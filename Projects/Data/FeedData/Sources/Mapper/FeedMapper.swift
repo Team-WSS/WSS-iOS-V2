@@ -198,7 +198,8 @@ enum FeedMapper {
 
     static func userFeeds(author: Author, isMyFeed: Bool, from response: UserFeedListResponse) throws -> Paginated<TotalFeed> {
         let feeds = try response.feeds.map { try userFeed(author: author, isMyFeed: isMyFeed, from: $0) }
-        return Paginated(items: feeds, hasNext: response.isLoadable)
+        // feedsCount는 페이지네이션 이전 전체 개수 — 내 피드 "n개의 기록" 표시에 로드된 배열 길이 대신 쓴다(V1 parity).
+        return Paginated(items: feeds, hasNext: response.isLoadable, totalCount: response.feedsCount)
     }
 
     // MARK: - NovelFeed

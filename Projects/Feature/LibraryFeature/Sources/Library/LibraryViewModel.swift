@@ -114,18 +114,28 @@ final class LibraryViewModel {
     // NovelDomain
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
     private let loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase
+    /// 필터·정렬 로컬 영속화(#221) — 앱 재실행을 넘겨 마지막 상태를 복원한다.
+    private let loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase
+    private let saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase
 
     // MARK: - Init
 
     init(
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
+        loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase,
+        saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase,
         logger: Logger? = nil
     ) {
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.loadMyLibraryKeywordsUseCase = loadMyLibraryKeywordsUseCase
+        self.loadMyLibraryFilterUseCase = loadMyLibraryFilterUseCase
+        self.saveMyLibraryFilterUseCase = saveMyLibraryFilterUseCase
         self.logger = logger
-        self.state = State()
+        // ⚠️ 복원은 **동기**로 여기서 한다 — 첫 `.load`(onAppear)보다 먼저 필터가 서 있어야
+        // 첫 조회가 복원된 필터로 나간다(비동기로 복원하면 한 프레임 기본 필터로 로드가 새어 나간다).
+        // 저장된 게 없으면 기본 필터로 시작.
+        self.state = State(filter: loadMyLibraryFilterUseCase.execute() ?? MyLibraryFilter())
     }
 
     // MARK: - handle
@@ -190,6 +200,7 @@ private extension LibraryViewModel {
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
     func toggleInterestFilter() {
         state.filter.toggleInterest()
+        persistFilter()
         reloadFromScratch()
     }
 
@@ -197,6 +208,7 @@ private extension LibraryViewModel {
     func selectSortType(_ sortType: LibrarySortType) {
         guard state.filter.sortType != sortType else { return }
         state.filter.setSortType(sortType)
+        persistFilter()
         reloadFromScratch()
     }
 
@@ -204,7 +216,15 @@ private extension LibraryViewModel {
     /// (시트는 현재 필터의 복사본에서 시작하므로 관심·정렬도 보존된 채 돌아온다.)
     func applyFilter(_ filter: MyLibraryFilter) {
         state.filter = filter
+        persistFilter()
         reloadFromScratch()
+    }
+
+    /// 현재 필터·정렬을 로컬에 저장한다(#221). 필터·정렬이 바뀌는 **모든** 경로(관심·정렬·시트 적용)에서
+    /// 부른다 — 시트 "초기화"도 결국 `applyFilter`로 들어오므로 여기서 함께 커버된다. best-effort라
+    /// 실패해도 무시한다(다음 실행 복원만 놓칠 뿐 현재 세션 동작엔 영향 없음).
+    func persistFilter() {
+        saveMyLibraryFilterUseCase.execute(state.filter)
     }
 
     /// 필터 시트 키워드 탭 데이터 로드. 서재 등록 상태에 따라 변하므로 시트를 열 때마다 다시 불러온다.

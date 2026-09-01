@@ -7,6 +7,15 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
+  초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계
+  (clamp → 초과면 로컬 재대입 / 아니면 VM 전달)로 처리한다([상위/UserPageFeature CLAUDE.md]의 글자수 제한
+  TextField 함정과 동일 패턴, #222 복원). 전송 버튼 활성(`FeedDetailCommentInputBar.isSendEnabled`)은 "비어있지
+  않고 수정 모드면 원본과 다름"을 View(`isCommentSendEnabled`)가 계산해 넘긴다 — 무변경 재전송 가드.
+- **댓글 작성/수정/삭제·피드 삭제 실패는 조용히 삼키지 않는다**(#222 회귀 복원) — `FeedDetailViewModel`이
+  `isActionFailedToastPresented`로 `WSSToastType.networkDelay` 토스트를 띄우고, 전송 실패 시 입력 내용·수정
+  모드를 보존해 재시도하게 한다(성공했을 때만 입력 비우고 목록 재조회). `create/editComment`가 성공 여부를
+  `Bool`로 돌려주는 이유. "사용자 액션 실패"라 전면 뷰가 아니라 토스트([상위 CLAUDE.md] 로드 실패 표현 계약).
 - **`CreateFeedConnectNovelSheet`(작품 연결 검색)의 결과 영역은 `searchedNovels`가 아니라
   `CreateFeedViewModel.state.hasSearchedNovel` 플래그로 가른다** — `WSSSearchBar.onSearch`는 제출
   (엔터/검색 버튼)에만 발화하고 타이핑 자체는 매 글자마다 `updateConnectedNovelSearchText`로 바로
@@ -30,6 +39,12 @@
   - **`CreateFeedDemoScene`은 Mock 토글이 없다** — `DefaultSearchNovelUseCase` + 실제 dev 서버로만
     동작해서(`CollectionFeature`의 Demo와 달리), 이 시트의 검색/무한스크롤을 시뮬레이터에서 직접
     확인하려면 dev 서버 접근이 필요하다.
+  - **피드 상세 데모는 씬이 둘이다** — `FeedDetailDemoScene`은 실서버(`NetworkingClient` + 토큰)로만
+    떠서 네트워크가 막힌 시뮬레이터/샌드박스에선 화면 자체가 안 뜬다. `FeedDetailMockDemoScene`은
+    mock UseCase 12개를 주입해 **dev 서버 없이** 상세를 띄우고, create/edit/delete UseCase가 일부러
+    `throw .networkUnavailable`해 **조용한 실패 토스트·입력 보존(#222 #1)** 을 재현한다. `currentUserID`를
+    피드·댓글 작성자와 같은 값(2)으로 둬 "내 글/내 댓글"이 되므로 수정/삭제 드롭다운·**전송 게이트(#3)**
+    도 확인할 수 있다(`FeedDetailView`의 `#Preview` mock을 데모 타깃으로 승격한 형태).
 - `fetchMyFeeds`/`fetchUserFeeds` 응답(`UserFeedResponse`, FeedData)은 작성자 닉네임/프로필 이미지를 내려주지 않는다(서버 스펙). `SosoFeedViewModel`이 `ProfileDomain.LoadProfileUseCase`로 프로필을 따로 조회해 `TotalFeed.author`를 다시 조립해 채운다(`applying(_:to:)`). `TotalFeed.author`가 `private(set)`이라 직접 mutate 불가 — 공개 `init`으로 새 값을 만들어 교체하는 방식.
 - 이 조합 로직 때문에 FeedFeature가 `ProfileDomain`(다른 최상위 도메인)을 직접 의존한다 — Domain 레이어 규칙상 Domain끼리는 `BaseDomain` 외 서로 의존 못 하므로, 이런 두 도메인 조합은 Feature(ViewModel) 레벨에서 한다.
 - `MyFeedOption.sortType`은 genres/visibilityType과 달리 필터 시트의 draft→`applyMyFeedFilter` 커밋 흐름을 타지 않는다. `WSSSortButton` 탭이 `.toggleMyFeedSort`로 `state.myFeedOption`을 즉시 갱신하고 바로 재조회한다(시트를 열 필요 없음) — 필터 시트가 열릴 때 draft가 `resetMyFeedFilterDraft`로 이 값도 그대로 복사해가므로 두 경로가 어긋나지 않는다.
@@ -66,4 +81,5 @@
   ⚠️ **`.load`가 스폰하는 `Task`는 `[weak self]`로 감싼다**(#197 PR 리뷰에서 발견 — 처음엔 강한 캡처였다) — 없으면 화면이 로드 완료 전에 닫혀도 `Task`가 VM을 계속 붙잡고 있다가 완료 시점에 이미 죽은 화면의 `state`에 쓰게 된다. `CollectionFeature.CreateCollectionViewModel.loadForEdit`(동일 패턴이라 서로 참조하는 사이)가 처음부터 이 가드를 갖고 있었다 — 두 화면 중 하나만 고칠 게 아니라 앞으로도 짝을 맞출 것.
 - ⚠️ **`CreateFeedViewModel`의 `draft.attachedImages`와 `attachedImageDatas`는 키가 어긋나도 에러 없이 조용히 이미지가 빠진다** — 제출 시 `draft.attachedImages.compactMap { state.attachedImageDatas[$0] }`(`CreateFeedViewModel.swift`)로 매핑하는데, `compactMap`이라 `attachedImages`의 `AttachedImageID`가 `attachedImageDatas`에 없으면 그 이미지만 매핑에서 빠지고 나머지는 정상 제출된다(크래시도, 로그도 없음). `loadForEdit`은 같은 루프에서 `draft.addImage(id)`와 `attachedImageDatas[id] = data`를 1:1로 채워 이 함정을 피한다 — 두 값을 채우는 새 코드를 추가할 땐 같은 방식으로 짝지어 채울 것.
 - **`CreateFeedView`는 `submitState == .submitted`가 되면 `.onChange`로 자동 `dismiss()`한다**(작성·수정 공용, #197) — 제출 완료 후 사용자가 직접 뒤로가기를 누를 필요가 없다. 작성/수정 모드를 구분하지 않는 이유는 `submitState`가 두 모드가 공유하는 단일 상태라서다.
+- **작성/수정 성공 시 앱스토어 평점 요청**(#221 재도입) — `CreateFeedViewModel.submit()` 성공(`state.submitState = .submitted`) 직후 `recordEngagementAndGateReview()`가 `AppReviewRequestUseCase`(BaseDomain, 감상평과 **공유** → 앱 전역 게이트)에 참여를 기록하고, 게이트(누적 참여 ≥ 임계치 AND 이번 버전 미요청)를 통과하면 `state.shouldRequestReview = true`. 실제 프롬프트는 `CreateFeedView`가 `import StoreKit` + `@Environment(\.requestReview)`로 띄운다 — ⚠️ **`submitState == .submitted` onChange에서 `dismiss()`보다 먼저 `requestReview()`를 부른다**(화면 pop 후에도 밑 화면 위로 정상 표시됨, 시뮬레이터 실측 확인). 작성·수정 모두 이 단일 `.submitted`를 지나므로 둘 다 카운트되지만 게이트가 버전당 1회로 수렴한다. V1은 성공마다 무조건 호출했으나 "무분별 호출 금지"로 게이트를 얹었다.
 - **"완료" 버튼(`canSubmit`)은 내용이 비어있지 않은 것과 별개로, `originalDraft`(수정 모드는 `loadForEdit` 완료 시점, 작성 모드는 빈 draft) 대비 `state.draft`가 실제로 달라야(`hasChanges`) 활성화된다**(사용자 확정, #197) — 수정 모드에서 아무것도 안 바꾸고 "완료"를 누를 수 있으면 안 된다는 요구. `FeedDraft`/`ConnectedNovel`이 이 비교를 위해 `Equatable`을 준수한다(합성 비교로 충분 — `attachedImages`는 ID 목록이라 이미지 추가/삭제도 이 비교에 자연히 걸린다). 작성 모드는 별도 분기 없이도 항상 성립한다(빈 draft와 달라지는 순간 자연히 `hasChanges == true`). 로드 중(`isLoadingForEdit == true`)엔 `state.draft`가 아직 placeholder라 `originalDraft`와 같아 자연히 비활성 상태를 유지한다.

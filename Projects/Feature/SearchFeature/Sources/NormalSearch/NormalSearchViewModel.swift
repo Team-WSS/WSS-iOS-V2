@@ -17,6 +17,9 @@ import Logger
 @Observable
 final class NormalSearchViewModel {
 
+    /// 검색어 최대 길이. 입력 단계(`NormalSearchView`)에서 이 값으로 clamp한다(V1 30자 하드컷 복원, #222).
+    static let maxSearchTextCount = 30
+
     struct State {
         var sosoPickNovels: [SosoPick] = []
         var recentSearchWords: [RecentSearchWord] = []

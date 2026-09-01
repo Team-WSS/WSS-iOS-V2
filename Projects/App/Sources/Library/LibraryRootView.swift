@@ -18,6 +18,7 @@ import NotificationDomain
 import NovelDomain
 import SearchDomain
 import SettingFeature
+import WSSComponent
 
 /// "서재" 탭 콘텐츠. 로그인한 본인 서재(`makeMyLibraryView`)를 붙이고, 이 탭에서 push되는 타유저
 /// 프로필의 서재 블록 탭 시 그 유저의 서재(`makeUserLibraryView`)까지 다른 3탭과 동일하게 push한다
@@ -74,6 +75,11 @@ struct LibraryRootView: View {
     /// "작품 추가"/"서재에서 추가" 확정 결과를 컬렉션 수정 화면에 돌려주는 1회성 nil→값 채널(#228,
     /// `MypageRootView`와 동일 — 확정(return) 값이라 `Destination` 레이스 대상이 아니다).
     @State private var pendingCollectionNovelSelection: [CollectionNovel]?
+    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀 화면 위에 띄우는 "차단했어요" 토스트(#221, V1 parity).
+    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 이 루트가 표시한다 — 4탭 공통
+    /// 패턴이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절 크로스스크린 완료 피드백).
+    @State private var isUserBlockedToastPresented = false
+    @State private var blockedNickname = ""
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -90,6 +96,12 @@ struct LibraryRootView: View {
                 ),
                 loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(
                     novelRepository: dependencies.novelRepository
+                ),
+                loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(
+                    repository: dependencies.myLibraryFilterRepository
+                ),
+                saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(
+                    repository: dependencies.myLibraryFilterRepository
                 ),
                 logger: dependencies.logger,
                 onNovelSelected: { path.append(Destination.novel($0)) },
@@ -119,7 +131,11 @@ struct LibraryRootView: View {
                                 path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) }
+                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
+                            onUserBlocked: { nickname in
+                                blockedNickname = nickname
+                                isUserBlockedToastPresented = true
+                            }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -190,6 +206,7 @@ struct LibraryRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
+        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
     }
 }
 
@@ -317,6 +334,7 @@ private extension LibraryRootView {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
+            appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel
         )
     }

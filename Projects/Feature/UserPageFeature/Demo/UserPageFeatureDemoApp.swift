@@ -25,6 +25,7 @@ import CollectionData
 import Logger
 import Networking
 import DesignSystem
+import WSSComponent
 
 @main
 struct UserPageFeatureDemoApp: App {
@@ -78,66 +79,100 @@ private struct DemoScreenSelectionView: View {
 
     @State private var isEnteringUserID = false
     @State private var userIDInput = "10016"
+    /// 차단 성공 시 UserPage가 pop되고 이 화면(직전 뷰)으로 돌아온다 — App 4탭 Root의 `NavigationStack` +
+    /// `.showWSSToast(.blockUser)` 배선(#221)을 Demo에서 재현해 seam→복귀 화면 토스트를 확인한다.
+    @State private var blockedNickname: String?
 
     var body: some View {
-        VStack(spacing: 16) {
-            NavigationLink("내 화면 (MyPage)") {
-                DemoFactory.makeMypageView(dataSource: dataSource)
-            }
-            .buttonStyle(.borderedProminent)
+        ScrollView {
+            VStack(spacing: 16) {
+                NavigationLink("내 화면 (MyPage)") {
+                    DemoFactory.makeMypageView(dataSource: dataSource)
+                }
+                .buttonStyle(.borderedProminent)
 
-            Button("남의 화면 (UserPage)") {
-                withAnimation { isEnteringUserID = true }
-            }
-            .buttonStyle(.bordered)
+                Button("남의 화면 (UserPage)") {
+                    withAnimation { isEnteringUserID = true }
+                }
+                .buttonStyle(.bordered)
 
-            if isEnteringUserID {
-                HStack(spacing: 8) {
-                    TextField("유저 ID", text: $userIDInput)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
+                if isEnteringUserID {
+                    HStack(spacing: 8) {
+                        TextField("유저 ID", text: $userIDInput)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
 
-                    if let id = Int(userIDInput) {
-                        NavigationLink("이동") {
-                            DemoFactory.makeUserPageView(dataSource: dataSource, userID: UserID(id))
+                        if let id = Int(userIDInput) {
+                            NavigationLink("이동") {
+                                DemoFactory.makeUserPageView(
+                                    dataSource: dataSource,
+                                    userID: UserID(id),
+                                    onUserBlocked: { blockedNickname = $0 }
+                                )
+                            }
                         }
                     }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
-            }
 
-            // Mock 전용 — 예약 userID(`DemoCollectionScenario`)로 컬렉션 개수 시나리오를 바로 시연한다.
-            // 실서버는 실제 데이터를 그대로 조회하므로 이 바로가기가 의미가 없다.
-            if dataSource == .mock {
-                Divider().padding(.vertical, 8)
+                // Mock 전용 — 예약 userID(`DemoCollectionScenario`)로 컬렉션 개수 시나리오를 바로 시연한다.
+                // 실서버는 실제 데이터를 그대로 조회하므로 이 바로가기가 의미가 없다.
+                if dataSource == .mock {
+                    Divider().padding(.vertical, 8)
 
-                Text("컬렉션 개수별 데모 (MyPage)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text("컬렉션 개수별 데모 (MyPage)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                ForEach(DemoCollectionScenario.allCases) { scenario in
-                    NavigationLink(scenario.title) {
-                        DemoFactory.makeMypageView(dataSource: dataSource, userID: scenario.userID)
+                    ForEach(DemoCollectionScenario.allCases) { scenario in
+                        NavigationLink(scenario.title) {
+                            DemoFactory.makeMypageView(dataSource: dataSource, userID: scenario.userID)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Divider().padding(.vertical, 8)
+
+                    Text("컬렉션 개수별 데모 (UserPage)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(DemoCollectionScenario.allCases) { scenario in
+                        NavigationLink(scenario.title) {
+                            DemoFactory.makeUserPageView(dataSource: dataSource, userID: scenario.userID)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Divider().padding(.vertical, 8)
+
+                    // 특수 상태(없는 유저·비공개 프로필)는 예약 userID로 Mock 응답을 분기한다 — 키보드 입력 없이
+                    // 바로 진입하도록 바로가기로 둔다(userID 입력칸 + 이동으로도 같은 값을 넣을 수 있다).
+                    Text("특수 상태 데모 (UserPage)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    NavigationLink("없는 유저 (998 · USER-018)") {
+                        DemoFactory.makeUserPageView(dataSource: dataSource, userID: demoNotFoundProfileUserID)
+                    }
+                    .buttonStyle(.bordered)
+
+                    NavigationLink("비공개 프로필 (999)") {
+                        DemoFactory.makeUserPageView(dataSource: dataSource, userID: demoPrivateProfileUserID)
                     }
                     .buttonStyle(.bordered)
                 }
-
-                Divider().padding(.vertical, 8)
-
-                Text("컬렉션 개수별 데모 (UserPage)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                ForEach(DemoCollectionScenario.allCases) { scenario in
-                    NavigationLink(scenario.title) {
-                        DemoFactory.makeUserPageView(dataSource: dataSource, userID: scenario.userID)
-                    }
-                    .buttonStyle(.bordered)
-                }
             }
+            .padding()
         }
-        .padding()
         .navigationTitle(dataSource.rawValue)
+        .showWSSToast(
+            isPresented: Binding(
+                get: { blockedNickname != nil },
+                set: { if !$0 { blockedNickname = nil } }
+            ),
+            type: .blockUser(nickname: blockedNickname ?? "")
+        )
     }
 }
 
@@ -218,7 +253,11 @@ private enum DemoFactory {
     }
 
     @ViewBuilder
-    static func makeUserPageView(dataSource: DemoDataSource, userID: UserID) -> some View {
+    static func makeUserPageView(
+        dataSource: DemoDataSource,
+        userID: UserID,
+        onUserBlocked: @escaping (String) -> Void = { _ in }
+    ) -> some View {
         switch dataSource {
         case .mock:
             UserPageFeatureFactory.makeView(
@@ -238,7 +277,8 @@ private enum DemoFactory {
                     consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
                 },
                 onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
-                onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
+                onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") },
+                onUserBlocked: onUserBlocked
             )
         case .live:
             makeUserPageLiveView(userID: userID)
@@ -400,6 +440,10 @@ private struct DemoLoadProfileUseCase: LoadProfileUseCase {
 private struct DemoLoadOtherUserProfileUseCase: LoadProfileUseCase {
     func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
         try? await Task.sleep(nanoseconds: 500_000_000)
+        // userID 998 = "없는 유저"(USER-018 → .notFound) 시연 — 데모 메뉴 userID 입력칸에 998 입력.
+        if case .user(demoNotFoundProfileUserID) = target {
+            throw .notFound
+        }
         return Profile(
             nickname: "구리구리스",
             introduction: "백덕수 작가입니다. 반갑습니다.백덕수 작가입니다. 반갑습니다.",
@@ -453,6 +497,10 @@ private struct DemoUpdateProfileUseCase: UpdateProfileUseCase {
 /// 유저 ID `999`는 "비공개 프로필" 데모 시나리오(`RepositoryError.privateProfile`) 확인용 —
 /// `USER-015` 응답을 이 세 UseCase(장르·작품 취향, 피드) 각각에서 흉내낸다.
 private let demoPrivateProfileUserID = UserID(999)
+
+/// 유저 ID `998`은 "없는 유저"(USER-018 → `RepositoryError.notFound`) 데모 시나리오 확인용 —
+/// `DemoLoadOtherUserProfileUseCase`가 이 userID에 `.notFound`를 던져 "존재하지 않는 유저예요" 화면을 낸다.
+private let demoNotFoundProfileUserID = UserID(998)
 
 private struct DemoLoadGenrePreferencesUseCase: LoadGenrePreferencesUseCase {
     func execute(_ target: ProfileTarget) async throws(RepositoryError) -> [GenrePreference] {

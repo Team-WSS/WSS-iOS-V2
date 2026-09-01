@@ -27,6 +27,9 @@ final class NovelReviewViewModel {
         var loadFailed = false
         var isSaving = false
         var shouldDismiss = false
+        /// 저장 성공 순간 앱 리뷰 게이트를 통과했는지 — View가 `onChange`로 소비해 `requestReview()`를 부른다.
+        /// `shouldDismiss`는 취소에도 켜지므로, 리뷰 신호는 저장 성공 경로에서만 세우는 별도 플래그로 둔다.
+        var shouldRequestReview = false
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         /// 어느 서버 호출에서 발생하든 여기로 모이며, View가 `onChange`로 소비한다(`shouldDismiss`와 대칭).
         var requiresAuthentication = false
@@ -86,6 +89,9 @@ final class NovelReviewViewModel {
     private let loadUseCase: LoadNovelReviewDraftUseCase
     private let saveUseCase: SaveNovelReviewUseCase
 
+    /// 앱스토어 평점 프롬프트 게이팅(피드·감상평 공유). 저장 성공 시 참여를 기록하고 요청 여부를 판정한다.
+    private let appReviewUseCase: AppReviewRequestUseCase
+
     // MARK: - Init
 
     init(
@@ -93,6 +99,7 @@ final class NovelReviewViewModel {
         status: ReadingStatus,
         loadUseCase: LoadNovelReviewDraftUseCase,
         saveUseCase: SaveNovelReviewUseCase,
+        appReviewUseCase: AppReviewRequestUseCase,
         logger: Logger? = nil
     ) {
         let initialDraft = NovelReviewDraft(novelID: novelID, status: status)
@@ -102,6 +109,7 @@ final class NovelReviewViewModel {
         self.baselineDraft = initialDraft
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
+        self.appReviewUseCase = appReviewUseCase
         self.logger = logger
     }
 
@@ -283,9 +291,19 @@ private extension NovelReviewViewModel {
         do {
             try await saveUseCase.execute(draft: state.draft)
             state.shouldDismiss = true
+            recordEngagementAndGateReview()
         } catch {
             presentError(error)
         }
+    }
+
+    /// 저장 성공을 긍정 완료로 기록하고, 앱 리뷰 게이트(누적 참여·버전)를 통과하면 `shouldRequestReview`를
+    /// 세운다 — 실제 프롬프트는 View가 `@Environment(\.requestReview)`로 띄운다.
+    private func recordEngagementAndGateReview() {
+        appReviewUseCase.recordEngagement()
+        guard appReviewUseCase.shouldRequestReview() else { return }
+        appReviewUseCase.markReviewRequested()
+        state.shouldRequestReview = true
     }
 }
 

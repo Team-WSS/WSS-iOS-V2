@@ -20,14 +20,28 @@ struct NovelDetailReviewSection: View {
 
     let information: NovelInformation
     let novel: Novel
+    /// 스크롤 좌표공간 이름 — 평가 온보딩 스포트라이트를 위해 상태바 프레임을 화면 좌표로 재는 데 쓴다.
+    let scrollSpaceName: String
     let onSelectStatus: (ReadingStatus) -> Void
     let onToggleInterest: () -> Void
     let onCreateFeedTapped: () -> Void
+    /// 상태바(reviewBox) 프레임 변경 콜백(scrollSpaceName 좌표계 = 화면 좌상단 기준). 온보딩 오버레이가
+    /// 이 자리만 딤에서 뚫어(스포트라이트) 실제 상태바를 밝게 보이게 하고, 그 아래 말풍선을 앉힌다.
+    let onReviewBoxFrameChange: (CGRect) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 22)
             reviewBox
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.frame(in: .named(scrollSpaceName)),
+                                      initial: true) { _, frame in
+                                onReviewBoxFrameChange(frame)
+                            }
+                    }
+                )
             Spacer().frame(height: 20)
             ctaButtons
             Spacer().frame(height: 20)

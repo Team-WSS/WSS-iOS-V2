@@ -26,7 +26,9 @@ public struct CommentDraft: Sendable {
     
     // MARK: - Policy
     
-    static let maxContentCount: Int = 500
+    /// 댓글 본문 최대 길이. 입력 단계에서 이 값으로 clamp해야 한다 — 넘긴 채 `init`이 불리면
+    /// DEBUG 빌드에서 `assertionFailure`로 죽는다(입력 화면이 `FeedDetailCommentInputBar`).
+    public static let maxContentCount: Int = 500
     
     public enum ValidationError: Error, Equatable {
         case emptyContent

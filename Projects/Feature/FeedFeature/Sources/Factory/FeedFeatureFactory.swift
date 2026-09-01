@@ -28,12 +28,14 @@ public enum FeedFeatureFactory {
     public static func makeCreateFeedView(
         createFeedUseCase: CreateFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase,
+        appReviewUseCase: AppReviewRequestUseCase,
         connectedNovel: ConnectedNovel? = nil
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
+                appReviewUseCase: appReviewUseCase,
                 initialDraft: emptyDraft(connectedNovel: connectedNovel)
             )
         )
@@ -47,7 +49,8 @@ public enum FeedFeatureFactory {
         feedID: FeedID,
         editFeedUseCase: EditFeedUseCase,
         searchNovelUseCase: SearchNovelUseCase,
-        loadFeedDetailUseCase: LoadFeedDetailUseCase
+        loadFeedDetailUseCase: LoadFeedDetailUseCase,
+        appReviewUseCase: AppReviewRequestUseCase
     ) -> some View {
         CreateFeedView(
             viewModel: CreateFeedViewModel(
@@ -55,6 +58,7 @@ public enum FeedFeatureFactory {
                 editFeedUseCase: editFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
                 loadFeedDetailUseCase: loadFeedDetailUseCase,
+                appReviewUseCase: appReviewUseCase,
                 initialDraft: emptyDraft()
             )
         )
@@ -65,7 +69,8 @@ public enum FeedFeatureFactory {
     @MainActor
     public static func makeCreateFeedPreviewView() -> some View {
         makeCreateFeedView(createFeedUseCase: StubCreateFeedUseCase(),
-                           searchNovelUseCase: StubSearchNovelUseCase())
+                           searchNovelUseCase: StubSearchNovelUseCase(),
+                           appReviewUseCase: StubAppReviewRequestUseCase())
     }
 
     /// 실제 UseCase를 주입해 FeedDetailView를 생성한다.
@@ -179,6 +184,13 @@ private struct StubCreateFeedUseCase: CreateFeedUseCase {
     func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) {
         try? await Task.sleep(for: .seconds(1))
     }
+}
+
+/// 검증용 Stub — 프리뷰에선 리뷰 프롬프트를 띄우지 않는다.
+private struct StubAppReviewRequestUseCase: AppReviewRequestUseCase {
+    func recordEngagement() {}
+    func shouldRequestReview() -> Bool { false }
+    func markReviewRequested() {}
 }
 
 private struct StubSearchNovelUseCase: SearchNovelUseCase {

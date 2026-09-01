@@ -40,6 +40,20 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **내 서재 필터·정렬은 앱 실행을 넘겨 영속화된다(#221) — 복원은 `init`에서 반드시 *동기*로 한다.**
+  `LibraryViewModel`이 `init`에서 `LoadMyLibraryFilterUseCase.execute()`로 마지막 필터·정렬을 읽어
+  `State(filter:)`에 넣는다. **동기 복원인 이유**: 첫 `onAppear → .load`보다 body 첫 평가가 먼저라, 비동기로
+  복원하면 **첫 조회가 기본 필터로 새어 나갔다가** 복원 필터로 다시 로드돼 화면이 한 번 깜빡인다(초기값
+  `isLoading=true`가 같은 결의 교훈). 그래서 UseCase·Repository를 async가 아니라 **동기·비-throwing**으로
+  뒀다(복원 실패 = nil → 기본 필터). 저장은 필터·정렬이 바뀌는 **3경로**(`toggleInterestFilter`·
+  `selectSortType`·`applyFilter`)가 공통으로 `persistFilter()`를 부른다 — 시트 "초기화"도 결국 `applyFilter`로
+  들어와 함께 커버된다. best-effort라 저장 실패는 삼킨다(다음 실행 복원만 놓칠 뿐 현재 세션엔 영향 없음).
+  - ⚠️ **저장/복원 코드는 `LibraryFeature`가 아니라 `NovelDomain`(계약 `MyLibraryFilterRepository` + `Load/
+    SaveMyLibraryFilterUseCase`) + `NovelData`(`UserDefaults` 구현·JSON 스냅샷 코덱)에 산다** — Feature는
+    Data를 import할 수 없어서다(arch-lint). **LibraryDomain/LibraryData는 없다**(서재 도메인 전체가
+    `NovelDomain`/`NovelData` — 루트 규칙). `MyLibraryFilterRepository`는 서버 조회 계약 `NovelRepository`와
+    **일부러 분리**했다(순수 로컬·userID 무관이라 SRP + `NovelRepository` 목킹 6곳을 안 건드림).
+  - **표시 모드(그리드/리스트)는 영속화 대상이 아니다**(세션 상태) — V1도 안 했다. 필터·정렬만 저장한다.
 - ⚠️ **"무효해진 로드 == 취소된 로드"가 두 서재 VM의 동시성 전제다** — 늦게 도착한 옛 결과는 세대(generation) 카운터가 아니라 `Task.isCancelled`만으로 걸러낸다. 이게 성립하는 조건이 둘 있고, **둘 중 하나만 깨져도 세대 카운터가 다시 필요해진다**:
   1. **로드는 항상 `loadTask` 한 슬롯에만 살고, 시작하는 모든 경로가 `loadTask == nil`을 확인하거나 이전 로드를 취소하고 곧바로 재대입한다.** ⚠️ 한때 이 조건을 "목록을 갈아엎는 경로는 전부 `reloadFromScratch()`를 거친다"로 적었는데 **틀린 문장이다** — `.refresh`는 거치지 않고 목록을 교체하는 **예외**이고, 그게 안전한 이유는 `load()`의 `loadTask == nil` 가드뿐이다. **그 가드를 완화하면 세대 카운터가 다시 필요해진다.** 반대로 취소만 하고 재대입하지 않는 경로(`onDisappear`에서 `cancel()`만 부르는 류)를 만들면 슬롯이 non-nil로 굳어 `load()`가 영구 차단된다.
   2. `@MainActor`라 `guard !Task.isCancelled` 뒤 `state` 대입까지 suspension이 없다 — 그 사이에 `await`를 끼워 넣지 말 것.
@@ -80,14 +94,15 @@
   - 인증 만료 뒤 **화면을 치우는 건 App 책임**이라 두 서재 모두 목록은 빈 채 남는다(빈 상태가 비친다) — Feature에서 가리지 말 것. → [Feature CLAUDE.md](../CLAUDE.md)의 "인증 만료 처리 계약".
   - 소진을 넣은 대가로 "두 번째 `true`는 값 변화가 아니라 무시"되던 중복 억제가 사라진다 — 목록 로드와 키워드 로드가 **시간차를 두고 각각** 인증 실패하면 콜백이 2회 발화한다. **`onAuthenticationRequired`는 idempotent해야 한다**(루트 교체는 무해, `path.append(.login)`류면 로그인 화면이 두 겹 쌓인다). Feature 안에서 막으려면 별도 플래그가 필요한데 그럼 래치(영구 삼킴) 문제가 되살아난다.
 - ⚠️ **그리드 셀은 2026-08에 `WSSComponent.WSSLibraryGridCell`로 승격됐다**(`CollectionFeature`의 "서재에서 추가" 화면과 공용, 유일한 차이는 선택 서클 오버레이라 `isSelected: Bool?`로 흡수 — nil이면 이 화면처럼 선택 UI 자체가 안 그려진다). 이 화면은 이제 `LibraryNovel`을 그대로 넘기지 않고 `thumbnailImage`/`title`/`readingStatus`/`myRating`/`dateText`/`isInterested`(+`isSelected: nil`)로 풀어서 넘긴다 — 정보 스택 고정 높이(`Metric.infoHeight` 65)·표지 비율(108:160)·`WSSNovelCoverImage(url:aspectRatio:)` 충돌 회피 같은 레이아웃 함정은 이제 컴포넌트 내부 구현 문제이므로 **정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `WSSLibraryGridCell` 항목** — 이 화면에서 그 함정을 다시 우회하지 말 것. 날짜 문자열은 `ReadingPeriod.displayText`(같은 승격, 아래 참고)로 이미 포맷된 값을 넘긴다.
+- ⚠️ **리스트 셀(`LibraryListCell`)의 두 별점은 "없음(0.0)"을 감추는 층이 다르다**(#221) — **내 별점**(`userReview.rating`)은 매핑 단계에서 이미 nil이라 `if let`으로 빠지고(`try? Rating(0.0)`이 `Rating`의 0.5~5.0 정책에 걸려 throw), **전체 별점**(`novel.rating`)은 서버 평균이라 `Float` 그대로 와서 0.0이 `"0.0"`으로 찍힌다 — 이건 `Rating`(0.5 단위)으로 못 올려 **View가 `hasNovelRating`(> 0)으로 판정**한다. **`.opacity(0)` + `.accessibilityHidden`으로 감추되 제거하지 않는 건 의도** — 별점 행이 `.frame(height: 17)` 고정이라 세로 자리는 어차피 남지만, opacity면 내 별점 옆 **가로 자리까지 그대로** 유지돼 "감춰도 공간은 그대로"가 된다(사용자 요구). **그리드 셀(`WSSLibraryGridCell`)엔 전체 별점이 아예 없어**(내 별점만) 이 처리는 리스트 셀 전용이고, 내 서재·타유저 서재 리스트 모드가 이 셀을 공유하므로 한 곳 수정으로 둘 다 반영된다.
 - ⚠️ **필터 시트는 진입 탭을 `.sheet(item: $filterSheetTab)`으로 넘긴다** — `isPresented:` + 별도 탭 State로 열면 **앱 실행 후 첫 시트만** 항상 읽기상태 탭으로 열린다(실제 발생). 두 번째부터는 정상이라 "가끔 그러네"로 넘기기 쉬우니, `isPresented`로 되돌리지 말 것. 원리는 Feature CLAUDE.md의 "표시 상태 소유 구분" 항목이 정본.
 - **iOS 26 시트 기본 배경은 글래스(반투명)** — 디자인은 불투명 흰색이라 정렬/필터 시트 모두 `.presentationBackground(Color.wssWhite)` 명시 필수. 빼면 뒤 콘텐츠가 비쳐 보인다.
 - **필터 시트 탭 행(6탭)은 화면 폭보다 넓어 가로 스크롤** — 디자인 시안에서도 우측 탭이 잘려 있다. 고정 HStack으로 두면 "매력포인트"가 2줄로 꺾인다(`fixedSize()`+ScrollView).
 - ⚠️ **필터 시트 레이아웃 골격은 구 WSSiOS `LibraryFilterView`(UIKit)가 정본** — 시트 높이가 고정(516)인데 탭마다 콘텐츠 자연 높이가 크게 달라, **탭 콘텐츠 영역이 남은 공간을 전부 차지하고(`.frame(maxHeight:.infinity, alignment:.top)`) 넘치면 그 안에서 스크롤**해야 한다. 콘텐츠 뒤에 `Spacer()`를 놓아 CTA를 바닥으로 미는 구조로 되돌리지 말 것 — 탭을 옮길 때마다 콘텐츠가 위아래로 튀고, 긴 탭(키워드)은 잘린다.
   - ⚠️ **공통 세로 ScrollView는 두지 않는다 — 가변 길이 탭이 자기 스크롤을 갖는다.** 현재 6탭 중 길이가 유동적인 건 키워드뿐이라 `keywordContent`의 칩 영역만 자체 `ScrollView`고 나머지는 고정 콘텐츠다(남는 가용 높이 약 272pt에 나머지 탭 자연 높이가 전부 들어간다). **가변 높이 탭을 새로 추가하면 그 탭도 자체 스크롤을 가져야 한다** — `.frame(maxHeight:.infinity)`는 클립하지 않아서, 넘치면 잘리는 게 아니라 **CTA 버튼 위로 그려진다**.
-  - ⚠️ **읽기상태·매력포인트 선택만 `handleWithoutAnimation`으로 반영한다**(Feature 기본 규칙인 "선택엔 짧은 색 애니메이션"의 **이 시트 한정 예외** — 앱 전반의 토글은 그대로 애니메이션을 가진다). 첫 선택으로 위쪽에 선택 칩 행이 생기면서 항목 행 전체가 아래로 밀리는데, 애니메이션이 살아 있으면 **방금 누른 항목만** 늦게 미끄러져 내려온다.
-    - ⚠️ **`.animation` modifier 제거만으론 안 고쳐진다** — 떼고도 증상이 그대로임을 연사 캡처로 실측했다. 액션 시점 **트랜잭션**이 살아 있으면 그게 레이아웃 변화를 애니메이트하므로, `Transaction.disablesAnimations`로 `viewModel.handle` 호출 자체를 감싸야 한다(그 대가로 색 전환도 즉시가 된다).
-    - 장르·연재상태·키워드는 WSSComponent 칩(`CapsuleSelectableKeywordChip`·`RectangleSelectableKeywordChip`)이라 애초에 애니메이션이 없어 증상이 없다 — **세 탭 첫 선택을 눈으로 확인함**(#166). 통일한답시고 이쪽에 애니메이션을 넣지 말 것.
+  - ⚠️ **필터 시트 선택 항목은 두 갈래다 — 칩(장르·연재상태·키워드)은 색이 애니메이트되고, 아이콘 항목(읽기상태·매력포인트)은 즉시 전환(애니메이션 없음)**이다(#221에 실측으로 확정). 공통 전제: 첫 선택으로 위쪽에 선택 칩 행이 생기면 항목 행 전체가 아래로 밀리는데, 색 전환을 `.animation(value: isSelected)`로 **직접** 걸면 그 위치 변화까지 함께 애니메이트돼 **방금 누른 항목만** 뒤늦게 미끄러진다(잔상). 그래서 위치는 항상 `isSelected`로 즉시 확정한다.
+    - **장르·연재상태·키워드**(WSSComponent 칩 `CapsuleSelectableKeywordChip`·`RectangleSelectableKeywordChip`)는 **색이 애니메이트된다** — 색을 한 박자 뒤 미러(`animatedSelected`, `onChange`에서 갱신)로 굴려 위치는 스냅하고 색만 spring시킨다(정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). 이게 되는 건 칩 색이 **`.background(Color)` 도형 fill**이라 보간되기 때문. ⚠️ **이 칩들에 `.animation(value: isSelected)`를 다시 직접 걸지 말 것**(위치까지 애니메이트돼 잔상 재발). "장르·연재상태·키워드 칩엔 애니메이션이 없다"던 옛 문장은 #166 이후 `CapsuleSelectableKeywordChip`에 spring이 다시 붙으며 틀렸었다.
+    - **읽기상태·매력포인트**(시트 로컬 `readingStatusItem`/`attractivePointItem`)는 **`handleWithoutAnimation`(`Transaction.disablesAnimations`)으로 색·위치 모두 즉시 전환**한다(#166부터의 방식). ⚠️ **#221에서 이 둘도 "색만 애니메이트"를 시도했다가 사용자 결정으로 걷어냈다 — 되살리지 말 것.** 이 항목의 색은 **아이콘 tint(`foregroundStyle`)** 라, 칩과 달리 두 함정에 걸린다(둘 다 #221 픽셀·중간프레임 실측): ① **템플릿 이미지 tint는 `.animation`으로 보간되지 않고 즉시 스냅**한다(칩처럼 `.background`가 아니라서) → opacity 크로스페이드로 두 벌을 겹쳐야 겨우 애니메이트됨. ② **`Button`이라 `.animation(value:)`를 라벨 안에 걸어야만** 먹는다(바깥·`withAnimation`은 라벨 내부에 전파 안 됨). 이렇게까지 해서 얻는 게 적어 즉시 전환으로 확정했다.
   - **선택 칩 행은 칩이 없으면 구분선까지 통째로 사라진다**(정본 동작). 빈 높이를 남겨 "점프 방지"할 필요가 없다 — 위 콘텐츠 영역이 유연해서 그 차이를 흡수한다.
   - `presentationCornerRadius` 금지 규약은 정렬 시트뿐 아니라 **필터 시트에도 동일 적용**(아래 시트 공통 항목 참고).
 - **별점 범위 슬라이더는 `WSSComponent.WSSRangeSlider`**(구 `LibraryRatingSlider`) — `SearchFeature`(#185, 상세탐색 필터)도 같은 모양(0.0~5.0, 0.5 단위)을 필요로 해 WSSComponent로 승격했다. 드래그 좌표계 함정(트랙이 핸들 반지름만큼 안쪽, 핸들 판정은 드래그 시작에 한 번만)은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)가 정본 — 이 화면에 로컬로 다시 구현하지 말 것.
@@ -98,7 +113,7 @@
 - 별점 범위 필터의 "전체 범위(0.0~5.0) = 필터 없음(nil)" 정규화는 도메인(`MyLibraryFilter.setRatingRange`)이 담당 — 시트 VM은 슬라이더 편집값(`ratingMin/Max`)을 **별도 보유**한다(필터 nil이어도 슬라이더는 전체 범위를 그려야 해서).
 - 정렬 시트 선택 즉시 적용·닫기(확인 버튼 없음). 디자인상 상단 그래버 없음(`.presentationDragIndicator(.hidden)`). presentation 설정·배경·높이는 **시트 뷰가 자체 보유**하고 콘텐츠는 `.padding(.horizontal,20)`(행마다 X, VStack 전체에 한 번) + `.frame(maxHeight:.infinity, alignment:.top)` + 흰 배경(ReadingPeriodSheet 패턴). `sheetHeight`(detent)는 콘텐츠에 딱 맞춘다(상단여백 + 행 + 간격) — 쿠션 더하기 ❌(빈 공간만 생김).
   - ⚠️ **하단 여백은 콘텐츠에 넣지 않는다** — 시스템이 detent 높이 **아래에 홈 인디케이터 safe area를 더해** 시트를 그린다. 콘텐츠에서 또 주면 여백이 두 겹이 되어 마지막 행 아래가 휑해진다(정렬 시트에서 실제 발생, `bottomPadding` 24 제거). 상단 여백만 명시하면 된다.
-  - ⚠️ **`presentationCornerRadius`를 쓰지 말 것** — `presentationBackground(Color)`(iOS 26 글래스 방지용 불투명 흰색)와 함께 쓰면 **배경 사각형이 시트 둥근 모서리에 클립되지 않아 양 옆·하단이 화면 프레임 밖으로 삐져나온다**(실제 발생, 오진으로 헤맴). `presentationBackground`만 두면 시스템 기본 둥근 모서리가 배경까지 제대로 클립한다(ReadingPeriodSheet도 CornerRadius 안 씀).
+  - ⚠️ **`presentationCornerRadius`를 쓰지 말 것** — `presentationBackground(Color)`(iOS 26 글래스 방지용 불투명 흰색)와 함께 쓰면 **배경 사각형이 시트 둥근 모서리에 클립되지 않아 양 옆·하단이 화면 프레임 밖으로 삐져나온다**(실제 발생, 오진으로 헤맴). `presentationBackground`만 두면 시스템 기본 둥근 모서리가 배경까지 제대로 클립한다(ReadingPeriodSheet도 CornerRadius 안 씀). ⚠️ **필터 시트에 `.presentationCornerRadius(16)`이 주석 경고를 뚫고 다시 들어와 하단 양끝이 삐져나왔던 걸 #221에서 제거했다** — 정렬 시트(이 줄 없음)와 달라 보이면 이 줄부터 의심할 것.
   - ⚠️ **선택 체크는 `HStack`에 넣지 말고(넣으면 글씨가 가운데 정렬에 밀려 오른쪽으로 이동) 글씨의 `.overlay(alignment:.leading)` + `offset`으로** 얹는다 — overlay는 레이아웃에 영향을 안 줘 글씨는 가운데 그대로 있고 체크만 왼쪽에 나타난다.
 - ⚠️ **그리드↔리스트는 스크롤 뷰를 각각 갖고, 안 보이는 쪽도 지우지 않고 숨기기만 한다**(두 화면 공통 `novelScroll(for:)`). 스크롤 뷰 **하나** 안에서 `switch displayMode`로 콘텐츠만 갈아끼우면 SwiftUI가 그 스크롤 뷰의 정체성을 유지해 **contentOffset이 두 모드에 공유된다** — 그리드에서 내린 만큼 리스트도 내려가 있다(실제 발생). 배포 타깃이 iOS 17이라 오프셋을 저장·복원하는 `ScrollPosition`/`onScrollGeometryChange`(iOS 18+)를 쓸 수 없어, **동시에 살려두고 숨기는 것이 유일하게 견고한 방법**이다. 겹쳐 있으므로 `opacity` 외에 `allowsHitTesting(false)`·`accessibilityHidden(true)`를 함께 걸어 탭·VoiceOver가 새지 않게 한다.
   - ⚠️ **숨은 쪽의 `loadMore`(마지막 셀 `onAppear`)를 "지금 보는 모드만"으로 가드하지 말 것** — 그 셀이 이미 `onAppear`를 소진해 **나중에 그 모드로 전환했을 때 무한 스크롤이 되살아나지 않는다.** 열어둬도 중복 요청은 VM의 `loadTask == nil` 가드가 드롭한다(양쪽 다 25개 끝까지 로드됨을 실측).
