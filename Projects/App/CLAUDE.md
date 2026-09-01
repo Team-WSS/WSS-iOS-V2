@@ -11,9 +11,11 @@
 Sources/
 ├── WSSIOSV2App.swift        # @main. 폰트 등록·KakaoSDK 초기화 등 앱 시작 시 1회 처리 + onOpenURL
 │                             # (카카오 로그인 콜백은 SDK로, websoso:// 딥링크는 pendingDeepLink로, #228).
-├── ContentView.swift        # 앱 루트. AppDependencies를 한 번 만들어 두 플로우에 내려주고,
-│                             # Route(.onboarding/.main)로 전환한다(로그인 상태 분기는 여기).
-│                             # 딥링크 Binding은 MainTabView로만 내려간다(온보딩 중엔 그대로 대기).
+├── ContentView.swift        # 앱 루트. AppDependencies를 만들어 플로우들에 내려주고,
+│                             # Route(.splash/.onboarding/.main)로 전환한다(#236 — 초기 route는 .splash,
+│                             # 부트스트랩 결과(BootstrapOutcome)가 forceUpdate 알럿/온보딩/홈+약관시트를 가른다).
+│                             # 세션이 끝나는 모든 경로(resetToOnboarding)는 AppDependencies를 재조립한다.
+│                             # 딥링크 Binding은 MainTabView로만 내려간다(스플래시·온보딩 중엔 그대로 대기).
 ├── DI/
 │   └── AppDependencies.swift  # 유일한 조립 지점 — NetworkingClient·TokenStore·Repository 조립.
 ├── Onboarding/
@@ -156,6 +158,10 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **재발급(/reissue) 전용 URLSession엔 요청 타임아웃 10초가 걸려 있다**(#236, `AppDependencies`의
+  `refresherClient`) — 재발급 대기(`SessionRefreshCoordinator`)가 취소에 반응하지 않아 스플래시 게이트
+  예산(4초)이 뚫리는 구멍(`SplashDomain/CLAUDE.md`)을 App 조립에서 60초→10초로 좁힌 것. Core는 그대로다
+  — 이 세션을 기본(60초)으로 "정리"하면 만료 토큰 + 무응답 망에서 스플래시가 최대 1분 잠기는 회귀가 된다.
 - ⚠️ **CreateFeed에 새 UseCase를 주입하려면 조립 지점이 5곳이다** — 작성 경로는 각 탭 Root의 `createFeedView(connectedNovel:)` 헬퍼 **4곳**(`FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`, 동일 코드 복제)에서 `FeedFeatureFactory.makeCreateFeedView`를 직접 호출하고, 수정 경로는 `FeedDetailAssembly.makeEditFeedView` **1곳**이다(NovelReview는 `NovelReviewAssembly` 1곳으로 공용화된 것과 대비 — 작성 헬퍼는 아직 공용 Assembly로 안 뽑힘). #221 앱 리뷰 UseCase 주입 때 이 5곳 + NovelReviewAssembly를 모두 손댔다. 순수 로컬(UserDefaults) repo(온보딩·앱리뷰)는 `AppDependencies`에 `let ...Repository` 선언 + init 끝에서 `Default...Repository(appStorage: UserDefaultsStorage())`로 조립(네트워크 client 불필요)한 뒤, 각 조립 지점이 `Default...UseCase(repository: dependencies.xxxRepository)`로 감싸 주입한다.
 - ⚠️ **push할 화면에 "진입 파라미터"를 넘길 땐 별도 `@State` 스크래치 변수에 먼저 써두고 그 값을
   읽어 destination view를 만들지 말 것 — `NavigationPath`의 `Destination` payload로 직접 실어
@@ -235,11 +241,13 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   수 있는 게 아니라 `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약"
   참고). **Home·Feed·서재 세 탭은 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
   거기서 push하는 작품 상세(`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
-- **`onAuthenticationRequired`는 메인→온보딩으로 라우팅을 되돌리는 것까지만 하고, 로그아웃 처리
-  (토큰 삭제 등)는 하지 않는다** — 401을 받은 시점에 이미 서버가 세션을 무효화한 상태라 재로그인하면
-  새 토큰으로 덮어써진다. 별도 로그아웃 로직이 필요해지면 `AuthRepository.logout()`을 여기서 호출할지
-  검토할 것. 어느 탭에서 발생했든(`MainTabView`가 4탭의 `onAuthenticationRequired`를 같은 클로저
-  `restoreDeepLinkAndRequireAuthentication`으로 받음) idempotent해야 한다는 계약은 그대로 유지.
+- **`onAuthenticationRequired`(→ `ContentView.resetToOnboarding`)는 온보딩 라우팅 + `AppDependencies`
+  재조립까지 하고, 토큰 삭제는 하지 않는다**(#236) — 401을 받은 시점에 이미 서버가 세션을 무효화한
+  상태라 재로그인하면 새 토큰으로 덮어써진다. 재조립을 하는 이유는 **이전 세션에서 채워졌을 수 있는
+  `HomePrefetchStore` 슬롯을 인스턴스째 버리기 위함**(TODO 11절의 좁은 레이스 — 유효 토큰으로 채워진
+  뒤 소비 전에 세션이 바뀌는 경우). 어느 탭에서 발생했든(`MainTabView`가 4탭의 `onAuthenticationRequired`를
+  같은 클로저 `restoreDeepLinkAndRequireAuthentication`으로 받음) idempotent해야 한다는 계약은 그대로
+  유지 — 재조립은 `route != .onboarding` 가드로 1회만 된다.
 - ⚠️ **`DesignSystem` 에셋을 탭바 아이콘처럼 이름 문자열로 참조하면(`Label(_:image:)`) 완전히 새로
   설치한 상태에서 아이콘이 조용히 안 보인다** — 그 이미지는 App이 아니라 `DesignSystem.framework`
   자체의 리소스 번들에 있는데, `Label(_:image:)`/`Image(_:)`(이름 문자열 버전)는 기본적으로
@@ -272,11 +280,11 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   중에도 백그라운드에서 서재(`LoadMyLibraryUseCase`)가 같이 호출된다. 서버가 미인증 요청에 404
   `USER-006`으로 응답하면 `NetworkingClient`가 이를 "재인증 필요"로 해석해 토큰을 지우고
   `.authenticationRequired`를 던지고, `LibraryRootView.onAuthenticationRequired` → `MainTabView` →
-  `ContentView`가 그대로 받아 `route = .onboarding`으로 전체를 되돌린다. **홈은 원래 비로그인도 봐야
-  하는 화면이라 이 정책이 맞지 않다** — 지금은 실제 로그인 세션으로 테스트하면 안 겪지만, 비로그인
-  브라우징을 지원하려면 탭을 lazy 로드하거나(진짜 선택했을 때만 그 탭의 API 호출) 홈만 인증 실패를
-  무시하도록 정책을 분리해야 한다. 아직 미해결 — 다음에 이 증상(탭바가 보이자마자 사라짐)을 다시 보면
-  먼저 이 문서부터 볼 것.
+  `ContentView`가 그대로 받아 온보딩으로 전체를 되돌린다. **#236부터 콜드 스타트에선 이 증상이
+  사라졌다** — 스플래시 세션 게이트가 토큰 없으면 `.intro`로 보내 `MainTabView` 자체가 안 뜬다.
+  이 바운스 경로는 "쓰던 중 세션이 죽는" 경우의 안전망으로만 남는다. **홈은 원래 비로그인도 봐야
+  하는 화면이라 이 정책이 맞지 않다** — 비로그인 브라우징을 지원하려면 탭을 lazy 로드하거나(진짜
+  선택했을 때만 그 탭의 API 호출) 홈만 인증 실패를 무시하도록 정책을 분리해야 한다(여전히 미지원).
 - **서재의 "웹소설 찾기"(빈 상태 CTA, `onSearchTapped`)와 우상단 등록 버튼(`onRegisterTapped`)은
   둘 다 같은 `SearchAssembly`(일반 검색)로 push된다**(사용자 확정, #196) — 서재엔 전용 "작품 등록"
   화면이 없고, 검색해서 찾은 작품을 작품 상세에서 등록하는 흐름이다. 나중에 전용 등록 화면이 생기면
@@ -306,8 +314,9 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
       - ⚠️ **My 탭은 콜백이 둘이다** — `onSessionEnded`(설정 로그아웃·탈퇴 성공 = 사용자가 세션을 끝냄, 복원 ❌)와
         `onAuthenticationRequired`(그 탭 위 push 화면의 401, 복원 ⭕). 예전엔 하나로 합쳐져 있었는데 My 탭에서
         딥링크 화면이 401을 만나면 복원이 안 됐다. 결과(온보딩 복귀)가 같다고 다시 합치지 말 것.
-      - 세션 복원(`docs/TODO.md` 9절)이 들어오면 콜드 스타트 401 자체가 사라지지만 "보던 중 만료" 바운스엔
-        여전히 유효하니 지우지 말 것.
+      - 세션 복원(#236, 스플래시 세션 게이트)이 들어와 콜드 스타트 401 자체는 사라졌지만 — 토큰 없는
+        콜드 스타트는 이제 `.intro`로 시작해 `pendingDeepLink`가 로그인까지 대기한다 — 이 복원 로직은
+        "보던 중 만료" 바운스에 여전히 필요하니 지우지 말 것.
   - `onOpenURL`은 **`DeepLink(url:)`를 먼저** 보고, nil이면 카카오 로그인 콜백(`kakao{APP_KEY}://oauth…`)인지
     `AuthApi.isKakaoTalkLoginUrl`로 물어 SDK에 넘긴다 — 카카오 콜백은 host가 `oauth`라 `DeepLink`가 nil을
     돌려주니 순서를 뒤집어도 동작은 같지만, `isKakaoTalkLoginUrl`은 앱 키 미설정 시 `try!`로 죽는 SDK 경로라

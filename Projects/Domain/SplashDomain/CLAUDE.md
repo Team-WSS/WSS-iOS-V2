@@ -36,6 +36,8 @@
   refresh 대기에 앉아 예산 4초를 넘겨도 못 빠져나오고, `URLSession` 기본 60초까지 스플래시가 고정될 수 있다.
   (강제 업데이트 게이트는 `.withoutToken`이라 이 경로가 없다.) 근본 해결은 refresh 대기를 취소 가능하게
   만들거나 Networking에 request timeout을 두는 것 — 둘 다 Core 변경이라 이 모듈 밖이다.
+  **완화(#236)**: App 조립이 재발급 전용 URLSession에 요청 타임아웃 10초를 걸어 최악 잠김을 60초→약
+  10초로 좁혔다(`App/CLAUDE.md` 주의사항). 예산 4초를 온전히 지키려면 여전히 위 근본 해결이 필요하다.
 - `.intro`로 낙착해도 **이미 던진 부수 태스크는 되돌리지 않는다**. 죽은 세션에선 4종 전부 실패하고 끝나
   무해하다 — 홈 프리페치 3종도 **전부 `requireToken`**이라(2026-08-31, today/trending을
   `usesTokenIfAvailable`에서 전환) 익명 200으로 슬롯이 채워지는 일이 없다(fail-closed).
