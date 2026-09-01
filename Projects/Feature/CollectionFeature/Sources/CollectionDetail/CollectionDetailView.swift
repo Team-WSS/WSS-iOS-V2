@@ -278,17 +278,9 @@ private extension CollectionDetailView {
     func heroInfo(_ detail: CollectionDetail) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                AsyncImage(url: detail.owner.profileImage) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        WSSImage.imgEmptyCover.swiftUIImage
-                            .resizable()
-                            .scaledToFill()
-                    }
-                }
-                .frame(width: 32, height: 32)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                WSSProfileImage(url: detail.owner.profileImage)
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 Text(detail.owner.nickname)
                     .applyWSSFont(.title4)
