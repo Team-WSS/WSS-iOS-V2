@@ -211,13 +211,9 @@ private extension TodayDiscoveryCard {
         switch discovery.content {
         case .userComment(let user):
             HStack(spacing: 10) {
-                WSSAsyncImage(url: user.profileImage) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: { _ in
-                    Color.wssGray50
-                }
-                .frame(width: Metric.profileSize, height: Metric.profileSize)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                WSSProfileImage(url: user.profileImage)
+                    .frame(width: Metric.profileSize, height: Metric.profileSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Text("\(user.nickname)님의 한마디")
                     .applyWSSFont(.title2, color: .wssGray300, alignment: .leading)
