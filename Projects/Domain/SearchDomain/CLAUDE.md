@@ -15,6 +15,7 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **`SearchFilter`는 `Hashable`을 준수한다**(#196) — Domain 엔티티치곤 드문 이유로, App(`HomeRootView`/`LibraryRootView`)이 `Destination` enum(`NavigationPath` push용)의 연관값으로 이 값을 직접 담기 위해서다(상세탐색 결과 화면 push를 App으로 옮긴 것, `SearchFeature/CLAUDE.md`의 "화면이 안 쌓이는 버그" 참고). `genres`/`keywords` 등 저장 필드가 전부 이미 `Hashable`이라 컴파일러 자동 합성만으로 충분했다.
+- **`DetailSearchFilterTab`(정보/키워드)도 같은 이유로 이 모듈에 있다**(#236) — 상세탐색 필터 화면의 진입 탭을 App이 `Destination` 연관값으로 담아 `SearchFeature`에 되넘기므로 `Hashable`이 필요하다. 원래 `SearchFeature/Sources/Navigation/`에 뒀다가 arch-lint `feature-exclusivity`에 걸려 옮겼다 — Navigation seam은 계약 타입(typealias·protocol)만 허용이고 구체 enum/struct는 위반이다. **App↔Feature로 넘길 값 계약 타입은 Feature가 아니라 이 도메인이 소유**한다.
 - `RecentSearchWord.id`는 서버 발급 `SearchWordID`(`IDWrapper<Int>`, `BaseDomain.WSSIdentifiers`에 등록됨) — 클라이언트가 임의로 생성하지 않는다.
 - 구현체는 `SearchData`의 `DefaultSearchRepository` 하나가 `RecentSearchRepository`/`SearchAutoCompletionRepository`/`SearchNovelRepository` **세 프로토콜 전부**를 구현한다(`SearchDataFactory.makeRepository`가 세 타입의 교집합을 반환). 실서버 확인 완료 — 세부 응답 형태는 `SearchData/CLAUDE.md` 참고.
 - **`NovelPlatform`/`NovelRatingRange`(#185)는 이 모듈 전용 신규 타입**이다. `NovelPlatform`은 `NovelDomain.NovelPlatform`(name+image+url, 작품 상세용)과 동명이지만 별개 — 이쪽은 상세탐색 필터 선택지로 쓸 고정 5종 enum이다. `NovelRatingRange`(min~max)는 애초 `SearchFilter`가 함께 갖던 단일 최소값 필드(`ratingThreshold`, `BaseDomain.NovelRatingThreshold`)를 대체하며 그 필드·타입 자체를 없앴다(#185 후반) — 이제 별점 필터는 `ratingRange` 하나뿐이다.

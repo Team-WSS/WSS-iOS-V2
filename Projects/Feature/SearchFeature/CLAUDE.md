@@ -7,7 +7,7 @@
   "뭐 읽을지 고민될 때?" 배너(`onDetailSearchTapped`, #201)와 일반 검색의 장르/키워드 "더보기" 헤더
   (`onDetailSearchFilterRequested`, #236 — 4탭 전부)에서 이 화면을 push한다**(조립은 App `SearchAssembly.
   makeDetailSearchFilterView`로 공용화, 아래 "필터 화면 진입·복귀" 참고). 진입 탭은
-  `initialTab: DetailSearchFilterTab`(`Sources/Navigation/`의 public seam)으로 호출자가 지정한다 —
+  `initialTab: DetailSearchFilterTab`(`SearchDomain`의 값 타입 — App↔Feature 계약이라 Domain 소유, 아래 주의사항)으로 호출자가 지정한다 —
   장르 더보기 `.info`, 키워드 더보기 `.keyword`(V1 parity). "키워드" 탭은 `KeywordFeature`의
   키워드 선택 화면을 **콘텐츠 주입(`KeywordTabContentBuilder`)으로 재사용**한다(아래 참고) — 이 모듈
   안에 그 화면이 없다.
@@ -84,3 +84,4 @@
 - **최근 검색어 개별 삭제와 전체 삭제는 서로 배타적**(`removingRecentSearchWordIDs.isEmpty`/`isClearingRecentSearchWords` 상호 가드) — 처음엔 각자 낙관적 반영 시점의 배열 전체를 스냅샷해뒀다가 실패 시 그 스냅샷으로 복원하는 방식이었는데, 두 종류가 동시에 진행되면 나중에 실패한 쪽의 스냅샷 복원이 그 사이 반영된 다른 변경을 덮어써 서버-화면 상태가 어긋나는 버그가 있었다(PR 리뷰에서 발견). 그래서 **개별 삭제 롤백은 스냅샷 복원이 아니라 그 단어 하나만 재삽입**하도록 바꿨고, 두 액션은 서로 진행 중이면 무시하도록 가드했다. 이후 수정 시 "스냅샷 후 통째로 복원" 패턴으로 되돌리지 말 것 — 여러 항목이 동시에 지워질 수 있는 화면에서는 안전하지 않다(단일 엔티티만 다루는 `NovelDetailViewModel`의 관심 토글 롤백과는 성격이 다름).
 - **무한스크롤에 `onAppear`로 마지막 행을 감지하는 패턴은 반드시 `LazyVStack`/`LazyVGrid` 안에서만 의미가 있다** — `ScrollView { ForEach { ... } }`처럼 일반(non-lazy) 컨테이너에 직접 넣으면 스크롤 여부와 무관하게 전체 행이 렌더링 시점에 한꺼번에 나타나 `onAppear`가 즉시 연쇄 발동한다(첫 페이지 로드 직후 스크롤 없이 다음 페이지들이 순식간에 다 로드돼버림 — #165에서 `NormalSearchResultView`가 이 상태였다가 발견 후 `LazyVStack`으로 감쌈). `DetailSearchResultView`는 `LazyVGrid`라 원래 문제 없었다. 새 무한스크롤 리스트를 추가할 때 이 패턴을 잊지 말 것 — 페이지 크기가 화면 한 번에 다 안 채울 만큼 작으면(예: 5개) 화면을 꽉 채울 때까지 여러 페이지가 스크롤 없이 연달아 로드되는 것 자체는 정상 동작이다(마지막 행이 실제로 보이는 한).
 - **작품 검색 페이지네이션은 커서(`lastID`)가 아니라 정수 `page`(0부터)다** — `NovelDetailFeature`의 피드 무한스크롤(`lastFeedID` 커서, `FeedDomain/CLAUDE.md` 참고)과 방식이 다르니 그 패턴을 그대로 복사하지 말 것. `SearchNovelUseCase.searchByText(_:page:)`/`searchByFilter(_:page:)` 둘 다 필수 파라미터(기본값 없음) — 첫 페이지 호출도 명시적으로 `page: 0`을 넘겨야 한다. `NormalSearchViewModel`은 `nextSearchResultPage`, `DetailSearchResultViewModel`은 `nextPage`라는 `@ObservationIgnored` 프로퍼티로 다음 페이지 번호를 들고 있다가 성공 시 +1 한다.
+- ⚠️ **App↔Feature로 넘기는 값 계약 타입(진입 파라미터·`Destination` payload 등)은 이 모듈이 아니라 `SearchDomain`에 둔다.** `Sources/Navigation/`의 seam으로 여는 건 **계약 타입(typealias·protocol)만** 허용이고 구체 enum/struct는 arch-lint `feature-exclusivity` 위반이다 — #236에서 `DetailSearchFilterTab`(진입 탭 enum)을 `Sources/Navigation/`에 뒀다가 CI에서 걸려 `SearchDomain`으로 옮겼다(`SearchFilter`가 App `Destination` 연관값이라 거기 있는 것과 같은 이유). Navigation seam은 지금도 `KeywordTabContentBuilder`(typealias) 하나뿐이다.

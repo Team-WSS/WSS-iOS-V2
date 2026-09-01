@@ -25,7 +25,7 @@ import WSSComponent
 /// App/Demo가 조립해 값으로 건네받는다. 자세한 계약은 `Navigation/KeywordTabContentBuilder.swift` 참고.
 struct DetailSearchFilterView: View {
 
-    /// 탭 모델은 public seam(`Navigation/DetailSearchFilterTab.swift`) — 진입 탭을 호출자가 지정한다(#236).
+    /// 탭 모델은 `SearchDomain.DetailSearchFilterTab` — 진입 탭을 호출자가 지정한다(#236, App↔Feature 값 계약이라 Domain 소유).
     private typealias Tab = DetailSearchFilterTab
 
     @State private var viewModel: DetailSearchFilterViewModel
