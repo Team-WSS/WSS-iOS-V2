@@ -100,9 +100,8 @@
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
   팀이라 컷오버 시점에 V1의 운영 인증서를 그대로 이어받기 위함). `Fastfile`에 실기기 개발
-  서명만 동기화하는 `sync_dev_certificates` lane을 새로 추가했다(ASC API 키 불필요, `match(type:
-  "development", readonly: false)`만 실행) — 이게 지금 당장 막힌 "프로비저닝 프로파일 없음" 문제의
-  실제 해결책이다.
+  서명만 동기화하는 `sync_dev_certificates` lane을 새로 추가했다 — 이게 지금 당장 막힌
+  "프로비저닝 프로파일 없음" 문제의 실제 해결책이다.
   - **✅ `debug_beta` 아카이브→TestFlight 업로드까지 실제로 성공(2026-08-29, `archive-debug` 스킬로
     실행)** — 애초 예상과 달리 App Store Connect에 디버그 앱 레코드가 **이미 존재**했다
     (기존 TestFlight 빌드 `1.9.4`도 있었음 — "미검증" 우려는 기우였다). 다만
@@ -113,19 +112,6 @@
     아이콘 분리, `TARGETED_DEVICE_FAMILY`, `CFBundlePackageType`/`UISupportedInterfaceOrientations`,
     Apple Generic Versioning 설정까지). `release_beta`/`release` lane 자체는 아직 미실행(스킴만
     `WSS-iOS-RELEASE`로 다를 뿐 같은 경로라 성공 가능성 높음, 실측은 아직 안 함).
-  - **로컬에서 처음 실행하려면**: `bundle install` → `fastlane/.env`에 `APP_IDENTIFIER_DEBUG`·
-    `APP_IDENTIFIER_RELEASE`·`TEAM_ID` 채우기(실제
-    값은 팀 채널로 확인 — 이 저장소엔 커밋 안 함, `.gitignore`; `APPLE_ID`는 `Appfile`에 남은 V1
-    잔재라 실제로는 안 채워도 됨 — `match`/`upload_to_testflight` 둘 다 App Store Connect API 키로만
-    인증한다) → `MATCH_PASSWORD`는 셸 환경변수보다 macOS Keychain 등록을 권장(`security
-    add-internet-password -a "" -s "match_login.keychain" -w "<값>"` — `.claude/skills/setup/SKILL.md`
-    5단계 참고) → GitHub에서 `Team-WSS/WSS-iOS-Certificates` 저장소 read 권한 있는 SSH 키 확인 →
-    `bundle exec fastlane sync_dev_certificates`. `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_PATH`는
-    `sync_dev_certificates`엔 필요 없다(배포 lane 전용).
-  - **아직 실측 못 한 것**: `sync_dev_certificates`(development 타입) 자체는 아직 안 돌려봤다 — `archive-debug`가
-    성공했으므로 (`match(type: "appstore")`가 이미 정상 동작 확인됨) development 타입도 될 가능성이
-    높지만, 실기기(시뮬레이터 아님) 설치까지는 별도 확인 필요. `release_beta`/`release` lane, 그리고
-    `COMPILER_INDEX_STORE_ENABLE=NO`로 인한 아카이브 시간 단축 효과(정량 측정)도 아직 안 봤다.
   - **⚠️ 컷오버 전 확인 필요(2026-08-29 wss-pr-reviewer 지적)**: `AppIcon.appiconset`/`AppIcon-Debug.appiconset`의
     1024×1024 PNG 둘 다 알파 채널을 포함한다(`sips`로 실측) — TestFlight 내부 업로드는 통과했지만
     정식 App Store 심사(`release` lane)에서는 마케팅 아이콘의 투명도가 거부 사유가 될 수 있다.
