@@ -33,6 +33,12 @@
 	<string>$(BUCKET_URL)</string>
 	<key>KAKAO_APP_KEY</key>
 	<string>$(KAKAO_APP_KEY)</string>
+	<key>KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1</key>
+	<string>$(KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1)</string>
+	<key>KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2</key>
+	<string>$(KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2)</string>
+	<key>KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3</key>
+	<string>$(KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3)</string>
 	<key>AMPLITUDE_API_KEY</key>
 	<string>$(AMPLITUDE_API_KEY)</string>
 	<key>APPSTORE_ID</key>
