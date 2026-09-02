@@ -18,23 +18,9 @@ struct NormalSearchResultItemRow: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            AsyncImage(url: novel.thumbnailImage,
-                       transaction: Transaction(animation: .easeInOut(duration: 0.25))) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .transition(.opacity)
-                case .failure(_):
-                    WSSImage.imgEmpty.swiftUIImage
-                        .resizable()
-                default:
-                    ProgressView()
-                }
-            }
-            .frame(width: 78, height: 105)
-            .scaledToFill()
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            WSSNovelCoverImage(url: novel.thumbnailImage)
+                .frame(width: 78, height: 105)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Spacer().frame(width: 18)
 

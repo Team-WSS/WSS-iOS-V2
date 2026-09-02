@@ -65,7 +65,6 @@ struct NovelReviewView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar { toolbarContent }
@@ -154,6 +153,12 @@ private extension NovelReviewView {
     /// 좌측 뒤로가기(닫기 요청) + 우측 완료(저장). 저장 중엔 완료 자리에 스피너를 띄우고 비활성화한다.
     @ToolbarContentBuilder
     var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Text(title)
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+        }
+
         ToolbarItem(placement: .cancellationAction) {
             Button {
                 viewModel.handle(.requestClose)

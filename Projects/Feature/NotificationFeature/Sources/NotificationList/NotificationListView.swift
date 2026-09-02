@@ -173,8 +173,9 @@ private extension NotificationListView {
             image
                 .resizable()
                 .scaledToFit()
-        } placeholder: {
+        } placeholder: { _ in
             // 이미지가 없으면 배경 캡슐만 남는다 — 자리를 지켜야 텍스트가 밀리지 않는다.
+            // 로딩 중에도 같은 화면에 여러 알림 아이콘이 동시에 뜨므로 스피너 없이 조용히 비워둔다.
             Color.clear
         }
         // 아이콘 이미지는 배경보다 작다(시안: 배경 36 안에 27) — 배경 캡슐이 이미지에 가려지지 않게 한다.

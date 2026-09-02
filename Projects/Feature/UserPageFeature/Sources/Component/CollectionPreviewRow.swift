@@ -95,7 +95,7 @@ struct CollectionPreviewRow: View {
                 // (`WSSNovelGridCell`과 동일 패턴) — raw `AsyncImage`는 URL이 nil이면 `.empty`
                 // phase에서 영영 못 벗어나 `ProgressView()`가 멈추지 않고 계속 돈다.
                 // `WSSNovelCoverImage`가 그 문제를 피한다.
-                WSSNovelCoverImage(url: imageURL, aspectRatio: Metric.coverAspectRatio)
+                WSSNovelCoverImage(url: imageURL, aspectRatio: Metric.coverAspectRatio, placeholderStyle: .grid)
                     .clipShape(RoundedRectangle(cornerRadius: 6.57))
             }
             // ⚠️ 장식 사각형이 오른쪽으로 튀어나오는 만큼(`Metric.decorationOffset`) 미리 여유를 둔다 —

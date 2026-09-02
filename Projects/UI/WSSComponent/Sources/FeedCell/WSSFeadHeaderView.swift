@@ -119,20 +119,9 @@ public struct WSSFeadHeaderView: View {
 
     private var profileContent: some View {
         HStack(spacing: 0) {
-            AsyncImage(url: header.profileImageURL) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable()
-                case .failure:
-                    WSSColor.wssGray200.swiftUIColor
-                default:
-                    ProgressView()
-                }
-            }
-            .scaledToFit()
-            .frame(width: 32, height: 32)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            WSSProfileImage(url: header.profileImageURL)
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
 
             Spacer().frame(width: 10)
 

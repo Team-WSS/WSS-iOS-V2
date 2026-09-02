@@ -9,6 +9,7 @@
 import SwiftUI
 
 import DesignSystem
+import WSSComponent
 
 struct FeedDetailCommentInputBar: View {
 
@@ -29,16 +30,8 @@ struct FeedDetailCommentInputBar: View {
                 RoundedRectangle(cornerRadius: 14)
                     .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
 
-                if let profileImageURL {
-                    AsyncImage(url: profileImageURL) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
-                    }
+                WSSProfileImage(url: profileImageURL)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
             }
             .frame(width: 42, height: 42)
 

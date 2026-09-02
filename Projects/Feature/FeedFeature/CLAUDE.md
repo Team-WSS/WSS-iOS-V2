@@ -83,3 +83,8 @@
 - **`CreateFeedView`는 `submitState == .submitted`가 되면 `.onChange`로 자동 `dismiss()`한다**(작성·수정 공용, #197) — 제출 완료 후 사용자가 직접 뒤로가기를 누를 필요가 없다. 작성/수정 모드를 구분하지 않는 이유는 `submitState`가 두 모드가 공유하는 단일 상태라서다.
 - **작성/수정 성공 시 앱스토어 평점 요청**(#221 재도입) — `CreateFeedViewModel.submit()` 성공(`state.submitState = .submitted`) 직후 `recordEngagementAndGateReview()`가 `AppReviewRequestUseCase`(BaseDomain, 감상평과 **공유** → 앱 전역 게이트)에 참여를 기록하고, 게이트(누적 참여 ≥ 임계치 AND 이번 버전 미요청)를 통과하면 `state.shouldRequestReview = true`. 실제 프롬프트는 `CreateFeedView`가 `import StoreKit` + `@Environment(\.requestReview)`로 띄운다 — ⚠️ **`submitState == .submitted` onChange에서 `dismiss()`보다 먼저 `requestReview()`를 부른다**(화면 pop 후에도 밑 화면 위로 정상 표시됨, 시뮬레이터 실측 확인). 작성·수정 모두 이 단일 `.submitted`를 지나므로 둘 다 카운트되지만 게이트가 버전당 1회로 수렴한다. V1은 성공마다 무조건 호출했으나 "무분별 호출 금지"로 게이트를 얹었다.
 - **"완료" 버튼(`canSubmit`)은 내용이 비어있지 않은 것과 별개로, `originalDraft`(수정 모드는 `loadForEdit` 완료 시점, 작성 모드는 빈 draft) 대비 `state.draft`가 실제로 달라야(`hasChanges`) 활성화된다**(사용자 확정, #197) — 수정 모드에서 아무것도 안 바꾸고 "완료"를 누를 수 있으면 안 된다는 요구. `FeedDraft`/`ConnectedNovel`이 이 비교를 위해 `Equatable`을 준수한다(합성 비교로 충분 — `attachedImages`는 ID 목록이라 이미지 추가/삭제도 이 비교에 자연히 걸린다). 작성 모드는 별도 분기 없이도 항상 성립한다(빈 draft와 달라지는 순간 자연히 `hasChanges == true`). 로드 중(`isLoadingForEdit == true`)엔 `state.draft`가 아직 placeholder라 `originalDraft`와 같아 자연히 비활성 상태를 유지한다.
+- **`FeedDetailLinkNovelBlock`(연결 작품 배너)의 표지는 `WSSNovelCoverImage`가 항상 `.fill`로 통일되며(#237,
+  `WSSComponent/CLAUDE.md` 참고) 원본을 안 자르고 보여주던 이전 동작(`.fit`)에서 크롭 표시로 바뀌었다** —
+  `aspectRatio: Metric.coverAspectRatio`(86/123, 로컬 파일 상수)로 넘겨 컴포넌트가 내부에서 크기·클립을
+  전부 처리한다(밖에서 `.frame`+수동 `.clipped()`를 거는 방식은 쓰지 않는다 — `WSSComponent/CLAUDE.md`의
+  "누가 프레임을 정하느냐" 원칙대로 `aspectRatio` 모드에선 컴포넌트가 프레임 소유자).

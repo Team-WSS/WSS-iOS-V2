@@ -21,20 +21,9 @@ struct BlockUserRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                AsyncImage(url: user.profileImageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .scaledToFit()
-                .frame(width: 50, height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                WSSProfileImage(url: user.profileImageURL)
+                    .frame(width: 50, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
 
                 Spacer().frame(width: 14)
 

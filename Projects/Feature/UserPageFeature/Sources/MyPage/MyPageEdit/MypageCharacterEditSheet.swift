@@ -82,13 +82,8 @@ struct MypageCharacterEditSheet: View {
 
     private var thumbnailSection: some View {
         VStack(spacing: 0) {
-            WSSAsyncImage(url: selectedCharacter?.representativeImage) { image in
-                image.resizable()
-                    .scaledToFit()
-            } placeholder: {
-                ProgressView()
-            }
-            .frame(width: 250, height: 250)
+            WSSProfileImage(url: selectedCharacter?.representativeImage)
+                .frame(width: 250, height: 250)
 
             Spacer().frame(height: 18)
 
@@ -224,19 +219,14 @@ private struct CharacterSelectionCell: View {
 
     var body: some View {
         Button(action: action) {
-            WSSAsyncImage(url: imageURL) { image in
-                image.resizable()
-                    .scaledToFill()
-            } placeholder: {
-                ProgressView()
-            }
-            .frame(width: size, height: size)
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(WSSColor.wssPrimary100.swiftUIColor, lineWidth: 2)
-                    .opacity(isSelected ? 1 : 0)
-            )
+            WSSProfileImage(url: imageURL)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(WSSColor.wssPrimary100.swiftUIColor, lineWidth: 2)
+                        .opacity(isSelected ? 1 : 0)
+                )
         }
         .buttonStyle(.plain)
     }

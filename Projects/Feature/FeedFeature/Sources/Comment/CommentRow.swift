@@ -10,6 +10,7 @@ import SwiftUI
 
 import CommentDomain
 import DesignSystem
+import WSSComponent
 
 struct CommentRow: View {
 
@@ -40,21 +41,9 @@ struct CommentRow: View {
                 guard !myComment, visibility == .visible || visibility == .spoiler else { return }
                 profileImageTapped()
             } label: {
-                AsyncImage(url: profileImageURL) {
-                    phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .scaledToFill()
-                .frame(width: 42, height: 42)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                WSSProfileImage(url: profileImageURL)
+                    .frame(width: 42, height: 42)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
 

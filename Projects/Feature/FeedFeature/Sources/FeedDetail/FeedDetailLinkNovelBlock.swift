@@ -10,9 +10,14 @@ import SwiftUI
 
 import BaseDomain
 import DesignSystem
+import WSSComponent
+
+private enum Metric {
+    static let coverAspectRatio: CGFloat = 86.0 / 123.0
+}
 
 struct FeedDetailLinkNovelBlock: View {
-    
+
     let imageURL: URL?
     let title: String
     let novelDescription: String
@@ -24,19 +29,8 @@ struct FeedDetailLinkNovelBlock: View {
     var body: some View {
         HStack(spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
-                AsyncImage(url: imageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                    case .failure:
-                        WSSImage.imgLoadingThumbnail.swiftUIImage
-                    default:
-                        ProgressView()
-                    }
-                }
-                .frame(width: 86)
-                .scaledToFit()
+                WSSNovelCoverImage(url: imageURL,
+                                   aspectRatio: Metric.coverAspectRatio)
                 
                 genre.markImage
                     .resizable()

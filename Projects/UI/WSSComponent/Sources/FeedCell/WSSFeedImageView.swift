@@ -32,20 +32,19 @@ public struct WSSFeedImageView: View {
     
     public var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            AsyncImage(url: feedImage.thumbnailImageURL) {
-                phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                case .failure:
+            WSSAsyncImage(url: feedImage.thumbnailImageURL) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: { isLoading in
+                if isLoading {
+                    ProgressView()
+                } else {
                     WSSImage.imgLoadingThumbnail.swiftUIImage
                         .resizable()
-                default:
-                    ProgressView()
+                        .scaledToFill()
                 }
             }
-            .scaledToFill()
             .frame(height: 248)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             

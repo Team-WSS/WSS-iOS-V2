@@ -352,19 +352,9 @@ struct NormalSearchView: View {
     
     private func sosoPickItem(imageURL: URL?, title: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable()
-                case .failure(_):
-                    WSSImage.imgEmpty.swiftUIImage.resizable()
-                default:
-                    ProgressView()
-                }
-            }
-            .scaledToFill()
-            .frame(width: 121, height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            WSSNovelCoverImage(url: imageURL, placeholderStyle: .grid)
+                .frame(width: 121, height: 180)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             
             Text(title)
                 .applyWSSFont(.body4)
