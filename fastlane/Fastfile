@@ -14,20 +14,20 @@ ENV["FASTLANE_XCODE_LIST_TIMEOUT"] = "120"
 # =====================================
 # 실기기 개발 서명 — 지금 당장 필요한 것
 # =====================================
-# docs/TODO.md 4번의 "실기기 빌드/아카이브 안 됨" 항목을 푸는 lane. V1과 같은 인증서 저장소
-# (Matchfile 참고)에서 development 프로파일만 받아온다 — App Store Connect API 키가 필요 없다
-# (그 키는 build_with 안에서 배포 lane(debug_beta/release_beta/release)에만 요청된다).
-# ⚠️ 이 lane 자체는 아직 실행해본 적이 없다(2026-08-29 기준 — build_with의 match(type: "appstore")는
-# archive-debug로 성공 확인했지만, development 타입은 별개 검증이 필요하다). 또한 Project.swift가
-# App 타깃에 참조하는 PROVISIONING_PROFILE_SPECIFIER는 "match AppStore <bundle id>"(appstore 타입)
-# 이름이라, sync_dev_certificates가 받아오는 "match Development <bundle id>" 프로파일과 이름이
-# 다르다 — 이 lane만으로 Xcode에서 Debug 스킴을 수동 서명 Run 하는 시나리오까지 풀리는지는 미검증.
+# 새 기기 추가·최초 셋업 절차는 docs/FASTLANE_ONBOARDING.md 참고.
 desc "개발용(Development) 인증서·프로비저닝 프로파일을 로컬로 동기화한다"
 lane :sync_dev_certificates do
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH")
+  )
+
   match(
     type: "development",
     app_identifier: ENV.fetch("APP_IDENTIFIER_DEBUG"),
-    readonly: false
+    readonly: false,
+    force_for_new_devices: true
   )
 end
 
