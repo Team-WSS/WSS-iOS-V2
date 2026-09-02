@@ -310,7 +310,7 @@ struct DefaultNotificationRepositoryTests {
 - `Architecture`: Clean Architecture 기반 멀티 모듈
 - `Test`: Swift Testing
 - `CI/CD`: GitHub Actions
-- `Dependencies`: 없음
+- `Dependencies`: 앱 런타임 의존성 없음(빌드 툴링 `fastlane`은 예외 — 루트 `CLAUDE.md` 참고)
 
 ```bash
 # Tuist 설치
@@ -332,6 +332,13 @@ git config core.hooksPath .githooks
 추가로 — **Config 비밀값**(`Config/*.xcconfig`)은 `.gitignore`되어 있어 팀 내부 배포로 받아 `Config/`에 둔다.
 빌드·테스트·UI 자동화(**XcodeBuildMCP**)를 쓰려면 **Node/npx**가 필요하고, 첫 Claude Code 세션에서 `.mcp.json`
 **신뢰 승인**을 1회 해야 한다. (셋업 도구 상세·함정 → [`docs/BUILD_AND_TEST.md`](docs/BUILD_AND_TEST.md))
+
+**실기기**에 빌드·설치하려면(시뮬레이터만 쓴다면 불필요) `bundle install` 후 `fastlane/.env`(`APP_IDENTIFIER_*`·
+`TEAM_ID`, `APPLE_ID`는 `match`/`upload_to_testflight`가 App Store Connect API 키로만 인증해 실제로는
+안 채워도 됨)와 `MATCH_PASSWORD`(macOS Keychain 등록을 권장 — `MATCH_PASSWORD` 환경변수 대신 안전)를
+팀 내부 배포로 채우고, `Team-WSS/WSS-iOS-Certificates`
+(match 인증서 저장소) 협업자 초대를 받은 뒤 `bundle exec fastlane sync_dev_certificates`로 서명 프로파일을
+받는다. 처음 쓰는 기기라면 Apple Developer 포털에 UDID 등록이 추가로 필요할 수 있다.
 
 > **Claude Code 사용자**는 위 셋업 과정을 `/setup` 으로 한 번에 점검·안내받을 수 있다.
 

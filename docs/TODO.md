@@ -67,19 +67,28 @@
 ### 4. 최종 이관(cutover) 시 운영 앱의 Bundle ID·서명 팀으로 교체해야 한다
 
 - **무엇**: WSS-iOS-V2는 지금 운영 중인 기존 앱을 **나중에 완전히 대체**할 새 프로젝트다(사용자 확정).
-  백엔드는 이미 같은 서버/DB를 공유하지만, 클라이언트 쪽 Bundle ID·서명 팀은 아직 운영 앱과 **다르다**
-  (현재 `kr.websoso.app.WSS-iOS`, `Plugins/EnvironmentPlugin/ProjectDescriptionHelpers/ProjectEnvironment.swift`
-  하드코딩). Apple 로그인 유저 식별자(`sub`)는 **(Apple Developer 팀 ID + Bundle ID)** 조합에 고정되고,
-  Kakao 로그인은 App Key(이미 운영 키 `Config/Config_Shared.xcconfig`의 `KAKAO_APP_KEY` 재사용 중)는
-  같아도 SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의 iOS 플랫폼 등록값과 일치하는지**
-  검사한다. 이 값들이 운영 앱과 다른 채로 배포하면 기존 유저가 로그인해도 **다른 계정으로 인식**된다.
+  백엔드는 이미 같은 서버/DB를 공유한다. Apple 로그인 유저 식별자(`sub`)는 **(Apple Developer 팀 ID +
+  Bundle ID)** 조합에 고정되고, Kakao 로그인은 App Key(이미 운영 키 `Config/Config_Shared.xcconfig`의
+  `KAKAO_APP_KEY` 재사용 중)는 같아도 SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의
+  iOS 플랫폼 등록값과 일치하는지** 검사한다. 이 값들이 운영 앱과 다른 채로 배포하면 기존 유저가
+  로그인해도 **다른 계정으로 인식**된다.
 - **결과**: 백엔드가 공유돼 있어 별도 계정 마이그레이션 로직은 필요 없지만, 아래 항목이 정확히 안 맞으면
   기존 유저의 Apple/Kakao 로그인이 "신규 가입"으로 잘못 처리된다.
-- **어디를 고치나(컷오버 시점에)**:
-  1. `Plugins/EnvironmentPlugin/ProjectDescriptionHelpers/ProjectEnvironment.swift`의
-     `organizationName`/`targetName` → 운영 앱의 실제 Bundle ID로 교체 후 `tuist generate`.
-  2. **`DEVELOPMENT_TEAM`을 리포 어디에도 설정한 적이 없다**(확인됨, xcconfig·`Project.swift`·pbxproj
-     전부 없음) — 운영 앱을 만든 것과 **같은 Apple Developer 팀 계정**으로 서명하도록 추가해야 한다.
+- **✅ 완료(2026-08-29, 코드 반영)**: V1 레포(별도 클론)의 `project.pbxproj`를 직접 대조해 실제 값을
+  그대로 옮겼다.
+  - `Plugins/EnvironmentPlugin/ProjectDescriptionHelpers/ProjectEnvironment.swift`에
+    `debugBundleId`/`releaseBundleId`/`appleDeveloperTeamID`(V1과 동일한 실제 값 — 값 자체는 `env`
+    선언부 참고) 추가.
+  - `Projects/App/Project.swift`의 Debug/Release 구성 각각에 `PRODUCT_BUNDLE_IDENTIFIER`·
+    `CODE_SIGN_STYLE`(Manual)·`CODE_SIGN_IDENTITY`(기본 `Apple Development`, 실기기(`sdk=iphoneos*`)만
+    `iPhone Distribution`)·`DEVELOPMENT_TEAM`(실기기만)·`PROVISIONING_PROFILE_SPECIFIER`(실기기만,
+    `match AppStore <bundleId>`)를 V1과 동일하게 오버라이드.
+  - `tuist generate` + 시뮬레이터 빌드 성공까지 검증.
+  - Team ID는 비밀값이 아니다(프로비저닝 프로파일·배포 앱 서명 정보에 이미 공개돼 있고, 이것만으론
+    서명 권한이 없음) — 평문 커밋 문제없음, V1도 동일하게 평문.
+- **어디를 고치나(남은 것, 컷오버 시점에)**:
+  1. ~~Bundle ID 교체~~ ✅ 위에서 완료.
+  2. ~~`DEVELOPMENT_TEAM` 추가~~ ✅ 위에서 완료(fastlane match도 이후 도입 완료 — 아래 참고).
   3. Apple Sign-in capability는 운영 Bundle ID의 App ID에 이미 켜져 있을 것 — 신규 등록 불필요, 확인만.
   4. Kakao Developers 콘솔의 해당 앱(App Key 그대로) → 플랫폼 → iOS에 운영 Bundle ID + **새로 서명한
      배포 인증서의 키해시**가 등록돼 있는지 확인/추가.
@@ -87,12 +96,31 @@
      기존 유저가 일반 업데이트로 받아야 리뷰·랭킹·설치기반이 유지됨, 사용자 확정).
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
      서버 응답으로 리허설 검증.
-- **왜 지금 안 했나**: 사용자 결정 — 지금은 개발용 설정으로 계속 진행하고, 실제 스위치(운영 앱을
-  이 코드베이스로 교체하는 시점)에 한 번에 전환하기로 함(2026-08-12).
+- **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
+  `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
+  (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
+  팀이라 컷오버 시점에 V1의 운영 인증서를 그대로 이어받기 위함). `Fastfile`에 실기기 개발
+  서명만 동기화하는 `sync_dev_certificates` lane을 새로 추가했다 — 이게 지금 당장 막힌
+  "프로비저닝 프로파일 없음" 문제의 실제 해결책이다.
+  - **✅ `debug_beta` 아카이브→TestFlight 업로드까지 실제로 성공(2026-08-29, `archive-debug` 스킬로
+    실행)** — 애초 예상과 달리 App Store Connect에 디버그 앱 레코드가 **이미 존재**했다
+    (기존 TestFlight 빌드 `1.9.4`도 있었음 — "미검증" 우려는 기우였다). 다만
+    처음부터 한 번에 되지는 않았고, 이 과정에서 이 프로젝트에 원래 있던(fastlane과 무관한) App Store
+    제출 준비 공백들을 실측으로 걷어냈다 — 자세한 내용·재발 방지 포인트는
+    [Projects/App/CLAUDE.md](../Projects/App/CLAUDE.md)의 "앱 아이콘·버전 정보는 시뮬레이터 빌드만으론
+    검증되지 않는다" 항목 참고(`resources:` 누락으로 아이콘이 빌드에 안 들어가던 것, Debug/Release
+    아이콘 분리, `TARGETED_DEVICE_FAMILY`, `CFBundlePackageType`/`UISupportedInterfaceOrientations`,
+    Apple Generic Versioning 설정까지). `release_beta`/`release` lane 자체는 아직 미실행(스킴만
+    `WSS-iOS-RELEASE`로 다를 뿐 같은 경로라 성공 가능성 높음, 실측은 아직 안 함).
+  - **⚠️ 컷오버 전 확인 필요(2026-08-29 wss-pr-reviewer 지적)**: `AppIcon.appiconset`/`AppIcon-Debug.appiconset`의
+    1024×1024 PNG 둘 다 알파 채널을 포함한다(`sips`로 실측) — TestFlight 내부 업로드는 통과했지만
+    정식 App Store 심사(`release` lane)에서는 마케팅 아이콘의 투명도가 거부 사유가 될 수 있다.
+    컷오버 전 알파 제거된 PNG로 교체할 것.
 - **놓치기 쉬운 것**: Kakao 키해시는 서명 인증서 기준이라 같은 팀 인증서를 쓰면 대체로 그대로겠지만
   Xcode 프로젝트가 통째로 바뀌는 이관이라 **반드시 실측 검증**할 것 — 추측으로 넘어가지 말 것. Push
   (APNs)·Universal Link(`apple-app-site-association`) 등 Bundle ID에 종속된 다른 설정이 운영 앱에
   더 있다면 같은 시점에 함께 점검 대상.
+
 ### 5. 401과 "재발급까지 해봤지만 실패"가 Data 레이어에서 구분되지 않는다
 
 - **무엇**: `NetworkingError+RepositoryError.swift`가 `responseFailure(401)`과 `requiresReauthentication`을

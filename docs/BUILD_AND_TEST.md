@@ -32,7 +32,7 @@
 
 1. **incremental 빌드(xcodemake)는 Tuist 워크스페이스를 깬다.** `.mcp.json`에서 `INCREMENTAL_BUILDS_ENABLED=false`로 끈다(표준 xcodebuild 사용). 켜져 있으면 `preferXcodebuild` 폴백을 강제당한다.
 2. **Feature 실행 스킴은 `XxxFeature`** — 별도 `XxxFeatureDemo` 스킴은 없다. 이 스킴의 LaunchAction이 `XxxFeatureDemo.app`을 띄운다.
-3. **`launch_app_sim`용 bundleId는 `kr.websoso.app.XxxFeatureDemo`** — `build_run_sim`이 보고하는 bundleId는 framework(`...XxxFeature`)라 그걸 그대로 launch에 쓰면 `SBMainWorkspace` 거부로 실패. Demo 앱 ID는 `.app/Info.plist` 또는 `simctl listapps`로 확인.
+3. **`launch_app_sim`용 bundleId는 `<env.organizationName>.XxxFeatureDemo`**(`ProjectEnvironment.swift`의 `organizationName` 참고) — `build_run_sim`이 보고하는 bundleId는 framework(`...XxxFeature`)라 그걸 그대로 launch에 쓰면 `SBMainWorkspace` 거부로 실패. Demo 앱 ID는 `.app/Info.plist` 또는 `simctl listapps`로 확인.
 4. **별점(★) 등 커스텀 드로잉은 접근성 tap 타겟으로 안 잡힌다** → `snapshot_ui`에 안 뜨면 좌표 탭. 표준 버튼/세그먼트/매력포인트는 `elementRef`로 잡힌다.
 5. **Demo `Mock` 모드는 일부 화면 미연결**(예: 키워드 입력) — 네트워크 의존 플로우는 `실서버` 토글이 필요.
 6. **`SNAPSHOT_EXPIRED`는 흔하다** — `tap`/`type_text` 직전에 `snapshot_ui`로 fresh `elementRef`를 다시 확보한다.

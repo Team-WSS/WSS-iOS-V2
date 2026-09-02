@@ -24,6 +24,9 @@
 4. **테스트는 필수**(현재 Domain 레이어 한정). 새 UseCase·Entity·정책은 **테스트 없이 머지하지 않는다.**
    테스트는 "읽히는 기능 명세"로 작성 → 작성 전 [docs/TESTING.md](docs/TESTING.md) 필독. 모듈이 `Project.swift`에 `.tests` 타깃을 선언하면(레이어 무관) develop 대상 PR마다 CI가 자동으로 그 모듈 테스트를 돌린다.
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
+   (예외: `fastlane`(`Gemfile`) — 앱 바이너리에 링크되는 게 아니라 서명·아카이브·배포를 자동화하는
+   빌드 툴링(Ruby gem)이라 이 원칙이 겨냥하는 "앱 런타임 의존성"과 다른 범주. #231에서 의도적으로
+   도입, `docs/TODO.md` 4번 참고.)
 6. **작업 방식**: 브랜치 `Type/#이슈` (예: `Docs/#130`), 커밋 `[Type] #이슈 - 한글 설명`, 머지는 PR 경유(브랜치 보호). → [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 ---
@@ -72,6 +75,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·import 순서·주석·접근제어·비동기·에러 규약 |
 | [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
+| [docs/FASTLANE_ONBOARDING.md](docs/FASTLANE_ONBOARDING.md) | 신규 팀원 실기기 서명 셋업·새 기기 추가 |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
 | [docs/TODO.md](docs/TODO.md) | **범위 밖이라 미룬 것**을 적거나 꺼낼 때 (그 PR에서 못 고친 결함·부활 대기 코드) |
 | [docs/PENDING_DECISIONS.md](docs/PENDING_DECISIONS.md) | **판정이 열려 있는 결정 전부**를 모아둔 곳 — 개발 단독으로 못 닫는 것(백엔드·기획·디자인 확정 필요) + 개발이 실측 뒤 정하기로 미룬 것 |

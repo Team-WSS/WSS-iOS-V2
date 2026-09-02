@@ -1,0 +1,171 @@
+default_platform(:ios)
+
+# fastlane 기본 실행 위치(fastlane/) 기준 상대경로 대신 절대경로로 계산 — match 등 앞선 액션이
+# 실행 중 작업 디렉토리를 바꿔놓는 경우가 있어(정확한 원인 미확인, 2026-08-29 archive-debug 스킬
+# 실행에서 상대경로 "../Projects/App/WSS-iOS.xcodeproj"가 "Could not find Xcode project"로 실패하는
+# 걸 실측), cwd에 의존하지 않게 __dir__ 기준으로 고정한다.
+XCODEPROJ_PATH = File.expand_path("../Projects/App/WSS-iOS.xcodeproj", __dir__)
+
+platform :ios do
+
+ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+ENV["FASTLANE_XCODE_LIST_TIMEOUT"] = "120"
+
+# =====================================
+# 실기기 개발 서명 — 지금 당장 필요한 것
+# =====================================
+# 새 기기 추가·최초 셋업 절차는 docs/FASTLANE_ONBOARDING.md 참고.
+desc "개발용(Development) 인증서·프로비저닝 프로파일을 로컬로 동기화한다"
+lane :sync_dev_certificates do
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH")
+  )
+
+  match(
+    type: "development",
+    app_identifier: ENV.fetch("APP_IDENTIFIER_DEBUG"),
+    readonly: false,
+    force_for_new_devices: true
+  )
+end
+
+# =====================================
+# yymmddvv build number 생성
+# =====================================
+private_lane :increment_build_number_with_date do |options|
+  app_id = options[:app_identifier]
+
+  today = Time.now.strftime("%Y%m%d")
+
+  latest_build = latest_testflight_build_number(
+    app_identifier: app_id
+  )
+
+  if latest_build.to_s.start_with?(today)
+    vv = latest_build.to_s[-2..].to_i + 1
+  else
+    vv = 1
+  end
+
+  new_build_number = "#{today}#{format('%02d', vv)}"
+
+  # xcodeproj를 안 주면 agvtool이 fastlane의 기본 실행 위치(fastlane/)를 기준으로 프로젝트를 찾다가
+  # "There are no Xcode project files in this directory"로 실패한다(2026-08-29 archive-debug 스킬
+  # 첫 실행에서 실측) — Tuist가 생성하는 실제 .xcodeproj 경로를 명시해야 한다.
+  increment_build_number(
+    build_number: new_build_number,
+    xcodeproj: XCODEPROJ_PATH
+  )
+
+  UI.message("📦 Build Number set to #{new_build_number}")
+end
+
+# =====================================
+# 공통 빌드 로직
+# =====================================
+# ⚠️ Tuist 프로젝트라 .xcworkspace/.xcodeproj가 저장소에 없다(gitignore) — 빌드 전 매번
+# tuist install + tuist generate로 먼저 만들어야 한다(로컬 setup 스킬과 동일 절차).
+private_lane :build_with do |options|
+  scheme = options[:scheme]
+  app_id = options[:app_identifier]
+  export_method = options[:export_method] || "app-store"
+
+  # 배포 lane만 ASC API 키가 필요하다 — sync_dev_certificates는 이 lane을 안 타므로 영향 없다.
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH")
+  )
+
+  sh("cd .. && mise exec -- tuist install && mise exec -- tuist generate --no-open")
+
+  match(
+    type: "appstore",
+    app_identifier: app_id,
+    readonly: true
+  )
+
+  increment_build_number_with_date(
+    app_identifier: app_id
+  )
+
+  build_app(
+    workspace: "WSS-iOS-V2.xcworkspace",
+    scheme: scheme,
+    export_method: export_method,
+    clean: false,
+    derived_data_path: "build/DerivedData",
+    xcargs: "-parallelizeTargets -UseModernBuildSystem=YES COMPILER_INDEX_STORE_ENABLE=NO",
+    export_options: {
+      compileBitcode: false,
+      signingStyle: "manual",
+      provisioningProfiles: {
+        app_id => "match AppStore #{app_id}"
+      }
+    }
+  )
+end
+
+# =====================================
+# Debug → TestFlight (Internal)
+# =====================================
+# ✅ 2026-08-29 archive-debug 스킬로 아카이브→TestFlight 업로드까지 실제 성공 확인됨(App Store
+# Connect 앱 레코드가 이미 존재했다). 자세한 내용은 docs/TODO.md 4번.
+desc "Debug 스킴 TestFlight 배포"
+lane :debug_beta do
+  build_with(
+    scheme: "WSS-iOS-DEBUG",
+    app_identifier: ENV.fetch("APP_IDENTIFIER_DEBUG")
+  )
+
+  upload_to_testflight(
+    app_identifier: ENV.fetch("APP_IDENTIFIER_DEBUG"),
+    skip_waiting_for_build_processing: true,
+    distribute_external: false
+  )
+end
+
+# =====================================
+# Release → TestFlight
+# =====================================
+# ⚠️ 이 lane 자체는 아직 미실행 — debug_beta가 같은 경로(build_with)로 이미 성공했으니 될 가능성은
+# 높지만, scheme/app identifier만 다를 뿐 실측은 안 했다. 컷오버 이후(APP_IDENTIFIER_RELEASE가 실제
+# 운영 앱과 같아지는 시점) 사용을 전제로 미리 마련해 둔 것.
+desc "Release 스킴 TestFlight 배포"
+lane :release_beta do
+  build_with(
+    scheme: "WSS-iOS-RELEASE",
+    app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE")
+  )
+
+  upload_to_testflight(
+    app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE"),
+    skip_waiting_for_build_processing: true,
+    distribute_external: false
+  )
+end
+
+# =====================================
+# Release → App Store 제출
+# =====================================
+# ⚠️ 컷오버 전까지 절대 실행하지 말 것 — 운영 앱과 별개로 App Store 심사에 제출된다.
+desc "Release 스킴 App Store 제출"
+lane :release do
+  build_with(
+    scheme: "WSS-iOS-RELEASE",
+    app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE")
+  )
+
+  # app_identifier를 명시하지 않으면 Appfile의 app_identifier(배열)를 기본값으로 쓰려다 타입
+  # 불일치로 걸릴 수 있다(2026-08-29 wss-pr-reviewer가 fastlane gem 소스로 확인 — Appfile의
+  # app_identifier([...])는 문자열로 정규화되지 않고 Array 그대로 저장된다). build_with/
+  # upload_to_testflight와 동일하게 명시적으로 넘긴다.
+  deliver(
+    app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE"),
+    submit_for_review: true,
+    automatic_release: false
+  )
+end
+end
