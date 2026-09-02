@@ -221,7 +221,10 @@ private struct DemoRootView: View {
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
             onNovelTapped: handleNovelTapped,
-            onEditTapped: { path.append(Destination.edit(id)) }
+            onEditTapped: { path.append(Destination.edit(id)) },
+            kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,
+            kakaoCollectionShareTemplateID2: NetworkingConfig.kakaoCollectionShareTemplateID2,
+            kakaoCollectionShareTemplateID3: NetworkingConfig.kakaoCollectionShareTemplateID3
         )
     }
 

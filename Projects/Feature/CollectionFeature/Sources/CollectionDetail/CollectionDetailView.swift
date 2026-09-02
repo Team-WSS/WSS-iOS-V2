@@ -44,17 +44,30 @@ struct CollectionDetailView: View {
     /// 수정 모드로 조립)은 호출자(App 조정 계층)가 수행한다 — `CreateCollectionView`가 대상 컬렉션을
     /// `id`로 스스로 다시 불러오므로(자기 로드 방식) 이 화면은 `id`만 알면 된다.
     private let onEditTapped: () -> Void
+    /// 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장 전용 — Kakao 커스텀 템플릿은 이미지
+    /// 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다). Feature가 `Data`를 못 읽어(레이어 규칙)
+    /// 호출자(App/Demo)가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를 읽어 그대로 넘긴다 —
+    /// 자세한 배경은 `CollectionKakaoShare` 헤더 주석.
+    private let kakaoCollectionShareTemplateID1: Int64
+    private let kakaoCollectionShareTemplateID2: Int64
+    private let kakaoCollectionShareTemplateID3: Int64
 
     init(
         viewModel: CollectionDetailViewModel,
         onAuthenticationRequired: @escaping () -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void
+        onEditTapped: @escaping () -> Void,
+        kakaoCollectionShareTemplateID1: Int64,
+        kakaoCollectionShareTemplateID2: Int64,
+        kakaoCollectionShareTemplateID3: Int64
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onNovelTapped = onNovelTapped
         self.onEditTapped = onEditTapped
+        self.kakaoCollectionShareTemplateID1 = kakaoCollectionShareTemplateID1
+        self.kakaoCollectionShareTemplateID2 = kakaoCollectionShareTemplateID2
+        self.kakaoCollectionShareTemplateID3 = kakaoCollectionShareTemplateID3
     }
 
     var body: some View {
@@ -365,7 +378,13 @@ private extension CollectionDetailView {
             Task {
                 defer { isSharing = false }
                 do {
-                    try await CollectionKakaoShare.share(detail, coverImageURL: heroImageURL)
+                    try await CollectionKakaoShare.share(
+                        detail,
+                        coverImageURL: heroImageURL,
+                        multiThumbnailTemplateID1: kakaoCollectionShareTemplateID1,
+                        multiThumbnailTemplateID2: kakaoCollectionShareTemplateID2,
+                        multiThumbnailTemplateID3: kakaoCollectionShareTemplateID3
+                    )
                 } catch {
                     isShareErrorToastPresented = true
                 }
@@ -573,7 +592,10 @@ private extension CollectionDetailView {
             ),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditTapped: { print("컬렉션 수정 진입") }
+            onEditTapped: { print("컬렉션 수정 진입") },
+            kakaoCollectionShareTemplateID1: 0,
+            kakaoCollectionShareTemplateID2: 0,
+            kakaoCollectionShareTemplateID3: 0
         )
     }
 }

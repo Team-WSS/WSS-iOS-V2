@@ -477,3 +477,52 @@
   `#Preview` 본문은 **Release 구성에서도 컴파일된다** — CI(Debug 테스트)와 시뮬레이터 Debug 빌드는 통과하는데
   `tuist build`(= `WSS-iOS-RELEASE` 스킴)만 "extra arguments in call"로 깨져, #227 머지 직전 `ready-merge`
   전체 빌드 검증에서야 드러났다(2026-08-29). `#Preview` 안의 명시적 `return` 자체는 문제 없다(다른 모듈에서 통과 확인).
+- ⚠️ **컬렉션 공유 카드는 작품 수만큼 표지가 붙는다(2026-09-01)** — Kakao Developers 콘솔에 만든
+  **사용자 정의 템플릿 3종**(표지 1/2/3장 전용)을 작품 수로 골라 `ShareApi.shared.shareCustom`/
+  `makeCustomUrl`을 쓴다(`templateArgs`로 `${KEY}` 자리를 채움 — 기본 템플릿의 `#{key}`와 문법이
+  다르다는 점 주의). Kakao 기본 템플릿의 `content.imageUrl`은 URL 1개만 받아 여러 장을 못 실어서
+  커스텀 템플릿이 필요했다. **제목·본문 구성(`NICKNAME`/`TITLE`/`DESCRIPTION`)은 표지 1/2/3장 세
+  템플릿 모두 동일하다** — 표지 장수만 다르고 카드 텍스트 템플릿을 따로 안 둔다.
+  ⚠️ **처음엔 표지 3장짜리 템플릿 하나로 2개(`image3` 인자 생략)까지 커버하려 했으나, Kakao 커스텀
+  템플릿은 이미지 슬롯 개수가 고정이라 가변 개수를 못 받는다는 게 실기기 실측으로 확인됐다**
+  (2026-09-01 — "선택(옵션)"이라는 처음 전제가 틀렸다는 뜻). 그래서 작품 1/2/3개 이상 각각 전용
+  템플릿을 콘솔에 따로 만들고, `detail.novelCount`(3 이상은 3장 템플릿으로 고정)에 맞는 템플릿 ID를
+  `CollectionKakaoShare.multiThumbnailTemplate(for:...)`가 골라 쓴다 — **템플릿 슬롯 개수를 가변으로
+  다루려는 시도를 다시 하지 말 것**, 대신 필요한 이미지 개수만큼 콘솔에 템플릿을 늘리는 쪽이 정본이다.
+  ⚠️ **표지 인자 키는 대소문자가 템플릿마다 다르다** — 세 템플릿을 서로 다른 시점에 콘솔에서 따로
+  만들다 보니, 표지 1/2장 템플릿은 `IMAGE1`/`IMAGE2`(대문자), 3장 템플릿은 `image1`/`image2`/`image3`
+  (소문자)로 등록돼 있다(2026-09-01 확인). `multiThumbnailTemplate(for:...)`가 템플릿 ID와 이 접두어
+  (`imageArgKeyPrefix`)를 항상 짝으로 돌려주고 `multiThumbnailArgs(imageArgKeyPrefix:)`가 그대로 쓴다 —
+  둘을 분리해서 다루면(예: 항상 소문자로 통일) 그 컴포넌트가 "정의 안 된 키"로 무시돼 이미지가 조용히
+  빠진다. 나중에 템플릿을 다시 만들거나 늘릴 땐 이 대소문자 불일치가 재발하지 않게 콘솔에서 케이스를
+  맞추는 게 이상적이지만, 맞추기 전까진 이 접두어 매핑을 유지할 것.
+  ⚠️ **템플릿 ID는 Swift 소스에 하드코딩하지 않는다** — 개인 Kakao 콘솔에 만든 값이라 커밋되는 코드에
+  두면 다른 개발자와도 공유돼버린다. gitignore된 `Config/Config_Shared.xcconfig`의
+  `KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1/2/3`(현재 `136749`/`136748`/`136662`) →
+  `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`(BaseData) → App/Demo가
+  `CollectionFeatureFactory.makeCollectionDetailView(kakaoCollectionShareTemplateID1/2/3:)`에 주입 →
+  `CollectionDetailView` → `CollectionKakaoShare.share(multiThumbnailTemplateID1/2/3:)` 순으로 흘러간다
+  (Feature가 `Data`를 못 읽는 레이어 규칙 때문에 파라미터로만 내려받는다). 새로 이 프로젝트를 셋업하는
+  사람은 xcconfig가 gitignore 대상이라 이 값이 로컬에 없다 — 자기 Kakao 콘솔에 표지 1/2/3장짜리 템플릿
+  3개를 각각 만들고(1/2장 템플릿은 `IMAGE1`/`IMAGE2` 대문자 키로) 이 xcconfig 키 3개를 채워야 컬렉션
+  공유가 표지 다중 카드로 나간다 — **셋 중 하나만 미설정(`Config`에 키 자체가 없거나 파싱 실패 →
+  `0`)이어도 나머지 두 작품 수는 정상 동작**하고, 그 작품 수만 기본 카드(표지 1장)로 폴백한다(공유
+  자체가 막히지는 않음).
+  ⚠️ **표지 URL은 원본 그대로 못 보낸다 — 먼저 카카오 CDN에 스크랩(`ShareApi.shared.imageScrap`)해야
+  한다**(2026-09-01 실측) — 이 템플릿의 표지 슬롯이 카카오 내부적으로 "썸네일 리스트" 컴포넌트라, 외부
+  (네이버 등) CDN URL을 그대로 넣으면 앱에 `NONE_KAGE_IMAGE_SUPPORTED` 권한이 없어 **요청은 성공하는데
+  그 이미지만 `warningMsg`와 함께 조용히 빠진다** — 에러도 안 나서 처음엔 "이미지가 안 넘어왔다"로만
+  보였다. `multiThumbnailArgs`가 표지마다 `scrapImage(_:)`로 먼저 카카오 URL로 바꾼 뒤 넣는다(병렬,
+  `withTaskGroup`). 기본 카드(`makeTemplate`)의 `content.imageUrl`은 이 제약이 없다 — 다중 이미지
+  컴포넌트에서만 걸린다. ⚠️ **슬롯이 고정(옵션 아님)이라 스크랩 실패로 키가 빠지면 그 슬롯이 통째로
+  비어 서버 검증에서 거부될 수 있다** — 표지 하나가 일시적으로 안 불러와져도 조용히 넘어가던 예전
+  가정(옵션 슬롯)은 더 이상 유효하지 않으니, 스크랩 실패로 공유가 막히는 사례가 실측되면 이 지점부터 볼 것.
+  ⚠️ **`DESCRIPTION`(본문) 인자는 코드엔 있지만 콘솔 템플릿에 아직 그 텍스트 컴포넌트가 없다** — 사용자가
+  "일단 진행"으로 코드만 먼저 반영한 상태라, 컴포넌트를 콘솔에서 만들기 전까진 커스텀 카드에 본문이 안
+  보일 수 있다(정의 안 된 인자를 보냈을 때 무시되는지 검증 실패로 이어지는지 아직 실측 안 됨).
+  ⚠️ **이 커스텀 템플릿 3종엔 "앱에서 보기" 버튼 컴포넌트 자체가 없다(사용자 확정 — 할 일이 아니라
+  계획에 없는 것)** — 콘솔에 저장된 사용자 인자가 `NICKNAME`/`TITLE`/`DESCRIPTION`과 표지 키(템플릿마다
+  `IMAGE1`/`IMAGE2` 또는 `image1`/`image2`/`image3`)뿐이라 딥링크를 실을 자리가 없고,
+  `multiThumbnailArgs`도 그 인자를 안 채운다(기본 카드만 `DeepLink.kakaoExecutionParameters`를 씀) —
+  커스텀 카드로 받은 사람이 앱의 그 컬렉션으로 못 들어가는 건 **의도된 동작**이다. 나중에 버튼이
+  필요해지면 콘솔에 컴포넌트부터 새로 만들어야 한다(기존 3개 템플릿에 사후 추가가 아니라).
