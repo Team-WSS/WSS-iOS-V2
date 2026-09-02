@@ -42,34 +42,23 @@ public struct WSSNovelCoverImage: View {
     private let url: URL?
     private let aspectRatio: CGFloat?
     private let placeholderStyle: PlaceholderStyle
-    /// 표지 표준은 `.fill`(꽉 채워 자름)이라 기본값이다. `aspectRatio` 모드는 내부적으로 `.fill`
-    /// 전제로 크기를 계산하므로(비율 상자에 overlay로 채움), `.fit`은 **`aspectRatio`를 안 쓰는
-    /// 자리에서만** 의미 있게 동작한다 — 원본을 자르지 않고 보여줘야 하는 예외적인 자리(연결 작품
-    /// 배너 등)에 한해 명시로 넘길 것.
-    private let contentMode: ContentMode
 
     public init(
         url: URL?,
         aspectRatio: CGFloat? = nil,
-        placeholderStyle: PlaceholderStyle = .default,
-        contentMode: ContentMode = .fill
+        placeholderStyle: PlaceholderStyle = .default
     ) {
         self.url = url
         self.aspectRatio = aspectRatio
         self.placeholderStyle = placeholderStyle
-        self.contentMode = contentMode
     }
 
     public var body: some View {
         if let aspectRatio {
-            // 비율은 **투명 뷰가 잡고 그림은 overlay로 채운다** — 표지 자신에게 비율을 걸면
-            // `scaledToFill`과 충돌하므로, 크기를 정하는 역할과 채우는 역할을 분리한다.
             Color.clear
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .overlay { coverImage }
-                // 채우다 넘친 그림이 이웃 셀 위로 삐져나오지 않게 프레임에서 자른다.
-                // (그리기만 자르므로 탭 영역이 필요하면 호출부가 `.contentShape`를 얹는다.)
-                .clipped()
+                .clipped() // 넘친 그림이 이웃 셀로 안 삐져나가게 자름(탭 영역엔 호출부가 .contentShape 별도)
         } else {
             coverImage
         }
@@ -79,7 +68,7 @@ public struct WSSNovelCoverImage: View {
         WSSAsyncImage(url: url) { image in
             image
                 .resizable()
-                .aspectRatio(contentMode: contentMode)
+                .aspectRatio(contentMode: .fill)
         } placeholder: { isLoading in
             placeholderView(isLoading: isLoading)
         }
@@ -107,6 +96,6 @@ public struct WSSNovelCoverImage: View {
     private var defaultCover: some View {
         WSSImage.imgLoadingThumbnail.swiftUIImage
             .resizable()
-            .aspectRatio(contentMode: contentMode)
+            .aspectRatio(contentMode: .fill)
     }
 }
