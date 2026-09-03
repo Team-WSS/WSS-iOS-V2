@@ -44,17 +44,30 @@ struct CollectionDetailView: View {
     /// 수정 모드로 조립)은 호출자(App 조정 계층)가 수행한다 — `CreateCollectionView`가 대상 컬렉션을
     /// `id`로 스스로 다시 불러오므로(자기 로드 방식) 이 화면은 `id`만 알면 된다.
     private let onEditTapped: () -> Void
+    /// 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장 전용 — Kakao 커스텀 템플릿은 이미지
+    /// 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다). Feature가 `Data`를 못 읽어(레이어 규칙)
+    /// 호출자(App/Demo)가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를 읽어 그대로 넘긴다 —
+    /// 자세한 배경은 `CollectionKakaoShare` 헤더 주석.
+    private let kakaoCollectionShareTemplateID1: Int64
+    private let kakaoCollectionShareTemplateID2: Int64
+    private let kakaoCollectionShareTemplateID3: Int64
 
     init(
         viewModel: CollectionDetailViewModel,
         onAuthenticationRequired: @escaping () -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void
+        onEditTapped: @escaping () -> Void,
+        kakaoCollectionShareTemplateID1: Int64,
+        kakaoCollectionShareTemplateID2: Int64,
+        kakaoCollectionShareTemplateID3: Int64
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onNovelTapped = onNovelTapped
         self.onEditTapped = onEditTapped
+        self.kakaoCollectionShareTemplateID1 = kakaoCollectionShareTemplateID1
+        self.kakaoCollectionShareTemplateID2 = kakaoCollectionShareTemplateID2
+        self.kakaoCollectionShareTemplateID3 = kakaoCollectionShareTemplateID3
     }
 
     var body: some View {
@@ -354,10 +367,11 @@ private extension CollectionDetailView {
     }
 
     /// 공유는 **카카오 공유 카드**(`CollectionKakaoShare`, 사용자 확정 2026-08-29, #228) 하나다 — 카카오톡이 있으면
-    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 받는 사람이 카드의 "앱에서 보기"로 이 화면에 들어온다(앱이 없으면
-    /// 카카오가 App Store로). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력). 순수 표현이라 VM을
-    /// 거치지 않는다(`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는
-    /// 사용자 액션 실패라 토스트로 알린다.
+    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력).
+    /// **카드는 작품 수별 커스텀 템플릿뿐이라 버튼 컴포넌트가 없다**(#241) — 대신 카드 자체를 탭하면
+    /// 앱으로 딥링크된다(콘솔 템플릿 설정, `CollectionKakaoShare` 헤더 주석 참고). 순수 표현이라 VM을 거치지 않는다
+    /// (`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는 사용자
+    /// 액션 실패라 토스트로 알린다.
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
             guard !isSharing else { return }
@@ -365,7 +379,12 @@ private extension CollectionDetailView {
             Task {
                 defer { isSharing = false }
                 do {
-                    try await CollectionKakaoShare.share(detail, coverImageURL: heroImageURL)
+                    try await CollectionKakaoShare.share(
+                        detail,
+                        multiThumbnailTemplateID1: kakaoCollectionShareTemplateID1,
+                        multiThumbnailTemplateID2: kakaoCollectionShareTemplateID2,
+                        multiThumbnailTemplateID3: kakaoCollectionShareTemplateID3
+                    )
                 } catch {
                     isShareErrorToastPresented = true
                 }
@@ -573,7 +592,10 @@ private extension CollectionDetailView {
             ),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
             onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditTapped: { print("컬렉션 수정 진입") }
+            onEditTapped: { print("컬렉션 수정 진입") },
+            kakaoCollectionShareTemplateID1: 0,
+            kakaoCollectionShareTemplateID2: 0,
+            kakaoCollectionShareTemplateID3: 0
         )
     }
 }

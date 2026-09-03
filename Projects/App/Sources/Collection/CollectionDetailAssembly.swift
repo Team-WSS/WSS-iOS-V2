@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+import BaseData
 import BaseDomain
 import CollectionDomain
 import CollectionFeature
@@ -37,7 +38,10 @@ enum CollectionDetailAssembly {
             logger: dependencies.logger,
             onAuthenticationRequired: onAuthenticationRequired,
             onNovelTapped: onNovelTapped,
-            onEditTapped: onEditTapped
+            onEditTapped: onEditTapped,
+            kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,
+            kakaoCollectionShareTemplateID2: NetworkingConfig.kakaoCollectionShareTemplateID2,
+            kakaoCollectionShareTemplateID3: NetworkingConfig.kakaoCollectionShareTemplateID3
         )
     }
 }

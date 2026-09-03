@@ -185,6 +185,11 @@ public enum CollectionFeatureFactory {
     ///   - onEditTapped: 더보기 "컬렉션 수정" 탭 콜백. 실제 화면 전환(`makeEditCollectionView` 조립)은
     ///     호출자(App 조정 계층)가 수행한다 — 그 화면이 `id`로 대상을 스스로 다시 불러오므로(자기 로드
     ///     방식) 이 콜백은 파라미터가 필요 없다.
+    ///   - kakaoCollectionShareTemplateID1/2/3: 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장
+    ///     전용 — Kakao 커스텀 템플릿은 이미지 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다).
+    ///     Feature가 `Data`를 못 읽어(레이어 규칙) 호출자가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를
+    ///     읽어 그대로 넘긴다. 기본값 `0`은 "미설정"과 같은 뜻이라 그 작품 수만 표지 1장 기본 카드로
+    ///     폴백한다(`CollectionKakaoShare` 헤더 주석 참고).
     @MainActor
     public static func makeCollectionDetailView(
         id: CollectionID,
@@ -194,7 +199,10 @@ public enum CollectionFeatureFactory {
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void
+        onEditTapped: @escaping () -> Void,
+        kakaoCollectionShareTemplateID1: Int64 = 0,
+        kakaoCollectionShareTemplateID2: Int64 = 0,
+        kakaoCollectionShareTemplateID3: Int64 = 0
     ) -> some View {
         CollectionDetailView(
             viewModel: CollectionDetailViewModel(
@@ -206,7 +214,10 @@ public enum CollectionFeatureFactory {
             ),
             onAuthenticationRequired: onAuthenticationRequired,
             onNovelTapped: onNovelTapped,
-            onEditTapped: onEditTapped
+            onEditTapped: onEditTapped,
+            kakaoCollectionShareTemplateID1: kakaoCollectionShareTemplateID1,
+            kakaoCollectionShareTemplateID2: kakaoCollectionShareTemplateID2,
+            kakaoCollectionShareTemplateID3: kakaoCollectionShareTemplateID3
         )
     }
 }

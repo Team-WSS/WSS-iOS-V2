@@ -26,8 +26,9 @@
 
 - **무엇**: WSS-iOS-V2는 지금 운영 중인 기존 앱을 **나중에 완전히 대체**할 새 프로젝트다(사용자 확정).
   백엔드는 이미 같은 서버/DB를 공유한다. Apple 로그인 유저 식별자(`sub`)는 **(Apple Developer 팀 ID +
-  Bundle ID)** 조합에 고정되고, Kakao 로그인은 App Key(이미 운영 키 `Config/Config_Shared.xcconfig`의
-  `KAKAO_APP_KEY` 재사용 중)는 같아도 SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의
+  Bundle ID)** 조합에 고정되고, Kakao 로그인은 App Key(Release 빌드가 `Config/Config_Release.xcconfig`의
+  운영 `KAKAO_APP_KEY`를 씀 — Debug는 #241부터 별도 테스트 앱 키라 이 이관 대상이 아니다)는 같아도
+  SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의
   iOS 플랫폼 등록값과 일치하는지** 검사한다. 이 값들이 운영 앱과 다른 채로 배포하면 기존 유저가
   로그인해도 **다른 계정으로 인식**된다.
 - **결과**: 백엔드가 공유돼 있어 별도 계정 마이그레이션 로직은 필요 없지만, 아래 항목이 정확히 안 맞으면
@@ -129,7 +130,8 @@
 
 ### 8. 컬렉션 "공유하기" ✅구현됨(#228, 카카오 공유 카드) / 남은 것: Universal Link(카카오 외 채널 공유)
 
-- **무엇(해소)**: "공유하기"가 **카카오 공유 카드(`KakaoSDKShare`/`KakaoSDKTemplate`, "앱에서 보기" →
+- **무엇(해소)**: "공유하기"가 **카카오 공유 카드(`KakaoSDKShare`, 콘솔 커스텀 템플릿 — #241부터
+  `KakaoSDKTemplate`/기본 템플릿 아님, 카드 자체를 탭하면 →
   `kakao{APP_KEY}://kakaolink?collectionId={id}`)** + 앱 내 라우팅(지금 선택된 탭 위에 push)으로 구현됐다
   (2026-08-29, 사용자 확정). 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari, SDK 권장 폴백).
   처음엔 iOS 기본 공유 시트 + `websoso://collections/{id}`만으로 갔다가, **카카오톡이 커스텀 스킴을 링크로
@@ -145,7 +147,8 @@
   ① 시스템 공유 시트를 그 링크로 되살리고(폐기 이력의 함정 참고) ② 카카오 카드의 `Link.webUrl`/
   `mobileWebUrl`에도 같은 URL을 실을 것.
 - **어디를 고치나**: `BaseDomain/DeepLink.swift`(https 형식 추가) + App `Info.plist`/entitlements +
-  `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.makeTemplate`(`webUrl`).
+  `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.multiThumbnailArgs`(콘솔
+  커스텀 템플릿의 웹 링크 변수, #241부터 `makeTemplate`/`Link.webUrl`은 없음).
 
 ### 10. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
 
