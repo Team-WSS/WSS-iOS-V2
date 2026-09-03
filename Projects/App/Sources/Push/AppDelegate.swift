@@ -56,7 +56,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        MainActor.assumeIsolated {
+        // deviceToken(Data)은 Sendable — main으로 hop해 허브에 넘긴다.
+        Task { @MainActor in
             PushNotificationCenter.shared.setAPNSToken(deviceToken)
         }
     }
@@ -103,9 +104,22 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         Messaging.messaging().appDidReceiveMessage(userInfo)
-        MainActor.assumeIsolated {
-            PushNotificationCenter.shared.handleNotificationTap(userInfo: userInfo)
+        // ⚠️ UNUserNotificationCenterDelegate는 UIApplicationDelegate와 달리 메인 스레드 호출이 보장되지
+        // 않는다 — assumeIsolated는 비메인 진입 시 precondition 크래시 위험이라, payload를 Sendable
+        // dictionary로 먼저 정규화한 뒤 main으로 hop한다.
+        let payload = Self.stringPayload(from: userInfo)
+        Task { @MainActor in
+            PushNotificationCenter.shared.handleNotificationTap(payload: payload)
         }
         completionHandler()
+    }
+
+    /// FCM userInfo에서 문자열 키/값만 추려 Sendable dictionary로 만든다(비메인에서 만들어 main으로 넘기기 위함).
+    private static func stringPayload(from userInfo: [AnyHashable: Any]) -> [String: String] {
+        userInfo.reduce(into: [String: String]()) { result, element in
+            if let key = element.key as? String, let value = element.value as? String {
+                result[key] = value
+            }
+        }
     }
 }
