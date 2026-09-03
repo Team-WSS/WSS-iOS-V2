@@ -29,14 +29,16 @@ import CollectionDomain
 /// `0`이면 공유 자체가 `Failure.templateNotConfigured`로 막힌다. 표지 인자 키는 세 템플릿 모두
 /// `IMAGE1`/`IMAGE2`/`IMAGE3`(대문자)로 통일돼 있다.
 /// 이 커스텀 템플릿들엔 별도 "앱에서 보기" 버튼 컴포넌트가 없다 — 대신 **카드(메시지) 자체를 탭하면
-/// 앱으로 딥링크된다**(앱 미설치 시 App Store로). 이 이동 경로는 앱 코드가 아니라 **콘솔 템플릿에 고정
-/// URL 패턴으로 미리 등록**돼 있어, `templateArgs`에 딥링크·컬렉션 ID를 따로 실을 필요가 없다(위
-/// `multiThumbnailArgs`가 텍스트·표지 키만 채우는 이유).
+/// 앱으로 딥링크된다**(앱 미설치 시 App Store로). 이동 URL은 콘솔 템플릿의 "컴포넌트 링크 관리"에
+/// `kakao{APP_KEY}://kakaolink?collectionId=${collectionId}` 형식으로 등록돼 있고, `${collectionId}`
+/// 변수는 `multiThumbnailArgs`가 `templateArgs`로 채워 보내는 `collectionId` 값으로 매 공유마다
+/// 치환된다(자세한 내용은 `multiThumbnailArgs` 참고).
 ///
 /// **템플릿 ID는 이 파일에 하드코딩하지 않는다** — 개인 Kakao 콘솔에 만든 값이라 커밋되는 Swift
 /// 소스에 두면 다른 개발자와도 공유돼버린다. 호출부(`share(_:multiThumbnailTemplateID1:2:3:)`)가
-/// 파라미터로 받고, App/Demo가 gitignore된 `Config/*.xcconfig`(`KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1/2/3`) →
-/// `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`(BaseData)로 읽어 넘긴다.
+/// 파라미터로 받고, App/Demo가 gitignore된 `Config/Config_Debug.xcconfig`/`Config_Release.xcconfig`
+/// (`KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1/2/3`, #241 후속 — Debug/Release가 서로 다른 Kakao 앱 콘솔의
+/// 값을 쓴다) → `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`(BaseData)로 읽어 넘긴다.
 ///
 /// `KakaoSDK.initSDK(appKey:)`가 앱 진입점(App·Demo)에서 먼저 불려 있어야 하고, 호출 앱의 `Info.plist`에
 /// `CFBundleShortVersionString`이 있어야 한다(SDK가 필수 파라미터 `appver`로 보냄 — `App/CLAUDE.md`).
@@ -164,12 +166,19 @@ enum CollectionKakaoShare {
     /// 키를 생략하는 동작만 남아 있고, 실패를 별도로 감지해 폴백하는 로직은 아직 없다 — 스크랩 실패로
     /// 공유가 막히는 사례가 실측되면 이 지점부터 볼 것.
     ///
-    /// 딥링크는 콘솔 템플릿에 고정 URL 패턴으로 미리 등록돼 있어(위 헤더 주석 참고) `args`엔 텍스트·
-    /// 표지 키만 채운다 — `collectionId` 등을 따로 실을 필요가 없다.
+    /// ⚠️ **`collectionId`는 반드시 채워야 한다** — 콘솔 템플릿의 iOS 링크(컴포넌트 링크 관리)가
+    /// `kakao{APP_KEY}://kakaolink?collectionId=${collectionId}` 형식으로 `${collectionId}` 변수를
+    /// 쓰고 있어, 이 값이 `templateArgs`에 없으면 변수가 치환되지 않아 `DeepLink.init?(url:)`(양의
+    /// 정수 ID 필수)가 파싱에 실패하고 그냥 홈 화면으로 열린다. `shareCustom`/`makeCustomUrl`엔 기본
+    /// 템플릿의 `iosExecutionParams` 같은 별도 실행 파라미터가 없어(`templateId`/`templateArgs`/
+    /// `serverCallbackArgs`뿐, Kakao iOS SDK `ShareApi.swift` 확인) 커스텀 템플릿에서 동적 URL을 만드는
+    /// 유일한 경로가 `templateArgs` 변수 치환이다. 키 이름(`collectionId`)은 표지 1/2/3장 세 템플릿
+    /// 콘솔 설정과 정확히 일치해야 한다 — 템플릿을 새로 만들거나 키 이름을 바꾸면 여기도 같이 고칠 것.
     private static func multiThumbnailArgs(_ detail: CollectionDetail, slotCount: Int) async -> [String: String] {
         var args: [String: String] = [
             "NICKNAME": detail.owner.nickname,
-            "TITLE": detail.name
+            "TITLE": detail.name,
+            "collectionId": String(detail.id.value)
         ]
         let thumbnails = Array(detail.novels.prefix(slotCount).map(\.thumbnailImage))
         let scrapedThumbnails = await withTaskGroup(of: (Int, URL?).self) { group in

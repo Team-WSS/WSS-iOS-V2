@@ -161,8 +161,10 @@
     - 카드(`CollectionKakaoShare`, `@MainActor enum`): 기본 템플릿(`FeedTemplate`)이 아니라 **Kakao
       Developers 콘솔의 사용자 정의 템플릿**만 쓴다(작품 수별 표지 1/2/3장 3종 — #241, 자세한 계약은 아래
       "주의사항"의 다중표지 템플릿 항목이 정본). 별도 "앱에서 보기" 버튼 컴포넌트는 없고, **카드(메시지)
-      자체를 탭하면 딥링크된다** — 이동 경로는 앱 코드가 아니라 콘솔 템플릿에 고정 URL 패턴으로 미리
-      등록돼 있어 `templateArgs`에 `collectionId` 등을 따로 실을 필요가 없다. 받는 앱엔
+      자체를 탭하면 딥링크된다** — URL 스킴·host는 콘솔 템플릿의 "컴포넌트 링크 관리"에 고정 패턴으로
+      등록돼 있지만, **그 안의 `${collectionId}` 변수는 매 공유마다 `templateArgs`로 채워야 한다**
+      (커스텀 템플릿은 `shareCustom`/`makeCustomUrl`에 기본 템플릿의 실행 파라미터 같은 게 없어
+      `templateArgs` 변수 치환이 유일한 동적화 경로). 받는 앱엔
       `kakao{APP_KEY}://kakaolink?collectionId={id}`로 도착하고 App `onOpenURL`이 `DeepLink(url:)`로 푼다.
       앱 미설치자는 카카오가 App Store로 보낸다(카카오 콘솔 iOS 플랫폼에 Bundle ID·App Store ID 등록 필요 —
       Demo 번들 `kr.websoso.app.CollectionFeatureDemo`는 등록돼 있지 않으면 템플릿 검증에서 거부될 수 있다).
@@ -514,9 +516,12 @@
   `withTaskGroup`). ⚠️ **슬롯이 고정(옵션 아님)이라 스크랩 실패로 키가 빠지면 그 슬롯이 통째로
   비어 서버 검증에서 거부될 수 있다** — 표지 하나가 일시적으로 안 불러와져도 조용히 넘어가던 예전
   가정(옵션 슬롯)은 더 이상 유효하지 않으니, 스크랩 실패로 공유가 막히는 사례가 실측되면 이 지점부터 볼 것.
-  **이 커스텀 템플릿 3종엔 별도 "앱에서 보기" 버튼 컴포넌트가 없다** — 콘솔에 저장된 사용자 인자가
-  `NICKNAME`/`TITLE`과 표지 키(`IMAGE1`/`IMAGE2`/`IMAGE3`)뿐이고 `multiThumbnailArgs`도 그 이상은
-  안 채운다. 대신 **카드(메시지) 자체를 탭하면 딥링크된다** — 이동 경로는 콘솔 템플릿에 고정 URL
-  패턴으로 미리 등록돼 있어, 앱 코드가 `templateArgs`로 `collectionId` 등을 따로 실어 보낼 필요가
-  없다(위 헤더 주석·`App/CLAUDE.md`의 딥링크 항목 참고 — 받는 쪽 `kakao{APP_KEY}://kakaolink?collectionId={id}`
-  파싱 자체는 이전과 동일).
+  **이 커스텀 템플릿 3종엔 별도 "앱에서 보기" 버튼 컴포넌트가 없다** — 콘솔에 저장된 사용자 인자는
+  `NICKNAME`/`TITLE`·표지 키(`IMAGE1`/`IMAGE2`/`IMAGE3`)에 더해 **`collectionId`도 반드시 포함**하고
+  `multiThumbnailArgs`가 `detail.id.value`를 채워 보낸다. 대신 **카드(메시지) 자체를 탭하면 딥링크된다**
+  — URL 스킴·host(`kakao{APP_KEY}://kakaolink`)는 콘솔 템플릿의 "컴포넌트 링크 관리"에 고정 패턴으로
+  등록돼 있지만, 그 안의 `${collectionId}` 변수는 위 인자로 매 공유마다 실제 값으로 치환돼야 한다 —
+  ⚠️ **`templateArgs`에서 빠지거나, 콘솔의 iOS 링크가 `=${collectionId}` 없이 키만 등록돼 있으면
+  카드를 탭해도 `DeepLink` 파싱이 실패해 그냥 홈 화면으로 열린다** — 새 템플릿을 추가하거나 콘솔 변수
+  키 이름을 바꾸면 `multiThumbnailArgs`도 같이 맞출 것. 위 헤더 주석·`App/CLAUDE.md`의 딥링크 항목
+  참고 — 받는 쪽 `kakao{APP_KEY}://kakaolink?collectionId={id}` 파싱 자체는 이전과 동일.
