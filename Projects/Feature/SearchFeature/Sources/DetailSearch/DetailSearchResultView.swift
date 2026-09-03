@@ -33,7 +33,8 @@ struct DetailSearchResultView: View {
 
     var body: some View {
         content
-            .navigationBarBackButtonHidden()
+            // 커스텀 상단바(뒤로가기+필터 요약)를 자체적으로 그리므로 시스템 네비바를 숨기고 스와이프 뒤로가기를 되살린다.
+            .wssCustomNavigationBar()
             .background(WSSColor.wssWhite.swiftUIColor)
             .onAppear { viewModel.handle(.load) }
     }

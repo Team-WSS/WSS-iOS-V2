@@ -113,7 +113,9 @@ struct NormalSearchView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .background(WSSColor.wssWhite.swiftUIColor)
         .ignoresSafeArea(.container, edges: .bottom)
-        .navigationBarBackButtonHidden()
+        // 커스텀 상단바(뒤로가기+검색바)를 자체적으로 그리므로 시스템 네비바를 숨기고(iOS 26 빈 글래스 바 제거),
+        // 네비바 숨김이 함께 꺼버리는 스와이프 뒤로가기를 되살린다.
+        .wssCustomNavigationBar()
         .onAppear {
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
