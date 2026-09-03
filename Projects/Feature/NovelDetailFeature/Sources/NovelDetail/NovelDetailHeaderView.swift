@@ -45,7 +45,7 @@ struct NovelDetailHeaderView: View {
     /// 커버를 크게 깔아 블러하고 그 위에 디자인의 radial gradient 에셋(#D2D3F8→#F4F5F8)을 덮는다
     /// → 아래 회색(wssGray50) 영역으로 자연 연결. 표지가 없으면 그라데이션만 보인다.
     /// ⚠️ 그라데이션 에셋의 알파는 85%(상단)~100%(하단) — 블러 표지는 상단에서만 은은히 비친다.
-    /// - 블러를 radius 12→6으로만 완화해 표지 아트가 상단에서 더 또렷이 비치게 했다(#221 사용자 피드백).
+    /// - 블러를 radius 12→6→3으로 완화해 표지 아트가 상단에서 더 또렷이 비치게 했다(#221·#244 사용자 피드백).
     ///   보라 그라데이션은 디자인대로 **full opacity로 커버 위에 그대로** 얹는다(opacity를 낮춰 보라가
     ///   옅어지면 안 된다 — 사용자 지적). 제목은 backdropHeight 아래(gray50) 위라 가독성엔 영향 없다.
     /// - 상단 오버스크롤(당겨서 내림) 시 blur 레이어를 그만큼 확대해 빈 영역을 메우는 순수 SwiftUI
@@ -69,7 +69,7 @@ struct NovelDetailHeaderView: View {
                     }
                     .frame(width: proxy.size.width, height: backdropHeight, alignment: .top)
                     .clipped()
-                    .blur(radius: 6, opaque: true)
+                    .blur(radius: 3, opaque: true)
 
                     WSSImage.imgDetailBackgroundGradation.swiftUIImage
                         .resizable()
