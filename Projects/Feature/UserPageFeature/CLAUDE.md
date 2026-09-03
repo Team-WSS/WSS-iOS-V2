@@ -64,7 +64,8 @@
 
 ### 주의사항 (작업 중 발견 시 누적)
 
-- **네비바 교체(#244)**: `MyPageEditView`(프로필 편집, 완료 버튼=`trailing`)와 `UserFeedListView`(활동 목록)는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`로 교체(정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md), 둘 다 미저장 확인 알럿이 없어 스와이프백 허용). ⚠️ **`UserPageView`·`MypageView`는 이 교체에서 뺐다** — 스크롤 반응형 툴바 배경·타이틀 페이드(`.toolbarBackground` + 스크롤 트리거)를 갖고 있어 이미 리퀴드 글래스가 아니고, 플랫 커스텀 헤더로 옮기려면 `NovelDetailView`식 스크롤 측정 오버레이 재구현이 필요해 디자인 판단이 선행돼야 한다(보류, [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 스크롤 반응형 항목 참고).
+- **네비바 교체(#244)**: `MyPageEditView`(프로필 편집, 완료 버튼=`trailing`)와 `UserFeedListView`(활동 목록)는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`로 교체(정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md), 둘 다 미저장 확인 알럿이 없어 스와이프백 허용).
+- **`MypageView`·`UserPageView`는 `WSSNavigationBar`가 아니라 커스텀 몰입형 상단 바로 교체했다**(#244, `NovelDetailView` 결) — 스크롤 반응형(타이틀·배경 전환)이라 back+title 고정형 `WSSNavigationBar`가 안 맞아서다. 둘 다 시스템 툴바(+`.toolbarBackground`)를 걷어내고 `safeAreaInset(edge:.top)`으로 커스텀 바를 고정한다. **`MypageView`**: 뒤로가기 없는 탭 루트라 우측 설정 아이콘 항상 + "마이페이지" 타이틀 페이드인(`mypageTopBar`, 흰 배경). **`UserPageView`**: back + threedots + 닉네임 페이드인, 바 배경이 히어로와 이어지는 `primary20`↔스크롤 후 `wssWhite`로 전환(`userPageTopBar`, push 화면이라 `.wssCustomNavigationBar()`로 스와이프백). ⚠️ **커스텀 오버레이라 `.opacity`/색 애니메이션이 정상 동작**한다 — 아래 "스크롤 반응형 네비 타이틀" 항목의 `if 구조 토글`(시스템 `.principal` UIKit 브리지 함정 회피책)은 **더 이상 이 두 화면에 적용되지 않는다**(그 함정은 시스템 툴바에서만 났다).
 - **미리보기 카드 렌더(`CollectionPreviewRow`, `Sources/Component/`)는 `MypageView.swift`에 미사용
   상태로 있던 죽은 코드(`collectionItem`)를 되살린 것이다**(#200) — 대표 표지 1장 + 뒤에 오프셋된 회색
   사각형 2장(쌓인 카드 장식)이 `CollectionPreview.representativeNovel` 요구사항과 정확히 일치해 그대로
