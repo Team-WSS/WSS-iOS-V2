@@ -61,6 +61,19 @@ struct FeedDetailView: View {
     }
     
     var body: some View {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "") {
+                dismiss()
+            } trailing: {
+                WSSImage.icThreedots.swiftUIImage
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .frame(width: 38, height: 38)
+                    .onTapGesture {
+                        showFeedDropdown.toggle()
+                    }
+            }
+
         Group {
             if let detail = viewModel.state.detail {
                 let header = FeedHeader(
@@ -85,16 +98,13 @@ struct FeedDetailView: View {
                     .padding(.top, 4)
             }
         }
-        .toolbar {
-            createFeedDetailToolBarContent()
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
         .onTapGesture {
             if showFeedDropdown { showFeedDropdown = false }
             if showCommentDropdown { showCommentDropdown = false }
             isCommentFocused = false
         }
+        }
+        .wssCustomNavigationBar()
         .onAppear {
             Task { await viewModel.handle(.load) }
         }
@@ -259,7 +269,6 @@ struct FeedDetailView: View {
                         .id("bottomAnchor")
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .navigationBarBackButtonHidden()
                 .padding(.bottom, 50)
                 .onChange(of: isCommentFocused) { _, isFocused in
                     guard isFocused else { return }
@@ -306,32 +315,6 @@ struct FeedDetailView: View {
         }
     }
 
-    //MARK: - 툴바 아이템
-    
-    @ToolbarContentBuilder
-    private func createFeedDetailToolBarContent() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            WSSImage.icNavigateLeft.swiftUIImage
-                .resizable()
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 24, height: 24)
-                .onTapGesture {
-                    dismiss()
-                }
-        }
-        
-        ToolbarItem(placement: .topBarTrailing) {
-            WSSImage.icThreedots.swiftUIImage
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 38, height: 38)
-                .onTapGesture {
-                    showFeedDropdown.toggle()
-                }
-        }
-    }
-    
     //MARK: - 피드 드롭다운
     
     private func feedDropdownItems() -> [WSSDropdownItem] {
