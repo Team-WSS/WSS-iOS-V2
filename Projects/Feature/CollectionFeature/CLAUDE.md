@@ -495,17 +495,20 @@
   표지 인자 키는 세 템플릿 모두 `IMAGE1`/`IMAGE2`/`IMAGE3`(대문자)로 통일돼 있다 —
   `multiThumbnailArgs`가 `IMAGE\(index+1)`을 고정으로 쓴다. **새로 템플릿을 늘릴 때 이 통일을 다시
   깨지 말 것** — 깨지면 그 컴포넌트가 "정의 안 된 키"로 무시돼 이미지가 조용히 빠진다.
-  ⚠️ **템플릿 ID는 Swift 소스에 하드코딩하지 않는다** — 개인 Kakao 콘솔에 만든 값이라 커밋되는 코드에
-  두면 다른 개발자와도 공유돼버린다. gitignore된 `Config/Config_Shared.xcconfig`의
-  `KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1/2/3`(현재 `136749`/`136748`/`136662`) →
+  ⚠️ **템플릿 ID는 Swift 소스는 물론 이 문서에도 하드코딩하지 않는다** — 개인 Kakao 콘솔에 만든 값이라
+  커밋되는 곳에 실제 값을 적으면 다른 개발자와도 공유돼버린다(이 문서 자체도 git에 커밋되므로 예외
+  아님). gitignore된 `Config/Config_Debug.xcconfig`(Debug 전용 테스트 Kakao 앱)·
+  `Config/Config_Release.xcconfig`(운영 Kakao 앱)의 `KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1/2/3`(#241
+  후속 — 원래 `Config_Shared.xcconfig` 하나였다가 Debug 테스트 앱 도입으로 Debug/Release가 서로 다른
+  Kakao 콘솔·다른 템플릿 ID를 쓰도록 분리됨) →
   `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`(BaseData) → App/Demo가
   `CollectionFeatureFactory.makeCollectionDetailView(kakaoCollectionShareTemplateID1/2/3:)`에 주입 →
   `CollectionDetailView` → `CollectionKakaoShare.share(multiThumbnailTemplateID1/2/3:)` 순으로 흘러간다
   (Feature가 `Data`를 못 읽는 레이어 규칙 때문에 파라미터로만 내려받는다). 새로 이 프로젝트를 셋업하는
-  사람은 xcconfig가 gitignore 대상이라 이 값이 로컬에 없다 — 자기 Kakao 콘솔에 표지 1/2/3장짜리 템플릿
-  3개를 각각 만들고(표지 인자 키는 세 템플릿 모두 `IMAGE1`/`IMAGE2`/`IMAGE3` 대문자로) 이 xcconfig 키
-  3개를 채워야 컬렉션
-  공유가 표지 다중 카드로 나간다 — **2/3번 키만 미설정(`Config`에 키 자체가 없거나 파싱 실패 →
+  사람은 xcconfig가 gitignore 대상이라 이 값이 로컬에 없다 — 자기 Kakao 콘솔에(Debug는 별도 테스트 앱,
+  Release는 운영 앱) 표지 1/2/3장짜리 템플릿 3개씩을 각각 만들고(표지 인자 키는 세 템플릿 모두
+  `IMAGE1`/`IMAGE2`/`IMAGE3` 대문자로) 해당 xcconfig 키 3개를 채워야 컬렉션 공유가 표지 다중 카드로
+  나간다 — **2/3번 키만 미설정(`Config`에 키 자체가 없거나 파싱 실패 →
   `0`)이어도 나머지 두 작품 수는 정상 동작**하고, 그 작품 수만 1장 템플릿(`id1`)으로 폴백한다(표지도
   1장만 실림) — `id1`마저 `0`이면 그때는 공유 자체가 막힌다(`Failure.templateNotConfigured`).
   ⚠️ **표지 URL은 원본 그대로 못 보낸다 — 먼저 카카오 CDN에 스크랩(`ShareApi.shared.imageScrap`)해야

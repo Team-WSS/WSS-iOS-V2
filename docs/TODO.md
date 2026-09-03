@@ -26,8 +26,9 @@
 
 - **무엇**: WSS-iOS-V2는 지금 운영 중인 기존 앱을 **나중에 완전히 대체**할 새 프로젝트다(사용자 확정).
   백엔드는 이미 같은 서버/DB를 공유한다. Apple 로그인 유저 식별자(`sub`)는 **(Apple Developer 팀 ID +
-  Bundle ID)** 조합에 고정되고, Kakao 로그인은 App Key(이미 운영 키 `Config/Config_Shared.xcconfig`의
-  `KAKAO_APP_KEY` 재사용 중)는 같아도 SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의
+  Bundle ID)** 조합에 고정되고, Kakao 로그인은 App Key(Release 빌드가 `Config/Config_Release.xcconfig`의
+  운영 `KAKAO_APP_KEY`를 씀 — Debug는 #241부터 별도 테스트 앱 키라 이 이관 대상이 아니다)는 같아도
+  SDK가 런타임에 **호출 앱의 Bundle ID·서명 키해시가 Kakao 콘솔의
   iOS 플랫폼 등록값과 일치하는지** 검사한다. 이 값들이 운영 앱과 다른 채로 배포하면 기존 유저가
   로그인해도 **다른 계정으로 인식**된다.
 - **결과**: 백엔드가 공유돼 있어 별도 계정 마이그레이션 로직은 필요 없지만, 아래 항목이 정확히 안 맞으면
