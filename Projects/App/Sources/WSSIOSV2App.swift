@@ -13,6 +13,10 @@ struct WSSIOSV2App: App {
     /// 로그아웃 상태(온보딩 루트)로 링크를 열면 로그인이 끝나 메인 탭이 뜨는 순간 이어서 처리된다.
     @State private var pendingDeepLink: DeepLink?
 
+    /// 원격 알림(FCM/APNs, #243)용 UIKit 진입점. 순수 SwiftUI 앱엔 `application(_:didRegister…)` 등
+    /// 시스템 콜백을 받을 자리가 없어 어댑터로 `AppDelegate`를 붙인다 — Firebase 배선은 그 안에 있다.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     init() {
         // 커스텀 폰트(Pretendard) 등록. 없으면 applyWSSFont의 UIFont(name:)! 가 nil → 크래시.
         DesignSystemFontFamily.registerAllCustomFonts()
