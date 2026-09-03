@@ -359,6 +359,17 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   연결할 것 — Root마다 별도 `@State` 쌍을 새로 만들지 말 것(#221의 4벌 복붙이 그 함정이었다).
   ⚠️ **콜백은 저장/차단 "성공" 경로에서만 발화해야 한다** — 취소로 닫힐 때도 부르면 완료 안 한 일이
   완료로 안내된다(NovelReview는 `didSaveReview`, CreateFeed는 `.submitted`로 성공을 가른다).
+- **피드 작성 완료 → 피드 탭 목록 재로드는 `AppDependencies.feedListInvalidation`(`Sources/Main/FeedListInvalidation.swift`,
+  `@Observable` 단조 증가 카운터)이 맡는다**(2026-09-03, V1 `feedEdited` 알림 parity). 피드 탭 목록은 재진입에
+  목록을 다시 받지 않아(스크롤 보존 — `FeedFeature/CLAUDE.md` 화면 동작 계약) **새 글은 이 신호로만 들어온다**:
+  4탭 Root의 작성 `createFeedView` 헬퍼 `onSubmitted`가 `crossScreenFeedback.present(.feedEdited)` 뒤에
+  `dependencies.feedListInvalidation.markFeedCreated()`를 부르고, `FeedRootView`가 `feedCreatedVersion`을
+  `makeSosoFeedView(feedCreatedVersion:)`로 넘긴다. `@Observable` 값을 body에서 읽으므로 다른 탭에서 작성해도
+  `FeedRootView`가 재평가돼(TabView가 4탭을 계속 mount) 피드 탭에 오기 전에 이미 재로드된다. `CrossScreenFeedback`
+  (그 탭에서 한 번 보여주는 토스트)과 역할이 다르니 합치지 말 것. ⚠️ **수정(`makeEditFeedView`)의 `onSubmitted`에는
+  붙이지 말 것** — 수정은 목록이 다녀온 셀을 상세로 동기화하고, 여기서 재로드하면 수정 후 복귀마다 스크롤이 튄다.
+  새 작성 진입점(탭 Root)을 추가하면 `markFeedCreated()`도 같이 붙여야 한다 — 빠뜨리면 그 경로로 쓴 글이 피드
+  탭에 당겨서 새로고침 전까지 안 보인다.
 - **⚠️ 앱 아이콘·버전 정보는 시뮬레이터 빌드만으론 검증되지 않는다 — 실제 아카이브(`archive-debug`/
   `archive-release` 스킬)를 처음 돌려봐야 드러난다(2026-08-29 실측).** 이 프로젝트가 발견 당시 처음
   겪은 순서 그대로 기록:
