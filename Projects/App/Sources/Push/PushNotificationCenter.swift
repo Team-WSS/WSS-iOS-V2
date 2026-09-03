@@ -81,6 +81,7 @@ final class PushNotificationCenter {
 
     /// APNs device token 수신 → Firebase에 직접 대입(method swizzling off — `FirebaseAppDelegateProxyEnabled=NO`).
     func setAPNSToken(_ deviceToken: Data) {
+        guard isFirebaseConfigured else { return }
         Messaging.messaging().apnsToken = deviceToken
     }
 
@@ -96,13 +97,7 @@ final class PushNotificationCenter {
 
     /// 알림 탭(`AppDelegate.didReceive`)의 payload를 딥링크로 풀어 앱으로 넘긴다. `view`에 맞는 화면으로
     /// 이동한다(작품/피드 상세). 콜백이 아직 없으면(콜드 스타트) 보관 후 등록 시 flush. 모르는 payload는 무시.
-    func handleNotificationTap(userInfo: [AnyHashable: Any]) {
-        let payload = userInfo.reduce(into: [String: String]()) { result, element in
-            if let key = element.key as? String, let value = element.value as? String {
-                result[key] = value
-            }
-        }
-
+    func handleNotificationTap(payload: [String: String]) {
         // 읽음 처리는 딥링크(화면 이동) 유무와 무관하게 — 탭한 알림은 읽음으로(V1 parity).
         markNotificationAsReadIfPossible(payload)
 
@@ -129,6 +124,7 @@ final class PushNotificationCenter {
     /// 부트스트랩(세션 있을 때)이 당겨가는 현재 디바이스 푸시 토큰. 알림 권한이 허용된 경우에만 FCM 토큰을
     /// 만들어 돌려준다 — 미허용/실패면 nil을 주고, 런치 태스크는 등록을 조용히 건너뛴다.
     func currentDevicePushToken() async -> DevicePushToken? {
+        guard isFirebaseConfigured else { return nil }
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized else { return nil }
         guard let token = try? await Messaging.messaging().token() else { return nil }
@@ -158,6 +154,13 @@ final class PushNotificationCenter {
         @unknown default:
             break
         }
+    }
+
+    /// Firebase 기본 앱이 실제로 구성됐는지. `GoogleService-Info` plist가 없으면(gitignore돼 로컬/CI에 미배치)
+    /// `AppDelegate`가 `configure`를 건너뛴다 → **`Messaging.messaging()`을 만지기 전에 이걸로 가드**한다.
+    /// 미구성 상태에서 `Messaging.messaging()`을 부르면 "default app not configured"로 Firebase가 크래시한다.
+    private var isFirebaseConfigured: Bool {
+        FirebaseApp.app() != nil
     }
 
     // MARK: - Device identifier (V1과 동일 — Keychain에 UUID 영속, get-or-create)
