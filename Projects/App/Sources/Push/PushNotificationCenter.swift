@@ -13,6 +13,7 @@ import FirebaseCore
 import FirebaseMessaging
 
 import BaseData
+import BaseDomain
 import NotificationDomain
 
 /// 앱의 FCM/APNs 런타임 허브(#243).
@@ -39,6 +40,17 @@ final class PushNotificationCenter {
     private var isLoggedIn: (@Sendable () -> Bool)?
     /// 마지막으로 받은 FCM 등록 토큰. 로그인 전에 도착하면 보관만 하고, 로그인/조립 시점에 등록에 쓴다.
     private var latestFCMToken: String?
+
+    /// 알림 탭으로 만들어진 딥링크를 앱(`WSSIOSV2App`)의 `pendingDeepLink` 채널로 넘기는 통로. App이 등록한다.
+    /// ⚠️ 콜드 스타트(알림 탭으로 앱이 실행)면 콜백 등록 전에 탭이 도착할 수 있어, 등록되는 순간 보관분을 flush한다.
+    var onNotificationDeepLink: (@MainActor (DeepLink) -> Void)? {
+        didSet {
+            guard let onNotificationDeepLink, let pending = pendingNotificationDeepLink else { return }
+            pendingNotificationDeepLink = nil
+            onNotificationDeepLink(pending)
+        }
+    }
+    private var pendingNotificationDeepLink: DeepLink?
 
     private init(deviceIdentifierStore: DeviceIdentifierStore = DefaultDeviceIdentifierStore()) {
         self.deviceIdentifierStore = deviceIdentifierStore
@@ -76,6 +88,23 @@ final class PushNotificationCenter {
         guard isLoggedIn?() == true, let registerDeviceToken else { return }
         let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
         Task { await registerDeviceToken(devicePushToken) }
+    }
+
+    /// 알림 탭(`AppDelegate.didReceive`)의 payload를 딥링크로 풀어 앱으로 넘긴다. `view`에 맞는 화면으로
+    /// 이동한다(작품/피드 상세). 콜백이 아직 없으면(콜드 스타트) 보관 후 등록 시 flush. 모르는 payload는 무시.
+    func handleNotificationTap(userInfo: [AnyHashable: Any]) {
+        let payload = userInfo.reduce(into: [String: String]()) { result, element in
+            if let key = element.key as? String, let value = element.value as? String {
+                result[key] = value
+            }
+        }
+        guard let deepLink = DeepLink.fromNotificationPayload(payload) else { return }
+
+        if let onNotificationDeepLink {
+            onNotificationDeepLink(deepLink)
+        } else {
+            pendingNotificationDeepLink = deepLink
+        }
     }
 
     // MARK: - 부트스트랩 pull (SplashData의 deviceTokenProvider가 호출)
