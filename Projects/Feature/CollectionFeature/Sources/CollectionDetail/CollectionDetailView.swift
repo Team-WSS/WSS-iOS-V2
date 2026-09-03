@@ -311,14 +311,12 @@ private extension CollectionDetailView {
         }
     }
 
+    /// 그리드 셀(`novelCell`)과 **같은 `WSSNovelCoverImage`** → 같은 대표 작품 URL을 인메모리 캐시로
+    /// 공유한다(중복 다운로드 없음, 재진입·재렌더 시 배경 번쩍임 없음 — raw `AsyncImage`는 뷰가
+    /// 재생성될 때마다 `.empty`부터 다시 시작해 느리고 깜빡였다, #244). `placeholderStyle: .grid`는
+    /// 로딩 중 `wssGray50` 배경을 깔아 과거 `Color.wssGray50` 폴백과 같은 결(그 위 어두운 그라디언트).
     var heroImage: some View {
-        AsyncImage(url: heroImageURL) { phase in
-            if case .success(let image) = phase {
-                image.resizable().scaledToFill()
-            } else {
-                Color.wssGray50
-            }
-        }
+        WSSNovelCoverImage(url: heroImageURL, placeholderStyle: .grid)
     }
 
     /// 실측 아니라 고정값(336, Figma) — 안전영역이 다른 기기에서도 텍스트 위치는 콘텐츠 흐름을

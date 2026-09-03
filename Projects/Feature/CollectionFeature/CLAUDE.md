@@ -433,6 +433,10 @@
   조건으로 넣고 뺀다** — 시스템 `.toolbar { ToolbarItem(.principal) { Text().opacity(조건 ? 1:0) } }`
   조합은 opacity 값만 바뀌어선 UIKit 브리지(titleView)에 갱신되지 않고 계속 숨어있는다(#201 실측,
   `Feature/CLAUDE.md` 공통 주의사항에 일반화해 남김 — `UserPageFeature`도 동일 재발).
+- **히어로 배경(`heroImage`)은 raw `AsyncImage`가 아니라 그리드 셀과 같은 `WSSNovelCoverImage`다**(#244) —
+  같은 대표 작품 URL을 인메모리 캐시로 공유해 중복 다운로드·재렌더 번쩍임이 없다(raw `AsyncImage`는 뷰
+  재생성마다 `.empty`부터 시작해 느렸다 — 사용자 리포트). `placeholderStyle: .grid`로 로딩 중 `wssGray50`
+  배경을 깔아 과거 `Color.wssGray50` 폴백과 같은 결. **단순화한다고 raw `AsyncImage`로 되돌리지 말 것.**
 - **히어로 표지는 `.frame(height:, alignment: .top)`으로 상단 기준 크롭한다**(기본값 `.center`
   대신) — `scaledToFill()`로 프레임보다 커진 이미지가 위쪽부터 정렬된 뒤 잘리게 하려는 의도. 가로는
   이미 화면 폭을 꽉 채운 상태라 세로 정렬만 바뀐다.
