@@ -181,6 +181,10 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   각자 배치해야 실제 푸시가 뜬다. V2 번들 ID가 V1과 동일해 **V1 레포의 plist를 그대로 복사**하면 된다(같은 Firebase 앱
   `websoso-e3a8a`, APNs 키도 그 프로젝트에 이미 연결). 빌드 구성별로 올바른 plist를 `FirebaseOptions(contentsOfFile:)`로
   **실제 적용**한다 — V1은 옵션을 만들고 버린 뒤 인자 없는 `configure()`를 불러 항상 운영 plist만 쓰던 버그가 있었으니 복붙하지 말 것.
+- ⚠️ **`Messaging.messaging()`을 만지는 새 코드는 반드시 `isFirebaseConfigured`(`FirebaseApp.app() != nil`)로 가드**한다 —
+  위 plist 미배치로 Firebase가 **미구성**이면 `Messaging.messaging()` 호출 자체가 "default app not configured"로 크래시한다
+  (Codex 리뷰 실측). `PushNotificationCenter.currentDevicePushToken()`/`setAPNSToken()`이 그렇게 가드돼 있다. 델리게이트
+  콜백(`willPresent`/`didReceive`)의 `appDidReceiveMessage`는 델리게이트가 **구성 성공 시에만** 설정돼 미구성 땐 도달하지 않는다.
 - **권한 요청·원격 알림 등록 시점은 `MainTabView.task`**(V1 parity, 사용자 확정) — `MainTabView`는 세션이 있어야만
   뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한 요청, 허용 상태면 `registerForRemoteNotifications()`.
   (기존 홈 알림벨/설정의 화면별 권한 흐름은 그대로 — 이건 그 위에 추가된 진입 트리거다.)
