@@ -26,12 +26,25 @@ struct LoadNovelFeedsUseCaseTests {
         let novelID = NovelID(10)
         let lastFeedID = FeedID(0)
 
-        let result = try await usecase.execute(novelID: novelID, lastFeedID: lastFeedID)
+        let result = try await usecase.execute(novelID: novelID, lastFeedID: lastFeedID, size: nil)
 
         #expect(result.items == expected.items)
         #expect(result.hasNext == expected.hasNext)
         #expect(mock.fetchedNovelFeeds.last?.novelID == novelID)
         #expect(mock.fetchedNovelFeeds.last?.lastFeedID == lastFeedID)
+        #expect(mock.fetchedNovelFeeds.last?.size == nil)
+    }
+
+    @Test("재진입 갱신용 size를 Repository에 그대로 전달한다")
+    func loadNovelFeedsPassesSizeThrough() async throws {
+        let mock = MockFeedRepository()
+        mock.fetchNovelFeedsResult = .success(makeFeeds())
+
+        let usecase = DefaultLoadNovelFeedsUseCase(feedRepository: mock)
+
+        _ = try await usecase.execute(novelID: NovelID(10), lastFeedID: FeedID(0), size: 37)
+
+        #expect(mock.fetchedNovelFeeds.last?.size == 37)
     }
 
     @Test("작품 피드 조회에 실패하면 에러를 던진다")
@@ -42,7 +55,7 @@ struct LoadNovelFeedsUseCaseTests {
         let usecase = DefaultLoadNovelFeedsUseCase(feedRepository: mock)
 
         await #expect(throws: RepositoryError.serverUnavailable) {
-            try await usecase.execute(novelID: NovelID(1), lastFeedID: FeedID(0))
+            try await usecase.execute(novelID: NovelID(1), lastFeedID: FeedID(0), size: nil)
         }
     }
 }

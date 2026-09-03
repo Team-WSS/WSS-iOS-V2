@@ -39,9 +39,19 @@ struct NovelDetailFeedTab: View {
     /// 좋아요 탭 → 낙관 토글 요청(반영·롤백은 VM 소관).
     let onToggleLike: (FeedID) -> Void
 
-    /// 각 셀 상단의 화면 y(스크롤 좌표공간 실측) — threedots 앵커 계산용.
-    /// 네비 타이틀·탭바와 같은 측정 방식(GeometryReader 안 onChange). 사라진 셀의 잔존 값은 무해하다.
-    @State private var cellTopYs: [FeedID: CGFloat] = [:]
+    /// 각 셀 상단의 화면 y(스크롤 좌표공간 실측)를 담는 참조 박스 — threedots 앵커 계산용.
+    /// 값은 **threedots 탭 시점에만 읽으므로** 뷰가 반응할 필요가 없다.
+    ///
+    /// ⚠️ **`@State var [FeedID: CGFloat]` 딕셔너리로 되돌리지 말 것** — 그 형태에선 셀 y가 바뀔 때마다
+    /// (모든 스크롤·재배치) @State 쓰기가 body 무효화를 일으켜, 필요 없는 재평가가 상시로 돈다.
+    /// 참조 타입 내부 변경은 SwiftUI가 관찰하지 않아 이 낭비가 없다(@State는 인스턴스 보유용일 뿐).
+    /// 이 화면의 간헐 라이브락(무한 레이아웃 루프 — 모듈 CLAUDE.md 주의사항) 조사 중에 사이클 한 겹을
+    /// 끊으려 전환했다 — **단독 해결책은 아니었지만**(전환 후에도 재현) 되돌릴 이유도 없다.
+    @MainActor
+    private final class CellTopYStore {
+        var values: [FeedID: CGFloat] = [:]
+    }
+    @State private var cellTopYs = CellTopYStore()
 
     /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
     private let threeDotsBottomOffset: CGFloat = 52
@@ -77,7 +87,8 @@ struct NovelDetailFeedTab: View {
                                 Color.clear
                                     .onChange(of: proxy.frame(in: .named(scrollSpaceName)).minY,
                                               initial: true) { _, newY in
-                                        cellTopYs[feed.feedId] = newY
+                                        // 참조 박스 내부 쓰기 — 뷰 무효화를 만들지 않는다(위 CellTopYStore 주석).
+                                        cellTopYs.values[feed.feedId] = newY
                                     }
                             }
                         )
@@ -119,7 +130,7 @@ struct NovelDetailFeedTab: View {
                 onUserProfileTapped(userId)
             },
             threeDotsButtonTapped: {
-                onThreeDotsTapped(feed, (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset)
+                onThreeDotsTapped(feed, (cellTopYs.values[feed.feedId] ?? 0) + threeDotsBottomOffset)
             },
             content: feed.content,
             feedImage: feed.thumbnailImageURL.map {

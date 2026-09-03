@@ -35,15 +35,20 @@ struct NormalSearchView: View {
     /// 호출자(App 조정 계층)가 수행한다 — App이 소유한 `NavigationPath`에 직접 push해야 그 안에서 다시
     /// `onNovelSelected`로 작품 상세를 열 때 화면이 제대로 쌓인다(아래 주의사항 참고, #196).
     private let onDetailSearchRequested: (SearchFilter) -> Void
+    /// 장르·키워드 섹션 "더보기" 헤더 → 상세탐색 **필터 화면** 진입 콜백(#236, V1 parity).
+    /// 장르 더보기는 정보 탭(`.info`), 키워드 더보기는 키워드 탭(`.keyword`)으로 연다.
+    private let onDetailSearchFilterRequested: (DetailSearchFilterTab) -> Void
 
     init(
         viewModel: NormalSearchViewModel,
         onNovelSelected: @escaping (NovelID) -> Void = { _ in },
-        onDetailSearchRequested: @escaping (SearchFilter) -> Void = { _ in }
+        onDetailSearchRequested: @escaping (SearchFilter) -> Void = { _ in },
+        onDetailSearchFilterRequested: @escaping (DetailSearchFilterTab) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelSelected = onNovelSelected
         self.onDetailSearchRequested = onDetailSearchRequested
+        self.onDetailSearchFilterRequested = onDetailSearchFilterRequested
         // initialQuery로 진입 시 VM이 init에서 이미 searchText를 채워두므로 로컬 버퍼도 그 값으로 시작한다.
         self._searchDraft = State(initialValue: viewModel.state.searchText)
     }
@@ -225,7 +230,7 @@ struct NormalSearchView: View {
                 Spacer().frame(width: 3)
                 
                 Button {
-                    // TODO: - 탐색 정보탭으로 이동
+                    onDetailSearchFilterRequested(.info)
                 } label: {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
@@ -280,7 +285,7 @@ struct NormalSearchView: View {
                 Spacer().frame(width: 3)
                 
                 Button {
-                    // TODO: - 탐색 키워드탭으로 이동
+                    onDetailSearchFilterRequested(.keyword)
                 } label: {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()

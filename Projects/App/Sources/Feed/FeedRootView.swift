@@ -17,6 +17,7 @@ import LibraryFeature
 import NovelDomain
 import ProfileDomain
 import SearchDomain
+import SearchFeature
 import SocialDomain
 import WSSComponent
 
@@ -63,6 +64,10 @@ struct FeedRootView: View {
         case searchNovelForCollection([CollectionNovel])
         case myLibrarySelectForCollection([CollectionNovel])
         case authorSearch(String)
+        /// 작가 이름 검색 화면에서 검색어를 지우면 브라우즈(장르·키워드 섹션)로 돌아가므로, 이 탭도
+        /// 상세탐색 결과·필터로 갈 수 있다(#236 — 예전엔 placeholder였다. `HomeRootView`와 동일 규칙).
+        case detailSearchFilter(DetailSearchFilterTab)
+        case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
     }
 
@@ -81,11 +86,9 @@ struct FeedRootView: View {
     /// "작품 추가"/"서재에서 추가" 확정 결과를 컬렉션 수정 화면에 돌려주는 1회성 nil→값 채널(#228,
     /// `MypageRootView`와 동일 — 확정(return) 값이라 `Destination` 레이스 대상이 아니다).
     @State private var pendingCollectionNovelSelection: [CollectionNovel]?
-    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀 화면 위에 띄우는 "차단했어요" 토스트(#221, V1 parity).
-    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 이 루트가 표시한다 — 4탭 공통
-    /// 패턴이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절 크로스스크린 완료 피드백).
-    @State private var isUserBlockedToastPresented = false
-    @State private var blockedNickname = ""
+    /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
+    /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
+    @State private var crossScreenFeedback = CrossScreenFeedbackState()
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -98,12 +101,15 @@ struct FeedRootView: View {
             FeedFeatureFactory.makeSosoFeedView(
                 loadMyFeedsUseCase: DefaultLoadMyFeedsUseCase(feedRepository: dependencies.feedRepository),
                 loadSosoFeedsUseCase: DefaultLoadSosoFeedsUseCase(feedRepository: dependencies.feedRepository),
+                loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository),
                 feedLikeUseCase: DefaultLikeUseCase(feedRepository: dependencies.feedRepository),
                 loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: dependencies.profileRepository),
                 deleteFeedUseCase: DefaultDeleteFeedUseCase(repository: dependencies.feedRepository),
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
+                // 앱 어느 탭에서든 피드 작성이 끝나면 오르는 카운터 — 목록이 새 글을 받는 유일한 경로(`FeedListInvalidation`).
+                feedCreatedVersion: dependencies.feedListInvalidation.feedCreatedVersion,
                 onEditFeedTapped: { path.append(Destination.editFeed($0)) },
                 onFeedTapped: { path.append(Destination.feed($0)) },
                 onCreateFeedTapped: { path.append(Destination.createFeed) },
@@ -130,7 +136,11 @@ struct FeedRootView: View {
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
-                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                        FeedDetailAssembly.makeEditFeedView(
+                            feedID: feedID,
+                            dependencies: dependencies,
+                            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+                        )
                     case .userPage(let userID):
                         UserPageAssembly.makeView(
                             userID: userID,
@@ -141,10 +151,7 @@ struct FeedRootView: View {
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
-                            onUserBlocked: { nickname in
-                                blockedNickname = nickname
-                                isUserBlockedToastPresented = true
-                            }
+                            onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -178,13 +185,18 @@ struct FeedRootView: View {
                         collectionMyLibrarySelectView(initialSelection: initialSelection)
                     case .authorSearch(let authorName):
                         authorSearchView(authorName)
+                    case .detailSearchFilter(let initialTab):
+                        detailSearchFilterView(initialTab: initialTab)
+                    case .detailSearch(let filter):
+                        detailSearchResultView(filter)
                     case .novelReview(let novelID, let title, let status):
                         NovelReviewAssembly.makeView(
                             novelID: novelID,
                             title: title,
                             status: status,
                             dependencies: dependencies,
-                            onAuthenticationRequired: onAuthenticationRequired
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onSaved: { crossScreenFeedback.present(.novelReviewed) }
                         )
                     }
                 }
@@ -205,7 +217,7 @@ struct FeedRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
-        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
+        .showCrossScreenFeedbackToast($crossScreenFeedback)
     }
 }
 
@@ -312,14 +324,31 @@ private extension FeedRootView {
 
 private extension FeedRootView {
     /// 피드 탭엔 일반 검색 진입점(검색 버튼)이 없어 `.search` 케이스가 아예 없다 — 작가 이름 검색
-    /// 전용으로만 이 화면을 조립한다. `onDetailSearchRequested`(장르·키워드 칩 탭)는 이 탭에 상세탐색
-    /// 결과로 갈 `Destination`이 없어 아직 placeholder(다른 탭의 미구현 콜백과 같은 패턴).
+    /// 전용으로만 이 화면을 조립한다. 단 검색어를 지우면 브라우즈(장르·키워드 섹션)로 돌아가므로
+    /// 상세탐색 결과·필터 경로는 다른 탭과 동일하게 배선한다(#236 — 예전 placeholder를 해소).
     func authorSearchView(_ authorName: String) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { _ in dependencies.logger.info("상세탐색 결과 진입(미구현) — 피드 탭") },
+            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
             initialQuery: authorName
+        )
+    }
+
+    func detailSearchFilterView(initialTab: DetailSearchFilterTab) -> some View {
+        SearchAssembly.makeDetailSearchFilterView(
+            initialTab: initialTab,
+            dependencies: dependencies,
+            onSearch: { filter in path.append(Destination.detailSearch(filter)) }
+        )
+    }
+
+    func detailSearchResultView(_ filter: SearchFilter) -> some View {
+        SearchAssembly.makeDetailSearchResultView(
+            filter: filter,
+            dependencies: dependencies,
+            onNovelSelected: { path.append(Destination.novel($0)) }
         )
     }
 }
@@ -334,7 +363,11 @@ private extension FeedRootView {
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
-            connectedNovel: connectedNovel
+            connectedNovel: connectedNovel,
+            onSubmitted: {
+                crossScreenFeedback.present(.feedEdited)
+                dependencies.feedListInvalidation.markFeedCreated()
+            }
         )
     }
 }

@@ -18,7 +18,6 @@ import LibraryFeature
 import NotificationDomain
 import NovelDomain
 import ProfileDomain
-import KeywordFeature
 import NotificationFeature
 import PushAuthorization
 import RecommendationDomain
@@ -58,10 +57,11 @@ struct HomeRootView: View {
         case myLibrarySelectForCollection([CollectionNovel])
         case search
         case authorSearch(String)
-        /// "뭐 읽을지 고민될 때?" 배너 → 상세탐색 필터 화면(정보/키워드 탭). 확정("작품 찾기") 시
-        /// 이 화면 자신은 pop되지 않고 그대로 스택에 남아, 그 위로 `detailSearch(filter)`가 push된다
+        /// "뭐 읽을지 고민될 때?" 배너(정보 탭)·일반 검색의 장르/키워드 "더보기" 헤더(#236, 진입점이
+        /// 열 탭을 payload로 지정) → 상세탐색 필터 화면. 확정("작품 찾기") 시 이 화면 자신은 pop되지
+        /// 않고 그대로 스택에 남아, 그 위로 `detailSearch(filter)`가 push된다
         /// (`SearchFeature/CLAUDE.md`의 "필터 화면 진입·복귀" 참고 — pop/push 여부는 항상 호출부 책임).
-        case detailSearchFilter
+        case detailSearchFilter(DetailSearchFilterTab)
         case detailSearch(SearchFilter)
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case notification
@@ -85,11 +85,9 @@ struct HomeRootView: View {
     @State private var path = NavigationPath()
     /// 딥링크 화면이 놓인 스택 깊이 — `path.count`가 이보다 작아지면 그 화면이 빠진 것(아래 `.onChange(of: path.count)`).
     @State private var deepLinkDestinationDepth: Int?
-    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀 화면 위에 띄우는 "차단했어요" 토스트(#221, V1 parity).
-    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 이 루트가 표시한다 — 4탭 공통
-    /// 패턴이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절 크로스스크린 완료 피드백).
-    @State private var isUserBlockedToastPresented = false
-    @State private var blockedNickname = ""
+    /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
+    /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
+    @State private var crossScreenFeedback = CrossScreenFeedbackState()
     /// 알림 목록으로 이동한 뒤, 그 화면 위에 기기 설정 유도 알럿을 띄워야 하는지(#193) — `.overlay` 기반
     /// `showWSSAlert`가 push 전환과 동시에 뜨면 전환에 밀려 사라지므로(`HomeFeature/CLAUDE.md` 참고),
     /// `HomeFeature`가 아니라 여기(`NavigationStack` 컨테이너)에 붙여 push가 끝난 뒤에도 살아남게 한다.
@@ -118,7 +116,7 @@ struct HomeRootView: View {
                 onNovelSelected: { path.append(Destination.novel($0)) },
                 onFeedSelected: { path.append(Destination.feed($0)) },
                 onSearchTapped: { path.append(Destination.search) },
-                onDetailSearchTapped: { path.append(Destination.detailSearchFilter) },
+                onDetailSearchTapped: { path.append(Destination.detailSearchFilter(.info)) },
                 onNotificationTapped: {
                     path.append(Destination.notification)
                     Task {
@@ -143,7 +141,11 @@ struct HomeRootView: View {
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
-                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                        FeedDetailAssembly.makeEditFeedView(
+                            feedID: feedID,
+                            dependencies: dependencies,
+                            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+                        )
                     case .userPage(let userID):
                         UserPageAssembly.makeView(
                             userID: userID,
@@ -154,10 +156,7 @@ struct HomeRootView: View {
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
-                            onUserBlocked: { nickname in
-                                blockedNickname = nickname
-                                isUserBlockedToastPresented = true
-                            }
+                            onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -193,8 +192,8 @@ struct HomeRootView: View {
                         searchView()
                     case .authorSearch(let authorName):
                         searchView(initialQuery: authorName)
-                    case .detailSearchFilter:
-                        detailSearchFilterView
+                    case .detailSearchFilter(let initialTab):
+                        detailSearchFilterView(initialTab: initialTab)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     case .novelReview(let novelID, let title, let status):
@@ -203,7 +202,8 @@ struct HomeRootView: View {
                             title: title,
                             status: status,
                             dependencies: dependencies,
-                            onAuthenticationRequired: onAuthenticationRequired
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onSaved: { crossScreenFeedback.present(.novelReviewed) }
                         )
                     case .preferenceGenreSetting:
                         mypageEditView
@@ -243,7 +243,7 @@ struct HomeRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
-        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
+        .showCrossScreenFeedbackToast($crossScreenFeedback)
     }
 }
 
@@ -372,7 +372,12 @@ private extension HomeRootView {
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
-            connectedNovel: connectedNovel
+            connectedNovel: connectedNovel,
+            onSubmitted: {
+                crossScreenFeedback.present(.feedEdited)
+                // 피드 탭 목록은 재진입에 목록을 다시 받지 않아, 다른 탭에서 쓴 새 글은 이 신호로만 들어간다.
+                dependencies.feedListInvalidation.markFeedCreated()
+            }
         )
     }
 }
@@ -387,6 +392,7 @@ private extension HomeRootView {
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
             onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
             initialQuery: initialQuery
         )
     }
@@ -400,32 +406,16 @@ private extension HomeRootView {
     }
 }
 
-// MARK: - 상세탐색 필터 ("뭐 읽을지 고민될 때?" 배너, #201 — 지금은 홈 탭에만 이 배너가 있어 다른
-// 탭과 공유하는 Assembly로 뽑지 않았다. 2번째 탭이 필요해지면 그때 SearchAssembly로 승격 검토)
+// MARK: - 상세탐색 필터 ("뭐 읽을지 고민될 때?" 배너 + 일반 검색의 "더보기" 헤더 — 3탭 공용이 되어
+// #236에서 SearchAssembly로 승격, 키워드 탭 콘텐츠 조립도 그쪽으로 옮겼다)
 
 private extension HomeRootView {
-    var detailSearchFilterView: some View {
-        SearchFeatureFactory.makeDetailSearchFilterView(
-            keywordTabContent: keywordTabContent,
+    func detailSearchFilterView(initialTab: DetailSearchFilterTab) -> some View {
+        SearchAssembly.makeDetailSearchFilterView(
+            initialTab: initialTab,
+            dependencies: dependencies,
             onSearch: { filter in path.append(Destination.detailSearch(filter)) }
         )
-    }
-
-    /// "키워드" 탭 콘텐츠 — `SearchFeature`는 `KeywordFeature`를 모르므로 App이 조립해 값으로
-    /// 건넨다(`KeywordTabContentBuilder` 참고). `KeywordFeatureFactory.makeSearchKeywordView`는
-    /// 자체 액션바가 없어 그대로 감싸면 된다.
-    var keywordTabContent: KeywordTabContentBuilder {
-        { initialKeywords, onSelectionChanged in
-            AnyView(
-                KeywordFeatureFactory.makeSearchKeywordView(
-                    loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
-                    searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: dependencies.keywordRepository),
-                    initialSelectedKeywords: initialKeywords,
-                    onSelectionChanged: onSelectionChanged,
-                    logger: dependencies.logger
-                )
-            )
-        }
     }
 }
 

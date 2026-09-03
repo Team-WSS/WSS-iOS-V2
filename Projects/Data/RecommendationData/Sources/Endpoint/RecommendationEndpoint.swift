@@ -44,7 +44,7 @@ enum RecommendationEndpoint: Endpoint {
         switch self {
         // today/trending도 `requireToken`이다(2026-08-31, `usesTokenIfAvailable`에서 전환) —
         // 비로그인 진입이 불가해져 익명 허용의 의미가 없어졌고, 죽은 세션에서 프리페치가
-        // 익명 200으로 슬롯을 채우던 세션 전환 함정(docs/TODO.md 11절)도 함께 닫힌다.
+        // 익명 200으로 슬롯을 채우던 세션 전환 함정(#236에서 세션 전환 시 의존성 재조립으로도 방어)도 함께 닫힌다.
         case .getTodayDiscovery, .getTrendingFeeds, .getInterestFeeds, .getPreferenceGenreNovels:
             return .requireToken
         case .sosopickNovels:

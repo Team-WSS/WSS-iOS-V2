@@ -135,6 +135,11 @@ final class NovelDetailViewModel {
     @ObservationIgnored private var feedActionTask: Task<Void, Never>?
     /// 좋아요는 셀별 독립 동기화 — 같은 피드의 연타만 막고 다른 피드는 병행을 허용한다.
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
+    /// 마지막 피드 재조회 요청 **이후** 좋아요를 토글한 셀 — `refreshFeeds`가 요청을 낼 때 비우고
+    /// `toggleFeedLike`가 채운다. 재조회 응답 병합에서 `syncingLikeFeedIDs`와 합쳐 보호 대상을 만든다
+    /// (좋아요 POST가 목록 GET보다 먼저 끝나면 in-flight 집합만으론 병합 시점에 이미 비어 있어서 —
+    /// "요청이 도는 동안 토글된 셀"을 구간으로 기억해야 순서와 무관하게 보호된다, #236 리뷰).
+    @ObservationIgnored private var likeToggledDuringRefresh: Set<FeedID> = []
     @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
@@ -240,18 +245,31 @@ private extension NovelDetailViewModel {
 
     /// 진입/재진입 상세 로드. onAppear는 재진입마다 불린다.
     /// - **첫 로드**(`!hasLoaded`): 전면 스피너를 세우고 로드한다.
-    /// - **재진입**(`hasLoaded`): 스피너 없이 **조용히 재조회**해 `information`만 갈아끼운다 —
-    ///   평가 화면(push) 등에서 바뀐 유저 평가·별점·독자 평가 집계를 복귀 즉시 반영하기 위함.
-    ///   `loadNovel`이 `information`/`novel`만 교체하고 피드·페이지네이션·스크롤은 안 건드리며,
-    ///   `isLoading`을 올리지 않아 기존 화면이 유지된 채 새 데이터가 오면 갈아끼워진다(깜빡임 없음).
+    /// - **재진입**(`hasLoaded`): 스피너 없이 **조용히 재조회**해 `information`을 갈아끼우고,
+    ///   피드도 이미 세워져 있으면 함께 조용히 갱신한다(`refreshFeedsIfNeeded`) —
+    ///   평가 화면·피드 작성/수정 화면(push) 등에서 바뀐 유저 평가·별점·독자 평가 집계·피드 목록을
+    ///   복귀 즉시 반영하기 위함. `isLoading`을 올리지 않아 기존 화면이 유지된 채
+    ///   새 데이터가 오면 갈아끼워진다(깜빡임 없음).
     ///   재조회가 실패해도 기존 화면을 그대로 두고 전면 실패 뷰로 덮지 않는다(백그라운드 갱신이므로).
     /// 실패는 가드(`hasLoaded`)를 소진하지 않아 재진입 시 재시도가 열려 있다.
     func load() {
+        if hasLoaded {
+            refreshFeedsIfNeeded()
+        }
         guard loadTask == nil, !isClosing else { return }
         if !hasLoaded {
             state.isLoading = true
         }
         loadTask = Task { await loadNovel() }
+    }
+
+    /// 재진입 시 피드 목록의 조용한 재조회 — **피드를 한 번이라도 세운 뒤에만**(`hasLoadedFirstFeeds`).
+    /// V1은 viewWillAppear마다 `lastFeedId 0 + size = 보던 개수`로 전체를 다시 받아 통째로 교체했다(parity 복원).
+    /// 같은 ID들이 그대로 돌아오므로 목록 개수·스크롤이 유지되고, 다녀온 사이 작성/수정/삭제된 피드가 반영된다.
+    /// 진행 중인 피드 로드(더보기·재시도)가 있으면 갱신 쪽이 양보하고 스킵한다(서재 `.refresh`와 같은 규칙).
+    func refreshFeedsIfNeeded() {
+        guard hasLoadedFirstFeeds, feedsTask == nil, !isClosing else { return }
+        feedsTask = Task { await refreshFeeds() }
     }
 
     /// 탭 전환. 피드 탭은 첫 성공 전까지 진입(재탭 포함)마다 첫 페이지 로드를 시도한다.
@@ -314,6 +332,8 @@ private extension NovelDetailViewModel {
         var feed = before
         // 정책 위반(카운트 음수)이면 반영하지 않는다 — 서버 호출도 없다.
         guard (try? feed.toggleLike()) != nil else { return }
+        // 재조회가 도는 동안의 토글을 병합 보호 대상으로 기억한다(위 프로퍼티 주석).
+        likeToggledDuringRefresh.insert(feedID)
 
         state.feeds[index] = feed
         syncingLikeFeedIDs.insert(feedID)
@@ -416,7 +436,8 @@ private extension NovelDetailViewModel {
         do {
             let page = try await loadNovelFeedsUseCase.execute(
                 novelID: novelID,
-                lastFeedID: lastFeedID ?? FeedID(0)
+                lastFeedID: lastFeedID ?? FeedID(0),
+                size: nil
             )
             guard !isClosing, !Task.isCancelled else { return }
             state.feeds.append(contentsOf: page.items)
@@ -433,6 +454,52 @@ private extension NovelDetailViewModel {
             // (규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약")
             state.feedsLoadFailed = true
             logger?.error("피드 로드 실패(\(lastFeedID == nil ? "첫 페이지" : "더보기")): \(String(describing: error))")
+        }
+    }
+
+    /// 피드 조용한 재조회 — 로딩 표시 없이 **보던 개수만큼** 처음(커서 0)부터 다시 받아 통째로 교체한다.
+    /// `loadFeeds`와 달리 append가 아니라 **교체**고(같은 ID가 돌아와 스크롤 유지),
+    /// 실패해도 기존 목록을 그대로 둔다(`loadNovel` 재진입 갱신과 같은 백그라운드 갱신 계약 —
+    /// 단 인증 만료는 예외로 로그인 라우팅에 합류).
+    /// 요청 크기 규칙(보던 개수·서버 상한 100·빈 목록이면 기본 크기)은 `NovelFeedPageSizePolicy`가 정한다.
+    func refreshFeeds() async {
+        defer { feedsTask = nil }
+        // 보호 대상 좋아요: ① 요청 시작 시점에 아직 동기화 중이던 셀 ② 요청이 도는 동안 새로 토글된 셀.
+        // 서버 응답이 토글 이전 스냅샷일 수 있는 건 이 둘뿐이다 — 요청 전에 POST가 끝난 토글은
+        // 서버가 반영을 마친 뒤 응답했으므로 이번 스냅샷에 이미 들어 있다.
+        var likeProtectedIDs = syncingLikeFeedIDs
+        likeToggledDuringRefresh = []
+        do {
+            let page = try await loadNovelFeedsUseCase.execute(
+                novelID: novelID,
+                lastFeedID: FeedID(0),
+                size: NovelFeedPageSizePolicy.refreshSize(loadedCount: state.feeds.count)
+            )
+            guard !isClosing, !Task.isCancelled else { return }
+            // ⚠️ "응답이 기존과 같으면 대입 스킵" 최적화를 넣지 말 것 — `TotalFeed`의 `==`는
+            // feedId만 비교하는 identity 등가라, 같은 ID 목록이 돌아오면 수정된 본문·좋아요·댓글수
+            // 변화까지 "같음"으로 판정돼 영영 반영되지 않는다(#236 리뷰에서 실제로 그렇게 들어갔다 걷어냄).
+            likeProtectedIDs.formUnion(likeToggledDuringRefresh)
+            var items = page.items
+            // 보호 셀은 **좋아요 두 필드만** 로컬 우선으로 병합한다(엔티티 `preservingLikeState` —
+            // 셀 전체를 로컬로 되돌리면 그 사이 서버에서 바뀐 본문·댓글수까지 버린다).
+            // 최종 정합은 syncFeedLike의 성공 유지/실패 롤백이 마무리한다.
+            if !likeProtectedIDs.isEmpty {
+                for index in items.indices where likeProtectedIDs.contains(items[index].feedId) {
+                    if let local = state.feeds.first(where: { $0.feedId == items[index].feedId }) {
+                        items[index] = items[index].preservingLikeState(of: local)
+                    }
+                }
+            }
+            state.feeds = items
+            state.hasNextFeeds = page.hasNext
+            // 더보기 실패 등으로 실패 뷰가 덮여 있던 상태라면 성공한 갱신이 목록을 되살린다.
+            state.feedsLoadFailed = false
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            if routeToLoginIfAuthenticationRequired(error) { return }
+            // 백그라운드 갱신 실패는 기존 목록을 유지하고 실패 뷰·토스트를 세우지 않는다.
+            logger?.error("피드 조용한 재조회 실패: \(String(describing: error))")
         }
     }
 
@@ -467,7 +534,9 @@ private extension NovelDetailViewModel {
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
             if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
-                state.feeds[index] = before
+                // 좋아요 두 필드만 이전 값으로 되돌린다 — 셀 전체를 되돌리면 그 사이 재조회가
+                // 가져온 최신 본문·댓글수까지 이전 스냅샷으로 물러난다(병합과 대칭, #236 리뷰).
+                state.feeds[index] = state.feeds[index].preservingLikeState(of: before)
             }
             presentError(error, as: .likeFailed)
         }
@@ -479,6 +548,11 @@ private extension NovelDetailViewModel {
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)
             guard !isClosing, !Task.isCancelled else { return }
+            // 진행 중인 피드 로드가 있으면 무효화한다 — 삭제 전 스냅샷을 든 응답(재진입 조용한 재조회)이
+            // 늦게 도착해 방금 지운 피드를 목록에 되살리는 창을 닫는다(#236 리뷰). 같은 슬롯을 쓰는
+            // **더보기도 함께 취소**된다 — 조용히 드롭되고 스크롤 재실현으로 복구되는 기존 절충과 동일.
+            // 취소돼도 loadFeeds/refreshFeeds의 defer가 슬롯을 nil로 되돌리므로 이후 로드가 막히지 않는다.
+            feedsTask?.cancel()
             state.feeds.removeAll { $0.feedId == feedID }
             // 평가 삭제와 같은 이유의 재로드 — 실패해도 재진입 시 다시 시도되도록 가드를 미리 되돌린다.
             hasLoaded = false

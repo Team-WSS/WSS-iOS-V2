@@ -168,12 +168,28 @@
 
 ### 핵심 시나리오
 
+- **재진입(push 복귀)은 조용한 재조회다**(#236, V1 parity 복원 — `NovelDetailViewModel.load` 정본 패턴):
+  `UserPageViewModel.load()`가 `hasLoaded` 후에도 재진입마다 프로필 묶음을 스피너 없이 제자리 교체하고,
+  활동 탭 미리보기도 이미 로드된 적 있으면 첫 페이지를 같이 재조회한다(실패 시 기존 화면 유지 —
+  단 비공개 전환(`privateProfile`) 반영은 **활동 피드 조회 경로에만** 있다: `loadFirstFeedsPage`가 두 모드
+  모두 `isProfilePrivate`를 세우고, 프로필 묶음 silent 실패는 전부 조용히 유지된다). **전체 피드 목록
+  (`UserFeedListViewModel`)도 동일** — 재진입 시 첫 페이지 조용한 교체(페이지네이션 리셋, V1의 "비우고
+  처음부터 + 로딩뷰" 대신). 모든 로드가 단일 Task 가드(`loadTask`/`feedsTask == nil`)로 직렬화돼 취소 장치
+  없이 안전하다.
+  - **깊이 스크롤 후 복귀 시 목록이 첫 페이지로 줄어드는 건 판정된 절충이다**(#236 리뷰에서 인지) —
+    NovelDetail 피드는 `size = 보던 개수` 정책(`NovelFeedPageSizePolicy`)으로 window를 보존하지만, 이
+    화면(과 알림 목록)은 push 복귀의 목적이 "최신순 맨 위 갱신"이고 `LoadUserFeedsUseCase`에 size 배관이
+    없어 비용 대비 이득이 작아 1페이지 리셋을 감수한다. 되살리려면 피드 쪽과 같은 Repository size 배관이 선행.
+  - **통째 교체는 진행 중 낙관 좋아요를 되덮을 수 있어 병합으로 보호한다**(#236) — 첫 페이지 교체 직전
+    "요청 시작 시 in-flight + 요청 중 토글"(`syncingLikeFeedIDs` ∪ `likeToggledDuringRefresh`) 셀만
+    `TotalFeed.preservingLikeState`(좋아요 두 필드만 로컬 우선)로 병합한다. `NovelDetailViewModel.refreshFeeds`가
+    정본 패턴 — 셀 전체를 로컬로 되돌리면 그 사이 서버 변경(본문 수정 등)까지 버리므로 두 필드만.
 - **서재 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입은 App 몫**(#196) — `UserPageView`는
   `onLibraryTapped()` 콜백만 부르고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +
   `LibrarySection` 블록 전체) 모두 같은 콜백을 부른다 — 어느 쪽을 눌러도 같은 화면으로 간다.
 - **차단**: 툴바 threedots 드롭다운("차단하기") → `WSSAlertType.blockUser` 확인 알럿 → `BlockUserUseCase`. **성공하면 화면을 dismiss한다**(`state.shouldDismiss`) — 차단하면 상대 프로필을 다시 볼 수 없어 화면에 남아있을 이유가 없다는 판단(사용자 확정).
-  - **차단했어요 크로스스크린 안내 seam(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser(nickname)`를 post해 **복귀 화면**이 "차단했어요" 토스트를 띄웠다(V2 parity 대상, `V1_BEHAVIOR_CONTRACT.md` 4.6). 이 화면은 차단 성공과 동시에 pop되므로 토스트는 자기가 못 띄운다 — `UserPageView.onUserBlocked(nickname)` 콜백을 `shouldDismiss` 전이에서 `dismiss()` **직전**에 부르는 것까지만 뚫어뒀다(Factory·`UserPageAssembly`까지 전달, 전부 기본 no-op). `shouldDismiss`가 **차단 성공에서만** 켜지므로(뒤로가기는 툴바 버튼이 직접 `dismiss`) 이 전이 = 차단 성공으로 봐도 된다. **실제 토스트(`WSSToastType.blockUser(nickname:)` = "{nickname}님을 차단했어요", 이미 존재)는 4탭 Root(App, `FeedRootView`·`HomeRootView`·`LibraryRootView`·`MypageRootView`)가 `onUserBlocked`를 받아 `.showWSSToast(.blockUser)`로 띄운다** — 각 탭의 `NavigationStack` **컨테이너**에 얹은 오버레이라, pop 후 최상단이 된 **직전 뷰**(소소피드/피드상세/작품상세 등) 위에 뜬다. V1은 전역 `NotificationCenter.blockUser`를 **피드 탭 하나(`FeedViewController`)만** 캐치해 띄웠던 것과 달리, V2는 **차단한 바로 그 탭**에서 뜬다(더 정확). ⚠️ **이 4탭 배선은 의도적 4벌 복붙(interim)** — `feedEdited`·`novelReviewed`까지 합쳐 App 조정 계층의 **통합 크로스스크린 채널**로 재설계할 때 걷어낼 예정이라(`docs/TODO.md` 12절), 이 4벌을 "화면 전환 완료 피드백"의 정식 패턴으로 확대 복제하지 말 것.
+  - **차단했어요 크로스스크린 안내 seam(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser(nickname)`를 post해 **복귀 화면**이 "차단했어요" 토스트를 띄웠다(V2 parity 대상, `V1_BEHAVIOR_CONTRACT.md` 4.6). 이 화면은 차단 성공과 동시에 pop되므로 토스트는 자기가 못 띄운다 — `UserPageView.onUserBlocked(nickname)` 콜백을 `shouldDismiss` 전이에서 `dismiss()` **직전**에 부르는 것까지만 뚫어뒀다(Factory·`UserPageAssembly`까지 전달, 전부 기본 no-op). `shouldDismiss`가 **차단 성공에서만** 켜지므로(뒤로가기는 툴바 버튼이 직접 `dismiss`) 이 전이 = 차단 성공으로 봐도 된다. **실제 토스트("{nickname}님을 차단했어요")는 App의 통합 크로스스크린 피드백 채널이 띄운다**(#236 — `App/Sources/Main/CrossScreenFeedback.swift`, `feedEdited`·`novelReviewed`와 한 채널. #221의 4탭 4벌 복붙은 이 채널로 흡수됨). 각 탭 Root가 `onUserBlocked`를 받아 `crossScreenFeedback.present(.userBlocked(nickname:))`로 연결하고, 토스트는 `NavigationStack` **컨테이너** 오버레이라 pop 후 최상단이 된 **직전 뷰**(소소피드/피드상세/작품상세 등) 위에 뜬다. V1은 전역 `NotificationCenter.blockUser`를 **피드 탭 하나(`FeedViewController`)만** 캐치해 띄웠던 것과 달리, V2는 **차단한 바로 그 탭**에서 뜬다(더 정확).
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
 - **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onFeedListTapped(userID, nickname, profileImage)` 콜백만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 콜백을 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
@@ -204,7 +220,7 @@
   develop 라인 #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo가 컴파일이 안
   되게 어긋났던 걸 rebase 중 최소 수정으로 되살렸다(2026-08-28). 실제 push/무시 여부는 아직 미설계 —
   Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))상 완전하진 않다는 것만 기록
-  ([docs/TODO.md](../../../docs/TODO.md) 11번).
+  ([docs/TODO.md](../../../docs/TODO.md) 10절 — 절 번호는 정리로 밀릴 수 있으니 Demo 항목을 찾을 것).
 - `WSSAlertView`의 버튼은 접근성 트리에 안 잡힌다 — UI 자동화(XcodeBuildMCP `tap`)로 알럿이 뜨는 것까지만 검증 가능, 버튼 탭 이후 동작은 코드 리뷰로 대체(WSSComponent 공용 컴포넌트라 이 모듈 범위 밖).
 - 피드 셀 threedots 드롭다운의 앵커(`anchorY`)는 `NovelDetailFeedTab`과 동일하게 "셀 상단 패딩(20) + 헤더 높이(32) = 52" 오프셋을 그대로 재사용한다 — `WSSFeadView` 자체에 내장된 값이라 어느 화면에서 셀을 그리든 동일하다.
 - `UserPageView`/`UserFeedListView` 둘 다 피드 셀+신고 드롭다운 렌더링 코드가 거의 동일하게 중복돼 있다 — 의도적 선택(`NovelDetailFeature`도 자기 화면 전용 사본을 갖는 것과 같은 이유, 화면마다 앵커 계산·오버레이 배치가 미묘하게 달라질 수 있어 공용화 대신 화면별 사본 유지).
@@ -244,3 +260,12 @@
   - `onEditTapped`(`CollectionDetailAssembly`)는 기본값 no-op으로 둔다 — 타유저 프로필에서 여는
     컬렉션은 항상 남의 것이라(`detail.isMine == false`) "컬렉션 수정" 버튼 자체가 안 뜬다(마이페이지만
     실제 `onEditTapped`를 채워 자기 컬렉션 편집 진입점으로 쓴다).
+- ⚠️ **조용한 재조회(`load()`→`loadUserPage(isSilentRefresh:)`)는 병렬(`async let`) 5개 결과를 로컬
+  변수로 다 받은 뒤 `state`에 일괄 대입한다(#236)** — 받는 족족 `state`에 대입하면 중간 하나가 실패했을 때
+  실패 지점 앞의 값만 새로 교체돼 프로필 묶음이 부분 갱신된 채 남고(닉네임은 새 값·통계는 옛 값 등),
+  "실패해도 기존 화면 유지"라는 조용한 재조회 계약이 깨진다. fresh 경로는 실패 시 `presentError`로 전면
+  덮여 안 보이지만 silent는 그대로 드러난다. `MypageViewModel.loadMypage`도 같은 5개 병렬 로드 구조라,
+  조용한 재조회를 얹을 땐 동일하게 일괄 대입해야 한다.
+  - 알려진 절충(#236 리뷰에서 수용): 재조회 중 프로필 조회와 활동 피드 조회가 병렬이라, 그 사이 상대가
+    프로필을 바꾸면 피드 author 닉네임(응답에 없어 호출 측 프로필 값으로 채움)이 한 박자 옛 값일 수 있다 —
+    창이 매우 좁고 다음 재진입에 자가 치유되므로 순차화하지 않는다.

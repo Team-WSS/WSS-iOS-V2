@@ -11,6 +11,7 @@ import SwiftUI
 import CollectionFeature
 import FeedFeature
 import LibraryFeature
+import SearchFeature
 import SettingFeature
 import UserPageFeature
 import BaseDomain
@@ -46,7 +47,7 @@ import WSSComponent
 /// **컬렉션(#201)**: "컬렉션 N개" 행 탭 → 컬렉션 목록(`collectionListView`)까지 push하고, 그 안의 생성·
 /// 수정·상세·"작품 추가"/"서재에서 추가"까지 전부 이 루트가 조립한다(`CollectionFeatureFactory`는
 /// 화면 간 이동을 스스로 하지 않는다 — 모듈 CLAUDE.md 참고). 컬렉션 상세의 작품 탭은 다른 탭과 동일하게
-/// 작품 상세(`NovelDetailAssembly`)까지 이어진다(#201 `docs/TODO.md` 9번의 후속 조치) — 그 상세가 다시
+/// 작품 상세(`NovelDetailAssembly`)까지 이어진다(#201에서 해소된 옛 TODO 항목의 후속 조치) — 그 상세가 다시
 /// 여는 리뷰·피드 작성·피드 상세·유저 프로필·일반 검색까지 `LibraryRootView`와 동일한 구조로 이 루트에도
 /// 옮겨왔다(마이페이지에서 진입했다고 그 하위 흐름이 달라질 이유가 없어서).
 ///
@@ -100,6 +101,9 @@ struct MypageRootView: View {
         case novelReview(novelID: NovelID, title: String, status: ReadingStatus)
         case search
         case authorSearch(String)
+        /// 검색 화면의 장르/키워드 "더보기" 헤더 → 상세탐색 필터 화면(#236 — 진입점이 열 탭을 payload로
+        /// 지정, `HomeRootView`와 동일 규칙). 확정 시 필터 화면은 스택에 남고 `detailSearch`가 위로 push된다.
+        case detailSearchFilter(DetailSearchFilterTab)
         case detailSearch(SearchFilter)
     }
 
@@ -130,11 +134,10 @@ struct MypageRootView: View {
     /// 프로필 공개 설정 화면이 저장 성공으로 dismiss된 뒤, 돌아온 설정 목록 화면에서 이 루트가 띄운다.
     @State private var isVisibilityChangedToastPresented = false
     @State private var visibilityChangedToastType: WSSToastType = .changePublic
-    /// 타유저 프로필 차단 성공 시(그 화면 pop) 복귀한 이 루트가 띄우는 "차단했어요" 토스트(#221, V1 parity).
-    /// `UserPageAssembly`의 `onUserBlocked` seam이 닉네임을 올려주면 표시한다(위 저장/변경 토스트와 동일한
-    /// 크로스스크린 패턴) — 4탭 공통이라 통합 채널 전환은 App 배선 재설계 때 재검토(`docs/TODO.md` 12절).
-    @State private var isUserBlockedToastPresented = false
-    @State private var blockedNickname = ""
+    /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
+    /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통.
+    /// 위 저장/변경 토스트들과 달리 push 목적지가 발화하는 완료라 이 채널을 탄다).
+    @State private var crossScreenFeedback = CrossScreenFeedbackState()
 
     /// "작품 추가"/"서재에서 추가" 확정 결과를 생성/수정 컬렉션 화면에 돌려주는 1회성 nil→값 채널
     /// (`CollectionFeatureFactory.makeCreateCollectionView` 문서 참고). 생성·수정이 동시에 열릴 일이
@@ -218,7 +221,11 @@ struct MypageRootView: View {
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
-                        FeedDetailAssembly.makeEditFeedView(feedID: feedID, dependencies: dependencies)
+                        FeedDetailAssembly.makeEditFeedView(
+                            feedID: feedID,
+                            dependencies: dependencies,
+                            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+                        )
                     case .userPage(let userID):
                         UserPageAssembly.makeView(
                             userID: userID,
@@ -229,10 +236,7 @@ struct MypageRootView: View {
                             },
                             onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                             onCollectionListTapped: { path.append(Destination.userCollectionList(userID)) },
-                            onUserBlocked: { nickname in
-                                blockedNickname = nickname
-                                isUserBlockedToastPresented = true
-                            }
+                            onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):
                         userLibraryView(userID)
@@ -256,12 +260,15 @@ struct MypageRootView: View {
                             title: title,
                             status: status,
                             dependencies: dependencies,
-                            onAuthenticationRequired: onAuthenticationRequired
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onSaved: { crossScreenFeedback.present(.novelReviewed) }
                         )
                     case .search:
                         searchView()
                     case .authorSearch(let authorName):
                         searchView(initialQuery: authorName)
+                    case .detailSearchFilter(let initialTab):
+                        detailSearchFilterView(initialTab: initialTab)
                     case .detailSearch(let filter):
                         detailSearchResultView(filter)
                     }
@@ -286,7 +293,7 @@ struct MypageRootView: View {
             deepLinkDestinationDepth = nil
             onDeepLinkDestinationDismissed()
         }
-        .showWSSToast(isPresented: $isUserBlockedToastPresented, type: .blockUser(nickname: blockedNickname))
+        .showCrossScreenFeedbackToast($crossScreenFeedback)
     }
 }
 
@@ -513,7 +520,7 @@ private extension MypageRootView {
     }
 }
 
-// MARK: - 작품 상세 (컬렉션 상세 작품 탭 → #201 `docs/TODO.md` 9번의 후속 조치)
+// MARK: - 작품 상세 (컬렉션 상세 작품 탭 → #201에서 해소된 옛 TODO 항목의 후속 조치)
 
 private extension MypageRootView {
     func novelDetailView(_ novelID: NovelID) -> some View {
@@ -582,7 +589,12 @@ private extension MypageRootView {
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
-            connectedNovel: connectedNovel
+            connectedNovel: connectedNovel,
+            onSubmitted: {
+                crossScreenFeedback.present(.feedEdited)
+                // 피드 탭 목록은 재진입에 목록을 다시 받지 않아, 다른 탭에서 쓴 새 글은 이 신호로만 들어간다.
+                dependencies.feedListInvalidation.markFeedCreated()
+            }
         )
     }
 }
@@ -597,7 +609,16 @@ private extension MypageRootView {
             dependencies: dependencies,
             onNovelSelected: { path.append(Destination.novel($0)) },
             onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
+            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
             initialQuery: initialQuery
+        )
+    }
+
+    func detailSearchFilterView(initialTab: DetailSearchFilterTab) -> some View {
+        SearchAssembly.makeDetailSearchFilterView(
+            initialTab: initialTab,
+            dependencies: dependencies,
+            onSearch: { filter in path.append(Destination.detailSearch(filter)) }
         )
     }
 

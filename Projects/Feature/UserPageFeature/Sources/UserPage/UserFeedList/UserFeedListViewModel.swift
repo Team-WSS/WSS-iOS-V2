@@ -63,6 +63,8 @@ final class UserFeedListViewModel {
     @ObservationIgnored private var hasLoadedFirstPage = false
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
+    /// 마지막 첫 페이지(재조회) 요청 이후 좋아요를 토글한 셀 — 재조회 병합 보호용(`NovelDetailViewModel`과 동일, #236).
+    @ObservationIgnored private var likeToggledDuringRefresh: Set<FeedID> = []
     @ObservationIgnored private var feedActionTask: Task<Void, Never>?
 
     // MARK: - Dependency
@@ -131,11 +133,21 @@ final class UserFeedListViewModel {
 // MARK: - Action Handling
 
 private extension UserFeedListViewModel {
+    /// 진입/재진입 로드. onAppear는 재진입마다 불린다(#236, push 재진입 재조회 복원 — V1 parity).
+    /// - **첫 로드**: 로딩과 함께 첫 페이지. 실패는 가드를 소진하지 않아 재시도가 열려 있다.
+    /// - **재진입**: 스피너·목록 비움 없이 **조용히 첫 페이지를 재조회**해 목록을 교체한다(V1의
+    ///   "비우고 처음부터 + 로딩뷰" 대신 — 스크롤·화면 보존 재검토 결과). 실패해도 기존 목록 유지.
+    ///   ⚠️ 재조회 성공은 페이지네이션을 첫 페이지로 되돌린다 — 깊이 스크롤한 채 복귀하면 스크롤이
+    ///   당겨질 수 있는 감수(알림 목록과 동일).
     func load() {
-        guard !hasLoadedFirstPage, feedsTask == nil else { return }
-        state.isLoadingFeeds = true
-        state.feedsLoadFailed = false
-        feedsTask = Task { await loadFeedsPage(after: nil) }
+        guard feedsTask == nil else { return }
+        if hasLoadedFirstPage {
+            feedsTask = Task { await loadFeedsPage(after: nil, isSilentRefresh: true) }
+        } else {
+            state.isLoadingFeeds = true
+            state.feedsLoadFailed = false
+            feedsTask = Task { await loadFeedsPage(after: nil) }
+        }
     }
 
     /// 다음 페이지. `lastFeedID` 커서는 현재 목록의 마지막 피드.
@@ -157,6 +169,7 @@ private extension UserFeedListViewModel {
 
         state.feeds[index] = feed
         syncingLikeFeedIDs.insert(feedID)
+        likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
     }
 
@@ -185,11 +198,15 @@ private extension UserFeedListViewModel {
 // MARK: - UseCase Handling
 
 private extension UserFeedListViewModel {
-    func loadFeedsPage(after lastFeedID: FeedID?) async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 실패해도 기존 목록을 실패 뷰로 덮지 않는다.
+    func loadFeedsPage(after lastFeedID: FeedID?, isSilentRefresh: Bool = false) async {
         defer {
             feedsTask = nil
             state.isLoadingFeeds = false
         }
+        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글) — 첫 페이지 교체에서만 쓴다(#236).
+        var likeProtectedIDs = syncingLikeFeedIDs
+        if lastFeedID == nil { likeToggledDuringRefresh = [] }
 
         do {
             let page = try await loadUserFeedsUseCase.execute(
@@ -198,11 +215,26 @@ private extension UserFeedListViewModel {
                 profileImage: profileImage,
                 lastFeedID: lastFeedID ?? FeedID(0)
             )
-            state.feeds.append(contentsOf: page.items)
+            // 첫 페이지는 교체, 다음 페이지는 append — 재조회(교체)가 이전 방문의 목록 위에 겹치지 않게.
+            if lastFeedID == nil {
+                likeProtectedIDs.formUnion(likeToggledDuringRefresh)
+                var items = page.items
+                // 보호 셀은 좋아요 두 필드만 로컬 우선(`preservingLikeState`) — 통째 교체가 낙관 토글을 되덮지 않게.
+                if !likeProtectedIDs.isEmpty {
+                    for index in items.indices where likeProtectedIDs.contains(items[index].feedId) {
+                        if let local = state.feeds.first(where: { $0.feedId == items[index].feedId }) {
+                            items[index] = items[index].preservingLikeState(of: local)
+                        }
+                    }
+                }
+                state.feeds = items
+                hasLoadedFirstPage = true
+            } else {
+                state.feeds.append(contentsOf: page.items)
+            }
             state.hasNextFeeds = page.hasNext
-            if lastFeedID == nil { hasLoadedFirstPage = true }
         } catch {
-            if lastFeedID == nil { state.feedsLoadFailed = true }
+            if lastFeedID == nil, !isSilentRefresh { state.feedsLoadFailed = true }
             logger?.error("UserFeedList 로드 실패: \(String(describing: error))")
         }
     }
@@ -217,7 +249,8 @@ private extension UserFeedListViewModel {
             }
         } catch {
             if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
-                state.feeds[index] = before
+                // 좋아요 두 필드만 되돌림 — 재조회가 가져온 최신 본문을 이전 스냅샷으로 물리지 않게(병합과 대칭).
+                state.feeds[index] = state.feeds[index].preservingLikeState(of: before)
             }
             logger?.error("UserFeedList 좋아요 동기화 실패: \(String(describing: error))")
         }

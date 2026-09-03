@@ -24,6 +24,8 @@ public enum NovelReviewFeatureFactory {
     ///     호출자가 주입한다(로드된 초안이 있으면 그 값으로 갱신될 수 있다).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 로드/저장 등 서버 호출 공통.
     ///     실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    ///   - onSaved: 저장 **성공**으로 닫힐 때 dismiss 직전 발화(#236 — 취소로 닫힐 땐 안 부른다).
+    ///     "평가 완료" 토스트는 이 화면이 pop되므로 복귀 스택(App 크로스스크린 피드백 채널)이 띄운다.
     ///   - keywordSearchSheet: 키워드 탐색 시트 콘텐츠 빌더 — `KeywordFeature`는 이 모듈이 모르므로
     ///     App이 조립해 주입한다(`KeywordSearchSheetBuilder` 참고).
     @MainActor
@@ -36,6 +38,7 @@ public enum NovelReviewFeatureFactory {
         appReviewUseCase: AppReviewRequestUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
+        onSaved: @escaping () -> Void = {},
         keywordSearchSheet: @escaping KeywordSearchSheetBuilder
     ) -> some View {
         let viewModel = NovelReviewViewModel(
@@ -50,6 +53,7 @@ public enum NovelReviewFeatureFactory {
             viewModel: viewModel,
             title: title,
             onAuthenticationRequired: onAuthenticationRequired,
+            onSaved: onSaved,
             keywordSearchSheet: keywordSearchSheet
         )
     }

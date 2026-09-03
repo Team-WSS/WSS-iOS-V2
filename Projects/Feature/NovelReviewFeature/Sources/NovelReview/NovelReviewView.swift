@@ -34,6 +34,9 @@ struct NovelReviewView: View {
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 로드/저장 등 서버 호출 공통.
     /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
     private let onAuthenticationRequired: () -> Void
+    /// 저장 **성공**으로 닫힐 때 dismiss 직전 발화(#236, 취소로 닫힐 땐 안 부른다) — 이 화면은 pop되므로
+    /// "평가 완료" 토스트는 복귀 스택(App)이 띄운다(크로스스크린 피드백 채널, V1 `NovelReviewed` parity).
+    private let onSaved: () -> Void
     /// 키워드 탐색 시트 콘텐츠 — `KeywordFeature`는 이 모듈이 모르므로 App이 조립해 주입한다.
     private let keywordSearchSheet: KeywordSearchSheetBuilder
 
@@ -41,11 +44,13 @@ struct NovelReviewView: View {
         viewModel: NovelReviewViewModel,
         title: String,
         onAuthenticationRequired: @escaping () -> Void,
+        onSaved: @escaping () -> Void = {},
         keywordSearchSheet: @escaping KeywordSearchSheetBuilder
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.title = title
         self.onAuthenticationRequired = onAuthenticationRequired
+        self.onSaved = onSaved
         self.keywordSearchSheet = keywordSearchSheet
     }
 
@@ -102,6 +107,8 @@ struct NovelReviewView: View {
             guard shouldDismiss else { return }
             // 리뷰 프롬프트는 화면이 pop되기 전에 띄운다(저장 성공 경로에서만 게이트가 켜진다).
             if viewModel.state.shouldRequestReview { requestReview() }
+            // 저장 성공으로 닫힐 때만 — 취소(그만하기·뒤로가기)로 닫힐 땐 완료 피드백이 없어야 한다.
+            if viewModel.state.didSaveReview { onSaved() }
             dismiss()
         }
         // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.

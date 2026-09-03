@@ -110,15 +110,25 @@ private extension OnboardingRootView {
 private extension OnboardingRootView {
     /// 홈의 "{닉네임}님을 위한 추천글" 섹션은 서버 응답이 아니라 **로컬 캐시**(`UserDefaultsStorage`의
     /// `.nickname`)를 읽는다(`RecommendationData`, `HomeFeature/CLAUDE.md` 참고) — 로그인/온보딩
-    /// 완료만으로는 이 캐시가 안 채워지므로, Home으로 넘어가기 직전에 `syncUserBasicInfo()`로 한 번
-    /// 채워준다. 실패해도(네트워크 등) 닉네임 없이 "추천글"로만 표시될 뿐 치명적이지 않아 Home 진입
-    /// 자체는 막지 않는다.
+    /// 완료만으로는 이 캐시가 안 채워지므로, Home으로 넘어가기 직전에 `syncUserBasicInfo()`로 채워준다.
+    ///
+    /// ⚠️ 로그인 성공이 이전 사용자 잔존 방지를 위해 사용자 스코프 캐시(`.userID` 포함)를 지우므로(#236),
+    /// 이 동기화가 끝내 실패하면 닉네임만이 아니라 **"내 글" 판정·마이페이지 프로필까지 세션 내내 죽는다**
+    /// (`.userID` 캐시가 비면 `resolveUserID(.me)`가 실패) — 그래서 1회 재시도로 창을 좁힌다.
+    /// 그래도 실패하면 Home 진입 자체는 막지 않는다(다음 콜드 스타트의 부트스트랩 동기화가 회복).
     func syncProfileThenFinish() {
         Task {
             do {
                 try await DefaultSyncUserBasicInfoUseCase(repository: dependencies.profileRepository).execute()
             } catch {
-                dependencies.logger.error("사용자 기본 정보 동기화 실패(닉네임 캐시 미갱신): \(error)")
+                dependencies.logger.error("사용자 기본 정보 동기화 실패(1회 재시도): \(error)")
+                // 즉시 재시도는 순간 단절에 둘 다 실패하기 쉬워 반 박자 쉰다(Home 진입 지연은 최대 0.5초).
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                do {
+                    try await DefaultSyncUserBasicInfoUseCase(repository: dependencies.profileRepository).execute()
+                } catch {
+                    dependencies.logger.error("사용자 기본 정보 동기화 재시도 실패(userID 캐시 미복구 — 다음 콜드 스타트에 회복): \(error)")
+                }
             }
             onFinished()
         }

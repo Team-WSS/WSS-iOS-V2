@@ -166,6 +166,7 @@ struct MyFeedFilterSheet: View {
         viewModel: SosoFeedViewModel(
             loadMyFeedsUseCase: PreviewLoadMyFeedsUseCaseForSheet(),
             loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCaseForSheet(),
+            loadFeedDetailUseCase: PreviewLoadFeedDetailUseCaseForSheet(),
             feedLikeUseCase: PreviewFeedLikeUseCaseForSheet(),
             loadProfileUseCase: PreviewLoadProfileUseCaseForSheet(),
             deleteFeedUseCase: PreviewDeleteFeedUseCaseForSheet(),
@@ -187,6 +188,12 @@ private struct PreviewLoadSosoFeedsUseCaseForSheet: LoadSosoFeedsUseCase {
     func execute(option: SosoFeedOption,
                  lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         Paginated(items: [], hasNext: false)
+    }
+}
+
+private struct PreviewLoadFeedDetailUseCaseForSheet: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .notFound
     }
 }
 

@@ -77,7 +77,7 @@ struct DefaultLaunchTaskRepository: LaunchTaskRepository {
 
     /// taste는 개인화 응답이지만 `/novels/taste`가 `requireToken`이라 유효 토큰 없이는 실패해
     /// 슬롯이 안 채워진다(fail-closed) — 세션 전환 시 익명 데이터가 남는 today/trending의
-    /// 함정(`docs/TODO.md` 11절)이 이 슬롯엔 없다.
+    /// 함정(#236에서 세션 전환 시 `AppDependencies` 재조립으로 해소)이 이 슬롯엔 없다.
     private func prefetchPreferenceGenreNovels() async {
         guard let state = try? await recommendationRepository.fetchPreferenceGenreNovels() else { return }
         await prefetchStore.fillPreferenceGenreNovels(state)

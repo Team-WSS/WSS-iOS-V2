@@ -149,8 +149,8 @@
   - **작품 카드 탭은 `onNovelTapped(NovelID)` 콜백까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
     Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
     동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
-    **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201, `docs/TODO.md` 9번
-    해소) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
+    **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201에서 해소된
+    옛 TODO 항목) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
   - **"공유하기"는 카카오 공유 카드 하나다 — 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari).
     시스템 공유 시트는 쓰지 않는다**(#228, 사용자 확정 2026-08-29). 목표가 "받은 사람이 카톡에서 탭해 앱의 이

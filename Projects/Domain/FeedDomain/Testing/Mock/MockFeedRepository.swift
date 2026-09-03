@@ -24,7 +24,7 @@ public final class MockFeedRepository: FeedRepository {
     public var fetchedSosoFeeds: [(option: SosoFeedOption, lastFeedID: FeedID)] = []
     public var fetchedUserFeeds: [(id: UserID, nickname: String, profileImage: URL?, lastFeedID: FeedID)] = []
     public var fetchedMyFeeds: [(option: MyFeedOption, lastFeedID: FeedID)] = []
-    public var fetchedNovelFeeds: [(novelID: NovelID, lastFeedID: FeedID)] = []
+    public var fetchedNovelFeeds: [(novelID: NovelID, lastFeedID: FeedID, size: Int?)] = []
 
     public var addedLikeIDs: [FeedID] = []
     public var deletedLikeIDs: [FeedID] = []
@@ -125,8 +125,8 @@ public final class MockFeedRepository: FeedRepository {
         }
     }
 
-    public func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
-        fetchedNovelFeeds.append((id, lastFeedID))
+    public func fetchNovelFeeds(id: NovelID, lastFeedID: FeedID, size: Int?) async throws(RepositoryError) -> Paginated<TotalFeed> {
+        fetchedNovelFeeds.append((id, lastFeedID, size))
         switch fetchNovelFeedsResult {
         case .success(let value):
             return value

@@ -59,7 +59,7 @@
 
 7. 🔨 **고치기 확정→TODO 12절** (2026-08-28, 사용자: 0건도 설정 유도 카드로 — V1 parity, 빈 자리보다 행동 유도) — **선호장르 "설정했으나 0건" 분리** — V1은 로그인+취향추천 0건을 **미설정과 똑같이 설정 유도 카드**로 처리했다(둘 다 `unregisterView`). V2는 `.noGenreSettings`(→ 설정 유도)와 `.novels([])`(→ 섹션 숨김)를 나눈다. → [2.5](#25-선호장르-이-웹소설은-어때요-novelstaste)
 8. ⏸ **보류** (2026-08-28, 사용자: 실측 후 재검토 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 7) — **취향추천 독립 스켈레톤 로딩 제거** — V1은 취향추천만 별도 shimmer 스켈레톤을 항상 띄웠다(개인화 연산이 느려서). V2는 홈 전체가 한 로드라 섹션 단위 스켈레톤이 없다. → [4.2](#42-로딩)
-9. 🔧 **Splash 부트스트랩으로 이관(되살림, TODO 11절)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
+9. 🔧 **Splash 부트스트랩으로 이관(되살림, #236에서 App 배선 완료)** / 🗑 **토스트는 삭제 확정**(마이페이지가 띄움) (2026-08-28, 사용자) — **유저 정보(userMe) 조회·UserDefaults 저장 / editProfile 토스트 제거** — V1 홈이 `getUserMeData`로 userId·nickname·gender를 저장하고, 프로필 수정 복귀 시 토스트를 띄웠다. V2 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다. → [6.2](#62-유저-정보-처리)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -264,8 +264,8 @@
 
 ### 6.2 유저 정보 처리
 
-- 🔧 **Splash 부트스트랩으로 이관 확정** (2026-08-28, 사용자: 유저 정보 조회·캐시 갱신은 앱 진입마다 필요 — `docs/TODO.md` 11절 런치 허브) — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
-  - V2: 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다(`fetchCachedNickname`). 저장은 로그인·프로필 조회 등 다른 경로가 담당(홈의 책임 아님). **앱 진입마다 `/users/me` 재조회·캐시 갱신은 Splash 부트스트랩이 맡는다**(신설 대기).
+- 🔧 **Splash 부트스트랩으로 이관 확정** (2026-08-28, 사용자: 유저 정보 조회·캐시 갱신은 앱 진입마다 필요 — #236에서 App 배선 완료) — V1 홈은 `viewDidLoad`에서 `getUserMeData`로 **userId·nickname·gender를 UserDefaults에 저장**했다(홈이 유저 정보 갱신 지점 겸용).
+  - V2: 홈은 닉네임을 **로컬 캐시에서 읽기만** 한다(`fetchCachedNickname`). 저장은 로그인·프로필 조회 등 다른 경로가 담당(홈의 책임 아님). **앱 진입마다 `/users/me` 재조회·캐시 갱신은 Splash 부트스트랩이 맡는다**(#236에서 배선 완료 — `SplashData.DefaultLaunchTaskRepository.syncUserBasicInfo`).
   - 근거: V1 `HomeViewModel.swift:200-213`,`299-301` · V2 `LoadHomeDataUseCase.swift:46`, `RecommendationDomain/CLAUDE.md`(닉네임은 로컬 캐시)
 - 🗑 **Delete 확정** (2026-08-28, 사용자: 편집 저장 토스트는 마이페이지가 띄움 — UserPage 계약 1.9 ✅, 홈 복귀 경로 자체가 없음) — V1은 `NotificationName.editProfile`을 관찰해 프로필 수정 복귀 시 **"프로필 수정" 토스트**를 띄웠다.
   - V2: 홈에 이 토스트가 없다.

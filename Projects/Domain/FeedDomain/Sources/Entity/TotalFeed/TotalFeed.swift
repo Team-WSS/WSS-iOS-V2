@@ -53,7 +53,58 @@ public struct TotalFeed: Equatable, Sendable {
         }
         isLiked.toggle()
     }
-    
+
+    /// 재조회로 받은 서버 항목(self)에 **로컬 항목의 좋아요 상태(isLiked·likeCount)만** 얹은 사본.
+    ///
+    /// 재진입 조용한 재조회의 통째 교체가 낙관 좋아요 토글과 겹칠 때 쓴다 — 서버 응답이 토글 이전
+    /// 스냅샷일 수 있어 그대로 교체하면 방금 누른 좋아요가 시각적으로 풀린다. 좋아요 두 필드만
+    /// 로컬 우선으로 보존하고 **본문·댓글수·수정 여부 등 나머지는 서버 값을 따른다**(셀 전체를
+    /// 로컬로 되돌리면 그 사이 서버에서 바뀐 다른 값까지 버리게 된다 — #236 리뷰).
+    public func preservingLikeState(of local: TotalFeed) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: content,
+            author: author,
+            likeCount: local.likeCount,
+            isLiked: local.isLiked,
+            commentCount: commentCount,
+            connectedNovel: connectedNovel,
+            isSpoiler: isSpoiler,
+            isModified: isModified,
+            isPublic: isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: thumbnailImageURL,
+            imageCount: imageCount
+        )
+    }
+
+    /// 피드 상세(`FeedDetail`) 응답으로 이 목록 항목을 갱신한 사본 — 목록에서 **다녀온 셀만** 상세 API로
+    /// 맞추는 데 쓴다(재진입 목록 재조회의 대체 — 목록 전체를 다시 받지 않아 스크롤·길이가 유지된다).
+    ///
+    /// 본문·좋아요·댓글수·스포일러/공개/수정 여부·연결 작품·이미지(썸네일=첫 장, 개수)는 상세 값을 따르고,
+    /// **`feedId`·`createdDate`·`author`·`isMyFeed`는 로컬을 유지**한다 — `isMyFeed`는 상세 응답에 없고,
+    /// `author`는 내 피드 목록이 프로필 조회로 덧씌운 값이라 상세의 author로 되돌리면 그 조립이 풀린다.
+    /// 작성일은 바뀌지 않는 값이라 목록 응답의 표기를 그대로 둔다.
+    public func updated(from detail: FeedDetail) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: detail.feedContent,
+            author: author,
+            likeCount: detail.likeCount,
+            isLiked: detail.isLiked,
+            commentCount: detail.commentCount,
+            connectedNovel: detail.connectedNovel?.basicInfo,
+            isSpoiler: detail.isSpoiler,
+            isModified: detail.isModified,
+            isPublic: detail.isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: detail.feedImageURLs.first ?? nil,
+            imageCount: detail.feedImageURLs.count
+        )
+    }
+
     public init(
         feedId: FeedID,
         createdDate: String,

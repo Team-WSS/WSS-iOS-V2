@@ -115,11 +115,20 @@ final class NotificationListViewModel {
 
 private extension NotificationListViewModel {
 
-    /// 진입 시 첫 페이지 로드. onAppear는 재진입마다 불리므로 성공 후에는 다시 로드하지 않되,
-    /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
+    /// 진입/재진입 로드. onAppear는 재진입마다 불린다(#236, push 재진입 재조회 복원 — V1 parity).
+    /// - **첫 로드**(`!hasLoaded`): 로딩 뷰와 함께 처음부터 로드. 실패는 가드를 소진하지 않아 재시도가 열려 있다.
+    /// - **재진입**(`hasLoaded`): 스피너·목록 비움 없이 **조용히 첫 페이지를 재조회**해 목록을 교체한다 —
+    ///   상세/피드/작품에서 복귀하는 사이 서버에서 바뀐 것(새 알림·다른 기기 읽음)을 반영하기 위함.
+    ///   실패해도 기존 화면을 그대로 둔다(백그라운드 갱신이므로 — `NovelDetailViewModel.load` 정본).
+    ///   ⚠️ 재조회 성공은 목록을 첫 페이지로 되돌린다(페이지네이션 리셋) — 깊이 스크롤한 채 복귀하는
+    ///   드문 경우 스크롤이 위로 당겨질 수 있는 감수(V1은 아예 로딩뷰로 비우고 처음부터였다).
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
-        reloadFromScratch()
+        guard loadTask == nil else { return }
+        if hasLoaded {
+            loadTask = Task { await loadPage(lastNotificationID: nil, isSilentRefresh: true) }
+        } else {
+            reloadFromScratch()
+        }
     }
 
     /// 전면 실패 뷰의 재시도.
@@ -205,7 +214,9 @@ private extension NotificationListViewModel {
 private extension NotificationListViewModel {
 
     /// 알림 페이지 로드. `lastNotificationID == nil`이면 첫 페이지(목록 교체), 아니면 다음 페이지(append).
-    func loadPage(lastNotificationID cursor: NotificationID?) async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 성공 처리는 첫 페이지와 같되(목록 교체 + 커서 리셋),
+    /// 실패해도 화면을 실패 뷰로 덮지 않는다.
+    func loadPage(lastNotificationID cursor: NotificationID?, isSilentRefresh: Bool = false) async {
         defer {
             loadTask = nil
             state.isLoading = false
@@ -220,6 +231,10 @@ private extension NotificationListViewModel {
             if cursor == nil {
                 state.items = page.items
                 hasLoaded = true
+                // 재조회로 목록을 새로 받으면 읽음 여부는 서버 값이 정본 — 이전 방문의 전송 기록을
+                // 비워야 그때 실패했던 알림을 다시 탭했을 때 재요청이 스킵되지 않는다
+                // (`reloadFromScratch`가 로드 전에 비우는 것과 같은 이유, 이쪽은 성공 시에만).
+                if isSilentRefresh { markedAsReadIDs = [] }
             } else {
                 state.items.append(contentsOf: page.items)
             }
@@ -230,7 +245,11 @@ private extension NotificationListViewModel {
             guard !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
             if routeToLoginIfAuthenticationRequired(error) { return }
-            if cursor == nil {
+            if isSilentRefresh {
+                // 조용한 재조회 실패는 기존 화면을 그대로 둔다 — 실패 뷰로 덮으면 멀쩡히 보고 있던
+                // 목록이 사라진다(백그라운드 갱신 실패는 알리지 않는 NovelDetail 계약과 동일).
+                logger?.error("NotificationList 실패(silentRefresh): \(String(describing: error))")
+            } else if cursor == nil {
                 // 첫 페이지 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
                 state.loadFailed = true
                 logger?.error("NotificationList 실패(load): \(String(describing: error))")

@@ -63,14 +63,14 @@
 8. 🔧 **미배선** — **프로필 탭 → 유저 페이지 / 탈퇴 유저(userId == -1) 처리** — 프로필 탭 배선 시 V1의 "탈퇴 유저" 토스트 가드도 함께 복원. → [1.6](#16-상호작용네비게이션)·[3.6](#36-상호작용네비게이션-상세)
 9. 🔧 **미배선** — **셀 선택 더블탭 가드** — V1 throttle(1s/500ms). 화면 전환 자체가 미배선이라 배선 시 함께. → [1.6](#16-상호작용네비게이션)
 10. 🔧 **미배선** — **수정 기존 이미지 prefill** — V1은 첨부 이미지를 Kingfisher로 내려받아 채움. V2는 `initialDraft` 데이터가 있어야(App 배선 의존) 채워진다. → [4.1](#41-진입prefill)
-11. 🔧 **미배선** — **작성 성공 후 dismiss·목록 갱신·피드 상세 pop** — `feedEdited`/`popFeedDetailViewController` 크로스스크린 알림 배관이 V2에 없다(App 조정 계층에서 push 재진입 재조회·알림 재도입과 함께, 12절). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
+11. ✅ **구현 완료(#236)** — **작성 성공 후 dismiss·목록 갱신·완료 피드백** — V1의 `feedEdited`/`popFeedDetailViewController` 크로스스크린 알림 배관을 V2는 다르게 채웠다: dismiss는 `.submitted` onChange(#197), 목록 갱신은 push 재진입 조용한 재조회(#236), 완료 토스트는 App `CrossScreenFeedback` 채널의 `onSubmitted` seam(#236). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
 12. 🔧 **미배선** — **빈 화면 "피드 작성" CTA** — `WSSEmptyView(type: .myFeed)`는 뜨지만 버튼 액션이 빈 클로저(작성 화면 배선 대기). → [1.4](#14-빈-화면에러로딩)
 
 **의도적 변경 (확인 완료)**
 
 13. 🔧 **미분류(연결 작품 없는 내 피드) 필터** — V1 `etc` case → V2 `includesUncategorized: Bool` 별도 필드 + Data가 `"etc"` sentinel 부착(FeedDomain/CLAUDE.md:18 오탐 방지). → [2.2](#22-장르-필터)·[부록](#부록-a-서버-요청-파라미터-매핑-c2-비교-재료)
 14. 🗑 **Amplitude 이벤트 제거** — 피드 진입·작성·좋아요·신고 등. 홈·리뷰와 함께 횡단 재도입 대상(12절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
-15. 🗑 **`BlockUser`/`feedEdited` 알림 토스트** — 차단·수정 완료 크로스스크린 토스트 배관. push 재진입 재조회·알림 재도입과 함께 App에서 재설계(12절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
+15. ✅ **구현 완료(#236 — App 크로스스크린 피드백 채널)** — **`BlockUser`/`feedEdited` 알림 토스트** — V1의 싱글톤 `NotificationCenter` 배관 대신 App `CrossScreenFeedback` 채널(콜백 seam)이 차단·작성/수정 완료·평가 완료 토스트를 복귀 화면 위에 띄운다. → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 
 **추가 확정 (2026-08-28 사용자) → 구현 대기 (`docs/TODO.md` 12절)**
 
@@ -95,10 +95,10 @@
   - V2: `state.myFeeds`/`state.sosoFeeds` 두 배열을 한 VM이 들고, `currentFeeds`로 가른다. 관찰 동작(탭 누르면 그 목록)은 같다.
   - 근거: V1 `FeedViewController.swift:28-31`,`207-229`(3 VC 생성·스크롤 잠금) · V2 `SosoFeedView.swift:252-257`, `SosoFeedViewModel.swift:33-34`
 - ✅ **Keep** — 탭/옵션을 바꾸면 목록을 **처음부터 다시 채운다**(페이징 상태 리셋 후 재조회).
-  - V2: `onChange(of: selectedTab)`/`onChange(of: selectedSosoFeedOption)` → `.load`(refresh: true). 스크롤 위치도 `.id(scrollIdentity)`로 최상단 리셋.
+  - V2: VM `selectTab`/`selectSosoFeedOption`이 `reloadFromScratch`(진행 중 로드 취소+재대입, 같은 값 재선택은 무시 — 2026-09-03). 스크롤 위치도 `.id(scrollIdentity)`로 최상단 리셋.
   - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedView.swift:98-104`,`259-266`, `SosoFeedViewModel.swift:160-163`
-- ✅ **Keep** (확정 2026-08-28: 재진입 재조회 없음은 화면별 의도 설계) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(5)이나 탭 재선택으로만 일어났다.
-  - V2: `SosoFeedView`가 `onAppear`마다 `.load`. **탭 콘텐츠라면 복귀마다 갱신**이 V2 규약([Feature CLAUDE.md](../CLAUDE.md))이지만, V1은 오히려 진입 1회였다. 재조회 시점이 어긋날 수 있어 확인 필요.
+- ✅ **Keep + Improve** (확정 2026-09-03: V1처럼 재진입 재조회 없음, 대신 다녀온 셀만 동기화) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(5)이나 탭 재선택으로만 일어났다.
+  - V2: `SosoFeedView.onAppear → .load`는 탭별 첫 페이지를 세운 뒤엔 **목록을 다시 받지 않고**, 목록에서 들어갔던 피드(셀 탭·"수정하기")만 복귀 시 피드 상세 API로 그 셀을 교체한다(삭제·숨김이면 제거 — V1엔 없던 개선, 스크롤·길이 보존). 전체 최신화는 당겨서 새로고침. 작성 완료는 App `FeedListInvalidation`(V1 `feedEdited` parity)이 목록을 처음부터 다시 채운다. V2 규약 "탭 콘텐츠는 복귀마다 갱신"의 명시적 예외(정본: `CLAUDE.md` 화면 동작 계약). 한때(#236) 복귀마다 커서 0·20개로 통째 재조회해 깊이 스크롤한 위치가 튀었던 것을 되돌린 것.
   - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.swift:95-97`
 
 ### 1.2 목록 로드·페이지네이션
@@ -110,10 +110,10 @@
   - V2: 수단 변경 — V1은 스크롤 오프셋 임계값(`offsetY + viewHeight >= contentHeight`, **여백 0 = 정확히 바닥**), V2는 `LazyVStack` 마지막 행 `onAppear` → `.loadMore`.
   - 근거: V1 `FeedPageContentViewController.swift:308-318`, `FeedPageContentViewModel.swift:231-255` · V2 `SosoFeedView.swift:290-294`
 - ✅ **Keep** — 진행 중 중복 요청 가드(`isFetching`).
-  - V2: `isLoading` + `hasMore` 가드. (경합 방어는 서재만큼 정교하진 않음 — 단일 슬롯/취소 구조 아님.)
+  - V2(2026-09-03): 서재와 같은 **단일 슬롯(`feedsTask`) + 취소/재대입** 구조 — `load`/`loadMore`는 슬롯이 비었을 때만, 탭/옵션/필터/정렬 전환·당겨서 새로고침·작성 완료는 진행 중 로드를 취소하고 재대입한다(`CLAUDE.md` 주의사항).
   - 근거: V1 `FeedPageContentViewModel.swift:22`,`232-237` · V2 `SosoFeedViewModel.swift:223`,`280`
 - ✅ **Keep** — 당겨서 새로고침(pull-to-refresh)으로 목록을 처음부터 다시 받는다.
-  - V2: `.refreshable { .load }`.
+  - V2: `.refreshable { .pullToRefresh; await awaitFeedsLoad() }` — 현재 탭을 커서 0부터 다시 받고, 인디케이터는 로드 완료까지 남는다. 재진입이 목록을 다시 받지 않으므로(1.1) **전체 최신화는 이 경로뿐**이다(2026-09-03).
   - 근거: V1 `FeedPageContentViewController.swift:86`(refreshControl), `FeedPageContentViewModel.swift:257-280` · V2 `SosoFeedView.swift:310-312`
 - 🔧 **Improve** — **내 피드 작성자 정보 조립**. V1 내 피드는 `getMyFeedData`가 `getMyProfileData`(프로필)와 `getUserFeed`(목록)를 **`zip`으로 매번 함께** 받아 닉네임/프로필을 합쳤다. V2는 프로필을 **한 번 받아 캐시**(`cachedMyProfile`)하고 탭을 오갈 때 재사용한다.
   - V2: `fetchMyFeeds` 응답에 작성자 정보가 없어 `LoadProfileUseCase`로 따로 조회 후 `applying(_:to:)`으로 `TotalFeed.author`를 채운다(FeedFeature가 `ProfileDomain`을 직접 의존하는 이유). 관찰 동작(내 피드에 내 프로필/닉네임 표시)은 같다.
@@ -322,7 +322,7 @@
   - V2: back 탭 → `showDismissAlert`(`.stopWritingFeed`), 확인 시 `dismiss`.
   - 근거: V1 `FeedEditViewModel.swift:160-165`,`276-280`(stopEditButton) · V2 `CreateFeedView.swift:174-176`,`139-146`
 - ✅ **앱 리뷰 요청: 구현 완료 (#221)** — **작성/수정 성공 후 처리**. V1은 성공마다 무조건 `AppReviewManager.requestReview()`를 호출했다(작성+수정, 앱측 억제 없음).
-  - V2: `submit()` 성공 시 `AppReviewRequestUseCase`(감상평과 공유, **참여 임계치+버전 게이트**)를 통과하면 `CreateFeedView`가 `@Environment(\.requestReview)`(StoreKit)로 프롬프트를 dismiss 직전에 띄운다. "무분별 호출 금지"로 V1의 매번 호출을 게이트로 대체. 목록 갱신은 V2가 탭 복귀마다 재조회하므로 V1의 `NotificationName.feedEdited` 브로드캐스트는 불필요(별도 배선 없음), dismiss는 `.submitted` onChange가 이미 처리(#197).
+  - V2: `submit()` 성공 시 `AppReviewRequestUseCase`(감상평과 공유, **참여 임계치+버전 게이트**)를 통과하면 `CreateFeedView`가 `@Environment(\.requestReview)`(StoreKit)로 프롬프트를 dismiss 직전에 띄운다. "무분별 호출 금지"로 V1의 매번 호출을 게이트로 대체. 목록 갱신은 App `FeedListInvalidation.markFeedCreated()`(V1 `NotificationName.feedEdited` parity — 4탭 Root의 작성 `onSubmitted`)가 피드 탭 목록을 처음부터 다시 채운다(2026-09-03. 그 전엔 탭 복귀마다 재조회해 별도 배선이 없었다), dismiss는 `.submitted` onChange가 이미 처리(#197).
   - 근거: V1 `FeedEditViewModel.swift:188-197` · V2 `CreateFeedViewModel.swift`(submit 성공 → `recordEngagementAndGateReview`), `CreateFeedView.swift`(submitState onChange: requestReview→dismiss)
 - 🔧 **복원 확정→TODO** (2026-08-28: 무변경 재저장 차단) — **수정 "변경 감지" 게이트**. V1 수정 모드는 내용·스포일러·공개·연결작품·이미지 중 **하나라도 바뀌어야** 완료 버튼 활성(`isInitialFeedChanged`). V2 `canSubmit`은 "내용 비어있지 않음"만 봐 무변경 재저장이 가능하다 → V1처럼 실제 변경 시만 활성으로 복원(불필요 PUT·이미지 재업로드 방지).
   - 근거: V1 `FeedEditViewModel.swift:322-330` · V2 `CreateFeedViewModel.swift:53-56`

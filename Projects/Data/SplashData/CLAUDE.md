@@ -25,4 +25,5 @@
 - 프리페치 슬롯은 **today·trending·taste 3개**다(taste는 2026-08-31 추가 — 홈의 원자적 첫 페인트가
   제일 느린 taste에 붙잡혀 2종만 데워선 이득이 0이라서). **3종 모두 `requireToken`이라 유효 세션 없인
   실패해 슬롯이 안 채워진다**(fail-closed — today/trending도 2026-08-31 전환). 죽은 세션의 프리페치가
-  익명 200으로 슬롯을 채우던 세션 전환 함정은 이로써 닫혔다(→ `SplashDomain` 문서·TODO 11절).
+  익명 200으로 슬롯을 채우던 세션 전환 함정은 이로써 닫혔다(→ `SplashDomain` 문서. 세션 전환 시
+  store 인스턴스 교체는 #236의 `ContentView.resetToOnboarding`이 `AppDependencies` 재조립으로 수행).

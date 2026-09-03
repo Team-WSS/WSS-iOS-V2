@@ -48,7 +48,7 @@
 4. **로그인 성공 시 FCM 토큰 발급** — V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.fetchFCMToken()`을 부른다. V2 인트로 흐름엔 안 보인다(푸시 권한은 "Home 진입 시점 별도"라고 문서화 — FCM 등록 시점이 어디로 옮겨졌는지 확인). → [1.6](#16-로그인-성공-라우팅)
    - **✅ 확정(2026-08-28, 조사): 인프라 존재·App 배선 대기(삭제 아님).** FCM 등록이 V1의 인라인 로그인 부수효과 → V2는 `NotificationDomain.RegisterDeviceTokenUseCase`(+`DefaultPushRepository`·엔드포인트 `/users/fcm-token`)로 분리됨. **호출부는 아직 미배선**(Feature·App grep 0) = App 부트스트랩 몫.
 5. **온보딩 진입 분석 이벤트** — V1은 "둘러보기" 탭 시 `AmplitudeManager.track(...nonLogin)`을 남긴다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로 자체가 없어 이벤트도 사라졌다. 분석 계측을 어디서 이어받는지 별개 확인. → [1.2](#12-둘러보기비로그인)
-   - **➡️ 확정(2026-08-28): Amplitude 횡단 재도입으로 흡수.** 화면별 계약이 아니라 앱 전반 애널리틱스 부재 사안 → `docs/TODO.md` 9(Amplitude 횡단 재도입, 별도 이슈 승격)로 이관.
+   - **➡️ 확정(2026-08-28): Amplitude 횡단 재도입으로 흡수.** 화면별 계약이 아니라 앱 전반 애널리틱스 부재 사안 → `docs/TODO.md` 12절(Amplitude 횡단 재도입, 별도 이슈 승격)로 이관.
 
 **🔧 눈에 띄는 개선 (근거 확인)**
 

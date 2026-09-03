@@ -14,7 +14,7 @@
   전부 네트워크(홈 "탭 복귀마다 갱신" 계약 유지). Demo·테스트에서 nil이면 기존과 완전히 동일하게 동작한다.
   - 홈 추천(today/trending/taste)은 **전부 `requireToken`이다**(2026-08-31 — today/trending을
     `usesTokenIfAvailable`에서 전환. 비로그인 진입이 불가해져 익명 허용의 의미가 없어졌고, 죽은 세션의
-    프리페치가 익명 200으로 슬롯을 채우던 세션 전환 함정도 함께 닫힌다 → TODO 11절). 소소픽만 공개
+    프리페치가 익명 200으로 슬롯을 채우던 세션 전환 함정도 함께 닫힌다 → `SplashDomain/CLAUDE.md`). 소소픽만 공개
     API(`withoutToken`)로 남아 있다. **`usesTokenIfAvailable`로 되돌리지 말 것** — 함정이 부활한다.
 - 홈 데이터 합성은 Domain의 `LoadHomeDataUseCase` 책임 — 여기선 개별 fetch만 구현.
 - ⚠️ **홈 응답의 장르는 영문 케이스명**(`romanceFantasy`·`BL`·`modernFantasy`)으로 온다 — 작품 상세

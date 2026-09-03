@@ -142,6 +142,9 @@ final class UserPageViewModel {
     @ObservationIgnored private var hasLoadedFirstFeeds = false
     @ObservationIgnored private var feedsTask: Task<Void, Never>?
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
+    /// 마지막 피드 재조회 요청 이후 좋아요를 토글한 셀 — 재조회 응답 병합의 보호 대상 계산용
+    /// (좋아요 POST가 목록 GET보다 먼저 끝나면 in-flight 집합만으론 놓친다 — `NovelDetailViewModel`과 동일, #236).
+    @ObservationIgnored private var likeToggledDuringRefresh: Set<FeedID> = []
     /// 피드 신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다(`NovelDetailFeature`와 동일).
     @ObservationIgnored private var feedActionTask: Task<Void, Never>?
 
@@ -237,11 +240,24 @@ final class UserPageViewModel {
 // MARK: - Action Handling
 
 private extension UserPageViewModel {
+    /// 진입/재진입 로드. onAppear는 재진입마다 불린다(#236, push 재진입 재조회 복원 — V1 parity).
+    /// - **첫 로드**(`!hasLoaded`): 전면 로딩과 함께 로드. 실패는 가드를 소진하지 않아 재시도가 열려 있다.
+    /// - **재진입**(`hasLoaded`): 로딩 없이 **조용히 재조회**해 프로필 묶음을 제자리 교체한다 — 이
+    ///   화면 위에 push된 피드 상세 등에서 바뀐 것(좋아요·차단·프로필 변경)을 복귀 즉시 반영하기 위함.
+    ///   활동 탭 미리보기도 이미 로드된 적 있으면 첫 페이지를 같이 재조회한다(V1은 피드까지 전부 재로드).
+    ///   실패해도 기존 화면을 그대로 둔다(`NovelDetailViewModel.load` 정본).
     func load() {
-        guard !hasLoaded, loadTask == nil else { return }
-        state.isLoading = true
-        state.hasLoadError = false
-        loadTask = Task { await loadUserPage() }
+        guard loadTask == nil else { return }
+        if hasLoaded {
+            loadTask = Task { await loadUserPage(isSilentRefresh: true) }
+            if hasLoadedFirstFeeds, feedsTask == nil, !state.isProfilePrivate {
+                feedsTask = Task { await loadFirstFeedsPage(isSilentRefresh: true) }
+            }
+        } else {
+            state.isLoading = true
+            state.hasLoadError = false
+            loadTask = Task { await loadUserPage() }
+        }
     }
 
     /// "활동" 탭 첫 진입 시 지연 로드(`NovelDetailFeature` 피드 탭과 동일 패턴). 미리보기라 첫 페이지만
@@ -265,6 +281,7 @@ private extension UserPageViewModel {
 
         state.feeds[index] = feed
         syncingLikeFeedIDs.insert(feedID)
+        likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
     }
 
@@ -314,10 +331,12 @@ private extension UserPageViewModel {
     /// 목록 API는 대상 사용자를 명시로 받는 계약이라 "본인 조회"와 달리 이 화면이 직접 userID를 넘긴다
     /// (`CollectionDomain/CLAUDE.md` 참고). 하나가 실패해도(구조적 동시성으로 나머지 자식 태스크는
     /// 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
-    func loadUserPage() async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 전면 로딩을 세우지 않고, 실패해도 기존
+    /// 화면을 그대로 둔다(비공개 전환·탈퇴 같은 의미 상태 변화도 다음 fresh 진입에서 반영).
+    func loadUserPage(isSilentRefresh: Bool = false) async {
         defer { loadTask = nil }
-        state.isLoading = true
-        defer { state.isLoading = false }
+        if !isSilentRefresh { state.isLoading = true }
+        defer { if !isSilentRefresh { state.isLoading = false } }
 
         do {
             async let profile = loadProfileUseCase.execute(target: .user(userID))
@@ -326,24 +345,40 @@ private extension UserPageViewModel {
             async let registeredNovelStats = loadUserRegisteredNovelStatsUseCase.execute(id: userID)
             async let collectionPreviews = loadCollectionPreviewsUseCase.execute(userID: userID, size: Self.collectionPreviewSize)
 
-            state.profile = try await profile
-            state.genrePreferences = try await genrePreferences
-            state.novelPreference = try await novelPreference
-            state.registeredNovelStats = try await registeredNovelStats
+            // 병렬 로드 결과를 로컬 변수로 모두 수급한 뒤 일괄 반영한다 — 중간 하나가 실패하면
+            // 어떤 state도 바꾸지 않아, 조용한 재조회의 "실패해도 기존 화면 유지" 계약을 정확히 지킨다
+            // (즉시 대입은 실패 지점 앞의 값만 교체돼 프로필 묶음이 부분 갱신된 채 남는다).
+            let loadedProfile = try await profile
+            let loadedGenrePreferences = try await genrePreferences
+            let loadedNovelPreference = try await novelPreference
+            let loadedRegisteredNovelStats = try await registeredNovelStats
             let (loadedCollectionPreviews, loadedCollectionCount) = try await collectionPreviews
+            state.profile = loadedProfile
+            state.genrePreferences = loadedGenrePreferences
+            state.novelPreference = loadedNovelPreference
+            state.registeredNovelStats = loadedRegisteredNovelStats
             state.collectionPreviews = loadedCollectionPreviews
             state.collectionCount = loadedCollectionCount
             hasLoaded = true
         } catch {
-            presentError(error)
+            if isSilentRefresh {
+                logger?.error("UserPage 재조회 실패(기존 화면 유지): \(String(describing: error))")
+            } else {
+                presentError(error)
+            }
         }
     }
 
-    func loadFirstFeedsPage() async {
+    /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 실패해도 기존 미리보기를 실패 뷰로 덮지 않는다.
+    /// 비공개 전환(`privateProfile`)만은 두 모드 모두 반영한다 — 서버가 접근 자체를 막은 의미 상태라서.
+    func loadFirstFeedsPage(isSilentRefresh: Bool = false) async {
         defer {
             feedsTask = nil
             state.isLoadingFeeds = false
         }
+        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글) — NovelDetail refreshFeeds와 동일 규칙(#236).
+        var likeProtectedIDs = syncingLikeFeedIDs
+        likeToggledDuringRefresh = []
 
         do {
             // 유저 피드 조회는 이 화면(유저 페이지)에서만 일어나므로, 이미 로드된 프로필의
@@ -354,14 +389,28 @@ private extension UserPageViewModel {
                 profileImage: state.profile?.characterImage,
                 lastFeedID: FeedID(0)
             )
-            state.feeds = page.items
+            likeProtectedIDs.formUnion(likeToggledDuringRefresh)
+            var items = page.items
+            // 보호 셀은 좋아요 두 필드만 로컬 우선(`preservingLikeState`) — 통째 교체가 낙관 토글을 되덮지 않게.
+            if !likeProtectedIDs.isEmpty {
+                for index in items.indices where likeProtectedIDs.contains(items[index].feedId) {
+                    if let local = state.feeds.first(where: { $0.feedId == items[index].feedId }) {
+                        items[index] = items[index].preservingLikeState(of: local)
+                    }
+                }
+            }
+            state.feeds = items
             state.hasNextFeeds = page.hasNext
             hasLoadedFirstFeeds = true
         } catch RepositoryError.privateProfile {
             state.isProfilePrivate = true
         } catch {
-            state.feedsLoadFailed = true
-            logger?.error("UserPage 피드 로드 실패: \(String(describing: error))")
+            if isSilentRefresh {
+                logger?.error("UserPage 피드 재조회 실패(기존 목록 유지): \(String(describing: error))")
+            } else {
+                state.feedsLoadFailed = true
+                logger?.error("UserPage 피드 로드 실패: \(String(describing: error))")
+            }
         }
     }
 
@@ -375,7 +424,8 @@ private extension UserPageViewModel {
             }
         } catch {
             if let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) {
-                state.feeds[index] = before
+                // 좋아요 두 필드만 되돌림 — 재조회가 가져온 최신 본문을 이전 스냅샷으로 물리지 않게(병합과 대칭).
+                state.feeds[index] = state.feeds[index].preservingLikeState(of: before)
             }
             logger?.error("UserPage 피드 좋아요 동기화 실패: \(String(describing: error))")
         }

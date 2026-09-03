@@ -25,4 +25,11 @@ public enum AppURL: Sendable {
 
     /// 서비스 이용약관 노션 페이지.
     public static let serviceAgreement = URL(string: "https://websoso.notion.site/143600bd74688050be18f4da31d9403e?pvs=4")
+
+    /// 앱스토어 상세 페이지(강제 업데이트 알럿 → 이동). V1과 같은 앱 레코드 ID이며,
+    /// 컷오버도 같은 레코드로 업로드하는 계획이라(docs/TODO.md 4절) ID가 유지된다.
+    /// V1의 `itms-apps://` 스킴 대신 https 유니버설 링크를 쓴다 — 실기기에선 똑같이 App Store 앱이
+    /// 열리고, 핸들러가 없는 환경(시뮬레이터 등)에서도 Safari 폴백으로 조용히 죽지 않는다(#236 실측 —
+    /// itms-apps는 시뮬레이터에서 "no registered handler"로 아무 반응이 없었다).
+    public static let appStore = URL(string: "https://apps.apple.com/kr/app/id6738299124")
 }

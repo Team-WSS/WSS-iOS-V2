@@ -853,7 +853,8 @@ private struct PreviewNovelInterestUseCase: NovelInterestUseCase {
 
 private struct PreviewLoadNovelFeedsUseCase: LoadNovelFeedsUseCase {
     func execute(novelID: NovelID,
-                 lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+                 lastFeedID: FeedID,
+                 size: Int?) async throws(RepositoryError) -> Paginated<TotalFeed> {
         Paginated(items: [], hasNext: false)
     }
 }

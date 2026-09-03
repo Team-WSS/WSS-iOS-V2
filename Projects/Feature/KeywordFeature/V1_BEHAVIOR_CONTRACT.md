@@ -51,7 +51,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
 4. 🗑/🔧 **Delete(호출부 이관)·Improve(전달 방식)** — **하단 액션바(초기화 + "n개 선택" 완료 버튼) 통째 제거 + 결과 전달 방식 전환.** V1은 `WSSBottomActionView`에 **초기화 버튼**과 **"n개 선택" 완료 버튼**을 두고, 완료 시 `NotificationCenter`(`"NovelReviewKeywordSelected"`)로 선택 목록을 던지고 모달을 닫았다. V2는 **확정 버튼 없이** 선택이 바뀔 때마다 `onSelectionChanged` 콜백으로 실시간 통지하며, 초기화·완료 CTA는 호출부 몫이다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
 5. 🗑 **Delete(호출부 이관)** — **모달 크롬(바텀 시트·타이틀·닫기 X) 제거.** V1은 화면 높이−81의 바텀 모달(상단 라운드 16, "키워드 선택" 타이틀, 닫기 X)이었다. V2는 크롬 없는 콘텐츠라 시트·타이틀·닫기를 호출부가 갖는다. → [8](#8-호출부로-이관삭제된-것-모달-크롬액션바)
 6. 🔧 **Improve 확정** (2026-08-28, 사용자: 로컬 고정이 맞음 — 서버 응답 의존 불필요) — **카테고리 목록이 서버 응답 → 로컬 고정 5종.** V1은 서버가 준 `categoryName`·`categoryImage`(URL)로 카테고리를 그렸고, V2는 로컬 `KeywordCategory` enum 5종 + `DomainPresentation`(서버 `categoryImage` 미매핑)이다. → [2](#2-카테고리-브라우징-접힘펼침)
-7. 🔧 **Improve 확정** (2026-08-28, 사용자: 캐시 갱신은 Splash 부트스트랩에서 — TODO 11절) — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
+7. 🔧 **Improve 확정** (2026-08-28, 사용자: 캐시 갱신은 Splash 부트스트랩에서 — #236에서 App 배선 완료) — **검색 데이터가 매 제출 서버 왕복 → 로컬 캐시 조회.** V1은 제출마다 `GET /keywords?query=`. V2는 로컬 DB 캐시(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 폴백. → [3](#3-검색)
 
 (나머지는 대부분 ✅ Keep — 수단만 RxSwift→구조적 동시성으로 바뀌고 관찰 동작은 같다.)
 
@@ -94,7 +94,7 @@ V2 `KeywordFeature`는 **재사용 콘텐츠**(카테고리 브라우징 + 검�
   - 근거: V1 `NovelKeywordSelectModalViewModel.swift:134`(`flatMapLatest`) · V2 `Sources/SearchKeywordViewModel.swift:134-143`, `CLAUDE.md`(stale 가드)
 - 🔧 **Improve 확정** (2026-08-28, 사용자) — **검색 데이터 소스**. V1은 제출마다 **서버 왕복**(`GET /keywords?query=`, 액세스 토큰 헤더). V2는 **로컬 DB 캐시** 조회(`searchKeywords`) + 실패 시 `syncKeywords()` 1회 후 재조회 폴백.
   - (오탐 방지: `BaseDomain/CLAUDE.md`에 "fetch/search는 로컬 캐시, sync가 서버 동기화"로 명문화된 의도적 구조.)
-  - **캐시 갱신 시점 = Splash 부트스트랩**(2026-08-28 사용자 결정, `docs/TODO.md` 11절 런치 허브): 앱 진입 시 `syncKeywords()`로 새 키워드가 검색에 빠지는 창을 없앤다.
+  - **캐시 갱신 시점 = Splash 부트스트랩**(2026-08-28 사용자 결정, #236에서 App 배선 완료): 앱 진입 시 `syncKeywords()`로 새 키워드가 검색에 빠지는 창을 없앤다.
   - 근거: V1 `WSSiOS/Network/Keyword/KeywordService.swift:18-42`(서버 GET) · V2 `SearchKeywordsUseCase.swift:23-33`, `BaseDomain/CLAUDE.md`(로컬/서버 계약)
 
 ## 4. 선택
