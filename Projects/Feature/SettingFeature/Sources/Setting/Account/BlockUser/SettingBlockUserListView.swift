@@ -49,6 +49,9 @@ struct SettingBlockUserListView: View {
                 blockUserListSection
             }
         }
+        // 네비바 아래 남은 세로 공간을 채운다 — 빈 상태(이미지+문구)가 네비바에 붙지 않고 중앙에 오도록.
+        // (예전엔 content가 body 루트라 화면을 꽉 채웠는데, 네비바와 한 VStack에 묶이며 채움이 사라졌다.)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var blockUserListSection: some View {
