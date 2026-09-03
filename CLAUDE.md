@@ -27,6 +27,10 @@
    (예외: `fastlane`(`Gemfile`) — 앱 바이너리에 링크되는 게 아니라 서명·아카이브·배포를 자동화하는
    빌드 툴링(Ruby gem)이라 이 원칙이 겨냥하는 "앱 런타임 의존성"과 다른 범주. #231에서 의도적으로
    도입, `docs/TODO.md` 4번 참고.)
+   - (예외: `FirebaseMessaging`(SPM) — fastlane과 달리 **앱 런타임 의존성**이지만, FCM 푸시 수신은
+     Firebase SDK 없이는 불가하고 서버가 이미 FCM으로 발송한다(V1도 동일 SDK 사용). #243에서 사용자
+     승인 하에 도입, **App 레이어에만 격리**(→ `Projects/App/CLAUDE.md` 푸시 배선). `FirebaseMessaging`
+     하나만 링크(Analytics 등 제외). 이 도입이 Tuist 4.29.1→4.206.0 업그레이드를 부른 이유이기도 하다(`.mise.toml`).)
 6. **작업 방식**: 브랜치 `Type/#이슈` (예: `Docs/#130`), 커밋 `[Type] #이슈 - 한글 설명`, 머지는 PR 경유(브랜치 보호). → [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 ---
