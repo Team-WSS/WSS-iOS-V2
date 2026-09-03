@@ -53,6 +53,16 @@ struct WSSIOSV2App: App {
                         _ = AuthController.handleOpenUrl(url: url)
                     }
                 }
+                .onAppear {
+                    // 푸시 알림 탭 딥링크(#243)를 onOpenURL과 **같은** pendingDeepLink 채널로 흘려보낸다 —
+                    // MainTabView가 선택된 탭 위에 push하고, 콜드 스타트·401 복원 로직(딥링크 항목)을 그대로 탄다.
+                    // 콜백 등록 전(콜드 스타트, 알림 탭으로 앱 실행)에 도착한 탭은 PushNotificationCenter가 보관했다가
+                    // 이 등록 시점에 flush한다.
+                    let deepLinkBinding = $pendingDeepLink
+                    PushNotificationCenter.shared.onNotificationDeepLink = { deepLink in
+                        deepLinkBinding.wrappedValue = deepLink
+                    }
+                }
         }
     }
 }

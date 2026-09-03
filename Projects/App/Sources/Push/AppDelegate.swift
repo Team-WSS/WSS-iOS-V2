@@ -94,15 +94,18 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 
-    /// 알림 탭 → 딥링크(화면 이동)는 step 5에서 연결한다 — 서버 payload 스키마(연재 알림의 `view` 값·키)
-    /// 확정 후 `userInfo`를 `DeepLink`로 풀어 `pendingDeepLink`에 태운다. 지금은 수신 처리만 한다.
+    /// 알림 탭 → payload(`view`/`novelId`/`feedId`)를 딥링크로 풀어 해당 화면(작품/피드 상세)으로 이동한다(#243).
+    /// 라우팅은 `PushNotificationCenter`가 앱의 `pendingDeepLink` 채널로 넘겨 처리한다(콜드 스타트도 보관→flush).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        Messaging.messaging().appDidReceiveMessage(response.notification.request.content.userInfo)
-        // TODO(#243, step 5): response.notification.request.content.userInfo → DeepLink 라우팅(서버 스키마 확정 후).
+        let userInfo = response.notification.request.content.userInfo
+        Messaging.messaging().appDidReceiveMessage(userInfo)
+        MainActor.assumeIsolated {
+            PushNotificationCenter.shared.handleNotificationTap(userInfo: userInfo)
+        }
         completionHandler()
     }
 }

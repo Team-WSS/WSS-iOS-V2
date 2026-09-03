@@ -57,7 +57,7 @@ struct DeepLinkTests {
 
     @Test("모르는 host면 nil이다")
     func nilWhenHostUnknown() {
-        let url = makeURL("websoso://novels/31")
+        let url = makeURL("websoso://comments/31")
 
         #expect(DeepLink(url: url) == nil)
     }
@@ -150,6 +150,72 @@ struct DeepLinkTests {
         let url = makeURL("kakaoabc123://kakaolink?collectionId=\(rawID)")
 
         #expect(DeepLink(url: url) == nil)
+    }
+
+    // MARK: - 작품·피드 상세 딥링크 init(url:) (#243)
+
+    @Test("websoso 스킴에 novels host와 정수 id가 붙은 URL을 파싱하면 그 id의 작품 상세 딥링크가 된다")
+    func parseNovelDetail() {
+        let url = makeURL("websoso://novels/12345")
+
+        #expect(DeepLink(url: url) == .novelDetail(NovelID(12345)))
+    }
+
+    @Test("websoso 스킴에 feeds host와 정수 id가 붙은 URL을 파싱하면 그 id의 피드 상세 딥링크가 된다")
+    func parseFeedDetail() {
+        let url = makeURL("websoso://feeds/67890")
+
+        #expect(DeepLink(url: url) == .feedDetail(FeedID(67890)))
+    }
+
+    @Test("novels host의 id가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
+    func nilWhenNovelIDNotPositive(rawID: String) {
+        let url = makeURL("websoso://novels/\(rawID)")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
+    @Test("작품·피드 상세 딥링크는 outbound url을 만들지 않는다 — 푸시로 받기만 한다")
+    func novelAndFeedHaveNoOutboundURL() {
+        #expect(DeepLink.novelDetail(NovelID(1)).url == nil)
+        #expect(DeepLink.feedDetail(FeedID(1)).url == nil)
+    }
+
+    // MARK: - 푸시 payload 파싱 fromNotificationPayload (#243)
+
+    @Test("view가 novelDetail이고 novelId가 있으면 그 작품 상세 딥링크가 된다")
+    func parsePayloadNovelDetail() {
+        let payload = ["view": "novelDetail", "novelId": "12345", "feedId": "", "notificationId": "67890"]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == .novelDetail(NovelID(12345)))
+    }
+
+    @Test("view가 feedDetail이고 feedId가 있으면 그 피드 상세 딥링크가 된다")
+    func parsePayloadFeedDetail() {
+        let payload = ["view": "feedDetail", "feedId": "42", "novelId": ""]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == .feedDetail(FeedID(42)))
+    }
+
+    @Test("모르는 view면 nil이다")
+    func nilWhenPayloadViewUnknown() {
+        let payload = ["view": "notificationDetail", "notificationId": "1"]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == nil)
+    }
+
+    @Test("view는 맞지만 해당 id가 비었거나 정수가 아니면 nil이다", arguments: ["", "abc", "0", "-1"])
+    func nilWhenPayloadIDInvalid(rawID: String) {
+        let payload = ["view": "novelDetail", "novelId": rawID]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == nil)
+    }
+
+    @Test("view 키가 없으면 nil이다")
+    func nilWhenPayloadViewMissing() {
+        let payload = ["novelId": "12345"]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == nil)
     }
 }
 

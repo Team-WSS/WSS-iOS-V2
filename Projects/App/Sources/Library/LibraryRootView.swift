@@ -203,6 +203,10 @@ struct LibraryRootView: View {
             switch deepLink {
             case .collectionDetail(let id):
                 path.append(Destination.collectionDetail(id))
+            case .novelDetail(let id):
+                path.append(Destination.novel(id))
+            case .feedDetail(let id):
+                path.append(Destination.feed(id))
             }
             deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
