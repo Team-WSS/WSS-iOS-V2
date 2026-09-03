@@ -9,6 +9,7 @@
 import SwiftUI
 
 import DesignSystem
+import WSSComponent
 
 /// 첨부 이미지 확대 뷰. 탭한 이미지부터 시작해 페이지 스와이프로 다른 첨부 이미지도 볼 수 있다.
 struct FeedDetailImageViewer: View {
@@ -33,15 +34,15 @@ struct FeedDetailImageViewer: View {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 0) {
                         ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                default:
-                                    ProgressView()
-                                }
+                            // 첨부 블록(FeedDetailAttachImageBlock)에서 이미 받은 이미지를 확대 뷰가 같은
+                            // 공유 캐시로 즉시 재사용한다 → 확대 시 placeholder 번쩍임 없음. 원래 동작
+                            // (성공=scaledToFit / 그 외=ProgressView)을 유지하려 isLoading은 구분하지 않는다.
+                            WSSAsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                            } placeholder: { _ in
+                                ProgressView()
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .containerRelativeFrame(.horizontal)

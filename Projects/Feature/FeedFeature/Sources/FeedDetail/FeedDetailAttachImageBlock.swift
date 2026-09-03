@@ -9,6 +9,7 @@
 import SwiftUI
 
 import DesignSystem
+import WSSComponent
 
 struct FeedDetailAttachImageBlock: View {
 
@@ -85,21 +86,23 @@ struct FeedDetailAttachImageBlock: View {
     }
     
     private func imageView(url: URL?) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                
-            case .failure:
+        // 첨부 이미지는 셀 여러 장 + 확대 뷰가 같은 URL을 반복 렌더하므로 raw AsyncImage면 캐시 히트에도
+        // placeholder가 번쩍인다 → WSSAsyncImage로 인메모리 캐시 공유. 원래 3-상태(로딩 중 ProgressView /
+        // 실패 기본 썸네일 / 성공 이미지)를 isLoading으로 그대로 재현하고, 바깥에 있던 .scaledToFill()은
+        // 각 뷰 안으로 옮긴다(ProgressView엔 원래도 영향 없음).
+        WSSAsyncImage(url: url) { image in
+            image
+                .resizable()
+                .scaledToFill()
+        } placeholder: { isLoading in
+            if isLoading {
+                ProgressView()
+            } else {
                 WSSImage.imgLoadingThumbnail.swiftUIImage
                     .resizable()
-                
-            default:
-                ProgressView()
+                    .scaledToFill()
             }
         }
-        .scaledToFill()
     }
 }
 

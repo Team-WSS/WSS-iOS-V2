@@ -151,3 +151,10 @@
   `aspectRatio: Metric.coverAspectRatio`(86/123, 로컬 파일 상수)로 넘겨 컴포넌트가 내부에서 크기·클립을
   전부 처리한다(밖에서 `.frame`+수동 `.clipped()`를 거는 방식은 쓰지 않는다 — `WSSComponent/CLAUDE.md`의
   "누가 프레임을 정하느냐" 원칙대로 `aspectRatio` 모드에선 컴포넌트가 프레임 소유자).
+- **피드 첨부 이미지(`FeedDetailAttachImageBlock`·`FeedDetailImageViewer`)는 `WSSFeedImageView`가 아니라
+  raw `WSSAsyncImage`를 쓴다**(#244) — `WSSFeedImageView`는 "썸네일 1장 + 개수 배지"인 **목록 셀
+  미리보기** 전용(`WSSFeadView`가 씀)이고, 이 둘은 첨부를 전부 그리드/확대로 펼치는 다른 화면이라
+  맞지 않는다. 원래 raw `AsyncImage`였던 걸 반복 렌더·확대 시 placeholder 번쩍임을 없애려 공유 캐시
+  래퍼(`WSSAsyncImage`)로만 옮긴 것이니 **`WSSFeedImageView`로 통합하려 하지 말 것**(표지/프로필처럼
+  정형 래퍼가 안 맞는 자리라 raw `WSSAsyncImage`가 맞다 — `WSSComponent/CLAUDE.md`). 첨부 블록은
+  `isLoading`으로 로딩 중 `ProgressView`/실패 시 기본 썸네일을 구분하고, 확대 뷰는 구분 없이 `ProgressView`.

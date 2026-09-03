@@ -131,16 +131,15 @@ struct NovelDetailInfoTab: View {
     }
 
     private func platformIcon(_ platform: NovelPlatform) -> some View {
-        AsyncImage(url: platform.image) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-
-            default:
-                Color.wssGray70
-            }
+        // 플랫폼 아이콘도 목록(ForEach)처럼 반복 렌더돼 raw AsyncImage면 캐시 히트에도 placeholder가
+        // 번쩍인다 → WSSAsyncImage로 인메모리 캐시 공유. 원래 동작(로딩 중·실패 모두 회색)을 유지하려
+        // placeholder는 isLoading을 구분하지 않고 Color.wssGray70만 그린다.
+        WSSAsyncImage(url: platform.image) { image in
+            image
+                .resizable()
+                .scaledToFill()
+        } placeholder: { _ in
+            Color.wssGray70
         }
         .frame(width: 48, height: 48)
         .clipShape(
