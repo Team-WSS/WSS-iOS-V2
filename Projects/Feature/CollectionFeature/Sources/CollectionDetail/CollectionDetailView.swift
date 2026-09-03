@@ -22,6 +22,12 @@ struct CollectionDetailView: View {
     /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목이 즉시 나타남, 페이드 아님) 네비바가 반응한다 —
     /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
     @State private var isScrolledFromTop = false
+    /// 스티키 정렬 바 — 커스텀 네비바 배경의 실측 높이(= 안전영역 top + 44). 스크롤되는 "원본" 정렬 바가
+    /// 이 y까지 올라오면 상단에 정렬 바를 고정한다(작품 상세 스티키 탭바와 같은 "오버레이 2벌" 방식 —
+    /// 몰입형이라 `LazyVStack(pinnedViews:)`는 못 쓴다, `NovelDetailFeature/CLAUDE.md` 참고).
+    @State private var navBarBottomY: CGFloat = 0
+    /// 스티키 정렬 바 — 스크롤 콘텐츠 안 "원본" 정렬 바의 상단 y(화면 좌상단 기준). 측정 전엔 안 뜨도록 무한대.
+    @State private var sortBarMinY: CGFloat = .greatestFiniteMagnitude
     /// 이 화면의 유일한 자식은 "컬렉션 수정"(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상
     /// "수정 화면에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다(`CollectionListView`의
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
@@ -114,7 +120,18 @@ struct CollectionDetailView: View {
             // 아이콘 + 컬렉션명 타이틀(Figma "스크롤 됐을때 헤더가 컬렉션 명으로 변경"). 커스텀
             // 오버레이라 opacity/색 애니메이션이 정상 동작(시스템 .principal의 UIKit 브리지 함정 없음
             // → 예전 즉시 전환 대신 부드러운 페이드).
-            collectionDetailTopBar
+            //
+            // 네비바와 스티키 정렬 바를 한 VStack으로 묶는다 — 정렬 바가 네비바 "바로 아래"에 붙는 게
+            // 레이아웃으로 보장돼 스티키 y를 따로 계산할 필요가 없다(작품 상세 스티키 탭바와 동일).
+            VStack(spacing: 0) {
+                collectionDetailTopBar
+
+                if showStickySortBar, let detail = viewModel.state.detail {
+                    // 스크롤 원본이 네비바 하단까지 올라오면 이 복제본이 그 자리를 흰 배경으로 덮어 고정한다.
+                    sortBar(detail)
+                        .background(Color.wssWhite)
+                }
+            }
         }
         .wssCustomNavigationBar()
         .showWSSAlert(
@@ -202,15 +219,31 @@ private extension CollectionDetailView {
             // 배경만 상태바까지 확장한다(버튼은 안전영역 안). clear일 땐 히어로가 그대로 비치고,
             // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ allowsHitTesting(false) — 없으면 바 영역
             // 드래그가 Color에 먹혀 스크롤이 안 된다(NovelDetail과 동일 함정).
-            (isScrolledFromTop ? Color.wssWhite : Color.clear)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+            // 스티키 정렬 바의 임계선(네비바 하단 y)도 여기서 얻는다 — 이 배경은 ignoresSafeArea로
+            // 이미 상태바까지 확장돼 있어 그 실측 높이가 곧 "안전영역 top + 네비바 높이"다.
+            // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
+            GeometryReader { proxy in
+                (isScrolledFromTop ? Color.wssWhite : Color.clear)
+                    .allowsHitTesting(false)
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        navBarBottomY = height
+                    }
+            }
+            .ignoresSafeArea(edges: .top)
         )
         .animation(.easeInOut(duration: 0.2), value: isScrolledFromTop)
     }
 
     var navIconColor: Color {
         isScrolledFromTop ? Color.wssBlack : Color.wssWhite
+    }
+
+    /// 스크롤되는 원본 정렬 바가 네비바 하단까지 올라왔는지 — 상단 스티키 정렬 바 표시 여부.
+    /// 두 좌표 모두 화면 좌상단(상태바 포함) 기준이라 그대로 비교한다. 임계선을 아직 못 쟀으면(0) 안 띄운다.
+    var showStickySortBar: Bool {
+        viewModel.state.detail != nil
+            && navBarBottomY > 0
+            && sortBarMinY <= navBarBottomY
     }
 }
 
@@ -449,27 +482,43 @@ private extension CollectionDetailView {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 10)
 
-            HStack(spacing: 0) {
-                Text("\(detail.novelCount)개")
-                    .applyWSSFont(.body3)
-                    .foregroundStyle(Color.wssGray200)
-
-                Spacer()
-
-                WSSSortButton(sortType: viewModel.state.sortType) {
-                    viewModel.handle(.changeSortType(viewModel.state.sortType == .recent ? .old : .recent))
-                }
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 33)
+            // 스크롤되는 "원본" 정렬 바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
+            // 네비바 하단에 닿는 순간부터 상단 오버레이의 스티키 정렬 바가 이 자리를 그대로 덮는다.
+            sortBar(detail)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.frame(in: .named(scrollCoordinateSpace)).minY,
+                                      initial: true) { _, newY in
+                                sortBarMinY = newY
+                            }
+                    }
+                )
 
             Spacer().frame(height: 8)
 
             novelGrid(detail.novels)
                 .padding(.horizontal, 16)
-            
+
             Spacer().frame(height: 60)
         }
+    }
+
+    /// 작품 개수 + 정렬 버튼 행 — 스크롤 콘텐츠 안 원본과 상단 스티키 오버레이가 같은 렌더를 공유한다.
+    func sortBar(_ detail: CollectionDetail) -> some View {
+        HStack(spacing: 0) {
+            Text("\(detail.novelCount)개")
+                .applyWSSFont(.body3)
+                .foregroundStyle(Color.wssGray200)
+
+            Spacer()
+
+            WSSSortButton(sortType: viewModel.state.sortType) {
+                viewModel.handle(.changeSortType(viewModel.state.sortType == .recent ? .old : .recent))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 33)
     }
 
     func novelGrid(_ novels: [CollectionNovel]) -> some View {
