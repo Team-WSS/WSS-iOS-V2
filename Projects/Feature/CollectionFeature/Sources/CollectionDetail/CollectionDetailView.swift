@@ -71,6 +71,7 @@ struct CollectionDetailView: View {
     }
 
     var body: some View {
+        ZStack(alignment: .top) {
         Group {
             if viewModel.state.hasLoadError {
                 NetworkErrorView {
@@ -108,21 +109,14 @@ struct CollectionDetailView: View {
             }
         }
         .ignoresSafeArea()
-        .navigationBarBackButtonHidden()
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
-        // 스크롤 전엔 투명(히어로 이미지가 상태바까지 그대로 비침), 스크롤되면 흰 배경 + 컬렉션명
-        // 타이틀로 전환된다(Figma 주석 "스크롤 됐을때 헤더가 컬렉션 명으로 변경").
-        .toolbarBackground(
-            (isScrolledFromTop ? Color.wssWhite : Color.clear),
-            for: .navigationBar
-        )
-        .toolbarBackground(.visible, for: .navigationBar)
-        // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
-        // 서브트리를 감싸면 툴바 principal의 `Text` opacity 갱신이 UIKit 브리지(titleView)로 아예
-        // 전달되지 않아 계속 숨어있는다(실측 확인 — 로컬/루트 어느 쪽에 걸든 동일 증상). 그래서
-        // opacity 대신 아래 `toolbarContent`가 `if`로 뷰 자체를 구조적으로 넣고 뺀다 — 배경·아이콘
-        // 색·타이틀 모두 애니메이션 없이 즉시 전환된다(페이드 아님, `UserPageFeature`도 동일).
+
+            // 커스텀 몰입형 상단 바 — 히어로 위엔 투명 바 + 흰 아이콘, 스크롤되면 흰 배경 + 검정
+            // 아이콘 + 컬렉션명 타이틀(Figma "스크롤 됐을때 헤더가 컬렉션 명으로 변경"). 커스텀
+            // 오버레이라 opacity/색 애니메이션이 정상 동작(시스템 .principal의 UIKit 브리지 함정 없음
+            // → 예전 즉시 전환 대신 부드러운 페이드).
+            collectionDetailTopBar
+        }
+        .wssCustomNavigationBar()
         .showWSSAlert(
             isPresented: deleteAlertBinding,
             type: .deleteCollection,
@@ -155,56 +149,66 @@ struct CollectionDetailView: View {
     }
 }
 
-// MARK: - Toolbar
+// MARK: - 상단 바 (커스텀 몰입형)
 
 private extension CollectionDetailView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
-                // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
-                // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
-                viewModel.handle(.backTapped)
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(navIconColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        
-        // 더보기(수정/삭제)는 소유자에게만 노출된다.
-        if viewModel.state.detail?.isMine == true {
-            ToolbarItem(placement: .topBarTrailing) {
+    var collectionDetailTopBar: some View {
+        ZStack {
+            Text(viewModel.state.detail?.name ?? "")
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(1)
+                .opacity(isScrolledFromTop ? 1 : 0)
+
+            HStack(spacing: 0) {
                 Button {
-                    viewModel.handle(.menuTapped)
+                    // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
+                    // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
+                    // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
+                    viewModel.handle(.backTapped)
+                    dismiss()
                 } label: {
-                    WSSImage.icThreedots.swiftUIImage
+                    WSSImage.icNavigateLeft.swiftUIImage
                         .resizable()
                         .renderingMode(.template)
                         .foregroundStyle(navIconColor)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 24, height: 24)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+
+                Spacer()
+
+                // 더보기(수정/삭제)는 소유자에게만 노출된다.
+                if viewModel.state.detail?.isMine == true {
+                    Button {
+                        viewModel.handle(.menuTapped)
+                    } label: {
+                        WSSImage.icThreedots.swiftUIImage
+                            .resizable()
+                            .renderingMode(.template)
+                            .foregroundStyle(navIconColor)
+                            .frame(width: 18, height: 18)
+                            .contentShape(Rectangle())
+                    }
+                    .padding(.trailing, 20)
                 }
             }
+            .padding(.leading, 6)
         }
-        
-        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
-        // (titleView)에 갱신되지 않고 계속 숨어있는다(실측 확인 — 애니메이션 유무·위치와 무관).
-        // 대신 `if`로 뷰 자체를 구조적으로 넣고 뺀다 — `ToolbarContentBuilder`가 진짜 다른 콘텐츠로
-        // 인식해야 브리지가 갱신된다.
-        if isScrolledFromTop {
-            ToolbarItem(placement: .principal) {
-                Text(viewModel.state.detail?.name ?? "")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(Color.wssBlack)
-                    .lineLimit(1)
-            }
-        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+            // 배경만 상태바까지 확장한다(버튼은 안전영역 안). clear일 땐 히어로가 그대로 비치고,
+            // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ allowsHitTesting(false) — 없으면 바 영역
+            // 드래그가 Color에 먹혀 스크롤이 안 된다(NovelDetail과 동일 함정).
+            (isScrolledFromTop ? Color.wssWhite : Color.clear)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        )
+        .animation(.easeInOut(duration: 0.2), value: isScrolledFromTop)
     }
-    
+
     var navIconColor: Color {
         isScrolledFromTop ? Color.wssBlack : Color.wssWhite
     }
