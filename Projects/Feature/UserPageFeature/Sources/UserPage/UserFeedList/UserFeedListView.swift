@@ -35,7 +35,10 @@ struct UserFeedListView: View {
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "활동") { dismiss() }
+
+            Group {
             if viewModel.state.feeds.isEmpty, viewModel.state.feedsLoadFailed {
                 NetworkErrorView {
                     viewModel.handle(.load)
@@ -83,12 +86,9 @@ struct UserFeedListView: View {
                 }
             }
         }
-        .background(WSSColor.wssWhite.swiftUIColor)
-        .navigationBarBackButtonHidden()
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            toolbarContent
         }
+        .background(WSSColor.wssWhite.swiftUIColor)
+        .wssCustomNavigationBar()
         .showWSSAlert(
             isPresented: feedAlertBinding,
             type: feedAlertType,
@@ -141,31 +141,6 @@ struct UserFeedListView: View {
             isSpoiler: feed.isSpoiler,
             isPrivate: !feed.isPublic
         )
-    }
-}
-
-// MARK: - Toolbar
-
-private extension UserFeedListView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("활동")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
     }
 }
 

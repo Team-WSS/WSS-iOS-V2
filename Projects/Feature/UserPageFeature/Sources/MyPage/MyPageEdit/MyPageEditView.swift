@@ -55,22 +55,41 @@ struct MyPageEditView: View {
     }
 
     var body: some View {
-        content
-            .overlay {
-                if viewModel.state.isLoading {
-                    LoadingView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.state.loadFailed {
-                    NetworkErrorView { viewModel.handle(.load) }
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "프로필 편집") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.save)
+                } label: {
+                    if viewModel.state.isSaving {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(
+                                viewModel.state.draft.isSubmittable
+                                    ? WSSColor.wssPrimary100.swiftUIColor
+                                    : WSSColor.wssGray200.swiftUIColor
+                            )
+                    }
                 }
+                .disabled(!viewModel.state.draft.isSubmittable || viewModel.state.isSaving)
             }
-            .background(WSSColor.wssWhite.swiftUIColor)
-            .navigationBarBackButtonHidden()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                toolbarContent
-            }
-            .onAppear {
+
+            content
+                .overlay {
+                    if viewModel.state.isLoading {
+                        LoadingView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if viewModel.state.loadFailed {
+                        NetworkErrorView { viewModel.handle(.load) }
+                    }
+                }
+        }
+        .background(WSSColor.wssWhite.swiftUIColor)
+        .wssCustomNavigationBar()
+        .onAppear {
                 viewModel.handle(.load)
             }
             .sheet(item: $characterEditContext) { context in
@@ -291,50 +310,6 @@ extension MyPageEditView {
         Rectangle()
             .frame(height: 1)
             .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
-    }
-}
-
-// MARK: - Toolbar
-
-extension MyPageEditView {
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("프로필 편집")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.handle(.save)
-            } label: {
-                if viewModel.state.isSaving {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(
-                            viewModel.state.draft.isSubmittable
-                                ? WSSColor.wssPrimary100.swiftUIColor
-                                : WSSColor.wssGray200.swiftUIColor
-                        )
-                }
-            }
-            .disabled(!viewModel.state.draft.isSubmittable || viewModel.state.isSaving)
-        }
     }
 }
 
