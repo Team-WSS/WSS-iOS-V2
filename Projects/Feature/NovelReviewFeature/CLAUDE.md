@@ -31,6 +31,9 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+#### 네비게이션 바 (#244)
+- 시스템 툴바가 아니라 플랫 `WSSNavigationBar`(타이틀=작품명, 완료 버튼=`trailing` 슬롯) + `.wssCustomNavigationBar(swipeBackEnabled: false)`다(패턴 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). **`swipeBackEnabled: false`인 이유**: 좌측 back이 `requestClose`(저장 전 "그만하기" 확인 알럿)라, 스와이프로 그 확인을 건너뛰면 작성 중이던 draft가 사라진다. 로딩/실패 `overlay`는 content에만 걸려 네비바를 덮지 않는다. ⚠️ **뒤로가기 화살표 색을 회색(`wssGray200`)에서 표준 검정으로 통일**했다(#244, 전 화면 통일 목적) — 이 화면만 회색이던 걸 되돌리지 말 것.
+
 #### 저장 성공 시 앱스토어 평점 요청 (#221 재도입)
 - `saveDraft()` 성공 직후 `recordEngagementAndGateReview()`가 `AppReviewRequestUseCase`(BaseDomain, **피드와 공유** → 앱 전역 게이트)에 참여를 기록하고, 게이트(누적 참여 ≥ 임계치 AND 이번 버전 미요청) 통과 시 `state.shouldRequestReview = true`. 실제 프롬프트는 `NovelReviewView`가 `import StoreKit` + `@Environment(\.requestReview)`로 띄운다.
 - ⚠️ **`shouldDismiss`를 리뷰 트리거로 쓰면 안 된다** — `close()`(취소/뒤로가기)에도 켜지므로, 저장 성공 경로에서만 세우는 **별도 `shouldRequestReview` 플래그**를 둔다. `NovelReviewView`의 `shouldDismiss` onChange에서 `dismiss()`보다 먼저 `if shouldRequestReview { requestReview() }`를 부른다(pop 후에도 정상 표시, 시뮬레이터로 저장→프롬프트 / 취소→프롬프트 없음 양쪽 실측 확인). V1은 성공마다 무조건 호출했으나 "무분별 호출 금지"로 게이트를 얹었다.

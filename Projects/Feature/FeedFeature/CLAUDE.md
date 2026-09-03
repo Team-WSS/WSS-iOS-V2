@@ -40,6 +40,9 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **네비바는 시스템 툴바가 아니라 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 패턴 정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). 이 모듈의 두 화면에 코드만 봐선 모르는 배치 결정이 있다:
+  - ⚠️ **`CreateFeedView`의 `WSSNavigationBar`는 content를 감싼 `allowsHitTesting`/`opacity`/`overlay(로딩)` 스코프 *밖*(바깥 VStack)에 둔다** — 제출 중(`isSubmitting`)·수정 로드 중(`isLoadingForEdit`)에도 back(→ `showDismissAlert` 확인 알럿)이 눌려야 하기 때문. content VStack 안에 넣으면 그 스코프에 걸려 back이 죽고 로딩 오버레이가 네비바까지 덮는다. **미저장 초안 확인 알럿이 있어 `swipeBackEnabled: false`**(스와이프로 확인을 건너뛰지 못하게). 이 화면은 principal 타이틀이 없어 `WSSNavigationBar(title: "")`.
+  - ⚠️ **`FeedDetailView`의 threedots 드롭다운 `overlay(alignment: .topTrailing)`과 "바깥 탭 닫기" `onTapGesture`는 네비바를 감싼 VStack이 아니라 content(`Group`)에 걸어야 한다** — (1) `.padding(.top, 4)`가 네비바 *아래* 4pt에 드롭다운을 앉히려면 기준이 content 상단이어야 하고, (2) VStack(네비바 포함)에 `onTapGesture`를 걸면 네비바 trailing의 threedots 탭(`showFeedDropdown.toggle()`)과 부모 탭이 충돌한다. threedots는 `trailing` 슬롯으로 옮겼고, 일반 상세라 스와이프백은 허용(기본 true). ⚠️ **`loadedFeedDetailView` 안 ScrollView에 있던 중복 `.navigationBarBackButtonHidden()`는 제거했다** — 그게 `hidesBackButton=true`를 세우면 전역 pop 제스처 delegate가 이 화면 스와이프백을 거부해(swipe 허용과 모순) 죽는다.
 - ⚠️ **`SosoFeedViewModel`의 목록 로드는 `feedsTask` 한 슬롯**이고 동시성 불변식은 서재 `LibraryViewModel.loadPage`와
   같다(정본은 [LibraryFeature](../LibraryFeature/CLAUDE.md)): 시작 경로는 `nil` 확인(`load`/`loadMore`) 또는
   취소+즉시 재대입(`reloadFromScratch`) 둘 중 하나, 취소된 로드의 `defer`는 **아무것도 정리하지 않는다**

@@ -64,6 +64,7 @@
 
 ### 주의사항 (작업 중 발견 시 누적)
 
+- **네비바 교체(#244)**: `MyPageEditView`(프로필 편집, 완료 버튼=`trailing`)와 `UserFeedListView`(활동 목록)는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`로 교체(정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md), 둘 다 미저장 확인 알럿이 없어 스와이프백 허용). ⚠️ **`UserPageView`·`MypageView`는 이 교체에서 뺐다** — 스크롤 반응형 툴바 배경·타이틀 페이드(`.toolbarBackground` + 스크롤 트리거)를 갖고 있어 이미 리퀴드 글래스가 아니고, 플랫 커스텀 헤더로 옮기려면 `NovelDetailView`식 스크롤 측정 오버레이 재구현이 필요해 디자인 판단이 선행돼야 한다(보류, [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 스크롤 반응형 항목 참고).
 - **미리보기 카드 렌더(`CollectionPreviewRow`, `Sources/Component/`)는 `MypageView.swift`에 미사용
   상태로 있던 죽은 코드(`collectionItem`)를 되살린 것이다**(#200) — 대표 표지 1장 + 뒤에 오프셋된 회색
   사각형 2장(쌓인 카드 장식)이 `CollectionPreview.representativeNovel` 요구사항과 정확히 일치해 그대로

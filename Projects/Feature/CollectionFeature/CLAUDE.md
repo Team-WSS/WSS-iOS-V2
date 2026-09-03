@@ -216,6 +216,7 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **네비바는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). `CreateCollectionView`·`CollectionListView`·`CollectionMyLibrarySelectView`·`CollectionSearchNovelView` 4화면 교체(우측 완료/추가는 `trailing` 슬롯). ⚠️ **`CreateCollectionView`만 `swipeBackEnabled: false`** — 좌측 back이 `requestClose`(미저장 초안 "그만하기/계속 작성" 확인 알럿)라 스와이프로 건너뛰면 안 된다. 나머지 3화면은 `dismiss()`(확인 없음)라 스와이프백 허용. 참고: `CreateCollectionView` 타이틀 폰트가 `.title3`→`.title2`로 통일됐다(`WSSNavigationBar` 고정값). **`CollectionDetailView`는 스크롤 반응형 툴바 배경(`.toolbarBackground`)이라 이 교체 대상에서 뺐다**(리퀴드 글래스 아님 — [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 스크롤 반응형 보류 항목 참고).
 - ⚠️ **App이 push하는 화면의 "진입 파라미터"는 반드시 `NavigationPath`의 `Destination` payload로
   실어 보내야 한다 — 별도 `@State` 스크래치 변수에 먼저 쓰고 그 변수를 읽어 destination view를
   만드는 방식은 레이스가 있다(#201, 사용자 리포트로 실측 재발견 — "작품 추가→서재에서 추가로 넘어가면
