@@ -163,25 +163,14 @@ struct UserPageView: View {
                 }
             }
         }
-        .navigationBarBackButtonHidden()
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            toolbarContent
+        // 시스템 툴바 대신 커스텀 상단 바를 safeAreaInset로 고정한다(NovelDetail식 몰입형 헤더 결).
+        // 바 배경은 스크롤 전엔 프로필 히어로와 이어지는 primary20, 스크롤되면 아래 콘텐츠와 이어지는
+        // wssWhite로 전환하고 닉네임 타이틀이 페이드인한다. 커스텀 오버레이라 opacity/색 애니메이션이
+        // 정상 동작한다(시스템 .principal의 UIKit 브리지 함정 없음 → 예전 즉시 전환 대신 부드럽게).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            userPageTopBar
         }
-        // 스크롤 전엔 프로필 섹션과 이어지는 primary20, 프로필 섹션이 화면 밖으로 스크롤되면(닉네임
-        // 타이틀 전환과 동일 트리거인 isScrolledFromTop) 아래 콘텐츠와 이어지는 wssWhite로 전환한다.
-        .toolbarBackground(
-            (isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor,
-            for: .navigationBar
-        )
-        // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 보이는 자동 동작이라
-        // 스크롤 여부와 무관하게 항상 배경이 보이도록 강제한다(색 자체는 위에서 스크롤에 따라 전환).
-        .toolbarBackground(.visible, for: .navigationBar)
-        // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
-        // 서브트리를 감싸면 툴바 principal의 닉네임 `Text` opacity 갱신이 UIKit 브리지(titleView)로
-        // 전달되지 않아 계속 숨어있는다(실측 확인, `CollectionFeature.CollectionDetailView`에서 먼저
-        // 발견). opacity 대신 아래 `toolbarContent`가 `if`로 뷰 자체를 구조적으로 넣고 뺀다 —
-        // 배경 색·닉네임 모두 애니메이션 없이 즉시 전환된다(페이드 아님).
+        .wssCustomNavigationBar()
         // 차단 확인 — 알럿은 스스로 닫히지 않으므로 두 버튼 모두 handle 경유로 상태를 되돌린다.
         .showWSSAlert(
             isPresented: blockAlertBinding,
@@ -607,47 +596,52 @@ struct UserPageView: View {
     }
 }
 
-// MARK: - Toolbar
+// MARK: - 상단 바 (커스텀)
 
 extension UserPageView {
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                isMenuPresented.toggle()
-            } label: {
-                WSSImage.icThreedots.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 18, height: 18)
-            }
-        }
+    /// 커스텀 몰입형 상단 바 — 좌측 뒤로가기 + 우측 threedots + 가운데 닉네임(스크롤 시 페이드인).
+    /// 배경은 스크롤 전 primary20(히어로와 연속)↔스크롤 후 wssWhite(콘텐츠와 연속).
+    private var userPageTopBar: some View {
+        ZStack {
+            Text(viewModel.state.profile?.nickname ?? "웹소소")
+                .applyWSSFont(.title2)
+                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                .lineLimit(1)
+                .opacity(isScrolledFromTop ? 1 : 0)
 
-        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
-        // (titleView)에 갱신되지 않고 계속 숨어있는다(실측 확인 — 애니메이션 유무·위치와 무관,
-        // `CollectionFeature.CollectionDetailView`에서 먼저 발견). 대신 `if`로 뷰 자체를 구조적으로
-        // 넣고 뺀다 — `ToolbarContentBuilder`가 진짜 다른 콘텐츠로 인식해야 브리지가 갱신된다.
-        if isScrolledFromTop {
-            ToolbarItem(placement: .principal) {
-                Text(viewModel.state.profile?.nickname ?? "웹소소")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .lineLimit(1)
+            HStack(spacing: 0) {
+                Button {
+                    dismiss()
+                } label: {
+                    WSSImage.icNavigateLeft.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                        .frame(width: 24, height: 24)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+
+                Spacer()
+
+                Button {
+                    isMenuPresented.toggle()
+                } label: {
+                    WSSImage.icThreedots.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                        .frame(width: 18, height: 18)
+                        .contentShape(Rectangle())
+                }
+                .padding(.trailing, 20)
             }
+            .padding(.leading, 6)
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background((isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor)
+        .animation(.easeInOut(duration: 0.2), value: isScrolledFromTop)
     }
 }
 
