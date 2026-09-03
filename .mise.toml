@@ -1,2 +1,6 @@
 [tools]
-tuist = "4.29.1"
+# 4.29.1 → 4.206.0 (#243): 4.29.1은 Firebase SPM 매니페스트를 디코딩하지 못해 `tuist generate`가
+# `targets[N].settings[0]` name 없음 에러로 깨졌다(FirebaseMessaging 도입에 필요). 4.206.0(당시 최신
+# stable)에서 정상. 남은 경고 1건(`Tuist/Config.swift` → 루트 `Tuist.swift` 리네임 권고)은 동작에 영향
+# 없어 미처리 — 별도로 마이그레이션할 것.
+tuist = "4.206.0"
