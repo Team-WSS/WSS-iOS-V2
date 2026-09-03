@@ -155,6 +155,48 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   삼키고 로깅만 하는 계약(throws 없음)이라 App도 결과를 기다리거나 에러 처리를 하지 않는다 —
   `dependencies` 조립과 동시에 백그라운드로 쏘고 화면 진입은 막지 않는 fire-and-forget.
 
+## 푸시 알림(FCM/APNs) 배선 (#243)
+
+FCM 수신·토큰 발급·서버 등록. **Firebase(`Messaging`) import는 App 레이어의 두 파일에만** 있다 —
+`Sources/Push/PushNotificationCenter.swift`(런타임 허브)와 `Sources/Push/AppDelegate.swift`(시스템 콜백).
+Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain) 추상화로 이미 격리돼 Firebase를 모른다.
+
+- **등록 파이프라인은 새로 만든 게 아니라 이미 있던 슬롯을 채운 것** — `SplashDomain`의 부트스트랩
+  (`BootstrapAppUseCase`)이 세션 있을 때 `registerDeviceTokenIfNeeded()`를 fire-and-forget으로 돌리고, 그게
+  `AppDependencies`가 넘긴 `deviceTokenProvider`(async)를 당겨 토큰이 있으면 `pushSettingRepository.registerDeviceToken`으로
+  보낸다. #243 전엔 `deviceTokenProvider: { nil }`(등록 스킵)이었고, 지금은 `PushNotificationCenter.shared.currentDevicePushToken()`이다.
+- **등록 경로는 둘, 둘 다 필요**: ① **부트스트랩 pull**(`currentDevicePushToken`) — 세션 있는 재방문·이미 권한
+  허용 사용자. ② **반응 push**(`setFCMRegistrationToken`) — 부트스트랩이 지나간 뒤 로그인/권한허용하는 신규
+  사용자(이게 없으면 신규 유저 토큰 등록이 다음 실행까지 밀린다). 반응 경로는 `isLoggedIn` 게이트를 통과할 때만 서버로 보낸다.
+- **왜 `PushNotificationCenter.shared`(싱글턴)인가**: UIKit `AppDelegate`(시스템 콜백 수신)와 SwiftUI DI
+  (`AppDependencies` — UseCase 조립)는 생명주기가 달라 인스턴스 공유 통로가 없다. V1의 `NotificationHelper.shared`와 같은 이유.
+  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다(idempotent).
+- **method swizzling은 끈다**(`Support/Info.plist`의 `FirebaseAppDelegateProxyEnabled=NO`) — SwiftUI
+  `@UIApplicationDelegateAdaptor` 환경에서 Firebase 자동 프록시가 불안정해, APNs device token을 `AppDelegate`가
+  받아 `Messaging.messaging().apnsToken`에 **직접** 대입한다(V1과 동일). 그래서 `willPresent`/`didReceive`에서
+  `Messaging.appDidReceiveMessage(userInfo)`도 우리가 직접 부른다.
+- **`GoogleService-Info.plist`(운영 `kr.websoso`) + `GoogleService-Info-Debug.plist`(디버그 `kr.websoso.debug2`)는
+  `Resources/`에 있으나 `.gitignore`돼 커밋 안 한다**(V1도 커밋 안 함 — API 키 포함). ⚠️ **신규 팀원/CI는 이 두
+  파일이 로컬에 없으면 Firebase가 비활성**된다(`AppDelegate.firebaseOptions()`가 nil이면 크래시 대신 조용히 스킵) —
+  각자 배치해야 실제 푸시가 뜬다. V2 번들 ID가 V1과 동일해 **V1 레포의 plist를 그대로 복사**하면 된다(같은 Firebase 앱
+  `websoso-e3a8a`, APNs 키도 그 프로젝트에 이미 연결). 빌드 구성별로 올바른 plist를 `FirebaseOptions(contentsOfFile:)`로
+  **실제 적용**한다 — V1은 옵션을 만들고 버린 뒤 인자 없는 `configure()`를 불러 항상 운영 plist만 쓰던 버그가 있었으니 복붙하지 말 것.
+- **권한 요청·원격 알림 등록 시점은 `MainTabView.task`**(V1 parity, 사용자 확정) — `MainTabView`는 세션이 있어야만
+  뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한 요청, 허용 상태면 `registerForRemoteNotifications()`.
+  (기존 홈 알림벨/설정의 화면별 권한 흐름은 그대로 — 이건 그 위에 추가된 진입 트리거다.)
+- **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — payload는 `{view, novelId, feedId,
+  notificationId}`(전부 문자열, `view`에 맞는 id만 채워지고 나머진 빈 문자열). `view=novelDetail`→작품 상세,
+  `view=feedDetail`→피드 상세. 흐름: `AppDelegate.didReceive` → `PushNotificationCenter.handleNotificationTap`
+  → `DeepLink.fromNotificationPayload`로 풀어 `onNotificationDeepLink` 콜백이 `WSSIOSV2App.pendingDeepLink`에
+  태운다 — **onOpenURL과 같은 채널**이라 MainTabView가 선택된 탭 위에 push하고 콜드 스타트·401 복원 로직(아래
+  딥링크 항목)을 그대로 탄다. ⚠️ **콜드 스타트(알림 탭으로 앱 실행)는 콜백 등록(`WSSIOSV2App.onAppear`) 전에
+  탭이 도착**할 수 있어, `PushNotificationCenter`가 딥링크를 보관했다가 등록 시 flush한다. `DeepLink`(BaseDomain)에
+  `.novelDetail`/`.feedDetail` case를 더하면 4탭 Root의 `deepLink switch`(exhaustive)를 컴파일러가 강제한다 —
+  4탭 다 이미 `.novel`/`.feed` destination을 갖고 있어 라우팅은 2줄씩만 더했다. `notificationId` 읽음 처리(V1
+  parity)만 아직 — 후속(인앱 알림함이 재진입 시 어차피 읽음 상태를 재조회한다).
+- ⚠️ **Tuist 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 한다**(`targets[N].settings[0]` name 없음 에러) — #243에서
+  `.mise.toml` 핀을 **4.206.0**으로 올려 해결했다(CI도 mise를 읽어 함께 반영). 되돌리면 Firebase 붙은 채로 generate가 깨진다.
+
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **재발급(/reissue) 전용 URLSession엔 요청 타임아웃 10초가 걸려 있다**(#236, `AppDependencies`의
