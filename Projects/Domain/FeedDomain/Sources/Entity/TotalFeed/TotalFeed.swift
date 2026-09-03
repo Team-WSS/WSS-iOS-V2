@@ -78,7 +78,33 @@ public struct TotalFeed: Equatable, Sendable {
             imageCount: imageCount
         )
     }
-    
+
+    /// 피드 상세(`FeedDetail`) 응답으로 이 목록 항목을 갱신한 사본 — 목록에서 **다녀온 셀만** 상세 API로
+    /// 맞추는 데 쓴다(재진입 목록 재조회의 대체 — 목록 전체를 다시 받지 않아 스크롤·길이가 유지된다).
+    ///
+    /// 본문·좋아요·댓글수·스포일러/공개/수정 여부·연결 작품·이미지(썸네일=첫 장, 개수)는 상세 값을 따르고,
+    /// **`feedId`·`createdDate`·`author`·`isMyFeed`는 로컬을 유지**한다 — `isMyFeed`는 상세 응답에 없고,
+    /// `author`는 내 피드 목록이 프로필 조회로 덧씌운 값이라 상세의 author로 되돌리면 그 조립이 풀린다.
+    /// 작성일은 바뀌지 않는 값이라 목록 응답의 표기를 그대로 둔다.
+    public func updated(from detail: FeedDetail) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: detail.feedContent,
+            author: author,
+            likeCount: detail.likeCount,
+            isLiked: detail.isLiked,
+            commentCount: detail.commentCount,
+            connectedNovel: detail.connectedNovel?.basicInfo,
+            isSpoiler: detail.isSpoiler,
+            isModified: detail.isModified,
+            isPublic: detail.isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: detail.feedImageURLs.first ?? nil,
+            imageCount: detail.feedImageURLs.count
+        )
+    }
+
     public init(
         feedId: FeedID,
         createdDate: String,

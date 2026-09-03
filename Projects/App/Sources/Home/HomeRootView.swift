@@ -373,7 +373,11 @@ private extension HomeRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
-            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+            onSubmitted: {
+                crossScreenFeedback.present(.feedEdited)
+                // 피드 탭 목록은 재진입에 목록을 다시 받지 않아, 다른 탭에서 쓴 새 글은 이 신호로만 들어간다.
+                dependencies.feedListInvalidation.markFeedCreated()
+            }
         )
     }
 }

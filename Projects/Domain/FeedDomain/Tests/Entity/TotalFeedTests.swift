@@ -80,9 +80,89 @@ struct TotalFeedTests {
         #expect(merged.connectedNovel == server.connectedNovel)
         #expect(merged.thumbnailImageURL == server.thumbnailImageURL)
     }
+
+    @Test("상세로 갱신하면 본문·좋아요·댓글수·수정 여부·연결 작품·이미지가 상세 값으로 바뀐다")
+    func updatedFromDetailTakesContentFieldsFromDetail() {
+        let local = makeMock(likeCount: 1, isLiked: false)
+        let firstImage = URL(string: "https://example.com/detail-1.jpg")
+        let detail = makeMockDetail(
+            content: "상세에서 수정된 본문",
+            likeCount: 5,
+            isLiked: true,
+            commentCount: 3,
+            isModified: true,
+            imageURLs: [firstImage, URL(string: "https://example.com/detail-2.jpg")]
+        )
+
+        let updated = local.updated(from: detail)
+
+        #expect(updated.content == "상세에서 수정된 본문")
+        #expect(updated.likeCount == 5)
+        #expect(updated.isLiked == true)
+        #expect(updated.commentCount == 3)
+        #expect(updated.isModified == true)
+        #expect(updated.connectedNovel == detail.connectedNovel?.basicInfo)
+        #expect(updated.thumbnailImageURL == firstImage)
+        #expect(updated.imageCount == 2)
+    }
+
+    @Test("상세로 갱신해도 feedId·작성일·작성자·내 글 여부는 로컬 값을 유지한다")
+    func updatedFromDetailKeepsLocalIdentityFields() {
+        let local = makeMock(feedId: FeedID(7), authorId: UserID(10))
+        // 상세의 author는 서버 원본(닉네임 다름) — 내 피드 목록이 프로필로 덧씌운 로컬 author가 이겨야 한다.
+        let detail = makeMockDetail(authorNickname: "상세의 다른 닉네임")
+
+        let updated = local.updated(from: detail)
+
+        #expect(updated.feedId == FeedID(7))
+        #expect(updated.createdDate == local.createdDate)
+        #expect(updated.author.userId == UserID(10))
+        #expect(updated.author.nickname == "작성자")
+        #expect(updated.isMyFeed == local.isMyFeed)
+    }
+
+    @Test("이미지가 없는 상세로 갱신하면 썸네일이 비고 이미지 수는 0이다")
+    func updatedFromDetailWithoutImagesClearsThumbnail() {
+        let local = makeMock(imageCount: 2, thumbnail: URL(string: "https://example.com/old-thumb.jpg"))
+        let detail = makeMockDetail(imageURLs: [])
+
+        let updated = local.updated(from: detail)
+
+        #expect(updated.thumbnailImageURL == nil)
+        #expect(updated.imageCount == 0)
+    }
 }
 
 extension TotalFeedTests {
+    private func makeMockDetail(
+        content: String = "상세 본문",
+        authorNickname: String = "작성자",
+        likeCount: Int = 0,
+        isLiked: Bool = false,
+        commentCount: Int = 0,
+        isModified: Bool = false,
+        imageURLs: [URL?] = []
+    ) -> FeedDetail {
+        FeedDetail(
+            id: FeedID(1),
+            author: Author(userId: UserID(10), nickname: authorNickname, profileImage: nil),
+            createdDate: "2026-02-06",
+            isModified: isModified,
+            feedContent: content,
+            feedImageURLs: imageURLs,
+            connectedNovel: ConnectedNovelDetail(
+                basicInfo: makeMockConnectedNovel(),
+                thumbnailImageURL: nil,
+                descirption: "소개"
+            ),
+            likeCount: likeCount,
+            isLiked: isLiked,
+            commentCount: commentCount,
+            isSpoiler: false,
+            isPublic: true
+        )
+    }
+
     private func makeMockConnectedNovel() -> ConnectedNovel {
         ConnectedNovel(
             id: NovelID(3),

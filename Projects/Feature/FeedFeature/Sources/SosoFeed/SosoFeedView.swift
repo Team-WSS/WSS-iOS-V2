@@ -48,6 +48,11 @@ struct SosoFeedView: View {
     private let onUserProfileTapped: (UserID) -> Void
     /// 연결 작품 배너 탭 → 작품 상세 진입 콜백.
     private let onNovelTapped: (NovelID) -> Void
+    /// 피드 작성 완료 신호(App이 올리는 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터 다시 받고 스크롤을
+    /// 최상단으로 — 이 화면은 재진입에 목록을 다시 받지 않으므로(다녀온 셀만 동기화) 새 글은 이 신호로만 들어온다.
+    /// 앱 어느 탭에서 작성해도 오도록 App 전역 값이며, TabView가 이 뷰를 계속 mount해 두므로 다른 탭에 있어도
+    /// `onChange`가 받아 미리 재로드한다.
+    private let feedCreatedVersion: Int
 
     /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
     private let threeDotsBottomOffset: CGFloat = 52
@@ -56,6 +61,7 @@ struct SosoFeedView: View {
 
     init(
         viewModel: SosoFeedViewModel,
+        feedCreatedVersion: Int = 0,
         onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onCreateFeedTapped: @escaping () -> Void = {},
@@ -63,6 +69,7 @@ struct SosoFeedView: View {
         onNovelTapped: @escaping (NovelID) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
+        self.feedCreatedVersion = feedCreatedVersion
         self.onEditFeedTapped = onEditFeedTapped
         self.onFeedTapped = onFeedTapped
         self.onCreateFeedTapped = onCreateFeedTapped
@@ -117,12 +124,8 @@ struct SosoFeedView: View {
         .onAppear {
             viewModel.handle(.load)
         }
-        .onChange(of: viewModel.state.selectedTab) { _, _ in
-            viewModel.handle(.load)
-        }
-        .onChange(of: viewModel.state.selectedSosoFeedOption) { _, _ in
-            guard viewModel.state.selectedTab == .sosoFeed else { return }
-            viewModel.handle(.load)
+        .onChange(of: feedCreatedVersion) { _, _ in
+            viewModel.handle(.reloadForCreatedFeed)
         }
     }
 
@@ -277,13 +280,15 @@ struct SosoFeedView: View {
         }
     }
 
-    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다 다른 값 — ScrollView의 `.id()`로
-    /// 걸어 전환 시 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다.
+    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다, 그리고 작성 완료 재로드(`listGeneration`)
+    /// 마다 다른 값 — ScrollView의 `.id()`로 걸어 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로
+    /// 리셋시킨다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다.
     private var scrollIdentity: String {
         let option = viewModel.state.myFeedOption
         let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
         return "\(viewModel.state.selectedTab)_\(viewModel.state.selectedSosoFeedOption.rawValue)"
             + "_\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
+            + "_\(viewModel.state.listGeneration)"
     }
 
     @ViewBuilder
@@ -321,6 +326,8 @@ struct SosoFeedView: View {
                             // 눌러도 피드 상세로 함께 이동하는 버그가 있었다(#196).
                             .contentShape(Rectangle())
                             .onTapGesture {
+                                // 돌아왔을 때 이 셀만 상세로 다시 맞추기 위해 떠나기 전에 기억시킨다.
+                                viewModel.handle(.feedVisited(feed.feedId))
                                 onFeedTapped(feed.feedId)
                             }
                         Rectangle()
@@ -332,7 +339,9 @@ struct SosoFeedView: View {
             }
             .id(scrollIdentity)
             .refreshable {
-                viewModel.handle(.load)
+                // `handle`은 동기 반환이라 그대로 두면 인디케이터가 즉시 사라진다 — 진행 중 로드의 종료를 기다린다.
+                viewModel.handle(.pullToRefresh)
+                await viewModel.awaitFeedsLoad()
             }
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(.hidden)
@@ -426,6 +435,8 @@ struct SosoFeedView: View {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
+                    // 수정하고 돌아오면 이 셀만 상세로 다시 맞춘다(작성 완료 신호는 작성에만 붙는다).
+                    viewModel.handle(.feedVisited(feed.feedId))
                     onEditFeedTapped(feed.feedId)
                 },
                 WSSDropdownItem(title: "삭제하기") {
@@ -499,6 +510,7 @@ struct SosoFeedView: View {
         viewModel: SosoFeedViewModel(
             loadMyFeedsUseCase: PreviewLoadMyFeedsUseCase(),
             loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCase(),
+            loadFeedDetailUseCase: PreviewLoadFeedDetailUseCase(),
             feedLikeUseCase: PreviewFeedLikeUseCase(),
             loadProfileUseCase: PreviewLoadProfileUseCase(),
             deleteFeedUseCase: PreviewDeleteFeedUseCase(),
@@ -532,6 +544,12 @@ private struct PreviewLoadSosoFeedsUseCase: LoadSosoFeedsUseCase {
     func execute(option: SosoFeedOption,
                  lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
         Paginated(items: [], hasNext: false)
+    }
+}
+
+private struct PreviewLoadFeedDetailUseCase: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .notFound
     }
 }
 

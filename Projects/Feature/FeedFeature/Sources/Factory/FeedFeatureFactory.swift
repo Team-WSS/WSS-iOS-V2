@@ -129,6 +129,11 @@ public enum FeedFeatureFactory {
 
     /// 실제 UseCase를 주입해 SosoFeedView를 생성한다.
     /// - Parameters:
+    ///   - loadFeedDetailUseCase: 재진입 시 **다녀온 셀만** 상세 API로 다시 맞추는 데 쓴다(이 화면은 재진입에
+    ///     목록을 다시 받지 않는다 — 스크롤·길이 보존). 구현 클래스명은 `DefaultLoadFeedUseCase`.
+    ///   - feedCreatedVersion: 피드 작성 완료 신호(App 전역 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터
+    ///     다시 받고 스크롤을 최상단으로 올린다 — 새 글은 이 신호로만 목록에 들어온다. 수정 완료엔 붙이지 말 것
+    ///     (수정은 이 화면이 다녀온 셀 동기화로 처리한다).
     ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기". 대상 피드
     ///     `FeedID`만 넘긴다 — 실제 데이터 로드는 수정 화면 자신이 한다(`makeEditFeedView` 참고).
     ///     실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
@@ -144,12 +149,14 @@ public enum FeedFeatureFactory {
     public static func makeSosoFeedView(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
         loadSosoFeedsUseCase: LoadSosoFeedsUseCase,
+        loadFeedDetailUseCase: LoadFeedDetailUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         loadProfileUseCase: LoadProfileUseCase,
         deleteFeedUseCase: DeleteFeedUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
+        feedCreatedVersion: Int = 0,
         onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onFeedTapped: @escaping (FeedID) -> Void = { _ in },
         onCreateFeedTapped: @escaping () -> Void = {},
@@ -160,6 +167,7 @@ public enum FeedFeatureFactory {
             viewModel: SosoFeedViewModel(
                 loadMyFeedsUseCase: loadMyFeedsUseCase,
                 loadsosoFeedsUseCase: loadSosoFeedsUseCase,
+                loadFeedDetailUseCase: loadFeedDetailUseCase,
                 feedLikeUseCase: feedLikeUseCase,
                 loadProfileUseCase: loadProfileUseCase,
                 deleteFeedUseCase: deleteFeedUseCase,
@@ -167,6 +175,7 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: logger
             ),
+            feedCreatedVersion: feedCreatedVersion,
             onEditFeedTapped: onEditFeedTapped,
             onFeedTapped: onFeedTapped,
             onCreateFeedTapped: onCreateFeedTapped,

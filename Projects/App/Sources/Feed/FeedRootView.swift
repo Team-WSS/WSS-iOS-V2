@@ -101,12 +101,15 @@ struct FeedRootView: View {
             FeedFeatureFactory.makeSosoFeedView(
                 loadMyFeedsUseCase: DefaultLoadMyFeedsUseCase(feedRepository: dependencies.feedRepository),
                 loadSosoFeedsUseCase: DefaultLoadSosoFeedsUseCase(feedRepository: dependencies.feedRepository),
+                loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository),
                 feedLikeUseCase: DefaultLikeUseCase(feedRepository: dependencies.feedRepository),
                 loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: dependencies.profileRepository),
                 deleteFeedUseCase: DefaultDeleteFeedUseCase(repository: dependencies.feedRepository),
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
+                // 앱 어느 탭에서든 피드 작성이 끝나면 오르는 카운터 — 목록이 새 글을 받는 유일한 경로(`FeedListInvalidation`).
+                feedCreatedVersion: dependencies.feedListInvalidation.feedCreatedVersion,
                 onEditFeedTapped: { path.append(Destination.editFeed($0)) },
                 onFeedTapped: { path.append(Destination.feed($0)) },
                 onCreateFeedTapped: { path.append(Destination.createFeed) },
@@ -361,7 +364,10 @@ private extension FeedRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
-            onSubmitted: { crossScreenFeedback.present(.feedEdited) }
+            onSubmitted: {
+                crossScreenFeedback.present(.feedEdited)
+                dependencies.feedListInvalidation.markFeedCreated()
+            }
         )
     }
 }
