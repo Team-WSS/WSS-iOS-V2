@@ -56,6 +56,8 @@ struct CollectionListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            WSSNavigationBar(title: "컬렉션") { dismiss() }
+
             if isOwnCollections {
                 CollectionSegmentedTab(
                     selectedTab: viewModel.state.selectedTab,
@@ -64,9 +66,7 @@ struct CollectionListView: View {
             }
             content
         }
-        .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
+        .wssCustomNavigationBar()
         .onAppear {
             // 이 화면의 자식(컬렉션 만들기/상세) 중 하나에서 복귀한 뒤의 재진입만 무조건 재로드한다 —
             // 성공/취소를 구분하지 않는다(취소해도 한 번 더 불리는 낭비는 있지만 최소 diff,
@@ -119,33 +119,6 @@ struct CollectionListView: View {
         switch tab {
         case .mine: viewModel.state.mine
         case .liked: viewModel.state.liked
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension CollectionListView {
-
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssBlack)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("컬렉션")
-                .applyWSSFont(.title2)
-                .foregroundStyle(Color.wssBlack)
         }
     }
 }
