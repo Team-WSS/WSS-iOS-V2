@@ -37,12 +37,12 @@ struct NotificationSettingView: View {
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "알림 설정") { dismiss() }
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -126,30 +126,6 @@ struct NotificationSettingView: View {
     }
 }
 
-// MARK: - Toolbar
-
-private extension NotificationSettingView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("알림 설정")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-    }
-}
 
 // MARK: - Presentation
 

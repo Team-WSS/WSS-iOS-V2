@@ -38,7 +38,31 @@ struct NovelNotificationListView: View {
         // 로딩/실패/빈 상태를 if/else 트리 교체가 아니라 overlay로 둔다. 상태 전환 시에도 루트(content)
         // 정체성이 유지돼야, 로드 완료 순간과 뒤로가기(dismiss)가 겹쳐도 진행 중인 pop이 취소되지 않는다
         // (NovelReviewView와 동일한 이유).
-        content
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: title) {
+                viewModel.handle(.requestClose)
+            } trailing: {
+                if !viewModel.state.subscriptions.isEmpty {
+                    Button {
+                        if viewModel.state.isEditing {
+                            viewModel.handle(.presentDeleteConfirmation)
+                        } else {
+                            viewModel.handle(.beginEditing)
+                        }
+                    } label: {
+                        if viewModel.state.isDeleting {
+                            ProgressView()
+                        } else {
+                            Text(viewModel.state.isEditing ? "삭제" : "수정")
+                                .applyWSSFont(.title2)
+                                .foregroundStyle(trailingButtonColor)
+                        }
+                    }
+                    .disabled(viewModel.state.isDeleting || (viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty))
+                }
+            }
+
+            content
             .overlay {
                 if viewModel.state.isLoading {
                     LoadingView()
@@ -55,11 +79,8 @@ struct NovelNotificationListView: View {
                     }
                 }
             }
-            .toolbar {
-                toolbarContent
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -113,52 +134,6 @@ private extension NovelNotificationListView {
             .padding(.horizontal, 20)
         }
         .scrollBounceBehavior(.basedOnSize)
-    }
-}
-
-// MARK: - Toolbar
-
-private extension NovelNotificationListView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                viewModel.handle(.requestClose)
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text(title)
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        if !viewModel.state.subscriptions.isEmpty {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    if viewModel.state.isEditing {
-                        viewModel.handle(.presentDeleteConfirmation)
-                    } else {
-                        viewModel.handle(.beginEditing)
-                    }
-                } label: {
-                    if viewModel.state.isDeleting {
-                        ProgressView()
-                    } else {
-                        Text(viewModel.state.isEditing ? "삭제" : "수정")
-                            .applyWSSFont(.title2)
-                            .foregroundStyle(trailingButtonColor)
-                    }
-                }
-                .disabled(viewModel.state.isDeleting || (viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty))
-            }
-        }
     }
 }
 

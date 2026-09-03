@@ -23,12 +23,12 @@ struct SettingBlockUserListView: View {
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "차단유저 목록") { dismiss() }
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -93,31 +93,6 @@ private extension SettingBlockUserListView {
         }
         switch viewModel.state.toastError {
         case .unknown, .none: return .unknownError
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingBlockUserListView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("차단유저 목록")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
         }
     }
 }

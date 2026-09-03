@@ -30,12 +30,31 @@ struct SettingProfilePublicView: View {
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "프로필 공개 설정") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.save)
+                } label: {
+                    if viewModel.state.isSaving {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(
+                                viewModel.hasChanges
+                                    ? WSSColor.wssPrimary100.swiftUIColor
+                                    : WSSColor.wssGray100.swiftUIColor
+                            )
+                    }
+                }
+                .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -75,50 +94,6 @@ struct SettingProfilePublicView: View {
             .padding(.top, 10.5)
 
             Spacer()
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingProfilePublicView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("프로필 공개 설정")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.handle(.save)
-            } label: {
-                if viewModel.state.isSaving {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(
-                            viewModel.hasChanges
-                                ? WSSColor.wssPrimary100.swiftUIColor
-                                : WSSColor.wssGray100.swiftUIColor
-                        )
-                }
-            }
-            .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
         }
     }
 }

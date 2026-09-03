@@ -49,21 +49,21 @@ struct SettingAccountInfoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(SettingMenu.allCases, id: \.self) { menu in
-                SettingMenuRow(
-                    title: menu.title,
-                    bottomText: menu == .email ? viewModel.state.email : nil,
-                    action: menu.isSelectable ? { select(menu) } : nil
-                )
-            }
+            WSSNavigationBar(title: "계정정보") { dismiss() }
 
-            Spacer()
+            VStack(spacing: 0) {
+                ForEach(SettingMenu.allCases, id: \.self) { menu in
+                    SettingMenuRow(
+                        title: menu.title,
+                        bottomText: menu == .email ? viewModel.state.email : nil,
+                        action: menu.isSelectable ? { select(menu) } : nil
+                    )
+                }
+
+                Spacer()
+            }
         }
-        .toolbar {
-            toolbarContent
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
+        .wssCustomNavigationBar()
         .onAppear {
             viewModel.handle(.load)
         }
@@ -142,31 +142,6 @@ extension SettingAccountInfoView {
             case .email:    false
             default:        true
             }
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingAccountInfoView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("계정정보")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
         }
     }
 }

@@ -30,7 +30,10 @@ struct WithdrawReasonView: View {
     }
 
     var body: some View {
-        ScrollView {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "회원탈퇴") { dismiss() }
+
+            ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Spacer().frame(height: 51)
 
@@ -95,11 +98,8 @@ struct WithdrawReasonView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .toolbar {
-            toolbarContent
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
+        .wssCustomNavigationBar()
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             guard shouldDismiss else { return }
             onWithdrawSuccess()
@@ -224,31 +224,6 @@ struct WithdrawReasonView: View {
                 .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
         }
         .padding(.vertical, 10)
-    }
-}
-
-// MARK: - Toolbar
-
-private extension WithdrawReasonView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("회원탈퇴")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
     }
 }
 

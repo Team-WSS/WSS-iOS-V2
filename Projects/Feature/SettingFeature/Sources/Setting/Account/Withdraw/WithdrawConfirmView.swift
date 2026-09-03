@@ -36,8 +36,10 @@ struct WithdrawConfirmView: View {
             let size = geo.size
             
             VStack(alignment: .leading, spacing: 0) {
+                WSSNavigationBar(title: "회원탈퇴") { dismiss() }
+
                 Spacer().frame(height: 45)
-                
+
                 Text("정말 탈퇴하시겠어요?")
                     .applyWSSFont(.headline1)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
@@ -81,11 +83,7 @@ struct WithdrawConfirmView: View {
                 .padding(.vertical, 10)
                 .padding(.horizontal, 16)
             }
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+            .wssCustomNavigationBar()
         }
         .onAppear {
             viewModel.handle(.load)
@@ -123,31 +121,6 @@ struct WithdrawConfirmView: View {
         .frame(maxWidth: .infinity)
         .background(WSSColor.wssPrimary20.swiftUIColor)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-}
-
-// MARK: - Toolbar
-
-private extension WithdrawConfirmView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        
-        ToolbarItem(placement: .principal) {
-            Text("회원탈퇴")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
     }
 }
 
