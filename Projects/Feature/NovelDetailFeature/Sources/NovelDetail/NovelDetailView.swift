@@ -174,8 +174,7 @@ struct NovelDetailView: View {
             if let information = viewModel.state.information {
                 loadedContent(information)
             } else if viewModel.state.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LoadingView()
             } else {
                 // 로드 실패 — 공용 실패 뷰 재사용. 재시도 버튼이 load를 다시 발화한다(실패는 가드를 소진하지 않음).
                 NetworkErrorView { viewModel.handle(.load) }
