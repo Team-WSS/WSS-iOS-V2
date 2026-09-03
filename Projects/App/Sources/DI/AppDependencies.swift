@@ -195,11 +195,15 @@ final class AppDependencies {
         // 여기선 Domain UseCase(RegisterDeviceTokenUseCase)와 세션 판정만 넘긴다. 세션이 끝나 이
         // AppDependencies가 재조립되면 새 UseCase/tokenStore로 다시 주입된다.
         let registerDeviceTokenUseCase = DefaultRegisterDeviceTokenUseCase(repository: pushSettingRepository)
+        let markNotificationAsReadUseCase = DefaultMarkNotificationAsReadUseCase(repository: notificationRepository)
         PushNotificationCenter.shared.configure(
             registerDeviceToken: { devicePushToken in
                 try? await registerDeviceTokenUseCase.execute(devicePushToken: devicePushToken)
             },
-            isLoggedIn: { (try? tokenStore.accessToken()) != nil }
+            isLoggedIn: { (try? tokenStore.accessToken()) != nil },
+            markNotificationAsRead: { notificationID in
+                try? await markNotificationAsReadUseCase.execute(id: NotificationID(notificationID))
+            }
         )
 
         // 런치 부트스트랩(#225 모듈, #236 배선) — 기존 저장소·정책에 위임하는 composite 조립.
