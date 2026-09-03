@@ -38,6 +38,8 @@ final class PushNotificationCenter {
     private var registerDeviceToken: (@Sendable (DevicePushToken) async -> Void)?
     /// `AppDependencies`가 조립 시 주입 — 현재 로그인(세션 보유) 여부.
     private var isLoggedIn: (@Sendable () -> Bool)?
+    /// `AppDependencies`가 조립 시 주입 — 알림 읽음 처리 훅(`MarkNotificationAsReadUseCase` 래핑, 인자는 알림 id).
+    private var markNotificationAsRead: (@Sendable (Int) async -> Void)?
     /// 마지막으로 받은 FCM 등록 토큰. 로그인 전에 도착하면 보관만 하고, 로그인/조립 시점에 등록에 쓴다.
     private var latestFCMToken: String?
 
@@ -63,10 +65,12 @@ final class PushNotificationCenter {
     /// (부트스트랩이 지나간 뒤 로그인한 신규 사용자가 이 조립 시점에 걸리는 경로).
     func configure(
         registerDeviceToken: @escaping @Sendable (DevicePushToken) async -> Void,
-        isLoggedIn: @escaping @Sendable () -> Bool
+        isLoggedIn: @escaping @Sendable () -> Bool,
+        markNotificationAsRead: @escaping @Sendable (Int) async -> Void
     ) {
         self.registerDeviceToken = registerDeviceToken
         self.isLoggedIn = isLoggedIn
+        self.markNotificationAsRead = markNotificationAsRead
 
         guard let token = latestFCMToken, isLoggedIn() else { return }
         let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
@@ -98,13 +102,26 @@ final class PushNotificationCenter {
                 result[key] = value
             }
         }
-        guard let deepLink = DeepLink.fromNotificationPayload(payload) else { return }
 
+        // 읽음 처리는 딥링크(화면 이동) 유무와 무관하게 — 탭한 알림은 읽음으로(V1 parity).
+        markNotificationAsReadIfPossible(payload)
+
+        guard let deepLink = DeepLink.fromNotificationPayload(payload) else { return }
         if let onNotificationDeepLink {
             onNotificationDeepLink(deepLink)
         } else {
             pendingNotificationDeepLink = deepLink
         }
+    }
+
+    /// 탭한 알림을 서버에 읽음 처리한다(V1 parity). 로그인 상태 + payload에 유효한 `notificationId`가 있을 때만 —
+    /// 미로그인이면 어차피 401이라 조용히 건너뛴다. 실패는 fire-and-forget으로 삼킨다(등록 훅과 동일 계약).
+    private func markNotificationAsReadIfPossible(_ payload: [String: String]) {
+        guard isLoggedIn?() == true, let markNotificationAsRead,
+              let raw = payload["notificationId"],   // 서버 push payload 키(#243)
+              let id = Int(raw), id > 0
+        else { return }
+        Task { await markNotificationAsRead(id) }
     }
 
     // MARK: - 부트스트랩 pull (SplashData의 deviceTokenProvider가 호출)

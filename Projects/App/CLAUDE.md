@@ -192,8 +192,9 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   딥링크 항목)을 그대로 탄다. ⚠️ **콜드 스타트(알림 탭으로 앱 실행)는 콜백 등록(`WSSIOSV2App.onAppear`) 전에
   탭이 도착**할 수 있어, `PushNotificationCenter`가 딥링크를 보관했다가 등록 시 flush한다. `DeepLink`(BaseDomain)에
   `.novelDetail`/`.feedDetail` case를 더하면 4탭 Root의 `deepLink switch`(exhaustive)를 컴파일러가 강제한다 —
-  4탭 다 이미 `.novel`/`.feed` destination을 갖고 있어 라우팅은 2줄씩만 더했다. `notificationId` 읽음 처리(V1
-  parity)만 아직 — 후속(인앱 알림함이 재진입 시 어차피 읽음 상태를 재조회한다).
+  4탭 다 이미 `.novel`/`.feed` destination을 갖고 있어 라우팅은 2줄씩만 더했다. **탭 시 `notificationId`는 읽음
+  처리**(V1 parity) — `PushNotificationCenter.markNotificationAsReadIfPossible`가 로그인 상태 + 유효 id일 때
+  `MarkNotificationAsReadUseCase`로 보낸다(딥링크 유무와 무관하게 탭한 알림은 읽음으로). 미로그인이면 401이라 건너뛴다.
 - ⚠️ **Tuist 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 한다**(`targets[N].settings[0]` name 없음 에러) — #243에서
   `.mise.toml` 핀을 **4.206.0**으로 올려 해결했다(CI도 mise를 읽어 함께 반영). 되돌리면 Firebase 붙은 채로 generate가 깨진다.
 
