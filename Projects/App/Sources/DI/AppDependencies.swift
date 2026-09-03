@@ -190,6 +190,18 @@ final class AppDependencies {
         self.onboardingHintRepository = DefaultOnboardingHintRepository(appStorage: UserDefaultsStorage())
         self.appReviewRequestRepository = DefaultAppReviewRequestRepository(appStorage: UserDefaultsStorage())
 
+        // 푸시(#243): FCM 런타임 허브(App 레이어의 PushNotificationCenter)에 "토큰 서버 등록" 훅과
+        // "로그인 여부"를 주입한다. Firebase 자체는 App(PushNotificationCenter/AppDelegate)에만 있고,
+        // 여기선 Domain UseCase(RegisterDeviceTokenUseCase)와 세션 판정만 넘긴다. 세션이 끝나 이
+        // AppDependencies가 재조립되면 새 UseCase/tokenStore로 다시 주입된다.
+        let registerDeviceTokenUseCase = DefaultRegisterDeviceTokenUseCase(repository: pushSettingRepository)
+        PushNotificationCenter.shared.configure(
+            registerDeviceToken: { devicePushToken in
+                try? await registerDeviceTokenUseCase.execute(devicePushToken: devicePushToken)
+            },
+            isLoggedIn: { (try? tokenStore.accessToken()) != nil }
+        )
+
         // 런치 부트스트랩(#225 모듈, #236 배선) — 기존 저장소·정책에 위임하는 composite 조립.
         // appUpdateRepository는 이 게이트만 쓰므로 프로퍼티로 열지 않는다(다른 소비자가 생기면 승격).
         self.launchGateRepository = SplashDataFactory.makeLaunchGateRepository(
@@ -203,11 +215,12 @@ final class AppDependencies {
         )
         // 프리페치를 실행하는 쪽 추천 레포는 store를 주입하지 않은 **별도 인스턴스**여야 한다
         // (위 prefetchStore 주석의 짝 — 같은 인스턴스를 넘기면 프리페치가 스스로를 무효화한다).
-        // deviceTokenProvider의 nil은 "FCM 등록 건너뛰기" — 푸시 인프라(APNs/FCM)가 아직 App에 없다.
+        // deviceTokenProvider는 App 레이어 FCM 허브에서 현재 토큰을 당겨온다(#243) — 권한 허용 상태에서만
+        // 토큰을 만들어 주고, 미허용/실패면 nil을 돌려 부트스트랩이 등록을 조용히 건너뛴다(세션 있을 때만 호출됨).
         self.launchTaskRepository = SplashDataFactory.makeLaunchTaskRepository(
             profileRepository: profileRepository,
             pushSettingRepository: pushSettingRepository,
-            deviceTokenProvider: { nil },
+            deviceTokenProvider: { await PushNotificationCenter.shared.currentDevicePushToken() },
             keywordRepository: keywordRepository,
             recommendationRepository: RecommendationDataFactory.makeRepository(
                 network: client,
