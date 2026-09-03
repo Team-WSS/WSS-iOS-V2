@@ -119,24 +119,23 @@ private struct WSSCustomNavigationBarModifier: ViewModifier {
 
     let swipeBackEnabled: Bool
 
-    func body(content: Content) -> some View {
-        content
-            .toolbar(.hidden, for: .navigationBar)
-            // enabled=false면 hidesBackButton=true → 전역 제스처 delegate가 이 화면의 스와이프 pop을 거부.
-            // enabled=true면 false(기본값) → delegate 가드를 안 세워 스와이프백이 정상 동작한다.
-            .navigationBarBackButtonHidden(!swipeBackEnabled)
-            .applyEnableSwipeBack(swipeBackEnabled)
-    }
-}
-
-private extension View {
-
     @ViewBuilder
-    func applyEnableSwipeBack(_ enabled: Bool) -> some View {
-        if enabled {
-            enableSwipeBack()
+    func body(content: Content) -> some View {
+        if swipeBackEnabled {
+            // 시스템 네비바만 숨기고, 네비바 숨김이 함께 꺼버리는 스와이프백을 제스처로 되살린다
+            // (Notification·NovelDetail 등 검증된 패턴과 동일).
+            // ⚠️ `.navigationBarBackButtonHidden(false)`를 명시로 걸지 말 것 — iOS 26에서 그게 시스템
+            // back 버튼(리퀴드 글래스)을 강제로 띄워, 투명 커스텀 바(컬렉션 상세 등) 위로 비쳐 보인다.
+            // 걸지 않으면 기본값(hidesBackButton=false)이라 스와이프 delegate 가드도 통과한다.
+            content
+                .toolbar(.hidden, for: .navigationBar)
+                .enableSwipeBack()
         } else {
-            self
+            // 닫기 전 확인이 필요한 화면(작성 중 초안 등): hidesBackButton=true로 전역 pop 제스처
+            // delegate가 이 화면의 스와이프 pop 시작을 거부하게 한다(스와이프백 미적용).
+            content
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
         }
     }
 }
