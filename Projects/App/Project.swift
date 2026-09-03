@@ -98,6 +98,9 @@ let targets: [Target] = [
         dependencies: [
             .external(name: "KakaoSDKCommon"),
             .external(name: "KakaoSDKAuth"),
+            // FCM 푸시 알림 수신·토큰 발급(#243). Firebase는 App 레이어에만 격리한다 — Domain/Data는
+            // DevicePushToken/RegisterDeviceTokenUseCase 추상화로 이미 분리돼 있어 Firebase를 모른다.
+            .external(name: "FirebaseMessaging"),
             // 온보딩 플로우 조립(App이 유일한 DI 지점) — Feature + Domain(UseCase 타입) + Data(Factory 구현체) + Core.
             .module(.feature(.onboarding)),
             .module(.domain(.base)),
