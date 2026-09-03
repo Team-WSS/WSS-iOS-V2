@@ -319,7 +319,8 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     `AuthApi.isKakaoTalkLoginUrl`로 물어 SDK에 넘긴다 — 카카오 콜백은 host가 `oauth`라 `DeepLink`가 nil을
     돌려주니 순서를 뒤집어도 동작은 같지만, `isKakaoTalkLoginUrl`은 앱 키 미설정 시 `try!`로 죽는 SDK 경로라
     순수 파서를 앞에 둔다.
-  - **카카오톡 공유 카드의 "앱에서 보기"도 같은 경로다** — 카카오톡이 앱을
+  - **카카오톡 공유 카드(메시지 자체)를 탭해도 같은 경로다**(#241부터 — 콘솔 커스텀 템플릿엔 별도
+    "앱에서 보기" 버튼 컴포넌트가 없다, `CollectionFeature/CLAUDE.md` 공유 항목 참고) — 카카오톡이 앱을
     `kakao{APP_KEY}://kakaolink?collectionId={id}`로 열면 `DeepLink(url:)`이 `kakaolink` host를
     `.collectionDetail`로 풀어 위와 똑같이 push된다. App은
     스킴을 따로 분기하지 않는다. 카드 전송 쪽 전제(`LSApplicationQueriesSchemes`의 `kakaolink`, 카카오 콘솔

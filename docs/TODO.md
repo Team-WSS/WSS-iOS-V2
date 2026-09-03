@@ -130,7 +130,8 @@
 
 ### 8. 컬렉션 "공유하기" ✅구현됨(#228, 카카오 공유 카드) / 남은 것: Universal Link(카카오 외 채널 공유)
 
-- **무엇(해소)**: "공유하기"가 **카카오 공유 카드(`KakaoSDKShare`/`KakaoSDKTemplate`, "앱에서 보기" →
+- **무엇(해소)**: "공유하기"가 **카카오 공유 카드(`KakaoSDKShare`, 콘솔 커스텀 템플릿 — #241부터
+  `KakaoSDKTemplate`/기본 템플릿 아님, 카드 자체를 탭하면 →
   `kakao{APP_KEY}://kakaolink?collectionId={id}`)** + 앱 내 라우팅(지금 선택된 탭 위에 push)으로 구현됐다
   (2026-08-29, 사용자 확정). 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari, SDK 권장 폴백).
   처음엔 iOS 기본 공유 시트 + `websoso://collections/{id}`만으로 갔다가, **카카오톡이 커스텀 스킴을 링크로
@@ -146,7 +147,8 @@
   ① 시스템 공유 시트를 그 링크로 되살리고(폐기 이력의 함정 참고) ② 카카오 카드의 `Link.webUrl`/
   `mobileWebUrl`에도 같은 URL을 실을 것.
 - **어디를 고치나**: `BaseDomain/DeepLink.swift`(https 형식 추가) + App `Info.plist`/entitlements +
-  `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.makeTemplate`(`webUrl`).
+  `CollectionDetailView.shareButton`(시트 재도입) + `CollectionKakaoShare.multiThumbnailArgs`(콘솔
+  커스텀 템플릿의 웹 링크 변수, #241부터 `makeTemplate`/`Link.webUrl`은 없음).
 
 ### 10. `UserPageFeatureDemoApp`의 마이페이지 편집·설정·서재 전환이 콘솔 로그로만 남아있다
 

@@ -168,6 +168,12 @@
       `kakao{APP_KEY}://kakaolink?collectionId={id}`로 도착하고 App `onOpenURL`이 `DeepLink(url:)`로 푼다.
       앱 미설치자는 카카오가 App Store로 보낸다(카카오 콘솔 iOS 플랫폼에 Bundle ID·App Store ID 등록 필요 —
       Demo 번들 `kr.websoso.app.CollectionFeatureDemo`는 등록돼 있지 않으면 템플릿 검증에서 거부될 수 있다).
+    - **표지는 대표 작품(`representativeNovelID`)이 아니라 화면에 보이는 현재 정렬 순서(`SortType`)
+      상위 `slotCount`개를 그대로 쓴다**(사용자 확정, 2026-09-03) — 히어로 이미지(`CollectionDetailView.
+      heroImageURL`)는 대표 작품을 명시적으로 찾지만, 공유 카드 표지(`CollectionKakaoShare.
+      multiThumbnailArgs`)는 `detail.novels.prefix(slotCount)`를 그대로 쓰는 게 의도된 동작이다 —
+      정렬을 바꿔 공유하면 카드 표지도 그 순서를 따라간다. 대표 작품 우선으로 되돌리는 방향으로
+      "수정"하지 말 것.
     - 카카오톡이 있으면 `ShareApi.shared.shareCustom`(템플릿 서버 검증)이 돌려준 `kakaolink://send?…` URL을,
       없으면 `ShareApi.shared.makeCustomUrl`(로컬 조립, 서버 검증 없음)의 카카오 웹 공유 URL을
       `UIApplication.shared.open`으로 연다 — 카카오톡의 받는 사람 선택 화면 또는 Safari의 카카오 웹 공유가 뜨는
