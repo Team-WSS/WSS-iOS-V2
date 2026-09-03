@@ -367,10 +367,11 @@ private extension CollectionDetailView {
     }
 
     /// 공유는 **카카오 공유 카드**(`CollectionKakaoShare`, 사용자 확정 2026-08-29, #228) 하나다 — 카카오톡이 있으면
-    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 받는 사람이 카드의 "앱에서 보기"로 이 화면에 들어온다(앱이 없으면
-    /// 카카오가 App Store로). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력). 순수 표현이라 VM을
-    /// 거치지 않는다(`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는
-    /// 사용자 액션 실패라 토스트로 알린다.
+    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력).
+    /// **카드는 작품 수별 커스텀 템플릿뿐이라 버튼 컴포넌트가 없다**(#241) — 대신 카드 자체를 탭하면
+    /// 앱으로 딥링크된다(콘솔 템플릿 설정, `CollectionKakaoShare` 헤더 주석 참고). 순수 표현이라 VM을 거치지 않는다
+    /// (`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는 사용자
+    /// 액션 실패라 토스트로 알린다.
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
             guard !isSharing else { return }
@@ -380,7 +381,6 @@ private extension CollectionDetailView {
                 do {
                     try await CollectionKakaoShare.share(
                         detail,
-                        coverImageURL: heroImageURL,
                         multiThumbnailTemplateID1: kakaoCollectionShareTemplateID1,
                         multiThumbnailTemplateID2: kakaoCollectionShareTemplateID2,
                         multiThumbnailTemplateID3: kakaoCollectionShareTemplateID3
