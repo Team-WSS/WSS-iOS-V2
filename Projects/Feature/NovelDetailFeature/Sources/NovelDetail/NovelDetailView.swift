@@ -384,7 +384,6 @@ private extension NovelDetailView {
                 .padding(.leading, 74)
                 .padding(.trailing, 80)
                 .opacity(showNavTitle ? 1 : 0)
-                .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
         .padding(.leading, 6)
         // 타이틀과 함께 페이드인하는 흰 배경 — 없으면 타이틀·버튼이 스크롤되는 본문과 겹쳐 안 읽힌다.
@@ -399,7 +398,6 @@ private extension NovelDetailView {
             GeometryReader { proxy in
                 Color.wssWhite
                     .opacity(showNavTitle ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.1), value: showNavTitle)
                     .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navigationBarBottomY = height

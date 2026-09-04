@@ -231,7 +231,6 @@ private extension CollectionDetailView {
             }
             .ignoresSafeArea(edges: .top)
         )
-        .animation(.easeInOut(duration: 0.02), value: isScrolledFromTop)
     }
 
     var navIconColor: Color {

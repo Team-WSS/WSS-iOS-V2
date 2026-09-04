@@ -146,7 +146,6 @@ struct MypageView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background(WSSColor.wssWhite.swiftUIColor)
-        .animation(.easeInOut(duration: 0.2), value: isScrolledFromTop)
     }
     
     // MARK: - 프로필

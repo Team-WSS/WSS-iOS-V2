@@ -641,7 +641,6 @@ extension UserPageView {
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background((isScrolledFromTop ? WSSColor.wssWhite : WSSColor.wssPrimary20).swiftUIColor)
-        .animation(.easeInOut(duration: 0.2), value: isScrolledFromTop)
     }
 }
 
