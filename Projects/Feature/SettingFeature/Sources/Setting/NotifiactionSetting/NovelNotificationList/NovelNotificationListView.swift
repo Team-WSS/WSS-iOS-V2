@@ -66,8 +66,8 @@ struct NovelNotificationListView: View {
             .overlay {
                 if viewModel.state.isLoading {
                     LoadingView()
-                } else if viewModel.state.loadError != nil {
-                    NetworkErrorView {
+                } else if let error = viewModel.state.loadError {
+                    NetworkErrorView(error: error) {
                         viewModel.handle(.load)
                     }
                 } else if viewModel.state.subscriptions.isEmpty {

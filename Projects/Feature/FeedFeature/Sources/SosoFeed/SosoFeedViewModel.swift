@@ -326,8 +326,9 @@ final class SosoFeedViewModel {
     ///
     /// 취소된 로드는 **아무것도 정리하지 않는다** — 정리하면 자기를 밀어낸 새 로드의 `feedsTask`와 로딩 표시를
     /// 지운다(defer 안에서는 `return`이 안 돼 `if`로 감싼다). ⚠️ 취소는 `CancellationError`가 아니라
-    /// `RepositoryError.networkUnavailable`로 도착한다(`URLError.cancelled` → `NetworkingError.unknown` →
-    /// `.networkUnavailable`) — 그래서 실패 경로도 첫 줄에서 취소를 걸러야 옛 로드가 에러를 세우지 않는다.
+    /// `RepositoryError.unknown`으로 도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.unknown`;
+    /// #244에서 오프라인(`notConnectedToInternet`/`networkConnectionLost`)만 `networkUnavailable`로 가르며
+    /// 취소는 `.unknown`이 됐다) — 어느 값이든 실패 경로 첫 줄에서 취소를 걸러야 옛 로드가 에러를 세우지 않는다.
     private func loadFeeds(_ kind: LoadKind) async {
         guard !Task.isCancelled else { return }
         defer {

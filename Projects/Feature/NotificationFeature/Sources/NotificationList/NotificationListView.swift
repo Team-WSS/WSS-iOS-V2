@@ -79,8 +79,8 @@ struct NotificationListView: View {
             // 로딩·실패는 네비게이션 바만 남기고 그 아래를 통째로 대체한다(Library와 같은 규칙).
             if viewModel.state.isLoading {
                 LoadingView()
-            } else if viewModel.state.loadFailed {
-                NetworkErrorView { viewModel.handle(.retry) }
+            } else if let error = viewModel.state.loadFailed {
+                NetworkErrorView(error: error) { viewModel.handle(.retry) }
             } else if viewModel.state.items.isEmpty {
                 // CTA 없는 빈 상태 — 알림은 유도할 행동이 마땅치 않다(#181에서 확정).
                 WSSEmptyView(type: .notification)

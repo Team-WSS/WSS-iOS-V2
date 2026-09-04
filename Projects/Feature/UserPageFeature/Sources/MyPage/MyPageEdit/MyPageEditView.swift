@@ -82,8 +82,8 @@ struct MyPageEditView: View {
                     if viewModel.state.isLoading {
                         LoadingView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if viewModel.state.loadFailed {
-                        NetworkErrorView { viewModel.handle(.load) }
+                    } else if let error = viewModel.state.loadFailed {
+                        NetworkErrorView(error: error) { viewModel.handle(.load) }
                     }
                 }
         }

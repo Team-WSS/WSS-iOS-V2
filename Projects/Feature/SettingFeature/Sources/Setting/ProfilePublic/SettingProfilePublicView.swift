@@ -70,8 +70,8 @@ struct SettingProfilePublicView: View {
     private var content: some View {
         if viewModel.state.isLoading {
             LoadingView()
-        } else if viewModel.state.loadError != nil {
-            NetworkErrorView {
+        } else if let error = viewModel.state.loadError {
+            NetworkErrorView(error: error) {
                 viewModel.handle(.load)
             }
         } else {

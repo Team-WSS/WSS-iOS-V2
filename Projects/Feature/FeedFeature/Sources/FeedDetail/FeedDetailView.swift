@@ -83,8 +83,8 @@ struct FeedDetailView: View {
                     isEdited: detail.isModified
                 )
                 loadedFeedDetailView(detail: detail, header: header)
-            } else if viewModel.state.detailLoadFailed {
-                NetworkErrorView { Task { await viewModel.handle(.load) } }
+            } else if let error = viewModel.state.detailLoadFailed {
+                NetworkErrorView(error: error) { Task { await viewModel.handle(.load) } }
             } else {
                 LoadingView()
             }

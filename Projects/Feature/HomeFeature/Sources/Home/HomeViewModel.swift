@@ -33,7 +33,7 @@ final class HomeViewModel {
         /// ⚠️ 초깃값 `true` — `onAppear`의 `.load`보다 첫 body 평가가 먼저라, false면 한 프레임 동안
         /// "검색바·배너만 있는 빈 홈"이 스친다(Library·NovelDetail과 같은 이유).
         var isLoading = true
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         var requiresAuthentication = false
         /// 알림 목록 화면으로 이동해도 되는 신호 — **벨 탭 즉시** 오른다. View가 `onChange`로 소비하고
         /// 곧바로 `.consumeNotificationNavigation`으로 되돌린다(`requiresAuthentication`과 같은 1회성
@@ -162,7 +162,7 @@ private extension HomeViewModel {
         state.isLoading = true
         // 재시도·재진입 시작 시점에 함께 내린다 — 성공할 때만 내리면 "페이지 다시 불러오기"를 눌러도
         // 로드가 끝날 때까지 실패 뷰가 그대로라 아무 반응이 없어 보인다.
-        state.loadFailed = false
+        state.loadFailed = nil
         defer { state.isLoading = false }
 
         // 둘은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
@@ -217,7 +217,7 @@ private extension HomeViewModel {
         // 되살아나지 않고 로딩부터 다시 시작한다. (인증 만료는 위에서 return되어 여기 오지 않는다 —
         // 그쪽은 실패 뷰를 세우지 않으니 콘텐츠가 남아도 맞다.)
         hasLoadedContent = false
-        state.loadFailed = true
+        state.loadFailed = error
     }
 
     /// 배지는 부수 데이터라 실패해도 홈 콘텐츠를 지우지 않는다 — **사용자에겐 아무것도 띄우지 않고

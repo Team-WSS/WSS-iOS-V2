@@ -70,8 +70,8 @@ struct CollectionMyLibrarySelectView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.state.loadFailed {
-            NetworkErrorView { viewModel.handle(.retry) }
+        if let error = viewModel.state.loadFailed {
+            NetworkErrorView(error: error) { viewModel.handle(.retry) }
         } else if viewModel.state.isLoading {
             LoadingView()
         } else if viewModel.state.novels.isEmpty {

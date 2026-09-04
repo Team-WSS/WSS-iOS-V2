@@ -27,7 +27,7 @@ final class UserFeedListViewModel {
         var feeds: [TotalFeed] = []
         var hasNextFeeds = true
         var isLoadingFeeds = false
-        var feedsLoadFailed = false
+        var feedsLoadFailed: RepositoryError?
 
         /// 피드 셀 드롭다운(스포일러/부적절한 표현 신고)의 확인·완료 알럿 — `UserPageViewModel`과 동일 2단 패턴.
         var presentedFeedAlert: FeedAlert?
@@ -145,7 +145,7 @@ private extension UserFeedListViewModel {
             feedsTask = Task { await loadFeedsPage(after: nil, isSilentRefresh: true) }
         } else {
             state.isLoadingFeeds = true
-            state.feedsLoadFailed = false
+            state.feedsLoadFailed = nil
             feedsTask = Task { await loadFeedsPage(after: nil) }
         }
     }
@@ -234,7 +234,7 @@ private extension UserFeedListViewModel {
             }
             state.hasNextFeeds = page.hasNext
         } catch {
-            if lastFeedID == nil, !isSilentRefresh { state.feedsLoadFailed = true }
+            if lastFeedID == nil, !isSilentRefresh { state.feedsLoadFailed = (error as? RepositoryError) ?? .unknown }
             logger?.error("UserFeedList 로드 실패: \(String(describing: error))")
         }
     }

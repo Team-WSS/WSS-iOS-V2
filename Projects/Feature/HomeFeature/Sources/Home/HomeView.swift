@@ -97,8 +97,8 @@ struct HomeView: View {
     /// (`isInitialLoading`) 띄운다. NovelDetail도 같은 이유로 데이터 우선 분기다.
     @ViewBuilder
     private func content(for state: HomeViewModel.State) -> some View {
-        if state.loadFailed {
-            NetworkErrorView { viewModel.handle(.load) }
+        if let error = state.loadFailed {
+            NetworkErrorView(error: error) { viewModel.handle(.load) }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if viewModel.isInitialLoading {
             LoadingView()

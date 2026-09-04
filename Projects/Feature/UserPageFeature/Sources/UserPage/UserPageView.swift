@@ -87,8 +87,8 @@ struct UserPageView: View {
                 // 존재하지 않는/탈퇴한 유저(USER-018) — 프로필 자체가 없어 헤더·탭도 못 그리므로 body 전체를
                 // 안내로 대체한다. 재시도 버튼 없음(존재하지 않는 유저는 재시도해도 동일, #222 V1 parity).
                 userNotFoundView
-            } else if viewModel.state.hasLoadError {
-                NetworkErrorView {
+            } else if let error = viewModel.state.hasLoadError {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else {
@@ -466,8 +466,8 @@ struct UserPageView: View {
                     LoadingView()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 90)
-                } else if viewModel.state.feedsLoadFailed {
-                    NetworkErrorView {
+                } else if let error = viewModel.state.feedsLoadFailed {
+                    NetworkErrorView(error: error) {
                         viewModel.handle(.loadFeeds)
                     }
                     .frame(maxWidth: .infinity)

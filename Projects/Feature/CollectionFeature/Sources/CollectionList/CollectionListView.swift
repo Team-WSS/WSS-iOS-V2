@@ -104,8 +104,8 @@ struct CollectionListView: View {
     @ViewBuilder
     private func tabContent(for tab: CollectionListTab) -> some View {
         let tabState = state(for: tab)
-        if tabState.loadFailed {
-            NetworkErrorView { viewModel.handle(.retry(tab)) }
+        if let error = tabState.loadFailed {
+            NetworkErrorView(error: error) { viewModel.handle(.retry(tab)) }
         } else if tabState.isLoading {
             LoadingView()
         } else if tabState.items.isEmpty {

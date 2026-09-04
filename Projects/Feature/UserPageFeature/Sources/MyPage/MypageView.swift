@@ -54,8 +54,8 @@ struct MypageView: View {
 
     var body: some View {
         Group {
-            if viewModel.state.hasLoadError {
-                NetworkErrorView {
+            if let error = viewModel.state.hasLoadError {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else {

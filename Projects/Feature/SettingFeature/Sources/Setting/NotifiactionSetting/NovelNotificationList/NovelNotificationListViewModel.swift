@@ -31,8 +31,8 @@ final class NovelNotificationListViewModel {
         var isDeleting = false
         var presentedDeleteConfirmation = false
         var shouldDismiss = false
-        /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 삭제 실패와 분리한다.
-        var loadError: NovelNotificationListError?
+        /// 최초 로드 실패(에러 종류). 전체화면 `NetworkErrorView`에 넘겨 3분류 문구를 분기한다 — 삭제 실패와 분리한다.
+        var loadError: RepositoryError?
         /// 삭제 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 선택 상태도 유지한다.
         var toastError: NovelNotificationListError?
     }
@@ -238,7 +238,7 @@ private extension NovelNotificationListViewModel {
 private extension NovelNotificationListViewModel {
     func presentLoadError(_ error: Error) {
         logger?.error("작품 알림 구독 목록 로드 실패: \(String(describing: error))")
-        state.loadError = .unknown
+        state.loadError = (error as? RepositoryError) ?? .unknown
     }
 
     func presentToastError(_ error: Error) {

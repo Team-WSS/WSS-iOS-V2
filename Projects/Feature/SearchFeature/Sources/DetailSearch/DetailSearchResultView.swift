@@ -124,8 +124,8 @@ struct DetailSearchResultView: View {
     private var resultContent: some View {
         if viewModel.state.isLoading {
             LoadingView()
-        } else if viewModel.state.hasLoadError {
-            NetworkErrorView(action: { viewModel.handle(.load) })
+        } else if let error = viewModel.state.hasLoadError {
+            NetworkErrorView(error: error, action: { viewModel.handle(.load) })
         } else if viewModel.state.novels.isEmpty {
             Spacer()
             VStack(spacing: 10) {

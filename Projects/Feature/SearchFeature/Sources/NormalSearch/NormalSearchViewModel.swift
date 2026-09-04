@@ -31,7 +31,7 @@ final class NormalSearchViewModel {
         var searchResultNovels: [Novel] = []
         var searchResultCount: Int = 0
         var isSearchingResult = false
-        var hasSearchResultError = false
+        var hasSearchResultError: RepositoryError?
         var hasNextSearchResultPage = false
         var isLoadingMoreSearchResults = false
         var isLoading = false
@@ -222,7 +222,7 @@ private extension NormalSearchViewModel {
         loadMoreSearchResultTask?.cancel()
         loadMoreSearchResultTask = nil
         state.isSearchingResult = true
-        state.hasSearchResultError = false
+        state.hasSearchResultError = nil
         state.hasNextSearchResultPage = false
         searchResultTask = Task { await loadSearchResult(searchText: trimmedText) }
     }
@@ -351,7 +351,7 @@ private extension NormalSearchViewModel {
         } catch {
             guard !Task.isCancelled else { return }
             logger?.error("작품 검색 실패: \(String(describing: error))")
-            state.hasSearchResultError = true
+            state.hasSearchResultError = (error as? RepositoryError) ?? .unknown
         }
     }
 

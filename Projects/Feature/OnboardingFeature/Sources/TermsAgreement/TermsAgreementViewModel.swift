@@ -23,7 +23,7 @@ final class TermsAgreementViewModel {
         var draft = TermsAgreementDraft()
         var isLoading = false
         /// 초안 로드 실패 → 전면 실패 뷰(재시도). 저장 실패와 분리(NovelReview와 동일 관례).
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         var isSaving = false
         /// 저장 성공 시점에 채워진다 — View는 이 값이 true가 되면 다음 온보딩 단계 진행 콜백을 발화한다.
         var shouldProceed = false
@@ -132,12 +132,12 @@ private extension TermsAgreementViewModel {
 
         do {
             state.draft = try await loadUseCase.execute()
-            state.loadFailed = false
+            state.loadFailed = nil
             hasLoaded = true
         } catch {
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("TermsAgreement 로드 실패: \(String(describing: error))")
-            state.loadFailed = true
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
         }
     }
 

@@ -37,9 +37,10 @@ final class FeedDetailViewModel {
         /// 현재 떠 있는 알럿의 의미값. `nil`이면 알럿 없음 — View는 이 값 하나로 모든 알럿을 표현한다.
         var alert: AlertType?
         /// 피드 상세 조회가 `alert`로 표현되는 사유(존재하지 않음·접근 불가)가 아닌 다른 이유로
-        /// 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현한다.
+        /// 실패했을 때 잡은 에러 종류(nil이면 실패 아님) — 전면 실패 뷰(재시도 가능)가 문구를
+        /// 3분류(서버/일반/네트워크)로 가른다.
         /// 댓글 조회의 동종 실패는 화면 전체를 덮지 않고 로그만 남긴다(부차 콘텐츠).
-        var detailLoadFailed: Bool = false
+        var detailLoadFailed: RepositoryError?
         /// 피드/댓글 작성자 프로필 탭이 탈퇴 유저(`Author.accessibleUserId == nil`)를 가리킬 때 뜨는
         /// 안내 토스트(`WSSToastType.unknownUser`) — 둘 다 같은 화면·같은 의미라 상태를 공유한다
         /// (`SosoFeedViewModel.isUnavailableUserToastPresented`와 동일 패턴).
@@ -232,7 +233,7 @@ final class FeedDetailViewModel {
 
     private func loadFeed() async {
         state.isLoading = true
-        state.detailLoadFailed = false
+        state.detailLoadFailed = nil
         defer { state.isLoading = false }
 
         do {
@@ -243,7 +244,7 @@ final class FeedDetailViewModel {
                 state.alert = .feedUnavailable
             } else {
                 logger?.error("FeedDetail fetchFeedDetail 실패: \(String(describing: error))")
-                state.detailLoadFailed = true
+                state.detailLoadFailed = (error as? RepositoryError) ?? .unknown
             }
         }
     }

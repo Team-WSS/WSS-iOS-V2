@@ -26,7 +26,7 @@ final class NotificationDetailViewModel {
         /// 로드 시작 전 한 프레임 동안 빈 화면이 스친다.
         var isLoading = true
         /// 로드 실패 여부 — View가 전면 실패 뷰(재시도)를 그리는 기준.
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         var requiresAuthentication = false
     }
@@ -101,7 +101,7 @@ private extension NotificationDetailViewModel {
 
     func startLoad() {
         state.isLoading = true
-        state.loadFailed = false
+        state.loadFailed = nil
         loadTask = Task { await loadDetail() }
     }
 }
@@ -119,13 +119,13 @@ private extension NotificationDetailViewModel {
             let detail = try await loadNotificationDetailUseCase.execute(id: notificationID)
             guard !Task.isCancelled else { return }
             state.detail = detail
-            state.loadFailed = false
+            state.loadFailed = nil
             hasLoaded = true
         } catch {
             guard !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
             if routeToLoginIfAuthenticationRequired(error) { return }
-            state.loadFailed = true
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
             logger?.error("NotificationDetail 실패(load): \(String(describing: error))")
         }
     }

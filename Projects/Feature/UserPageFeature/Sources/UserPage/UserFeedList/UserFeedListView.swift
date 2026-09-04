@@ -39,8 +39,8 @@ struct UserFeedListView: View {
             WSSNavigationBar(title: "활동") { dismiss() }
 
             Group {
-            if viewModel.state.feeds.isEmpty, viewModel.state.feedsLoadFailed {
-                NetworkErrorView {
+            if viewModel.state.feeds.isEmpty, let error = viewModel.state.feedsLoadFailed {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else if viewModel.state.feeds.isEmpty, viewModel.state.isLoadingFeeds {

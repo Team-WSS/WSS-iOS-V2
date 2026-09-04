@@ -67,7 +67,7 @@ struct NormalSearchView: View {
                         novels: viewModel.state.searchResultNovels,
                         resultCount: viewModel.state.searchResultCount,
                         isLoading: viewModel.state.isSearchingResult,
-                        hasLoadError: viewModel.state.hasSearchResultError,
+                        loadError: viewModel.state.hasSearchResultError,
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
                         onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) },

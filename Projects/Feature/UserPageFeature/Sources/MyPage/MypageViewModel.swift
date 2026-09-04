@@ -31,7 +31,7 @@ final class MypageViewModel {
         /// `collectionsCount`, `CollectionDomain/CLAUDE.md` 참고)다.
         var collectionCount = 0
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
     }
 
     // MARK: - Derived
@@ -136,7 +136,7 @@ private extension MypageViewModel {
     func load() {
         guard loadTask == nil else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadMypage() }
     }
 }
@@ -191,6 +191,6 @@ private extension MypageViewModel {
         // 실패 뷰가 화면을 덮으므로 "보이는 콘텐츠"는 없어진다 — 이걸 내려야 재시도 때 옛 화면이
         // 되살아나지 않고 로딩부터 다시 시작한다.
         hasLoadedContent = false
-        state.hasLoadError = true
+        state.hasLoadError = (error as? RepositoryError) ?? .unknown
     }
 }

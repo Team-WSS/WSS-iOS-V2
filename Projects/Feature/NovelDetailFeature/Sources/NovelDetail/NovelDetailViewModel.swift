@@ -34,11 +34,15 @@ final class NovelDetailViewModel {
         /// 초기값 true — onAppear의 `.load`보다 첫 body 평가가 먼저라, false로 시작하면
         /// 로드 시작 전 한 프레임 동안 실패 뷰(`information == nil && !isLoading`)가 스친다.
         var isLoading = true
+        /// 본체 로드 실패 시 잡은 에러 종류 — 실패 뷰(`information == nil && !isLoading`)가 문구를
+        /// 3분류(서버/일반/네트워크)로 가르는 데 쓴다. 게이트 조건 자체는 information/isLoading이 정한다.
+        var loadError: RepositoryError?
         var isLoadingFeeds = false
-        /// 피드 로드 실패 여부(첫 페이지·더보기 **공통**) — 탭 자리를 실패 뷰로 대체할지 가른다.
+        /// 피드 로드 실패 시 잡은 에러 종류(첫 페이지·더보기 **공통**, nil이면 실패 아님) — 탭 자리를
+        /// 실패 뷰로 대체할지 가르고, 그 뷰 문구를 3분류(서버/일반/네트워크)로 가른다.
         /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없다.
         /// 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
-        var feedsLoadFailed = false
+        var feedsLoadFailed: RepositoryError?
         var shouldDismiss = false
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         /// 어느 서버 호출에서 발생하든 여기로 모이며, View가 `onChange`로 소비한다(`shouldDismiss`와 대칭).
@@ -279,7 +283,7 @@ private extension NovelDetailViewModel {
             // ⚠️ 실패 플래그를 **함께 내려야** 한다 — `NovelDetailFeedTab`이 실패를 목록보다 먼저 판단하므로,
             // 안 내리면 요청이 도는 내내 실패 뷰가 그려지고 그 재시도 버튼은 `retryFeeds()`의
             // `feedsTask == nil` 가드에 막혀 **눌러도 아무 반응이 없다**(느린 망에서 수 초 지속).
-            state.feedsLoadFailed = false
+            state.feedsLoadFailed = nil
             state.isLoadingFeeds = true
             feedsTask = Task { await loadFeeds(after: nil) }
         }
@@ -316,7 +320,7 @@ private extension NovelDetailViewModel {
 
         state.feeds = []
         state.hasNextFeeds = true
-        state.feedsLoadFailed = false
+        state.feedsLoadFailed = nil
         hasLoadedFirstFeeds = false
         state.isLoadingFeeds = true
         feedsTask = Task { await loadFeeds(after: nil) }
@@ -413,6 +417,7 @@ private extension NovelDetailViewModel {
             let isFirstLoad = !hasLoaded
             state.information = information
             state.novel = information.novel
+            state.loadError = nil
             hasLoaded = true
             // 첫 로드 성공 시에만 온보딩을 판정한다(재진입 조용한 갱신에선 다시 뜨지 않게).
             if isFirstLoad, !onboardingHintUseCase.hasSeen(.novelDetailReview) {
@@ -423,6 +428,8 @@ private extension NovelDetailViewModel {
             // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화한다(이 catch는 presentError를 안 거치므로 직접 감지).
             if routeToLoginIfAuthenticationRequired(error) { return }
             // 본체 로드 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
+            // 잡은 에러 종류를 실어보내 실패 뷰가 문구를 3분류로 가른다.
+            state.loadError = (error as? RepositoryError) ?? .unknown
             logger?.error("NovelDetail 실패(novelLoad): \(String(describing: error))")
         }
     }
@@ -442,7 +449,7 @@ private extension NovelDetailViewModel {
             guard !isClosing, !Task.isCancelled else { return }
             state.feeds.append(contentsOf: page.items)
             state.hasNextFeeds = page.hasNext
-            state.feedsLoadFailed = false
+            state.feedsLoadFailed = nil
             if lastFeedID == nil { hasLoadedFirstFeeds = true }
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
@@ -452,7 +459,7 @@ private extension NovelDetailViewModel {
             // 첫 페이지든 더보기든 **탭 자리를 실패 뷰(재시도 버튼)로 대체**한다 — 사용자에겐 둘 다
             // "피드를 못 불러왔다"는 같은 사건이고, 토스트는 사라지면 다시 부를 방법이 없다.
             // (규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약")
-            state.feedsLoadFailed = true
+            state.feedsLoadFailed = (error as? RepositoryError) ?? .unknown
             logger?.error("피드 로드 실패(\(lastFeedID == nil ? "첫 페이지" : "더보기")): \(String(describing: error))")
         }
     }
@@ -494,7 +501,7 @@ private extension NovelDetailViewModel {
             state.feeds = items
             state.hasNextFeeds = page.hasNext
             // 더보기 실패 등으로 실패 뷰가 덮여 있던 상태라면 성공한 갱신이 목록을 되살린다.
-            state.feedsLoadFailed = false
+            state.feedsLoadFailed = nil
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }

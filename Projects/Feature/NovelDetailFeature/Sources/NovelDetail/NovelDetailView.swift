@@ -177,7 +177,8 @@ struct NovelDetailView: View {
                 LoadingView()
             } else {
                 // 로드 실패 — 공용 실패 뷰 재사용. 재시도 버튼이 load를 다시 발화한다(실패는 가드를 소진하지 않음).
-                NetworkErrorView { viewModel.handle(.load) }
+                // 잡은 에러 종류로 문구를 3분류(서버/일반/네트워크)로 가른다.
+                NetworkErrorView(error: viewModel.state.loadError ?? .unknown) { viewModel.handle(.load) }
             }
 
             // 네비바와 스티키 탭바는 한 VStack으로 묶는다 — 탭바가 네비바 "바로 아래"에 붙는 게
@@ -263,7 +264,7 @@ struct NovelDetailView: View {
                             NovelDetailFeedTab(
                                 feeds: viewModel.state.feeds,
                                 isLoading: viewModel.state.isLoadingFeeds,
-                                hasLoadFailed: viewModel.state.feedsLoadFailed,
+                                loadError: viewModel.state.feedsLoadFailed,
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onRetry: { viewModel.handle(.retryFeeds) },

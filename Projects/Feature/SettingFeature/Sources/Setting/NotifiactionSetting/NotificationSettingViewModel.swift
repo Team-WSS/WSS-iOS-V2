@@ -9,6 +9,7 @@
 import Foundation
 import Observation
 
+import BaseDomain
 import NotificationDomain
 import Logger
 
@@ -25,9 +26,9 @@ final class NotificationSettingViewModel {
     struct State {
         var isNotificationOn = false
         var isLoading = false
-        /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 토글 실패와 분리한다.
+        /// 최초 로드 실패(에러 종류). 전체화면 `NetworkErrorView`에 넘겨 3분류 문구를 분기한다 — 토글 실패와 분리한다.
         /// 하나로 합치면 토글 실패 시에도 화면 전체가 에러로 뒤덮여, 이미 로드된 목록으로 되돌아올 방법이 없어진다.
-        var loadError: NotificationStatusError?
+        var loadError: RepositoryError?
         /// 토글(저장) 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 값만 이전으로 되돌린다.
         var toastError: NotificationStatusError?
     }
@@ -135,7 +136,7 @@ private extension NotificationSettingViewModel {
 private extension NotificationSettingViewModel {
     func presentLoadError(_ error: Error) {
         logger?.error("NotificationSetting 로드 실패: \(String(describing: error))")
-        state.loadError = .unknown
+        state.loadError = (error as? RepositoryError) ?? .unknown
     }
 
     func presentToastError(_ error: Error) {

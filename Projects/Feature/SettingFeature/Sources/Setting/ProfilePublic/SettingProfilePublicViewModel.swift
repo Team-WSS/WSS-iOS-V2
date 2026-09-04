@@ -9,6 +9,7 @@
 import Foundation
 import Observation
 
+import BaseDomain
 import ProfileDomain
 import Logger
 
@@ -23,9 +24,9 @@ final class SettingProfilePublicViewModel {
         var isLoading = false
         var isSaving = false
         var shouldDismiss = false
-        /// 최초 로드 실패(의미값). 전체화면 `NetworkErrorView` 표시용 — 저장 실패와 분리한다.
+        /// 최초 로드 실패(에러 종류). 전체화면 `NetworkErrorView`에 넘겨 3분류 문구를 분기한다 — 저장 실패와 분리한다.
         /// 하나로 합치면 저장 실패 시에도 화면 전체가 에러로 뒤덮여, 방금 토글하던 화면으로 되돌아올 방법이 없어진다.
-        var loadError: SettingError?
+        var loadError: RepositoryError?
         /// 저장 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 토글 값도 유지한다.
         var toastError: SettingError?
     }
@@ -145,7 +146,7 @@ private extension SettingProfilePublicViewModel {
 private extension SettingProfilePublicViewModel {
     func presentLoadError(_ error: Error) {
         logger?.error("SettingProfilePublic 로드 실패: \(String(describing: error))")
-        state.loadError = .unknown
+        state.loadError = (error as? RepositoryError) ?? .unknown
     }
 
     func presentToastError(_ error: Error) {

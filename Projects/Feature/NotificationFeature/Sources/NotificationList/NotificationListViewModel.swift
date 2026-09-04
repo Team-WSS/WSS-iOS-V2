@@ -28,7 +28,7 @@ final class NotificationListViewModel {
         var isLoadingMore = false
         /// 첫 페이지 로드 실패 여부 — View가 "알림 없음"과 "로드 실패"를 구분해 그리기 위한 상태.
         /// (더보기 실패는 기존 목록을 유지하므로 토스트만 띄우고 이 값은 건드리지 않는다.)
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         var requiresAuthentication = false
         /// 표시할 토스트(의미값). 표현(문구·스타일) 매핑은 View가 한다(얇은 ViewModel).
@@ -204,7 +204,7 @@ private extension NotificationListViewModel {
         state.items = []
         state.isLoading = true
         state.isLoadingMore = false
-        state.loadFailed = false
+        state.loadFailed = nil
         loadTask = Task { await loadPage(lastNotificationID: nil) }
     }
 }
@@ -240,7 +240,7 @@ private extension NotificationListViewModel {
             }
             lastNotificationID = page.items.last?.id ?? cursor
             isLoadable = page.isLoadable
-            state.loadFailed = false
+            state.loadFailed = nil
         } catch {
             guard !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
@@ -251,7 +251,7 @@ private extension NotificationListViewModel {
                 logger?.error("NotificationList 실패(silentRefresh): \(String(describing: error))")
             } else if cursor == nil {
                 // 첫 페이지 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
-                state.loadFailed = true
+                state.loadFailed = (error as? RepositoryError) ?? .unknown
                 logger?.error("NotificationList 실패(load): \(String(describing: error))")
             } else {
                 presentError(error, as: .loadMoreFailed)

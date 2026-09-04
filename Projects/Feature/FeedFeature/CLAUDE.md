@@ -47,8 +47,9 @@
   같다(정본은 [LibraryFeature](../LibraryFeature/CLAUDE.md)): 시작 경로는 `nil` 확인(`load`/`loadMore`) 또는
   취소+즉시 재대입(`reloadFromScratch`) 둘 중 하나, 취소된 로드의 `defer`는 **아무것도 정리하지 않는다**
   (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`isLoading`)는
-  Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.networkUnavailable`로
-  도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.networkUnavailable`) — 실패 경로 첫 줄도
+  Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.unknown`으로
+  도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.unknown`; #244에서 오프라인만 `networkUnavailable`로
+  가르며 취소는 `.unknown`이 됐다 — 값이 뭐든 로직엔 무관) — 실패 경로 첫 줄도
   `guard !Task.isCancelled`여야 옛 로드가 에러를 세우지 않는다. 다녀온 셀 동기화(`cellSyncTask`)는 별개 슬롯이고
   `reloadFromScratch`가 취소+nil로 함께 버린다.
 - ⚠️ **재진입 `.load`의 첫 로드/셀 동기화 분기는 탭별 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds` 플래그다 —
