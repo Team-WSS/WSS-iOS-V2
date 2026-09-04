@@ -37,7 +37,10 @@ struct LibraryFeatureDemoApp: App {
 private enum DemoUserLibraryScenario: String, CaseIterable, Identifiable {
     case filled = "정상"
     case empty = "빈 서재"
-    case failure = "실패"
+    /// 첫 페이지 로드 실패 — NetworkErrorView 3분류 문구를 각각 확인하는 축(#244).
+    case failureNetwork = "실패(네트워크)"
+    case failureServer = "실패(서버)"
+    case failureGeneral = "실패(일시)"
     /// 첫 페이지는 성공하고 **더보기만** 실패 — root의 "다음 요청 실패" 주입은 push된 이 화면에서 누를 수
     /// 없어서(첫 요청이 먼저 소비한다) 더보기 실패 경로를 만들려면 전용 시나리오가 필요하다.
     case loadMoreFailure = "더보기 실패"
@@ -368,8 +371,12 @@ private struct DemoLoadUserLibraryUseCase: LoadUserLibraryUseCase {
             return await DemoLibraryNovels.page(cursor: cursor, sortType: filter.sortType)
         case .empty:
             return (CursorPaginated(items: [], hasNext: false, nextCursor: nil), 0)
-        case .failure:
+        case .failureNetwork:
             throw .networkUnavailable
+        case .failureServer:
+            throw .serverUnavailable
+        case .failureGeneral:
+            throw .unknown
         case .authExpired:
             throw .authenticationRequired
         }

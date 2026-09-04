@@ -41,7 +41,10 @@ private enum DemoNotificationScenario: String, CaseIterable, Identifiable {
     case paged = "페이지네이션"
     /// 알림 0건 — 빈 상태 축.
     case empty = "빈 데이터"
-    case failure = "실패"
+    /// 로드 실패 3분류 — 전면 `NetworkErrorView`가 `RepositoryError`별로 다른 문구를 내는지 확인하는 축.
+    case failureServer = "서버오류"     // serverUnavailable → "서버에 문제가 생겼어요"
+    case failureNetwork = "네트워크오류" // networkUnavailable → "네트워크 연결에 실패했어요"
+    case failureGeneral = "일시오류"     // unknown → "일시적인 오류가 발생했어요"
     case authExpired = "인증만료"
     var id: String { rawValue }
 }
@@ -221,7 +224,9 @@ private struct DemoLoadPagedNotificationsUseCase: LoadPagedNotificationsUseCase 
         try? await Task.sleep(nanoseconds: 500_000_000)
 
         switch scenario {
-        case .failure:      throw .networkUnavailable
+        case .failureServer:  throw .serverUnavailable
+        case .failureNetwork: throw .networkUnavailable
+        case .failureGeneral: throw .unknown
         case .authExpired:  throw .authenticationRequired
         case .empty:        return PagedNotifications(items: [], isLoadable: false)
         case .filled:       return PagedNotifications(items: DemoNotificationData.firstPage, isLoadable: false)
@@ -252,7 +257,9 @@ private struct DemoLoadNotificationDetailUseCase: LoadNotificationDetailUseCase 
         try? await Task.sleep(nanoseconds: 500_000_000)
 
         switch scenario {
-        case .failure:      throw .networkUnavailable
+        case .failureServer:  throw .serverUnavailable
+        case .failureNetwork: throw .networkUnavailable
+        case .failureGeneral: throw .unknown
         case .authExpired:  throw .authenticationRequired
         default:
             return NotificationDetail(
