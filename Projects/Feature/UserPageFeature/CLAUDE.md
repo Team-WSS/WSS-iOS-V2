@@ -204,6 +204,7 @@
   대상 사용자 userID를 명시로 받는 계약이라(`CollectionDomain/CLAUDE.md`) 이 화면의 `userID`(프로필
   대상, `.me`가 아님)를 그대로 넘긴다.
 - **스크롤 반응형 네비 타이틀**: 프로필 섹션이 화면 밖으로 스크롤되면(`minY < -1`) 툴바 principal에 닉네임이 페이드인한다 — `PreferenceKey` 대신 `GeometryReader` 안에서 `onChange`로 `@State`를 직접 갱신(`NovelDetailFeature`와 동일 패턴/동일 이유, 이 SDK는 `onPreferenceChange`→`@State` 갱신이 먹지 않는다).
+- ⚠️ **핀 고정 스티키 탭 헤더(`stickyHeaderSection`, 통계/활동)엔 불투명 배경(`.background(wssWhite)`)이 필수다** — 이 화면은 `LazyVStack(pinnedViews: [.sectionHeaders])`로 탭 헤더를 고정하는데(NovelDetail·Collection의 "오버레이 2벌"과 다른 방식), 헤더 배경이 없으면 스크롤된 아래 콘텐츠(컬렉션 미리보기 등)가 헤더의 투명 영역을 통해 **네비바 바로 아래로 비쳐 보인다**("틈새로 컬렉션 보임", #244 사용자 실측). NovelDetail 스티키 탭바(`NovelDetailView.tabBar`)도 같은 이유로 흰 배경을 둔다 — pin 방식이든 오버레이 방식이든 **스티키 헤더는 불투명 배경이 원칙**.
 - **툴바 배경은 스크롤에 따라 `wssPrimary20`↔`wssWhite`로 전환된다**(닉네임 타이틀 페이드인과 동일 트리거 `isScrolledFromTop`) — `.toolbarBackground(color, for: .navigationBar)`만으로는 기본이 "스크롤 전엔 투명, 후엔 표시"라 `.toolbarBackground(.visible, for: .navigationBar)`를 명시로 강제해야 배경 자체가 항상 보인다(색은 별개로 스크롤 상태에 따라 계산).
 - **프로필 헤더 배경(`wssPrimary20`)은 위로만 오버슈트한 사각형으로 확장**해 위로 당겨 바운싱해도 흰 배경이 안 비치게 한다(`profileSection`의 두 번째 `.background(alignment: .top)`, height 1000 + offset -1000).
 - **하단 바운싱 배경은 `ScrollView` 자체에 건 `.background(wssWhite)`로 채운다**(`UserPageView.body`, 콘텐츠 안 개별 섹션이 아니라 `ScrollView` 뷰 바로 뒤). `ScrollView`(뷰 자체)에 건 배경은 뷰포트에 고정되어 스크롤과 무관하게 항상 보이는 반면, 콘텐츠(LazyVStack 안 섹션)에 건 배경은 콘텐츠와 함께 스크롤되어 바운싱 시 빈 공간을 못 채운다 — 그래서 profileSection처럼 콘텐츠 쪽에 오버슈트 사각형을 추가하는 대신 뷰포트 레벨 배경을 택함. 상단은 profileSection의 오버슈트가 이 위에 덮여 primary20이 우선한다.

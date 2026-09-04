@@ -287,6 +287,10 @@ struct UserPageView: View {
                 stickyHeaderItem(tab: tab)
             }
         }
+        // ⚠️ 핀 고정 헤더엔 불투명 배경이 필수다 — 없으면 스크롤된 아래 콘텐츠(컬렉션 미리보기 등)가
+        // 헤더의 투명 영역을 통해 네비바 바로 아래로 비쳐 보인다("틈새로 컬렉션 보임", 사용자 실측).
+        // NovelDetail 스티키 탭바(`NovelDetailView.tabBar`)도 같은 이유로 `.background(wssWhite)`를 둔다.
+        .background(WSSColor.wssWhite.swiftUIColor)
     }
 
     private func stickyHeaderItem(tab: Tab) -> some View {
