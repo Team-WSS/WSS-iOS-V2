@@ -62,8 +62,10 @@
     하고, 이미지를 배경과 같은 36으로 키우면 캡슐이 가려져 사라진다. 27을 임의로 키우지 말 것.
 - **작품 알림(완결·휴재 복귀)은 작품 상세로 간다** — 응답의 `novelId`를 매퍼가 `.novelDetail`로 옮기고
   `onNovelSelected` 콜백이 발화한다(#181에서 연결). 알림 상세 API를 타지 않는 경로라 **`read` 호출도 함께 나간다**.
-  ⚠️ **실서버에서 값이 채워진 샘플을 아직 못 봤다** — 테스트 계정 알림이 전부 공지(`isNotice: true`, `novelId: null`)라
-  매핑은 `NotificationMapperTests`로만 고정돼 있다. 실제 완결 알림이 오는 계정이 생기면 전환을 눈으로 확인할 것.
+  매퍼는 **id 존재를 `isNotice`보다 우선**하므로 novelId만 있으면 서버가 isNotice를 뭘로 주든 작품 상세로 간다
+  ("novelId 있으면 다 작품 상세" 규칙 — → [NotificationData/NotificationMapper](../../Data/NotificationData/CLAUDE.md)).
+  ✅ **실앱 빌드에서 실제 알림 진입으로 작품 상세 전환 확인 완료(2026-09-05)** — 그전까지 테스트 계정 알림이 전부
+  공지라 매핑이 `NotificationMapperTests`로만 고정돼 있었으나, 실제 알림으로 전환이 실측 검증됐다.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
