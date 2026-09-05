@@ -233,10 +233,12 @@ private extension CollectionDetailView {
         )
     }
 
-    /// 히어로가 바 뒤에 없을 때(스크롤 다운 · 로딩/로드 실패로 `detail == nil`)는 바를 솔리드로 둔다 —
-    /// 안 그러면 흰 배경(LoadingView·NetworkErrorView) 위에 흰 아이콘이 겹쳐 뒤로가기가 안 보인다(#244 회귀).
+    /// 히어로가 바 뒤에 없을 때는 바를 솔리드로 둔다 — 안 그러면 흰 배경(LoadingView·NetworkErrorView)
+    /// 위에 흰 아이콘이 겹쳐 뒤로가기가 안 보인다(#244 회귀). 흰 배경이 깔리는 3케이스를 모두 덮는다:
+    /// 스크롤 다운 · 첫 로드/로딩(`detail == nil`) · 이미 detail이 있는 상태의 재조회 실패(`hasLoadError`,
+    /// 정렬 변경·수정 복귀 — detail은 남고 실패 뷰만 전면에 뜬다).
     var isBarSolid: Bool {
-        isScrolledFromTop || viewModel.state.detail == nil
+        isScrolledFromTop || viewModel.state.detail == nil || viewModel.state.hasLoadError != nil
     }
 
     var navIconColor: Color {
