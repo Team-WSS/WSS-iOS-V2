@@ -34,7 +34,7 @@ Sources/
 │                                          # makeDetailSearchFilterView로 승격)까지(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
 │                                          # LibraryFactory.makeUserLibraryView(타유저 서재)/SearchAssembly/
-│                                          # MypageFactory) 실제 push.
+│                                          # MypageFeatureFactory) 실제 push.
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
 │                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 전체 피드 목록·
 │                                          # 그 프로필의 타유저 서재·작가 이름 검색(makeFeedDetailView/
@@ -49,7 +49,7 @@ Sources/
 │                                          # SearchAssembly/SettingFeatureFactory의 makeNotificationSettingView·
 │                                          # makeCompletionNotificationListView·makeHiatusReturnNotificationListView,
 │                                          # #201)까지 push.
-├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFactory.makeView 조립 +
+├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFeatureFactory.makeView 조립 +
 │                                          # 프로필 편집·설정 전체 트리(makeEditView/SettingFeatureFactory의
 │                                          # 8개 화면 — 계정정보·성별나이변경·차단유저목록·회원탈퇴·
 │                                          # 프로필공개설정·알림설정·완결/휴재복귀 알림목록, #201)·
@@ -239,7 +239,7 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   회원탈퇴/로그아웃 **성공**(`SettingFactory`의 `onWithdrawSuccess`/`onLogoutSuccess`) — 사용자가 세션을 끝낸
   것. `onAuthenticationRequired`는 그 탭 위에 push된 화면(컬렉션 상세·작품 상세 등)의 401 — 다른 탭과 같은
   계약. 둘 다 결과는 온보딩 복귀지만 `MainTabView`가 후자에만 딥링크 복원을 거는 차이가 있어(아래 딥링크
-  항목) 예전처럼 하나로 합치지 말 것. **`MypageFactory.makeView`도 #244부터 `onAuthenticationRequired`를 받는다**
+  항목) 예전처럼 하나로 합치지 말 것. **`MypageFeatureFactory.makeView`도 #244부터 `onAuthenticationRequired`를 받는다**
   (마이페이지 콘텐츠 로드 401이 조용히 빈 상태로 남지 않고 이 콜백으로 로그인 유도) — `MypageRootView`가 그 탭의
   `onAuthenticationRequired`를 그대로 넘긴다. 단 `.makeEditView`(프로필 편집)는 아직 안 받고, 타유저 프로필
   (`UserPageView`)·활동 피드(`UserFeedListView`)도 미배선이다(`docs/TODO.md`의 "UserPage 계열 인증 만료 로그인
