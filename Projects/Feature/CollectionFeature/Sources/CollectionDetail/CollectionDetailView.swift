@@ -223,7 +223,7 @@ private extension CollectionDetailView {
             // 이미 상태바까지 확장돼 있어 그 실측 높이가 곧 "안전영역 top + 네비바 높이"다.
             // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
             GeometryReader { proxy in
-                (isScrolledFromTop ? Color.wssWhite : Color.clear)
+                (isBarSolid ? Color.wssWhite : Color.clear)
                     .allowsHitTesting(false)
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navBarBottomY = height
@@ -233,8 +233,14 @@ private extension CollectionDetailView {
         )
     }
 
+    /// 히어로가 바 뒤에 없을 때(스크롤 다운 · 로딩/로드 실패로 `detail == nil`)는 바를 솔리드로 둔다 —
+    /// 안 그러면 흰 배경(LoadingView·NetworkErrorView) 위에 흰 아이콘이 겹쳐 뒤로가기가 안 보인다(#244 회귀).
+    var isBarSolid: Bool {
+        isScrolledFromTop || viewModel.state.detail == nil
+    }
+
     var navIconColor: Color {
-        isScrolledFromTop ? Color.wssBlack : Color.wssWhite
+        isBarSolid ? Color.wssBlack : Color.wssWhite
     }
 
     /// 스크롤되는 원본 정렬 바가 네비바 하단까지 올라왔는지 — 상단 스티키 정렬 바 표시 여부.
