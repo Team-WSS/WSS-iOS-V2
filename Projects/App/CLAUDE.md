@@ -239,11 +239,13 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   회원탈퇴/로그아웃 **성공**(`SettingFactory`의 `onWithdrawSuccess`/`onLogoutSuccess`) — 사용자가 세션을 끝낸
   것. `onAuthenticationRequired`는 그 탭 위에 push된 화면(컬렉션 상세·작품 상세 등)의 401 — 다른 탭과 같은
   계약. 둘 다 결과는 온보딩 복귀지만 `MainTabView`가 후자에만 딥링크 복원을 거는 차이가 있어(아래 딥링크
-  항목) 예전처럼 하나로 합치지 말 것. `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 어느 콜백도
-  모른다 — 즉 마이페이지 로드(프로필·장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠
-  수 있는 게 아니라 `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약"
-  참고). **Home·Feed·서재 세 탭은 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
-  거기서 push하는 작품 상세(`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
+  항목) 예전처럼 하나로 합치지 말 것. **`MypageFactory.makeView`도 #244부터 `onAuthenticationRequired`를 받는다**
+  (마이페이지 콘텐츠 로드 401이 조용히 빈 상태로 남지 않고 이 콜백으로 로그인 유도) — `MypageRootView`가 그 탭의
+  `onAuthenticationRequired`를 그대로 넘긴다. 단 `.makeEditView`(프로필 편집)는 아직 안 받고, 타유저 프로필
+  (`UserPageView`)·활동 피드(`UserFeedListView`)도 미배선이다(`docs/TODO.md`의 "UserPage 계열 인증 만료 로그인
+  라우팅 배관"). **Home·Feed·서재 세 탭도 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
+  거기서 push하는 작품 상세(`NovelDetailAssembly`)·**피드 상세(`FeedDetailAssembly`, #244부터)**는 받아서
+  전달한다 — `FeedRootView` 참고).
 - **`onAuthenticationRequired`(→ `ContentView.resetToOnboarding`)는 온보딩 라우팅 + `AppDependencies`
   재조립까지 하고, 토큰 삭제는 하지 않는다**(#236) — 401을 받은 시점에 이미 서버가 세션을 무효화한
   상태라 재로그인하면 새 토큰으로 덮어써진다. 재조립을 하는 이유는 **이전 세션에서 채워졌을 수 있는

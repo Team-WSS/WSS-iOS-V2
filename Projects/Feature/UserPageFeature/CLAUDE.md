@@ -141,6 +141,14 @@
   `state.isLoading`을 직접 보면, 탭 복귀마다 다시 로드하는 정책과 만나 이미 그린 화면 위로 전체 화면
   `LoadingView`가 매번 깜빡인다(HomeFeature와 같은 이유·같은 해법 — `hasLoadedContent` 플래그로
   "아직 보여줄 게 없을 때만" 로딩을 씌운다).
+- ✅ **`MypageView`는 #244에서 인증 만료 라우팅이 들어왔다** — `MypageViewModel`이 `State.requiresAuthentication` +
+  `routeToLoginIfAuthenticationRequired(_:)`를 두고 `presentError` 최상단에서 실패 뷰보다 먼저 걸러 `return`한다
+  (그래서 로드 401은 `NetworkErrorView`로 덮이지 않고 로그인 유도로 간다 — 예전엔 조용히 빈/실패 상태로 남았다).
+  View가 `onChange(of:requiresAuthentication)` → `onAuthenticationRequired`(`MypageFeatureFactory.makeView`까지
+  전달, 기본값 `{}`)로 올리고 App(`MypageRootView`)이 그 탭의 `onAuthenticationRequired`로 연결한다.
+  ⚠️ **`UserPageView`(타유저 프로필)·`UserFeedListView`(활동 피드)엔 아직 없다** — 이 두 화면은 이번 범위 밖으로
+  `docs/TODO.md`의 "UserPage 계열 인증 만료 로그인 라우팅 배관" 항목에 남아 있다(같은 모듈이라고 이미 됐다고
+  넘겨짚지 말 것 — MyPage만 배선됐다).
 - ⚠️ **글자수 제한이 있는 `TextField`는 VM 상태에 직접 물리지 않는다.** `Binding(get:set:)`의 `set`에서
   곧바로 clamp하면, `get`이 SwiftUI가 방금 그 필드에 마지막으로 써준 값과 같아져 "변화 없음"으로 판단되고,
   **네이티브 텍스트필드는 사용자가 입력한 초과분을 화면에 그대로 들고 있는다**(카운터는 맞는데 눈에 보이는

@@ -58,8 +58,18 @@
 - 재로드가 도는 중 바닥에 닿은 `loadMore`는 슬롯 가드에 조용히 드롭된다(작품 상세·서재와 같은 좁은 창 — 스크롤
   재실현으로 복구). "밀린 요청 기억" 방어는 넣지 말 것(서재 #195에서 더 나쁜 결함으로 판명).
 - `SosoFeedViewModel.state.errorMessage`는 View가 어디서도 읽지 않는 죽은 상태다(목록 로드 실패가 무표시) —
-  이 화면엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
-  재진입 갱신 작업의 범위 밖으로 남겨둔 것.
+  이 화면(`SosoFeedView`)엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
+  재진입 갱신 작업의 범위 밖으로 남겨둔 것. **`FeedDetailView`는 이와 별개로 #244에서 auth 라우팅이 들어왔다**(아래).
+- **`FeedDetailView`의 인증 만료 라우팅은 로드 경로에만 건다**(#244) — `FeedDetailViewModel`이
+  `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고, **상세/댓글/프로필 이미지
+  로드**(`loadFeed`·`loadComments`·`loadCurrentUserProfileImage`)의 catch에서 실패 플래그·알럿보다 **먼저** 걸러
+  `return`한다(`loadFeed`는 `isFeedUnavailable` 판정보다도 앞). View가 `onChange(of:requiresAuthentication)` →
+  `onAuthenticationRequired`(Factory·`FeedDetailAssembly.makeView`·4탭 Root까지 전달, 기본값 `{}`)로 올린다.
+  ⚠️ **좋아요·댓글 작성/수정/삭제·삭제·신고 같은 개별 사용자 액션 실패는 일부러 auth 라우팅에 태우지 않았다** —
+  이미 로드된 화면의 "사용자 액션 실패" 토스트 lane([상위 CLAUDE.md] 로드 실패 표현 계약)이 담당하고, 화면을
+  "갇히게" 만드는 건 로드 401뿐이라서다(게다가 `create/editComment`는 성공 여부를 `Bool`로 돌려주는 구조,
+  `toggleLike`·신고는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
+  넓히려면 그 Bool/`try?` 설계부터 다시 볼 것.
 
 - ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
   초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계
