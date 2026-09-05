@@ -55,6 +55,11 @@
      기존 유저가 일반 업데이트로 받아야 리뷰·랭킹·설치기반이 유지됨, 사용자 확정).
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
      서버 응답으로 리허설 검증.
+  7. **`aps-environment`를 배포용 `production`으로**(#243) — 현재 `Support/WSS-iOS.entitlements`는
+     `development` 고정(실기기 Xcode Run=개발 프로파일용). App Store/TestFlight 배포판은 `production`이어야
+     푸시가 배달된다(안 맞으면 **크래시는 없지만 조용히 안 옴**). Debug=development / Release=production으로
+     config 분리가 정석. 실기기 E2E는 development로 검증 완료(2026-09-05), production 경로는 배포 빌드로
+     별도 검증 필요.
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer

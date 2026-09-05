@@ -201,6 +201,17 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   `MarkNotificationAsReadUseCase`로 보낸다(딥링크 유무와 무관하게 탭한 알림은 읽음으로). 미로그인이면 401이라 건너뛴다.
 - ⚠️ **Tuist 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 한다**(`targets[N].settings[0]` name 없음 에러) — #243에서
   `.mise.toml` 핀을 **4.206.0**으로 올려 해결했다(CI도 mise를 읽어 함께 반영). 되돌리면 Firebase 붙은 채로 generate가 깨진다.
+- ⚠️ **App 타깃엔 `-ObjC` 링커 플래그가 반드시 있어야 한다**(`Project.swift`의 `appBaseSettings`, #243) — 없으면
+  Firebase(GoogleUtilities)가 `NSData`에 붙인 Obj-C 카테고리(`gul_dataByGzippingData:` 등)가 **static framework라
+  링커가 dead-strip**해, Firebase Installations의 heartbeat gzip 시점에 "unrecognized selector"로 NSException
+  크래시가 난다(Swift `try`는 Obj-C 예외를 못 잡아 그대로 앱 종료). ⚠️ **시뮬레이터에선 안 나고 실기기에서만** 터지며
+  (아키텍처별 링커 최적화 차이), 링크 이슈라 **Debug·Release 배포 빌드 모두** 해당 — 그래서 `base`에 둔다. CocoaPods(V1)는
+  이 플래그를 자동으로 넣어줘 안 겪던 것이라, SPM+Tuist static에선 명시가 필수. 실기기 실측으로 발견(2026-09-05).
+- ⚠️ **`aps-environment`(`Support/WSS-iOS.entitlements`)는 현재 `development` 고정** — 실기기 Xcode Run(개발 프로파일)엔
+  맞지만 **App Store/TestFlight 배포판은 `production`이어야** 푸시가 배달된다(안 맞으면 크래시 없이 조용히 안 옴).
+  Debug=development / Release=production 분리가 정석 — **컷오버 전 필수**(`docs/TODO.md` 4번). 실기기 Run은 배포
+  프로파일이 아니라 `match Development` 프로파일을 선택해야 설치되고 `tuist generate`가 그 선택을 App Store로 리셋한다 —
+  이 서명 함정은 `docs/FASTLANE_ONBOARDING.md` 참고.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
