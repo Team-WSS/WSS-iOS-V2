@@ -130,8 +130,6 @@ struct HomeRootView: View {
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Destination.self) { destination in
-                // 탭 콘텐츠에서 push된 화면은 탭바를 가린다 — 여기 한 곳에서 걸어두면 Destination
-                // case가 늘어나도 매번 개별 뷰에 붙일 필요가 없다.
                 Group {
                     switch destination {
                     case .novel(let novelID):
@@ -213,9 +211,9 @@ struct HomeRootView: View {
                         notificationDetailView(notificationID)
                     }
                 }
-                .toolbar(.hidden, for: .tabBar)
             }
         }
+        .hidesTabBar(when: !path.isEmpty)
         .showWSSAlert(
             isPresented: $isPushAuthorizationAlertPresented,
             type: .setAppNotification,

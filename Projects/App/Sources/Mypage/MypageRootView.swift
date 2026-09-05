@@ -179,7 +179,6 @@ struct MypageRootView: View {
                 onLibraryTapped: onLibraryTapped
             )
             .navigationDestination(for: Destination.self) { destination in
-                // 탭 콘텐츠에서 push된 화면은 탭바를 가린다(`HomeRootView`와 동일 규칙).
                 Group {
                     switch destination {
                     case .edit:
@@ -273,9 +272,9 @@ struct MypageRootView: View {
                         detailSearchResultView(filter)
                     }
                 }
-                .toolbar(.hidden, for: .tabBar)
             }
         }
+        .hidesTabBar(when: !path.isEmpty)
         .showWSSToast(isPresented: $showProfileSavedToast, type: .editProfile)
         .showWSSToast(isPresented: $isChangeSavedToastPresented, type: .changeInfo)
         .showWSSToast(isPresented: $isVisibilityChangedToastPresented, type: visibilityChangedToastType)

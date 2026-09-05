@@ -209,9 +209,14 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     `.navigationDestination(for: FeedID.self)`를 따로 등록하면 타입이 겹쳐 의도대로 라우팅되지 않는다.
     `HomeRootView.Destination` 같은 래퍼 enum으로 명시적으로 태깅해서 push할 것 — 다른 탭 Root에
     같은 방식의 push 네비게이션을 추가할 때도 이 함정을 반복하지 말 것.
-  - **탭에서 push된 화면은 탭바를 가린다**(`.toolbar(.hidden, for: .tabBar)`, 사용자 확정) — `.navigationDestination(for:)`
-    클로저 안, `switch` 결과를 감싸는 자리 한 곳에 걸어둬서 `Destination` case가 늘어나도 매번 개별
-    목적지 뷰에 반복해서 붙일 필요가 없다. 다른 탭 Root에 push 네비게이션을 추가할 때 이 자리도 같이 만들 것.
+  - **탭에서 push된 화면은 탭바를 가린다**(사용자 확정) — 단 `.toolbar(.hidden, for: .tabBar)`를
+    `.navigationDestination` 클로저(= pop 시 파괴되는 destination 뷰) 안에 붙이면, root 복귀 때 탭바가
+    **뒤늦게** 붙으며 홈이 "탭바 없이" 먼저 그려졌다 콘텐츠가 튀는 게 실측됐다(#244, iOS 26 Liquid Glass에서
+    더 심함). 그래서 각 탭 Root는 **`NavigationStack { … }` 호출부**에 `.hidesTabBar(when: !path.isEmpty)`
+    (공용 헬퍼 `Sources/Main/TabBarVisibility.swift`)로 건다 — 파괴되지 않는 컨테이너에서 `path.isEmpty`로
+    가시성 **값만** 바꾸므로 탭바 복원이 pop과 동기화된다. 다른 탭 Root에 push 네비게이션을 추가할 때
+    이 자리도 같이 만들 것(❌ destination 클로저 안에 다시 붙이지 말 것 — 지연이 재발한다). 자세한 사유는
+    헬퍼 파일 상단 주석 참조.
   - **같은 화면이라도 "흔한 진입 경로"와 "흔치 않은 부가 정보를 들고 들어오는 경로"는 옵셔널 파라미터
     하나로 합치지 말고 별도 `Destination` case로 분리한다**(사용자 확정, #197 — 예:
     `createFeed`(연필 아이콘, 파라미터 없음) vs `createFeedFromNovel(ConnectedNovel)`(작품 상세 "나도
