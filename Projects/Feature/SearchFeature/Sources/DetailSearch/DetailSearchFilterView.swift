@@ -73,7 +73,8 @@ struct DetailSearchFilterView: View {
 
             ctaSection
         }
-        .navigationBarBackButtonHidden()
+        // 커스텀 상단바(뒤로가기)를 자체적으로 그리므로 시스템 네비바를 숨기고 스와이프 뒤로가기를 되살린다.
+        .wssCustomNavigationBar()
         .background(Color.wssWhite)
     }
 }

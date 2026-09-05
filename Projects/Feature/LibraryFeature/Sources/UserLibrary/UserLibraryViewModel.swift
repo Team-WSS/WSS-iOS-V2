@@ -33,7 +33,7 @@ final class UserLibraryViewModel {
         /// 목록 로드 실패 여부(첫 페이지·더보기·갱신 **공통**) — 목록 자리를 전면 실패 뷰로 대체할지 가른다.
         /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없어
         /// 하단에서 페이지네이션이 멈춘 채 갇힌다(#195 실측). 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
         /// View가 `onChange`로 받은 뒤 `.consumeAuthenticationRequired`로 되돌린다 —
         /// 이 화면은 push라 보통 dismiss되지만, 로그인 화면에서 되돌아와 정렬을 바꾸면 VM이 그대로 살아 있다.
@@ -157,7 +157,7 @@ private extension UserLibraryViewModel {
         // (내 서재는 필터로 개수가 실제로 바뀌므로 거기선 비우는 게 맞다.)
         state.isLoading = true
         state.isLoadingMore = false
-        state.loadFailed = false
+        state.loadFailed = nil
         loadTask = Task { await loadPage(cursor: nil) }
     }
 }
@@ -197,7 +197,7 @@ private extension UserLibraryViewModel {
             state.totalCount = totalCount
             nextCursor = page.nextCursor
             hasNext = page.hasNext
-            state.loadFailed = false
+            state.loadFailed = nil
         } catch {
             guard !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 **먼저** 거른다(정본과 대칭).
@@ -208,7 +208,7 @@ private extension UserLibraryViewModel {
             // 첫 페이지든 더보기든 **전면 실패 뷰**가 표현한다 — 토스트는 사라지면 재시도할 방법이 없어
             // 하단에서 더보기가 실패하면 페이지네이션이 멈춘 채 갇힌다(내 서재에서 실제로 겪었다).
             // 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
-            state.loadFailed = true
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
             logger?.error("UserLibrary 목록 로드 실패(\(cursor == nil ? "첫 페이지" : "더보기")): \(String(describing: error))")
         }
     }

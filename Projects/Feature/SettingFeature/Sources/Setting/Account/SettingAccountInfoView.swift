@@ -32,38 +32,44 @@ struct SettingAccountInfoView: View {
     /// 회원탈퇴 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeWithdrawFlowView` 조립)은
     /// 호출자가 수행한다 — 확인→사유 2단계는 그 화면 안에서 여전히 로컬로 진행된다(`WithdrawFlowView` 참고).
     private let onWithdrawTapped: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 이메일 로드·로그아웃이 401로 막히면 발화(Feature 공통 계약).
+    /// 로그아웃 401은 이미 세션이 끝난 것이라 실패 토스트 대신 이 콜백으로 로그인/온보딩으로 되돌린다
+    /// (`onLogoutSuccess`와 결과는 같지만 App이 딥링크 복원 여부를 달리 거는 별개 콜백, `App/CLAUDE.md`).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: SettingAccountInfoViewModel,
         onLogoutSuccess: @escaping () -> Void = {},
         onChangeGenderOrAgeTapped: @escaping () -> Void = {},
         onBlockUserListTapped: @escaping () -> Void = {},
-        onWithdrawTapped: @escaping () -> Void = {}
+        onWithdrawTapped: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onLogoutSuccess = onLogoutSuccess
         self.onChangeGenderOrAgeTapped = onChangeGenderOrAgeTapped
         self.onBlockUserListTapped = onBlockUserListTapped
         self.onWithdrawTapped = onWithdrawTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(SettingMenu.allCases, id: \.self) { menu in
-                SettingMenuRow(
-                    title: menu.title,
-                    bottomText: menu == .email ? viewModel.state.email : nil,
-                    action: menu.isSelectable ? { select(menu) } : nil
-                )
-            }
+            WSSNavigationBar(title: "계정정보") { dismiss() }
 
-            Spacer()
+            VStack(spacing: 0) {
+                ForEach(SettingMenu.allCases, id: \.self) { menu in
+                    SettingMenuRow(
+                        title: menu.title,
+                        bottomText: menu == .email ? viewModel.state.email : nil,
+                        action: menu.isSelectable ? { select(menu) } : nil
+                    )
+                }
+
+                Spacer()
+            }
         }
-        .toolbar {
-            toolbarContent
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
+        .wssCustomNavigationBar()
         .onAppear {
             viewModel.handle(.load)
         }
@@ -79,6 +85,10 @@ struct SettingAccountInfoView: View {
         .onChange(of: viewModel.state.logoutSucceeded) { _, logoutSucceeded in
             guard logoutSucceeded else { return }
             onLogoutSuccess()
+        }
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
         }
     }
 
@@ -142,31 +152,6 @@ extension SettingAccountInfoView {
             case .email:    false
             default:        true
             }
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingAccountInfoView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("계정정보")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
         }
     }
 }

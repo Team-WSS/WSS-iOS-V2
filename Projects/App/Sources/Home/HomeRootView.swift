@@ -130,8 +130,6 @@ struct HomeRootView: View {
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Destination.self) { destination in
-                // 탭 콘텐츠에서 push된 화면은 탭바를 가린다 — 여기 한 곳에서 걸어두면 Destination
-                // case가 늘어나도 매번 개별 뷰에 붙일 필요가 없다.
                 Group {
                     switch destination {
                     case .novel(let novelID):
@@ -213,9 +211,9 @@ struct HomeRootView: View {
                         notificationDetailView(notificationID)
                     }
                 }
-                .toolbar(.hidden, for: .tabBar)
             }
         }
+        .hidesTabBar(when: !path.isEmpty)
         .showWSSAlert(
             isPresented: $isPushAuthorizationAlertPresented,
             type: .setAppNotification,
@@ -358,7 +356,8 @@ private extension HomeRootView {
                 // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
                 guard $0 != currentUserID else { return }
                 path.append(Destination.userPage($0))
-            }
+            },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }

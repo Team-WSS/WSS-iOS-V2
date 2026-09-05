@@ -52,6 +52,7 @@
 - **인증 만료는 위 규칙 전부의 예외** — 실패 표현 없이 로그인 라우팅으로 일원화한다(위 "인증 만료 처리 계약").
 - ⚠️ **핵심은 복구 수단이다.** 토스트는 알림이지 해결책이 아니다 — 사라지면 다시 부를 방법이 없다. 서재에서 실제로 "하단에서 더보기가 실패하면 그 뒤로 목록이 영영 안 채워지는" 상태를 만들었다(→ [LibraryFeature](LibraryFeature/CLAUDE.md)). 새 화면에서 목록 실패를 토스트로 처리하고 싶으면 **재시도 경로가 무엇인지 먼저 답할 것.**
 - **표현은 `NetworkErrorView`(재시도 버튼 포함)로 통일한다.** 화면 전체를 덮을지 그 영역만 덮을지는 구조를 따른다 — 서재는 헤더 아래 전체, `NovelDetail` 피드는 스티키 탭 아래 탭 콘텐츠 자리. 목록이 남아 있어도(더보기 실패) 걷어내고 실패 뷰를 세운다.
+- **실패 뷰는 잡은 `RepositoryError`를 3분류 문구로 가른다**(#244) — `NetworkErrorView(error:)`에 실어보내면 서버(5xx=`serverUnavailable`)/오프라인(`networkUnavailable`)/일시적(그 외=`unknown`·`invalidData`)로 **카피만** 분기된다(일러스트·재시도 버튼은 동일). 화면이 error를 실어보내는 **단일 배선 원칙**: Bool 게이트(`loadFailed`/`hasLoadError`/`feedsLoadFailed` 등)는 타입만 `RepositoryError?`로 in-place 치환(이름 유지, catch에서 `(error as? RepositoryError) ?? .unknown` 대입, View는 `if let error`), 게이트가 파생 조건인 화면(`NovelDetail` 본체 = `information == nil && !isLoading`)만 `loadError` 필드를 신설한다. **인증 만료 선-필터·토스트 lane은 불변** — 위 "인증 만료 처리 계약"대로 auth는 실패 뷰로 안 가고, `notFound`/`privateProfile` 전용 안내(비공개 프로필 등)도 그대로다(그래서 `NetworkErrorView`의 `switch`는 이 특수 케이스를 `default`=일시적으로 흡수만 한다).
 
 ### ViewModel 표준 구조 (마크주석 순서를 그대로 따른다)
 

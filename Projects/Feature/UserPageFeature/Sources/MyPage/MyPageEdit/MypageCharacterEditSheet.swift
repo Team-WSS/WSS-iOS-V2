@@ -56,8 +56,8 @@ struct MypageCharacterEditSheet: View {
 
                         Spacer().frame(height: 35)
 
-                        if viewModel.state.hasLoadError {
-                            NetworkErrorView { viewModel.handle(.load) }
+                        if let error = viewModel.state.hasLoadError {
+                            NetworkErrorView(error: error) { viewModel.handle(.load) }
                                 .frame(height: itemSize * CGFloat(characterRowCount) + characterRowSpacing + 18)
                         } else {
                             selectionSection(itemSize: itemSize)

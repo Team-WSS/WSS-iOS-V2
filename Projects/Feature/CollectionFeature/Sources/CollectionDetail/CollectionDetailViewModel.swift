@@ -23,7 +23,7 @@ final class CollectionDetailViewModel {
         var detail: CollectionDetail?
         var sortType: SortType = .recent
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
 
         /// 더보기 드롭다운(수정/삭제) 표시 여부 — `detail.isMine`일 때만 화면에 진입점 자체가 있다.
         var isMenuPresented = false
@@ -143,7 +143,7 @@ private extension CollectionDetailViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil, !isClosing else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadDetail() }
     }
 
@@ -152,7 +152,7 @@ private extension CollectionDetailViewModel {
         guard loadTask == nil, !isClosing else { return }
         state.sortType = sortType
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadDetail() }
     }
 
@@ -162,7 +162,7 @@ private extension CollectionDetailViewModel {
     func reloadAfterEdit() {
         guard loadTask == nil, !isClosing else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadDetail() }
     }
 
@@ -213,7 +213,7 @@ private extension CollectionDetailViewModel {
             guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 상세 로드 실패: \(String(describing: error))")
-            state.hasLoadError = true
+            state.hasLoadError = (error as? RepositoryError) ?? .unknown
         }
     }
 

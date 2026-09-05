@@ -35,6 +35,8 @@ struct MypageView: View {
     /// 서재 블록 탭 → "서재" 탭으로 전환 콜백. 이 화면 자신을 push하는 게 아니라 탭 자체를 바꾸는
     /// 것이라(`MainTabView`의 `TabView(selection:)`), 화면 전환이 아닌 탭 전환 콜백을 따로 받는다.
     private let onLibraryTapped: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 마이페이지 로드가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: MypageViewModel,
@@ -42,7 +44,8 @@ struct MypageView: View {
         onCollectionItemTapped: @escaping (CollectionID) -> Void,
         onEditProfileTapped: @escaping () -> Void,
         onSettingTapped: @escaping () -> Void,
-        onLibraryTapped: @escaping () -> Void
+        onLibraryTapped: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onCollectionTapped = onCollectionTapped
@@ -50,12 +53,13 @@ struct MypageView: View {
         self.onEditProfileTapped = onEditProfileTapped
         self.onSettingTapped = onSettingTapped
         self.onLibraryTapped = onLibraryTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
         Group {
-            if viewModel.state.hasLoadError {
-                NetworkErrorView {
+            if let error = viewModel.state.hasLoadError {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else {
@@ -112,17 +116,44 @@ struct MypageView: View {
             }
         }
         .background(WSSColor.wssWhite.swiftUIColor)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            createMypageViewToolBarContent()
+        // 시스템 툴바 대신 커스텀 상단 바를 safeAreaInset로 고정한다(NovelDetail식 몰입형 헤더와 같은 결
+        // — 탭 루트라 뒤로가기는 없고, 흰 배경 위 설정 아이콘 + 스크롤 시 타이틀 페이드인).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            mypageTopBar
         }
-        // 기본값은 스크롤 전엔 투명, 스크롤 후에만 배경이 자동으로 보이는 동작이라 — 항상 흰
-        // 배경이 보이도록 명시로 강제한다(`UserPageFeature`의 동일 항목과 같은 이유).
-        .toolbarBackground(WSSColor.wssWhite.swiftUIColor, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.handle(.load)
         }
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
+        }
+    }
+
+    // MARK: - 상단 바 (커스텀)
+
+    /// 뒤로가기 없는 탭 루트라 `WSSNavigationBar` 대신 커스텀 바를 쓴다 — 우측 설정 아이콘은 항상,
+    /// 가운데 "마이페이지" 타이틀은 프로필 섹션이 화면 밖으로 스크롤되면(`isScrolledFromTop`) 페이드인.
+    private var mypageTopBar: some View {
+        ZStack {
+            Text("마이페이지")
+                .applyWSSFont(.title2)
+                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                .opacity(isScrolledFromTop ? 1 : 0)
+
+            HStack(spacing: 0) {
+                Spacer()
+
+                Button(action: onSettingTapped) {
+                    WSSImage.icSetting.swiftUIImage
+                }
+                .padding(.trailing, 20)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(WSSColor.wssWhite.swiftUIColor)
     }
     
     // MARK: - 프로필
@@ -186,26 +217,6 @@ struct MypageView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private func createMypageViewToolBarContent() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button(action: onSettingTapped) {
-                WSSImage.icSetting.swiftUIImage
-            }
-        }
-
-        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
-        // (titleView)에 갱신되지 않고 계속 숨어있는다(`UserPageFeature`/`CollectionFeature`에서
-        // 먼저 발견한 함정, `Feature/CLAUDE.md` 공통 주의사항 참고) — 대신 `if`로 뷰 자체를
-        // 구조적으로 넣고 뺀다.
-        if isScrolledFromTop {
-            ToolbarItem(placement: .principal) {
-                Text("마이페이지")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-            }
-        }
-    }
 }
 
 /// `MypageView`의 스크롤 좌표공간 이름 — `GeometryReader`가 프로필 섹션의 화면상 위치를 재는 기준.

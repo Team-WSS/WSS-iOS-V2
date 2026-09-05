@@ -18,8 +18,9 @@ struct NovelDetailFeedTab: View {
 
     let feeds: [TotalFeed]
     let isLoading: Bool
-    /// 피드 로드 실패(첫 페이지·더보기 공통) — 탭 자리를 실패 뷰로 대체할지 가르는 값.
-    let hasLoadFailed: Bool
+    /// 피드 로드 실패 시 잡은 에러 종류(첫 페이지·더보기 공통, nil이면 실패 아님) — 탭 자리를
+    /// 실패 뷰로 대체할지 가르고, 그 뷰 문구를 3분류(서버/일반/네트워크)로 가른다.
+    let loadError: RepositoryError?
     /// 셀 y 실측에 쓸 ScrollView 좌표공간 이름(threedots 드롭다운 앵커 계산용).
     let scrollSpaceName: String
     let onReachEnd: () -> Void
@@ -60,8 +61,8 @@ struct NovelDetailFeedTab: View {
         // ⚠️ 실패는 목록보다 **먼저** 판단한다 — 더보기가 실패하면 목록이 남아 있는데, 그대로 두면
         // 실패를 알릴 자리가 없어 사용자가 "왜 안 늘어나지"로 갇힌다(서재에서 실제로 겪은 문제).
         // 재시도 버튼이 달린 실패 뷰로 탭 자리를 대체해 복구 경로를 준다.
-        if hasLoadFailed {
-            NetworkErrorView { onRetry() }
+        if let error = loadError {
+            NetworkErrorView(error: error) { onRetry() }
         } else if feeds.isEmpty {
             if isLoading {
                 ProgressView()

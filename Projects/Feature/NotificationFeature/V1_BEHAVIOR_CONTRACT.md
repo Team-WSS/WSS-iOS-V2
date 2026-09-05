@@ -90,9 +90,9 @@ V1은 셀 탭을 `isNotice` → `isRead` 3분기로 라우팅한다. **딥링크
 - ✅ **Keep** — **피드 알림(`isNotice=false`) → 피드 상세로 push**.
   - V2: 매퍼가 `feedId`를 `.feedDetail`로 옮기고 `onFeedSelected` 발화.
   - 근거: V1 `HomeNotificationViewModel.swift:86-93` · V2 `NotificationMapper.swift:32-33`, `NotificationListView.swift:216-217`
-- 🔧 **Improve 확정** (2026-08-28, 사용자) — **작품 딥링크(`.novelDetail`) 신규**. V1엔 `novelId`가 DTO에도 없고(공지/피드 2갈래) 작품 상세로 가는 경로가 없다. V2는 응답 `novelId`(작품 알림, `isNotice: false`)를 `.novelDetail`로 매핑해 작품 상세로 보낸다(#181에서 연결).
-  - ⚠️ V2 CLAUDE.md·NotificationDomain CLAUDE.md에 **매퍼 우선순위(`isNotice → feedId → novelId → unknown`)가 "작품 알림은 `isNotice: false`로 온다"는 서버 스펙에 기댄다**는 함정과, **실서버에서 값이 채워진 샘플을 아직 못 봤다**는 미검증이 명시돼 있다.
-  - 근거: V1 (해당 없음 — `…/Data/DTO/Notification.swift:16-25`에 novelId 필드 없음) · V2 `NotificationResponse.swift:22`, `NotificationMapper.swift:34-37`, `CLAUDE.md`(작품 알림), `NotificationDomain/CLAUDE.md`(매퍼 우선순위 함정)
+- 🔧 **Improve 확정** (2026-08-28, 사용자) — **작품 딥링크(`.novelDetail`) 신규**. V1엔 `novelId`가 DTO에도 없고(공지/피드 2갈래) 작품 상세로 가는 경로가 없다. V2는 응답에 `novelId`가 있으면 `.novelDetail`로 매핑해 작품 상세로 보낸다(#181에서 연결).
+  - 매퍼는 **id 존재를 `isNotice`보다 우선**한다(`feedId → novelId → isNotice → unknown`) — novelId만 있으면 서버가 isNotice를 뭘로 주든 작품 상세로 간다. 실앱에서 실제 알림 진입으로 작품 상세 전환 확인 완료(2026-09-05).
+  - 근거: V1 (해당 없음 — `…/Data/DTO/Notification.swift:16-25`에 novelId 필드 없음) · V2 `NotificationResponse.swift:22`, `NotificationMapper.swift:34-42`(id-우선 분기), `CLAUDE.md`(작품 알림), `NotificationDomain/CLAUDE.md`(매퍼 우선순위)
 - 🔧 **Improve 확정** (2026-08-29, 사용자: 실존하지 않음 — [`PENDING_DECISIONS.md`](../../../docs/PENDING_DECISIONS.md) 닫힘 이력 8) — **feedId 없는 비공지 알림 처리**. V1은 무조건 `pushToFeedDetailViewController.accept(notification.feedId ?? -1)` — feedId가 nil이면 **피드 `-1`(존재하지 않는 피드)로 push**한다(깨진 상세). V2는 매퍼가 `.unknown`으로 떨어뜨려 **화면 전환을 하지 않는다**(읽음 처리만 한다).
   - 근거: V1 `HomeNotificationViewModel.swift:87`,`91`(`feedId ?? -1`) · V2 `NotificationMapper.swift:38-39`, `NotificationListView.swift:220-221`
 - 🔧 **Improve** — **낙관 읽음 반영**. V1은 탭 시 목록 셀을 즉시 읽음으로 바꾸지 않는다(읽음 배경색은 read POST 성공 후 **재진입 재조회**로만 반영). V2는 탭 즉시 `applyReadState`로 셀을 읽음으로 교체하고, 실패해도 롤백하지 않는다.
@@ -198,7 +198,7 @@ V1은 셀 탭을 `isNotice` → `isRead` 3분기로 라우팅한다. **딥링크
 | `isNotice == false`, `novelId` 有 | (개념 없음) | `.novelDetail` | 🔧 신규 (#181) |
 | `isNotice == false`, feedId·novelId 無 | 피드 `-1` push(깨짐) | `.unknown` (전환 없음) | 🔧 Improve |
 
-- V1 라우팅은 `isNotice` → `isRead`로 갈리고 목적지는 공지/피드 2종. V2는 매퍼가 `isNotice → feedId → novelId → unknown` 우선순위로 `NotificationDeeplink`를 만든다.
+- V1 라우팅은 `isNotice` → `isRead`로 갈리고 목적지는 공지/피드 2종. V2는 매퍼가 **id 우선**(`feedId → novelId → isNotice → unknown`) 순으로 `NotificationDeeplink`를 만든다 — id가 있으면 그 상세로, 순수 공지만 알림 상세로.
 - 근거: V1 `HomeNotificationViewModel.swift:78-96` · V2 `NotificationMapper.swift:29-40`, `NotificationDeeplink.swift:11-18`
 
 ### A.3 읽음(read POST) 전송 조건

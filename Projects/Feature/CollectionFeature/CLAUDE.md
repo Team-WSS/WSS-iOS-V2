@@ -216,6 +216,9 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **네비바는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). `CreateCollectionView`·`CollectionListView`·`CollectionMyLibrarySelectView`·`CollectionSearchNovelView` 4화면 교체(우측 완료/추가는 `trailing` 슬롯). ⚠️ **`CreateCollectionView`만 `swipeBackEnabled: false`** — 좌측 back이 `requestClose`(미저장 초안 "그만하기/계속 작성" 확인 알럿)라 스와이프로 건너뛰면 안 된다. 나머지 3화면은 `dismiss()`(확인 없음)라 스와이프백 허용. 참고: `CreateCollectionView` 타이틀 폰트가 `.title3`→`.title2`로 통일됐다(`WSSNavigationBar` 고정값). **`CollectionDetailView`는 `WSSNavigationBar`가 아니라 `NovelDetailView`식 커스텀 몰입형 오버레이 바로 교체했다**(#244) — 히어로 이미지 위엔 투명 바 + 흰 아이콘(`navIconColor`), 스크롤되면 흰 배경 + 검정 아이콘 + 컬렉션명 타이틀 페이드인. `ZStack` 오버레이 + 바 배경만 `.ignoresSafeArea(edges:.top)`로 상태바까지 확장(버튼은 안전영역 안, 배경 Color는 `allowsHitTesting(false)`로 스크롤 통과) + `.wssCustomNavigationBar()`로 스와이프백. 커스텀 오버레이라 `.opacity`/색 전환이 그대로 반영된다(아래 "스크롤 반응형 네비 타이틀은 `if` 구조" 함정은 시스템 툴바 전용이라 더 이상 이 화면에 적용 안 됨). ⚠️ **스크롤 전환 애니메이션(`isScrolledFromTop`)은 사용자 선호로 제거돼 즉시 전환한다**(#244 후속, 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md) — 되살리지 말 것).
+  - **작품 개수 + 정렬 바(`sortBar`)는 스크롤해 네비바 하단에 닿으면 스티키로 고정된다**(#244, 사용자 요청 — 작품 상세 정보/피드 탭바처럼). 구현은 `NovelDetailView` 스티키 탭바와 같은 **"오버레이 2벌"** 방식이다(정본 [NovelDetailFeature](../NovelDetailFeature/CLAUDE.md)): 스크롤 콘텐츠 안 "원본" 정렬 바는 자리만 유지(스티키 전환 시 콘텐츠 점프 방지)하고, **네비바와 같은 VStack에** 정렬 바를 하나 더(흰 배경) 그려 `showStickySortBar`로 조건부로 띄운다. ⚠️ **몰입형(`.ignoresSafeArea(edges:.top)`)이라 `LazyVStack(pinnedViews:)`는 못 쓴다** — pin이 상태바 밑(화면 최상단)에 붙어 네비바와 겹친다(NovelDetail과 동일 이유). 임계선 `navBarBottomY`는 네비바 배경(`ignoresSafeArea`로 상태바까지 확장)의 실측 높이 = "안전영역 top + 44"라 안전영역을 직접 읽거나 44를 더하지 않는다(⚠️ `ignoresSafeArea`는 그 `GeometryReader` 쪽에 걸어야 확장분이 `proxy.size.height`에 잡힘). 원본 바 위치 `sortBarMinY`는 `scrollCoordinateSpace`에서 `GeometryReader`+`onChange`로 재고(같은 SDK 제약), 둘 다 화면 좌상단 기준이라 `sortBarMinY <= navBarBottomY`로 그대로 비교. 스티키가 뜰 무렵엔 히어로가 이미 스크롤아웃돼 `isScrolledFromTop == true`(네비바 흰 배경 + 컬렉션명)라 흰 정렬 바가 그 아래로 자연스럽게 이어진다.
+  - ⚠️ **커스텀 몰입형 바의 아이콘 색(`navIconColor`)이 흰색인 건 히어로가 바 뒤에 있을 때뿐이다** — 히어로 대신 흰 배경(`LoadingView`·`NetworkErrorView`)이 깔리는데 흰 아이콘이면 뒤로가기가 묻혀 안 보인다(#244 커스텀 바 도입 후 회귀, 코드 리뷰에서 발견). 흰 배경이 깔리는 경우가 **둘로 갈린다**: ① 첫 로드/로딩은 `detail == nil`, ② **이미 detail이 있는 상태의 재조회 실패**(정렬 변경·수정 복귀)는 `detail`을 비우지 않고 `hasLoadError`만 세우는데 View가 `hasLoadError != nil`이면 detail 유무와 무관하게 `NetworkErrorView`를 전면에 띄운다 — 그래서 `detail == nil`만 보면 ②(최상단 상태)에서 흰-온-흰 아이콘 회귀가 좁게 남았다(라운드2 리뷰에서 Codex·pr-reviewer 중복 지적). `isBarSolid`(`isScrolledFromTop || detail == nil || hasLoadError != nil`)로 세 흰 배경 케이스를 모두 솔리드(흰 배경 + 검정 아이콘)로 둔다 — `navIconColor`/바 배경을 `isScrolledFromTop`만으로 되돌리거나 `hasLoadError` 조건을 빼지 말 것.
 - ⚠️ **App이 push하는 화면의 "진입 파라미터"는 반드시 `NavigationPath`의 `Destination` payload로
   실어 보내야 한다 — 별도 `@State` 스크래치 변수에 먼저 쓰고 그 변수를 읽어 destination view를
   만드는 방식은 레이스가 있다(#201, 사용자 리포트로 실측 재발견 — "작품 추가→서재에서 추가로 넘어가면
@@ -427,10 +430,14 @@
     덕에 제목이 1줄이라 남는 공간은 항상 작가 텍스트 아래(카드 하단)로 흐른다 — 제목-작가 간격
     자체는 여전히 고정 `Spacer(2)`라 줄 수와 무관하게 2pt로 유지된다. `novelInfoHeight` 값은 시뮬레이터
     실측(1줄/2줄 제목이 섞인 그리드에서 바닥선·표지 폭 확인)으로 정했다.
-- ⚠️ **`CollectionDetailView`의 스크롤 반응형 네비 타이틀은 `opacity` 모디파이어가 아니라 `if` 구조적
-  조건으로 넣고 뺀다** — 시스템 `.toolbar { ToolbarItem(.principal) { Text().opacity(조건 ? 1:0) } }`
-  조합은 opacity 값만 바뀌어선 UIKit 브리지(titleView)에 갱신되지 않고 계속 숨어있는다(#201 실측,
-  `Feature/CLAUDE.md` 공통 주의사항에 일반화해 남김 — `UserPageFeature`도 동일 재발).
+- **`CollectionDetailView`의 스크롤 반응형 네비 타이틀은 커스텀 몰입형 오버레이라 `.opacity(isScrolledFromTop ? 1:0)`가
+  그대로 반영된다**(#244, 위 "네비바" 항목 참고) — 예전 시스템 `.toolbar { ToolbarItem(.principal) }` 시절의
+  "`opacity` 대신 `if` 구조로 넣고 뺀다"는 함정(#201, UIKit titleView 브리지 미갱신)은 **시스템 툴바 전용**이라 이
+  화면엔 더 이상 적용되지 않는다(일반 규칙은 `Feature/CLAUDE.md` 공통 주의사항 — 시스템 `.toolbar`를 쓰는 새 화면엔 여전히 유효).
+- **히어로 배경(`heroImage`)은 raw `AsyncImage`가 아니라 그리드 셀과 같은 `WSSNovelCoverImage`다**(#244) —
+  같은 대표 작품 URL을 인메모리 캐시로 공유해 중복 다운로드·재렌더 번쩍임이 없다(raw `AsyncImage`는 뷰
+  재생성마다 `.empty`부터 시작해 느렸다 — 사용자 리포트). `placeholderStyle: .grid`로 로딩 중 `wssGray50`
+  배경을 깔아 과거 `Color.wssGray50` 폴백과 같은 결. **단순화한다고 raw `AsyncImage`로 되돌리지 말 것.**
 - **히어로 표지는 `.frame(height:, alignment: .top)`으로 상단 기준 크롭한다**(기본값 `.center`
   대신) — `scaledToFill()`로 프레임보다 커진 이미지가 위쪽부터 정렬된 뒤 잘리게 하려는 의도. 가로는
   이미 화면 폭을 꽉 채운 상태라 세로 정렬만 바뀐다.

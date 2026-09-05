@@ -25,10 +25,17 @@ struct WithdrawConfirmView: View {
     /// "확인" 탭 시 호출된다. 실제 탈퇴 제출은 다음 화면(`WithdrawReasonView`)의 책임이라
     /// 이 화면은 다음 화면으로의 이동 신호만 호출자에게 알린다.
     private let onConfirm: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 서재 통계 로드가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
-    init(viewModel: WithdrawConfirmViewModel, onConfirm: @escaping () -> Void = {}) {
+    init(
+        viewModel: WithdrawConfirmViewModel,
+        onConfirm: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
+    ) {
         self._viewModel = State(initialValue: viewModel)
         self.onConfirm = onConfirm
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -36,8 +43,10 @@ struct WithdrawConfirmView: View {
             let size = geo.size
             
             VStack(alignment: .leading, spacing: 0) {
+                WSSNavigationBar(title: "회원탈퇴") { dismiss() }
+
                 Spacer().frame(height: 45)
-                
+
                 Text("정말 탈퇴하시겠어요?")
                     .applyWSSFont(.headline1)
                     .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
@@ -81,14 +90,14 @@ struct WithdrawConfirmView: View {
                 .padding(.vertical, 10)
                 .padding(.horizontal, 16)
             }
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+            .wssCustomNavigationBar()
         }
         .onAppear {
             viewModel.handle(.load)
+        }
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
         }
     }
 
@@ -123,31 +132,6 @@ struct WithdrawConfirmView: View {
         .frame(maxWidth: .infinity)
         .background(WSSColor.wssPrimary20.swiftUIColor)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-}
-
-// MARK: - Toolbar
-
-private extension WithdrawConfirmView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        
-        ToolbarItem(placement: .principal) {
-            Text("회원탈퇴")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
     }
 }
 

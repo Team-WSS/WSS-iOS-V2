@@ -34,6 +34,8 @@ public enum MypageFeatureFactory {
     ///     조립)은 호출자가 수행한다.
     ///   - onLibraryTapped: 서재 블록 탭 → "서재" 탭으로 전환 콜백. 화면 push가 아니라 탭 전환이라
     ///     호출자(App)가 자기 `TabView` selection을 바꾸는 방식으로 처리한다.
+    ///   - onAuthenticationRequired: 마이페이지 로드가 401로 막히면 발화 — 세션 종료라 로그인/온보딩으로
+    ///     되돌리는 배선(App)에 연결한다(Feature 공통 "인증 만료 처리 계약"). idempotent해야 한다.
     @MainActor
     public static func makeView(
         userID: UserID,
@@ -47,7 +49,8 @@ public enum MypageFeatureFactory {
         onCollectionItemTapped: @escaping (CollectionID) -> Void,
         onEditProfileTapped: @escaping () -> Void,
         onSettingTapped: @escaping () -> Void,
-        onLibraryTapped: @escaping () -> Void
+        onLibraryTapped: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = MypageViewModel(
             userID: userID,
@@ -64,7 +67,8 @@ public enum MypageFeatureFactory {
             onCollectionItemTapped: onCollectionItemTapped,
             onEditProfileTapped: onEditProfileTapped,
             onSettingTapped: onSettingTapped,
-            onLibraryTapped: onLibraryTapped
+            onLibraryTapped: onLibraryTapped,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 

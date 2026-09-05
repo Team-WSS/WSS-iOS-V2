@@ -42,7 +42,7 @@ final class CollectionListViewModel {
         /// 한 프레임 빈 상태가 스친다(`CollectionMyLibrarySelectViewModel`과 동일 이유).
         var isLoading = true
         var isLoadingMore = false
-        var loadFailed = false
+        var loadFailed: RepositoryError?
     }
 
     enum CollectionListToast: Equatable {
@@ -197,7 +197,7 @@ private extension CollectionListViewModel {
             $0.items = []
             $0.isLoading = true
             $0.isLoadingMore = false
-            $0.loadFailed = false
+            $0.loadFailed = nil
         }
         let generation = bookkeeping(for: tab).generation
         let task = Task { await loadPage(tab: tab, cursor: nil, generation: generation) }
@@ -230,7 +230,7 @@ private extension CollectionListViewModel {
                     content.items.append(contentsOf: page.items)
                 }
                 content.totalCount = totalCount
-                content.loadFailed = false
+                content.loadFailed = nil
             }
             updateBookkeeping(for: tab) {
                 $0.nextCursor = page.nextCursor
@@ -242,7 +242,7 @@ private extension CollectionListViewModel {
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
             if routeToLoginIfAuthenticationRequired(error) { return }
             if cursor == nil {
-                updateContent(for: tab) { $0.loadFailed = true }
+                updateContent(for: tab) { $0.loadFailed = (error as? RepositoryError) ?? .unknown }
                 logger?.error("CollectionList 실패(\(tab), load): \(String(describing: error))")
             } else {
                 presentError(error, tab: tab, as: .loadMoreFailed)

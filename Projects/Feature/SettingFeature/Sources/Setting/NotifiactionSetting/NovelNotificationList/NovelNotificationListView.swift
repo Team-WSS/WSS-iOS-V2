@@ -23,27 +23,55 @@ struct NovelNotificationListView: View {
     /// 목록이 비었을 때 "작품 둘러보기" CTA — 어디로 보낼지(검색 화면 등)는 다른 Feature 모듈이라
     /// 이 화면이 알지 못한다. 호출자(App)가 결정한다.
     private let onBrowseNovels: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·다음 페이지·삭제가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         title: String,
         viewModel: NovelNotificationListViewModel,
-        onBrowseNovels: @escaping () -> Void
+        onBrowseNovels: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self.title = title
         self._viewModel = State(initialValue: viewModel)
         self.onBrowseNovels = onBrowseNovels
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
         // 로딩/실패/빈 상태를 if/else 트리 교체가 아니라 overlay로 둔다. 상태 전환 시에도 루트(content)
         // 정체성이 유지돼야, 로드 완료 순간과 뒤로가기(dismiss)가 겹쳐도 진행 중인 pop이 취소되지 않는다
         // (NovelReviewView와 동일한 이유).
-        content
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: title) {
+                viewModel.handle(.requestClose)
+            } trailing: {
+                if !viewModel.state.subscriptions.isEmpty {
+                    Button {
+                        if viewModel.state.isEditing {
+                            viewModel.handle(.presentDeleteConfirmation)
+                        } else {
+                            viewModel.handle(.beginEditing)
+                        }
+                    } label: {
+                        if viewModel.state.isDeleting {
+                            ProgressView()
+                        } else {
+                            Text(viewModel.state.isEditing ? "삭제" : "수정")
+                                .applyWSSFont(.title2)
+                                .foregroundStyle(trailingButtonColor)
+                        }
+                    }
+                    .disabled(viewModel.state.isDeleting || (viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty))
+                }
+            }
+
+            content
             .overlay {
                 if viewModel.state.isLoading {
                     LoadingView()
-                } else if viewModel.state.loadError != nil {
-                    NetworkErrorView {
+                } else if let error = viewModel.state.loadError {
+                    NetworkErrorView(error: error) {
                         viewModel.handle(.load)
                     }
                 } else if viewModel.state.subscriptions.isEmpty {
@@ -55,16 +83,17 @@ struct NovelNotificationListView: View {
                     }
                 }
             }
-            .toolbar {
-                toolbarContent
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
             }
             .showWSSAlert(
                 isPresented: deleteConfirmationBinding,
@@ -113,52 +142,6 @@ private extension NovelNotificationListView {
             .padding(.horizontal, 20)
         }
         .scrollBounceBehavior(.basedOnSize)
-    }
-}
-
-// MARK: - Toolbar
-
-private extension NovelNotificationListView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                viewModel.handle(.requestClose)
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text(title)
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        if !viewModel.state.subscriptions.isEmpty {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    if viewModel.state.isEditing {
-                        viewModel.handle(.presentDeleteConfirmation)
-                    } else {
-                        viewModel.handle(.beginEditing)
-                    }
-                } label: {
-                    if viewModel.state.isDeleting {
-                        ProgressView()
-                    } else {
-                        Text(viewModel.state.isEditing ? "삭제" : "수정")
-                            .applyWSSFont(.title2)
-                            .foregroundStyle(trailingButtonColor)
-                    }
-                }
-                .disabled(viewModel.state.isDeleting || (viewModel.state.isEditing && viewModel.state.selectedNovelIDs.isEmpty))
-            }
-        }
     }
 }
 

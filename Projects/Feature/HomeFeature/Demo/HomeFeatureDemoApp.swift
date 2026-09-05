@@ -48,7 +48,10 @@ private enum DemoHomeScenario: String, CaseIterable, Identifiable {
     case noGenre = "장르미설정"
     /// 오늘의 발견·추천글이 0건 — 섹션이 통째로 빌 때의 레이아웃 축.
     case empty = "빈 데이터"
-    case failure = "실패"
+    /// 로드 실패 3종 — NetworkErrorView 문구가 RepositoryError 3분류(서버/네트워크/일시)로 갈리는 걸 확인하는 축(#244).
+    case failureServer = "실패-서버"
+    case failureNetwork = "실패-네트워크"
+    case failureGeneral = "실패-일시"
     case authExpired = "인증만료"
     var id: String { rawValue }
 }
@@ -211,7 +214,9 @@ private struct DemoLoadHomeDataUseCase: LoadHomeDataUseCase {
         try? await Task.sleep(nanoseconds: 500_000_000)
 
         switch scenario {
-        case .failure:      throw .networkUnavailable
+        case .failureServer:   throw .serverUnavailable
+        case .failureNetwork:  throw .networkUnavailable
+        case .failureGeneral:  throw .unknown
         case .authExpired:  throw .authenticationRequired
         case .empty:
             return HomeData(
@@ -244,7 +249,9 @@ private struct DemoLoadUnreadNotificationStatusUseCase: LoadUnreadNotificationSt
 
     func execute() async throws(RepositoryError) -> UnreadNotificationStatus {
         switch scenario {
-        case .failure:      throw .networkUnavailable
+        case .failureServer:   throw .serverUnavailable
+        case .failureNetwork:  throw .networkUnavailable
+        case .failureGeneral:  throw .unknown
         case .authExpired:  throw .authenticationRequired
         default:            return UnreadNotificationStatus(hasUnreadNotifications: true)
         }

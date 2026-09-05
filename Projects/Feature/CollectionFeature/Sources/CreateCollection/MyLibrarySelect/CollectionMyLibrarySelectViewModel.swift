@@ -41,7 +41,7 @@ final class CollectionMyLibrarySelectViewModel {
         /// 한 프레임 동안 빈 상태가 스친다(`LibraryViewModel`과 동일 이유).
         var isLoading = true
         var isLoadingMore = false
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         var isConfirmed = false
         var requiresAuthentication = false
         var presentedToast: MyLibrarySelectToast?
@@ -184,7 +184,7 @@ private extension CollectionMyLibrarySelectViewModel {
         state.novels = []
         state.isLoading = true
         state.isLoadingMore = false
-        state.loadFailed = false
+        state.loadFailed = nil
         let generation = loadGeneration
         loadTask = Task { await loadPage(cursor: nil, generation: generation) }
     }
@@ -219,13 +219,13 @@ private extension CollectionMyLibrarySelectViewModel {
             }
             nextCursor = page.nextCursor
             hasNext = page.hasNext
-            state.loadFailed = false
+            state.loadFailed = nil
         } catch {
             guard generation == loadGeneration, !Task.isCancelled else { return }
             // 인증 만료는 실패 뷰/토스트 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
             if routeToLoginIfAuthenticationRequired(error) { return }
             if cursor == nil {
-                state.loadFailed = true
+                state.loadFailed = (error as? RepositoryError) ?? .unknown
                 logger?.error("CollectionMyLibrarySelect 실패(load): \(String(describing: error))")
             } else {
                 presentError(error, as: .loadMoreFailed)

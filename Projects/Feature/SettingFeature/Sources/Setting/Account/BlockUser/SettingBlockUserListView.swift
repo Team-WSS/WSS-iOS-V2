@@ -17,20 +17,30 @@ struct SettingBlockUserListView: View {
 
     @State private var viewModel: SettingBlockUserListViewModel
     @Environment(\.dismiss) private var dismiss
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·차단 해제가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
-    init(viewModel: SettingBlockUserListViewModel) {
+    init(
+        viewModel: SettingBlockUserListViewModel,
+        onAuthenticationRequired: @escaping () -> Void = {}
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "차단유저 목록") { dismiss() }
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
     }
@@ -39,8 +49,8 @@ struct SettingBlockUserListView: View {
         VStack(spacing: 0) {
             if viewModel.state.isLoading {
                 LoadingView()
-            } else if viewModel.state.loadError != nil {
-                NetworkErrorView {
+            } else if let error = viewModel.state.loadError {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else if viewModel.state.blockedUsers.isEmpty {
@@ -49,6 +59,9 @@ struct SettingBlockUserListView: View {
                 blockUserListSection
             }
         }
+        // 네비바 아래 남은 세로 공간을 채운다 — 빈 상태(이미지+문구)가 네비바에 붙지 않고 중앙에 오도록.
+        // (예전엔 content가 body 루트라 화면을 꽉 채웠는데, 네비바와 한 VStack에 묶이며 채움이 사라졌다.)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var blockUserListSection: some View {
@@ -93,31 +106,6 @@ private extension SettingBlockUserListView {
         }
         switch viewModel.state.toastError {
         case .unknown, .none: return .unknownError
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingBlockUserListView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("차단유저 목록")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
         }
     }
 }

@@ -20,22 +20,45 @@ struct SettingProfilePublicView: View {
     /// 저장 성공으로 화면이 닫힐 때 호출된다(변경 결과가 공개/비공개인지 함께 전달). 토스트는 이 화면이
     /// 사라진 뒤 이전 화면에서 보여야 자연스러워 이 화면 스스로 띄우지 않고, 호출자에게 결과만 알린다.
     private let onSaveSuccess: (Bool) -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·저장이 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: SettingProfilePublicViewModel,
-         onSaveSuccess: @escaping (Bool) -> Void = { _ in }
+         onSaveSuccess: @escaping (Bool) -> Void = { _ in },
+         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onSaveSuccess = onSaveSuccess
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "프로필 공개 설정") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.save)
+                } label: {
+                    if viewModel.state.isSaving {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(
+                                viewModel.hasChanges
+                                    ? WSSColor.wssPrimary100.swiftUIColor
+                                    : WSSColor.wssGray100.swiftUIColor
+                            )
+                    }
+                }
+                .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -44,6 +67,10 @@ struct SettingProfilePublicView: View {
                 onSaveSuccess(viewModel.state.isPublic)
                 dismiss()
             }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
+            }
             .showWSSToast(isPresented: toastBinding, type: toastType)
     }
 
@@ -51,8 +78,8 @@ struct SettingProfilePublicView: View {
     private var content: some View {
         if viewModel.state.isLoading {
             LoadingView()
-        } else if viewModel.state.loadError != nil {
-            NetworkErrorView {
+        } else if let error = viewModel.state.loadError {
+            NetworkErrorView(error: error) {
                 viewModel.handle(.load)
             }
         } else {
@@ -75,50 +102,6 @@ struct SettingProfilePublicView: View {
             .padding(.top, 10.5)
 
             Spacer()
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingProfilePublicView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("프로필 공개 설정")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.handle(.save)
-            } label: {
-                if viewModel.state.isSaving {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(
-                            viewModel.hasChanges
-                                ? WSSColor.wssPrimary100.swiftUIColor
-                                : WSSColor.wssGray100.swiftUIColor
-                        )
-                }
-            }
-            .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
         }
     }
 }
