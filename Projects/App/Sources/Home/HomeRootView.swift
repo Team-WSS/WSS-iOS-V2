@@ -356,7 +356,8 @@ private extension HomeRootView {
                 // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
                 guard $0 != currentUserID else { return }
                 path.append(Destination.userPage($0))
-            }
+            },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }

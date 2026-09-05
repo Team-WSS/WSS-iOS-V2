@@ -19,13 +19,17 @@ struct SettingChangeGenderOrAgeView: View {
     @State private var showBirthYearPickerSheet: Bool = false
     @Environment(\.dismiss) private var dismiss
     private let onSaveSuccess: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 저장(서버 PUT)이 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: SettingChangeGenderOrAgeViewModel,
-         onSaveSuccess: @escaping () -> Void = {}
+         onSaveSuccess: @escaping () -> Void = {},
+         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onSaveSuccess = onSaveSuccess
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -65,6 +69,10 @@ struct SettingChangeGenderOrAgeView: View {
                 guard shouldDismiss else { return }
                 onSaveSuccess()
                 dismiss()
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
             }
     }
 

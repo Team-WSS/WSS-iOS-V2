@@ -25,15 +25,19 @@ struct NotificationSettingView: View {
     /// 휴재 복귀 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeHiatusReturnNotificationListView`
     /// 조립)은 호출자가 수행한다.
     private let onHiatusReturnListTapped: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·토글이 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: NotificationSettingViewModel,
         onCompletionListTapped: @escaping () -> Void = {},
-        onHiatusReturnListTapped: @escaping () -> Void = {}
+        onHiatusReturnListTapped: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onCompletionListTapped = onCompletionListTapped
         self.onHiatusReturnListTapped = onHiatusReturnListTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -47,6 +51,10 @@ struct NotificationSettingView: View {
                 viewModel.handle(.load)
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
+            }
     }
 
     @ViewBuilder

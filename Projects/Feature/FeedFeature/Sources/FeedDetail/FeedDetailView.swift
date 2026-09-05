@@ -47,17 +47,21 @@ struct FeedDetailView: View {
     /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. 실제 화면 전환(`UserPageAssembly` 조립)은
     /// 호출자(App 조정 계층)가 수행한다(`SosoFeedView`의 `onUserProfileTapped`와 동일 계약).
     private let onUserProfileTapped: (UserID) -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 상세/댓글/프로필 이미지 로드가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: FeedDetailViewModel,
         onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in }
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelTapped = onNovelTapped
         self.onEditFeedTapped = onEditFeedTapped
         self.onUserProfileTapped = onUserProfileTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
     
     var body: some View {
@@ -123,6 +127,10 @@ struct FeedDetailView: View {
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
+        }
     }
     
     @ViewBuilder

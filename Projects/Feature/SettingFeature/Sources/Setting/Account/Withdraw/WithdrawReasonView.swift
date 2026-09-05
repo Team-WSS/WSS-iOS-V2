@@ -22,11 +22,16 @@ struct WithdrawReasonView: View {
     /// 탈퇴 성공으로 화면이 닫힐 때 호출된다. 세션 종료(로그아웃 화면 전환 등)는 App(세션 관찰) 책임이라
     /// 이 화면은 성공 신호만 호출자에게 알린다.
     private let onWithdrawSuccess: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 탈퇴 제출이 401로 막히면 발화(Feature 공통 계약).
+    /// 탈퇴 401은 이미 세션이 끝난 것이라 실패 토스트 대신 로그인/온보딩으로 되돌린다.
+    private let onAuthenticationRequired: () -> Void
 
     init(viewModel: WithdrawReasonViewModel,
-         onWithdrawSuccess: @escaping () -> Void = {}) {
+         onWithdrawSuccess: @escaping () -> Void = {},
+         onAuthenticationRequired: @escaping () -> Void = {}) {
         self._viewModel = State(initialValue: viewModel)
         self.onWithdrawSuccess = onWithdrawSuccess
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -104,6 +109,10 @@ struct WithdrawReasonView: View {
             guard shouldDismiss else { return }
             onWithdrawSuccess()
             dismiss()
+        }
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
         }
     }
 

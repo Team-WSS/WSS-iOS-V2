@@ -51,11 +51,11 @@ import WSSComponent
 /// 여는 리뷰·피드 작성·피드 상세·유저 프로필·일반 검색까지 `LibraryRootView`와 동일한 구조로 이 루트에도
 /// 옮겨왔다(마이페이지에서 진입했다고 그 하위 흐름이 달라질 이유가 없어서).
 ///
-/// ⚠️ **`MypageFeatureFactory.makeView` 자체가 받는 `onAuthenticationRequired`는 없다** — 로드 401은
-/// 여전히 조용히 빈 상태로 남는다(FeedFeature와 같은 사정, App 쪽에서 고칠 수 있는 부분이 아님). 다만
-/// 여기서 push하는 **설정(`SettingFeatureFactory.makeView`)의 회원탈퇴/로그아웃 성공은 세션 자체를 끝내는
-/// 이벤트**라 `onSessionEnded`로 온보딩까지 되돌린다 — push 화면의 401(`onAuthenticationRequired`)과 결과는
-/// 같지만 `MainTabView`가 후자에만 딥링크 복원을 걸어서 콜백을 분리했다(#228).
+/// ⚠️ **`MypageFeatureFactory.makeView`도 이제 `onAuthenticationRequired`를 받는다**(#244 — 마이페이지
+/// 콘텐츠 로드가 401이면 조용히 빈 상태로 남지 않고 이 콜백으로 로그인 유도한다). 이 탭 위에 push되는
+/// 설정 트리·컬렉션·작품 상세도 같은 콜백을 받는다. 별개로 **설정 화면의 회원탈퇴/로그아웃 성공은 세션
+/// 자체를 끝내는 이벤트**라 `onSessionEnded`로 온보딩까지 되돌린다 — 401(`onAuthenticationRequired`)과
+/// 결과는 같지만 `MainTabView`가 후자에만 딥링크 복원을 걸어서 콜백을 분리했다(#228).
 struct MypageRootView: View {
 
     private enum Destination: Hashable {
@@ -176,7 +176,8 @@ struct MypageRootView: View {
                 onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
                 onEditProfileTapped: { path.append(Destination.edit) },
                 onSettingTapped: { path.append(Destination.setting) },
-                onLibraryTapped: onLibraryTapped
+                onLibraryTapped: onLibraryTapped,
+                onAuthenticationRequired: onAuthenticationRequired
             )
             .navigationDestination(for: Destination.self) { destination in
                 Group {
@@ -338,7 +339,8 @@ private extension MypageRootView {
             onLogoutSuccess: onSessionEnded,
             onChangeGenderOrAgeTapped: { path.append(Destination.settingChangeGenderOrAge) },
             onBlockUserListTapped: { path.append(Destination.settingBlockUserList) },
-            onWithdrawTapped: { path.append(Destination.settingWithdrawFlow) }
+            onWithdrawTapped: { path.append(Destination.settingWithdrawFlow) },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -349,7 +351,8 @@ private extension MypageRootView {
             ),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: dependencies.profileRepository),
             logger: dependencies.logger,
-            onSaveSuccess: { isChangeSavedToastPresented = true }
+            onSaveSuccess: { isChangeSavedToastPresented = true },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -357,7 +360,8 @@ private extension MypageRootView {
         SettingFeatureFactory.makeBlockUserListView(
             loadBlockedUsersUseCase: DefaultLoadBlockedUsersUseCase(repository: dependencies.socialRepository),
             unblockUserUseCase: DefaultUnblockUserUseCase(repository: dependencies.socialRepository),
-            logger: dependencies.logger
+            logger: dependencies.logger,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -371,7 +375,8 @@ private extension MypageRootView {
             withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
             logger: dependencies.logger,
             // 탈퇴 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
-            onWithdrawSuccess: onSessionEnded
+            onWithdrawSuccess: onSessionEnded,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -385,7 +390,8 @@ private extension MypageRootView {
             onSaveSuccess: { isPublic in
                 visibilityChangedToastType = isPublic ? .changePublic : .changePrivate
                 isVisibilityChangedToastPresented = true
-            }
+            },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -397,7 +403,8 @@ private extension MypageRootView {
             ),
             logger: dependencies.logger,
             onCompletionListTapped: { path.append(Destination.settingCompletionNotificationList) },
-            onHiatusReturnListTapped: { path.append(Destination.settingHiatusReturnNotificationList) }
+            onHiatusReturnListTapped: { path.append(Destination.settingHiatusReturnNotificationList) },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -410,7 +417,8 @@ private extension MypageRootView {
                 repository: dependencies.novelNotificationRepository
             ),
             logger: dependencies.logger,
-            onBrowseNovels: { path.append(Destination.search) }
+            onBrowseNovels: { path.append(Destination.search) },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -423,7 +431,8 @@ private extension MypageRootView {
                 repository: dependencies.novelNotificationRepository
             ),
             logger: dependencies.logger,
-            onBrowseNovels: { path.append(Destination.search) }
+            onBrowseNovels: { path.append(Destination.search) },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }
@@ -574,7 +583,8 @@ private extension MypageRootView {
                 // 다른 탭의 프로필 탭 이중 가드(#196)와 동일 — 내 프로필로는 절대 안 간다.
                 guard $0.value != currentUserID else { return }
                 path.append(Destination.userPage($0))
-            }
+            },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }

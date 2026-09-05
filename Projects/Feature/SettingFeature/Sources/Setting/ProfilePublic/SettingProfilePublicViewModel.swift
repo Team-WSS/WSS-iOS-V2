@@ -29,6 +29,8 @@ final class SettingProfilePublicViewModel {
         var loadError: RepositoryError?
         /// 저장 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 토글 값도 유지한다.
         var toastError: SettingError?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        var requiresAuthentication = false
     }
 
     /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
@@ -145,12 +147,21 @@ private extension SettingProfilePublicViewModel {
 
 private extension SettingProfilePublicViewModel {
     func presentLoadError(_ error: Error) {
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("SettingProfilePublic 로드 실패: \(String(describing: error))")
         state.loadError = (error as? RepositoryError) ?? .unknown
     }
 
     func presentToastError(_ error: Error) {
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("SettingProfilePublic 예기치 못한 에러: \(String(describing: error))")
         state.toastError = .unknown
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환(Feature 공통 계약).
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

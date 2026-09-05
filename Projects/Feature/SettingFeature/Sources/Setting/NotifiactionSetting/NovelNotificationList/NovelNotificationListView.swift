@@ -23,15 +23,19 @@ struct NovelNotificationListView: View {
     /// 목록이 비었을 때 "작품 둘러보기" CTA — 어디로 보낼지(검색 화면 등)는 다른 Feature 모듈이라
     /// 이 화면이 알지 못한다. 호출자(App)가 결정한다.
     private let onBrowseNovels: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·다음 페이지·삭제가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         title: String,
         viewModel: NovelNotificationListViewModel,
-        onBrowseNovels: @escaping () -> Void
+        onBrowseNovels: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self.title = title
         self._viewModel = State(initialValue: viewModel)
         self.onBrowseNovels = onBrowseNovels
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -86,6 +90,10 @@ struct NovelNotificationListView: View {
             }
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss { dismiss() }
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
             }
             .showWSSAlert(
                 isPresented: deleteConfirmationBinding,

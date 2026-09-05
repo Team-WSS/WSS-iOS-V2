@@ -35,6 +35,8 @@ struct MypageView: View {
     /// 서재 블록 탭 → "서재" 탭으로 전환 콜백. 이 화면 자신을 push하는 게 아니라 탭 자체를 바꾸는
     /// 것이라(`MainTabView`의 `TabView(selection:)`), 화면 전환이 아닌 탭 전환 콜백을 따로 받는다.
     private let onLibraryTapped: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 마이페이지 로드가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: MypageViewModel,
@@ -42,7 +44,8 @@ struct MypageView: View {
         onCollectionItemTapped: @escaping (CollectionID) -> Void,
         onEditProfileTapped: @escaping () -> Void,
         onSettingTapped: @escaping () -> Void,
-        onLibraryTapped: @escaping () -> Void
+        onLibraryTapped: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onCollectionTapped = onCollectionTapped
@@ -50,6 +53,7 @@ struct MypageView: View {
         self.onEditProfileTapped = onEditProfileTapped
         self.onSettingTapped = onSettingTapped
         self.onLibraryTapped = onLibraryTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -120,6 +124,10 @@ struct MypageView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.handle(.load)
+        }
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
         }
     }
 

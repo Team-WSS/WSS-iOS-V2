@@ -50,6 +50,9 @@ final class FeedDetailViewModel {
         /// 콘텐츠는 멀쩡하고 그 행동만 실패한 "사용자 액션 실패"라 전면 뷰가 아니라 토스트로 표현한다
         /// ([Feature CLAUDE.md](../CLAUDE.md)의 로드 실패 표현 계약).
         var isActionFailedToastPresented = false
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        /// 로드(상세·댓글·프로필 이미지) 실패가 401이면 실패 뷰/토스트 대신 이 신호로 로그인 유도한다.
+        var requiresAuthentication = false
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -240,6 +243,8 @@ final class FeedDetailViewModel {
             let feed = try await loadFeedDetailUseCase.execute(feedID: feedID)
             state.detail = feed
         } catch {
+            // 인증 만료는 실패 뷰/알럿보다 먼저 거른다 — 로그인 유도로 일원화(Feature 공통 계약).
+            if routeToLoginIfAuthenticationRequired(error) { return }
             if isFeedUnavailable(error) {
                 state.alert = .feedUnavailable
             } else {
@@ -254,6 +259,7 @@ final class FeedDetailViewModel {
             let comments = try await loadCommentsUseCase.execute(feedID: feedID)
             state.comments = comments
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             if isFeedUnavailable(error) {
                 state.alert = .feedUnavailable
             } else {
@@ -268,8 +274,19 @@ final class FeedDetailViewModel {
             let profile = try await loadProfileUseCase.execute(target: .me)
             state.currentUserProfileImageURL = profile.characterImage
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("FeedDetail loadCurrentUserProfileImage 실패: \(String(describing: error))")
         }
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    /// 세션이 죽은 상황이라 실패 뷰/토스트 대신 로그인 유도로 일원화한다(Feature 공통 계약).
+    /// 좋아요·댓글·삭제·신고 같은 개별 사용자 액션 실패는 이미 로드된 화면의 토스트 lane이 담당하므로
+    /// 여기 태우지 않는다 — 화면을 "갇히게" 만드는 로드 401만 로그인으로 보낸다.
+    private func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 
     /// `.notFound`(삭제됨)·`.forbidden`(숨김·차단)은 서버가 사유를 세분화해도 이 화면에서는
