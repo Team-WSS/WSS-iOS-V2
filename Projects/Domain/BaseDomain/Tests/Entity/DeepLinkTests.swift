@@ -175,10 +175,25 @@ struct DeepLinkTests {
         #expect(DeepLink(url: url) == nil)
     }
 
-    @Test("작품·피드 상세 딥링크는 outbound url을 만들지 않는다 — 푸시로 받기만 한다")
+    @Test("websoso 스킴에 notifications host와 정수 id가 붙은 URL을 파싱하면 그 id의 알림 상세 딥링크가 된다")
+    func parseNotificationDetail() {
+        let url = makeURL("websoso://notifications/3853")
+
+        #expect(DeepLink(url: url) == .notificationDetail(NotificationID(3853)))
+    }
+
+    @Test("notifications host의 id가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
+    func nilWhenNotificationIDNotPositive(rawID: String) {
+        let url = makeURL("websoso://notifications/\(rawID)")
+
+        #expect(DeepLink(url: url) == nil)
+    }
+
+    @Test("작품·피드·알림 상세 딥링크는 outbound url을 만들지 않는다 — 푸시로 받기만 한다")
     func novelAndFeedHaveNoOutboundURL() {
         #expect(DeepLink.novelDetail(NovelID(1)).url == nil)
         #expect(DeepLink.feedDetail(FeedID(1)).url == nil)
+        #expect(DeepLink.notificationDetail(NotificationID(1)).url == nil)
     }
 
     // MARK: - 푸시 payload 파싱 fromNotificationPayload (#243)
@@ -197,9 +212,17 @@ struct DeepLinkTests {
         #expect(DeepLink.fromNotificationPayload(payload) == .feedDetail(FeedID(42)))
     }
 
+    // 공지 push 실측 형태(#243): view=notificationDetail + notificationId만 채워지고 novelId 키는 없다.
+    @Test("view가 notificationDetail이고 notificationId가 있으면 그 알림 상세 딥링크가 된다")
+    func parsePayloadNotificationDetail() {
+        let payload = ["view": "notificationDetail", "notificationId": "3853", "feedId": ""]
+
+        #expect(DeepLink.fromNotificationPayload(payload) == .notificationDetail(NotificationID(3853)))
+    }
+
     @Test("모르는 view면 nil이다")
     func nilWhenPayloadViewUnknown() {
-        let payload = ["view": "notificationDetail", "notificationId": "1"]
+        let payload = ["view": "commentDetail", "notificationId": "1"]
 
         #expect(DeepLink.fromNotificationPayload(payload) == nil)
     }

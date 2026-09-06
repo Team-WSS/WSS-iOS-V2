@@ -236,6 +236,8 @@ struct HomeRootView: View {
                 path.append(Destination.novel(id))
             case .feedDetail(let id):
                 path.append(Destination.feed(id))
+            case .notificationDetail(let id):
+                path.append(Destination.notificationDetail(id))
             }
             deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
@@ -438,10 +440,9 @@ private extension HomeRootView {
     }
 
     func notificationDetailView(_ notificationID: NotificationID) -> some View {
-        NotificationFeatureFactory.makeNotificationDetailView(
+        NotificationDetailAssembly.makeView(
             notificationID: notificationID,
-            loadNotificationDetailUseCase: DefaultLoadNotificationDetailUseCase(repository: dependencies.notificationRepository),
-            logger: dependencies.logger,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

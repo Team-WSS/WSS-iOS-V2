@@ -66,6 +66,10 @@ Sources/
 ├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
 ├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
 │                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
+├── Notification/
+│   └── NotificationDetailAssembly.swift  # 알림 상세 조립 공용 헬퍼 — 원래 홈 알림 목록 전용이었으나
+│                                           # #243 공지 푸시 딥링크(view=notificationDetail)가 4탭
+│                                           # 어디서든 열려 4탭이 공유(홈 인라인도 이걸로 이주).
 └── Collection/
     ├── CollectionEditAssembly.swift    # 컬렉션 수정 트리(수정→작품 추가→서재에서 추가) 조립 공용 헬퍼 —
     │                                     # 딥링크(#228)로 어느 탭에서든 내 컬렉션이 열려 4탭 전부 사용.
@@ -188,16 +192,23 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
 - **권한 요청·원격 알림 등록 시점은 `MainTabView.task`**(V1 parity, 사용자 확정) — `MainTabView`는 세션이 있어야만
   뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한 요청, 허용 상태면 `registerForRemoteNotifications()`.
   (기존 홈 알림벨/설정의 화면별 권한 흐름은 그대로 — 이건 그 위에 추가된 진입 트리거다.)
-- **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — payload는 `{view, novelId, feedId,
-  notificationId}`(전부 문자열, `view`에 맞는 id만 채워지고 나머진 빈 문자열). `view=novelDetail`→작품 상세,
-  `view=feedDetail`→피드 상세. 흐름: `AppDelegate.didReceive` → `PushNotificationCenter.handleNotificationTap`
+- **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — 판별자는 **`view` 문자열**이고 서버가
+  `view`에 맞는 id만 채운다(나머진 빈 문자열 **또는 키 자체가 없음** — 실측: `view=notificationDetail` 공지 push는
+  `novelId` 키가 아예 없고 `feedId`만 빈 문자열). id는 전부 문자열이라 `AppDelegate.stringPayload`(String만 통과)를
+  탄다. 라우팅: `view=novelDetail`→작품 상세, `view=feedDetail`→피드 상세, **`view=notificationDetail`→알림 상세(공지 등,
+  #243 실측으로 추가)**. 흐름: `AppDelegate.didReceive` → `PushNotificationCenter.handleNotificationTap`
   → `DeepLink.fromNotificationPayload`로 풀어 `onNotificationDeepLink` 콜백이 `WSSIOSV2App.pendingDeepLink`에
   태운다 — **onOpenURL과 같은 채널**이라 MainTabView가 선택된 탭 위에 push하고 콜드 스타트·401 복원 로직(아래
   딥링크 항목)을 그대로 탄다. ⚠️ **콜드 스타트(알림 탭으로 앱 실행)는 콜백 등록(`WSSIOSV2App.onAppear`) 전에
   탭이 도착**할 수 있어, `PushNotificationCenter`가 딥링크를 보관했다가 등록 시 flush한다. `DeepLink`(BaseDomain)에
-  `.novelDetail`/`.feedDetail` case를 더하면 4탭 Root의 `deepLink switch`(exhaustive)를 컴파일러가 강제한다 —
-  4탭 다 이미 `.novel`/`.feed` destination을 갖고 있어 라우팅은 2줄씩만 더했다. **탭 시 `notificationId`는 읽음
-  처리**(V1 parity) — `PushNotificationCenter.markNotificationAsReadIfPossible`가 로그인 상태 + 유효 id일 때
+  case를 더하면 4탭 Root의 `deepLink switch`(exhaustive)를 컴파일러가 강제한다 — 작품/피드는 4탭이 이미
+  `.novel`/`.feed` destination을 갖고 있어 2줄씩만 더했고, **알림 상세는 원래 홈 알림 목록에서만 쓰던 destination이라
+  4탭 공용 `NotificationDetailAssembly`(`Sources/Notification/`)로 뽑아** 나머지 3탭에도 `.notificationDetail`
+  destination을 새로 붙였다(홈 인라인도 이 Assembly로 이주). 앱 내 알림 목록 셀 탭이 가는 알림 상세와 **같은 화면·같은
+  UseCase**지만, 그 경로는 API 응답을 `NotificationDeeplink`로 푸는 것이라 `DeepLink`(푸시 payload 파싱)와는 무관하다.
+  ⚠️ **알림 상세는 상세 GET이 서버에서 읽음 처리를 겸하므로**(→ `NotificationFeature/CLAUDE.md`) push 탭 시 명시 read와
+  중복되지만, read는 멱등이라 무해하고 오히려 상세 GET 실패 시에도 읽음이 보장돼 앱 내 목록 경로의 취약점(상세 GET
+  실패 시 미읽음 잔존)이 push 경로엔 없다. **탭 시 `notificationId`는 읽음 처리**(V1 parity) — `PushNotificationCenter.markNotificationAsReadIfPossible`가 로그인 상태 + 유효 id일 때
   `MarkNotificationAsReadUseCase`로 보낸다(딥링크 유무와 무관하게 탭한 알림은 읽음으로). 미로그인이면 401이라 건너뛴다.
 - ⚠️ **Tuist 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 한다**(`targets[N].settings[0]` name 없음 에러) — #243에서
   `.mise.toml` 핀을 **4.206.0**으로 올려 해결했다(CI도 mise를 읽어 함께 반영). 되돌리면 Firebase 붙은 채로 generate가 깨진다.

@@ -89,6 +89,9 @@ struct MypageRootView: View {
         // 작품 상세와 그 하위 흐름(`LibraryRootView`/`HomeRootView`와 동일 구조)
         case novel(NovelID)
         case feed(FeedID)
+        /// 공지 푸시 딥링크(`view=notificationDetail`, #243) → 알림 상세. 딥링크는 선택된 탭 위에 열려서
+        /// 4탭 전부 이 목적지를 갖는다(`NotificationDetailAssembly`). My 탭은 알림 목록이 홈에 있어 딥링크 전용이다.
+        case notificationDetail(NotificationID)
         case createFeedFromNovel(ConnectedNovel)
         case editFeed(FeedID)
         case userPage(UserID)
@@ -218,6 +221,8 @@ struct MypageRootView: View {
                         novelDetailView(novelID)
                     case .feed(let feedID):
                         feedDetailView(feedID)
+                    case .notificationDetail(let id):
+                        notificationDetailView(id)
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
@@ -288,6 +293,8 @@ struct MypageRootView: View {
                 path.append(Destination.novel(id))
             case .feedDetail(let id):
                 path.append(Destination.feed(id))
+            case .notificationDetail(let id):
+                path.append(Destination.notificationDetail(id))
             }
             deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
@@ -552,6 +559,15 @@ private extension MypageRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// 공지 푸시 딥링크(#243) 전용 — My 탭엔 알림 목록이 없어 딥링크로만 도달한다(`NotificationDetailAssembly`).
+    func notificationDetailView(_ notificationID: NotificationID) -> some View {
+        NotificationDetailAssembly.makeView(
+            notificationID: notificationID,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

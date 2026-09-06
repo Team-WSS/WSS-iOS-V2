@@ -95,7 +95,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 
-    /// 알림 탭 → payload(`view`/`novelId`/`feedId`)를 딥링크로 풀어 해당 화면(작품/피드 상세)으로 이동한다(#243).
+    /// 알림 탭 → payload(`view` + 그에 맞는 id)를 딥링크로 풀어 해당 화면(작품/피드/알림 상세)으로 이동한다(#243).
     /// 라우팅은 `PushNotificationCenter`가 앱의 `pendingDeepLink` 채널로 넘겨 처리한다(콜드 스타트도 보관→flush).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,

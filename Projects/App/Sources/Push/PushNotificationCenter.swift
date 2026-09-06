@@ -96,7 +96,7 @@ final class PushNotificationCenter {
     }
 
     /// 알림 탭(`AppDelegate.didReceive`)의 payload를 딥링크로 풀어 앱으로 넘긴다. `view`에 맞는 화면으로
-    /// 이동한다(작품/피드 상세). 콜백이 아직 없으면(콜드 스타트) 보관 후 등록 시 flush. 모르는 payload는 무시.
+    /// 이동한다(작품/피드/알림 상세). 콜백이 아직 없으면(콜드 스타트) 보관 후 등록 시 flush. 모르는 payload는 무시.
     func handleNotificationTap(payload: [String: String]) {
         // 읽음 처리는 딥링크(화면 이동) 유무와 무관하게 — 탭한 알림은 읽음으로(V1 parity).
         markNotificationAsReadIfPossible(payload)

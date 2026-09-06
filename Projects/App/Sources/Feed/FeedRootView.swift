@@ -43,6 +43,9 @@ struct FeedRootView: View {
     private enum Destination: Hashable {
         case feed(FeedID)
         case novel(NovelID)
+        /// 공지 푸시 딥링크(`view=notificationDetail`, #243) → 알림 상세. 딥링크는 선택된 탭 위에 열려서
+        /// 4탭 전부 이 목적지를 갖는다(`NotificationDetailAssembly`). 이 탭엔 알림 목록이 없어 딥링크 전용이다.
+        case notificationDetail(NotificationID)
         case createFeed
         /// "나도 한마디"/피드 탭 플로팅 버튼 전용 — 작품 상세에서만 발생하는 흔치 않은 경로라
         /// `createFeed`에 옵셔널 파라미터를 얹는 대신 별도 케이스로 분리했다(연필 아이콘 등 나머지
@@ -130,6 +133,8 @@ struct FeedRootView: View {
                         feedDetailView(feedID)
                     case .novel(let novelID):
                         novelDetailView(novelID)
+                    case .notificationDetail(let id):
+                        notificationDetailView(id)
                     case .createFeed:
                         createFeedView(connectedNovel: nil)
                     case .createFeedFromNovel(let connectedNovel):
@@ -211,6 +216,8 @@ struct FeedRootView: View {
                 path.append(Destination.novel(id))
             case .feedDetail(let id):
                 path.append(Destination.feed(id))
+            case .notificationDetail(let id):
+                path.append(Destination.notificationDetail(id))
             }
             deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
@@ -319,6 +326,15 @@ private extension FeedRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// 공지 푸시 딥링크(#243) 전용 — 이 탭엔 알림 목록이 없어 딥링크로만 도달한다(`NotificationDetailAssembly`).
+    func notificationDetailView(_ notificationID: NotificationID) -> some View {
+        NotificationDetailAssembly.makeView(
+            notificationID: notificationID,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
