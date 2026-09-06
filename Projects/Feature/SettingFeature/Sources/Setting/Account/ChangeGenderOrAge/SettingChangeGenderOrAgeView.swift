@@ -19,22 +19,45 @@ struct SettingChangeGenderOrAgeView: View {
     @State private var showBirthYearPickerSheet: Bool = false
     @Environment(\.dismiss) private var dismiss
     private let onSaveSuccess: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 저장(서버 PUT)이 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: SettingChangeGenderOrAgeViewModel,
-         onSaveSuccess: @escaping () -> Void = {}
+         onSaveSuccess: @escaping () -> Void = {},
+         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onSaveSuccess = onSaveSuccess
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "성별/나이 변경") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.save)
+                } label: {
+                    if viewModel.state.isSaving {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(
+                                viewModel.hasChanges
+                                    ? WSSColor.wssPrimary100.swiftUIColor
+                                    : WSSColor.wssGray100.swiftUIColor
+                            )
+                    }
+                }
+                .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
@@ -46,6 +69,10 @@ struct SettingChangeGenderOrAgeView: View {
                 guard shouldDismiss else { return }
                 onSaveSuccess()
                 dismiss()
+            }
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
             }
     }
 
@@ -127,50 +154,6 @@ struct SettingChangeGenderOrAgeView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
-    }
-}
-
-// MARK: - Toolbar
-
-private extension SettingChangeGenderOrAgeView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("성별/나이 변경")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.handle(.save)
-            } label: {
-                if viewModel.state.isSaving {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(
-                            viewModel.hasChanges
-                                ? WSSColor.wssPrimary100.swiftUIColor
-                                : WSSColor.wssGray100.swiftUIColor
-                        )
-                }
-            }
-            .disabled(viewModel.state.isSaving || !viewModel.hasChanges)
-        }
     }
 }
 

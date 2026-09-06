@@ -34,7 +34,7 @@ Sources/
 │                                          # makeDetailSearchFilterView로 승격)까지(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
 │                                          # LibraryFactory.makeUserLibraryView(타유저 서재)/SearchAssembly/
-│                                          # MypageFactory) 실제 push.
+│                                          # MypageFeatureFactory) 실제 push.
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
 │                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 전체 피드 목록·
 │                                          # 그 프로필의 타유저 서재·작가 이름 검색(makeFeedDetailView/
@@ -49,7 +49,7 @@ Sources/
 │                                          # SearchAssembly/SettingFeatureFactory의 makeNotificationSettingView·
 │                                          # makeCompletionNotificationListView·makeHiatusReturnNotificationListView,
 │                                          # #201)까지 push.
-├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFactory.makeView 조립 +
+├── Mypage/  └── MypageRootView.swift    # "My" 탭. UserPageFeature의 MypageFeatureFactory.makeView 조립 +
 │                                          # 프로필 편집·설정 전체 트리(makeEditView/SettingFeatureFactory의
 │                                          # 8개 화면 — 계정정보·성별나이변경·차단유저목록·회원탈퇴·
 │                                          # 프로필공개설정·알림설정·완결/휴재복귀 알림목록, #201)·
@@ -209,9 +209,14 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
     `.navigationDestination(for: FeedID.self)`를 따로 등록하면 타입이 겹쳐 의도대로 라우팅되지 않는다.
     `HomeRootView.Destination` 같은 래퍼 enum으로 명시적으로 태깅해서 push할 것 — 다른 탭 Root에
     같은 방식의 push 네비게이션을 추가할 때도 이 함정을 반복하지 말 것.
-  - **탭에서 push된 화면은 탭바를 가린다**(`.toolbar(.hidden, for: .tabBar)`, 사용자 확정) — `.navigationDestination(for:)`
-    클로저 안, `switch` 결과를 감싸는 자리 한 곳에 걸어둬서 `Destination` case가 늘어나도 매번 개별
-    목적지 뷰에 반복해서 붙일 필요가 없다. 다른 탭 Root에 push 네비게이션을 추가할 때 이 자리도 같이 만들 것.
+  - **탭에서 push된 화면은 탭바를 가린다**(사용자 확정) — 단 `.toolbar(.hidden, for: .tabBar)`를
+    `.navigationDestination` 클로저(= pop 시 파괴되는 destination 뷰) 안에 붙이면, root 복귀 때 탭바가
+    **뒤늦게** 붙으며 홈이 "탭바 없이" 먼저 그려졌다 콘텐츠가 튀는 게 실측됐다(#244, iOS 26 Liquid Glass에서
+    더 심함). 그래서 각 탭 Root는 **`NavigationStack { … }` 호출부**에 `.hidesTabBar(when: !path.isEmpty)`
+    (공용 헬퍼 `Sources/Main/TabBarVisibility.swift`)로 건다 — 파괴되지 않는 컨테이너에서 `path.isEmpty`로
+    가시성 **값만** 바꾸므로 탭바 복원이 pop과 동기화된다. 다른 탭 Root에 push 네비게이션을 추가할 때
+    이 자리도 같이 만들 것(❌ destination 클로저 안에 다시 붙이지 말 것 — 지연이 재발한다). 자세한 사유는
+    헬퍼 파일 상단 주석 참조.
   - **같은 화면이라도 "흔한 진입 경로"와 "흔치 않은 부가 정보를 들고 들어오는 경로"는 옵셔널 파라미터
     하나로 합치지 말고 별도 `Destination` case로 분리한다**(사용자 확정, #197 — 예:
     `createFeed`(연필 아이콘, 파라미터 없음) vs `createFeedFromNovel(ConnectedNovel)`(작품 상세 "나도
@@ -234,11 +239,13 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   회원탈퇴/로그아웃 **성공**(`SettingFactory`의 `onWithdrawSuccess`/`onLogoutSuccess`) — 사용자가 세션을 끝낸
   것. `onAuthenticationRequired`는 그 탭 위에 push된 화면(컬렉션 상세·작품 상세 등)의 401 — 다른 탭과 같은
   계약. 둘 다 결과는 온보딩 복귀지만 `MainTabView`가 후자에만 딥링크 복원을 거는 차이가 있어(아래 딥링크
-  항목) 예전처럼 하나로 합치지 말 것. `MypageFactory.makeView`/`.makeEditView` 자체는 여전히 어느 콜백도
-  모른다 — 즉 마이페이지 로드(프로필·장르·서재 통계) 401은 여전히 조용히 빈 상태로 남는다(App 쪽에서 고칠
-  수 있는 게 아니라 `UserPageFeature` 쪽에 콜백이 먼저 추가돼야 함, Feature/CLAUDE.md "인증 만료 처리 계약"
-  참고). **Home·Feed·서재 세 탭은 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
-  거기서 push하는 작품 상세(`NovelDetailAssembly`)는 받아서 전달한다 — `FeedRootView` 참고).
+  항목) 예전처럼 하나로 합치지 말 것. **`MypageFeatureFactory.makeView`도 #244부터 `onAuthenticationRequired`를 받는다**
+  (마이페이지 콘텐츠 로드 401이 조용히 빈 상태로 남지 않고 이 콜백으로 로그인 유도) — `MypageRootView`가 그 탭의
+  `onAuthenticationRequired`를 그대로 넘긴다. 단 `.makeEditView`(프로필 편집)는 아직 안 받고, 타유저 프로필
+  (`UserPageView`)·활동 피드(`UserFeedListView`)도 미배선이다(`docs/TODO.md`의 "UserPage 계열 인증 만료 로그인
+  라우팅 배관"). **Home·Feed·서재 세 탭도 401 경로만 있다**(Feed는 탭 콘텐츠 자체(`makeSosoFeedView`)는 못 받지만,
+  거기서 push하는 작품 상세(`NovelDetailAssembly`)·**피드 상세(`FeedDetailAssembly`, #244부터)**는 받아서
+  전달한다 — `FeedRootView` 참고).
 - **`onAuthenticationRequired`(→ `ContentView.resetToOnboarding`)는 온보딩 라우팅 + `AppDependencies`
   재조립까지 하고, 토큰 삭제는 하지 않는다**(#236) — 401을 받은 시점에 이미 서버가 세션을 무효화한
   상태라 재로그인하면 새 토큰으로 덮어써진다. 재조립을 하는 이유는 **이전 세션에서 채워졌을 수 있는

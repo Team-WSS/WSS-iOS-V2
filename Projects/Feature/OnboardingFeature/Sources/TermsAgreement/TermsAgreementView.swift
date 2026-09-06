@@ -40,8 +40,8 @@ struct TermsAgreementView: View {
             .overlay {
                 if viewModel.state.isLoading {
                     LoadingView()
-                } else if viewModel.state.loadFailed {
-                    NetworkErrorView { viewModel.handle(.load) }
+                } else if let error = viewModel.state.loadFailed {
+                    NetworkErrorView(error: error) { viewModel.handle(.load) }
                 }
             }
             // 필수 온보딩 단계 — 동의 없이 스와이프/바깥 탭으로 빠져나갈 수 없다.

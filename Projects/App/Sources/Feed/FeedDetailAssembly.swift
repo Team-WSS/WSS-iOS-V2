@@ -39,7 +39,8 @@ enum FeedDetailAssembly {
         dependencies: AppDependencies,
         onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in }
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         FeedFeatureFactory.makeFeedDetailView(
             feedID: feedID,
@@ -59,7 +60,8 @@ enum FeedDetailAssembly {
             logger: dependencies.logger,
             onNovelTapped: onNovelTapped,
             onEditFeedTapped: onEditFeedTapped,
-            onUserProfileTapped: onUserProfileTapped
+            onUserProfileTapped: onUserProfileTapped,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 

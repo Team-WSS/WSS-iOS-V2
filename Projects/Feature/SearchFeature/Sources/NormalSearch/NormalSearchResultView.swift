@@ -19,7 +19,7 @@ struct NormalSearchResultView: View {
     let novels: [Novel]
     let resultCount: Int
     let isLoading: Bool
-    let hasLoadError: Bool
+    let loadError: RepositoryError?
     let isLoadingMore: Bool
     let onLoadMore: () -> Void
     let onRetry: () -> Void
@@ -36,8 +36,8 @@ struct NormalSearchResultView: View {
     private var resultContent: some View {
         if isLoading {
             LoadingView()
-        } else if hasLoadError {
-            NetworkErrorView(action: onRetry)
+        } else if let error = loadError {
+            NetworkErrorView(error: error, action: onRetry)
         } else if novels.isEmpty {
             Spacer()
             WSSEmptyView(type: .novel,
@@ -122,7 +122,7 @@ struct NormalSearchResultView: View {
         ],
         resultCount: 1,
         isLoading: false,
-        hasLoadError: false,
+        loadError: nil,
         isLoadingMore: false,
         onLoadMore: { },
         onRetry: { }

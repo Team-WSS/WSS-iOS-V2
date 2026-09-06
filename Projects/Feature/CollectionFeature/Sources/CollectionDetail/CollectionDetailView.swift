@@ -22,6 +22,12 @@ struct CollectionDetailView: View {
     /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목이 즉시 나타남, 페이드 아님) 네비바가 반응한다 —
     /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
     @State private var isScrolledFromTop = false
+    /// 스티키 정렬 바 — 커스텀 네비바 배경의 실측 높이(= 안전영역 top + 44). 스크롤되는 "원본" 정렬 바가
+    /// 이 y까지 올라오면 상단에 정렬 바를 고정한다(작품 상세 스티키 탭바와 같은 "오버레이 2벌" 방식 —
+    /// 몰입형이라 `LazyVStack(pinnedViews:)`는 못 쓴다, `NovelDetailFeature/CLAUDE.md` 참고).
+    @State private var navBarBottomY: CGFloat = 0
+    /// 스티키 정렬 바 — 스크롤 콘텐츠 안 "원본" 정렬 바의 상단 y(화면 좌상단 기준). 측정 전엔 안 뜨도록 무한대.
+    @State private var sortBarMinY: CGFloat = .greatestFiniteMagnitude
     /// 이 화면의 유일한 자식은 "컬렉션 수정"(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상
     /// "수정 화면에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다(`CollectionListView`의
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
@@ -71,9 +77,10 @@ struct CollectionDetailView: View {
     }
 
     var body: some View {
+        ZStack(alignment: .top) {
         Group {
-            if viewModel.state.hasLoadError {
-                NetworkErrorView {
+            if let error = viewModel.state.hasLoadError {
+                NetworkErrorView(error: error) {
                     viewModel.handle(.load)
                 }
             } else {
@@ -108,21 +115,25 @@ struct CollectionDetailView: View {
             }
         }
         .ignoresSafeArea()
-        .navigationBarBackButtonHidden()
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
-        // 스크롤 전엔 투명(히어로 이미지가 상태바까지 그대로 비침), 스크롤되면 흰 배경 + 컬렉션명
-        // 타이틀로 전환된다(Figma 주석 "스크롤 됐을때 헤더가 컬렉션 명으로 변경").
-        .toolbarBackground(
-            (isScrolledFromTop ? Color.wssWhite : Color.clear),
-            for: .navigationBar
-        )
-        .toolbarBackground(.visible, for: .navigationBar)
-        // ⚠️ `.animation(value: isScrolledFromTop)`을 body 루트에 걸지 않는다 — `.toolbar { }`가 붙은
-        // 서브트리를 감싸면 툴바 principal의 `Text` opacity 갱신이 UIKit 브리지(titleView)로 아예
-        // 전달되지 않아 계속 숨어있는다(실측 확인 — 로컬/루트 어느 쪽에 걸든 동일 증상). 그래서
-        // opacity 대신 아래 `toolbarContent`가 `if`로 뷰 자체를 구조적으로 넣고 뺀다 — 배경·아이콘
-        // 색·타이틀 모두 애니메이션 없이 즉시 전환된다(페이드 아님, `UserPageFeature`도 동일).
+
+            // 커스텀 몰입형 상단 바 — 히어로 위엔 투명 바 + 흰 아이콘, 스크롤되면 흰 배경 + 검정
+            // 아이콘 + 컬렉션명 타이틀(Figma "스크롤 됐을때 헤더가 컬렉션 명으로 변경"). 커스텀
+            // 오버레이라 opacity/색 애니메이션이 정상 동작(시스템 .principal의 UIKit 브리지 함정 없음
+            // → 예전 즉시 전환 대신 부드러운 페이드).
+            //
+            // 네비바와 스티키 정렬 바를 한 VStack으로 묶는다 — 정렬 바가 네비바 "바로 아래"에 붙는 게
+            // 레이아웃으로 보장돼 스티키 y를 따로 계산할 필요가 없다(작품 상세 스티키 탭바와 동일).
+            VStack(spacing: 0) {
+                collectionDetailTopBar
+
+                if showStickySortBar, let detail = viewModel.state.detail {
+                    // 스크롤 원본이 네비바 하단까지 올라오면 이 복제본이 그 자리를 흰 배경으로 덮어 고정한다.
+                    sortBar(detail)
+                        .background(Color.wssWhite)
+                }
+            }
+        }
+        .wssCustomNavigationBar()
         .showWSSAlert(
             isPresented: deleteAlertBinding,
             type: .deleteCollection,
@@ -155,58 +166,91 @@ struct CollectionDetailView: View {
     }
 }
 
-// MARK: - Toolbar
+// MARK: - 상단 바 (커스텀 몰입형)
 
 private extension CollectionDetailView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
-                // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
-                // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
-                viewModel.handle(.backTapped)
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(navIconColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        
-        // 더보기(수정/삭제)는 소유자에게만 노출된다.
-        if viewModel.state.detail?.isMine == true {
-            ToolbarItem(placement: .topBarTrailing) {
+    var collectionDetailTopBar: some View {
+        ZStack {
+            Text(viewModel.state.detail?.name ?? "")
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(1)
+                .opacity(isScrolledFromTop ? 1 : 0)
+
+            HStack(spacing: 0) {
                 Button {
-                    viewModel.handle(.menuTapped)
+                    // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
+                    // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
+                    // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
+                    viewModel.handle(.backTapped)
+                    dismiss()
                 } label: {
-                    WSSImage.icThreedots.swiftUIImage
+                    WSSImage.icNavigateLeft.swiftUIImage
                         .resizable()
                         .renderingMode(.template)
                         .foregroundStyle(navIconColor)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 24, height: 24)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+
+                Spacer()
+
+                // 더보기(수정/삭제)는 소유자에게만 노출된다.
+                if viewModel.state.detail?.isMine == true {
+                    Button {
+                        viewModel.handle(.menuTapped)
+                    } label: {
+                        WSSImage.icThreedots.swiftUIImage
+                            .resizable()
+                            .renderingMode(.template)
+                            .foregroundStyle(navIconColor)
+                            .frame(width: 18, height: 18)
+                            .contentShape(Rectangle())
+                    }
+                    .padding(.trailing, 20)
                 }
             }
+            .padding(.leading, 6)
         }
-        
-        // ⚠️ `opacity(isScrolledFromTop ? 1 : 0)` 모디파이어 값만으로는 이 Text가 UIKit 브리지
-        // (titleView)에 갱신되지 않고 계속 숨어있는다(실측 확인 — 애니메이션 유무·위치와 무관).
-        // 대신 `if`로 뷰 자체를 구조적으로 넣고 뺀다 — `ToolbarContentBuilder`가 진짜 다른 콘텐츠로
-        // 인식해야 브리지가 갱신된다.
-        if isScrolledFromTop {
-            ToolbarItem(placement: .principal) {
-                Text(viewModel.state.detail?.name ?? "")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(Color.wssBlack)
-                    .lineLimit(1)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+            // 배경만 상태바까지 확장한다(버튼은 안전영역 안). clear일 땐 히어로가 그대로 비치고,
+            // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ allowsHitTesting(false) — 없으면 바 영역
+            // 드래그가 Color에 먹혀 스크롤이 안 된다(NovelDetail과 동일 함정).
+            // 스티키 정렬 바의 임계선(네비바 하단 y)도 여기서 얻는다 — 이 배경은 ignoresSafeArea로
+            // 이미 상태바까지 확장돼 있어 그 실측 높이가 곧 "안전영역 top + 네비바 높이"다.
+            // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
+            GeometryReader { proxy in
+                (isBarSolid ? Color.wssWhite : Color.clear)
+                    .allowsHitTesting(false)
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        navBarBottomY = height
+                    }
             }
-        }
+            .ignoresSafeArea(edges: .top)
+        )
     }
-    
+
+    /// 히어로가 바 뒤에 없을 때는 바를 솔리드로 둔다 — 안 그러면 흰 배경(LoadingView·NetworkErrorView)
+    /// 위에 흰 아이콘이 겹쳐 뒤로가기가 안 보인다(#244 회귀). 흰 배경이 깔리는 3케이스를 모두 덮는다:
+    /// 스크롤 다운 · 첫 로드/로딩(`detail == nil`) · 이미 detail이 있는 상태의 재조회 실패(`hasLoadError`,
+    /// 정렬 변경·수정 복귀 — detail은 남고 실패 뷰만 전면에 뜬다).
+    var isBarSolid: Bool {
+        isScrolledFromTop || viewModel.state.detail == nil || viewModel.state.hasLoadError != nil
+    }
+
     var navIconColor: Color {
-        isScrolledFromTop ? Color.wssBlack : Color.wssWhite
+        isBarSolid ? Color.wssBlack : Color.wssWhite
+    }
+
+    /// 스크롤되는 원본 정렬 바가 네비바 하단까지 올라왔는지 — 상단 스티키 정렬 바 표시 여부.
+    /// 두 좌표 모두 화면 좌상단(상태바 포함) 기준이라 그대로 비교한다. 임계선을 아직 못 쟀으면(0) 안 띄운다.
+    var showStickySortBar: Bool {
+        viewModel.state.detail != nil
+            && navBarBottomY > 0
+            && sortBarMinY <= navBarBottomY
     }
 }
 
@@ -274,14 +318,12 @@ private extension CollectionDetailView {
         }
     }
 
+    /// 그리드 셀(`novelCell`)과 **같은 `WSSNovelCoverImage`** → 같은 대표 작품 URL을 인메모리 캐시로
+    /// 공유한다(중복 다운로드 없음, 재진입·재렌더 시 배경 번쩍임 없음 — raw `AsyncImage`는 뷰가
+    /// 재생성될 때마다 `.empty`부터 다시 시작해 느리고 깜빡였다, #244). `placeholderStyle: .grid`는
+    /// 로딩 중 `wssGray50` 배경을 깔아 과거 `Color.wssGray50` 폴백과 같은 결(그 위 어두운 그라디언트).
     var heroImage: some View {
-        AsyncImage(url: heroImageURL) { phase in
-            if case .success(let image) = phase {
-                image.resizable().scaledToFill()
-            } else {
-                Color.wssGray50
-            }
-        }
+        WSSNovelCoverImage(url: heroImageURL, placeholderStyle: .grid)
     }
 
     /// 실측 아니라 고정값(336, Figma) — 안전영역이 다른 기기에서도 텍스트 위치는 콘텐츠 흐름을
@@ -445,27 +487,43 @@ private extension CollectionDetailView {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 10)
 
-            HStack(spacing: 0) {
-                Text("\(detail.novelCount)개")
-                    .applyWSSFont(.body3)
-                    .foregroundStyle(Color.wssGray200)
-
-                Spacer()
-
-                WSSSortButton(sortType: viewModel.state.sortType) {
-                    viewModel.handle(.changeSortType(viewModel.state.sortType == .recent ? .old : .recent))
-                }
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 33)
+            // 스크롤되는 "원본" 정렬 바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
+            // 네비바 하단에 닿는 순간부터 상단 오버레이의 스티키 정렬 바가 이 자리를 그대로 덮는다.
+            sortBar(detail)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.frame(in: .named(scrollCoordinateSpace)).minY,
+                                      initial: true) { _, newY in
+                                sortBarMinY = newY
+                            }
+                    }
+                )
 
             Spacer().frame(height: 8)
 
             novelGrid(detail.novels)
                 .padding(.horizontal, 16)
-            
+
             Spacer().frame(height: 60)
         }
+    }
+
+    /// 작품 개수 + 정렬 버튼 행 — 스크롤 콘텐츠 안 원본과 상단 스티키 오버레이가 같은 렌더를 공유한다.
+    func sortBar(_ detail: CollectionDetail) -> some View {
+        HStack(spacing: 0) {
+            Text("\(detail.novelCount)개")
+                .applyWSSFont(.body3)
+                .foregroundStyle(Color.wssGray200)
+
+            Spacer()
+
+            WSSSortButton(sortType: viewModel.state.sortType) {
+                viewModel.handle(.changeSortType(viewModel.state.sortType == .recent ? .old : .recent))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 33)
     }
 
     func novelGrid(_ novels: [CollectionNovel]) -> some View {

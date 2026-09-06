@@ -54,10 +54,30 @@ struct CreateCollectionView: View {
     }
 
     var body: some View {
-        content
-            .navigationBarBackButtonHidden(true)
-            .toolbar { toolbarContent }
-            .showWSSToast(isPresented: toastBinding, type: toastType)
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: viewModel.isEditing ? "컬렉션 수정" : "컬렉션 만들기") {
+                viewModel.handle(.requestClose)
+            } trailing: {
+                Button {
+                    viewModel.handle(.submit)
+                } label: {
+                    if viewModel.state.isSubmitting {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(viewModel.canSubmit ? Color.wssPrimary100 : Color.wssGray100)
+                    }
+                }
+                .disabled(!viewModel.canSubmit)
+            }
+
+            content
+        }
+        // 미저장 초안이 있어 닫기 전 "그만하기" 확인 알럿을 강제하는 화면 — 스와이프로 그 확인을
+        // 건너뛰지 못하게 swipeBackEnabled: false(hidesBackButton으로 전역 pop 제스처를 막는다).
+        .wssCustomNavigationBar(swipeBackEnabled: false)
+        .showWSSToast(isPresented: toastBinding, type: toastType)
             // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
             // 생성/수정 겸용 화면이라 타이틀만 모드에 따라 갈린다(사용자 확정) — 버튼 문구("그만하기"/
             // "계속 작성")는 두 모드 공통.
@@ -140,48 +160,6 @@ struct CreateCollectionView: View {
         .onTapGesture {
             isNameFieldFocused = false
             isDescriptionFieldFocused = false
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension CreateCollectionView {
-
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button {
-                viewModel.handle(.requestClose)
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssBlack)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text(viewModel.isEditing ? "컬렉션 수정" : "컬렉션 만들기")
-                .applyWSSFont(.title3)
-                .foregroundStyle(Color.wssBlack)
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-            Button {
-                viewModel.handle(.submit)
-            } label: {
-                if viewModel.state.isSubmitting {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(viewModel.canSubmit ? Color.wssPrimary100 : Color.wssGray100)
-                }
-            }
-            .disabled(!viewModel.canSubmit)
         }
     }
 }

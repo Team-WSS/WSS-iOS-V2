@@ -174,11 +174,11 @@ struct NovelDetailView: View {
             if let information = viewModel.state.information {
                 loadedContent(information)
             } else if viewModel.state.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LoadingView()
             } else {
                 // 로드 실패 — 공용 실패 뷰 재사용. 재시도 버튼이 load를 다시 발화한다(실패는 가드를 소진하지 않음).
-                NetworkErrorView { viewModel.handle(.load) }
+                // 잡은 에러 종류로 문구를 3분류(서버/일반/네트워크)로 가른다.
+                NetworkErrorView(error: viewModel.state.loadError ?? .unknown) { viewModel.handle(.load) }
             }
 
             // 네비바와 스티키 탭바는 한 VStack으로 묶는다 — 탭바가 네비바 "바로 아래"에 붙는 게
@@ -264,7 +264,7 @@ struct NovelDetailView: View {
                             NovelDetailFeedTab(
                                 feeds: viewModel.state.feeds,
                                 isLoading: viewModel.state.isLoadingFeeds,
-                                hasLoadFailed: viewModel.state.feedsLoadFailed,
+                                loadError: viewModel.state.feedsLoadFailed,
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onRetry: { viewModel.handle(.retryFeeds) },
@@ -385,7 +385,6 @@ private extension NovelDetailView {
                 .padding(.leading, 74)
                 .padding(.trailing, 80)
                 .opacity(showNavTitle ? 1 : 0)
-                .animation(.easeInOut(duration: 0.1), value: showNavTitle)
         }
         .padding(.leading, 6)
         // 타이틀과 함께 페이드인하는 흰 배경 — 없으면 타이틀·버튼이 스크롤되는 본문과 겹쳐 안 읽힌다.
@@ -400,7 +399,6 @@ private extension NovelDetailView {
             GeometryReader { proxy in
                 Color.wssWhite
                     .opacity(showNavTitle ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.1), value: showNavTitle)
                     .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navigationBarBottomY = height

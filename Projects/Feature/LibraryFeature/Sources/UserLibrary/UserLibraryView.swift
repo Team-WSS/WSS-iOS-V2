@@ -82,8 +82,8 @@ struct UserLibraryView: View {
             WSSNavigationBar(title: "서재") { dismiss() }
             // 목록 로드 실패(첫 페이지·더보기 공통)는 네비게이션 바만 남기고 그 아래를 실패 뷰로 대체한다 —
             // 카운트·정렬·모드 토글은 실패 상태에서 조작할 게 없어 함께 숨긴다.
-            if viewModel.state.loadFailed {
-                NetworkErrorView { viewModel.handle(.retry) }
+            if let error = viewModel.state.loadFailed {
+                NetworkErrorView(error: error) { viewModel.handle(.retry) }
             } else {
                 countSortSection
                 Rectangle()

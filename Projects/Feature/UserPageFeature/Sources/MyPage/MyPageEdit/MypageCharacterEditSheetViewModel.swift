@@ -23,7 +23,7 @@ final class MypageCharacterEditSheetViewModel {
         var characters: [ProfileCharacter] = []
         var selectedCharacterID: Int?
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
     }
 
     // MARK: - Action
@@ -80,7 +80,7 @@ private extension MypageCharacterEditSheetViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadCharacters() }
     }
 }
@@ -112,6 +112,6 @@ private extension MypageCharacterEditSheetViewModel {
 private extension MypageCharacterEditSheetViewModel {
     func presentError(_ error: Error) {
         logger?.error("프로필 캐릭터 목록 로드 실패: \(String(describing: error))")
-        state.hasLoadError = true
+        state.hasLoadError = (error as? RepositoryError) ?? .unknown
     }
 }

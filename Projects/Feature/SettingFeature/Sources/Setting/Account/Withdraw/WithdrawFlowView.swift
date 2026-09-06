@@ -24,30 +24,36 @@ struct WithdrawFlowView: View {
     private let withdrawUseCase: WithdrawUseCase
     private let logger: Logger?
     private let onWithdrawSuccess: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 확인 화면 로드·탈퇴 제출이 401로 막히면 발화. 두 하위 화면에 그대로 흘려보낸다.
+    private let onAuthenticationRequired: () -> Void
 
     init(
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.withdrawUseCase = withdrawUseCase
         self.logger = logger
         self.onWithdrawSuccess = onWithdrawSuccess
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
         SettingFeatureFactory.makeWithdrawConfirmView(
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger,
-            onConfirm: { isReasonPresented = true }
+            onConfirm: { isReasonPresented = true },
+            onAuthenticationRequired: onAuthenticationRequired
         )
         .navigationDestination(isPresented: $isReasonPresented) {
             SettingFeatureFactory.makeWithdrawReasonView(
                 withdrawUseCase: withdrawUseCase,
                 logger: logger,
-                onWithdrawSuccess: onWithdrawSuccess
+                onWithdrawSuccess: onWithdrawSuccess,
+                onAuthenticationRequired: onAuthenticationRequired
             )
         }
     }

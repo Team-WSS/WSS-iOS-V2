@@ -51,7 +51,8 @@ public enum SettingFeatureFactory {
         onLogoutSuccess: @escaping () -> Void = {},
         onChangeGenderOrAgeTapped: @escaping () -> Void = {},
         onBlockUserListTapped: @escaping () -> Void = {},
-        onWithdrawTapped: @escaping () -> Void = {}
+        onWithdrawTapped: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingAccountInfoViewModel(
             loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
@@ -63,7 +64,8 @@ public enum SettingFeatureFactory {
             onLogoutSuccess: onLogoutSuccess,
             onChangeGenderOrAgeTapped: onChangeGenderOrAgeTapped,
             onBlockUserListTapped: onBlockUserListTapped,
-            onWithdrawTapped: onWithdrawTapped
+            onWithdrawTapped: onWithdrawTapped,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -72,41 +74,52 @@ public enum SettingFeatureFactory {
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
         logger: Logger? = nil,
-        onSaveSuccess: @escaping () -> Void = {}
+        onSaveSuccess: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingChangeGenderOrAgeViewModel(
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
             saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
             logger: logger
         )
-        return SettingChangeGenderOrAgeView(viewModel: viewModel, onSaveSuccess: onSaveSuccess)
+        return SettingChangeGenderOrAgeView(
+            viewModel: viewModel,
+            onSaveSuccess: onSaveSuccess,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
     }
 
     @MainActor
     public static func makeBlockUserListView(
         loadBlockedUsersUseCase: LoadBlockedUsersUseCase,
         unblockUserUseCase: UnblockUserUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingBlockUserListViewModel(
             loadBlockedUsersUseCase: loadBlockedUsersUseCase,
             unblockUserUseCase: unblockUserUseCase,
             logger: logger
         )
-        return SettingBlockUserListView(viewModel: viewModel)
+        return SettingBlockUserListView(viewModel: viewModel, onAuthenticationRequired: onAuthenticationRequired)
     }
 
     @MainActor
     public static func makeWithdrawConfirmView(
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         logger: Logger? = nil,
-        onConfirm: @escaping () -> Void = {}
+        onConfirm: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = WithdrawConfirmViewModel(
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             logger: logger
         )
-        return WithdrawConfirmView(viewModel: viewModel, onConfirm: onConfirm)
+        return WithdrawConfirmView(
+            viewModel: viewModel,
+            onConfirm: onConfirm,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
     }
 
     /// `WithdrawConfirmView` → `WithdrawReasonView`를 하나의 push 체인으로 묶는다.
@@ -117,13 +130,15 @@ public enum SettingFeatureFactory {
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         WithdrawFlowView(
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             withdrawUseCase: withdrawUseCase,
             logger: logger,
-            onWithdrawSuccess: onWithdrawSuccess
+            onWithdrawSuccess: onWithdrawSuccess,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -131,13 +146,18 @@ public enum SettingFeatureFactory {
     public static func makeWithdrawReasonView(
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
-        onWithdrawSuccess: @escaping () -> Void = {}
+        onWithdrawSuccess: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = WithdrawReasonViewModel(
             withdrawUseCase: withdrawUseCase,
             logger: logger
         )
-        return WithdrawReasonView(viewModel: viewModel, onWithdrawSuccess: onWithdrawSuccess)
+        return WithdrawReasonView(
+            viewModel: viewModel,
+            onWithdrawSuccess: onWithdrawSuccess,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
     }
 
     @MainActor
@@ -145,14 +165,19 @@ public enum SettingFeatureFactory {
         loadProfileVisibilityUseCase: LoadProfileVisibilityUseCase,
         updateProfileVisibilityUseCase: UpdateProfileVisibilityUseCase,
         logger: Logger? = nil,
-        onSaveSuccess: @escaping (Bool) -> Void = { _ in }
+        onSaveSuccess: @escaping (Bool) -> Void = { _ in },
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingProfilePublicViewModel(
             loadProfileVisibilityUseCase: loadProfileVisibilityUseCase,
             updateProfileVisibilityUseCase: updateProfileVisibilityUseCase,
             logger: logger
         )
-        return SettingProfilePublicView(viewModel: viewModel, onSaveSuccess: onSaveSuccess)
+        return SettingProfilePublicView(
+            viewModel: viewModel,
+            onSaveSuccess: onSaveSuccess,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
     }
 
     /// 알림 설정 진입점. 하위 화면(완결/휴재복귀 알림 목록)도 여기서 만들지 않는다 — row 탭 콜백만
@@ -163,7 +188,8 @@ public enum SettingFeatureFactory {
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         logger: Logger? = nil,
         onCompletionListTapped: @escaping () -> Void = {},
-        onHiatusReturnListTapped: @escaping () -> Void = {}
+        onHiatusReturnListTapped: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
@@ -173,7 +199,8 @@ public enum SettingFeatureFactory {
         return NotificationSettingView(
             viewModel: viewModel,
             onCompletionListTapped: onCompletionListTapped,
-            onHiatusReturnListTapped: onHiatusReturnListTapped
+            onHiatusReturnListTapped: onHiatusReturnListTapped,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -183,14 +210,16 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {}
+        onBrowseNovels: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
             type: .completion,
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels
+            onBrowseNovels: onBrowseNovels,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -199,14 +228,16 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {}
+        onBrowseNovels: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
             type: .hiatusReturn,
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels
+            onBrowseNovels: onBrowseNovels,
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 
@@ -216,7 +247,8 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger?,
-        onBrowseNovels: @escaping () -> Void
+        onBrowseNovels: @escaping () -> Void,
+        onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NovelNotificationListViewModel(
             type: type,
@@ -224,7 +256,12 @@ public enum SettingFeatureFactory {
             deleteSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger
         )
-        return NovelNotificationListView(title: type.novelNotificationListTitle, viewModel: viewModel, onBrowseNovels: onBrowseNovels)
+        return NovelNotificationListView(
+            title: type.novelNotificationListTitle,
+            viewModel: viewModel,
+            onBrowseNovels: onBrowseNovels,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
     }
 }
 

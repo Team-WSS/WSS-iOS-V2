@@ -9,6 +9,7 @@
 import Foundation
 import Observation
 
+import BaseDomain
 import ProfileDomain
 import Logger
 
@@ -25,6 +26,9 @@ final class SettingChangeGenderOrAgeViewModel {
         var shouldDismiss = false
         /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
         var presentedError: SettingError?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        /// 저장(서버 PUT) 401에만 걸린다 — 로드(`loadDraft`)는 로컬 userDefaults라 401이 없다.
+        var requiresAuthentication = false
     }
 
     /// 사용자에게 표시할 에러의 **의미값**. 성별/출생연도는 입력단(칩·연도 휠)이 이미 유효값만 만들어
@@ -153,7 +157,16 @@ private extension SettingChangeGenderOrAgeViewModel {
 
 private extension SettingChangeGenderOrAgeViewModel {
     func presentError(_ error: Error) {
+        // 저장(서버 PUT) 401이면 로그인 유도로 일원화(Feature 공통 계약). 로컬 로드 실패는 여기서 걸리지 않는다.
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("SettingChangeGenderOrAge 예기치 못한 에러: \(String(describing: error))")
         state.presentedError = .unknown
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환(Feature 공통 계약).
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

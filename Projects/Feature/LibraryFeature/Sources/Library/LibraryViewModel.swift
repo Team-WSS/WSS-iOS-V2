@@ -35,7 +35,7 @@ final class LibraryViewModel {
         /// 목록 로드 실패 여부(첫 페이지·더보기·갱신 **공통**) — 목록 자리를 전면 실패 뷰로 대체할지 가른다.
         /// ⚠️ 더보기 실패를 여기서 빼고 토스트로 가르지 말 것 — 토스트는 사라지면 재시도 경로가 없어
         /// 하단에서 페이지네이션이 멈춘 채 갇힌다(#195 실측). 규칙 정본: Feature CLAUDE.md "로드 실패 표현 계약".
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         /// 필터 시트 키워드 탭에 보여줄, 내가 서재 작품들에 등록한 키워드 목록.
         var registeredKeywords: [Keyword] = []
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
@@ -246,7 +246,7 @@ private extension LibraryViewModel {
         state.totalCount = 0
         state.isLoading = true
         state.isLoadingMore = false
-        state.loadFailed = false
+        state.loadFailed = nil
         loadTask = Task { await loadPage(.reload) }
     }
 }
@@ -301,7 +301,7 @@ private extension LibraryViewModel {
 
             apply(outcome, kind: kind)
             hasLoadedContent = true
-            state.loadFailed = false
+            state.loadFailed = nil
         } catch {
             guard !Task.isCancelled else { return }
             presentLoadFailure(error, kind: kind)
@@ -426,7 +426,7 @@ private extension LibraryViewModel {
 
         // ⚠️ `hasLoadedContent`를 함께 내려야 다음 진입이 '갱신'이 아니라 로딩부터 다시 시작한다.
         hasLoadedContent = false
-        state.loadFailed = true
+        state.loadFailed = (error as? RepositoryError) ?? .unknown
         // ⚠️ `kind`를 그대로 보간하면 `more(cursor: "eyJ...")`로 **서버 커서 원문**이 로그에 통째로 찍힌다.
         logger?.error("Library 목록 로드 실패(\(kind.logLabel)): \(String(describing: error))")
     }

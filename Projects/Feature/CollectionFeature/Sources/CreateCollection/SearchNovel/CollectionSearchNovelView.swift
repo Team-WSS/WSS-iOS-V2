@@ -43,10 +43,23 @@ struct CollectionSearchNovelView: View {
     }
 
     var body: some View {
-        content
-            .navigationBarBackButtonHidden(true)
-            .toolbar { toolbarContent }
-            .showWSSToast(isPresented: toastBinding, type: toastType)
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "작품 리스트") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.confirm)
+                } label: {
+                    Text("완료")
+                        .applyWSSFont(.title2)
+                        .foregroundStyle(Color.wssPrimary100)
+                }
+            }
+
+            content
+        }
+        .wssCustomNavigationBar()
+        .showWSSToast(isPresented: toastBinding, type: toastType)
             .onAppear {
                 isSearchBarFocused = true
             }
@@ -79,43 +92,6 @@ struct CollectionSearchNovelView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             isSearchBarFocused = false
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension CollectionSearchNovelView {
-
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssBlack)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("작품 리스트")
-                .applyWSSFont(.title2)
-                .foregroundStyle(Color.wssBlack)
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-            Button {
-                viewModel.handle(.confirm)
-            } label: {
-                Text("완료")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(Color.wssPrimary100)
-            }
         }
     }
 }

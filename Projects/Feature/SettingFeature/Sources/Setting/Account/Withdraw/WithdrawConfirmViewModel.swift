@@ -21,6 +21,8 @@ final class WithdrawConfirmViewModel {
 
     struct State {
         var registeredNovelStats: RegisteredNovelStats?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        var requiresAuthentication = false
     }
 
     // MARK: - Action
@@ -91,6 +93,14 @@ private extension WithdrawConfirmViewModel {
 
 private extension WithdrawConfirmViewModel {
     func presentError(_ error: Error) {
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("탈퇴 확인 화면 서재 통계 로드 실패: \(String(describing: error))")
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환(Feature 공통 계약).
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

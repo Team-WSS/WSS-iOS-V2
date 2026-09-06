@@ -47,20 +47,37 @@ struct FeedDetailView: View {
     /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. 실제 화면 전환(`UserPageAssembly` 조립)은
     /// 호출자(App 조정 계층)가 수행한다(`SosoFeedView`의 `onUserProfileTapped`와 동일 계약).
     private let onUserProfileTapped: (UserID) -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 상세/댓글/프로필 이미지 로드가 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: FeedDetailViewModel,
         onNovelTapped: @escaping (NovelID) -> Void,
         onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in }
+        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onNovelTapped = onNovelTapped
         self.onEditFeedTapped = onEditFeedTapped
         self.onUserProfileTapped = onUserProfileTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
     
     var body: some View {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "") {
+                dismiss()
+            } trailing: {
+                WSSImage.icThreedots.swiftUIImage
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .frame(width: 38, height: 38)
+                    .onTapGesture {
+                        showFeedDropdown.toggle()
+                    }
+            }
+
         Group {
             if let detail = viewModel.state.detail {
                 let header = FeedHeader(
@@ -70,8 +87,8 @@ struct FeedDetailView: View {
                     isEdited: detail.isModified
                 )
                 loadedFeedDetailView(detail: detail, header: header)
-            } else if viewModel.state.detailLoadFailed {
-                NetworkErrorView { Task { await viewModel.handle(.load) } }
+            } else if let error = viewModel.state.detailLoadFailed {
+                NetworkErrorView(error: error) { Task { await viewModel.handle(.load) } }
             } else {
                 LoadingView()
             }
@@ -85,16 +102,13 @@ struct FeedDetailView: View {
                     .padding(.top, 4)
             }
         }
-        .toolbar {
-            createFeedDetailToolBarContent()
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
         .onTapGesture {
             if showFeedDropdown { showFeedDropdown = false }
             if showCommentDropdown { showCommentDropdown = false }
             isCommentFocused = false
         }
+        }
+        .wssCustomNavigationBar()
         .onAppear {
             Task { await viewModel.handle(.load) }
         }
@@ -113,6 +127,10 @@ struct FeedDetailView: View {
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
+        .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+            guard required else { return }
+            onAuthenticationRequired()
+        }
     }
     
     @ViewBuilder
@@ -259,7 +277,6 @@ struct FeedDetailView: View {
                         .id("bottomAnchor")
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .navigationBarBackButtonHidden()
                 .padding(.bottom, 50)
                 .onChange(of: isCommentFocused) { _, isFocused in
                     guard isFocused else { return }
@@ -306,32 +323,6 @@ struct FeedDetailView: View {
         }
     }
 
-    //MARK: - 툴바 아이템
-    
-    @ToolbarContentBuilder
-    private func createFeedDetailToolBarContent() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            WSSImage.icNavigateLeft.swiftUIImage
-                .resizable()
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 24, height: 24)
-                .onTapGesture {
-                    dismiss()
-                }
-        }
-        
-        ToolbarItem(placement: .topBarTrailing) {
-            WSSImage.icThreedots.swiftUIImage
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 38, height: 38)
-                .onTapGesture {
-                    showFeedDropdown.toggle()
-                }
-        }
-    }
-    
     //MARK: - 피드 드롭다운
     
     private func feedDropdownItems() -> [WSSDropdownItem] {

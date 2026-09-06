@@ -67,14 +67,20 @@ struct NotificationMapperTests {
         #expect(item.deeplink == .unknown)
     }
 
-    /// 분기 우선순위를 **의도적으로 고정**한다 — 매퍼 순서를 바꾸면 여기서 깨진다.
-    /// ⚠️ 이 테스트가 지키는 건 순서뿐이고, **서버 스펙 변화는 잡지 못한다**(입력을 여기서 직접 만들기 때문).
-    /// 작품 알림이 `isNotice: true`로 오기 시작하면 이 테스트는 통과한 채 사용자만 엉뚱한 화면으로 간다 —
-    /// 증상은 "완결 알림을 탭했더니 작품이 아니라 알림 상세가 열린다"이고, 그때 봐야 할 곳이 여기다.
-    @Test("공지 플래그가 켜져 있으면 novelId가 있어도 알림 상세로 간다")
-    func noticeTakesPrecedenceOverNovelID() {
+    /// 분기 우선순위를 **의도적으로 고정**한다 — 매퍼는 **id 존재를 isNotice보다 먼저** 본다.
+    /// 완결 알림이 `isNotice: true`로 와도 novelId가 있으면 작품 상세로 가야 한다("novelId 있으면 다 작품 상세" 규칙).
+    /// 순수 공지(id 없음)만 isNotice로 알림 상세로 간다.
+    @Test("novelId가 있으면 공지 플래그가 켜져 있어도 작품 상세로 간다")
+    func novelIDTakesPrecedenceOverNotice() {
         let item = NotificationMapper.notificationItem(from: makeResponse(isNotice: true, novelId: 4217))
 
-        #expect(item.deeplink == .notificationDetail(id: NotificationID(1)))
+        #expect(item.deeplink == .novelDetail(id: NovelID(4217)))
+    }
+
+    @Test("feedId가 있으면 공지 플래그가 켜져 있어도 피드 상세로 간다")
+    func feedIDTakesPrecedenceOverNotice() {
+        let item = NotificationMapper.notificationItem(from: makeResponse(isNotice: true, feedId: 7))
+
+        #expect(item.deeplink == .feedDetail(id: FeedID(7)))
     }
 }

@@ -9,6 +9,7 @@
 import Foundation
 import Observation
 
+import BaseDomain
 import ProfileDomain
 import AuthDomain
 import Logger
@@ -30,6 +31,9 @@ final class SettingAccountInfoViewModel {
         var logoutSucceeded = false
         /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
         var presentedError: LogoutError?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        /// 로그아웃 401은 이미 세션이 끝난 것이라 실패 토스트 대신 이 신호로 로그인/온보딩으로 되돌린다.
+        var requiresAuthentication = false
     }
 
     enum LogoutError: Equatable {
@@ -118,6 +122,7 @@ private extension SettingAccountInfoViewModel {
             state.email = try await loadAccountInfoDraftUseCase.execute().email
             hasLoaded = true
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("계정정보 이메일 로드 실패: \(String(describing: error))")
         }
     }
@@ -139,7 +144,16 @@ private extension SettingAccountInfoViewModel {
 
 private extension SettingAccountInfoViewModel {
     func presentError(_ error: Error) {
+        // 로그아웃 401은 세션이 이미 끝난 것 — 실패 토스트 대신 로그인/온보딩으로 되돌린다(Feature 공통 계약).
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("로그아웃 실패: \(String(describing: error))")
         state.presentedError = .unknown
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환(Feature 공통 계약).
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }

@@ -45,6 +45,25 @@ struct CreateFeedView: View {
     
     var body: some View {
         ZStack {
+            VStack(spacing: 0) {
+                WSSNavigationBar(title: "") {
+                    showDismissAlert = true
+                } trailing: {
+                    Button {
+                        viewModel.handle(.submitFeed)
+                    } label: {
+                        if viewModel.isSubmitting {
+                            ProgressView()
+                        } else {
+                            Text("완료")
+                                .applyWSSFont(.title2)
+                                .foregroundStyle(viewModel.canSubmit ?
+                                                 WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
+                        }
+                    }
+                    .disabled(!viewModel.canSubmit)
+                }
+
                 VStack(spacing: 0) {
                     privateSection
                     
@@ -109,16 +128,6 @@ struct CreateFeedView: View {
                     guard wasLoading, !isLoading else { return }
                     contentFieldText = viewModel.state.draft.content
                 }
-                .toolbar {
-                    createFeedViewToolBarContent()
-                }
-                .toolbarBackground(
-                    WSSColor.wssWhite.swiftUIColor,
-                    for: .navigationBar
-                )
-                .toolbarBackground(.visible, for: .navigationBar)
-                .navigationBarBackButtonHidden()
-                .navigationBarTitleDisplayMode(.inline)
                 .photosPicker(
                     isPresented: $showPhotosPicker,
                     selection: $pickerItems,
@@ -185,6 +194,9 @@ struct CreateFeedView: View {
                         dismiss()
                     }
                 }
+            }
+            // 커스텀 헤더(빈 타이틀 + 완료). 미저장 초안 확인(showDismissAlert)이 있어 스와이프백은 막는다.
+            .wssCustomNavigationBar(swipeBackEnabled: false)
         }
         .showWSSAlert(
             isPresented: $showDismissAlert,
@@ -208,38 +220,6 @@ struct CreateFeedView: View {
             return .novelAlreadyConnected
         case .contentOverLimit, .emptyContent, nil:
             return .networkDelay
-        }
-    }
-
-    // MARK: - 툴바
-    
-    @ToolbarContentBuilder
-    private func createFeedViewToolBarContent() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            WSSImage.icNavigateLeft.swiftUIImage
-                .resizable()
-                .renderingMode(.template)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                .frame(width: 24, height: 24)
-                .onTapGesture {
-                    showDismissAlert = true
-                }
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.handle(.submitFeed)
-            } label: {
-                if viewModel.isSubmitting {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(viewModel.canSubmit ?
-                                         WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
-                }
-            }
-            .disabled(!viewModel.canSubmit)
         }
     }
 

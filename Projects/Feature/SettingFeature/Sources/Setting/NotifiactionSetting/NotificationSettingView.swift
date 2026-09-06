@@ -25,36 +25,44 @@ struct NotificationSettingView: View {
     /// 휴재 복귀 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeHiatusReturnNotificationListView`
     /// 조립)은 호출자가 수행한다.
     private let onHiatusReturnListTapped: () -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 로드·토글이 401로 막히면 발화(Feature 공통 계약).
+    private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: NotificationSettingViewModel,
         onCompletionListTapped: @escaping () -> Void = {},
-        onHiatusReturnListTapped: @escaping () -> Void = {}
+        onHiatusReturnListTapped: @escaping () -> Void = {},
+        onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onCompletionListTapped = onCompletionListTapped
         self.onHiatusReturnListTapped = onHiatusReturnListTapped
+        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
-        content
-            .toolbar {
-                toolbarContent
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "알림 설정") { dismiss() }
+
+            content
+        }
+            .wssCustomNavigationBar()
             .onAppear {
                 viewModel.handle(.load)
             }
             .showWSSToast(isPresented: toastBinding, type: toastType)
+            .onChange(of: viewModel.state.requiresAuthentication) { _, required in
+                guard required else { return }
+                onAuthenticationRequired()
+            }
     }
 
     @ViewBuilder
     private var content: some View {
         if viewModel.state.isLoading {
             LoadingView()
-        } else if viewModel.state.loadError != nil {
-            NetworkErrorView {
+        } else if let error = viewModel.state.loadError {
+            NetworkErrorView(error: error) {
                 viewModel.handle(.load)
             }
         } else {
@@ -126,30 +134,6 @@ struct NotificationSettingView: View {
     }
 }
 
-// MARK: - Toolbar
-
-private extension NotificationSettingView {
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .resizable()
-                    .renderingMode(.template)
-                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-                    .frame(width: 24, height: 24)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("알림 설정")
-                .applyWSSFont(.title2)
-                .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
-        }
-    }
-}
 
 // MARK: - Presentation
 

@@ -27,14 +27,16 @@ enum NotificationMapper {
         let notificationID = NotificationID(response.notificationId)
         let iconURL = ImageURLResolver.resolve(from: response.notificationImage)
         let deepLink: NotificationDeeplink
-        if response.isNotice {
-            deepLink = .notificationDetail(id: notificationID)
-        } else if let feedId = response.feedId {
+        // **id 존재를 isNotice보다 우선**한다 — 피드·작품 상세로 가는 알림은 각각 feedId·novelId를 달고 온다.
+        // 완결·휴재 복귀 알림은 novelId가 있으면 서버가 isNotice를 뭘로 주든(true/false) 작품 상세로 간다
+        // ("novelId 있으면 다 작품 상세" 규칙). 순수 공지는 id 없이 isNotice만으로 알림 상세로 간다.
+        // (이전엔 isNotice를 먼저 봐서, 완결 알림이 isNotice:true로 오면 알림 상세로 새는 위험이 있었다.)
+        if let feedId = response.feedId {
             deepLink = .feedDetail(id: FeedID(feedId))
         } else if let novelId = response.novelId {
-            // 완결·휴재 복귀 알림 → 작품 상세. 작품 알림은 `isNotice: false`로 오므로
-            // 위 공지 분기에 먼저 걸리지 않는다(#181에서 확인).
             deepLink = .novelDetail(id: NovelID(novelId))
+        } else if response.isNotice {
+            deepLink = .notificationDetail(id: notificationID)
         } else {
             deepLink = .unknown
         }

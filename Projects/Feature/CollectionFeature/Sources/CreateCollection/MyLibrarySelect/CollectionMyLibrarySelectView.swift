@@ -37,10 +37,24 @@ struct CollectionMyLibrarySelectView: View {
     }
 
     var body: some View {
-        content
-            .navigationBarBackButtonHidden(true)
-            .toolbar { toolbarContent }
-            .onAppear { viewModel.handle(.load) }
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "서재") {
+                dismiss()
+            } trailing: {
+                Button {
+                    viewModel.handle(.confirm)
+                } label: {
+                    Text("추가")
+                        .applyWSSFont(.title2)
+                        .foregroundStyle(viewModel.state.selectedNovels.isEmpty ? Color.wssGray100 : Color.wssPrimary100)
+                }
+                .disabled(viewModel.state.selectedNovels.isEmpty)
+            }
+
+            content
+        }
+        .wssCustomNavigationBar()
+        .onAppear { viewModel.handle(.load) }
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }
@@ -56,52 +70,14 @@ struct CollectionMyLibrarySelectView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.state.loadFailed {
-            NetworkErrorView { viewModel.handle(.retry) }
+        if let error = viewModel.state.loadFailed {
+            NetworkErrorView(error: error) { viewModel.handle(.retry) }
         } else if viewModel.state.isLoading {
             LoadingView()
         } else if viewModel.state.novels.isEmpty {
             WSSEmptyView(type: .collectionMyLibrary, action: {})
         } else {
             novelGrid
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-private extension CollectionMyLibrarySelectView {
-
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button {
-                dismiss()
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssBlack)
-            }
-        }
-
-        ToolbarItem(placement: .principal) {
-            Text("서재")
-                .applyWSSFont(.title2)
-                .foregroundStyle(Color.wssBlack)
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-            Button {
-                viewModel.handle(.confirm)
-            } label: {
-                Text("추가")
-                    .applyWSSFont(.title2)
-                    .foregroundStyle(viewModel.state.selectedNovels.isEmpty ? Color.wssGray100 : Color.wssPrimary100)
-            }
-            .disabled(viewModel.state.selectedNovels.isEmpty)
         }
     }
 }

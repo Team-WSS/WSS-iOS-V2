@@ -37,7 +37,7 @@ final class UserPageViewModel {
         /// 컬렉션 섹션 타이틀 행을 탭했는데 컬렉션이 0개일 때 뜨는 안내 토스트(`WSSToastType.noCollections`).
         var isNoCollectionsToastPresented = false
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
         /// 상대가 프로필을 비공개로 설정해 접근할 수 없는 경우(`RepositoryError.privateProfile`) —
         /// 일반 로드 실패(`hasLoadError`)와 분리해 전용 화면("비공개 프로필이에요")으로 표현한다.
         var isProfilePrivate = false
@@ -48,7 +48,7 @@ final class UserPageViewModel {
         var feeds: [TotalFeed] = []
         var hasNextFeeds = true
         var isLoadingFeeds = false
-        var feedsLoadFailed = false
+        var feedsLoadFailed: RepositoryError?
 
         /// 차단 확인 알럿 표시 여부 — 툴바 드롭다운 "차단하기" 진입점.
         var isBlockAlertPresented = false
@@ -255,7 +255,7 @@ private extension UserPageViewModel {
             }
         } else {
             state.isLoading = true
-            state.hasLoadError = false
+            state.hasLoadError = nil
             loadTask = Task { await loadUserPage() }
         }
     }
@@ -266,7 +266,7 @@ private extension UserPageViewModel {
         // 이미 비공개로 판정된 프로필이면 탭을 눌러도 다시 요청하지 않는다 — 어차피 같은 결과.
         guard !state.isProfilePrivate, !hasLoadedFirstFeeds, feedsTask == nil else { return }
         state.isLoadingFeeds = true
-        state.feedsLoadFailed = false
+        state.feedsLoadFailed = nil
         feedsTask = Task { await loadFirstFeedsPage() }
     }
 
@@ -408,7 +408,7 @@ private extension UserPageViewModel {
             if isSilentRefresh {
                 logger?.error("UserPage 피드 재조회 실패(기존 목록 유지): \(String(describing: error))")
             } else {
-                state.feedsLoadFailed = true
+                state.feedsLoadFailed = (error as? RepositoryError) ?? .unknown
                 logger?.error("UserPage 피드 로드 실패: \(String(describing: error))")
             }
         }
@@ -472,7 +472,7 @@ private extension UserPageViewModel {
             return
         }
         logger?.error("UserPage 로드 실패: \(String(describing: error))")
-        state.hasLoadError = true
+        state.hasLoadError = (error as? RepositoryError) ?? .unknown
     }
 
     func presentActionError(_ error: Error, context: String) {

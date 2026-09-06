@@ -64,8 +64,8 @@ struct NotificationDetailView: View {
             // 로딩·실패는 네비게이션 바만 남기고 그 아래를 통째로 대체한다(목록과 같은 규칙).
             if viewModel.state.isLoading {
                 LoadingView()
-            } else if viewModel.state.loadFailed {
-                NetworkErrorView { viewModel.handle(.retry) }
+            } else if let error = viewModel.state.loadFailed {
+                NetworkErrorView(error: error) { viewModel.handle(.retry) }
             } else if let detail = viewModel.state.detail {
                 detailSection(detail)
             } else {

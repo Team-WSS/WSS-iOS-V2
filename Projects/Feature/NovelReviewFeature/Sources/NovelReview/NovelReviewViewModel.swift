@@ -24,7 +24,7 @@ final class NovelReviewViewModel {
         var isLoading = false
         /// 초안 로드 실패 → 전면 실패 뷰(재시도) 표시. draft는 항상 존재하고
         /// "초안 없음(nil)=정상"이라 실패를 draft 유무로 판단할 수 없어 별도 플래그로 둔다.
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         var isSaving = false
         var shouldDismiss = false
         /// 저장 성공으로 닫히는가 — `shouldDismiss`는 취소에도 켜지므로, 저장 성공 경로에서만 세우는
@@ -275,7 +275,7 @@ private extension NovelReviewViewModel {
                 guard !isClosing, !Task.isCancelled else { return }
                 baselineDraft = state.draft          // 초안 없음 → 초기값(주입 상태)을 기준선으로
             }
-            state.loadFailed = false                 // 재시도 성공 시 실패 뷰 해제
+            state.loadFailed = nil                   // 재시도 성공 시 실패 뷰 해제
             hasLoaded = true
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
@@ -284,7 +284,7 @@ private extension NovelReviewViewModel {
             // 로드 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
             // (저장/검증 실패만 presentError→토스트, 로드 실패는 전면 뷰로 분화 — NovelDetail과 동일.)
             logger?.error("NovelReview 실패(loadDraft): \(String(describing: error))")
-            state.loadFailed = true
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
         }
     }
 

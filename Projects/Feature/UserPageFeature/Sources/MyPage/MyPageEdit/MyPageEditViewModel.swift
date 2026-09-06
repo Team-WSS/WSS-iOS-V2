@@ -23,7 +23,7 @@ final class MyPageEditViewModel {
         var draft: ProfileDraft
         var characters: [ProfileCharacter] = []
         var isLoading = false
-        var loadFailed = false
+        var loadFailed: RepositoryError?
         var isCheckingNickname = false
         var isSaving = false
         var presentedError = false
@@ -116,7 +116,7 @@ private extension MyPageEditViewModel {
     func load() {
         guard loadTask == nil else { return }
         state.isLoading = true
-        state.loadFailed = false
+        state.loadFailed = nil
         loadTask = Task { await loadInitial() }
     }
 
@@ -160,7 +160,7 @@ private extension MyPageEditViewModel {
             state.characters = loadedCharacters
         } catch {
             logger?.error("MyPageEdit 로드 실패: \(String(describing: error))")
-            state.loadFailed = true
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
         }
     }
 

@@ -40,12 +40,16 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **네비바는 시스템 툴바가 아니라 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 패턴 정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). 이 모듈의 두 화면에 코드만 봐선 모르는 배치 결정이 있다:
+  - ⚠️ **`CreateFeedView`의 `WSSNavigationBar`는 content를 감싼 `allowsHitTesting`/`opacity`/`overlay(로딩)` 스코프 *밖*(바깥 VStack)에 둔다** — 제출 중(`isSubmitting`)·수정 로드 중(`isLoadingForEdit`)에도 back(→ `showDismissAlert` 확인 알럿)이 눌려야 하기 때문. content VStack 안에 넣으면 그 스코프에 걸려 back이 죽고 로딩 오버레이가 네비바까지 덮는다. **미저장 초안 확인 알럿이 있어 `swipeBackEnabled: false`**(스와이프로 확인을 건너뛰지 못하게). 이 화면은 principal 타이틀이 없어 `WSSNavigationBar(title: "")`.
+  - ⚠️ **`FeedDetailView`의 threedots 드롭다운 `overlay(alignment: .topTrailing)`과 "바깥 탭 닫기" `onTapGesture`는 네비바를 감싼 VStack이 아니라 content(`Group`)에 걸어야 한다** — (1) `.padding(.top, 4)`가 네비바 *아래* 4pt에 드롭다운을 앉히려면 기준이 content 상단이어야 하고, (2) VStack(네비바 포함)에 `onTapGesture`를 걸면 네비바 trailing의 threedots 탭(`showFeedDropdown.toggle()`)과 부모 탭이 충돌한다. threedots는 `trailing` 슬롯으로 옮겼고, 일반 상세라 스와이프백은 허용(기본 true). ⚠️ **`loadedFeedDetailView` 안 ScrollView에 있던 중복 `.navigationBarBackButtonHidden()`는 제거했다** — 그게 `hidesBackButton=true`를 세우면 전역 pop 제스처 delegate가 이 화면 스와이프백을 거부해(swipe 허용과 모순) 죽는다.
 - ⚠️ **`SosoFeedViewModel`의 목록 로드는 `feedsTask` 한 슬롯**이고 동시성 불변식은 서재 `LibraryViewModel.loadPage`와
   같다(정본은 [LibraryFeature](../LibraryFeature/CLAUDE.md)): 시작 경로는 `nil` 확인(`load`/`loadMore`) 또는
   취소+즉시 재대입(`reloadFromScratch`) 둘 중 하나, 취소된 로드의 `defer`는 **아무것도 정리하지 않는다**
   (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`isLoading`)는
-  Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.networkUnavailable`로
-  도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.networkUnavailable`) — 실패 경로 첫 줄도
+  Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.unknown`으로
+  도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.unknown`; #244에서 오프라인만 `networkUnavailable`로
+  가르며 취소는 `.unknown`이 됐다 — 값이 뭐든 로직엔 무관) — 실패 경로 첫 줄도
   `guard !Task.isCancelled`여야 옛 로드가 에러를 세우지 않는다. 다녀온 셀 동기화(`cellSyncTask`)는 별개 슬롯이고
   `reloadFromScratch`가 취소+nil로 함께 버린다.
 - ⚠️ **재진입 `.load`의 첫 로드/셀 동기화 분기는 탭별 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds` 플래그다 —
@@ -54,8 +58,18 @@
 - 재로드가 도는 중 바닥에 닿은 `loadMore`는 슬롯 가드에 조용히 드롭된다(작품 상세·서재와 같은 좁은 창 — 스크롤
   재실현으로 복구). "밀린 요청 기억" 방어는 넣지 말 것(서재 #195에서 더 나쁜 결함으로 판명).
 - `SosoFeedViewModel.state.errorMessage`는 View가 어디서도 읽지 않는 죽은 상태다(목록 로드 실패가 무표시) —
-  이 화면엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
-  재진입 갱신 작업의 범위 밖으로 남겨둔 것.
+  이 화면(`SosoFeedView`)엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
+  재진입 갱신 작업의 범위 밖으로 남겨둔 것. **`FeedDetailView`는 이와 별개로 #244에서 auth 라우팅이 들어왔다**(아래).
+- **`FeedDetailView`의 인증 만료 라우팅은 로드 경로에만 건다**(#244) — `FeedDetailViewModel`이
+  `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고, **상세/댓글/프로필 이미지
+  로드**(`loadFeed`·`loadComments`·`loadCurrentUserProfileImage`)의 catch에서 실패 플래그·알럿보다 **먼저** 걸러
+  `return`한다(`loadFeed`는 `isFeedUnavailable` 판정보다도 앞). View가 `onChange(of:requiresAuthentication)` →
+  `onAuthenticationRequired`(Factory·`FeedDetailAssembly.makeView`·4탭 Root까지 전달, 기본값 `{}`)로 올린다.
+  ⚠️ **좋아요·댓글 작성/수정/삭제·삭제·신고 같은 개별 사용자 액션 실패는 일부러 auth 라우팅에 태우지 않았다** —
+  이미 로드된 화면의 "사용자 액션 실패" 토스트 lane([상위 CLAUDE.md] 로드 실패 표현 계약)이 담당하고, 화면을
+  "갇히게" 만드는 건 로드 401뿐이라서다(게다가 `create/editComment`는 성공 여부를 `Bool`로 돌려주는 구조,
+  `toggleLike`·신고는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
+  넓히려면 그 Bool/`try?` 설계부터 다시 볼 것.
 
 - ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
   초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계
@@ -151,3 +165,10 @@
   `aspectRatio: Metric.coverAspectRatio`(86/123, 로컬 파일 상수)로 넘겨 컴포넌트가 내부에서 크기·클립을
   전부 처리한다(밖에서 `.frame`+수동 `.clipped()`를 거는 방식은 쓰지 않는다 — `WSSComponent/CLAUDE.md`의
   "누가 프레임을 정하느냐" 원칙대로 `aspectRatio` 모드에선 컴포넌트가 프레임 소유자).
+- **피드 첨부 이미지(`FeedDetailAttachImageBlock`·`FeedDetailImageViewer`)는 `WSSFeedImageView`가 아니라
+  raw `WSSAsyncImage`를 쓴다**(#244) — `WSSFeedImageView`는 "썸네일 1장 + 개수 배지"인 **목록 셀
+  미리보기** 전용(`WSSFeadView`가 씀)이고, 이 둘은 첨부를 전부 그리드/확대로 펼치는 다른 화면이라
+  맞지 않는다. 원래 raw `AsyncImage`였던 걸 반복 렌더·확대 시 placeholder 번쩍임을 없애려 공유 캐시
+  래퍼(`WSSAsyncImage`)로만 옮긴 것이니 **`WSSFeedImageView`로 통합하려 하지 말 것**(표지/프로필처럼
+  정형 래퍼가 안 맞는 자리라 raw `WSSAsyncImage`가 맞다 — `WSSComponent/CLAUDE.md`). 첨부 블록은
+  `isLoading`으로 로딩 중 `ProgressView`/실패 시 기본 썸네일을 구분하고, 확대 뷰는 구분 없이 `ProgressView`.

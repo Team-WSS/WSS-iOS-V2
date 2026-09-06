@@ -57,22 +57,41 @@ struct NovelReviewView: View {
     var body: some View {
         // 로딩을 if/else 트리 교체가 아니라 overlay로 둔다. isLoading 토글 시 루트(content) 정체성이
         // 유지돼야, 로드 완료 순간과 뒤로가기(dismiss)가 겹쳐도 진행 중인 pop이 취소되지 않는다.
-        content
-        .overlay {
-            if viewModel.state.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.wssWhite)
-            } else if viewModel.state.loadFailed {
-                // 로드 실패 — 재시도 버튼이 load를 다시 발화(실패는 hasLoaded 가드를 소진하지 않아 재시도 열림).
-                // NetworkErrorView가 자체 흰 배경으로 content를 덮는다(overlay 방식 → 루트 정체성 유지).
-                NetworkErrorView { viewModel.handle(.load) }
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: title) {
+                viewModel.handle(.requestClose)
+            } trailing: {
+                Button {
+                    viewModel.handle(.save)
+                } label: {
+                    if viewModel.state.isSaving {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(Color.wssPrimary100)
+                    }
+                }
+                // 로드 실패(전면 실패 뷰) 상태에선 빈/초기 draft 저장을 막는다.
+                .disabled(viewModel.state.isSaving || viewModel.state.loadFailed != nil)
             }
+
+            content
+                .overlay {
+                    if viewModel.state.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color.wssWhite)
+                    } else if let error = viewModel.state.loadFailed {
+                        // 로드 실패 — 재시도 버튼이 load를 다시 발화(실패는 hasLoaded 가드를 소진하지 않아 재시도 열림).
+                        // NetworkErrorView가 자체 흰 배경으로 content를 덮는다(overlay 방식 → 루트 정체성 유지).
+                        NetworkErrorView(error: error) { viewModel.handle(.load) }
+                    }
+                }
+                .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar { toolbarContent }
+        // 커스텀 헤더. 저장 전 "그만하기" 확인 알럿이 있어 스와이프백은 막는다(swipeBackEnabled: false).
+        .wssCustomNavigationBar(swipeBackEnabled: false)
         .onAppear {
             viewModel.handle(.load)
         }
@@ -150,50 +169,6 @@ struct NovelReviewView: View {
         Rectangle()
             .fill(Color.wssGray50)
             .frame(height: 1)
-    }
-}
-
-// MARK: - Toolbar
-
-private extension NovelReviewView {
-
-    /// 좌측 뒤로가기(닫기 요청) + 우측 완료(저장). 저장 중엔 완료 자리에 스피너를 띄우고 비활성화한다.
-    @ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Text(title)
-                .applyWSSFont(.title2)
-                .foregroundStyle(Color.wssBlack)
-        }
-
-        ToolbarItem(placement: .cancellationAction) {
-            Button {
-                viewModel.handle(.requestClose)
-            } label: {
-                WSSImage.icNavigateLeft.swiftUIImage
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.wssGray200)
-            }
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-            Button {
-                viewModel.handle(.save)
-            } label: {
-                if viewModel.state.isSaving {
-                    ProgressView()
-                } else {
-                    Text("완료")
-                        .applyWSSFont(.title2)
-                        .foregroundStyle(Color.wssPrimary100)
-                }
-            }
-            // 로드 실패(전면 실패 뷰) 상태에선 빈/초기 draft 저장을 막는다.
-            .disabled(viewModel.state.isSaving || viewModel.state.loadFailed)
-        }
     }
 }
 

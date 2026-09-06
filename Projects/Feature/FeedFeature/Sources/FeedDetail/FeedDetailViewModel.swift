@@ -37,9 +37,10 @@ final class FeedDetailViewModel {
         /// 현재 떠 있는 알럿의 의미값. `nil`이면 알럿 없음 — View는 이 값 하나로 모든 알럿을 표현한다.
         var alert: AlertType?
         /// 피드 상세 조회가 `alert`로 표현되는 사유(존재하지 않음·접근 불가)가 아닌 다른 이유로
-        /// 실패했는지 — 전면 실패 뷰(재시도 가능)로 표현한다.
+        /// 실패했을 때 잡은 에러 종류(nil이면 실패 아님) — 전면 실패 뷰(재시도 가능)가 문구를
+        /// 3분류(서버/일반/네트워크)로 가른다.
         /// 댓글 조회의 동종 실패는 화면 전체를 덮지 않고 로그만 남긴다(부차 콘텐츠).
-        var detailLoadFailed: Bool = false
+        var detailLoadFailed: RepositoryError?
         /// 피드/댓글 작성자 프로필 탭이 탈퇴 유저(`Author.accessibleUserId == nil`)를 가리킬 때 뜨는
         /// 안내 토스트(`WSSToastType.unknownUser`) — 둘 다 같은 화면·같은 의미라 상태를 공유한다
         /// (`SosoFeedViewModel.isUnavailableUserToastPresented`와 동일 패턴).
@@ -49,6 +50,9 @@ final class FeedDetailViewModel {
         /// 콘텐츠는 멀쩡하고 그 행동만 실패한 "사용자 액션 실패"라 전면 뷰가 아니라 토스트로 표현한다
         /// ([Feature CLAUDE.md](../CLAUDE.md)의 로드 실패 표현 계약).
         var isActionFailedToastPresented = false
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        /// 로드(상세·댓글·프로필 이미지) 실패가 401이면 실패 뷰/토스트 대신 이 신호로 로그인 유도한다.
+        var requiresAuthentication = false
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -232,18 +236,20 @@ final class FeedDetailViewModel {
 
     private func loadFeed() async {
         state.isLoading = true
-        state.detailLoadFailed = false
+        state.detailLoadFailed = nil
         defer { state.isLoading = false }
 
         do {
             let feed = try await loadFeedDetailUseCase.execute(feedID: feedID)
             state.detail = feed
         } catch {
+            // 인증 만료는 실패 뷰/알럿보다 먼저 거른다 — 로그인 유도로 일원화(Feature 공통 계약).
+            if routeToLoginIfAuthenticationRequired(error) { return }
             if isFeedUnavailable(error) {
                 state.alert = .feedUnavailable
             } else {
                 logger?.error("FeedDetail fetchFeedDetail 실패: \(String(describing: error))")
-                state.detailLoadFailed = true
+                state.detailLoadFailed = (error as? RepositoryError) ?? .unknown
             }
         }
     }
@@ -253,6 +259,7 @@ final class FeedDetailViewModel {
             let comments = try await loadCommentsUseCase.execute(feedID: feedID)
             state.comments = comments
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             if isFeedUnavailable(error) {
                 state.alert = .feedUnavailable
             } else {
@@ -267,8 +274,19 @@ final class FeedDetailViewModel {
             let profile = try await loadProfileUseCase.execute(target: .me)
             state.currentUserProfileImageURL = profile.characterImage
         } catch {
+            if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("FeedDetail loadCurrentUserProfileImage 실패: \(String(describing: error))")
         }
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    /// 세션이 죽은 상황이라 실패 뷰/토스트 대신 로그인 유도로 일원화한다(Feature 공통 계약).
+    /// 좋아요·댓글·삭제·신고 같은 개별 사용자 액션 실패는 이미 로드된 화면의 토스트 lane이 담당하므로
+    /// 여기 태우지 않는다 — 화면을 "갇히게" 만드는 로드 401만 로그인으로 보낸다.
+    private func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 
     /// `.notFound`(삭제됨)·`.forbidden`(숨김·차단)은 서버가 사유를 세분화해도 이 화면에서는

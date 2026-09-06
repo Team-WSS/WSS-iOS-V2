@@ -101,6 +101,8 @@ private enum DemoScenario: CaseIterable, Identifiable {
     case loadFailure
     /// 피드 첫 페이지 로드 실패 → 피드 탭이 빈 상태 대신 실패 문구를 보여준다.
     case feedLoadFailure
+    /// 작품 로드가 일시 오류(`.unknown`)로 실패 → 전면 NetworkErrorView가 "일시적인 오류가 발생했어요" 문구.
+    case loadFailureGeneral
 
     var id: Self { self }
 
@@ -125,8 +127,9 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .feeds15: "피드 15개 (2페이지)"
         case .feeds45: "피드 45개 (5페이지)"
         case .minimal: "최소 데이터(신규 작품)"
-        case .loadFailure: "작품 로드 실패"
-        case .feedLoadFailure: "피드 로드 실패"
+        case .loadFailure: "작품 로드 실패(서버)"
+        case .feedLoadFailure: "피드 로드 실패(네트워크)"
+        case .loadFailureGeneral: "작품 로드 실패(일시 오류)"
         }
     }
 
@@ -142,7 +145,7 @@ private enum DemoScenario: CaseIterable, Identifiable {
         case .noReaderReview: "독자 평가 — 전부 없음"
         case .noFeed, .feeds1, .feeds5, .feeds15, .feeds45: "피드"
         case .minimal: "극단"
-        case .loadFailure, .feedLoadFailure: "실패"
+        case .loadFailure, .feedLoadFailure, .loadFailureGeneral: "실패"
         }
     }
 
@@ -503,6 +506,9 @@ private struct DemoLoadNovelUseCase: LoadNovelUseCase {
         try? await Task.sleep(nanoseconds: 500_000_000)
         if scenario == .loadFailure {
             throw .serverUnavailable
+        }
+        if scenario == .loadFailureGeneral {
+            throw .unknown
         }
         let isMinimal = scenario == .minimal
         let parts = scenario.readerReviewParts

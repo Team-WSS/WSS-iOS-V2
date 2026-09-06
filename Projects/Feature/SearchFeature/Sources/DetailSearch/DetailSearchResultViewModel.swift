@@ -24,7 +24,7 @@ final class DetailSearchResultViewModel {
         var novels: [Novel] = []
         var totalNovelCount: Int = 0
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
         var hasNextPage = false
         var isLoadingMore = false
     }
@@ -80,7 +80,7 @@ private extension DetailSearchResultViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadResult() }
     }
 
@@ -112,7 +112,7 @@ private extension DetailSearchResultViewModel {
         } catch {
             guard !Task.isCancelled else { return }
             logger?.error("필터 검색 실패: \(String(describing: error))")
-            state.hasLoadError = true
+            state.hasLoadError = (error as? RepositoryError) ?? .unknown
         }
     }
 

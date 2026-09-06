@@ -18,10 +18,11 @@
 
 - **Repository가 3개**다. 알림 데이터·푸시 설정·작품 알림(구독 목록+개별 설정)은 각각 별개 계약 — 섞지 말 것. Data 쪽도 `Notification`/`Push`/`NovelNotification` 세 Repository로 구현됨.
 - **`NovelNotificationRepository` 안에서 "구독 목록" 메서드와 "설정" 메서드를 이름만 보고 헷갈리지 말 것** — `loadSubscriptions`/`deleteSubscriptions`는 "구독 중인 작품들의 목록"(여러 작품, 커서 페이지네이션), `loadNotificationSetting`/`updateNotificationSetting`은 "작품 하나의 현재 on/off 상태"(단일 작품, 페이지네이션 없음). 같은 완결/휴재복귀 개념을 다른 두 화면(설정의 목록 화면 vs 작품 상세 시트)에서 다른 각도로 다뤄 한 Repository에 합쳤을 뿐 — 엔드포인트·응답 모양은 전혀 다르다(Data의 `NovelNotificationEndpoint`가 서로 다른 두 경로를 갖는다).
-- **`NotificationDeeplink` 네 갈래는 전부 Data가 실제로 만든다** — 매퍼 분기 우선순위는 `isNotice` → `feedId` →
-  `novelId` → `.unknown` 순이고, 이 순서는 **작품 알림이 `isNotice: false`로 온다는 서버 스펙에 기대고 있다**.
-  서버가 작품 알림에도 `isNotice: true`를 주기 시작하면 novelId가 채워져 있어도 알림 상세로 샌다.
-  ⚠️ **이 변화는 테스트가 못 잡는다** — `NotificationMapperTests`는 입력을 직접 만들어 순서만 고정하므로
-  그 조합이 와도 통과한다. 증상("완결 알림을 탭했더니 알림 상세가 열린다")으로만 드러나니, 그때 이 분기를 볼 것.
+- **`NotificationDeeplink` 네 갈래는 전부 Data가 실제로 만든다** — 매퍼 분기 우선순위는 **id 존재를 먼저**:
+  `feedId` → `novelId` → `isNotice` → `.unknown` 순이다. 즉 **피드·작품 상세로 가는 알림은 id로만 판정**하고,
+  isNotice는 id가 하나도 없는 **순수 공지**를 알림 상세로 보낼 때만 쓴다. 완결·휴재 복귀 알림은 novelId만 있으면
+  서버가 isNotice를 뭘로 주든 작품 상세로 간다("novelId 있으면 다 작품 상세" 규칙 — id-우선이라 서버 스펙에
+  의존하지 않는다). ⚠️ 예전엔 `isNotice`를 먼저 봐서, 완결 알림이 `isNotice: true`로 오면 알림 상세로 새는
+  위험이 있었다 — id-우선으로 바꿔 그 취약점을 없앴다(`NotificationMapperTests`가 id가 isNotice를 이기는 걸 고정).
 - `NotificationType`(feed/like/hot/event/notice/unknown)은 **정의만 있고 아무도 쓰지 않는다** — `NotificationItem`은
   타입 대신 서버가 준 `iconURL`을 들고 화면은 그 이미지를 그린다. 아이콘을 타입으로 분기하려 들지 말 것.

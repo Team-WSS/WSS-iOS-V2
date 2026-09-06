@@ -124,7 +124,6 @@ struct FeedRootView: View {
                 onNovelTapped: { path.append(Destination.novel($0)) }
             )
             .navigationDestination(for: Destination.self) { destination in
-                // 탭 콘텐츠에서 push된 화면은 탭바를 가린다(`HomeRootView`와 동일 규칙).
                 Group {
                     switch destination {
                     case .feed(let feedID):
@@ -200,9 +199,9 @@ struct FeedRootView: View {
                         )
                     }
                 }
-                .toolbar(.hidden, for: .tabBar)
             }
         }
+        .hidesTabBar(when: !path.isEmpty)
         .onChange(of: deepLink, initial: true) { _, deepLink in
             guard let deepLink else { return }
             switch deepLink {
@@ -290,7 +289,8 @@ private extension FeedRootView {
                 // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
                 guard $0 != currentUserID else { return }
                 path.append(Destination.userPage($0))
-            }
+            },
+            onAuthenticationRequired: onAuthenticationRequired
         )
     }
 }

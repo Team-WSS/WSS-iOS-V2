@@ -31,7 +31,10 @@ final class MypageViewModel {
         /// `collectionsCount`, `CollectionDomain/CLAUDE.md` 참고)다.
         var collectionCount = 0
         var isLoading = false
-        var hasLoadError = false
+        var hasLoadError: RepositoryError?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        /// 로드가 401이면 실패 뷰로 덮지 않고 이 신호로 로그인 유도한다.
+        var requiresAuthentication = false
     }
 
     // MARK: - Derived
@@ -136,7 +139,7 @@ private extension MypageViewModel {
     func load() {
         guard loadTask == nil else { return }
         state.isLoading = true
-        state.hasLoadError = false
+        state.hasLoadError = nil
         loadTask = Task { await loadMypage() }
     }
 }
@@ -187,10 +190,20 @@ private extension MypageViewModel {
 
 private extension MypageViewModel {
     func presentError(_ error: Error) {
+        // 인증 만료는 실패 뷰보다 먼저 거른다 — 세션이 죽은 상태라 재시도가 같은 401로 돌아와
+        // 갇히므로 로그인 유도로 일원화한다(Feature 공통 "인증 만료 처리 계약").
+        if routeToLoginIfAuthenticationRequired(error) { return }
         logger?.error("Mypage 로드 실패: \(String(describing: error))")
         // 실패 뷰가 화면을 덮으므로 "보이는 콘텐츠"는 없어진다 — 이걸 내려야 재시도 때 옛 화면이
         // 되살아나지 않고 로딩부터 다시 시작한다.
         hasLoadedContent = false
-        state.hasLoadError = true
+        state.hasLoadError = (error as? RepositoryError) ?? .unknown
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
     }
 }
