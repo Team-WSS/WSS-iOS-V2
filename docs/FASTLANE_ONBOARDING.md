@@ -22,9 +22,17 @@
    저장되어 이후엔 다시 안 물어본다.
 8. 기기를 맥에 연결해 신뢰 설정(맥에서 기기 신뢰 + 기기 설정 > 일반 > VPN 및 기기 관리에서 개발자
    앱 신뢰).
-9. Xcode(또는 XcodeBuildMCP)로 Debug 스킴 실기기 Run 시도.
-   ⚠️ 아직 끝까지 검증된 절차는 아님 — docs/TODO.md 4번의 "아직 실측 못 한 것" 참고, 막히면 그쪽에
-   실측 기록을 추가할 것.
+9. Xcode로 Debug 스킴 실기기 Run.
+   ⚠️ **`Project.swift`는 실기기(`sdk=iphoneos*`) Debug 서명을 `match AppStore`(배포 프로파일)로 잡아둔다**
+   (`debug_beta` TestFlight 레인용). 배포 프로파일은 기기에 직접 Run으로 **설치할 수 없어**
+   `0xe800801f "Attempted to install a Beta profile without the proper entitlement"`로 튕긴다. →
+   Xcode **Signing & Capabilities에서 Debug의 Provisioning Profile을 `match Development <bundle id>`로
+   수동 변경**해야 Run이 된다(자동 서명은 개인 팀으로 조직 App ID를 못 등록해 실패). ⚠️ **이 수동 선택은
+   `tuist generate`를 돌릴 때마다 App Store로 리셋**되니 generate 후 매번 다시 선택할 것(매번 하기 싫으면
+   Project.swift Debug 서명을 Development로 바꾸는 근본 정리가 필요 — 단 debug_beta는 App Store가 필요해
+   config 분리 조율이 따라온다).
+   - ✅ **2026-09-05 실기기 Run + FCM 수신 + 탭 딥링크까지 실제 검증 완료**(#243). 이때 `-ObjC` 미설정으로
+     인한 GoogleUtilities gzip 크래시도 함께 잡았다(Projects/App/CLAUDE.md 푸시 절 참고).
 
 ## `sync_dev_certificates`가 내부적으로 하는 일
 

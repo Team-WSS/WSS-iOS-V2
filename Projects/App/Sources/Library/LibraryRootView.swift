@@ -33,6 +33,9 @@ struct LibraryRootView: View {
     private enum Destination: Hashable {
         case novel(NovelID)
         case feed(FeedID)
+        /// 공지 푸시 딥링크(`view=notificationDetail`, #243) → 알림 상세. 딥링크는 선택된 탭 위에 열려서
+        /// 4탭 전부 이 목적지를 갖는다(`NotificationDetailAssembly`). 이 탭엔 알림 목록이 없어 딥링크 전용이다.
+        case notificationDetail(NotificationID)
         /// 서재 탭엔 피드 작성 진입점(연필 아이콘 등)이 따로 없어 작품 상세發("나도 한마디") 경로 하나뿐 —
         /// `FeedRootView`처럼 옵션 없는 `createFeed` 케이스를 따로 둘 필요가 없다(`HomeRootView`와 동일).
         case createFeedFromNovel(ConnectedNovel)
@@ -119,6 +122,8 @@ struct LibraryRootView: View {
                         novelDetailView(novelID)
                     case .feed(let feedID):
                         feedDetailView(feedID)
+                    case .notificationDetail(let id):
+                        notificationDetailView(id)
                     case .createFeedFromNovel(let connectedNovel):
                         createFeedView(connectedNovel: connectedNovel)
                     case .editFeed(let feedID):
@@ -202,6 +207,12 @@ struct LibraryRootView: View {
             switch deepLink {
             case .collectionDetail(let id):
                 path.append(Destination.collectionDetail(id))
+            case .novelDetail(let id):
+                path.append(Destination.novel(id))
+            case .feedDetail(let id):
+                path.append(Destination.feed(id))
+            case .notificationDetail(let id):
+                path.append(Destination.notificationDetail(id))
             }
             deepLinkDestinationDepth = path.count
             onDeepLinkConsumed()
@@ -291,6 +302,15 @@ private extension LibraryRootView {
             onNovelTapped: { path.append(Destination.novel($0)) },
             onEditFeedTapped: { path.append(Destination.editFeed($0)) },
             onAuthorTapped: { path.append(Destination.authorSearch($0)) },
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// 공지 푸시 딥링크(#243) 전용 — 이 탭엔 알림 목록이 없어 딥링크로만 도달한다(`NotificationDetailAssembly`).
+    func notificationDetailView(_ notificationID: NotificationID) -> some View {
+        NotificationDetailAssembly.makeView(
+            notificationID: notificationID,
+            dependencies: dependencies,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

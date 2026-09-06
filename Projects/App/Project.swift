@@ -75,6 +75,11 @@ let appBaseSettings: SettingsDictionary = env.baseSetting.merging([
     "CURRENT_PROJECT_VERSION": "1",
     "VERSIONING_SYSTEM": "apple-generic",
     "TARGETED_DEVICE_FAMILY": "1",
+    // GoogleUtilities(Firebase 전이 의존, #243)가 NSData에 붙이는 Obj-C 카테고리(gul_dataByGzippingData: 등)는
+    // static framework라 링커가 기본적으로 dead-strip한다 → 런타임에 Firebase Installations의 heartbeat gzip
+    // 시점에 "unrecognized selector"로 NSException 크래시(실기기 실측). -ObjC로 정적 라이브러리의 Obj-C
+    // 카테고리를 강제 로드해 해결. ⚠️ base(Debug/Release 공통)에 둔다 — 링크 이슈라 배포 빌드에서도 동일하게 터진다.
+    "OTHER_LDFLAGS": ["$(inherited)", "-ObjC"],
 ]) { _, new in new }
 
 // MARK: - Targets
@@ -98,6 +103,9 @@ let targets: [Target] = [
         dependencies: [
             .external(name: "KakaoSDKCommon"),
             .external(name: "KakaoSDKAuth"),
+            // FCM 푸시 알림 수신·토큰 발급(#243). Firebase는 App 레이어에만 격리한다 — Domain/Data는
+            // DevicePushToken/RegisterDeviceTokenUseCase 추상화로 이미 분리돼 있어 Firebase를 모른다.
+            .external(name: "FirebaseMessaging"),
             // 온보딩 플로우 조립(App이 유일한 DI 지점) — Feature + Domain(UseCase 타입) + Data(Factory 구현체) + Core.
             .module(.feature(.onboarding)),
             .module(.domain(.base)),

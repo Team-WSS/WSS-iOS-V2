@@ -66,6 +66,10 @@ Sources/
 ├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
 ├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
 │                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
+├── Notification/
+│   └── NotificationDetailAssembly.swift  # 알림 상세 조립 공용 헬퍼 — 원래 홈 알림 목록 전용이었으나
+│                                           # #243 공지 푸시 딥링크(view=notificationDetail)가 4탭
+│                                           # 어디서든 열려 4탭이 공유(홈 인라인도 이걸로 이주).
 └── Collection/
     ├── CollectionEditAssembly.swift    # 컬렉션 수정 트리(수정→작품 추가→서재에서 추가) 조립 공용 헬퍼 —
     │                                     # 딥링크(#228)로 어느 탭에서든 내 컬렉션이 열려 4탭 전부 사용.
@@ -154,6 +158,71 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   한 번도 안 불리면 그 화면들이 전부 빈 목록으로 보인다. `syncKeywords()`는 내부에서 실패를 전부
   삼키고 로깅만 하는 계약(throws 없음)이라 App도 결과를 기다리거나 에러 처리를 하지 않는다 —
   `dependencies` 조립과 동시에 백그라운드로 쏘고 화면 진입은 막지 않는 fire-and-forget.
+
+## 푸시 알림(FCM/APNs) 배선 (#243)
+
+FCM 수신·토큰 발급·서버 등록. **Firebase(`Messaging`) import는 App 레이어의 두 파일에만** 있다 —
+`Sources/Push/PushNotificationCenter.swift`(런타임 허브)와 `Sources/Push/AppDelegate.swift`(시스템 콜백).
+Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain) 추상화로 이미 격리돼 Firebase를 모른다.
+
+- **등록 파이프라인은 새로 만든 게 아니라 이미 있던 슬롯을 채운 것** — `SplashDomain`의 부트스트랩
+  (`BootstrapAppUseCase`)이 세션 있을 때 `registerDeviceTokenIfNeeded()`를 fire-and-forget으로 돌리고, 그게
+  `AppDependencies`가 넘긴 `deviceTokenProvider`(async)를 당겨 토큰이 있으면 `pushSettingRepository.registerDeviceToken`으로
+  보낸다. #243 전엔 `deviceTokenProvider: { nil }`(등록 스킵)이었고, 지금은 `PushNotificationCenter.shared.currentDevicePushToken()`이다.
+- **등록 경로는 둘, 둘 다 필요**: ① **부트스트랩 pull**(`currentDevicePushToken`) — 세션 있는 재방문·이미 권한
+  허용 사용자. ② **반응 push**(`setFCMRegistrationToken`) — 부트스트랩이 지나간 뒤 로그인/권한허용하는 신규
+  사용자(이게 없으면 신규 유저 토큰 등록이 다음 실행까지 밀린다). 반응 경로는 `isLoggedIn` 게이트를 통과할 때만 서버로 보낸다.
+- **왜 `PushNotificationCenter.shared`(싱글턴)인가**: UIKit `AppDelegate`(시스템 콜백 수신)와 SwiftUI DI
+  (`AppDependencies` — UseCase 조립)는 생명주기가 달라 인스턴스 공유 통로가 없다. V1의 `NotificationHelper.shared`와 같은 이유.
+  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다(idempotent).
+- **method swizzling은 끈다**(`Support/Info.plist`의 `FirebaseAppDelegateProxyEnabled=NO`) — SwiftUI
+  `@UIApplicationDelegateAdaptor` 환경에서 Firebase 자동 프록시가 불안정해, APNs device token을 `AppDelegate`가
+  받아 `Messaging.messaging().apnsToken`에 **직접** 대입한다(V1과 동일). 그래서 `willPresent`/`didReceive`에서
+  `Messaging.appDidReceiveMessage(userInfo)`도 우리가 직접 부른다.
+- **`GoogleService-Info.plist`(운영 `kr.websoso`) + `GoogleService-Info-Debug.plist`(디버그 `kr.websoso.debug2`)는
+  `Resources/`에 있으나 `.gitignore`돼 커밋 안 한다**(V1도 커밋 안 함 — API 키 포함). ⚠️ **신규 팀원/CI는 이 두
+  파일이 로컬에 없으면 Firebase가 비활성**된다(`AppDelegate.firebaseOptions()`가 nil이면 크래시 대신 조용히 스킵) —
+  각자 배치해야 실제 푸시가 뜬다. V2 번들 ID가 V1과 동일해 **V1 레포의 plist를 그대로 복사**하면 된다(같은 Firebase 앱
+  `websoso-e3a8a`, APNs 키도 그 프로젝트에 이미 연결). 빌드 구성별로 올바른 plist를 `FirebaseOptions(contentsOfFile:)`로
+  **실제 적용**한다 — V1은 옵션을 만들고 버린 뒤 인자 없는 `configure()`를 불러 항상 운영 plist만 쓰던 버그가 있었으니 복붙하지 말 것.
+- ⚠️ **`Messaging.messaging()`을 만지는 새 코드는 반드시 `isFirebaseConfigured`(`FirebaseApp.app() != nil`)로 가드**한다 —
+  위 plist 미배치로 Firebase가 **미구성**이면 `Messaging.messaging()` 호출 자체가 "default app not configured"로 크래시한다
+  (Codex 리뷰 실측). `PushNotificationCenter.currentDevicePushToken()`/`setAPNSToken()`이 그렇게 가드돼 있다. 델리게이트
+  콜백(`willPresent`/`didReceive`)의 `appDidReceiveMessage`는 델리게이트가 **구성 성공 시에만** 설정돼 미구성 땐 도달하지 않는다.
+- **권한 요청·원격 알림 등록 시점은 `MainTabView.task`**(V1 parity, 사용자 확정) — `MainTabView`는 세션이 있어야만
+  뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한 요청, 허용 상태면 `registerForRemoteNotifications()`.
+  (기존 홈 알림벨/설정의 화면별 권한 흐름은 그대로 — 이건 그 위에 추가된 진입 트리거다.)
+- **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — 판별자는 **`view` 문자열**이고 서버가
+  `view`에 맞는 id만 채운다(나머진 빈 문자열 **또는 키 자체가 없음** — 실측: `view=notificationDetail` 공지 push는
+  `novelId` 키가 아예 없고 `feedId`만 빈 문자열). id는 전부 문자열이라 `AppDelegate.stringPayload`(String만 통과)를
+  탄다. 라우팅: `view=novelDetail`→작품 상세, `view=feedDetail`→피드 상세, **`view=notificationDetail`→알림 상세(공지 등,
+  #243 실측으로 추가)**. 흐름: `AppDelegate.didReceive` → `PushNotificationCenter.handleNotificationTap`
+  → `DeepLink.fromNotificationPayload`로 풀어 `onNotificationDeepLink` 콜백이 `WSSIOSV2App.pendingDeepLink`에
+  태운다 — **onOpenURL과 같은 채널**이라 MainTabView가 선택된 탭 위에 push하고 콜드 스타트·401 복원 로직(아래
+  딥링크 항목)을 그대로 탄다. ⚠️ **콜드 스타트(알림 탭으로 앱 실행)는 콜백 등록(`WSSIOSV2App.onAppear`) 전에
+  탭이 도착**할 수 있어, `PushNotificationCenter`가 딥링크를 보관했다가 등록 시 flush한다. `DeepLink`(BaseDomain)에
+  case를 더하면 4탭 Root의 `deepLink switch`(exhaustive)를 컴파일러가 강제한다 — 작품/피드는 4탭이 이미
+  `.novel`/`.feed` destination을 갖고 있어 2줄씩만 더했고, **알림 상세는 원래 홈 알림 목록에서만 쓰던 destination이라
+  4탭 공용 `NotificationDetailAssembly`(`Sources/Notification/`)로 뽑아** 나머지 3탭에도 `.notificationDetail`
+  destination을 새로 붙였다(홈 인라인도 이 Assembly로 이주). 앱 내 알림 목록 셀 탭이 가는 알림 상세와 **같은 화면·같은
+  UseCase**지만, 그 경로는 API 응답을 `NotificationDeeplink`로 푸는 것이라 `DeepLink`(푸시 payload 파싱)와는 무관하다.
+  ⚠️ **알림 상세는 상세 GET이 서버에서 읽음 처리를 겸하므로**(→ `NotificationFeature/CLAUDE.md`) push 탭 시 명시 read와
+  중복되지만, read는 멱등이라 무해하고 오히려 상세 GET 실패 시에도 읽음이 보장돼 앱 내 목록 경로의 취약점(상세 GET
+  실패 시 미읽음 잔존)이 push 경로엔 없다. **탭 시 `notificationId`는 읽음 처리**(V1 parity) — `PushNotificationCenter.markNotificationAsReadIfPossible`가 로그인 상태 + 유효 id일 때
+  `MarkNotificationAsReadUseCase`로 보낸다(딥링크 유무와 무관하게 탭한 알림은 읽음으로). 미로그인이면 401이라 건너뛴다.
+- ⚠️ **Tuist 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 한다**(`targets[N].settings[0]` name 없음 에러) — #243에서
+  `.mise.toml` 핀을 **4.206.0**으로 올려 해결했다(CI도 mise를 읽어 함께 반영). 되돌리면 Firebase 붙은 채로 generate가 깨진다.
+- ⚠️ **App 타깃엔 `-ObjC` 링커 플래그가 반드시 있어야 한다**(`Project.swift`의 `appBaseSettings`, #243) — 없으면
+  Firebase(GoogleUtilities)가 `NSData`에 붙인 Obj-C 카테고리(`gul_dataByGzippingData:` 등)가 **static framework라
+  링커가 dead-strip**해, Firebase Installations의 heartbeat gzip 시점에 "unrecognized selector"로 NSException
+  크래시가 난다(Swift `try`는 Obj-C 예외를 못 잡아 그대로 앱 종료). ⚠️ **시뮬레이터에선 안 나고 실기기에서만** 터지며
+  (아키텍처별 링커 최적화 차이), 링크 이슈라 **Debug·Release 배포 빌드 모두** 해당 — 그래서 `base`에 둔다. CocoaPods(V1)는
+  이 플래그를 자동으로 넣어줘 안 겪던 것이라, SPM+Tuist static에선 명시가 필수. 실기기 실측으로 발견(2026-09-05).
+- ⚠️ **`aps-environment`(`Support/WSS-iOS.entitlements`)는 현재 `development` 고정** — 실기기 Xcode Run(개발 프로파일)엔
+  맞지만 **App Store/TestFlight 배포판은 `production`이어야** 푸시가 배달된다(안 맞으면 크래시 없이 조용히 안 옴).
+  Debug=development / Release=production 분리가 정석 — **컷오버 전 필수**(`docs/TODO.md` 4번). 실기기 Run은 배포
+  프로파일이 아니라 `match Development` 프로파일을 선택해야 설치되고 `tuist generate`가 그 선택을 App Store로 리셋한다 —
+  이 서명 함정은 `docs/FASTLANE_ONBOARDING.md` 참고.
 
 ## 주의사항 (작업 중 발견 시 누적)
 
