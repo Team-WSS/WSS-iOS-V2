@@ -20,10 +20,11 @@ metadata:
 - **없는 것만** 설치 안내(mise → https://mise.jdx.dev, Node → nodejs.org/brew/nvm, Xcode → App Store, jq → `brew install jq`). 다 있으면 다음 단계로.
 
 ### 2. 도구·의존성·프로젝트 (멱등)
-- `mise install` — `.mise.toml`의 tuist(4.29.1) 설치.
+- `mise install` — `.mise.toml`에 핀된 tuist 버전 설치(버전 숫자는 `.mise.toml`이 단일 진실 소스 — 여기 박아두지 않는다).
 - `tuist install` → `tuist generate`.
 - `WSS-iOS-V2.xcworkspace` 생성 확인. 이미 있으면 `tuist generate`만 재실행(stale 방지).
 - ⚠️ generate가 **Config 누락**으로 실패하면 4번을 먼저 처리하고 재시도.
+- ⚠️ **tuist 버전이 올라간 브랜치를 받았을 때**(누군가 `.mise.toml`의 tuist 핀을 올린 PR): `mise install`은 핀된 버전을 *자동 설치*까지 해주진 않는다 — 브랜치 전환 후 **`mise install`을 다시 한 번** 돌려야 그 버전이 로컬에 깔린다. 안 돌리면 `tuist generate`가 "미설치" 에러를 낸다. 또 **mise를 거치지 않고 직접 깐 tuist(brew 등)는 `.mise.toml`을 무시**하므로 로컬 버전이 어긋난 채 generate가 깨질 수 있다(예: 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 해 `targets[N].settings[0]` name 없음 에러 — `.mise.toml` 주석 참고). **tuist는 항상 mise 경유로 실행**할 것.
 
 ### 3. git 훅 활성화 (멱등 — 클론 후 1회)
 - `git config --get core.hooksPath` 확인 → `.githooks`가 아니면 `git config core.hooksPath .githooks`.
