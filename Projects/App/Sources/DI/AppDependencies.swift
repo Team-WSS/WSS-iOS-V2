@@ -36,9 +36,9 @@ import SearchData
 import SettingData
 import SocialData
 import SplashData
+import Analytics
 import Logger
 import Networking
-import Analytics
 
 /// App(DI)의 유일한 조립 지점 — Data 구현체와 Domain 프로토콜이 만나는 곳.
 /// 온보딩 플로우 + 로그인 이후 진입하는 메인 탭(홈/피드/서재/My)이 필요로 하는 Repository까지 조립한다.

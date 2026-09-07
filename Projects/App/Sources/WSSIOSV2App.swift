@@ -1,9 +1,8 @@
 import SwiftUI
 
+import Clarity
 import KakaoSDKAuth
 import KakaoSDKCommon
-
-import Clarity
 
 import BaseData
 import BaseDomain
