@@ -26,30 +26,19 @@ struct LibraryView: View {
     /// ⚠️ `isPresented` + 별도 탭 State 조합이면 **첫 진입에서만** 탭이 무시된다(아래 `.sheet(item:)` 주석 참고).
     @State private var filterSheetTab: LibraryFilterTab?
 
-    /// 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
-    private let onNovelSelected: (NovelID) -> Void
-    /// 빈 상태 "웹소설 찾기" 버튼 → 검색 화면 진입 콜백.
-    private let onSearchTapped: () -> Void
-    /// 우상단 등록 버튼 → 작품 등록(검색) 진입 콜백.
-    private let onRegisterTapped: () -> Void
-    /// "알림 관리" → 관심 작품 알림 설정 진입 콜백.
-    private let onNotificationTapped: () -> Void
-    /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통.
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `MyLibraryRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App)가 수행한다.
+    private let onRoute: (MyLibraryRoute) -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통. 세션 이벤트라 `onRoute`에 안 합친다.
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: LibraryViewModel,
-        onNovelSelected: @escaping (NovelID) -> Void,
-        onSearchTapped: @escaping () -> Void,
-        onRegisterTapped: @escaping () -> Void,
-        onNotificationTapped: @escaping () -> Void,
+        onRoute: @escaping (MyLibraryRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelSelected = onNovelSelected
-        self.onSearchTapped = onSearchTapped
-        self.onRegisterTapped = onRegisterTapped
-        self.onNotificationTapped = onNotificationTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -118,7 +107,7 @@ private extension LibraryView {
                 .applyWSSFont(.headline1, color: .wssBlack)
             Spacer()
             Button {
-                onRegisterTapped()
+                onRoute(.register)
             } label: {
                 WSSImage.icBookRegister.swiftUIImage
                     .resizable()
@@ -169,7 +158,7 @@ private extension LibraryView {
                 .applyWSSFont(.body4, color: .wssGray200)
             Spacer()
             Button {
-                onNotificationTapped()
+                onRoute(.notificationSetting)
             } label: {
                 HStack(spacing: 4) {
                     WSSImage.icAlarm.swiftUIImage
@@ -266,7 +255,7 @@ private extension LibraryView {
         ) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
-                    onNovelSelected(novel.id)
+                    onRoute(.novelDetail(novel.id))
                 } label: {
                     WSSLibraryGridCell(
                         thumbnailImage: novel.thumbnailImage,
@@ -289,7 +278,7 @@ private extension LibraryView {
         LazyVStack(spacing: 0) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
-                    onNovelSelected(novel.id)
+                    onRoute(.novelDetail(novel.id))
                 } label: {
                     LibraryListCell(novel: novel)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,7 +331,7 @@ private extension LibraryView {
                 .applyWSSFont(.body1, color: .wssGray200)
             Spacer().frame(height: 45)
             Button {
-                onSearchTapped()
+                onRoute(.search)
             } label: {
                 Text("웹소설 찾기")
                     .applyWSSFont(.title1, color: .wssPrimary100)
@@ -542,10 +531,7 @@ private extension LibraryView {
             loadMyLibraryFilterUseCase: PreviewLoadMyLibraryFilterUseCase(),
             saveMyLibraryFilterUseCase: PreviewSaveMyLibraryFilterUseCase()
         ),
-        onNovelSelected: { print("작품 상세: \($0)") },
-        onSearchTapped: { print("웹소설 찾기") },
-        onRegisterTapped: { print("작품 등록") },
-        onNotificationTapped: { print("알림 관리") },
+        onRoute: { print("화면 전환 요청: \($0)") },
         onAuthenticationRequired: { print("로그인 유도") }
     )
 }

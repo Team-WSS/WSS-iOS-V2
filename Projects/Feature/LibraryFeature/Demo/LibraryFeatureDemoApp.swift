@@ -180,7 +180,11 @@ private struct DemoRootView: View {
                 userID: UserID(1003),
                 loadUserLibraryUseCase: DemoLoadUserLibraryUseCase(scenario: scenario),
                 logger: consoleLogger,
-                onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+                onRoute: { route in
+                    switch route {
+                    case .novelDetail(let novelID): consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+                    }
+                },
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -205,10 +209,7 @@ private struct DemoRootView: View {
                 loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(repository: makeFilterRepository()),
                 saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(repository: makeFilterRepository()),
                 logger: consoleLogger,
-                onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
-                onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },
-                onRegisterTapped: { consoleLogger.info("작품 등록 진입 요청") },
-                onNotificationTapped: { consoleLogger.info("알림 관리 진입 요청") },
+                onRoute: handleMyLibraryRoute,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -276,7 +277,11 @@ private struct DemoRootView: View {
                 keywordRepository: repositories.keyword
             ),
             logger: consoleLogger,
-            onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID): consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+                }
+            },
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }
@@ -295,10 +300,7 @@ private struct DemoRootView: View {
             loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(repository: makeFilterRepository()),
             saveMyLibraryFilterUseCase: DefaultSaveMyLibraryFilterUseCase(repository: makeFilterRepository()),
             logger: consoleLogger,
-            onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
-            onSearchTapped: { consoleLogger.info("웹소설 찾기(검색) 진입 요청") },
-            onRegisterTapped: { consoleLogger.info("작품 등록 진입 요청") },
-            onNotificationTapped: { consoleLogger.info("알림 관리 진입 요청") },
+            onRoute: handleMyLibraryRoute,
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }
@@ -306,6 +308,20 @@ private struct DemoRootView: View {
     /// 인증 만료 콜백. 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.
     private func handleAuthenticationRequired() {
         consoleLogger.info("인증 만료 → 로그인 진입 요청")
+    }
+
+    /// 내 서재 화면 전환 의도 콜백(#253). 실제 앱은 App 조정 계층이 목적지 화면을 조립·push한다 — Demo는 로그만.
+    private func handleMyLibraryRoute(_ route: MyLibraryRoute) {
+        switch route {
+        case .novelDetail(let novelID):
+            consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+        case .search:
+            consoleLogger.info("웹소설 찾기(검색) 진입 요청")
+        case .register:
+            consoleLogger.info("작품 등록 진입 요청")
+        case .notificationSetting:
+            consoleLogger.info("알림 관리 진입 요청")
+        }
     }
 }
 

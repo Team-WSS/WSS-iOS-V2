@@ -39,18 +39,18 @@ struct UserLibraryView: View {
     @State private var isSortSheetPresented = false
     @Environment(\.dismiss) private var dismiss
 
-    /// 작품 셀 탭 → 작품 상세 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
-    private let onNovelSelected: (NovelID) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `UserLibraryRoute`(Navigation/)가 정본.
+    private let onRoute: (UserLibraryRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통.
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: UserLibraryViewModel,
-        onNovelSelected: @escaping (NovelID) -> Void,
+        onRoute: @escaping (UserLibraryRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelSelected = onNovelSelected
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -201,7 +201,7 @@ private extension UserLibraryView {
         ) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
-                    onNovelSelected(novel.id)
+                    onRoute(.novelDetail(novel.id))
                 } label: {
                     WSSLibraryGridCell(
                         thumbnailImage: novel.thumbnailImage,
@@ -224,7 +224,7 @@ private extension UserLibraryView {
         LazyVStack(spacing: 0) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
-                    onNovelSelected(novel.id)
+                    onRoute(.novelDetail(novel.id))
                 } label: {
                     LibraryListCell(novel: novel)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -280,7 +280,7 @@ private extension UserLibraryView {
                 userID: UserID(1003),
                 loadUserLibraryUseCase: PreviewLoadUserLibraryUseCase()
             ),
-            onNovelSelected: { print("작품 상세: \($0)") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("로그인 유도") }
         )
     }

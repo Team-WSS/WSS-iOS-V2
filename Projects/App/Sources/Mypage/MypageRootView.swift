@@ -591,7 +591,12 @@ private extension MypageRootView {
                 keywordRepository: dependencies.keywordRepository
             ),
             logger: dependencies.logger,
-            onNovelSelected: { path.append(Destination.novel($0)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

@@ -109,10 +109,20 @@ struct LibraryRootView: View {
                     repository: dependencies.myLibraryFilterRepository
                 ),
                 logger: dependencies.logger,
-                onNovelSelected: { path.append(Destination.novel($0)) },
-                onSearchTapped: { path.append(Destination.search) },
-                onRegisterTapped: { path.append(Destination.search) },
-                onNotificationTapped: { path.append(Destination.notificationSetting) },
+                onRoute: { route in
+                    switch route {
+                    case .novelDetail(let novelID):
+                        path.append(Destination.novel(novelID))
+                    case .search:
+                        path.append(Destination.search)
+                    case .register:
+                        // 전용 작품 등록 화면이 없어 검색으로 보낸다(사용자 확정, #196) —
+                        // 등록 화면이 생기면 이 매핑만 바꾸면 된다.
+                        path.append(Destination.search)
+                    case .notificationSetting:
+                        path.append(Destination.notificationSetting)
+                    }
+                },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .navigationDestination(for: Destination.self) { destination in
@@ -334,7 +344,12 @@ private extension LibraryRootView {
                 keywordRepository: dependencies.keywordRepository
             ),
             logger: dependencies.logger,
-            onNovelSelected: { path.append(Destination.novel($0)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
