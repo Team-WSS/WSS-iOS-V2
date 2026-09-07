@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NotificationDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -75,6 +76,7 @@ final class NotificationListViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NotificationDomain
     private let loadPagedNotificationsUseCase: LoadPagedNotificationsUseCase
@@ -85,12 +87,18 @@ final class NotificationListViewModel {
     init(
         loadPagedNotificationsUseCase: LoadPagedNotificationsUseCase,
         markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadPagedNotificationsUseCase = loadPagedNotificationsUseCase
         self.markNotificationAsReadUseCase = markNotificationAsReadUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State()
+    }
+
+    func track(_ event: NotificationAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -127,6 +135,7 @@ private extension NotificationListViewModel {
         if hasLoaded {
             loadTask = Task { await loadPage(lastNotificationID: nil, isSilentRefresh: true) }
         } else {
+            track(.screenViewed)
             reloadFromScratch()
         }
     }
@@ -150,6 +159,7 @@ private extension NotificationListViewModel {
     /// 셀 탭 — 읽음 상태를 낙관 반영하고, **명시 호출이 필요한 알림만** 서버에 알린다(화면 전환은 View 몫).
     /// 목록 표시는 딥링크와 무관하게 전부 즉시 읽음으로 바뀐다 — 갈리는 건 서버 호출 여부뿐이다.
     func selectNotification(_ item: NotificationItem) {
+        track(.notificationSelected)
         applyReadState(id: item.id)
         // 케이스를 전부 나열한다 — 딥링크가 늘면 컴파일러가 여기를 짚어 정책을 다시 정하게 한다.
         switch item.deeplink {

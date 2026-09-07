@@ -511,6 +511,7 @@ private extension HomeRootView {
             loadPagedNotificationsUseCase: DefaultLoadPagedNotificationsUseCase(repository: dependencies.notificationRepository),
             markNotificationAsReadUseCase: DefaultMarkNotificationAsReadUseCase(repository: dependencies.notificationRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .notificationDetail(let notificationID):
