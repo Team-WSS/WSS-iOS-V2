@@ -91,7 +91,7 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
     `DetailToast.unavailableUser`를 세운다. `-1` 리터럴을 여기서 다시 비교하지 말 것 — `SosoFeedView`/
     `FeedDetailView`(`FeedFeature/CLAUDE.md`)와 같은 Domain API를 공유한다.
   - 좋아요 버튼은 `feedCell`에서 `WSSFeadView`의 `likeButtonTapped`로 `onToggleLike(feed.feedId)`를 넘긴다.
-- **"수정하기"(내 글 드롭다운)는 목록 항목(`TotalFeed`)의 `FeedID`만 `onEditFeedTapped`로 넘긴다** — 데이터 로드는 이 화면이 아니라 App이 조립하는 수정 화면(`FeedFeature`의 `CreateFeedView`) 자신이 한다(`FeedFeature/CLAUDE.md`의 `CreateFeedViewModel` 항목 참고). 이 화면 쪽엔 준비 상태·로딩 오버레이가 없다 — 탭하면 바로 App이 화면을 전환한다(#197, 빠른 전환 우선).
+- **"수정하기"(내 글 드롭다운)는 목록 항목(`TotalFeed`)의 `FeedID`만 `.editFeed` 라우트로 넘긴다** — 데이터 로드는 이 화면이 아니라 App이 조립하는 수정 화면(`FeedFeature`의 `CreateFeedView`) 자신이 한다(`FeedFeature/CLAUDE.md`의 `CreateFeedViewModel` 항목 참고). 이 화면 쪽엔 준비 상태·로딩 오버레이가 없다 — 탭하면 바로 App이 화면을 전환한다(#197, 빠른 전환 우선).
 - **피드 삭제/신고는 2단 알럿 하나의 의미값(`FeedAlert`)으로 관리** — 삭제는 확인 알럿 → `DeleteFeedUseCase` → 목록 제거 + **상세 재로드**(헤더 피드 수 등 집계 동기화, 성공 토스트 없음 — 디자인에 없음). 신고는 확인 알럿 → SocialDomain UseCase → **접수 완료 알럿으로 전환**(문구가 종류별로 달라 완료 케이스 분리). 알럿 타입·버튼 매핑(WSSAlertType 5종)은 View가 한다.
 - **화면 드롭다운(오류 제보/평가 삭제)**: 오류 제보는 노션 문의 페이지를 외부 브라우저로 연다(`BaseDomain.AppURL.errorReport`, #165에서 화면 전용 상수에서 앱 전역 카탈로그로 이관). 평가 삭제는 알럿 확인 후 `DeleteNovelReviewUseCase`(NovelReviewDomain) → **성공 시 상세 재로드**(키워드·읽기 상태 집계가 함께 바뀌므로 화면 데이터를 서버와 재동기화). 삭제할 평가가 없으면 VM이 무시(관심 토글 no-op과 같은 정책).
 - 유저 평가 없음 셀렉터와 있음 상태바는 같은 3분할 레이아웃 — **둘 다 상태별 개별 진입(탭한 상태를 seed)**. 있음은 추가로 박스의 칩·여백을 탭하면 현재 상태로 진입한다(상태 `Button`이 hit-test 우선이라 바깥 `onTapGesture`와 공존 — 중첩 Button은 불안정해 피함).

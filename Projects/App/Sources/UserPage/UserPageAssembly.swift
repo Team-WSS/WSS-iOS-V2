@@ -61,7 +61,7 @@ enum UserPageAssembly {
     }
 
     /// "활동기록 더보기"로 진입하는 전체 피드 목록(`UserPageFeatureFactory.makeFeedListView`) 조립 —
-    /// `onFeedListTapped`를 받은 탭 Root가 자기 `Destination`에서 이 메서드로 push한다.
+    /// `UserPageRoute.userFeedList`를 받은 탭 Root가 자기 `Destination`에서 이 메서드로 push한다.
     static func makeFeedListView(
         userID: UserID,
         nickname: String,

@@ -148,7 +148,7 @@
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
   - **작품 카드 탭은 `onRoute(.novelDetail(NovelID))` 라우트까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
-    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
+    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailRoute.authorSearch`와
     동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201에서 해소된
     옛 TODO 항목) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
@@ -193,7 +193,7 @@
       "Core parameter(s) missing"으로 거부 — App은 커스텀 plist라 실제로 빠져 있었다, `App/CLAUDE.md`). `Tuist/Package.swift` `productTypes`에
       `.framework` 강제 필수(안 하면 `MustInitAppKey` 크래시, `OnboardingFeature/CLAUDE.md`).
     - 받는 쪽 라우팅은 App 몫(`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라
-      View가 직접 처리한다(`onNovelTapped`와 같은 위상).
+      View가 직접 처리한다(`.novelDetail` 라우트와 같은 위상).
     - **폐기 이력(시스템 공유 시트, 커밋 `0cd2f144`·`bffdbe1e`·`5d1e0b78`에 구현이 남아 있다)** — 나중에 Universal
       Link로 시트를 되살릴 때 같은 함정을 다시 밟지 않도록 요점만: `ShareLink(item: URL, message:)`는 "복사"가
       URL과 메시지를 별개 pasteboard 항목으로 넣어 plain-text 입력창(카카오톡)에 URL이 빠지고,
@@ -203,7 +203,7 @@
       iOS 26 공유 시트가 우리 설정을 무시하며, 컨테이너 child로 강제하면 흰 백드롭이 앱을 덮는다(전부 iOS 26.5
       실측, 2026-08-29). 미리보기 표지 로드용으로 만든 `WSSComponent.WSSImageLoader`는 `WSSAsyncImage`가 쓰므로 남아 있다.
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
-    (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
+    (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onRoute(.editCollection)`으로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
     감지한다(App 경로의 자식이 수정 화면 하나뿐이라 최초 이후 재발화는 곧 "수정에서 돌아옴") —
     성공/취소 구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(이미 `state.detail`이 있어 전면

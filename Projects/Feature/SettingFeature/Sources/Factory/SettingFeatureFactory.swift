@@ -200,7 +200,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {},
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
@@ -208,7 +208,7 @@ public enum SettingFeatureFactory {
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -218,7 +218,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {},
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
@@ -226,7 +226,7 @@ public enum SettingFeatureFactory {
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -237,7 +237,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger?,
-        onBrowseNovels: @escaping () -> Void,
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NovelNotificationListViewModel(
@@ -249,7 +249,7 @@ public enum SettingFeatureFactory {
         return NovelNotificationListView(
             title: type.novelNotificationListTitle,
             viewModel: viewModel,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

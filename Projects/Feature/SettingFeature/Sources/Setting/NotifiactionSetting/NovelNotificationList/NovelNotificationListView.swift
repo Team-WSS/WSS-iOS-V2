@@ -20,21 +20,20 @@ struct NovelNotificationListView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let title: String
-    /// 목록이 비었을 때 "작품 둘러보기" CTA — 어디로 보낼지(검색 화면 등)는 다른 Feature 모듈이라
-    /// 이 화면이 알지 못한다. 호출자(App)가 결정한다.
-    private let onBrowseNovels: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `NovelNotificationListRoute`(Navigation/)가 정본.
+    private let onRoute: (NovelNotificationListRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 로드·다음 페이지·삭제가 401로 막히면 발화(Feature 공통 계약).
     private let onAuthenticationRequired: () -> Void
 
     init(
         title: String,
         viewModel: NovelNotificationListViewModel,
-        onBrowseNovels: @escaping () -> Void,
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self.title = title
         self._viewModel = State(initialValue: viewModel)
-        self.onBrowseNovels = onBrowseNovels
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -79,7 +78,7 @@ struct NovelNotificationListView: View {
                         // 현재 페이지를 통째로 삭제해 일시적으로 빈 상태 — VM이 다음 페이지를 자동 로드 중이다.
                         LoadingView()
                     } else {
-                        WSSEmptyView(type: .novelNotification, action: onBrowseNovels)
+                        WSSEmptyView(type: .novelNotification, action: { onRoute(.browseNovels) })
                     }
                 }
             }
@@ -195,7 +194,7 @@ private extension NovelNotificationListView {
                 loadSubscriptionsUseCase: PreviewLoadNovelNotificationSubscriptionsUseCase(),
                 deleteSubscriptionsUseCase: PreviewDeleteNovelNotificationSubscriptionsUseCase()
             ),
-            onBrowseNovels: { print("작품 둘러보기") }
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

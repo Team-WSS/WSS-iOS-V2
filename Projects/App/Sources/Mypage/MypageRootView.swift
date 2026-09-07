@@ -472,7 +472,12 @@ private extension MypageRootView {
                 repository: dependencies.novelNotificationRepository
             ),
             logger: dependencies.logger,
-            onBrowseNovels: { path.append(Destination.search) },
+            onRoute: { route in
+                switch route {
+                case .browseNovels:
+                    path.append(Destination.search)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -486,7 +491,12 @@ private extension MypageRootView {
                 repository: dependencies.novelNotificationRepository
             ),
             logger: dependencies.logger,
-            onBrowseNovels: { path.append(Destination.search) },
+            onRoute: { route in
+                switch route {
+                case .browseNovels:
+                    path.append(Destination.search)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

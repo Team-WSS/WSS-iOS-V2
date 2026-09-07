@@ -48,8 +48,7 @@ private final class FeatureRouteCallbackVisitor: SyntaxVisitor {
     }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        let isPublic = node.modifiers.contains { $0.name.tokenKind == .keyword(.public) }
-        guard isPublic else { return .visitChildren }
+        guard Self.isEffectivelyPublic(node) else { return .visitChildren }
 
         for param in node.signature.parameterClause.parameters {
             let label = param.firstName.text
@@ -62,6 +61,26 @@ private final class FeatureRouteCallbackVisitor: SyntaxVisitor {
             ))
         }
         return .visitChildren
+    }
+
+    /// 함수 자신에 `public`이 없어도 `public extension` 안이면 실질 public이다 —
+    /// `public extension XxxFeatureFactory { static func makeView(...) }` 형태의 미탐을 막는다.
+    /// (조상에 명시 접근제어가 있는 함수는 자기 modifier가 우선이므로 함수 쪽을 먼저 본다.)
+    private static func isEffectivelyPublic(_ node: FunctionDeclSyntax) -> Bool {
+        if node.modifiers.contains(where: { $0.name.tokenKind == .keyword(.public) }) { return true }
+        // 자기 자신에 다른 접근제어가 명시돼 있으면 public이 아니다(예: public extension 안의 private func).
+        let accessKeywords: [TokenKind] = [
+            .keyword(.private), .keyword(.fileprivate), .keyword(.internal), .keyword(.package)
+        ]
+        if node.modifiers.contains(where: { accessKeywords.contains($0.name.tokenKind) }) { return false }
+        var current: Syntax? = node.parent
+        while let ancestor = current {
+            if let ext = ancestor.as(ExtensionDeclSyntax.self) {
+                return ext.modifiers.contains { $0.name.tokenKind == .keyword(.public) }
+            }
+            current = ancestor.parent
+        }
+        return false
     }
 
     /// 화면 전환 의도로 쓰여 온 콜백 네이밍 — `on` + 대문자 시작 + `Tapped`/`Selected` 종결.

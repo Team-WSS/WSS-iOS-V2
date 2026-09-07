@@ -343,7 +343,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -351,7 +355,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         }
     }
@@ -364,7 +372,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -372,7 +384,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         }
     }

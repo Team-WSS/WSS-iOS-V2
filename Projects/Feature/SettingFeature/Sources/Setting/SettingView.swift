@@ -20,9 +20,8 @@ struct SettingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
-    /// 계정정보 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeAccountInfoView` 조립)은
-    /// 호출자(App 조정 계층)가 수행한다.
-    /// 화면 전환 의도 콜백(#253) — 계약은 `SettingRoute`(Navigation/)가 정본.
+    /// 화면 전환 의도 콜백(#253) — 계약은 `SettingRoute`(Navigation/)가 정본. 실제 화면 전환
+    /// (`SettingFeatureFactory.makeXxxView` 조립)은 호출자(App 조정 계층)가 수행한다.
     private let onRoute: (SettingRoute) -> Void
 
     init(

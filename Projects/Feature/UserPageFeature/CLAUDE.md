@@ -227,11 +227,11 @@
   `FeedRootView`가 피드 셀 프로필 탭에서 push) — 홈·서재 탭엔 아직 진입 경로가 없다(연결 작품 배너만
   뚫려 있고 작성자 프로필 탭 자체가 없는 화면들이라서). 다른 화면에 유저 프로필 진입이 필요해지면
   `UserPageAssembly`를 재사용할 것 — App이 UseCase를 다시 조립하지 않는다. 그 화면에서 다시 여는
-  타유저 서재(`onLibraryTapped` → `LibraryFactory.makeUserLibraryView`)도 마찬가지로 지금은
-  `FeedRootView`만 배선했다 — `UserPageAssembly.makeView`에 `onLibraryTapped` 콜백이 있으니 다른
-  탭이 `UserPageAssembly`를 재사용하면 그 콜백만 채우면 된다.
-- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`는 `onEditProfileTapped`/`onSettingTapped`/
-  `onLibraryTapped`를 전부 콘솔 로그만 찍는 no-op으로 연결한다**(`onCollectionTapped`와 동일 패턴) —
+  타유저 서재(`.userLibrary` 라우트 → `LibraryFactory.makeUserLibraryView`)도 이제 4탭 전부 배선돼
+  있다(#201 이후 순차 확장 — `LibraryRootView` 주석 참고). 새 진입점이 생기면 `UserPageAssembly`의
+  `onRoute` switch에서 `.userLibrary` 케이스만 자기 `Destination`으로 매핑하면 된다.
+- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`는 `onRoute`(`handleMypageRoute`)를 전부
+  콘솔 로그만 찍는 no-op으로 연결한다** —
   develop 라인 #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo가 컴파일이 안
   되게 어긋났던 걸 rebase 중 최소 수정으로 되살렸다(2026-08-28). 실제 push/무시 여부는 아직 미설계 —
   Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))상 완전하진 않다는 것만 기록

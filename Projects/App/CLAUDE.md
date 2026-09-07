@@ -64,8 +64,10 @@ Sources/
 │            │                                 # 3탭으로 남아 있었으나 My 탭도 컬렉션 상세→작품 상세로 사용,
 │            │                                 # #253 onRoute 전환 때 컴파일러가 확인).
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
-│                                             # 3탭이 공유(#197).
-├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
+│                                             # 4탭이 공유(#197 3탭 → My 탭도 컬렉션 상세→작품 상세
+│                                             # 경로로 사용).
+├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 4탭이 공유(아래 — My 탭도
+│                                               # 작품 상세發 작가 검색 경로로 사용).
 ├── UserPage/└── UserPageAssembly.swift     # 타유저 프로필(makeView) + 그 "활동기록 더보기"(makeFeedListView,
 │                                             # #201) 조립 공용 헬퍼 — 홈/피드/서재/My 4탭 전부가 공유.
 ├── Notification/
@@ -78,18 +80,21 @@ Sources/
     │                                     # pop 핸들러·pendingCollectionNovelSelection은 각 Root 소유.
     ├── CollectionDetailAssembly.swift  # 컬렉션 상세 조립 공용 헬퍼 — 마이페이지 "내 컬렉션" 목록뿐
     │                                     # 아니라 4탭의 타유저 프로필 컬렉션 미리보기도 공유(#201 후속).
-    │                                     # onEditTapped 기본값은 no-op — 타유저 컬렉션은 항상
-    │                                     # isMine==false라 수정 버튼이 안 뜬다.
+    │                                     # 수정 진입은 CollectionDetailRoute.editCollection exhaustive
+    │                                     # switch(#253 — 예전 onEditTapped 기본값 no-op은 #228 죽은
+    │                                     # 버튼 사고를 만들어 제거). 타유저 컬렉션은 isMine==false라
+    │                                     # 수정 버튼 자체가 안 뜨지만 매핑은 전 호출자가 명시한다.
     └── CollectionListAssembly.swift    # 컬렉션 목록 조립 공용 헬퍼 — isOwnCollections 기본값 false
                                           # (타유저 프로필 "컬렉션" 헤더 탭). 마이페이지의 "내 컬렉션"
                                           # 목록만 true로 명시 호출.
 ```
 
-4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있다. 그 안에서 열리는 2차
-화면은 **홈·피드·서재·My가 상당수 실제로 뚫려 있고**(작품 상세·피드 상세·일반 검색·프로필 편집·
-알림 설정), 나머지는 대상 Feature 모듈이 App에 아직 안 붙어 있어 로그만 남기는 placeholder
-콜백이다 — 대상 모듈을 붙일 때 그 콜백 하나만 바꾸면 된다.
-- ⚠️ **`FeedRootView.onUserProfileTapped`는 push 직전 `currentUserID`(로컬 캐시)와 대상 `userID`를
+4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있고, 그 안에서 열리는 2차
+화면도 4탭 전부 실제 push로 뚫려 있다(작품 상세·피드 상세·일반 검색·프로필 편집·알림 설정 등).
+#253부터 화면 전환은 화면별 Route enum의 exhaustive switch라 **로그만 남기는 placeholder 콜백은
+더 이상 존재하지 않는다** — 그 탭에 대응 목적지가 없는 케이스는 `break`로 의도적 무시를 명시하고,
+새 목적지가 생기면 그 `break`를 실제 push로 바꾸면 된다(컴파일러가 케이스 추가를 4탭에 강제).
+- ⚠️ **`FeedRootView`의 유저 프로필 라우트(`.userProfile`)는 push 직전 `currentUserID`(로컬 캐시)와 대상 `userID`를
   한 번 더 비교해 같으면 무시한다**(#196) — `TotalFeed.isMyFeed` 기반으로 Feature(`SosoFeedView`)가
   이미 내 프로필 탭 자체를 막아두지만(`isProfileTappable`), "내 프로필이 타유저 프로필 화면으로
   넘어간다"는 증상이 실제로 보고돼(소소피드 탭처럼 `isMyFeed`가 서버 응답에 의존하는 목록에서
@@ -289,11 +294,10 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
   하나로 수렴**해 `ContentView`가 `route = .main`으로 전환한다 — 신규/기존 유저를 구분해 다른 곳으로
   보낼 이유가 아직 없어서 일부러 하나로 합쳤다. 나중에 갈림이 필요해지면(예: 신규 유저만 튜토리얼)
   `onFinished`를 매개변수 있는 콜백으로 바꿀 것.
-- **각 탭 Root의 화면 전환 콜백 중 상당수는 이미 실제 push로 뚫려 있다**(작품 상세·피드 상세·일반
+- **각 탭 Root의 화면 전환 라우트는 전부 실제 push로 매핑돼 있다**(작품 상세·피드 상세·일반
   검색·프로필 편집·설정·타유저 프로필·알림 설정·알림 목록/상세·상세탐색 필터/결과 — 필터/결과는
-  #236부터 4탭 전부, 검색 화면의 장르·키워드 "더보기" 헤더 포함) — 남는 placeholder가 생기면 그
-  모듈을 붙일 때 해당 콜백 하나만 실제 화면 전환으로 바꾸면 된다(전부 한 번에 바꿀 필요 없음). **`SosoFeedView`의 피드
-  셀은 연결 작품 배너(`onNovelTapped`)·작성자 프로필(`onUserProfileTapped`)까지 전부 실제 push다**
+  #236부터 4탭 전부, 검색 화면의 장르·키워드 "더보기" 헤더 포함). **`SosoFeedView`의 피드
+  셀은 연결 작품 배너(`SosoFeedRoute.novelDetail`)·작성자 프로필(`.userProfile`)까지 전부 실제 push다**
   (#196) — `FeedRootView`가 전자는 같은 `Destination.novel`로, 후자는 `Destination.userPage` →
   `UserPageAssembly`로 연결한다.
   - ⚠️ **`NovelID`와 `FeedID`는 둘 다 `IDWrapper<Int>` 타입 별칭이라 실제로는 같은 타입이다** —
@@ -382,10 +386,10 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
   이 바운스 경로는 "쓰던 중 세션이 죽는" 경우의 안전망으로만 남는다. **홈은 원래 비로그인도 봐야
   하는 화면이라 이 정책이 맞지 않다** — 비로그인 브라우징을 지원하려면 탭을 lazy 로드하거나(진짜
   선택했을 때만 그 탭의 API 호출) 홈만 인증 실패를 무시하도록 정책을 분리해야 한다(여전히 미지원).
-- **서재의 "웹소설 찾기"(빈 상태 CTA, `onSearchTapped`)와 우상단 등록 버튼(`onRegisterTapped`)은
+- **서재의 "웹소설 찾기"(빈 상태 CTA, `MyLibraryRoute.search`)와 우상단 등록 버튼(`.register`)은
   둘 다 같은 `SearchAssembly`(일반 검색)로 push된다**(사용자 확정, #196) — 서재엔 전용 "작품 등록"
   화면이 없고, 검색해서 찾은 작품을 작품 상세에서 등록하는 흐름이다. 나중에 전용 등록 화면이 생기면
-  `onRegisterTapped` 쪽만 그 화면으로 바꾸면 된다(`onSearchTapped`와 분리해서 갈 이유가 생기면).
+  `.register` 케이스 매핑만 그 화면으로 바꾸면 된다(케이스가 분리돼 있는 이유).
 - **딥링크(`websoso://…`, #228)는 `WSSIOSV2App.onOpenURL` → `pendingDeepLink`(@State) →
   `ContentView`(Binding) → `MainTabView` → **지금 선택된 탭 Root**의 `path.append` 순으로 흐른다**
   (사용자 확정 — 앱을 쓰던 중이면 보던 화면 위에 바로 push, 콜드 스타트면 기본 탭인 홈 위). 파싱은

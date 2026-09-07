@@ -505,4 +505,20 @@ struct RuleTests {
         let appPath = "/Projects/App/Sources/Home/HomeRootView.swift"
         #expect(lint(source: src, path: appPath, rules: [FeatureRouteCallbackRule()]).isEmpty)
     }
+
+    @Test("⑭ public extension 안의 함수는 modifier가 없어도 실질 public — 잡는다(안의 private은 제외)")
+    func routeCallbackCatchesPublicExtensionMembers() {
+        let src = """
+        public extension SampleFeatureFactory {
+            static func makeView(onNovelTapped: @escaping (Int) -> Void) -> Int { 0 }
+            private static func helper(onFeedTapped: @escaping (Int) -> Void) -> Int { 0 }
+        }
+        extension SampleFeatureFactory {
+            static func internalMake(onNovelTapped: @escaping (Int) -> Void) -> Int { 0 }
+        }
+        """
+        let vs = lint(source: src, path: featurePath, rules: [FeatureRouteCallbackRule()])
+        #expect(vs.count == 1)
+        #expect(vs.first?.ruleID == "feature-route-callback")
+    }
 }

@@ -26,7 +26,7 @@ public enum CollectionFeatureFactory {
     ///   - pendingNovelSelection: "작품 추가" 화면(App이 push)이 확정한 결과를 돌려받는 통로 —
     ///     `nil→값` 전이로 감지하는 1회성 신호(`OnboardingFeature`의 확정 신호 패턴과 동일). 이 화면이
     ///     소비 즉시 다시 `nil`로 되돌린다. 호출자(App)는 "작품 추가" 화면이 확정될 때 이 Binding에
-    ///     결과를 채우고 그만큼 pop하면 된다(`onAddNovelTapped` 문서 참고).
+    ///     결과를 채우고 그만큼 pop하면 된다(`CreateCollectionRoute.addNovel` 문서 참고).
     ///   - onRoute: 화면 전환 의도 콜백(`CreateCollectionRoute.addNovel` — 실제 화면 전환
     ///     (`makeSearchNovelView` 조립)은 호출자(App 조정 계층)가 수행한다, #253).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백. 실제 화면 전환은

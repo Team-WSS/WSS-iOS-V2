@@ -74,9 +74,9 @@ public enum SearchFeatureFactory {
         )
     }
 
-    /// 상세탐색 결과(장르·키워드 필터 검색 그리드) — App이 `onDetailSearchRequested`를 받아 자기
-    /// `NavigationPath`로 push할 때 이 메서드로 조립한다(#196). `NormalSearchView`가 내부에서 직접 push하지
-    /// 않는 이유는 `makeNormalSearchView`의 `onDetailSearchRequested` doc 참고. Demo도 `makeDetailSearchFilterView`의
+    /// 상세탐색 결과(장르·키워드 필터 검색 그리드) — App이 `NormalSearchRoute.detailSearchResult`를 받아
+    /// 자기 `NavigationPath`로 push할 때 이 메서드로 조립한다(#196). `NormalSearchView`가 내부에서 직접
+    /// push하지 않는 이유는 `NormalSearchRoute.detailSearchResult`의 doc 참고. Demo도 `makeDetailSearchFilterView`의
     /// "작품 찾기"를 실제 검색으로 이어 검증할 때 이 메서드를 그대로 쓴다.
     ///
     /// - Parameter onRoute: 화면 전환 의도 콜백(`DetailSearchResultRoute`) — 실제 push는 호출자(App)가
