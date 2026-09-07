@@ -16,6 +16,7 @@ import NovelReviewDomain
 import SocialDomain
 import Logger
 import PushAuthorization
+import Analytics
 
 @MainActor
 @Observable
@@ -170,6 +171,7 @@ final class NovelDetailViewModel {
 
     private let novelID: NovelID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelDomain
     private let loadNovelUseCase: LoadNovelUseCase
@@ -210,7 +212,8 @@ final class NovelDetailViewModel {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         onboardingHintUseCase: OnboardingHintUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.novelID = novelID
         self.loadNovelUseCase = loadNovelUseCase
@@ -225,7 +228,13 @@ final class NovelDetailViewModel {
         self.onboardingHintUseCase = onboardingHintUseCase
         self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State()
+    }
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: NovelDetailAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -308,6 +317,7 @@ private extension NovelDetailViewModel {
 
     /// 탭 전환. 피드 탭은 첫 성공 전까지 진입(재탭 포함)마다 첫 페이지 로드를 시도한다.
     func selectTab(_ tab: Tab) {
+        track(tab == .info ? .infoTabViewed : .feedTabViewed)
         state.selectedTab = tab
         if tab == .feed, !hasLoadedFirstFeeds, feedsTask == nil, !isClosing {
             // ⚠️ 실패 플래그를 **함께 내려야** 한다 — `NovelDetailFeedTab`이 실패를 목록보다 먼저 판단하므로,
@@ -323,6 +333,7 @@ private extension NovelDetailViewModel {
     /// UI에는 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다.
     func toggleInterest() {
         guard !isSyncingInterest, !isClosing, var novel = state.novel else { return }
+        track(.interestToggled)
         let before = novel
         novel.toggleInterest()
         // isInterested가 nil이면 엔티티 정책상 변화가 없다(비로그인 등) → 서버 호출도 하지 않는다.
@@ -386,6 +397,7 @@ private extension NovelDetailViewModel {
         guard !isClosing,
               !syncingLikeFeedIDs.contains(feedID),
               let index = state.feeds.firstIndex(where: { $0.feedId == feedID }) else { return }
+        track(.feedLikeTapped)
         let before = state.feeds[index]
         var feed = before
         // 정책 위반(카운트 음수)이면 반영하지 않는다 — 서버 호출도 없다.

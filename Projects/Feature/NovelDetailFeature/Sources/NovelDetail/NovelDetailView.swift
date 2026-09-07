@@ -123,6 +123,8 @@ struct NovelDetailView: View {
                 // 한다 — `NovelNotificationSettingSheetViewModel.load()`는 `hasLoaded` 가드가 있어
                 // 재진입마다 다시 부르는 건 무해하다(첫 로드 후엔 no-op).
                 notificationSettingViewModel.handle(.load)
+                // 기본 진입 탭이 `.info`라 `selectTab`을 거치지 않는다 — 화면 진입 자체를 여기서 기록.
+                viewModel.track(.infoTabViewed)
             }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
@@ -252,7 +254,10 @@ struct NovelDetailView: View {
                         scrollSpaceName: scrollSpaceName,
                         onSelectStatus: { onRoute(.review(information, $0)) },
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
-                        onCreateFeedTapped: { onRoute(.createFeed(connectedNovel(from: information.novel))) },
+                        onCreateFeedTapped: {
+                            viewModel.track(.writeButtonTapped)
+                            onRoute(.createFeed(connectedNovel(from: information.novel)))
+                        },
                         onReviewBoxFrameChange: { reviewBoxFrame = $0 }
                     )
                     // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
@@ -280,7 +285,8 @@ struct NovelDetailView: View {
                         case .info:
                             NovelDetailInfoTab(
                                 information: information,
-                                isDescriptionExpanded: $isDescriptionExpanded
+                                isDescriptionExpanded: $isDescriptionExpanded,
+                                onPlatformLinkTapped: { viewModel.track(.platformLinkTapped) }
                             )
                         case .feed:
                             NovelDetailFeedTab(
@@ -465,10 +471,12 @@ private extension NovelDetailView {
             WSSDropdownMenu(items: [
                 WSSDropdownItem(title: "오류 제보") {
                     isMenuPresented = false
+                    viewModel.track(.errorReportTapped)
                     if let url = AppURL.errorReport { openURL(url) }
                 },
                 WSSDropdownItem(title: "평가 삭제") {
                     isMenuPresented = false
+                    viewModel.track(.reviewDeleteTapped)
                     // 삭제할 평가가 없으면 VM이 무시한다(알럿 표시 여부 판단은 VM 소유).
                     viewModel.handle(.deleteReviewTapped)
                 }
@@ -644,6 +652,7 @@ private extension NovelDetailView {
     var floatingWriteButton: some View {
         Button {
             guard let novel = viewModel.state.information?.novel else { return }
+            viewModel.track(.writeFloatingButtonTapped)
             onRoute(.createFeed(connectedNovel(from: novel)))
         } label: {
             UnevenRoundedRectangle(
