@@ -487,6 +487,7 @@ struct RuleTests {
                 onRoute: @escaping (Int) -> Void,
                 onAuthenticationRequired: @escaping () -> Void,
                 onSubmitted: @escaping () -> Void,
+                onNovelTapped: Bool,
                 isNovelTapped: Bool,
                 lastTapped: String
             ) -> Int { 0 }

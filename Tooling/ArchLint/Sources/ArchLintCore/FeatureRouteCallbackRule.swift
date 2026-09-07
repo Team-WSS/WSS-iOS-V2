@@ -14,6 +14,8 @@ import SwiftSyntax
 /// 기댄 **프록시**다(문법==의미가 아님). 비-라우팅 콜백(세션 이벤트 `onAuthenticationRequired`,
 /// 완료 결과 `onSubmitted`/`onSaved`/`onUserBlocked` 등)은 과거형·명사형 네이밍이라 이 패턴에
 /// 안 걸리는 게 정상 — 걸리지 않는 이름으로 우회하는 신종 낱개 라우팅 콜백까지 잡지는 못한다.
+/// ⚠️ 실제 미탐 전례: `on…Requested`·`onBrowseNovels`류는 이 패턴 밖이라 #253 전파 때 `onBrowseNovels`가
+/// 라우팅 의도인 채 새어나갔다(리뷰가 잡아 Route로 편입) — 이 패턴 밖 이름의 화면 전환 콜백은 리뷰가 본다.
 /// internal 함수·서브뷰의 로컬 `onXxxTapped`는 모듈 경계가 아니므로 대상이 아니다(public만).
 struct FeatureRouteCallbackRule: Rule {
     let id = "feature-route-callback"
