@@ -14,6 +14,7 @@ import FeedDomain
 import ProfileDomain
 import SocialDomain
 import Logger
+import Analytics
 
 enum FeedTab {
     case myFeed
@@ -166,6 +167,7 @@ final class SosoFeedViewModel {
     private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
     private let reportImproperFeedUseCase: ReportImproperFeedUseCase
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     /// "내 피드" 목록 API가 작성자 정보(닉네임/프로필 이미지)를 내려주지 않아, 별도로 받아온 내 프로필로 채워 넣는다.
     /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시하되, 당겨서 새로고침 시엔 무효화된다(`.pullToRefresh`) —
@@ -216,7 +218,8 @@ final class SosoFeedViewModel {
         deleteFeedUseCase: DeleteFeedUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.state = State()
 
@@ -229,6 +232,12 @@ final class SosoFeedViewModel {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     //MARK: - Handle
@@ -638,6 +647,7 @@ final class SosoFeedViewModel {
     /// 끼어들면 서버 새 값 위에 이중 토글이 걸린다. 같은 셀은 서버 동기화가 끝날 때까지 연타를 무시한다.
     private func toggleLike(_ feedID: FeedID) {
         guard !syncingLikeFeedIDs.contains(feedID) else { return }
+        track(.likeTapped)
         let beforeMy = state.myFeeds.first { $0.feedId == feedID }
         let beforeSoso = state.sosoFeeds.first { $0.feedId == feedID }
         guard let before = beforeMy ?? beforeSoso else { return }
@@ -788,6 +798,7 @@ final class SosoFeedViewModel {
     /// 피드 신고. 성공하면 접수 완료 알럿으로 전환한다(신고는 목록에 보이는 변화가 없다).
     private func reportFeed(_ feedID: FeedID, spoiler: Bool) async {
         defer { feedActionTask = nil }
+        track(spoiler ? .feedSpoilerReported : .feedAbuseReported)
         do {
             if spoiler {
                 try await reportSpoilerFeedUseCase.execute(id: feedID)

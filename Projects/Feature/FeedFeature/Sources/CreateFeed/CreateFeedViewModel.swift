@@ -11,6 +11,7 @@ import Observation
 import BaseDomain
 import FeedDomain
 import SearchDomain
+import Analytics
 
 @MainActor
 @Observable
@@ -132,6 +133,7 @@ final class CreateFeedViewModel {
     private let loadFeedDetailUseCase: LoadFeedDetailUseCase?
     /// 앱스토어 평점 프롬프트 게이팅(피드·감상평 공유). 저장 성공 시 참여를 기록하고 요청 여부를 판정한다.
     private let appReviewUseCase: AppReviewRequestUseCase
+    private let analyticsTracker: AnalyticsTracker?
 
     /// 수정 모드 로드는 한 번만 — `.onAppear`가 재진입마다 불려도 재요청하지 않는다.
     private var hasLoadedForEdit = false
@@ -149,7 +151,8 @@ final class CreateFeedViewModel {
         searchNovelUseCase: SearchNovelUseCase,
         loadFeedDetailUseCase: LoadFeedDetailUseCase? = nil,
         appReviewUseCase: AppReviewRequestUseCase,
-        initialDraft: FeedDraft
+        initialDraft: FeedDraft,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.mode = mode
         self.createFeedUseCase = createFeedUseCase
@@ -159,6 +162,12 @@ final class CreateFeedViewModel {
         self.appReviewUseCase = appReviewUseCase
         self.originalDraft = initialDraft
         self.state = State(draft: initialDraft)
+        self.analyticsTracker = analyticsTracker
+    }
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -187,6 +196,7 @@ final class CreateFeedViewModel {
 
         case .toggleSpoiler:
             newState.draft.toggleSpoiler()
+            track(newState.draft.isSpoiler ? .spoilerToggleOn : .spoilerToggleOff)
 
         case .togglePrivate:
             newState.draft.togglePrivate()
@@ -316,6 +326,8 @@ private extension CreateFeedViewModel {
                 }
                 try await editFeedUseCase.execute(feedID: feedID, editedFeed: draft, imageDatas: imageDatas)
             }
+            // CSV 이벤트는 "글 작성 완료"(신규 작성)만 가리킨다 — 수정 제출은 트래킹하지 않는다.
+            if case .create = mode { track(.submitted) }
             state.submitState = .submitted
             recordEngagementAndGateReview()
         } catch let error {

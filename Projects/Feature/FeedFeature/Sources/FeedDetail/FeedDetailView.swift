@@ -102,6 +102,7 @@ struct FeedDetailView: View {
         .wssCustomNavigationBar()
         .onAppear {
             Task { await viewModel.handle(.load) }
+            viewModel.track(.detailViewed)
         }
         .fullScreenCover(item: $selectedImage) { item in
             FeedDetailImageViewer(

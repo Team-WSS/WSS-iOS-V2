@@ -16,6 +16,7 @@ import SocialDomain
 import ProfileDomain
 import WSSComponent
 import Logger
+import Analytics
 
 @Observable
 @MainActor
@@ -115,6 +116,7 @@ final class FeedDetailViewModel {
     private let loadProfileUseCase: LoadProfileUseCase
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // MARK: - Init
 
@@ -133,7 +135,8 @@ final class FeedDetailViewModel {
         reportSpoilerCommentUseCase: ReportSpoilerCommentUseCase,
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
         loadProfileUseCase: LoadProfileUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.feedID = feedID
         self.currentUserID = currentUserID
@@ -155,9 +158,14 @@ final class FeedDetailViewModel {
         self.reportImproperCommentUseCase = reportImproperCommentUseCase
         self.loadProfileUseCase = loadProfileUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
-    
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
+    }
+
     // MARK: - Action
     
     public enum Action {
@@ -199,6 +207,8 @@ final class FeedDetailViewModel {
             if let editingID = state.editingCommentID {
                 didSucceed = await editComment(commentID: editingID)
             } else {
+                // CSV 이벤트는 "댓글을 작성했을 때"(수정 아님)만 가리킨다 — 수정 제출은 트래킹하지 않는다.
+                track(.commentSubmitted)
                 didSucceed = await createComment()
             }
             state.isSubmittingComment = false
@@ -314,9 +324,11 @@ final class FeedDetailViewModel {
         guard let alert = state.alert else { return }
         switch alert {
         case .reportSpoiler(let commentID):
+            track(commentID == nil ? .feedSpoilerReported : .commentSpoilerReported)
             state.alert = await reportSpoiler(commentID: commentID) ? .reportSpoilerCompleted : nil
 
         case .reportImproper(let commentID):
+            track(commentID == nil ? .feedAbuseReported : .commentAbuseReported)
             state.alert = await reportImproper(commentID: commentID) ? .reportImproperCompleted : nil
 
         case .reportSpoilerCompleted, .reportImproperCompleted, .feedUnavailable:
@@ -434,6 +446,7 @@ final class FeedDetailViewModel {
     private func toggleLike() async {
         guard state.detail != nil else { return }
 
+        track(.detailLikeTapped)
         let wasLiked = state.detail!.isLiked
         try? state.detail!.toggleLike()
 

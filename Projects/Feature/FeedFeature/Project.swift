@@ -23,7 +23,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.profile)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        .module(.core(.analytics))
     ],
     demoDependencies: [
         .module(.core(.networking)),
