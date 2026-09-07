@@ -25,8 +25,7 @@ enum CollectionListAssembly {
         userID: UserID,
         dependencies: AppDependencies,
         onAuthenticationRequired: @escaping () -> Void,
-        onCollectionSelected: @escaping (CollectionID) -> Void,
-        onCreateTapped: @escaping () -> Void = {},
+        onRoute: @escaping (CollectionListRoute) -> Void,
         isOwnCollections: Bool = false
     ) -> some View {
         CollectionFeatureFactory.makeCollectionListView(
@@ -37,8 +36,7 @@ enum CollectionListAssembly {
             ),
             logger: dependencies.logger,
             onAuthenticationRequired: onAuthenticationRequired,
-            onCreateTapped: onCreateTapped,
-            onCollectionSelected: onCollectionSelected,
+            onRoute: onRoute,
             isOwnCollections: isOwnCollections
         )
     }

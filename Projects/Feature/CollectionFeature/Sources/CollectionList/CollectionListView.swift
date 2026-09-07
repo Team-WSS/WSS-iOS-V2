@@ -27,13 +27,10 @@ struct CollectionListView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let onAuthenticationRequired: () -> Void
-    /// "컬렉션 만들기" 버튼 탭 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCreateCollectionView`
-    /// 조립)은 호출자(App 조정 계층)가 수행한다. `isOwnCollections == false`면 버튼 자체가 안 뜨므로
-    /// 호출될 일이 없다.
-    private let onCreateTapped: () -> Void
-    /// 카드 탭 → 컬렉션 상세 진입 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCollectionDetailView`
-    /// 조립)은 호출자(App 조정 계층)가 수행한다.
-    private let onCollectionSelected: (CollectionID) -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CollectionListRoute`(Navigation/)가 정본. 실제 화면 조립·push는
+    /// 호출자(App 조정 계층)가 수행한다. `.createCollection`은 `isOwnCollections == false`면 버튼 자체가
+    /// 안 뜨므로 호출될 일이 없다.
+    private let onRoute: (CollectionListRoute) -> Void
     /// `false`면 남의 컬렉션을 보는 자리다(타유저 프로필의 "컬렉션" 헤더 탭, #201 후속) — 세그먼트
     /// 탭("좋아요한 컬렉션"이 세션 토큰=로그인 사용자 자신 기준이라 재사용 불가, `CollectionFeature/CLAUDE.md`
     /// 참고)과 "컬렉션 만들기"를 숨기고 "내 컬렉션" 탭 콘텐츠만 보여준다. `viewModel.state.selectedTab`은
@@ -43,14 +40,12 @@ struct CollectionListView: View {
     init(
         viewModel: CollectionListViewModel,
         onAuthenticationRequired: @escaping () -> Void,
-        onCreateTapped: @escaping () -> Void,
-        onCollectionSelected: @escaping (CollectionID) -> Void,
+        onRoute: @escaping (CollectionListRoute) -> Void,
         isOwnCollections: Bool = true
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onAuthenticationRequired = onAuthenticationRequired
-        self.onCreateTapped = onCreateTapped
-        self.onCollectionSelected = onCollectionSelected
+        self.onRoute = onRoute
         self.isOwnCollections = isOwnCollections
     }
 
@@ -159,7 +154,7 @@ private extension CollectionListView {
 
     var createCollectionButton: some View {
         Button {
-            onCreateTapped()
+            onRoute(.createCollection)
         } label: {
             HStack(spacing: 10) {
                 Text("컬렉션 만들기")
@@ -185,7 +180,7 @@ private extension CollectionListView {
 
     func collectionCard(_ card: CollectionCard) -> some View {
         Button {
-            onCollectionSelected(card.id)
+            onRoute(.collectionDetail(card.id))
         } label: {
             collectionCardContent(card)
         }
@@ -318,8 +313,7 @@ private extension CollectionListView {
                 loadLikedCollectionsUseCase: PreviewLoadLikedCollectionsUseCase()
             ),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
-            onCreateTapped: { print("컬렉션 만들기 진입") },
-            onCollectionSelected: { print("컬렉션 상세 진입: \($0)") }
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

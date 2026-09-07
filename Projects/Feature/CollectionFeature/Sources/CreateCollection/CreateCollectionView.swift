@@ -32,24 +32,25 @@ struct CreateCollectionView: View {
     /// "작품 추가" 화면(App이 push)이 확정한 결과 — `nil→값` 전이로 감지하는 1회성 신호
     /// (`OnboardingFeature`의 확정 신호 패턴과 동일). 소비 즉시 다시 `nil`로 되돌린다.
     private let pendingNovelSelection: Binding<[CollectionNovel]?>
-    /// "작품 추가" 타일 탭 콜백 — 현재 선택된 작품 목록을 실어 올린다("작품 추가" 화면이 이미 담긴
-    /// 작품도 선택된 채로 보여주는 편집 화면이라서). 실제 화면 전환(`CollectionFeatureFactory.makeSearchNovelView`
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CreateCollectionRoute`(Navigation/)가 정본.
+    /// `.addNovel`은 현재 선택된 작품 목록을 실어 올리고("작품 추가" 화면이 이미 담긴 작품도 선택된
+    /// 채로 보여주는 편집 화면이라서), 실제 화면 전환(`CollectionFeatureFactory.makeSearchNovelView`
     /// 조립)은 호출자(App 조정 계층)가 수행한다.
-    private let onAddNovelTapped: ([CollectionNovel]) -> Void
+    private let onRoute: (CreateCollectionRoute) -> Void
     /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행.
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: CreateCollectionViewModel,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
-        onAddNovelTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self._nameFieldText = State(initialValue: viewModel.state.draft.name)
         self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
         self.pendingNovelSelection = pendingNovelSelection
-        self.onAddNovelTapped = onAddNovelTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -314,7 +315,7 @@ private extension CreateCollectionView {
     var addNovelTile: some View {
         Button {
             let currentSelection = viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] }
-            onAddNovelTapped(currentSelection)
+            onRoute(.addNovel(currentSelection))
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 // ⚠️ `.aspectRatio`를 VStack에 직접 걸면 VStack이 제 내용물(텍스트+아이콘, ~41pt)의
@@ -435,7 +436,7 @@ private extension CreateCollectionView {
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
             pendingNovelSelection: .constant(nil),
-            onAddNovelTapped: { _ in print("작품 추가 진입") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }
@@ -464,7 +465,7 @@ private extension CreateCollectionView {
                 createCollectionUseCase: PreviewCreateCollectionUseCase()
             ),
             pendingNovelSelection: .constant(nil),
-            onAddNovelTapped: { _ in print("작품 추가 진입") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }

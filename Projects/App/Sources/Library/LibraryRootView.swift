@@ -168,15 +168,29 @@ struct LibraryRootView: View {
                             id: id,
                             dependencies: dependencies,
                             onAuthenticationRequired: onAuthenticationRequired,
-                            onNovelTapped: { path.append(Destination.novel($0)) },
-                            onEditTapped: { path.append(Destination.editCollection(id)) }
+                            onRoute: { route in
+                                switch route {
+                                case .novelDetail(let novelID):
+                                    path.append(Destination.novel(novelID))
+                                case .editCollection:
+                                    path.append(Destination.editCollection(id))
+                                }
+                            }
                         )
                     case .collectionList(let userID):
                         CollectionListAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
                             onAuthenticationRequired: onAuthenticationRequired,
-                            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
+                            onRoute: { route in
+                                switch route {
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
+                                case .createCollection:
+                                    // 타유저 컬렉션 목록(isOwnCollections=false)엔 "만들기" 버튼이 안 떠 도달 불가.
+                                    break
+                                }
+                            }
                         )
                     case .editCollection(let id):
                         editCollectionView(id: id)
@@ -245,7 +259,12 @@ private extension LibraryRootView {
             id: id,
             dependencies: dependencies,
             pendingNovelSelection: $pendingCollectionNovelSelection,
-            onAddNovelTapped: handleCollectionAddNovelTapped,
+            onRoute: { route in
+                switch route {
+                case .addNovel(let currentSelection):
+                    handleCollectionAddNovelTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -255,7 +274,12 @@ private extension LibraryRootView {
             initialSelection: initialSelection,
             dependencies: dependencies,
             onConfirm: handleCollectionSearchNovelConfirm,
-            onLibrarySelectTapped: handleCollectionLibrarySelectTapped,
+            onRoute: { route in
+                switch route {
+                case .myLibrarySelect(let currentSelection):
+                    handleCollectionLibrarySelectTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

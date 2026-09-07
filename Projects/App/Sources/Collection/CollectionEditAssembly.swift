@@ -28,7 +28,7 @@ enum CollectionEditAssembly {
         id: CollectionID,
         dependencies: AppDependencies,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
-        onAddNovelTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         CollectionFeatureFactory.makeEditCollectionView(
@@ -39,7 +39,7 @@ enum CollectionEditAssembly {
             ),
             logger: dependencies.logger,
             pendingNovelSelection: pendingNovelSelection,
-            onAddNovelTapped: onAddNovelTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -48,7 +48,7 @@ enum CollectionEditAssembly {
         initialSelection: [CollectionNovel],
         dependencies: AppDependencies,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
-        onLibrarySelectTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CollectionSearchNovelRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         CollectionFeatureFactory.makeSearchNovelView(
@@ -56,7 +56,7 @@ enum CollectionEditAssembly {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             logger: dependencies.logger,
             onConfirm: onConfirm,
-            onLibrarySelectTapped: onLibrarySelectTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

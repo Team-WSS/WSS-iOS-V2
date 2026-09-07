@@ -167,7 +167,11 @@ private struct DemoRootView: View {
                 createCollectionUseCase: DemoCreateCollectionUseCase(),
                 logger: consoleLogger,
                 pendingNovelSelection: $pendingNovelSelection,
-                onAddNovelTapped: handleAddNovelTapped,
+                onRoute: { route in
+                    switch route {
+                    case .addNovel(let currentSelection): handleAddNovelTapped(currentSelection)
+                    }
+                },
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -185,7 +189,11 @@ private struct DemoRootView: View {
                 loadCollectionDetailUseCase: DemoLoadCollectionDetailUseCase(),
                 logger: consoleLogger,
                 pendingNovelSelection: $pendingNovelSelection,
-                onAddNovelTapped: handleAddNovelTapped,
+                onRoute: { route in
+                    switch route {
+                    case .addNovel(let currentSelection): handleAddNovelTapped(currentSelection)
+                    }
+                },
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -203,8 +211,12 @@ private struct DemoRootView: View {
                 loadLikedCollectionsUseCase: DemoLoadLikedCollectionsUseCase(isEmpty: isEmpty),
                 logger: consoleLogger,
                 onAuthenticationRequired: handleAuthenticationRequired,
-                onCreateTapped: { path.append(Destination.create) },
-                onCollectionSelected: { id in path.append(Destination.detail(id)) }
+                onRoute: { route in
+                    switch route {
+                    case .createCollection: path.append(Destination.create)
+                    case .collectionDetail(let id): path.append(Destination.detail(id))
+                    }
+                }
             )
         case .live:
             makeLiveListView()
@@ -220,8 +232,12 @@ private struct DemoRootView: View {
             deleteCollectionUseCase: DemoDeleteCollectionUseCase(),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
-            onNovelTapped: handleNovelTapped,
-            onEditTapped: { path.append(Destination.edit(id)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID): handleNovelTapped(novelID)
+                case .editCollection: path.append(Destination.edit(id))
+                }
+            },
             kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,
             kakaoCollectionShareTemplateID2: NetworkingConfig.kakaoCollectionShareTemplateID2,
             kakaoCollectionShareTemplateID3: NetworkingConfig.kakaoCollectionShareTemplateID3
@@ -237,7 +253,11 @@ private struct DemoRootView: View {
                 searchNovelUseCase: DemoSearchNovelUseCase(),
                 logger: consoleLogger,
                 onConfirm: handleSearchNovelConfirm,
-                onLibrarySelectTapped: handleLibrarySelectTapped,
+                onRoute: { route in
+                    switch route {
+                    case .myLibrarySelect(let currentSelection): handleLibrarySelectTapped(currentSelection)
+                    }
+                },
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -342,7 +362,11 @@ private struct DemoRootView: View {
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: repository),
             logger: consoleLogger,
             pendingNovelSelection: $pendingNovelSelection,
-            onAddNovelTapped: handleAddNovelTapped,
+            onRoute: { route in
+                switch route {
+                case .addNovel(let currentSelection): handleAddNovelTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }
@@ -360,7 +384,11 @@ private struct DemoRootView: View {
             loadCollectionDetailUseCase: DefaultLoadCollectionDetailUseCase(collectionRepository: repository),
             logger: consoleLogger,
             pendingNovelSelection: $pendingNovelSelection,
-            onAddNovelTapped: handleAddNovelTapped,
+            onRoute: { route in
+                switch route {
+                case .addNovel(let currentSelection): handleAddNovelTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }
@@ -378,8 +406,12 @@ private struct DemoRootView: View {
             loadLikedCollectionsUseCase: DefaultLoadLikedCollectionsUseCase(collectionRepository: repository),
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
-            onCreateTapped: { path.append(Destination.create) },
-            onCollectionSelected: { id in path.append(Destination.detail(id)) }
+            onRoute: { route in
+                switch route {
+                case .createCollection: path.append(Destination.create)
+                case .collectionDetail(let id): path.append(Destination.detail(id))
+                }
+            }
         )
     }
 
@@ -395,7 +427,11 @@ private struct DemoRootView: View {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             logger: consoleLogger,
             onConfirm: handleSearchNovelConfirm,
-            onLibrarySelectTapped: handleLibrarySelectTapped,
+            onRoute: { route in
+                switch route {
+                case .myLibrarySelect(let currentSelection): handleLibrarySelectTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }

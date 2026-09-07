@@ -16,17 +16,17 @@ import CollectionFeature
 /// 목록뿐 아니라 홈/피드/서재/My 4탭의 타유저 프로필(`UserPageAssembly`) 컬렉션 미리보기도 같은 화면을
 /// 공유해서(#201 후속) `NovelDetailAssembly`/`NovelReviewAssembly`와 같은 이유로 공용으로 뽑았다.
 ///
-/// `onEditTapped`는 소유자(`detail.isMine == true`)에게만 노출되는 "컬렉션 수정" 진입 콜백이라 기본값을
-/// no-op으로 둔다 — 타유저 프로필에서 열리는 컬렉션은 항상 남의 것이라(`isMine == false`) 그 버튼
-/// 자체가 안 뜨므로 이 콜백이 호출될 일이 없다. 자기 컬렉션 편집이 필요한 마이페이지만 실제로 채운다.
+/// 화면 전환은 `onRoute`(`CollectionDetailRoute` exhaustive switch, #253) 하나로 받는다 — 예전의
+/// `onEditTapped` 기본값 no-op은 딥링크(#228) 도입 직후 "수정" 메뉴가 죽은 버튼이 되는 사고를 만든
+/// 전례가 있어(4탭 전부 수정 트리를 갖게 되며 해소), 이제 모든 호출자가 `.editCollection` 매핑을
+/// 명시해야 컴파일된다.
 @MainActor
 enum CollectionDetailAssembly {
     static func makeView(
         id: CollectionID,
         dependencies: AppDependencies,
         onAuthenticationRequired: @escaping () -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void = {}
+        onRoute: @escaping (CollectionDetailRoute) -> Void
     ) -> some View {
         CollectionFeatureFactory.makeCollectionDetailView(
             id: id,
@@ -37,8 +37,7 @@ enum CollectionDetailAssembly {
             deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: dependencies.collectionRepository),
             logger: dependencies.logger,
             onAuthenticationRequired: onAuthenticationRequired,
-            onNovelTapped: onNovelTapped,
-            onEditTapped: onEditTapped,
+            onRoute: onRoute,
             kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,
             kakaoCollectionShareTemplateID2: NetworkingConfig.kakaoCollectionShareTemplateID2,
             kakaoCollectionShareTemplateID3: NetworkingConfig.kakaoCollectionShareTemplateID3
