@@ -609,12 +609,17 @@ private extension MypageRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) },
-            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-            onUserProfileTapped: {
-                // 다른 탭의 프로필 탭 이중 가드(#196)와 동일 — 내 프로필로는 절대 안 간다.
-                guard $0.value != currentUserID else { return }
-                path.append(Destination.userPage($0))
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .editFeed(let feedID):
+                    path.append(Destination.editFeed(feedID))
+                case .userProfile(let userID):
+                    // 다른 탭의 프로필 탭 이중 가드(#196)와 동일 — 내 프로필로는 절대 안 간다.
+                    guard userID.value != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
+                }
             },
             onAuthenticationRequired: onAuthenticationRequired
         )

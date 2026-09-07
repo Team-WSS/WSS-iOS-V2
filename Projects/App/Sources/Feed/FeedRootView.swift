@@ -113,18 +113,25 @@ struct FeedRootView: View {
                 logger: dependencies.logger,
                 // 앱 어느 탭에서든 피드 작성이 끝나면 오르는 카운터 — 목록이 새 글을 받는 유일한 경로(`FeedListInvalidation`).
                 feedCreatedVersion: dependencies.feedListInvalidation.feedCreatedVersion,
-                onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-                onFeedTapped: { path.append(Destination.feed($0)) },
-                onCreateFeedTapped: { path.append(Destination.createFeed) },
-                onUserProfileTapped: {
-                    // `TotalFeed.isMyFeed`로 Feature 쪽에서 이미 내 프로필 탭 자체를 막지만(#196),
-                    // 여기서도 한 번 더 막는다 — 라우팅이 실제로 일어나는 지점이라 여기서 막아야
-                    // Feature/서버의 isMyFeed 판단이 어긋나는 경우에도 내 프로필로는 절대 안 간다는
-                    // 게 보장된다(`FeedDetailAssembly.currentUserID`와 같은 로컬 캐시 비교).
-                    guard $0 != currentUserID else { return }
-                    path.append(Destination.userPage($0))
-                },
-                onNovelTapped: { path.append(Destination.novel($0)) }
+                onRoute: { route in
+                    switch route {
+                    case .feedDetail(let feedID):
+                        path.append(Destination.feed(feedID))
+                    case .createFeed:
+                        path.append(Destination.createFeed)
+                    case .editFeed(let feedID):
+                        path.append(Destination.editFeed(feedID))
+                    case .userProfile(let userID):
+                        // `TotalFeed.isMyFeed`로 Feature 쪽에서 이미 내 프로필 탭 자체를 막지만(#196),
+                        // 여기서도 한 번 더 막는다 — 라우팅이 실제로 일어나는 지점이라 여기서 막아야
+                        // Feature/서버의 isMyFeed 판단이 어긋나는 경우에도 내 프로필로는 절대 안 간다는
+                        // 게 보장된다(`FeedDetailAssembly.currentUserID`와 같은 로컬 캐시 비교).
+                        guard userID != currentUserID else { return }
+                        path.append(Destination.userPage(userID))
+                    case .novelDetail(let novelID):
+                        path.append(Destination.novel(novelID))
+                    }
+                }
             )
             .navigationDestination(for: Destination.self) { destination in
                 Group {
@@ -294,12 +301,17 @@ private extension FeedRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) },
-            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-            onUserProfileTapped: {
-                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
-                guard $0 != currentUserID else { return }
-                path.append(Destination.userPage($0))
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .editFeed(let feedID):
+                    path.append(Destination.editFeed(feedID))
+                case .userProfile(let userID):
+                    // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                    guard userID != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
+                }
             },
             onAuthenticationRequired: onAuthenticationRequired
         )

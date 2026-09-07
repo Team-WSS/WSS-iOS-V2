@@ -39,28 +39,19 @@ struct FeedDetailView: View {
     @State private var showFeedDropdown: Bool = false
     @State private var showCommentDropdown: Bool = false
 
-    private let onNovelTapped: (NovelID) -> Void
-    /// 내 글 드롭다운의 "수정" → 수정 화면 진입 콜백. 대상 피드 `FeedID`만 넘긴다 — 실제 데이터 로드는
-    /// 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 값만 그대로
-    /// 받아 하면 된다.
-    private let onEditFeedTapped: (FeedID) -> Void
-    /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. 실제 화면 전환(`UserPageAssembly` 조립)은
-    /// 호출자(App 조정 계층)가 수행한다(`SosoFeedView`의 `onUserProfileTapped`와 동일 계약).
-    private let onUserProfileTapped: (UserID) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `FeedDetailRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다.
+    private let onRoute: (FeedDetailRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 상세/댓글/프로필 이미지 로드가 401로 막히면 발화(Feature 공통 계약).
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: FeedDetailViewModel,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onRoute: @escaping (FeedDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelTapped = onNovelTapped
-        self.onEditFeedTapped = onEditFeedTapped
-        self.onUserProfileTapped = onUserProfileTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
     
@@ -150,7 +141,7 @@ struct FeedDetailView: View {
                                     Task { await viewModel.handle(.userProfileUnavailableTapped) }
                                     return
                                 }
-                                onUserProfileTapped(userID)
+                                onRoute(.userProfile(userID))
                             },
                             isProfileTappable: !viewModel.isMyFeed,
                             showThreeDotsButton: false
@@ -198,7 +189,7 @@ struct FeedDetailView: View {
                         )
                         .padding(.horizontal, 16)
                         .onTapGesture {
-                            onNovelTapped(novel.basicInfo.id)
+                            onRoute(.novelDetail(novel.basicInfo.id))
                         }
 
                         Spacer().frame(height: 30)
@@ -245,7 +236,7 @@ struct FeedDetailView: View {
                                     Task { await viewModel.handle(.userProfileUnavailableTapped) }
                                     return
                                 }
-                                onUserProfileTapped(userID)
+                                onRoute(.userProfile(userID))
                             },
                             threeDotsAction: {
                                 if showCommentDropdown, selectedCommentID == comment.id {
@@ -333,7 +324,7 @@ struct FeedDetailView: View {
                     action: {
                         showFeedDropdown = false
                         if let feedID = viewModel.state.detail?.id {
-                            onEditFeedTapped(feedID)
+                            onRoute(.editFeed(feedID))
                         }
                     },
                     textColor: WSSColor.wssBlack.swiftUIColor
@@ -559,7 +550,7 @@ struct FeedDetailView: View {
             reportSpoilerCommentUseCase: PreviewReportSpoilerCommentUseCase(),
             reportImproperCommentUseCase: PreviewReportImproperCommentUseCase(),
             loadProfileUseCase: PreviewLoadProfileUseCase()
-        ), onNovelTapped: { print("작품 상세 진입: \($0)") })
+        ), onRoute: { print("화면 전환 요청: \($0)") })
     }
 }
 

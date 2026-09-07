@@ -36,18 +36,10 @@ struct SosoFeedView: View {
 
     @Namespace private var tabAnimation
 
-    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 대상 피드 `FeedID`만 넘긴다 — 실제 데이터
-    /// 로드는 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가
-    /// 값만 그대로 받아 하면 된다.
-    private let onEditFeedTapped: (FeedID) -> Void
-    /// 피드 셀 탭(좋아요 버튼 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백. 화면 전환은 호출자가 수행한다.
-    private let onFeedTapped: (FeedID) -> Void
-    /// 우상단 연필 아이콘 → 피드 작성 진입 콜백. 화면 전환은 호출자가 수행한다.
-    private let onCreateFeedTapped: () -> Void
-    /// 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백. `Author.userId`가 nil이면 호출하지 않는다.
-    private let onUserProfileTapped: (UserID) -> Void
-    /// 연결 작품 배너 탭 → 작품 상세 진입 콜백.
-    private let onNovelTapped: (NovelID) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `SosoFeedRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다(`.userProfile`은 `Author.userId`가
+    /// nil이면 호출하지 않는다).
+    private let onRoute: (SosoFeedRoute) -> Void
     /// 피드 작성 완료 신호(App이 올리는 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터 다시 받고 스크롤을
     /// 최상단으로 — 이 화면은 재진입에 목록을 다시 받지 않으므로(다녀온 셀만 동기화) 새 글은 이 신호로만 들어온다.
     /// 앱 어느 탭에서 작성해도 오도록 App 전역 값이며, TabView가 이 뷰를 계속 mount해 두므로 다른 탭에 있어도
@@ -62,19 +54,11 @@ struct SosoFeedView: View {
     init(
         viewModel: SosoFeedViewModel,
         feedCreatedVersion: Int = 0,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onCreateFeedTapped: @escaping () -> Void = {},
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
-        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
+        onRoute: @escaping (SosoFeedRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.feedCreatedVersion = feedCreatedVersion
-        self.onEditFeedTapped = onEditFeedTapped
-        self.onFeedTapped = onFeedTapped
-        self.onCreateFeedTapped = onCreateFeedTapped
-        self.onUserProfileTapped = onUserProfileTapped
-        self.onNovelTapped = onNovelTapped
+        self.onRoute = onRoute
     }
 
     var body: some View {
@@ -141,7 +125,7 @@ struct SosoFeedView: View {
 
             Spacer()
 
-            Button(action: onCreateFeedTapped) {
+            Button(action: { onRoute(.createFeed) }) {
                 WSSImage.icPencilSm.swiftUIImage
             }
         }
@@ -328,7 +312,7 @@ struct SosoFeedView: View {
                             .onTapGesture {
                                 // 돌아왔을 때 이 셀만 상세로 다시 맞추기 위해 떠나기 전에 기억시킨다.
                                 viewModel.handle(.feedVisited(feed.feedId))
-                                onFeedTapped(feed.feedId)
+                                onRoute(.feedDetail(feed.feedId))
                             }
                         Rectangle()
                             .frame(height: 1)
@@ -363,7 +347,7 @@ struct SosoFeedView: View {
                     viewModel.handle(.userProfileUnavailableTapped)
                     return
                 }
-                onUserProfileTapped(userId)
+                onRoute(.userProfile(userId))
             },
             // 내 글이면 내 프로필로 "이동"할 곳이 없다 — 탭 영역 자체를 없애 탭이 셀 나머지 영역과
             // 동일하게 피드 상세 진입으로 흘러가게 한다(죽은 탭 영역을 만들지 않기 위함).
@@ -387,7 +371,7 @@ struct SosoFeedView: View {
                         genreType: genre,
                         novelTitle: novel.title,
                         novelRating: novel.rating ?? 0,
-                        linkNovelTapped: { onNovelTapped(novel.id) }
+                        linkNovelTapped: { onRoute(.novelDetail(novel.id)) }
                     )
                 }
             },
@@ -437,7 +421,7 @@ struct SosoFeedView: View {
                     feedMenuContext = nil
                     // 수정하고 돌아오면 이 셀만 상세로 다시 맞춘다(작성 완료 신호는 작성에만 붙는다).
                     viewModel.handle(.feedVisited(feed.feedId))
-                    onEditFeedTapped(feed.feedId)
+                    onRoute(.editFeed(feed.feedId))
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
@@ -517,7 +501,7 @@ struct SosoFeedView: View {
             reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
             reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
         ),
-        onEditFeedTapped: { print("피드 수정 진입: \($0)") }
+        onRoute: { print("화면 전환 요청: \($0)") }
     )
 }
 

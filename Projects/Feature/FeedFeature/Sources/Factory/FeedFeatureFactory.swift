@@ -99,9 +99,7 @@ public enum FeedFeatureFactory {
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
         loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onRoute: @escaping (FeedDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         FeedDetailView(
@@ -122,9 +120,7 @@ public enum FeedFeatureFactory {
                 loadProfileUseCase: loadProfileUseCase,
                 logger: logger
             ),
-            onNovelTapped: onNovelTapped,
-            onEditFeedTapped: onEditFeedTapped,
-            onUserProfileTapped: onUserProfileTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -136,17 +132,8 @@ public enum FeedFeatureFactory {
     ///   - feedCreatedVersion: 피드 작성 완료 신호(App 전역 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터
     ///     다시 받고 스크롤을 최상단으로 올린다 — 새 글은 이 신호로만 목록에 들어온다. 수정 완료엔 붙이지 말 것
     ///     (수정은 이 화면이 다녀온 셀 동기화로 처리한다).
-    ///   - onEditFeedTapped: 피드 수정 진입 콜백 — 내 글 threedots 드롭다운의 "수정하기". 대상 피드
-    ///     `FeedID`만 넘긴다 — 실제 데이터 로드는 수정 화면 자신이 한다(`makeEditFeedView` 참고).
-    ///     실제 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onFeedTapped: 피드 셀 탭(좋아요 등 안쪽 인터랙션 제외) → 피드 상세 진입 콜백.
-    ///     실제 화면 전환(`makeFeedDetailView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onCreateFeedTapped: 우상단 연필 아이콘 → 피드 작성 진입 콜백.
-    ///     실제 화면 전환(`makeCreateFeedView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onUserProfileTapped: 작성자 프로필(이미지+닉네임) 탭 → 유저 프로필 진입 콜백.
-    ///     실제 화면 전환(`UserPageFactory.makeView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onNovelTapped: 연결 작품 배너 탭 → 작품 상세 진입 콜백.
-    ///     실제 화면 전환(`NovelDetailFactory` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `SosoFeedRoute`(Navigation/) 참고.
+    ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
     @MainActor
     public static func makeSosoFeedView(
         loadMyFeedsUseCase: LoadMyFeedsUseCase,
@@ -159,11 +146,7 @@ public enum FeedFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
         feedCreatedVersion: Int = 0,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onCreateFeedTapped: @escaping () -> Void = {},
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
-        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
+        onRoute: @escaping (SosoFeedRoute) -> Void
     ) -> some View {
         SosoFeedView(
             viewModel: SosoFeedViewModel(
@@ -178,11 +161,7 @@ public enum FeedFeatureFactory {
                 logger: logger
             ),
             feedCreatedVersion: feedCreatedVersion,
-            onEditFeedTapped: onEditFeedTapped,
-            onFeedTapped: onFeedTapped,
-            onCreateFeedTapped: onCreateFeedTapped,
-            onUserProfileTapped: onUserProfileTapped,
-            onNovelTapped: onNovelTapped
+            onRoute: onRoute
         )
     }
 
