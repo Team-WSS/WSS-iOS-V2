@@ -60,7 +60,9 @@ Sources/
 │                                          # 서재 블록 탭은 push가 아니라 MainTabView 탭 전환으로 위임
 │                                          # (모듈명과 Factory 이름이 다르니 혼동 주의) — 타유저 프로필
 │                                          # 안의 서재 블록(push)과는 별개.
-├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
+├── Novel/   ├── NovelDetailAssembly.swift  # 작품 상세 조립 공용 헬퍼 — 4탭 전부 공유(아래. 문서엔 오래
+│            │                                 # 3탭으로 남아 있었으나 My 탭도 컬렉션 상세→작품 상세로 사용,
+│            │                                 # #253 onRoute 전환 때 컴파일러가 확인).
 │            └── NovelReviewAssembly.swift  # 작품 평가 조립 공용 헬퍼 — 작품 상세 평가 상태바 탭에서
 │                                             # 3탭이 공유(#197).
 ├── Search/  └── SearchAssembly.swift       # 일반 검색 조립 공용 헬퍼 — 홈/피드/서재 3탭이 공유(아래).
@@ -98,13 +100,13 @@ Sources/
 - ⚠️ **탭 Root의 `NavigationPath`(`path`)와 그 아래 Feature가 로컬 `@State` + `.navigationDestination(item:)`로 직접 push한 화면을 섞으면, 그 로컬 화면이 스택에서 사라진다.** `SearchAssembly`의 상세탐색 결과 화면(`makeDetailSearchResultView`)이 실제로 이 버그였다(#196) — 자세한 증상·원인·고친 방법은 `SearchFeature/CLAUDE.md`의 동일 항목 참고. 교훈: **App이 소유한 `path` 아래에서 "또 다른(특히 다른 모듈) 화면으로 더 나아가야 하는" 중간 화면은, 그 화면 자신의 push까지도 처음부터 App의 `path`를 타야 한다** — Assembly 패턴을 늘릴 때(새 공용 헬퍼를 뽑을 때) 그 화면이 "막다른 끝"인지 "또 뻗어나가는 중간 지점"인지 먼저 판단할 것.
 - **작품 상세·작품 평가·일반 검색·타유저 프로필 조립은 `NovelDetailAssembly`/`NovelReviewAssembly`/
   `SearchAssembly`/`UserPageAssembly`(전부 `@MainActor enum`)로 공용화돼 있다**(#196~#197, 2번째
-  이상의 탭이 같은 목적지를 필요로 한 시점에 뽑는 패턴) — 각 탭 Root는 자기
-  `Destination` enum에 맞는 push 클로저(`onNovelTapped`/`onFeedTapped`/`onNovelSelected`)와
-  `onAuthenticationRequired`만 넘기면 된다. **새 탭 Root가 작품 상세나 일반 검색을 push해야 하면
-  이 공용 헬퍼부터 재사용할 것** — `NovelDetailFactory.makeView`/`SearchFactory.makeView`를 직접
-  다시 호출해 복제하지 말 것. 반대로 `onFeedTapped`처럼 그 탭에 대응 `Destination` case가 없으면
-  placeholder 로그로 넘기면 된다(`LibraryRootView`가 실제로 그렇게 함 — 서재는 피드 상세로 갈
-  이유가 없어서).
+  이상의 탭이 같은 목적지를 필요로 한 시점에 뽑는 패턴) — 각 탭 Root는 화면별 Route enum을 받는
+  `onRoute` 클로저(#253 — exhaustive switch로 자기 `Destination`에 매핑)와 `onAuthenticationRequired`만
+  넘기면 된다. **새 탭 Root가 작품 상세나 일반 검색을 push해야 하면 이 공용 헬퍼부터 재사용할 것** —
+  `NovelDetailFactory.makeView`/`SearchFactory.makeView`를 직접 다시 호출해 복제하지 말 것. 그 탭에
+  대응 `Destination` case가 없는 목적지는 switch에서 `break`로 **의도적 무시를 명시**한다(placeholder
+  no-op 클로저 ❌ — 기본값 no-op이 배선 누락을 조용히 삼킨 #228 사고의 재발 방지. 케이스가 늘면
+  컴파일러가 4탭 전부에 판단을 강제한다).
 - ⚠️ **`ContentView.body`에 `.preferredColorScheme(.light)`를 걸어 앱 전체를 라이트모드로 고정한다**
   (사용자 확정, #197) — `DesignSystem`의 색상 에셋(`WSSColor.wssWhite` 등)이 전부 다크 배리언트 없는
   고정값이라, 시스템이 다크모드면 화면마다 명시적으로 `.background(...)`를 안 건 자리(대부분의
@@ -112,10 +114,14 @@ Sources/
   추가하는 대신, 애초에 다크모드로 진입 자체를 막는 쪽을 택했다 — 새 화면을 추가해도 이 문제가
   재발하지 않는다. `DesignSystem`이 나중에 실제로 다크모드를 지원하게 되면 이 줄부터 지울 것.
 - **원칙: 화면 간 연결 조립은 무조건 App이 한다**(사용자 확정, #196) — Feature 안에 "다른 화면으로
-  이동하는 로직"(다른 Feature의 View를 직접 구성해 push/present)이 있으면 안 된다. Feature는 콜백
-  (`onNovelSelected`, `onEditProfileTapped` 등)만 밖으로 노출하고, 실제로 그 콜백을 받아 화면을
-  조립하는 건 전부 App의 각 탭 Root가 한다(`MypageView`→`MyPageEditView` 전환을 이 원칙에 맞춰
-  App으로 옮긴 사례 참고, `UserPageFeature/CLAUDE.md`).
+  이동하는 로직"(다른 Feature의 View를 직접 구성해 push/present)이 있으면 안 된다. Feature는 화면 전환
+  **의도**만 밖으로 노출하고, 실제로 그걸 받아 화면을 조립하는 건 전부 App의 각 탭 Root가 한다
+  (`MypageView`→`MyPageEditView` 전환을 이 원칙에 맞춰 App으로 옮긴 사례 참고, `UserPageFeature/CLAUDE.md`).
+  - **의도의 형태는 #253부터 화면별 `*Route` enum + `onRoute` 단일 클로저다**(낱개 `onXxxTapped` 클로저
+    나열 ❌ — 정본은 `Projects/Feature/CLAUDE.md`의 Route 패턴 절). App 쪽 switch는 exhaustive라 Feature가
+    케이스를 더하면 4탭 Root의 매핑 누락을 컴파일러가 잡는다(`DeepLink` switch와 같은 장치). 세션 이벤트
+    (`onAuthenticationRequired`/`onSessionEnded`)와 완료 결과 콜백(`onSubmitted`/`onSaved`/`onUserBlocked` 등
+    CrossScreenFeedback 채널)은 Route에 넣지 않고 별도 클로저 유지.
   - **예외**: 다른 화면으로의 "이동"이 아니라 **그 화면 자신의 로컬 상태(draft)를 채우는 값
     선택기**(피커류 시트 — 예: 마이페이지 편집의 캐릭터 선택 시트)는 Feature 안에 남겨도 된다.
     App으로 올리면 결과를 다시 그 화면 내부로 넣어주는 `Binding` 왕복이 필요해져 오히려 더
