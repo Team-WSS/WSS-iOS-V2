@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import ProfileDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -64,6 +65,7 @@ final class SettingChangeGenderOrAgeViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase
@@ -74,11 +76,13 @@ final class SettingChangeGenderOrAgeViewModel {
     init(
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadLocalGenderAndBirthUseCase = loadLocalGenderAndBirthUseCase
         self.saveAccountInfoDraftUseCase = saveAccountInfoDraftUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         let initial = AccountInfoDraft(email: nil, gender: .female, birth: try! BirthYear(2000))
         self.state = State(draft: initial)
         self.baselineDraft = initial
@@ -91,8 +95,10 @@ final class SettingChangeGenderOrAgeViewModel {
         case .load:
             load()
         case .selectGender(let gender):
+            analyticsTracker?.track(SettingAnalyticsEvent(gender: gender))
             state.draft.setGender(gender)
         case .selectBirthYear(let year):
+            analyticsTracker?.track(SettingAnalyticsEvent.birthYearSelected)
             setBirthYear(year)
         case .save:
             save()

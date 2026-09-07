@@ -178,6 +178,7 @@ struct MypageRootView: View {
                     collectionRepository: dependencies.collectionRepository
                 ),
                 logger: dependencies.logger,
+                analyticsTracker: dependencies.analyticsTracker,
                 onRoute: { route in
                     switch route {
                     case .collectionList:
@@ -386,6 +387,7 @@ private extension MypageRootView {
             loadAccountInfoDraftUseCase: DefaultLoadAccountInfoDraftUseCase(repository: dependencies.profileRepository),
             logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             // 로그아웃 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
             onLogoutSuccess: onSessionEnded,
             onRoute: { route in
@@ -409,6 +411,7 @@ private extension MypageRootView {
             ),
             saveAccountInfoDraftUseCase: DefaultSaveAccountInfoDraftUseCase(repository: dependencies.profileRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onSaveSuccess: { isChangeSavedToastPresented = true },
             onAuthenticationRequired: onAuthenticationRequired
         )
@@ -432,6 +435,7 @@ private extension MypageRootView {
             ),
             withdrawUseCase: DefaultWithdrawUseCase(repository: dependencies.authRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             // 탈퇴 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
             onWithdrawSuccess: onSessionEnded,
             onAuthenticationRequired: onAuthenticationRequired
@@ -727,6 +731,7 @@ private extension MypageRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
+            analyticsTracker: dependencies.analyticsTracker,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
                 // 작품 상세 경유 작성 — 복귀할 그 작품 상세가 자기 피드 섹션을 초기 로드처럼 리셋한다(#256).

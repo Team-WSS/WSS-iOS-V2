@@ -55,6 +55,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **CSV 이벤트 `mypage_man`/`mypage_woman`/`mypage_age`("프로필 편집 > 성별/나이 선택")는 `UserPageFeature`가
+  아니라 이 모듈에서 트래킹한다**(#249) — V1은 "마이페이지"로 분류했지만, 실제 성별/출생연도 입력 UI는
+  `SettingChangeGenderOrAgeView`(계정정보 하위 화면, 이 모듈)에 있다. `UserPageFeature`에서 이 이벤트를
+  찾지 말 것.
 - **설정 트리 9화면의 네비바는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)) — 시스템 툴바(iOS 26 리퀴드 글래스)에서 교체. 우측 액션이 있는 화면(프로필공개설정·성별나이변경 "완료", 완결/휴재알림목록 "수정↔삭제")은 `WSSNavigationBar`의 `trailing` 슬롯에 넣는다. 전부 미저장 초안 확인 알럿이 없어(NovelNotificationList의 알럿은 삭제 확인 전용) `swipeBackConfirmation` 없는 기본형(스와이프백 허용)이다.
 - **`SettingChangeBirthYearPickerSheet`가 쓰는 연도 휠은 `WSSComponent`의 `WSSBirthYearWheel`이다** — Feature 화면 전용이 아니라 UI 레이어로 승격된 **공용** 컴포넌트다(과거엔 `ChangeGenderOrAge/` 안의 화면 전용 타입이었다가 이동했다). `NovelReviewFeature`의 연/월/일 3열 `WSSDateWheel`과 이름은 비슷하지만 다른 컴포넌트다(연도 1열 전용). 연도 배열 자체가 `BirthYear.minYear...maxYear`로 하드 바운드돼 있어 오버슈트(미래 연도) 방지용 되돌림 로직이 필요 없다 — `WSSDateWheel`의 settle/bounce 로직을 그대로 가져오지 말 것. 수정은 `Projects/UI/WSSComponent/Sources/WSSBirthYearWheel.swift`에서.
 - ⚠️ **`SettingFeatureFactory`는 화면마다 독립된 진입점이다(#201부터) — 더 이상 `makeView(...)` 하나가

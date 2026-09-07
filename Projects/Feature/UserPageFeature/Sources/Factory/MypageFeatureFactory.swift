@@ -13,6 +13,7 @@ import ProfileDomain
 import NovelDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -36,6 +37,7 @@ public enum MypageFeatureFactory {
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (MypageRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
@@ -46,7 +48,8 @@ public enum MypageFeatureFactory {
             loadNovelPreferencesUseCase: loadNovelPreferencesUseCase,
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             loadCollectionPreviewsUseCase: loadCollectionPreviewsUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return MypageView(
             viewModel: viewModel,

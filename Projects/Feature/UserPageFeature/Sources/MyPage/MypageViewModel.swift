@@ -14,6 +14,7 @@ import ProfileDomain
 import NovelDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -89,6 +90,7 @@ final class MypageViewModel {
 
     private let userID: UserID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let loadProfileUseCase: LoadProfileUseCase
@@ -110,7 +112,8 @@ final class MypageViewModel {
         loadNovelPreferencesUseCase: LoadNovelPreferencesUseCase,
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.userID = userID
         self.loadProfileUseCase = loadProfileUseCase
@@ -119,6 +122,7 @@ final class MypageViewModel {
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.loadCollectionPreviewsUseCase = loadCollectionPreviewsUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -138,6 +142,7 @@ private extension MypageViewModel {
     /// 반영하려면, 최초 1회만 로드하는 가드를 두면 안 된다(뒤로가기로 돌아와도 onAppear는 다시 불린다).
     func load() {
         guard loadTask == nil else { return }
+        analyticsTracker?.track(UserPageAnalyticsEvent.mypageViewed)
         state.isLoading = true
         state.hasLoadError = nil
         loadTask = Task { await loadMypage() }

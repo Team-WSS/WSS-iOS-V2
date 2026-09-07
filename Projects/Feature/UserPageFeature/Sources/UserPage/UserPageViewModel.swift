@@ -16,6 +16,7 @@ import FeedDomain
 import SocialDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -156,6 +157,7 @@ final class UserPageViewModel {
 
     private let userID: UserID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let loadProfileUseCase: LoadProfileUseCase
@@ -191,7 +193,8 @@ final class UserPageViewModel {
         blockUserUseCase: BlockUserUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.userID = userID
         self.loadProfileUseCase = loadProfileUseCase
@@ -205,6 +208,7 @@ final class UserPageViewModel {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -218,6 +222,7 @@ final class UserPageViewModel {
         case .toggleFeedLike(let feedID):
             toggleFeedLike(feedID)
         case .blockUserTapped:
+            analyticsTracker?.track(UserPageAnalyticsEvent.otherBlockTapped)
             state.isBlockAlertPresented = true
         case .dismissBlockAlert:
             state.isBlockAlertPresented = false
@@ -254,6 +259,7 @@ private extension UserPageViewModel {
     ///   실패해도 기존 화면을 그대로 둔다(`NovelDetailViewModel.load` 정본).
     func load() {
         guard loadTask == nil else { return }
+        analyticsTracker?.track(UserPageAnalyticsEvent.otherMypageViewed)
         if hasLoaded {
             loadTask = Task { await loadUserPage(isSilentRefresh: true) }
             if hasLoadedFirstFeeds, feedsTask == nil, !state.isProfilePrivate {
