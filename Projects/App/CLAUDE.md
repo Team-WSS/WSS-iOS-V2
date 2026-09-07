@@ -224,6 +224,23 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   프로파일이 아니라 `match Development` 프로파일을 선택해야 설치되고 `tuist generate`가 그 선택을 App Store로 리셋한다 —
   이 서명 함정은 `docs/FASTLANE_ONBOARDING.md` 참고.
 
+## 애널리틱스(Amplitude·Clarity) 배선 (#249)
+
+Amplitude(이벤트 트래킹)·Microsoft Clarity(세션 리플레이·히트맵) **둘 다 App 레이어에만 격리**한다 —
+Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른다(`Logger`와 동일한 격리 패턴).
+
+- **`AmplitudeEventTracker`**(`Sources/Analytics/AmplitudeEventTracker.swift`)가 `AnalyticsTracker` 구현체 —
+  `AppDependencies.analyticsTracker`로 조립돼 각 Feature Factory에 `logger: Logger? = nil`과 동일한 형태로
+  주입될 예정(옵셔널·nil 기본값, Demo/테스트는 nil).
+- **Clarity는 프로토콜 대상이 아니다** — 커스텀 이벤트 API가 아니라 세션 자동 수집이라 `WSSIOSV2App.init()`에서
+  Kakao SDK와 같은 자리에 1회 초기화만 한다(Feature가 호출할 게 없음).
+- ⚠️ **둘 다 Release 스킴에서만 초기화한다**(사용자 확정) — Debug 이벤트가 운영 데이터와 섞이면 안 된다.
+  `Config_Debug.xcconfig`엔 `AMPLITUDE_API_KEY`/`CLARITY_PROJECT_ID` 키 자체가 없어 `NetworkingConfig`가
+  빈 문자열을 읽고, `AppDependencies`/`WSSIOSV2App` 양쪽이 `#if RELEASE` + 빈 문자열 체크로 이중 가드한다 —
+  Debug 빌드에선 `analyticsTracker`가 `nil`이라 모든 호출부(`analyticsTracker?.track(...)`)가 자동 no-op.
+- **Amplitude는 이벤트를 콘솔에 미리 등록할 필요가 없다** — SDK가 보내는 이벤트명을 첫 발생 시점에 자동
+  수집하는 구조라, 이벤트명·프로퍼티만 코드에서 정하면 된다(Amplitude 자체 특성, 콘솔 작업 불필요).
+
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **재발급(/reissue) 전용 URLSession엔 요청 타임아웃 10초가 걸려 있다**(#236, `AppDependencies`의

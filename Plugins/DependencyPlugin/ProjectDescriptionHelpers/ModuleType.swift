@@ -75,11 +75,12 @@ public enum DataModule: String, ModuleSpec {
 
 public enum CoreModule: String, ModuleSpec {
     public var moduleSuffix: String { "" }
-    
+
     case keychain
     case networking
     case logger
     case pushAuthorization
+    case analytics
 }
 
 public enum UIModule: String, ModuleSpec {

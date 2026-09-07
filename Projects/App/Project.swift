@@ -106,6 +106,11 @@ let targets: [Target] = [
             // FCM 푸시 알림 수신·토큰 발급(#243). Firebase는 App 레이어에만 격리한다 — Domain/Data는
             // DevicePushToken/RegisterDeviceTokenUseCase 추상화로 이미 분리돼 있어 Firebase를 모른다.
             .external(name: "FirebaseMessaging"),
+            // Amplitude·Microsoft Clarity 애널리틱스(#249). App 레이어에만 격리 — Core/Analytics는
+            // AnalyticsTracker 프로토콜만 노출하고 이 SDK들을 모른다(`Sources/Analytics/AmplitudeEventTracker.swift`).
+            .external(name: "AmplitudeSwift"),
+            .external(name: "Clarity"),
+            .module(.core(.analytics)),
             // 온보딩 플로우 조립(App이 유일한 DI 지점) — Feature + Domain(UseCase 타입) + Data(Factory 구현체) + Core.
             .module(.feature(.onboarding)),
             .module(.domain(.base)),

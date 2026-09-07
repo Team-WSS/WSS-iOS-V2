@@ -3,6 +3,9 @@ import SwiftUI
 import KakaoSDKAuth
 import KakaoSDKCommon
 
+import Clarity
+
+import BaseData
 import BaseDomain
 import DesignSystem
 
@@ -34,6 +37,15 @@ struct WSSIOSV2App: App {
             return
         }
         KakaoSDK.initSDK(appKey: kakaoAppKey)
+
+        // Microsoft Clarity(#249) — 세션 리플레이·히트맵 자동 수집. Amplitude(AppDependencies에서 조립)와
+        // 마찬가지로 Release 스킴에서만 초기화한다(Debug 이벤트가 운영 데이터와 섞이면 안 됨,
+        // Config_Debug.xcconfig엔 CLARITY_PROJECT_ID 키 자체가 없어 빈 문자열로 읽힌다).
+        #if RELEASE
+        if !NetworkingConfig.clarityProjectID.isEmpty {
+            ClaritySDK.initialize(config: ClarityConfig(projectId: NetworkingConfig.clarityProjectID))
+        }
+        #endif
     }
 
     var body: some Scene {

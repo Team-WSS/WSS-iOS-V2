@@ -57,6 +57,7 @@ public enum ModuleInfoPlist {
         case .data:
             var entries = commonEntries
             entries["AMPLITUDE_API_KEY"] = "$(AMPLITUDE_API_KEY)"
+            entries["CLARITY_PROJECT_ID"] = "$(CLARITY_PROJECT_ID)"
             entries["BASE_URL"] = "$(BASE_URL)"
             entries["TEST_API_KEY"] = "$(TEST_API_KEY)"
             entries["BUCKET_URL"] = "$(BUCKET_URL)"

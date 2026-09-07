@@ -37,6 +37,11 @@ let package = Package(
         .package(url: "https://github.com/kakao/kakao-ios-sdk.git", exact: "2.28.0"),
         // FCM 푸시 알림(#243). FirebaseMessaging 프로덕트만 App 타깃에서 .external로 링크한다
         // (Analytics 등은 제외 — 최소 의존). 버전은 V1(운영)과 동일하게 고정.
-        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "11.7.0")
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "11.7.0"),
+        // Amplitude·Microsoft Clarity 애널리틱스(#249) — App 레이어에만 격리해서 링크한다
+        // (Core/Analytics는 AnalyticsTracker 프로토콜만 노출, 이 SDK들을 모른다). Release 스킴에서만
+        // 실제로 초기화한다(Debug는 이벤트를 안 쏨, `AppDependencies` 참고).
+        .package(url: "https://github.com/amplitude/Amplitude-Swift.git", exact: "1.18.8"),
+        .package(url: "https://github.com/microsoft/clarity-apps.git", exact: "4.0.0")
     ]
 )
