@@ -417,7 +417,7 @@ struct RuleTests {
         #expect(vs.first?.ruleID == "factory-exclusivity" && vs.first?.severity == .error)
     }
 
-    @Test("⑬ Navigation/의 구체 View는 seam이 아니라 위반(계약 typealias/protocol만 허용)")
+    @Test("⑬ Navigation/의 구체 View는 seam이 아니라 위반(계약 typealias/protocol/Route enum만 허용)")
     func featureExclusivityNavigationOnlyAllowsContracts() {
         let sources = [
             (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
@@ -428,5 +428,81 @@ struct RuleTests {
         let vs = lintModule(sources: sources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
         #expect(vs.count == 1)
         #expect(vs.first?.ruleID == "feature-exclusivity" && vs.first?.severity == .error)
+    }
+
+    @Test("⑬ Navigation/의 public *Route enum은 라우트 계약 seam으로 허용(#253) — Route 아닌 enum·Navigation 밖 Route는 위반")
+    func featureExclusivityAllowsRouteEnumInNavigation() {
+        // Navigation/의 *Route enum — 화면 전환 의도 계약 → 허용.
+        let routeSources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/SampleRoute.swift",
+             source: "public enum SampleRoute { case detail(Int) }")
+        ]
+        #expect(lintModule(sources: routeSources, moduleName: "SampleFeature", rule: FeatureExclusivityRule()).isEmpty)
+
+        // Navigation/이라도 Route 접미사가 아닌 enum(상태 enum 등)은 여전히 위반.
+        let stateEnumSources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/Navigation/SampleState.swift",
+             source: "public enum SampleState { case loading }")   // Route 계약 아님 → 위반
+        ]
+        let stateVs = lintModule(sources: stateEnumSources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(stateVs.count == 1)
+
+        // Navigation/ 밖의 public *Route enum은 seam 자리가 아니므로 위반(폴더 규약 유지).
+        let outsideSources = [
+            (path: "/Projects/Feature/SampleFeature/Sources/Factory/SampleFeatureFactory.swift",
+             source: "public enum SampleFeatureFactory {}"),
+            (path: "/Projects/Feature/SampleFeature/Sources/SampleRoute.swift",
+             source: "public enum SampleRoute { case detail(Int) }")   // 위치 위반
+        ]
+        let outsideVs = lintModule(sources: outsideSources, moduleName: "SampleFeature", rule: FeatureExclusivityRule())
+        #expect(outsideVs.count == 1)
+    }
+
+    // MARK: - ⑭ feature-route-callback (warning)
+
+    @Test("⑭ public 함수의 onXxxTapped/onXxxSelected 클로저 파라미터를 warning으로 잡는다")
+    func routeCallbackCatchesNavigationClosures() {
+        let src = """
+        public enum SampleFeatureFactory {
+            public static func makeView(
+                onNovelTapped: @escaping (Int) -> Void,
+                onFeedSelected: ((Int) -> Void)? = nil
+            ) -> Int { 0 }
+        }
+        """
+        let vs = lint(source: src, path: featurePath, rules: [FeatureRouteCallbackRule()])
+        #expect(vs.count == 2)
+        #expect(vs.allSatisfy { $0.ruleID == "feature-route-callback" && $0.severity == .warning })
+    }
+
+    @Test("⑭ onRoute·비-라우팅 콜백(onSubmitted 등)·internal 함수·클로저 아닌 파라미터는 오탐하지 않는다")
+    func routeCallbackIgnoresLegitimateShapes() {
+        let src = """
+        public enum SampleFeatureFactory {
+            public static func makeView(
+                onRoute: @escaping (Int) -> Void,
+                onAuthenticationRequired: @escaping () -> Void,
+                onSubmitted: @escaping () -> Void,
+                isNovelTapped: Bool,
+                lastTapped: String
+            ) -> Int { 0 }
+        }
+        struct SampleView {
+            // internal 서브뷰의 로컬 콜백은 모듈 경계가 아니다 → 대상 아님.
+            func row(onNovelTapped: @escaping (Int) -> Void) -> Int { 0 }
+        }
+        """
+        #expect(lint(source: src, path: featurePath, rules: [FeatureRouteCallbackRule()]).isEmpty)
+    }
+
+    @Test("⑭ 비-Feature 경로(App/Data)는 스코프 밖")
+    func routeCallbackSkipsNonFeature() {
+        let src = "public func makeView(onNovelTapped: @escaping (Int) -> Void) -> Int { 0 }"
+        let appPath = "/Projects/App/Sources/Home/HomeRootView.swift"
+        #expect(lint(source: src, path: appPath, rules: [FeatureRouteCallbackRule()]).isEmpty)
     }
 }

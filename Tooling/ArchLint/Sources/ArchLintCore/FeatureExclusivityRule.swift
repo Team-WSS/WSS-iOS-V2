@@ -11,7 +11,9 @@ import SwiftSyntax
 ///
 /// - **Data엔 없는 정당한 예외 — 조립 seam**: Feature 간 직접 의존 없이 App이 콘텐츠를 주입하는 공개 접점
 ///   (예: SearchFeature의 `KeywordTabContentBuilder`)은 `Sources/Navigation/`에 두고 허용한다. 단
-///   **계약 타입(typealias·protocol)만** — 같은 폴더라도 구체 View/VM(struct/class/enum)은 여전히 위반이다.
+///   **계약 타입(typealias·protocol + `*Route` enum)만** — 같은 폴더라도 구체 View/VM(struct/class,
+///   Route 아닌 enum)은 여전히 위반이다. `*Route` enum(#253)은 화면 전환 의도를 payload와 함께 App에
+///   전달하는 순수 계약이라 seam으로 허용한다(규칙⑭ `feature-route-callback`가 이 패턴 사용을 유도).
 ///   "화면 간 이동은 App/조정 계층에서" 원칙을 화면 전환이 아니라 콘텐츠 주입으로 적용한 형태라 public이 정당하다.
 /// - **정식 모듈만 / top-level만**: `factory-exclusivity`와 동일(유령 폴더·타입 내부 멤버 제외).
 ///
@@ -54,8 +56,17 @@ struct FeatureExclusivityRule: ModuleRule {
         return violations
     }
 
-    /// 조립 seam으로 허용하는 선언 종류 — **계약(typealias·protocol)만**. 구체 타입(struct/class/enum)은 seam이 아니다.
+    /// 조립 seam으로 허용하는 선언 종류 — **계약(typealias·protocol + `*Route` enum)만**.
+    /// 구체 타입(struct/class, Route 아닌 enum)은 seam이 아니다. `*Route` enum(#253)은 화면 전환
+    /// 의도를 payload와 함께 나르는 순수 계약이라 예외 — View/VM/상태 enum이 이 이름을 사칭하면
+    /// 네이밍 자체가 리뷰에서 걸리는 수준의 오용이라 접미사 판정으로 충분하다.
     private static func isSeamContract(_ item: CodeBlockItemSyntax.Item) -> Bool {
-        item.as(TypeAliasDeclSyntax.self) != nil || item.as(ProtocolDeclSyntax.self) != nil
+        if item.as(TypeAliasDeclSyntax.self) != nil || item.as(ProtocolDeclSyntax.self) != nil {
+            return true
+        }
+        if let enumDecl = item.as(EnumDeclSyntax.self), enumDecl.name.text.hasSuffix("Route") {
+            return true
+        }
+        return false
     }
 }

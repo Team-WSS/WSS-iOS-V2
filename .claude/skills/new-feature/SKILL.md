@@ -73,6 +73,11 @@ metadata:
 - 파일 배치(**화면=영역별 폴더**, 타입별 분리 ❌):
   - `Sources/<Screen>/<Screen>View.swift` + `<Screen>ViewModel.swift` (+ 화면 전용 서브뷰 동거)
   - `Sources/Factory/<Module>Factory.swift` — **유일한 public 진입점**. opaque `some View` 반환, View/VM은 internal.
+  - **화면 전환이 있으면 `Sources/Navigation/<Screen>Route.swift`** — 화면 전환 의도는 낱개 클로저
+    (`onXxxTapped:` ❌ — arch-lint 규칙⑭가 경고)가 아니라 **public `<Screen>Route` enum + Factory의
+    `onRoute: @escaping (<Screen>Route) -> Void` 하나**로 내보낸다(#253). 세션 이벤트
+    (`onAuthenticationRequired`)와 완료 결과 콜백(`onSubmitted`류)은 Route에 넣지 않고 별도 클로저.
+    패턴 정본: `NovelDetailFeature/Sources/Navigation/NovelDetailRoute.swift`.
 - **UseCase 없는 순수 입력 화면**이면 `UseCase Handling`/`Error Mapping` 섹션을 생략한다(레퍼런스: `ReadingPeriodSheetViewModel`).
 - **Demo 앱**: `Demo/<Module>FeatureDemoApp.swift` — Factory를 `NavigationStack`에 띄워 단독 실행.
   - ⚠️ `init()`에서 `DesignSystemFontFamily.registerAllCustomFonts()`를 **반드시** 호출한다. 누락 시
