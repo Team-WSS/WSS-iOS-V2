@@ -313,19 +313,26 @@ private extension FeedRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
-            onReviewTapped: { information, status in
-                path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+            onRoute: { route in
+                switch route {
+                case .review(let information, let status):
+                    path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+                case .createFeed(let connectedNovel):
+                    path.append(Destination.createFeedFromNovel(connectedNovel))
+                case .feedDetail(let feedID):
+                    path.append(Destination.feed(feedID))
+                case .userProfile(let userID):
+                    // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                    guard userID != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .editFeed(let feedID):
+                    path.append(Destination.editFeed(feedID))
+                case .authorSearch(let name):
+                    path.append(Destination.authorSearch(name))
+                }
             },
-            onCreateFeedTapped: { path.append(Destination.createFeedFromNovel($0)) },
-            onFeedTapped: { path.append(Destination.feed($0)) },
-            onUserProfileTapped: {
-                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
-                guard $0 != currentUserID else { return }
-                path.append(Destination.userPage($0))
-            },
-            onNovelTapped: { path.append(Destination.novel($0)) },
-            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-            onAuthorTapped: { path.append(Destination.authorSearch($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
