@@ -643,9 +643,16 @@ private extension MypageRootView {
     func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
-            onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
-            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .detailSearchResult(let filter):
+                    path.append(Destination.detailSearch(filter))
+                case .detailSearchFilter(let tab):
+                    path.append(Destination.detailSearchFilter(tab))
+                }
+            },
             initialQuery: initialQuery
         )
     }
@@ -662,7 +669,12 @@ private extension MypageRootView {
         SearchAssembly.makeDetailSearchResultView(
             filter: filter,
             dependencies: dependencies,
-            onNovelSelected: { path.append(Destination.novel($0)) }
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            }
         )
     }
 }
