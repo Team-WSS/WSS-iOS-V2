@@ -23,15 +23,8 @@ struct SettingAccountInfoView: View {
     /// 로그아웃 성공 시 호출된다. 세션 종료(로그인 화면 전환 등)는 App(세션 관찰) 책임이라
     /// 이 화면은 성공 신호만 호출자에게 전달한다.
     private let onLogoutSuccess: () -> Void
-    /// 성별/나이 변경 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeChangeGenderOrAgeView` 조립)
-    /// 은 호출자(App)가 수행한다 — "저장됨" 토스트도 그 전환을 조립하는 쪽이 `onSaveSuccess` 시점에 띄운다.
-    private let onChangeGenderOrAgeTapped: () -> Void
-    /// 차단유저 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeBlockUserListView` 조립)은
-    /// 호출자가 수행한다.
-    private let onBlockUserListTapped: () -> Void
-    /// 회원탈퇴 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeWithdrawFlowView` 조립)은
-    /// 호출자가 수행한다 — 확인→사유 2단계는 그 화면 안에서 여전히 로컬로 진행된다(`WithdrawFlowView` 참고).
-    private let onWithdrawTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `SettingAccountInfoRoute`(Navigation/)가 정본.
+    private let onRoute: (SettingAccountInfoRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 이메일 로드·로그아웃이 401로 막히면 발화(Feature 공통 계약).
     /// 로그아웃 401은 이미 세션이 끝난 것이라 실패 토스트 대신 이 콜백으로 로그인/온보딩으로 되돌린다
     /// (`onLogoutSuccess`와 결과는 같지만 App이 딥링크 복원 여부를 달리 거는 별개 콜백, `App/CLAUDE.md`).
@@ -40,16 +33,12 @@ struct SettingAccountInfoView: View {
     init(
         viewModel: SettingAccountInfoViewModel,
         onLogoutSuccess: @escaping () -> Void = {},
-        onChangeGenderOrAgeTapped: @escaping () -> Void = {},
-        onBlockUserListTapped: @escaping () -> Void = {},
-        onWithdrawTapped: @escaping () -> Void = {},
+        onRoute: @escaping (SettingAccountInfoRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onLogoutSuccess = onLogoutSuccess
-        self.onChangeGenderOrAgeTapped = onChangeGenderOrAgeTapped
-        self.onBlockUserListTapped = onBlockUserListTapped
-        self.onWithdrawTapped = onWithdrawTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -95,11 +84,11 @@ struct SettingAccountInfoView: View {
     private func select(_ menu: SettingMenu) {
         switch menu {
         case .changeGenderOrAge:
-            onChangeGenderOrAgeTapped()
+            onRoute(.changeGenderOrAge)
         case .blockUserList:
-            onBlockUserListTapped()
+            onRoute(.blockUserList)
         case .withdraw:
-            onWithdrawTapped()
+            onRoute(.withdraw)
         case .logout:
             viewModel.handle(.presentLogoutAlert)
         case .email:
@@ -162,7 +151,8 @@ extension SettingAccountInfoView {
             viewModel: SettingAccountInfoViewModel(
                 loadAccountInfoDraftUseCase: PreviewLoadAccountInfoDraftUseCase(),
                 logoutUseCase: PreviewLogoutUseCase()
-            )
+            ),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

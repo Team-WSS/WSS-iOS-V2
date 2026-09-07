@@ -343,9 +343,16 @@ private extension MypageRootView {
         SettingFeatureFactory.makeView(
             pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: dependencies.logger,
-            onAccountInfoTapped: { path.append(Destination.settingAccountInfo) },
-            onProfilePublicTapped: { path.append(Destination.settingProfilePublic) },
-            onNotificationSettingTapped: { path.append(Destination.settingNotification) }
+            onRoute: { route in
+                switch route {
+                case .accountInfo:
+                    path.append(Destination.settingAccountInfo)
+                case .profilePublicSetting:
+                    path.append(Destination.settingProfilePublic)
+                case .notificationSetting:
+                    path.append(Destination.settingNotification)
+                }
+            }
         )
     }
 
@@ -356,9 +363,16 @@ private extension MypageRootView {
             logger: dependencies.logger,
             // 로그아웃 성공 시 세션을 끝낸다 — 온보딩까지 되돌리되 401 경로와는 분리(딥링크 복원 안 함).
             onLogoutSuccess: onSessionEnded,
-            onChangeGenderOrAgeTapped: { path.append(Destination.settingChangeGenderOrAge) },
-            onBlockUserListTapped: { path.append(Destination.settingBlockUserList) },
-            onWithdrawTapped: { path.append(Destination.settingWithdrawFlow) },
+            onRoute: { route in
+                switch route {
+                case .changeGenderOrAge:
+                    path.append(Destination.settingChangeGenderOrAge)
+                case .blockUserList:
+                    path.append(Destination.settingBlockUserList)
+                case .withdraw:
+                    path.append(Destination.settingWithdrawFlow)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -421,8 +435,14 @@ private extension MypageRootView {
                 repository: dependencies.pushSettingRepository
             ),
             logger: dependencies.logger,
-            onCompletionListTapped: { path.append(Destination.settingCompletionNotificationList) },
-            onHiatusReturnListTapped: { path.append(Destination.settingHiatusReturnNotificationList) },
+            onRoute: { route in
+                switch route {
+                case .completionNotificationList:
+                    path.append(Destination.settingCompletionNotificationList)
+                case .hiatusReturnNotificationList:
+                    path.append(Destination.settingHiatusReturnNotificationList)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

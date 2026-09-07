@@ -474,8 +474,14 @@ private extension LibraryRootView {
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             logger: dependencies.logger,
-            onCompletionListTapped: { path.append(Destination.completionNotificationList) },
-            onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) },
+            onRoute: { route in
+                switch route {
+                case .completionNotificationList:
+                    path.append(Destination.completionNotificationList)
+                case .hiatusReturnNotificationList:
+                    path.append(Destination.hiatusReturnNotificationList)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

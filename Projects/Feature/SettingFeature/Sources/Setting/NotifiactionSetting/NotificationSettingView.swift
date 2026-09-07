@@ -19,24 +19,18 @@ struct NotificationSettingView: View {
     @State private var viewModel: NotificationSettingViewModel
     @Environment(\.dismiss) private var dismiss
 
-    /// 완결 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeCompletionNotificationListView`
-    /// 조립)은 호출자(App)가 수행한다.
-    private let onCompletionListTapped: () -> Void
-    /// 휴재 복귀 알림 목록 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeHiatusReturnNotificationListView`
-    /// 조립)은 호출자가 수행한다.
-    private let onHiatusReturnListTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `NotificationSettingRoute`(Navigation/)가 정본.
+    private let onRoute: (NotificationSettingRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 로드·토글이 401로 막히면 발화(Feature 공통 계약).
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: NotificationSettingViewModel,
-        onCompletionListTapped: @escaping () -> Void = {},
-        onHiatusReturnListTapped: @escaping () -> Void = {},
+        onRoute: @escaping (NotificationSettingRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onCompletionListTapped = onCompletionListTapped
-        self.onHiatusReturnListTapped = onHiatusReturnListTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -71,11 +65,11 @@ struct NotificationSettingView: View {
                            title: "활동 알림",
                            description: "댓글, 좋아요 알림을 드려요"
                 )
-                settingRow(type: .navigate(action: onCompletionListTapped),
+                settingRow(type: .navigate(action: { onRoute(.completionNotificationList) }),
                            title: "완결 알림",
                            description: "작품이 완결나면 알림을 드려요"
                 )
-                settingRow(type: .navigate(action: onHiatusReturnListTapped),
+                settingRow(type: .navigate(action: { onRoute(.hiatusReturnNotificationList) }),
                            title: "휴재 복귀 알림",
                            description: "새로운 회차가 생기면 알림을 드려요"
                 )
@@ -165,7 +159,8 @@ private extension NotificationSettingView {
             viewModel: NotificationSettingViewModel(
                 loadPushPreferenceUseCase: PreviewLoadPushPreferenceUseCase(),
                 updatePushPreferenceUseCase: PreviewUpdatePushPreferenceUseCase()
-            )
+            ),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }
