@@ -112,6 +112,7 @@ struct LibraryRootView: View {
                     repository: dependencies.myLibraryFilterRepository
                 ),
                 logger: dependencies.logger,
+                analyticsTracker: dependencies.analyticsTracker,
                 onRoute: { route in
                     switch route {
                     case .novelDetail(let novelID):
@@ -384,6 +385,7 @@ private extension LibraryRootView {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .novelDetail(let novelID):

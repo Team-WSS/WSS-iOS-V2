@@ -687,6 +687,7 @@ private extension MypageRootView {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .novelDetail(let novelID):
