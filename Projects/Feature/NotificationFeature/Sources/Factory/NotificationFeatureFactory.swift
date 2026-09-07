@@ -23,19 +23,16 @@ public enum NotificationFeatureFactory {
     /// 알림 목록 화면. **`NavigationStack`에 push되는 화면**(홈 알림 벨에서 진입).
     ///
     /// - Parameters:
-    ///   - onNotificationSelected: 알림 상세 딥링크(`.notificationDetail`) 셀 탭 → 알림 상세 진입 콜백.
-    ///   - onFeedSelected: 피드 딥링크(`.feedDetail`) 셀 탭 → 피드 상세 진입 콜백.
-    ///   - onNovelSelected: 작품 딥링크(`.novelDetail`) 셀 탭 → 작품 상세 진입 콜백.
-    ///     완결·휴재 복귀 알림이 응답의 `novelId`로 여기 실린다(#181에서 연결).
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `NotificationListRoute`(Navigation/) 참고.
+    ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 서버 호출 공통.
+    ///     세션 이벤트라 `onRoute`에 합치지 않는다.
     @MainActor
     public static func makeNotificationListView(
         loadPagedNotificationsUseCase: LoadPagedNotificationsUseCase,
         markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
         logger: Logger? = nil,
-        onNotificationSelected: @escaping (NotificationID) -> Void,
-        onFeedSelected: @escaping (FeedID) -> Void,
-        onNovelSelected: @escaping (NovelID) -> Void,
+        onRoute: @escaping (NotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NotificationListViewModel(
@@ -45,9 +42,7 @@ public enum NotificationFeatureFactory {
         )
         return NotificationListView(
             viewModel: viewModel,
-            onNotificationSelected: onNotificationSelected,
-            onFeedSelected: onFeedSelected,
-            onNovelSelected: onNovelSelected,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

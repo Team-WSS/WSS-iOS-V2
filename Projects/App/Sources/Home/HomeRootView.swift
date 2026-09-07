@@ -451,9 +451,16 @@ private extension HomeRootView {
             loadPagedNotificationsUseCase: DefaultLoadPagedNotificationsUseCase(repository: dependencies.notificationRepository),
             markNotificationAsReadUseCase: DefaultMarkNotificationAsReadUseCase(repository: dependencies.notificationRepository),
             logger: dependencies.logger,
-            onNotificationSelected: { path.append(Destination.notificationDetail($0)) },
-            onFeedSelected: { path.append(Destination.feed($0)) },
-            onNovelSelected: { path.append(Destination.novel($0)) },
+            onRoute: { route in
+                switch route {
+                case .notificationDetail(let notificationID):
+                    path.append(Destination.notificationDetail(notificationID))
+                case .feedDetail(let feedID):
+                    path.append(Destination.feed(feedID))
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

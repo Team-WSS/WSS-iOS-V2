@@ -161,9 +161,13 @@ private struct DemoRootView: View {
             loadPagedNotificationsUseCase: loadPagedNotificationsUseCase,
             markNotificationAsReadUseCase: markNotificationAsReadUseCase,
             logger: consoleLogger,
-            onNotificationSelected: { path.append(.notificationDetail($0)) },
-            onFeedSelected: { path.append(.feedDetail($0)) },
-            onNovelSelected: { path.append(.novelDetail($0)) },
+            onRoute: { route in
+                switch route {
+                case .notificationDetail(let id): path.append(.notificationDetail(id))
+                case .feedDetail(let id): path.append(.feedDetail(id))
+                case .novelDetail(let id): path.append(.novelDetail(id))
+                }
+            },
             onAuthenticationRequired: { consoleLogger.info("인증 만료 → 로그인 진입 요청") }
         )
     }

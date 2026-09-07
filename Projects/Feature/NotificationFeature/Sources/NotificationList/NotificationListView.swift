@@ -36,26 +36,19 @@ struct NotificationListView: View {
     @State private var viewModel: NotificationListViewModel
     @Environment(\.dismiss) private var dismiss
 
-    /// 알림 상세 딥링크 → 상세 화면 진입 콜백. 화면 전환은 호출자(App)가 수행한다.
-    private let onNotificationSelected: (NotificationID) -> Void
-    /// 피드 딥링크 → 피드 상세 진입 콜백.
-    private let onFeedSelected: (FeedID) -> Void
-    /// 작품 딥링크 → 작품 상세 진입 콜백. 완결·휴재 복귀 알림이 응답의 `novelId`로 여기에 실린다.
-    private let onNovelSelected: (NovelID) -> Void
-    /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통.
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `NotificationListRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App)가 수행한다.
+    private let onRoute: (NotificationListRoute) -> Void
+    /// 인증 만료 시 로그인 유도 콜백 — 화면 내 모든 서버 호출 공통. 세션 이벤트라 `onRoute`에 안 합친다.
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: NotificationListViewModel,
-        onNotificationSelected: @escaping (NotificationID) -> Void,
-        onFeedSelected: @escaping (FeedID) -> Void,
-        onNovelSelected: @escaping (NovelID) -> Void,
+        onRoute: @escaping (NotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNotificationSelected = onNotificationSelected
-        self.onFeedSelected = onFeedSelected
-        self.onNovelSelected = onNovelSelected
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -213,11 +206,11 @@ private extension NotificationListView {
         viewModel.handle(.selectNotification(item))
         switch item.deeplink {
         case .notificationDetail(let id):
-            onNotificationSelected(id)
+            onRoute(.notificationDetail(id))
         case .feedDetail(let id):
-            onFeedSelected(id)
+            onRoute(.feedDetail(id))
         case .novelDetail(let id):
-            onNovelSelected(id)
+            onRoute(.novelDetail(id))
         case .unknown, .none:
             break
         }
@@ -239,9 +232,7 @@ private extension NotificationListView {
                 loadPagedNotificationsUseCase: PreviewLoadPagedNotificationsUseCase(),
                 markNotificationAsReadUseCase: PreviewMarkNotificationAsReadUseCase()
             ),
-            onNotificationSelected: { print("알림 상세: \($0)") },
-            onFeedSelected: { print("피드 상세: \($0)") },
-            onNovelSelected: { print("작품 상세: \($0)") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("로그인 유도") }
         )
     }
