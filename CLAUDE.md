@@ -31,6 +31,12 @@
      Firebase SDK 없이는 불가하고 서버가 이미 FCM으로 발송한다(V1도 동일 SDK 사용). #243에서 사용자
      승인 하에 도입, **App 레이어에만 격리**(→ `Projects/App/CLAUDE.md` 푸시 배선). `FirebaseMessaging`
      하나만 링크(Analytics 등 제외). 이 도입이 Tuist 4.29.1→4.206.0 업그레이드를 부른 이유이기도 하다(`.mise.toml`).)
+   - (예외: `AmplitudeSwift`·`Clarity`(SPM) — 애널리틱스(이벤트 트래킹·세션 리플레이)는 서드파티
+     SDK 없이는 불가. #249에서 사용자 승인 하에 도입, **App 레이어에만 격리**(→
+     `Projects/Core/Analytics/CLAUDE.md`의 `AnalyticsTracker` 프로토콜 + `Projects/App/Sources/Analytics/
+     AmplitudeEventTracker.swift`). **Release 스킴에서만 초기화**한다 — Debug 이벤트가 운영 데이터와
+     섞이면 안 돼 `Config_Debug.xcconfig`엔 API 키 자체를 안 둔다(`AppDependencies`/`WSSIOSV2App`이
+     `#if RELEASE`로 가드).)
 6. **작업 방식**: 브랜치 `Type/#이슈` (예: `Docs/#130`), 커밋 `[Type] #이슈 - 한글 설명`, 머지는 PR 경유(브랜치 보호). → [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 ---

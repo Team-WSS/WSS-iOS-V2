@@ -36,6 +36,7 @@ import SearchData
 import SettingData
 import SocialData
 import SplashData
+import Analytics
 import Logger
 import Networking
 
@@ -79,10 +80,23 @@ final class AppDependencies {
     /// 피드 작성 완료 → 피드 탭 목록 재로드 신호(앱 전역). Repository가 아니라 App 조정 계층 소유의
     /// 화면 간 상태라 여기 두되, 4탭 Root가 공유해야 해서 `AppDependencies`에 실어 나른다.
     let feedListInvalidation = FeedListInvalidation()
+    /// 이벤트 트래킹(#249) — Release 스킴에서만 실제 Amplitude 인스턴스, Debug는 nil(모든 호출부가
+    /// `analyticsTracker?.track(...)`라 자동 no-op). `Logger`와 동일한 옵셔널 주입 패턴.
+    let analyticsTracker: AnalyticsTracker?
 
     init() {
         let logger = ConsoleLogger()
         self.logger = logger
+
+        // Release 스킴에서만, 그리고 키가 실제로 있을 때만 만든다(#249) — Debug는
+        // Config_Debug.xcconfig에 AMPLITUDE_API_KEY 키 자체가 없어 빈 문자열로 읽히므로 이중 가드.
+        #if RELEASE
+        self.analyticsTracker = NetworkingConfig.amplitudeAPIKey.isEmpty
+            ? nil
+            : AmplitudeEventTracker(apiKey: NetworkingConfig.amplitudeAPIKey)
+        #else
+        self.analyticsTracker = nil
+        #endif
 
         let tokenStore = DefaultTokenStore()
 

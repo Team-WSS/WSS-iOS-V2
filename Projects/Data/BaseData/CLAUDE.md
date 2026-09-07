@@ -21,6 +21,11 @@ Data 레이어의 **공통 인프라**. 거의 모든 Data 모듈이 의존한�
 
 - **`ImageURLResolver.displayScale`은 UI 컨텍스트(루트 뷰 `@Environment(\.displayScale)`)에서 1회 주입**해야 한다 — 매퍼(백그라운드)에서 `UITraitCollection.current`를 읽으면 0이 나올 수 있어 값 주입 방식을 택했다. 미주입 시 기본 3(@3x — 전 기기에서 다운스케일이라 안전).
 - **plist 키(`BASE_URL` 등)는 Tuist `ModuleInfoPlist`가 featureDemo/data 타깃에만 주입**한다 — 새 키를 추가하면 xcconfig뿐 아니라 `Tuist/ProjectDescriptionHelpers/ModuleInfoPlist.swift`에도 넣어야 Bundle에서 읽힌다(빼먹으면 조용히 빈 문자열).
+- ⚠️ **`NetworkingConfig.amplitudeAPIKey`/`clarityProjectID`(#249)가 Debug 빌드에서 빈 문자열인 건 버그가
+  아니라 의도다** — 애널리틱스는 Release 스킴에서만 동작하도록 사용자가 확정해, `Config_Debug.xcconfig`엔
+  이 두 키 자체를 안 둔다(`Config_Release.xcconfig`에만 존재). App(`AppDependencies`/`WSSIOSV2App`)이
+  `#if RELEASE` + 빈 문자열 체크로 이중 가드하니, Debug에서 값이 비어 보여도 `Config_Debug.xcconfig`에
+  키를 추가해 "고치려" 하지 말 것.
 - `KeywordCache`는 **파일 기반**(캐시 디렉토리의 `keywords.json` JSON). "로컬 DB"라 부르지만 실제론 파일 캐시. 실패는 `CacheError`.
 - 키워드는 `syncKeywords()`로 서버→파일 동기화 후, 다른 도메인이 캐시에서 읽어 주입받는 구조.
 - `StorageKey` 추가 시 타입(`V`)을 정확히 — `UserDefaultsStorage`는 `as? V` 캐스팅이라 타입 불일치는 조용히 nil.

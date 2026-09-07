@@ -20,6 +20,7 @@ enum Config {
             static let kakaoCollectionShareTemplateID3 = "KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3"
             static let appStoreID = "APPSTORE_ID"
             static let amplitudeAPIKey = "AMPLITUDE_API_KEY"
+            static let clarityProjectID = "CLARITY_PROJECT_ID"
         }
     }
 }
@@ -45,4 +46,9 @@ public enum NetworkingConfig {
     public static let kakaoCollectionShareTemplateID3: Int64 = Int64(
         Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.kakaoCollectionShareTemplateID3) as? String ?? ""
     ) ?? 0
+    // Amplitude·Clarity(#249)는 Release 스킴에만 값이 있다(Config_Debug.xcconfig엔 키 자체가 없음) —
+    // Debug 빌드에선 둘 다 빈 문자열이 되고, App(`AppDependencies`/`WSSIOSV2App`)이 `#if RELEASE`로
+    // 가드해 초기화 자체를 건너뛴다(빈 키로 SDK를 초기화하지 않는다).
+    public static let amplitudeAPIKey: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.amplitudeAPIKey) as? String ?? ""
+    public static let clarityProjectID: String = Bundle.main.object(forInfoDictionaryKey: Config.Keys.Plist.clarityProjectID) as? String ?? ""
 }

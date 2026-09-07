@@ -13,6 +13,7 @@
 | `Keychain` | 보안 저장소, 키체인 접근 래퍼 |
 | `Logger` | 로깅 추상화, 콘솔 로거 |
 | `PushAuthorization` | 시스템 푸시 알림 권한 확인·요청 래퍼(`UserNotifications`) |
+| `Analytics` | 이벤트 트래킹 추상화(`AnalyticsTracker`) — Amplitude/Clarity 등 구체 SDK는 모름(#249) |
 
 ## 의존 규칙
 
