@@ -156,12 +156,18 @@ struct HomeRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
-                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
-                            onFeedListTapped: { userID, nickname, profileImage in
-                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            onRoute: { route in
+                                switch route {
+                                case .userLibrary:
+                                    path.append(Destination.userLibrary(userID))
+                                case .userFeedList(let userID, let nickname, let profileImage):
+                                    path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
+                                case .collectionList:
+                                    path.append(Destination.collectionList(userID))
+                                }
                             },
-                            onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
                             onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):

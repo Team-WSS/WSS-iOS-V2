@@ -22,16 +22,7 @@ import Logger
 public enum UserPageFeatureFactory {
 
     /// - Parameters:
-    ///   - onLibraryTapped: "서재" 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입 콜백.
-    ///     실제 화면 전환(`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onFeedListTapped: "활동기록 더보기" 탭 → 전체 피드 목록(`makeFeedListView`) 진입 콜백. 이
-    ///     화면이 이미 로드해둔 `(userID, nickname, profileImage)`를 그대로 실어 올린다(#201) — 실제
-    ///     화면 전환은 호출자(App)가 수행한다.
-    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세 진입 콜백. 실제 화면 전환
-    ///     (`CollectionFeature`의 상세 화면 조립)은 호출자(App)가 수행한다.
-    ///   - onCollectionListTapped: 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 그 유저의 컬렉션 목록 진입
-    ///     콜백. 실제 화면 전환(`CollectionFeature`의 목록 화면, "내 컬렉션" 탭만 보이는 모드)은
-    ///     호출자(App)가 수행한다.
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `UserPageRoute`(Navigation/) 참고(#253).
     ///   - onUserBlocked: 차단 성공(이 화면 dismiss) 직전 → 차단한 상대 닉네임을 실어 올리는 콜백.
     ///     이 화면은 곧 pop되므로 "차단했어요" 토스트(`WSSToastType.blockUser(nickname:)`)는 복귀할
     ///     화면(App 조정 계층)이 띄운다 — 지금은 도관만 뚫어둔 seam이고 실제 표시 배선은 크로스스크린
@@ -50,10 +41,7 @@ public enum UserPageFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
-        onLibraryTapped: @escaping () -> Void = {},
-        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
-        onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
-        onCollectionListTapped: @escaping () -> Void = {},
+        onRoute: @escaping (UserPageRoute) -> Void,
         onUserBlocked: @escaping (String) -> Void = { _ in }
     ) -> some View {
         let viewModel = UserPageViewModel(
@@ -73,10 +61,7 @@ public enum UserPageFeatureFactory {
         return UserPageView(
             viewModel: viewModel,
             userID: userID,
-            onLibraryTapped: onLibraryTapped,
-            onFeedListTapped: onFeedListTapped,
-            onCollectionItemTapped: onCollectionItemTapped,
-            onCollectionListTapped: onCollectionListTapped,
+            onRoute: onRoute,
             onUserBlocked: onUserBlocked
         )
     }

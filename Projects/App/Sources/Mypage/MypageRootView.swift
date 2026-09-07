@@ -175,11 +175,21 @@ struct MypageRootView: View {
                     collectionRepository: dependencies.collectionRepository
                 ),
                 logger: dependencies.logger,
-                onCollectionTapped: { path.append(Destination.collectionList) },
-                onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                onEditProfileTapped: { path.append(Destination.edit) },
-                onSettingTapped: { path.append(Destination.setting) },
-                onLibraryTapped: onLibraryTapped,
+                onRoute: { route in
+                    switch route {
+                    case .collectionList:
+                        path.append(Destination.collectionList)
+                    case .collectionDetail(let collectionID):
+                        path.append(Destination.collectionDetail(collectionID))
+                    case .editProfile:
+                        path.append(Destination.edit)
+                    case .setting:
+                        path.append(Destination.setting)
+                    case .libraryTab:
+                        // push가 아니라 탭 전환 — MainTabView.selectedTab을 바꾸는 클로저를 그대로 부른다.
+                        onLibraryTapped()
+                    }
+                },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .navigationDestination(for: Destination.self) { destination in
@@ -235,12 +245,18 @@ struct MypageRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
-                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
-                            onFeedListTapped: { userID, nickname, profileImage in
-                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            onRoute: { route in
+                                switch route {
+                                case .userLibrary:
+                                    path.append(Destination.userLibrary(userID))
+                                case .userFeedList(let userID, let nickname, let profileImage):
+                                    path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
+                                case .collectionList:
+                                    path.append(Destination.userCollectionList(userID))
+                                }
                             },
-                            onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                            onCollectionListTapped: { path.append(Destination.userCollectionList(userID)) },
                             onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):

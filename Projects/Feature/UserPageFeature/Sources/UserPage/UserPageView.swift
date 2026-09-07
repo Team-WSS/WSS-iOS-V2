@@ -43,19 +43,8 @@ struct UserPageView: View {
 
     private let userID: UserID
 
-    /// "서재" 블록(제목 옆 화살표 아이콘 + 통계 행) 탭 → 이 유저의 서재 진입 콜백. 실제 화면 전환
-    /// (`LibraryFactory.makeUserLibraryView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    private let onLibraryTapped: () -> Void
-    /// "활동기록 더보기" 탭 → 전체 피드 목록(`UserFeedListView`) 진입 콜백. 실제 화면 전환
-    /// (`UserPageFeatureFactory.makeFeedListView` 조립)은 호출자(App)가 수행한다(#201) — 그 화면이
-    /// 필요로 하는 `nickname`/`profileImage`는 이 화면이 이미 로드해둔 프로필 값을 그대로 실어 보낸다.
-    private let onFeedListTapped: (UserID, String, URL?) -> Void
-    /// 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세로 이동. 실제 화면 전환(`CollectionFeature`의 상세 화면
-    /// 조립)은 호출자(App)가 수행한다(#201) — 마이페이지 `onCollectionItemTapped`와 동일 계약.
-    private let onCollectionItemTapped: (CollectionID) -> Void
-    /// 컬렉션 섹션 헤더 탭(컬렉션이 있을 때) → 이 유저의 컬렉션 목록으로 이동. 실제 화면 전환
-    /// (`CollectionFeature`의 목록 화면 조립, "내 컬렉션" 탭만 보이는 모드)은 호출자(App)가 수행한다.
-    private let onCollectionListTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `UserPageRoute`(Navigation/)가 정본.
+    private let onRoute: (UserPageRoute) -> Void
     /// 차단 성공(이 화면 dismiss) 직전에 차단한 상대의 닉네임을 실어 올리는 콜백 — V1의 "차단했어요"
     /// 크로스스크린 안내(`NotificationCenter.blockUser`) 재도입용 seam. 이 화면은 곧 pop되므로 실제
     /// 토스트(`WSSToastType.blockUser(nickname:)`)는 **복귀할 화면(App 조정 계층)**이 띄운다 — 지금은
@@ -66,18 +55,12 @@ struct UserPageView: View {
     init(
         viewModel: UserPageViewModel,
         userID: UserID,
-        onLibraryTapped: @escaping () -> Void = {},
-        onFeedListTapped: @escaping (UserID, String, URL?) -> Void = { _, _, _ in },
-        onCollectionItemTapped: @escaping (CollectionID) -> Void = { _ in },
-        onCollectionListTapped: @escaping () -> Void = {},
+        onRoute: @escaping (UserPageRoute) -> Void,
         onUserBlocked: @escaping (String) -> Void = { _ in }
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.userID = userID
-        self.onLibraryTapped = onLibraryTapped
-        self.onFeedListTapped = onFeedListTapped
-        self.onCollectionItemTapped = onCollectionItemTapped
-        self.onCollectionListTapped = onCollectionListTapped
+        self.onRoute = onRoute
         self.onUserBlocked = onUserBlocked
     }
 
@@ -338,7 +321,7 @@ struct UserPageView: View {
                 
                 Spacer()
                 
-                Button(action: onLibraryTapped) {
+                Button(action: { onRoute(.userLibrary) }) {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
                         .renderingMode(.template)
@@ -357,7 +340,7 @@ struct UserPageView: View {
                 watching: viewModel.state.registeredNovelStats?.watching ?? 0,
                 watched: viewModel.state.registeredNovelStats?.watched ?? 0,
                 quit: viewModel.state.registeredNovelStats?.quit ?? 0,
-                action: onLibraryTapped
+                action: { onRoute(.userLibrary) }
             )
             
             Spacer().frame(height: 30)
@@ -382,7 +365,7 @@ struct UserPageView: View {
             if viewModel.hasCollections {
                 Spacer().frame(height: 8)
 
-                CollectionPreviewRow(previews: viewModel.state.collectionPreviews, onItemTapped: onCollectionItemTapped)
+                CollectionPreviewRow(previews: viewModel.state.collectionPreviews, onItemTapped: { onRoute(.collectionDetail($0)) })
             }
 
             Spacer().frame(height: viewModel.hasCollections ? 30 : 16)
@@ -390,13 +373,13 @@ struct UserPageView: View {
         .background(WSSColor.wssWhite.swiftUIColor)
     }
 
-    /// 컬렉션이 있으면 목록으로 이동(`onCollectionListTapped`, App이 조립), 없으면 VM이 "컬렉션을
-    /// 등록하지 않은 유저에요" 토스트를 띄운다 — "서재" 블록(`onLibraryTapped`)과 동일하게 순수
+    /// 컬렉션이 있으면 목록으로 이동(`onRoute(.collectionList)`, App이 조립), 없으면 VM이 "컬렉션을
+    /// 등록하지 않은 유저에요" 토스트를 띄운다 — "서재" 블록(`.userLibrary`)과 동일하게 순수
     /// 네비게이션은 View가 직접 콜백을 부르고, VM은 상태(토스트)만 관리한다.
     private var collectionSectionHeader: some View {
         Button {
             if viewModel.hasCollections {
-                onCollectionListTapped()
+                onRoute(.collectionList)
             } else {
                 viewModel.handle(.collectionSectionTapped)
             }
@@ -497,11 +480,11 @@ struct UserPageView: View {
                     if viewModel.hasMoreFeeds {
                         Spacer().frame(height: 20)
                         Button {
-                            onFeedListTapped(
-                                userID,
-                                viewModel.state.profile?.nickname ?? "",
-                                viewModel.state.profile?.characterImage
-                            )
+                            onRoute(.userFeedList(
+                                userID: userID,
+                                nickname: viewModel.state.profile?.nickname ?? "",
+                                profileImage: viewModel.state.profile?.characterImage
+                            ))
                         } label: {
                             Text("활동기록 더보기")
                                 .applyWSSFont(.title2)
@@ -794,7 +777,8 @@ private extension UserPageView {
                 reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
             ),
-            userID: UserID(1)
+            userID: UserID(1),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }
