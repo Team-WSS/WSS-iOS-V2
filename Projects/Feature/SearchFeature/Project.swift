@@ -19,7 +19,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.search)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        .module(.core(.analytics))
     ],
     demoDependencies: [
         // #185: 상세탐색 필터 화면의 "키워드" 탭 콘텐츠(KeywordTabContentBuilder)를 실제로 조립하려면

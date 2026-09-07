@@ -12,6 +12,7 @@ import BaseDomain
 import RecommendationDomain
 import SearchDomain
 import Logger
+import Analytics
 
 /// 모듈의 public 진입점 — 화면이 대등하게 둘이라 전부 `makeXxxView`로 무엇을 만드는지 이름에 넣는다
 /// (`Feature CLAUDE.md`의 Factory 규칙). `makeDetailSearchFilterView`는 #201부터 App(`SearchAssembly`)도
@@ -36,6 +37,7 @@ public enum SearchFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         initialQuery: String? = nil,
         onRoute: @escaping (NormalSearchRoute) -> Void
     ) -> some View {
@@ -49,6 +51,7 @@ public enum SearchFeatureFactory {
                 searchNovelUseCase: searchNovelUseCase,
                 loadPopularKeywordsUseCase: loadPopularKeywordsUseCase,
                 logger: logger,
+                analyticsTracker: analyticsTracker,
                 initialQuery: initialQuery
             ),
             onRoute: onRoute
@@ -64,13 +67,15 @@ public enum SearchFeatureFactory {
         filter: SearchFilter = SearchFilter(),
         initialTab: DetailSearchFilterTab = .info,
         keywordTabContent: @escaping KeywordTabContentBuilder,
-        onSearch: @escaping (SearchFilter) -> Void
+        onSearch: @escaping (SearchFilter) -> Void,
+        analyticsTracker: AnalyticsTracker? = nil
     ) -> some View {
         DetailSearchFilterView(
             filter: filter,
             initialTab: initialTab,
             keywordTabContent: keywordTabContent,
-            onSearch: onSearch
+            onSearch: onSearch,
+            analyticsTracker: analyticsTracker
         )
     }
 
@@ -86,13 +91,15 @@ public enum SearchFeatureFactory {
         filter: SearchFilter,
         searchNovelUseCase: SearchNovelUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (DetailSearchResultRoute) -> Void
     ) -> some View {
         DetailSearchResultView(
             viewModel: DetailSearchResultViewModel(
                 filter: filter,
                 searchNovelUseCase: searchNovelUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onRoute: onRoute
         )

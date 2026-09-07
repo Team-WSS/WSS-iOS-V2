@@ -25,13 +25,21 @@ struct SearchKeywordView: View {
     /// 실시간으로 호출부에 알리기만 한다. 초기화·완료 같은 CTA는 호출부(#185, `SearchFeature`의 상세탐색
     /// 필터 "키워드" 탭 등)가 자신의 것을 쓴다.
     private let onSelectionChanged: (([Keyword]) -> Void)?
+    /// 브라우징 블록에서 그 카테고리 칩을 토글할 때마다 호출(#249) — `KeywordFeatureFactory` 문서 참고.
+    private let onKeywordCategorySelected: ((KeywordCategory) -> Void)?
+    /// 검색 결과 없음 화면의 "키워드 문의하러 가기" 버튼 탭(#249) — 트래킹 여부는 호출부가 정한다.
+    private let onContactTapped: (() -> Void)?
 
     init(
         viewModel: SearchKeywordViewModel,
-        onSelectionChanged: (([Keyword]) -> Void)? = nil
+        onSelectionChanged: (([Keyword]) -> Void)? = nil,
+        onKeywordCategorySelected: ((KeywordCategory) -> Void)? = nil,
+        onContactTapped: (() -> Void)? = nil
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onSelectionChanged = onSelectionChanged
+        self.onKeywordCategorySelected = onKeywordCategorySelected
+        self.onContactTapped = onContactTapped
     }
     
     /// 실시간 검색이 아니라 제출(엔터·서치바 버튼) 시에만 갱신되는 `state.query` 기준으로 모드를 가른다.
@@ -74,6 +82,7 @@ struct SearchKeywordView: View {
                     WSSEmptyView(type: .keyword, action: {
                         // 범용 문의(errorReport)로 연다 — V1도 키워드 전용 폼이 아니라 범용 문의였다.
                         // 작품 등록 문의(inquiryAddNovel)로 연결됐던 건 V1 대비 오배선(#222 parity 복원).
+                        onContactTapped?()
                         if let url = AppURL.errorReport { openURL(url) }
                     })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -200,7 +209,10 @@ struct SearchKeywordView: View {
                     CapsuleSelectableKeywordChip(
                         keyword: keyword.name,
                         isSelected: viewModel.state.selectedKeywords.contains(keyword),
-                        action: { viewModel.handle(.toggleKeyword(keyword)) }
+                        action: {
+                            viewModel.handle(.toggleKeyword(keyword))
+                            onKeywordCategorySelected?(category)
+                        }
                     )
                 }
             }

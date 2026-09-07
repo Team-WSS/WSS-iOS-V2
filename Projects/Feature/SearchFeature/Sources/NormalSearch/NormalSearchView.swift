@@ -66,7 +66,11 @@ struct NormalSearchView: View {
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
                         onRetry: { viewModel.handle(.retrySearch) },
-                        onNovelSelected: { onRoute(.novelDetail($0)) }
+                        onNovelSelected: { novelID in
+                            viewModel.track(.resultSelected)
+                            onRoute(.novelDetail(novelID))
+                        },
+                        onContactTapped: { viewModel.track(.contactNovelTapped) }
                     )
                 } else if isFocused, !viewModel.state.searchText.isEmpty {
                     NormalSearchAutoCompletionView(
@@ -130,6 +134,7 @@ struct NormalSearchView: View {
                 viewModel.handle(.loadRecentSearchWords)
                 viewModel.handle(.loadPopularKeywords)
             }
+            viewModel.track(.screenViewed)
             // V1 parity: 진입 시 검색창에 자동 포커스(키보드 바로 뜸). 단 initialQuery로 이미 검색이
             // 실행된 경우(작가명 탭 등)엔 결과 화면을 보여줘야 하므로 포커스하지 않는다. 최초 1회만,
             // push 애니메이션이 끝난 뒤(포커스가 씹히지 않게) 건다.
@@ -354,6 +359,7 @@ struct NormalSearchView: View {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.sosoPickNovels, id: \.novelID) { pick in
                         Button {
+                            viewModel.track(.sosoPickSelected)
                             onRoute(.novelDetail(pick.novelID))
                         } label: {
                             sosoPickItem(imageURL: pick.novelThumbnailimage,
