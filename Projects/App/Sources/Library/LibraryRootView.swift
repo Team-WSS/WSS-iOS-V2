@@ -491,6 +491,7 @@ private extension LibraryRootView {
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .completionNotificationList:

@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NotificationDomain
 import Logger
+import Analytics
 
 /// ⚠️ 시스템 푸시 권한(denied) 확인·유도 알럿은 이 화면이 아니라 `SettingView`가 "알림 설정" 메뉴를
 /// 탭한 시점에 한다(#193) — `showWSSAlert`가 `.overlay` 기반이라 push 전환과 동시에 띄우면 화면 전환에
@@ -59,6 +60,7 @@ final class NotificationSettingViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NotificationDomain
     private let loadPushPreferenceUseCase: LoadPushPreferenceUseCase
@@ -69,11 +71,17 @@ final class NotificationSettingViewModel {
     init(
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadPushPreferenceUseCase = loadPushPreferenceUseCase
         self.updatePushPreferenceUseCase = updatePushPreferenceUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    func track(_ event: SettingAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -102,6 +110,7 @@ private extension NotificationSettingViewModel {
 
     /// 토글은 즉시 반영(낙관적 업데이트)하고, 실패하면 이전 값으로 되돌린다.
     func toggle(_ isOn: Bool) {
+        track(isOn ? .notificationOn : .notificationOff)
         let previous = state.isNotificationOn
         state.isNotificationOn = isOn
         Task { await updateNotificationStatus(isOn: isOn, previous: previous) }

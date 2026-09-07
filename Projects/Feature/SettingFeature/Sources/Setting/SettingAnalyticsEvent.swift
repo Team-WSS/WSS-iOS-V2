@@ -21,6 +21,10 @@ enum SettingAnalyticsEvent: String, AnalyticsEvent {
     case genderFemaleSelected = "mypage_woman"
     /// 프로필 편집 — 나이(출생연도) 선택(백로그)
     case birthYearSelected = "mypage_age"
+    /// 알림 설정 — 푸시 알림 전체 켜짐
+    case notificationOn = "setting_notification_on"
+    /// 알림 설정 — 푸시 알림 전체 꺼짐
+    case notificationOff = "setting_notification_off"
 
     init(gender: Gender) {
         self = gender == .male ? .genderMaleSelected : .genderFemaleSelected

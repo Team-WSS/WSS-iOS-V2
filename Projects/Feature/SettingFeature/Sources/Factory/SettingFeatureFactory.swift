@@ -188,13 +188,15 @@ public enum SettingFeatureFactory {
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (NotificationSettingRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return NotificationSettingView(
             viewModel: viewModel,
