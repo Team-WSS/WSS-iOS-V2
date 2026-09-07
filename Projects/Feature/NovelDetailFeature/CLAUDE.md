@@ -63,6 +63,10 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`NovelNotificationSettingSheetViewModel`은 `NovelDetailViewModel`과 별개 인스턴스라 `analyticsTracker`를
+  직접 받지 못한다** — `NovelDetailView`가 자기 생성자로 받은 `analyticsTracker`를 시트 생성 시점에 그대로
+  넘겨준다(로그인 `logger`와 같은 중계 방식). 알림 등록 4종(`novel_notification_view`/`_completion_on`/`off`/
+  `_hiatus_on`/`off`)은 `NovelDetailAnalyticsEvent`에 같이 얹혀 있다 — 별도 모듈 카탈로그를 만들지 않았다.
 - **`novel_info` 이벤트("정보 탭 진입")는 `.onAppear`와 `.selectTab(.info)` 둘 다에서 트래킹한다**(#249) —
   기본 진입 탭이 `.info`라 화면이 처음 뜰 땐 `selectTab` 액션을 안 거치므로, `onAppear`에서 한 번 더
   기록하지 않으면 최초 진입 이벤트가 누락된다.

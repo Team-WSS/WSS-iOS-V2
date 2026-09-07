@@ -16,6 +16,7 @@ import NovelReviewDomain
 import SocialDomain
 import Logger
 import PushAuthorization
+import Analytics
 import DesignSystem
 import WSSComponent
 
@@ -76,6 +77,7 @@ struct NovelDetailView: View {
 
     private let novelID: NovelID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     init(
         novelID: NovelID,
@@ -87,6 +89,7 @@ struct NovelDetailView: View {
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -97,9 +100,11 @@ struct NovelDetailView: View {
             novelID: novelID,
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         ))
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired

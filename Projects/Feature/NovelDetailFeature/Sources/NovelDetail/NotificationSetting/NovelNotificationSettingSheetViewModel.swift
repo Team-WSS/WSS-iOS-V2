@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NotificationDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -79,6 +80,7 @@ final class NovelNotificationSettingSheetViewModel {
 
     private let novelID: NovelID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NotificationDomain
     private let loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase
@@ -90,12 +92,18 @@ final class NovelNotificationSettingSheetViewModel {
         novelID: NovelID,
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.novelID = novelID
         self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
         self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    func track(_ event: NovelDetailAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -140,6 +148,7 @@ private extension NovelNotificationSettingSheetViewModel {
 
     func toggleCompletionNotification(_ isOn: Bool) {
         guard !state.isSyncing, !isClosing else { return }
+        track(isOn ? .notificationCompletionOn : .notificationCompletionOff)
         let rollback = currentSetting
         state.isCompletionNotificationEnabled = isOn
         // Task 스케줄링 틈새에 두 토글이 동시에 들어와도 가드가 뚫리지 않도록, 스폰 전에 동기로 세운다.
@@ -149,6 +158,7 @@ private extension NovelNotificationSettingSheetViewModel {
 
     func toggleHiatusReturnNotification(_ isOn: Bool) {
         guard !state.isSyncing, !isClosing else { return }
+        track(isOn ? .notificationHiatusOn : .notificationHiatusOff)
         let rollback = currentSetting
         state.isHiatusReturnNotificationEnabled = isOn
         state.isSyncing = true

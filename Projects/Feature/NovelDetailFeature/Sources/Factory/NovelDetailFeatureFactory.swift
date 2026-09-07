@@ -76,6 +76,7 @@ public enum NovelDetailFeatureFactory {
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
             logger: logger,
+            analyticsTracker: analyticsTracker,
             needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

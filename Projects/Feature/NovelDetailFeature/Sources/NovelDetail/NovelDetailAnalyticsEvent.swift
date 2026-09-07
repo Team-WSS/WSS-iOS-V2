@@ -28,4 +28,14 @@ enum NovelDetailAnalyticsEvent: String, AnalyticsEvent {
     case interestToggled = "rate_love"
     /// 더보기 드롭다운 "평가 삭제" 클릭
     case reviewDeleteTapped = "rate_delete"
+    /// 작품 알림 등록 시트 진입(네비바 종 아이콘 탭)
+    case notificationSheetViewed = "novel_notification_view"
+    /// 완결 알림 켜짐
+    case notificationCompletionOn = "novel_notification_completion_on"
+    /// 완결 알림 꺼짐
+    case notificationCompletionOff = "novel_notification_completion_off"
+    /// 휴재복귀 알림 켜짐
+    case notificationHiatusOn = "novel_notification_hiatus_on"
+    /// 휴재복귀 알림 꺼짐
+    case notificationHiatusOff = "novel_notification_hiatus_off"
 }
