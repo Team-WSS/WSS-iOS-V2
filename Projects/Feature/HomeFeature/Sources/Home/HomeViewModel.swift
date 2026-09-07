@@ -14,6 +14,7 @@ import RecommendationDomain
 import NotificationDomain
 import Logger
 import PushAuthorization
+import Analytics
 
 @MainActor
 @Observable
@@ -84,6 +85,7 @@ final class HomeViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // RecommendationDomain
     private let loadHomeDataUseCase: LoadHomeDataUseCase
@@ -100,13 +102,21 @@ final class HomeViewModel {
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadHomeDataUseCase = loadHomeDataUseCase
         self.loadUnreadNotificationStatusUseCase = loadUnreadNotificationStatusUseCase
         self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State()
+    }
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않고
+    /// View가 직접 호출한다(탭 자체가 콜백으로 바로 위임돼 VM 액션이 없는 화면 전환 탭 등).
+    func track(_ event: HomeAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle

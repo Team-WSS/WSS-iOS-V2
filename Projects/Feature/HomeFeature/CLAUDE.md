@@ -93,6 +93,9 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **CSV 이벤트 `general_search`("탐색 서치바 클릭")·`seek`("내 취향에 맞는...” 배너)는 `SearchFeature`가 아니라
+  이 모듈에서 트래킹한다**(#249) — V1은 "탐색" 화면으로 분류했지만, 실제 UI 요소(검색바·상세탐색 배너)는
+  `HomeSearchSection`(이 모듈)에 있다. `SearchFeature`에서 이 이벤트를 찾지 말 것.
 - 홈 Domain을 찾을 때 `HomeDomain`을 만들지 말 것 — 정본은 `RecommendationDomain/Sources/`다
   (`LibraryFeature`↔`NovelDomain`과 같은 형태의 이름 불일치).
 - **홈은 앱에서 손꼽히는 "동시 요청 4건" 지점**이다 → access token이 만료된 채 진입하면 **401도 4건이 동시에**

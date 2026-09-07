@@ -116,6 +116,7 @@ struct HomeRootView: View {
                 ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
+                analyticsTracker: dependencies.analyticsTracker,
                 onRoute: { route in
                     switch route {
                     case .novelDetail(let novelID):
@@ -443,6 +444,7 @@ private extension HomeRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
+            analyticsTracker: dependencies.analyticsTracker,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
                 // 작품 상세 경유 작성 — 복귀할 그 작품 상세가 자기 피드 섹션을 초기 로드처럼 리셋한다(#256).
