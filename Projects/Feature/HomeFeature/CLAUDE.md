@@ -9,9 +9,10 @@
   `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), `DesignSystem`, `WSSComponent`, `Logger`,
   `PushAuthorization`(#193 — 알림 벨 탭 시 시스템 권한 확인용)
 - 진입점: `HomeFeatureFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:
-  pushAuthorizationChecker:logger:onNovelSelected:onFeedSelected:onSearchTapped:onDetailSearchTapped:
-  onNotificationTapped:onPreferenceGenreSettingTapped:onAuthenticationRequired:)` —
-  **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫)
+  pushAuthorizationChecker:logger:onRoute:onAuthenticationRequired:)` —
+  **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫). 화면 전환 의도는 `onRoute: (HomeRoute) -> Void` 하나
+  (#253 — `.novelDetail`/`.feedDetail`/`.search`/`.detailSearch`/`.notification`/`.preferenceGenreSetting`,
+  정본 `Sources/Navigation/HomeRoute.swift`)
 
 ## 핵심 시나리오
 
@@ -36,7 +37,7 @@
   권한을 요청할 필요가 없다.** `authorized`/`denied`면 진입 시점엔 아무 것도 안 한다(denied 유도
   알럿은 아래 벨 탭 때만 — 진입만으로 매번 알럿을 띄우면 홈에 올 때마다 거슬린다).
 - **알림 벨 탭 → 이동 신호만 올린다(#193, App으로 이관)**: `notificationBellTapped()`는
-  `shouldNavigateToNotifications`만 세워 `onNotificationTapped()`를 바로 발화시킨다 — 권한 확인·denied
+  `shouldNavigateToNotifications`만 세워 `onRoute(.notification)`을 바로 발화시킨다 — 권한 확인·denied
   유도 알럿은 더 이상 이 화면(HomeFeature) 책임이 아니다. **알럿은 이동한 뒤의 알림 목록 화면 쪽에서
   App(`HomeRootView`)이 직접 판단·표시한다** — `showWSSAlert`가 `.overlay` 기반이라 push 전환과
   **동시에** 띄우면(구 설계) 그 전환에 밀려 사라지기 때문(`SettingFeature`의 알림 설정 메뉴가 이 함정을

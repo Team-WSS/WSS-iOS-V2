@@ -155,12 +155,16 @@ private struct DemoRootView: View {
             loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
-            onNovelSelected: { consoleLogger.info("작품 상세 진입 요청: \($0)") },
-            onFeedSelected: { consoleLogger.info("피드 상세 진입 요청: \($0)") },
-            onSearchTapped: { consoleLogger.info("검색 진입 요청") },
-            onDetailSearchTapped: { consoleLogger.info("상세 검색 진입 요청") },
-            onNotificationTapped: { consoleLogger.info("알림 진입 요청") },
-            onPreferenceGenreSettingTapped: { consoleLogger.info("선호장르 설정 진입 요청") },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID): consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+                case .feedDetail(let feedID): consoleLogger.info("피드 상세 진입 요청: \(feedID)")
+                case .search: consoleLogger.info("검색 진입 요청")
+                case .detailSearch: consoleLogger.info("상세 검색 진입 요청")
+                case .notification: consoleLogger.info("알림 진입 요청")
+                case .preferenceGenreSetting: consoleLogger.info("선호장르 설정 진입 요청")
+                }
+            },
             onAuthenticationRequired: { consoleLogger.info("인증 만료 → 로그인 진입 요청") }
         )
     }

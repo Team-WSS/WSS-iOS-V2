@@ -113,19 +113,27 @@ struct HomeRootView: View {
                 ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
-                onNovelSelected: { path.append(Destination.novel($0)) },
-                onFeedSelected: { path.append(Destination.feed($0)) },
-                onSearchTapped: { path.append(Destination.search) },
-                onDetailSearchTapped: { path.append(Destination.detailSearchFilter(.info)) },
-                onNotificationTapped: {
-                    path.append(Destination.notification)
-                    Task {
-                        if await DefaultPushAuthorizationChecker().authorizationStatus() == .denied {
-                            isPushAuthorizationAlertPresented = true
+                onRoute: { route in
+                    switch route {
+                    case .novelDetail(let novelID):
+                        path.append(Destination.novel(novelID))
+                    case .feedDetail(let feedID):
+                        path.append(Destination.feed(feedID))
+                    case .search:
+                        path.append(Destination.search)
+                    case .detailSearch:
+                        path.append(Destination.detailSearchFilter(.info))
+                    case .notification:
+                        path.append(Destination.notification)
+                        Task {
+                            if await DefaultPushAuthorizationChecker().authorizationStatus() == .denied {
+                                isPushAuthorizationAlertPresented = true
+                            }
                         }
+                    case .preferenceGenreSetting:
+                        path.append(Destination.preferenceGenreSetting)
                     }
                 },
-                onPreferenceGenreSettingTapped: { path.append(Destination.preferenceGenreSetting) },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .toolbar(.hidden, for: .navigationBar)
