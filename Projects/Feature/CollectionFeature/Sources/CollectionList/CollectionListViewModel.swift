@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 /// "내 컬렉션"/"좋아요한 컬렉션"을 세그먼트 탭으로 전환. 마이페이지 "컬렉션 N개" 행에서 진입한다
 /// (`UserPageFeature`가 콜백만 노출, 실제 화면 전환 배선은 App 몫 — 두 Feature는 서로 import 못 한다).
@@ -92,6 +93,7 @@ final class CollectionListViewModel {
 
     private let userID: UserID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // CollectionDomain
     private let loadCollectionsUseCase: LoadCollectionsUseCase
@@ -103,12 +105,18 @@ final class CollectionListViewModel {
         userID: UserID,
         loadCollectionsUseCase: LoadCollectionsUseCase,
         loadLikedCollectionsUseCase: LoadLikedCollectionsUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.userID = userID
         self.loadCollectionsUseCase = loadCollectionsUseCase
         self.loadLikedCollectionsUseCase = loadLikedCollectionsUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle

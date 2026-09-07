@@ -38,6 +38,7 @@ enum CollectionEditAssembly {
                 collectionRepository: dependencies.collectionRepository
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             pendingNovelSelection: pendingNovelSelection,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

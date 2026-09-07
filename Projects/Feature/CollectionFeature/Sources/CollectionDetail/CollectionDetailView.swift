@@ -158,6 +158,7 @@ struct CollectionDetailView: View {
                 viewModel.handle(.reloadAfterEdit)
             } else {
                 hasAppearedOnce = true
+                viewModel.track(.detailViewed)
                 viewModel.handle(.load)
             }
         }

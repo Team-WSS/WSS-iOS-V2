@@ -24,6 +24,7 @@ let project = Project.createFeatureModule(
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger)),
+        .module(.core(.analytics)),
         // 컬렉션 상세 "공유하기"의 카카오톡 공유 카드(#228) — ShareApi(Share).
         // Tuist/Package.swift에서 .framework로 강제돼 있어야 한다(OnboardingFeature와 같은 MustInitAppKey 함정).
         .external(name: "KakaoSDKShare")

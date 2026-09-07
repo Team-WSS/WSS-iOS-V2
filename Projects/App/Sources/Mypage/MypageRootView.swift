@@ -539,6 +539,7 @@ private extension MypageRootView {
         CollectionFeatureFactory.makeCreateCollectionView(
             createCollectionUseCase: DefaultCreateCollectionUseCase(collectionRepository: dependencies.collectionRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             pendingNovelSelection: $pendingCollectionNovelSelection,
             onRoute: { route in
                 switch route {
