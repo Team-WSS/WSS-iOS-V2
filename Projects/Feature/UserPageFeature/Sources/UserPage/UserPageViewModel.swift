@@ -259,13 +259,13 @@ private extension UserPageViewModel {
     ///   실패해도 기존 화면을 그대로 둔다(`NovelDetailViewModel.load` 정본).
     func load() {
         guard loadTask == nil else { return }
-        analyticsTracker?.track(UserPageAnalyticsEvent.otherMypageViewed)
         if hasLoaded {
             loadTask = Task { await loadUserPage(isSilentRefresh: true) }
             if hasLoadedFirstFeeds, feedsTask == nil, !state.isProfilePrivate {
                 feedsTask = Task { await loadFirstFeedsPage(isSilentRefresh: true) }
             }
         } else {
+            analyticsTracker?.track(UserPageAnalyticsEvent.otherMypageViewed)
             state.isLoading = true
             state.hasLoadError = nil
             loadTask = Task { await loadUserPage() }

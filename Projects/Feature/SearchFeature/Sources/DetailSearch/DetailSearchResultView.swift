@@ -38,7 +38,6 @@ struct DetailSearchResultView: View {
             .background(WSSColor.wssWhite.swiftUIColor)
             .onAppear {
                 viewModel.handle(.load)
-                viewModel.track(.detailResultViewed)
             }
     }
 

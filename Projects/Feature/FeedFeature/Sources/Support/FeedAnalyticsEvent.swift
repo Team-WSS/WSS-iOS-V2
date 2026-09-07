@@ -32,7 +32,7 @@ enum FeedAnalyticsEvent: String, AnalyticsEvent {
     /// 스포일러 토글 꺼짐(백로그)
     case spoilerToggleOff = "write_spoiler_off"
     /// 작품 연결하기 시트 열기(백로그)
-    case connectNovelSheetOpened = "write_connect_noevel"
+    case connectNovelSheetOpened = "write_connect_novel"
     /// 작품 연결 검색 결과 없을 때 문의하기 클릭
     case connectNovelContactTapped = "contact_novel_connect"
     /// 글 작성 완료

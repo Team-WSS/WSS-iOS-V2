@@ -78,6 +78,8 @@ final class DetailSearchFilterViewModel {
         self.state = State(filter: filter, ratingMin: ratingMin, ratingMax: ratingMax)
     }
 
+    // MARK: - Analytics
+
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
@@ -109,10 +111,11 @@ final class DetailSearchFilterViewModel {
 
 private extension DetailSearchFilterViewModel {
     func toggleGenre(_ genre: NovelGenre) {
-        track(.infoGenreSelected)
+        // 이벤트가 "선택"만 의미한다 — 해제로 갈 땐 트래킹하지 않는다.
         if state.filter.genres.contains(genre) {
             state.filter.removeGenre(genre)
         } else {
+            track(.infoGenreSelected)
             state.filter.addGenre(genre)
         }
     }
@@ -127,10 +130,11 @@ private extension DetailSearchFilterViewModel {
 
     /// 연재상태는 단일 선택 — 같은 값을 다시 탭하면 해제한다.
     func togglePublicationStatus(_ status: NovelPublicationStatus) {
-        track(.infoPublicationStatusSelected)
+        // 이벤트가 "선택"만 의미한다 — 같은 값을 다시 탭해 해제할 땐 트래킹하지 않는다.
         if state.filter.publicationStatus == status {
             state.filter.setPublicationStatus(nil)
         } else {
+            track(.infoPublicationStatusSelected)
             state.filter.setPublicationStatus(status)
         }
     }

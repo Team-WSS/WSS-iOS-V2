@@ -128,7 +128,6 @@ struct SosoFeedView: View {
             } else {
                 viewModel.handle(.load)
             }
-            viewModel.track(.screenViewed)
         }
     }
 

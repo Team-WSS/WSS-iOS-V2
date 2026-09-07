@@ -50,7 +50,6 @@ struct HomeView: View {
             .onAppear {
                 viewModel.handle(.load)
                 viewModel.handle(.checkPushAuthorizationOnEntry)
-                viewModel.track(.screenViewed)
             }
             .onChange(of: viewModel.state.requiresAuthentication) { _, requiresAuthentication in
                 guard requiresAuthentication else { return }

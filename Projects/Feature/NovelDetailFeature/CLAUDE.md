@@ -67,9 +67,11 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
   직접 받지 못한다** — `NovelDetailView`가 자기 생성자로 받은 `analyticsTracker`를 시트 생성 시점에 그대로
   넘겨준다(로그인 `logger`와 같은 중계 방식). 알림 등록 4종(`novel_notification_view`/`_completion_on`/`off`/
   `_hiatus_on`/`off`)은 `NovelDetailAnalyticsEvent`에 같이 얹혀 있다 — 별도 모듈 카탈로그를 만들지 않았다.
-- **`novel_info` 이벤트("정보 탭 진입")는 `.onAppear`와 `.selectTab(.info)` 둘 다에서 트래킹한다**(#249) —
-  기본 진입 탭이 `.info`라 화면이 처음 뜰 땐 `selectTab` 액션을 안 거치므로, `onAppear`에서 한 번 더
-  기록하지 않으면 최초 진입 이벤트가 누락된다.
+- **`novel_info` 이벤트("정보 탭 진입")는 `load()`의 `!hasLoaded`(최초 진입) 분기 안에서 트래킹한다**(#249,
+  #250 리뷰로 정정) — 기본 진입 탭이 `.info`라 `selectTab` 액션을 안 거쳐 별도로 잡아야 하지만, View의
+  `onAppear`에 직접 두면 **재진입(push 복귀)마다 재발화**한다(이 화면은 피드/평가/작성 화면으로 push했다
+  돌아오는 흐름이 흔해 `onAppear`가 반복 호출됨). VM의 `!hasLoaded` 가드 안으로 옮겨 최초 1회만 잡는다 —
+  `selectTab(.info)`로 전환하는 재방문은 그쪽에서 별도로 잡힌다.
 - ⚠️ **피드 로드 실패는 첫 페이지든 더보기든 탭 자리를 `NetworkErrorView`(재시도 버튼)로 대체한다**(#195) — 토스트로 알리지 않는다. 규칙 정본은 [Feature CLAUDE.md](../CLAUDE.md)의 "로드 실패 표현 계약".
   - ⚠️ **`NovelDetailFeedTab`은 실패를 목록보다 먼저 판단한다**(`if hasLoadFailed` → `else if feeds.isEmpty`). 더보기가 실패하면 목록이 남아 있는데 그대로 두면 **실패를 알릴 자리가 없어** 사용자가 "왜 안 늘어나지"로 갇힌다(서재에서 실제로 겪었다). 순서를 뒤집지 말 것.
   - ⚠️ **첫 성공 전이면 피드 탭 재진입(`selectTab`)도 첫 페이지 재로드를 시도한다** — 그때 `feedsLoadFailed`를 **함께 내려야** 요청이 도는 동안 실패 뷰 대신 로딩이 보인다. 안 내리면 실패 뷰가 그려진 채 그 재시도 버튼이 `feedsTask == nil` 가드에 막혀 **눌러도 반응이 없다**(#195에서 실제로 그랬다). 단 플래그 하강은 **재로드가 실제로 도는 `if` 블록 안**에 둘 것 — 밖에 두면 더보기 실패 상태에서 탭만 왕복해도 실패 뷰가 사라지고 재시도 수단이 증발한다.

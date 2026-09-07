@@ -93,6 +93,8 @@ final class UserLibraryViewModel {
         self.state = State()
     }
 
+    // MARK: - Analytics
+
     func track(_ event: LibraryAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

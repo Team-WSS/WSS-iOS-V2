@@ -55,6 +55,9 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`feed_all` 화면진입 이벤트는 `hasTrackedScreenViewed`(전용 1회 가드)로 최초 진입에만 쏜다**(#250
+  리뷰로 정정) — 이 화면은 탭(내 피드/소소피드)별로 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds`를 따로
+  갖는데, "화면 진입" 자체는 어느 탭에서 시작하든 1건이라 탭별 플래그로는 못 가른다. 별도 플래그를 둔 이유.
 - **`CreateFeedConnectNovelSheet`의 `inquiryNovelAction`(검색 결과 없을 때 "작품 문의하기" 버튼)은 이제
   `CreateFeedView`에서 트래킹(`.connectNovelContactTapped`, #249) + `AppURL.inquiryAddNovel`을 함께 연다**
   (한때 트래킹 배선 중 빈 클로저(`{ }`)로 남아 탭해도 반응이 없는 죽은 버튼이었던 걸 develop에서 고쳤다 —

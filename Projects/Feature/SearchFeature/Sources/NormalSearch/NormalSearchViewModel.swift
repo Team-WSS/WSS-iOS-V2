@@ -138,6 +138,8 @@ final class NormalSearchViewModel {
         }
     }
 
+    // MARK: - Analytics
+
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
@@ -177,6 +179,7 @@ final class NormalSearchViewModel {
 private extension NormalSearchViewModel {
     func loadSosoPick() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.screenViewed)
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadSosoPickNovels() }

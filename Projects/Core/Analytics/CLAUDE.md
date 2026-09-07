@@ -29,4 +29,9 @@ Clarity 등 구체 SDK를 **모른다**(#249). 구현체는 App 레이어에만 
 
 ## 주의사항 (작업 중 발견 시 누적)
 
-- (없음 — 발견 시 추가)
+- **"화면 진입"류(`XxxViewed`) 이벤트는 `View.onAppear`가 아니라 VM의 `load()` 안, `hasLoaded` 가드를 통과한
+  분기에서 쏜다** — `onAppear`는 뒤로가기 후 재진입마다 재발화되므로 거기서 직접 트래킹하면 화면 하나를 다시
+  볼 때마다 중복 집계된다. `load()`에 `hasLoaded`/`!hasLoaded` 가드가 있는 화면은 그 안에, 가드 없이
+  재진입마다 무조건 재조회하는 화면(예: `FeedDetailViewModel.load`)은 View 쪽에 별도 `hasTrackedXxx`
+  `@State` 플래그를 둬서 최초 1회만 쏜다(`NovelDetailViewModel`/`DetailSearchResultViewModel`/
+  `NormalSearchViewModel`/`FeedDetailView`에서 이 패턴으로 정리됨).

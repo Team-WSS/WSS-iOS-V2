@@ -74,6 +74,8 @@ final class NotificationDetailViewModel {
         self.state = State()
     }
 
+    // MARK: - Analytics
+
     func track(_ event: NotificationAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

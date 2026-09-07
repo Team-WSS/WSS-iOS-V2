@@ -232,6 +232,8 @@ final class NovelDetailViewModel {
         self.state = State()
     }
 
+    // MARK: - Analytics
+
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: NovelDetailAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
@@ -310,6 +312,9 @@ private extension NovelDetailViewModel {
         }
         guard loadTask == nil, !isClosing else { return }
         if !hasLoaded {
+            // 기본 진입 탭이 `.info`라 `selectTab`을 거치지 않는다 — 최초 진입 1회만 기록
+            // (재진입은 `onAppear` 재발화라 여기서 다시 잡으면 안 된다).
+            track(.infoTabViewed)
             state.isLoading = true
         }
         loadTask = Task { await loadNovel() }

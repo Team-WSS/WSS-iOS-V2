@@ -77,6 +77,12 @@ final class GenreSelectionViewModel {
         self.analyticsTracker = analyticsTracker
     }
 
+    // MARK: - Analytics
+
+    func track(_ event: GenreSelectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
+    }
+
     // MARK: - handle
 
     func handle(_ action: Action) {
@@ -101,10 +107,11 @@ final class GenreSelectionViewModel {
 
 private extension GenreSelectionViewModel {
     func toggleGenre(_ genre: NovelGenre) {
-        analyticsTracker?.track(GenreSelectionAnalyticsEvent(genre: genre))
+        // 카탈로그엔 "선택됨" 이벤트만 있다(해제 이벤트 없음) — 해제로 갈 땐 트래킹하지 않는다.
         if state.selectedGenres.contains(genre) {
             state.selectedGenres.remove(genre)
         } else {
+            track(GenreSelectionAnalyticsEvent(genre: genre))
             state.selectedGenres.insert(genre)
         }
     }

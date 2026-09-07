@@ -200,6 +200,8 @@ final class SosoFeedViewModel {
     /// ⚠️ `state.myFeeds.isEmpty`로 대체하면 안 된다 — 피드 0건 유저는 성공해도 배열이 비어 복귀마다 로딩 뷰로 깜빡인다.
     @ObservationIgnored private var hasLoadedMyFeeds = false
     @ObservationIgnored private var hasLoadedSosoFeeds = false
+    /// 화면 진입 트래킹 1회 가드 — 탭 두 개를 넘나드는 "화면 진입" 자체는 탭별 `hasLoaded*`로는 못 가른다.
+    @ObservationIgnored private var hasTrackedScreenViewed = false
     /// 좋아요 서버 동기화가 진행 중인 셀 — 같은 셀 연타 가드 + 목록 교체/셀 동기화가 낙관 토글을 되덮지 않게 보호.
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
     /// 마지막 `.reload` 요청 이후 토글한 셀 — 요청이 도는 동안 눌린 좋아요는 응답 스냅샷에 없을 수 있어 병합 보호
@@ -234,6 +236,8 @@ final class SosoFeedViewModel {
         self.logger = logger
         self.analyticsTracker = analyticsTracker
     }
+
+    // MARK: - Analytics
 
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
@@ -338,6 +342,11 @@ final class SosoFeedViewModel {
     /// 세웠으면 **목록을 다시 받지 않고** 다녀온 셀만 상세로 맞춘다 — 목록을 다시 받으면 20개로 줄어 스크롤이
     /// 튀기 때문. 전체 최신화는 당겨서 새로고침이 맡는다(탭 콘텐츠 "복귀마다 갱신" 규약의 의도된 예외).
     private func load() {
+        guard feedsTask == nil else { return }
+        if !hasTrackedScreenViewed {
+            hasTrackedScreenViewed = true
+            track(.screenViewed)
+        }
         if hasLoaded(state.selectedTab) {
             // 셀 동기화는 별도 슬롯(cellSyncTask)이라 목록 로드(더보기)가 도는 중이어도 진행한다 —
             // feedsTask 가드에 같이 걸면 더보기가 in-flight인 복귀에서 다녀온 셀 동기화가 조용히

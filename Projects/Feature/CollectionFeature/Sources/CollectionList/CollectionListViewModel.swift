@@ -115,6 +115,8 @@ final class CollectionListViewModel {
         self.analyticsTracker = analyticsTracker
     }
 
+    // MARK: - Analytics
+
     func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

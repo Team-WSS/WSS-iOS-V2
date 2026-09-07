@@ -161,6 +161,8 @@ final class FeedDetailViewModel {
         self.analyticsTracker = analyticsTracker
     }
 
+    // MARK: - Analytics
+
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)

@@ -142,6 +142,8 @@ final class LibraryViewModel {
         self.state = State(filter: loadMyLibraryFilterUseCase.execute() ?? MyLibraryFilter())
     }
 
+    // MARK: - Analytics
+
     func track(_ event: LibraryAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

@@ -102,6 +102,8 @@ final class NovelNotificationSettingSheetViewModel {
         self.analyticsTracker = analyticsTracker
     }
 
+    // MARK: - Analytics
+
     func track(_ event: NovelDetailAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

@@ -80,6 +80,8 @@ final class NotificationSettingViewModel {
         self.analyticsTracker = analyticsTracker
     }
 
+    // MARK: - Analytics
+
     func track(_ event: SettingAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

@@ -128,8 +128,6 @@ struct NovelDetailView: View {
                 // 한다 — `NovelNotificationSettingSheetViewModel.load()`는 `hasLoaded` 가드가 있어
                 // 재진입마다 다시 부르는 건 무해하다(첫 로드 후엔 no-op).
                 notificationSettingViewModel.handle(.load)
-                // 기본 진입 탭이 `.info`라 `selectTab`을 거치지 않는다 — 화면 진입 자체를 여기서 기록.
-                viewModel.track(.infoTabViewed)
             }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }

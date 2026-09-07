@@ -136,6 +136,8 @@ final class CreateCollectionViewModel {
         self.baselineDraft = CollectionDraft()
     }
 
+    // MARK: - Analytics
+
     func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
     }

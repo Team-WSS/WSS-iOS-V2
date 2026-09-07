@@ -71,6 +71,10 @@
 - **CSV 이벤트 `mypage_man`/`mypage_woman`/`mypage_age`("프로필 편집 > 성별/나이 선택")는 여기가 아니라
   `SettingFeature`(계정정보 > 성별/나이 변경 화면)에서 트래킹한다**(#249) — V1은 "마이페이지"로 분류했지만
   V2의 실제 입력 UI는 그쪽에 있다. `MypageViewModel`엔 `mypage`(화면 진입) 이벤트만 있다.
+  ⚠️ **`mypage`/`other_mypage` 둘 다 `load()`의 `!hasLoadedContent`(최초 진입) 분기에서만 쏜다**(#250 리뷰로
+  정정) — 이 화면들은 탭 콘텐츠·push 복귀 모두 재조회 자체엔 최초 1회 가드가 없지만(`Feature/CLAUDE.md`
+  "탭 콘텐츠는 복귀마다 갱신" 규약), 트래킹은 그 재조회 가드와 별개로 `hasLoadedContent`/`hasLoaded`
+  체크를 앞에 둬 재진입마다 중복 집계되지 않게 한다.
 - **네비바 교체(#244)**: `MyPageEditView`(프로필 편집, 완료 버튼=`trailing`)와 `UserFeedListView`(활동 목록)는 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`로 교체(정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md), 둘 다 미저장 확인 알럿이 없어 스와이프백 허용).
 - **`MypageView`·`UserPageView`는 `WSSNavigationBar`가 아니라 커스텀 몰입형 상단 바로 교체했다**(#244, `NovelDetailView` 결) — 스크롤 반응형(타이틀·배경 전환)이라 back+title 고정형 `WSSNavigationBar`가 안 맞아서다. 둘 다 시스템 툴바(+`.toolbarBackground`)를 걷어내고 `safeAreaInset(edge:.top)`으로 커스텀 바를 고정한다. **`MypageView`**: 뒤로가기 없는 탭 루트라 우측 설정 아이콘 항상 + "마이페이지" 타이틀 페이드인(`mypageTopBar`, 흰 배경). **`UserPageView`**: back + threedots + 닉네임 페이드인, 바 배경이 히어로와 이어지는 `primary20`↔스크롤 후 `wssWhite`로 전환(`userPageTopBar`, push 화면이라 `.wssCustomNavigationBar()`로 스와이프백). ⚠️ **커스텀 오버레이라 `.opacity`/색 전환이 그대로 반영된다** — 아래 "스크롤 반응형 네비 타이틀" 항목의 `if 구조 토글`(시스템 `.principal` UIKit 브리지 함정 회피책)은 **더 이상 이 두 화면에 적용되지 않는다**(그 함정은 시스템 툴바에서만 났다). ⚠️ **스크롤 전환 애니메이션(`isScrolledFromTop`)은 사용자 선호로 제거돼 즉시 전환한다**(#244 후속, 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md) — 되살리지 말 것).
 - **미리보기 카드 렌더(`CollectionPreviewRow`, `Sources/Component/`)는 `MypageView.swift`에 미사용

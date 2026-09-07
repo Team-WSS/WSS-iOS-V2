@@ -70,6 +70,8 @@ final class DetailSearchResultViewModel {
         self.state = State(filter: filter)
     }
 
+    // MARK: - Analytics
+
     /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
     func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
         analyticsTracker?.track(event, properties: properties)
@@ -92,6 +94,7 @@ final class DetailSearchResultViewModel {
 private extension DetailSearchResultViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.detailResultViewed)
         state.isLoading = true
         state.hasLoadError = nil
         loadTask = Task { await loadResult() }
