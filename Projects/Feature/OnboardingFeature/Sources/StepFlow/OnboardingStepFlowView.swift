@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import ProfileDomain
 import Logger
+import Analytics
 import DesignSystem
 import WSSComponent
 
@@ -48,7 +49,7 @@ struct OnboardingStepFlowView: View {
 
     @State private var viewModel = OnboardingStepFlowViewModel()
     @State private var nicknameViewModel: NicknameViewModel
-    @State private var genderBirthYearViewModel = GenderBirthYearViewModel()
+    @State private var genderBirthYearViewModel: GenderBirthYearViewModel
     /// 세 단계 VM 모두 컨테이너가 처음부터 만들어 **항상 mount**한다 — 장르 VM도 예외가 아니다(#257).
     /// 앞 단계 값(닉네임·성별/출생연도)은 생성이 아니라 성별/출생연도 확정 시 `setProfileContext`로 주입한다.
     @State private var genreSelectionViewModel: GenreSelectionViewModel
@@ -64,16 +65,24 @@ struct OnboardingStepFlowView: View {
         validateNicknameUseCase: ValidateNicknameUseCase,
         registerProfileUseCase: RegisterProfileUseCase,
         logger: Logger?,
+        analyticsTracker: AnalyticsTracker? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onCompleted: @escaping () -> Void
     ) {
         self._nicknameViewModel = State(
             initialValue: NicknameViewModel(validateNicknameUseCase: validateNicknameUseCase, logger: logger)
         )
+        self._genderBirthYearViewModel = State(
+            initialValue: GenderBirthYearViewModel(analyticsTracker: analyticsTracker)
+        )
         // 장르 VM도 다른 단계 VM처럼 여기서 미리 만들어 항상 mount한다(#257) — 앞 단계 값은 나중에
         // setProfileContext로 주입하므로 생성 시엔 UseCase만 있으면 된다.
         self._genreSelectionViewModel = State(
-            initialValue: GenreSelectionViewModel(registerProfileUseCase: registerProfileUseCase, logger: logger)
+            initialValue: GenreSelectionViewModel(
+                registerProfileUseCase: registerProfileUseCase,
+                logger: logger,
+                analyticsTracker: analyticsTracker
+            )
         )
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onCompleted = onCompleted

@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import ProfileDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -59,6 +60,7 @@ final class GenreSelectionViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let registerProfileUseCase: RegisterProfileUseCase
@@ -67,10 +69,12 @@ final class GenreSelectionViewModel {
 
     init(
         registerProfileUseCase: RegisterProfileUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.registerProfileUseCase = registerProfileUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -97,6 +101,7 @@ final class GenreSelectionViewModel {
 
 private extension GenreSelectionViewModel {
     func toggleGenre(_ genre: NovelGenre) {
+        analyticsTracker?.track(GenreSelectionAnalyticsEvent(genre: genre))
         if state.selectedGenres.contains(genre) {
             state.selectedGenres.remove(genre)
         } else {
