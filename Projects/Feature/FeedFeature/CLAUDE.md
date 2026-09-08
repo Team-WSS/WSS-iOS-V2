@@ -118,6 +118,7 @@
     피드·댓글 작성자와 같은 값(2)으로 둬 "내 글/내 댓글"이 되므로 수정/삭제 드롭다운·**전송 게이트(#3)**
     도 확인할 수 있다(`FeedDetailView`의 `#Preview` mock을 데모 타깃으로 승격한 형태).
 - `fetchMyFeeds`/`fetchUserFeeds` 응답(`UserFeedResponse`, FeedData)은 작성자 닉네임/프로필 이미지를 내려주지 않는다(서버 스펙). `SosoFeedViewModel`이 `ProfileDomain.LoadProfileUseCase`로 프로필을 따로 조회해 `TotalFeed.author`를 다시 조립해 채운다(`applying(_:to:)`). `TotalFeed.author`가 `private(set)`이라 직접 mutate 불가 — 공개 `init`으로 새 값을 만들어 교체하는 방식.
+  - ⚠️ 이 조회 결과는 `cachedMyProfile`에 VM 생존 기간 내내 캐시된다(탭 전환마다 재조회하지 않기 위함) — **`.pullToRefresh`가 이 캐시도 함께 `nil`로 무효화한다**(2026-09-08). 안 그러면 프로필 편집 후 이 화면으로 당겨서 새로고침해도 목록은 최신인데 작성자 닉네임/프로필 이미지만 편집 전 값으로 계속 붙는다 — 탭 전환·필터 전환 등 다른 `reloadFromScratch` 경로는 이 캐시를 그대로 재사용한다(전체 최신화가 계약인 pull-to-refresh만의 예외).
 - 이 조합 로직 때문에 FeedFeature가 `ProfileDomain`(다른 최상위 도메인)을 직접 의존한다 — Domain 레이어 규칙상 Domain끼리는 `BaseDomain` 외 서로 의존 못 하므로, 이런 두 도메인 조합은 Feature(ViewModel) 레벨에서 한다.
 - `MyFeedOption.sortType`은 genres/visibilityType과 달리 필터 시트의 draft→`applyMyFeedFilter` 커밋 흐름을 타지 않는다. `WSSSortButton` 탭이 `.toggleMyFeedSort`로 `state.myFeedOption`을 즉시 갱신하고 바로 재조회한다(시트를 열 필요 없음) — 필터 시트가 열릴 때 draft가 `resetMyFeedFilterDraft`로 이 값도 그대로 복사해가므로 두 경로가 어긋나지 않는다.
 - `state.myFeedOption.genres` 기본값은 "전체 선택" UX를 `NovelGenre.allCases`(9개 전부) + `includesUncategorized: true`로 표현한다(연결 작품 없는 내 피드까지 포함). FeedData는 이를 그대로 명시적 장르 필터로 보낼 뿐 정규화하지 않는다 — 카테고리 칩(장르+"그 외")을 전부 해제하면 `MyFeedOption.genres == []`가 되고 FeedData의 `genres.isEmpty ? nil : genres`가 이를 무필터로 해석해 전체 목록이 온다. **이는 의도된 동작**(빈 선택 = 무필터)이라 공개/비공개 체크박스와 달리 최소 1개 선택 가드를 두지 않는다.
