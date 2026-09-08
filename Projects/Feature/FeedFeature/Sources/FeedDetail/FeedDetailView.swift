@@ -320,7 +320,7 @@ struct FeedDetailView: View {
         if viewModel.isMyFeed {
             return [
                 WSSDropdownItem(
-                    title: "수정",
+                    title: "수정하기",
                     action: {
                         showFeedDropdown = false
                         if let feedID = viewModel.state.detail?.id {
@@ -330,12 +330,12 @@ struct FeedDetailView: View {
                     textColor: WSSColor.wssBlack.swiftUIColor
                 ),
                 WSSDropdownItem(
-                    title: "삭제",
+                    title: "삭제하기",
                     action: {
                         showFeedDropdown = false
                         Task { await viewModel.handle(.presentAlert(.deleteFeed)) }
                     },
-                    textColor: WSSColor.wssSecondary100.swiftUIColor
+                    textColor: WSSColor.wssBlack.swiftUIColor
                 )
             ]
         } else {
