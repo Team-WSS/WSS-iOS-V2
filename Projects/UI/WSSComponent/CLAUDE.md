@@ -179,7 +179,13 @@
   `action: (() -> Void)? = nil` — `nil`(기본값)이면 순수 표시용(부모 행의 `onTapGesture`가 탭을 받음),
   값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다(`WhiteRemovableKeywordChip`의 `onSelect`/`onDelete`
   분리와 같은 이유 — `nil`일 때 무조건 `onTapGesture`를 걸면 빈 클로저라도 이 뷰가 탭을 소비해버려
-  부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
+  부모의 `onTapGesture`로 전파되지 않는다).
+  ⚠️ **`nil`(행 전체 탭) 분기는 2026-09-08(#255 QA) 이후로 실제 호출부가 없다** — 유일한 콜사이트인
+  `CollectionSearchNovelView.novelRow`가 "행 전체를 누르면 실수로 토글되기 쉽다"는 QA 지적으로
+  `action`을 실제로 넘기는 쪽으로 바뀌었다(그 화면의 컨테이너 `onTapGesture`는 제거됨). `nil` 분기
+  자체는 API로 남겨뒀으니(다른 화면이 필요하면 그대로 재사용 가능) 죽은 코드로 보고 지우지 말 것 —
+  단, "지금 실사용 중인 게 하나도 없다"는 사실을 몰랐다면 헷갈릴 수 있어 남긴다.
+  `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
   이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
   확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).
 - **`WSSResetButton`(`Sources/Button/`)는 필터류 화면 하단 액션바의 "초기화" 보조 버튼이다**(2026-08,

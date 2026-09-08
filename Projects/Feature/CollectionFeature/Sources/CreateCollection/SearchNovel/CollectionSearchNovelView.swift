@@ -193,8 +193,9 @@ private extension CollectionSearchNovelView {
         }
     }
 
-    /// 행 전체가 탭 영역이다(`WSSNovelSelectRow`와 같은 이유 — 이 행의 유일한 액션이라 서브 액션과
-    /// 컨테이너를 나눌 필요가 없다). 필 배지(추가/삭제)는 순수 표시용.
+    /// 추가/삭제는 필 배지 자신만 탭 영역이다(#255 QA — 행 전체를 누르면 실수로 토글되기 쉽다는
+    /// 지적으로, 행 전체 탭에서 배지 단독 탭으로 좁혔다). 표지·제목·작가 영역은 더 이상 탭을 받지
+    /// 않는다.
     func novelRow(_ novel: Novel) -> some View {
         let isSelected = viewModel.selectedNovelIDs.contains(novel.id)
 
@@ -217,11 +218,9 @@ private extension CollectionSearchNovelView {
 
             Spacer()
 
-            WSSPillBadge(style: isSelected ? .remove : .add)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            viewModel.handle(.toggleNovel(novel))
+            WSSPillBadge(style: isSelected ? .remove : .add) {
+                viewModel.handle(.toggleNovel(novel))
+            }
         }
     }
 }

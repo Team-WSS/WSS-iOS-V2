@@ -542,3 +542,11 @@
   카드를 탭해도 `DeepLink` 파싱이 실패해 그냥 홈 화면으로 열린다** — 새 템플릿을 추가하거나 콘솔 변수
   키 이름을 바꾸면 `multiThumbnailArgs`도 같이 맞출 것. 위 헤더 주석·`App/CLAUDE.md`의 딥링크 항목
   참고 — 받는 쪽 `kakao{APP_KEY}://kakaolink?collectionId={id}` 파싱 자체는 이전과 동일.
+- **`CollectionSearchNovelView`의 작품 검색 행은 필 배지(`WSSPillBadge`)만 탭 영역이다**(#255 QA로
+  방향 전환 — 처음엔 행 전체가 탭 영역이었다) — `WSSPillBadge(style:action:)`의 `action`을 실제로
+  넘겨 배지 자신이 탭을 받게 하고, 행의 `.onTapGesture`는 제거했다. `WSSPillBadge`가 이 `action`
+  파라미터로 실제 쓰인 **첫 프로덕션 사례**다(승격 당시엔 API만 갖추고 아무도 안 씀 — 이 컴포넌트가
+  내부적으로 `Button`이 아니라 `onTapGesture`를 쓴다는 점(`WSSComponent/CLAUDE.md`의 이미지+탭 접근성
+  주의)은 그대로이니, 이 배지가 접근성 자동화 탭 대상으로 안 잡히는 건 기존 한계와 동일하다).
+  ⚠️ **표지·제목·작가 영역은 더 이상 어떤 탭도 받지 않는다** — 다시 행 전체 탭으로 되돌리려 하지 말 것
+  (실수로 토글되기 쉽다는 QA 지적으로 좁힌 것).
