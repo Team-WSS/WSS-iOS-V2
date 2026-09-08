@@ -42,6 +42,10 @@ struct NicknameView: View {
             .showWSSToast(isPresented: toastBinding, type: toastType)
             .onChange(of: viewModel.state.confirmedNickname) { _, nickname in
                 if let nickname {
+                    // 다음 단계(성별/출생년도)로 슬라이드하기 전에 키보드를 내린다(#257) — NicknameView는
+                    // 컨테이너 HStack에 계속 mount돼 있어(뒤로가기 대비) 여기서 포커스를 안 풀면 성별/나이
+                    // 화면으로 넘어간 뒤에도 닉네임 필드의 키보드가 그대로 떠 있는다.
+                    isKeyboardFocused = false
                     onConfirmed(nickname)
                     viewModel.handle(.consumeConfirmation)
                 }

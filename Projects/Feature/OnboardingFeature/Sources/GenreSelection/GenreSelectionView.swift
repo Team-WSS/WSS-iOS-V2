@@ -183,13 +183,9 @@ private extension GenreSelectionView {
 // MARK: - Preview
 
 #Preview {
+    // 앞 단계 값은 실제 흐름에선 컨테이너가 `.setProfileContext`로 주입한다 — 프리뷰는 미주입 상태(등록 시 guard).
     GenreSelectionView(
-        viewModel: GenreSelectionViewModel(
-            nickname: "구리구리스",
-            gender: .female,
-            birthYear: try! BirthYear(2000),
-            registerProfileUseCase: PreviewRegisterProfileUseCase()
-        ),
+        viewModel: GenreSelectionViewModel(registerProfileUseCase: PreviewRegisterProfileUseCase()),
         onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
         onCompleted: { print("온보딩 완료 → Home") }
     )

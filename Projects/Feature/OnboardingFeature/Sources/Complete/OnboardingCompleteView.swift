@@ -32,7 +32,7 @@ struct OnboardingCompleteView: View {
             Spacer().frame(height: 35)
 
             LottieView(animation: WSSLottie.onboardingComplete)
-                .playing(loopMode: .loop)
+                .playing(loopMode: .playOnce)
                 .frame(width: 300, height: 300)
 
             Spacer()

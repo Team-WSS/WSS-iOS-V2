@@ -10,6 +10,7 @@ import AuthenticationServices
 import SwiftUI
 
 import KakaoSDKAuth
+import KakaoSDKCommon
 import KakaoSDKUser
 
 import AuthDomain
@@ -55,49 +56,89 @@ struct OnboardingIntroView: View {
     }
 
     var body: some View {
-        content
-            .onAppear {
-                appleSignInHandler.onCompletion = handleAppleLoginResult
+        // 에러 토스트를 **화면 세이프에어리어 바닥**에 고정한다(#257). 전경(배너·버튼)은 고정 배너(567)로
+        // 작은 기기(SE)에서 화면 아래로 넘쳐, 공용 `.showWSSToast`(ZStack이 content 크기를 따라감)에 걸면
+        // 토스트가 그 넘친 바닥에 붙어 화면 밖으로 잘렸다(실측). 그래서 세이프에어리어를 소거한 GeometryReader로
+        // 윈도우를 잡고, 토스트 레이어를 그 윈도우 프레임에 고정해 전경 넘침과 분리한다. 배경 이미지는
+        // full-bleed로 맨 아래 깔아 상태바·홈 인디케이터 영역까지 덮고, 전경은 세이프에어리어(top·bottom
+        // 인셋을 수동 복원 — GeometryReader가 소거하므로)에 정확히 배치해 develop과 동일한 위치를 모든 기기에서
+        // 유지한다(배경을 분리하지 않으면 전경 패딩이 배경까지 밀어 인셋 영역에 흰 띠가 생긴다 — 리뷰 지적).
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                backgroundLayer
+
+                foregroundContent
+                    .padding(.top, proxy.safeAreaInsets.top)
+                    .padding(.bottom, proxy.safeAreaInsets.bottom)
+
+                if viewModel.state.hasLoginError {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        WSSToastView(type: .unknownError)
+                    }
+                    .padding(.bottom, 40 + proxy.safeAreaInsets.bottom)
+                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
+                    .transition(.opacity)
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.2), value: viewModel.state.hasLoginError)
+        .onAppear {
+            appleSignInHandler.onCompletion = handleAppleLoginResult
+            scheduleAutoAdvance()
+        }
+        .onDisappear {
+            autoAdvanceTask?.cancel()
+        }
+        .onChange(of: selection) { _, newValue in
+            if isProgrammaticSelectionChange {
+                isProgrammaticSelectionChange = false
+            } else {
+                // 사용자가 직접 스와이프함 — 자동전환 주기를 처음부터 다시 센다.
                 scheduleAutoAdvance()
             }
-            .onDisappear {
-                autoAdvanceTask?.cancel()
-            }
-            .onChange(of: selection) { _, newValue in
-                if isProgrammaticSelectionChange {
-                    isProgrammaticSelectionChange = false
-                } else {
-                    // 사용자가 직접 스와이프함 — 자동전환 주기를 처음부터 다시 센다.
-                    scheduleAutoAdvance()
-                }
-                snapIfLandedOnClone(newValue)
-            }
-            .onChange(of: viewModel.state.needOnboarding) { _, needOnboarding in
-                if let needOnboarding {
-                    onLoginSucceeded(needOnboarding)
-                }
-            }
-            .showWSSToast(isPresented: toastBinding, type: .unknownError)
-    }
-
-    private var content: some View {
-        ZStack(alignment: .top) {
-            WSSImage.imgLoginBackground.swiftUIImage
-                .resizable()
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                bannerCarousel
-
-                Spacer()
-
-                bottomSection
-                    .padding(.horizontal, 16)
-                
-                Spacer().frame(height: 67)
+            snapIfLandedOnClone(newValue)
+        }
+        .onChange(of: viewModel.state.needOnboarding) { _, needOnboarding in
+            if let needOnboarding {
+                onLoginSucceeded(needOnboarding)
             }
         }
-        .background(WSSColor.wssWhite.swiftUIColor)
+        // 토스트 자동 닫힘 — 공용 `.showWSSToast`(WSSToastViewModifier)를 이 화면 전용 배치로 대체하면서
+        // 그 타이머(기본 1.5초)도 여기로 옮겼다. `.task(id:)`가 hasLoginError 변화마다 이전 sleep을 취소·재시작해
+        // 재발화에도 견고하다(WSSToastViewModifier의 `.task(id: isPresented)`와 동일 패턴).
+        .task(id: viewModel.state.hasLoginError) {
+            guard viewModel.state.hasLoginError else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            viewModel.handle(.dismissError)
+        }
+    }
+
+    /// full-bleed 배경 — 상태바·홈 인디케이터 영역까지 덮도록 화면 전체(GeometryReader가 세이프에어리어를
+    /// 소거)를 채운다. 전경을 세이프에어리어로 패딩해도 배경은 인셋 영역을 그대로 덮어 흰 띠가 안 생긴다.
+    private var backgroundLayer: some View {
+        WSSImage.imgLoginBackground.swiftUIImage
+            .resizable()
+            .background(WSSColor.wssWhite.swiftUIColor)
+    }
+
+    /// 전경(배너·도트·소셜 버튼) — 배경은 위 `backgroundLayer`가 담당하므로 여기선 그리지 않는다.
+    /// 세이프에어리어에 배치되도록 body에서 인셋만큼 패딩된다(투명 배경이라 배경 레이어가 비친다).
+    private var foregroundContent: some View {
+        VStack(spacing: 0) {
+            bannerCarousel
+
+            Spacer()
+
+            bottomSection
+                .padding(.horizontal, 16)
+
+            Spacer().frame(height: 67)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .disabled(viewModel.state.isLoggingIn)
     }
 }
@@ -222,9 +263,9 @@ private extension OnboardingIntroView {
                 return
             }
             viewModel.handle(.login(.apple(authorizationCode: authorizationCode, idToken: idToken)))
-        case .failure:
-            // 사용자 취소를 포함한 모든 실패를 동일하게 취급한다(로그인 실패는 카피가 갈릴 이유가 없음).
-            viewModel.handle(.loginFailed)
+        case .failure(let error):
+            // 사용자 취소(#257)와 진짜 오류를 구분한다 — 취소는 에러 토스트를 띄우지 않는다.
+            viewModel.handle(isUserCancellation(error) ? .loginCancelled : .loginFailed)
         }
     }
 
@@ -233,23 +274,29 @@ private extension OnboardingIntroView {
         UserApi.shared.loginWithKakaoAccount { oauthToken, error in
             Task { @MainActor in
                 guard error == nil, let accessToken = oauthToken?.accessToken else {
-                    viewModel.handle(.loginFailed)
+                    // 사용자 취소(#257)와 진짜 오류를 구분한다 — 취소는 에러 토스트를 띄우지 않는다.
+                    viewModel.handle(isUserCancellation(error) ? .loginCancelled : .loginFailed)
                     return
                 }
                 viewModel.handle(.login(.kakao(accessToken: accessToken)))
             }
         }
     }
-}
 
-// MARK: - Presentation
-
-private extension OnboardingIntroView {
-    var toastBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.state.hasLoginError },
-            set: { if !$0 { viewModel.handle(.dismissError) } }
-        )
+    /// 소셜 로그인 SDK가 돌려준 에러가 "사용자가 직접 취소"인지 판별한다(#257) — 진짜 오류와 구분해
+    /// 취소일 땐 에러 토스트를 띄우지 않기 위함. Apple은 `ASAuthorizationError.canceled`,
+    /// Kakao는 `SdkError`의 `ClientFailed(.Cancelled)`. `nil`(에러 없음)은 취소가 아니다.
+    func isUserCancellation(_ error: Error?) -> Bool {
+        guard let error else { return false }
+        if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+            return true
+        }
+        if let sdkError = error as? SdkError,
+           sdkError.isClientFailed,
+           sdkError.getClientError().reason == .Cancelled {
+            return true
+        }
+        return false
     }
 }
 
