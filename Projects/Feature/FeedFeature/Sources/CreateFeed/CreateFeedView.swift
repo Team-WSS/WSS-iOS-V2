@@ -297,7 +297,6 @@ struct CreateFeedView: View {
                     .renderingMode(.template)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
                     .padding(.vertical, 12)
-                    .padding(.horizontal, 10)
                     .onTapGesture {
                         showPhotosPicker.toggle()
                     }
