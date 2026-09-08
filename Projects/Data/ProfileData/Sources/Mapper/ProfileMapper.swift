@@ -14,7 +14,12 @@ import BaseData
 enum ProfileMapper {
 
     static func profile(from response: UserProfileResponse) throws -> Profile {
-        let genrePreferences = try response.genrePreferences.map { try novelGenre(from: $0) }
+        // `genrePreferences`는 이 응답의 소비자(UserPage/MyPage 상단 프로필)가 실제로 쓰지 않는 필드다
+        // (닉네임·소개·프로필 이미지만 화면에 반영됨) — 그래서 `try`가 아니라 `try?`로 관대하게 매핑한다.
+        // 여기서 하나라도 못 알아듣는 장르 문자열 때문에 전체 프로필 매핑이 실패하면, 정작 필요한
+        // 닉네임/소개/이미지까지 함께 버려진다(#255 QA 실측 — 비공개 유저 상단 정보가 이 이유로 안 보일
+        // 뻔했다).
+        let genrePreferences = response.genrePreferences.compactMap { try? novelGenre(from: $0) }
         return Profile(
             nickname: response.nickname,
             introduction: response.intro,
