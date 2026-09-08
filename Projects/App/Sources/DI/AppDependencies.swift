@@ -221,6 +221,8 @@ final class AppDependencies {
         // appUpdateRepository는 이 게이트만 쓰므로 프로퍼티로 열지 않는다(다른 소비자가 생기면 승격).
         self.launchGateRepository = SplashDataFactory.makeLaunchGateRepository(
             tokenStore: tokenStore,
+            // 온보딩 완료 여부(StorageKey.isRegistered, #257) 조회용 — AuthData/ProfileData가 쓰는 같은 저장소.
+            appStorage: UserDefaultsStorage(),
             appUpdateRepository: SettingDataFactory.makeAppUpdateRepository(
                 client: client,
                 logger: DataLogger(moduleName: "SettingData", underlying: logger)
