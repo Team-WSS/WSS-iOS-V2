@@ -105,6 +105,7 @@ private extension NicknameView {
             isError: isNicknameError,
             isSuccess: viewModel.state.draft.validationState == .available,
             caption: nicknameValidationCaption.map { WSSNicknameField.Caption(text: $0.text, color: $0.color) },
+            treatsFilledAsFocused: true,
             isDuplicationCheckEnabled: isDuplicationCheckEnabled,
             isCheckingDuplication: viewModel.state.isCheckingDuplication,
             onCheckDuplication: { viewModel.handle(.checkDuplication) }
