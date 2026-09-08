@@ -102,7 +102,6 @@ struct CollectionPreviewRow: View {
             // 이게 없으면 표지가 칸 폭을 꽉 채운 뒤 그 위로 더 튀어나가 옆 아이템과의 간격(32)을
             // 침범해 간격이 좁아 보인다(실측, 2026-08-27).
             .padding(.trailing, Metric.decorationOffset)
-            .shadow(color: Color.black.opacity(0.1), radius: 12.68, x: 0, y: 1)
 
             Text(title)
                 .applyWSSFont(.body5)
