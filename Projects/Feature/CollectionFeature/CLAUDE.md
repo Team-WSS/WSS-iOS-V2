@@ -551,3 +551,14 @@
   주의)은 그대로이니, 이 배지가 접근성 자동화 탭 대상으로 안 잡히는 건 기존 한계와 동일하다).
   ⚠️ **표지·제목·작가 영역은 더 이상 어떤 탭도 받지 않는다** — 다시 행 전체 탭으로 되돌리려 하지 말 것
   (실수로 토글되기 쉽다는 QA 지적으로 좁힌 것).
+- **컬렉션 설명 입력 박스(`CreateCollectionView.descriptionSection`)는 텍스트필드 영역만 고정 높이로
+  스크롤되고, 글자수 카운터는 그 아래 별도 줄이다**(#255 QA) — 원래 `TextField(axis: .vertical)`에
+  `minHeight`만 줘서 엔터를 칠수록 박스 전체가 계속 늘어났고, 카운터는 `overlay(alignment:
+  .bottomTrailing)`로 떠 있어 텍스트가 박스 하단까지 차면 겹쳤다. 지금은 텍스트필드를 `ScrollView`로
+  감싸 `Metric.descriptionFieldHeight`(78, 기존 minHeight 값 유지)로 높이를 고정하고, 카운터를 그
+  스크롤뷰 **아래**의 독립된 `Text` 행으로 뺐다 — 입력이 고정 높이를 넘으면 박스가 아니라 이 스크롤
+  영역 안에서 스크롤된다. `ScrollViewReader` + `scrollTo(id, anchor: .bottom)`를 매 입력마다 걸어
+  캐럿을 계속 따라가게 한다(멀티라인 `TextField`는 캐럿 좌표를 직접 못 읽어서 — 텍스트필드 자신이
+  줄 수만큼 자라는 성질을 이용해 그 "아래쪽 끝"을 캐럿의 대리 앵커로 쓴다). 다른 화면에서 같은
+  `axis: .vertical` TextField를 고정 높이로 쓰려면 이 패턴(텍스트필드를 ScrollView+ScrollViewReader로
+  감싸고 부가 UI는 그 밖으로)을 재사용할 것.

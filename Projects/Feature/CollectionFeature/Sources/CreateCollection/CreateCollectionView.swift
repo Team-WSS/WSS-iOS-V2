@@ -173,6 +173,12 @@ private enum Metric {
     /// → 반올림 38. `novelGridCell`/`addNovelTile` 둘 다 이 상수로 제목 줄 수와 무관하게 높이를 맞춘다
     /// (`WSSNovelGridCell`의 `Metric.infoHeight`와 같은 패턴, `WSSComponent/CLAUDE.md` 참고).
     static let novelTitleHeight: CGFloat = 38
+    /// 컬렉션 설명 텍스트필드의 고정 높이(원래 `minHeight` 값 유지) — 입력이 이 높이를 넘으면
+    /// 박스가 늘어나는 대신 이 영역 안에서 스크롤된다(#255 QA, `descriptionSection` 참고).
+    static let descriptionFieldHeight: CGFloat = 78
+    /// `descriptionSection`의 스크롤 앵커 id — 입력마다 이 지점(텍스트필드 하단)으로 스크롤해
+    /// 캐럿을 계속 보이게 한다.
+    static let descriptionFieldID = "descriptionField"
 }
 
 private extension CreateCollectionView {
@@ -231,19 +237,48 @@ private extension CreateCollectionView {
 
             Spacer().frame(height: 10)
 
-            ZStack(alignment: .topLeading) {
-                if descriptionFieldText.isEmpty {
-                    Text("컬렉션에 관련한 설명을 간단하게 작성해주세요")
-                        .applyWSSFont(.body2)
-                        .foregroundStyle(Color.wssGray100)
-                        .allowsHitTesting(false)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+            // 박스 전체(텍스트필드+글자수)를 한 컨테이너로 묶어 배경·모서리를 공유한다. 텍스트필드
+            // 영역은 ScrollView로 감싸 높이를 고정한다(#255 QA) — `axis: .vertical` TextField는
+            // 자체적으로 줄 수만큼 계속 자라나서, 그대로 두면 엔터를 칠 때마다 박스 전체가 늘어난다.
+            // 글자수 카운터는 그 아래 별도 줄로 빼 — 이전엔 bottomTrailing overlay였는데 텍스트가
+            // 박스 하단까지 차면 카운터와 겹쳤다.
+            VStack(alignment: .leading, spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        ZStack(alignment: .topLeading) {
+                            if descriptionFieldText.isEmpty {
+                                Text("컬렉션에 관련한 설명을 간단하게 작성해주세요")
+                                    .applyWSSFont(.body2)
+                                    .foregroundStyle(Color.wssGray100)
+                                    .allowsHitTesting(false)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                            }
+
+                            TextField("", text: $descriptionFieldText, axis: .vertical)
+                                .applyWSSFont(.body2)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .focused($isDescriptionFieldFocused)
+                                // 높이가 고정된 스크롤 영역 안에서 커서를 계속 따라가게 하는 앵커 —
+                                // 멀티라인 TextField는 캐럿 좌표를 직접 못 읽어서(SwiftUI 미지원),
+                                // 텍스트필드 자신에 id를 걸고 매 입력마다 그 "아래쪽 끝"으로
+                                // scrollTo(anchor: .bottom)한다. 텍스트필드 높이가 줄 수만큼 자라는
+                                // 성질을 이용한 것 — 끝에 타이핑 중일 땐 이 아래쪽 끝이 곧 캐럿 위치다.
+                                .id(Metric.descriptionFieldID)
+                        }
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(height: Metric.descriptionFieldHeight)
+                    .onChange(of: descriptionFieldText) { _, _ in
+                        proxy.scrollTo(Metric.descriptionFieldID, anchor: .bottom)
+                    }
                 }
 
-                TextField("", text: $descriptionFieldText, axis: .vertical)
+                Spacer().frame(height: 8)
+
+                Text("(\(descriptionFieldText.count)/\(CollectionDraft.maxDescriptionCount))")
                     .applyWSSFont(.body2)
-                    .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
-                    .focused($isDescriptionFieldFocused)
+                    .foregroundStyle(Color.wssGray200)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 18)
@@ -253,13 +288,6 @@ private extension CreateCollectionView {
             // — 안 그러면 TextField 자신의 프레임 밖은 탭이 안 먹는다(Feature/CLAUDE.md 공통 주의).
             .contentShape(Rectangle())
             .onTapGesture { isDescriptionFieldFocused = true }
-            .overlay(alignment: .bottomTrailing) {
-                Text("(\(descriptionFieldText.count)/\(CollectionDraft.maxDescriptionCount))")
-                    .applyWSSFont(.body2)
-                    .foregroundStyle(Color.wssGray200)
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 18)
-            }
         }
         .onChange(of: descriptionFieldText) { _, newValue in
             let clamped = String(newValue.prefix(CollectionDraft.maxDescriptionCount))
