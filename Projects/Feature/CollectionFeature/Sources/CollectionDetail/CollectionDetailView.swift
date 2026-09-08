@@ -102,11 +102,6 @@ struct CollectionDetailView: View {
                         LoadingView()
                     }
                 }
-                .overlay(alignment: .topTrailing) {
-                    if viewModel.state.isMenuPresented {
-                        menuOverlay
-                    }
-                }
             }
         }
         .ignoresSafeArea()
@@ -126,6 +121,14 @@ struct CollectionDetailView: View {
                     sortBar(detail)
                         .background(Color.wssWhite)
                 }
+            }
+
+            // ⚠️ 더보기 드롭다운은 반드시 이 ZStack의 **마지막 자식**(최상위 z-order)이어야 한다 —
+            // 예전엔 Group(ScrollView)의 `.overlay`로 걸려 있어, 스크롤해 스티키 정렬 바(위 VStack)가
+            // 붙으면 그 흰 배경이 나중에 그려지며 드롭다운의 위쪽을 가렸다(#255 QA). 스크롤 위치와
+            // 무관하게 항상 보이려면 네비바+스티키 바보다 뒤에(= 위에) 그려야 한다.
+            if viewModel.state.isMenuPresented {
+                menuOverlay
             }
         }
         .wssCustomNavigationBar()
@@ -196,14 +199,15 @@ private extension CollectionDetailView {
                     Button {
                         viewModel.handle(.menuTapped)
                     } label: {
-                        WSSImage.icThreedots.swiftUIImage
+                        WSSImage.icThreedotsVertical.swiftUIImage
                             .resizable()
                             .renderingMode(.template)
                             .foregroundStyle(navIconColor)
                             .frame(width: 18, height: 18)
+                            .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
-                    .padding(.trailing, 20)
+                    .padding(.trailing, 20 - (44 - 18) / 2)
                 }
             }
             .padding(.leading, 6)
@@ -594,6 +598,12 @@ private extension CollectionDetailView {
 // MARK: - Menu
 
 private extension CollectionDetailView {
+    /// 네비바("..." 버튼) 바로 아래에 앉힌다(#255 QA — 예전엔 120pt로 떨어져 있어 헤더와 이상하게
+    /// 멀었다). 이 `ZStack`(과 그 안의 `WSSDropdownMenu`)은 `ignoresSafeArea()`가 안 걸려 있어
+    /// 안전영역을 존중한 채 배치되므로, `NovelDetailFeature.menuOverlay`와 동일하게 **네비바 높이
+    /// (44)만** 주면 안전영역 바로 아래(= 네비바 바로 아래)에 온다 — 안전영역을 더할 필요 없다
+    /// (형제인 dismiss용 `Color`가 `.ignoresSafeArea()`를 걸어도 이 좌표계엔 영향 없다, 같은 패턴이
+    /// `NovelDetailView.content`의 `Color.wssWhite.ignoresSafeArea()` 배경에서도 이미 검증됨).
     var menuOverlay: some View {
         ZStack(alignment: .topTrailing) {
             Color.wssBlack.opacity(0.001)
@@ -608,8 +618,8 @@ private extension CollectionDetailView {
                 WSSDropdownItem(title: "컬렉션 삭제") { viewModel.handle(.deleteTapped) }
             ])
             .frame(width: 122)
-            .padding(.top, 120)
-            .padding(.trailing, 25)
+            .padding(.top, 44)
+            .padding(.trailing, 20)
         }
     }
 }

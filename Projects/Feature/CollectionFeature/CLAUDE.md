@@ -562,3 +562,22 @@
   줄 수만큼 자라는 성질을 이용해 그 "아래쪽 끝"을 캐럿의 대리 앵커로 쓴다). 다른 화면에서 같은
   `axis: .vertical` TextField를 고정 높이로 쓰려면 이 패턴(텍스트필드를 ScrollView+ScrollViewReader로
   감싸고 부가 UI는 그 밖으로)을 재사용할 것.
+- ⚠️ **더보기 드롭다운(`menuOverlay`)은 반드시 화면 루트 `ZStack`의 마지막 자식(최상위 z-order)에
+  둔다**(#255 QA) — 처음엔 스크롤 `Group`의 `.overlay(alignment: .topTrailing)`로 걸려 있었는데,
+  네비바+스티키 정렬 바 `VStack`이 그 `Group` **뒤에**(= 위에) 그려지는 구조라, 스크롤해서 스티키
+  정렬 바가 붙은 상태로 드롭다운을 열면 그 흰 배경이 드롭다운 위쪽을 가렸다. 스티키 바 유무와
+  무관하게 항상 보이려면 `if isMenuPresented { menuOverlay }`를 네비바 `VStack`보다도 뒤(= ZStack의
+  마지막)에 둘 것 — 다른 화면에 몰입형 스티키 헤더 + 드롭다운 조합을 또 만들 때도 같은 순서를 지킬 것.
+  ⚠️ **위치도 같은 QA에서 같이 고쳤다** — `.padding(.top, 120)`로 네비바와 이상하게 멀리 떨어져
+  있던 걸 `NovelDetailFeature.menuOverlay`와 동일하게 `.padding(.top, 44)`(네비바 높이만)로 바꿔
+  "..." 버튼 바로 아래에 붙였다. `menuOverlay`의 `ZStack` 자신은 `.ignoresSafeArea()`가 안 걸려 있어
+  안전영역을 존중한 채 배치되므로(형제인 dismiss용 `Color`가 `.ignoresSafeArea()`를 걸어도 이
+  좌표계엔 영향 없다 — `NovelDetailView.content`의 `Color.wssWhite.ignoresSafeArea()` 배경과 같은
+  원리) 안전영역을 더할 필요 없이 44만으로 네비바 바로 아래가 된다. trailing도 20으로 맞춰
+  `NovelDetailFeature`/`UserPageFeature`의 같은 우상단 더보기 드롭다운과 인셋을 통일했다.
+- **"..." 더보기 버튼은 아이콘(18×18) 프레임을 한 번 더 `.frame(width: 44, height: 44)`로 감싸 탭
+  타깃을 넓힌다**(#255 QA, 애플 권장 44×44) — 원래 아이콘 자체 크기만 `contentShape`였다. 뒤로가기
+  버튼(`icNavigateLeft`)은 처음부터 이 이중 `.frame` 패턴이었는데 "..." 버튼만 빠져 있었다. 시각적
+  위치를 유지하려고 `.padding(.trailing, 20 - (44-18)/2)`로 트레일링 여백을 함께 보정했다(단순히
+  20을 그대로 두면 아이콘이 13pt 안쪽으로 밀린다) — 다른 트레일링 아이콘 버튼의 히트 영역을 넓힐 때도
+  아이콘 시각 위치가 그대로인지 이 계산으로 확인할 것.
