@@ -28,16 +28,12 @@ public enum SettingFeatureFactory {
     public static func makeView(
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
-        onAccountInfoTapped: @escaping () -> Void = {},
-        onProfilePublicTapped: @escaping () -> Void = {},
-        onNotificationSettingTapped: @escaping () -> Void = {}
+        onRoute: @escaping (SettingRoute) -> Void
     ) -> some View {
         let viewModel = SettingViewModel(pushAuthorizationChecker: pushAuthorizationChecker, logger: logger)
         return SettingView(
             viewModel: viewModel,
-            onAccountInfoTapped: onAccountInfoTapped,
-            onProfilePublicTapped: onProfilePublicTapped,
-            onNotificationSettingTapped: onNotificationSettingTapped
+            onRoute: onRoute
         )
     }
 
@@ -49,9 +45,7 @@ public enum SettingFeatureFactory {
         logoutUseCase: LogoutUseCase,
         logger: Logger? = nil,
         onLogoutSuccess: @escaping () -> Void = {},
-        onChangeGenderOrAgeTapped: @escaping () -> Void = {},
-        onBlockUserListTapped: @escaping () -> Void = {},
-        onWithdrawTapped: @escaping () -> Void = {},
+        onRoute: @escaping (SettingAccountInfoRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingAccountInfoViewModel(
@@ -62,9 +56,7 @@ public enum SettingFeatureFactory {
         return SettingAccountInfoView(
             viewModel: viewModel,
             onLogoutSuccess: onLogoutSuccess,
-            onChangeGenderOrAgeTapped: onChangeGenderOrAgeTapped,
-            onBlockUserListTapped: onBlockUserListTapped,
-            onWithdrawTapped: onWithdrawTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -187,8 +179,7 @@ public enum SettingFeatureFactory {
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         logger: Logger? = nil,
-        onCompletionListTapped: @escaping () -> Void = {},
-        onHiatusReturnListTapped: @escaping () -> Void = {},
+        onRoute: @escaping (NotificationSettingRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
@@ -198,8 +189,7 @@ public enum SettingFeatureFactory {
         )
         return NotificationSettingView(
             viewModel: viewModel,
-            onCompletionListTapped: onCompletionListTapped,
-            onHiatusReturnListTapped: onHiatusReturnListTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -210,7 +200,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {},
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
@@ -218,7 +208,7 @@ public enum SettingFeatureFactory {
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -228,7 +218,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger? = nil,
-        onBrowseNovels: @escaping () -> Void = {},
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         makeNovelNotificationListView(
@@ -236,7 +226,7 @@ public enum SettingFeatureFactory {
             loadNovelNotificationSubscriptionsUseCase: loadNovelNotificationSubscriptionsUseCase,
             deleteNovelNotificationSubscriptionsUseCase: deleteNovelNotificationSubscriptionsUseCase,
             logger: logger,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -247,7 +237,7 @@ public enum SettingFeatureFactory {
         loadNovelNotificationSubscriptionsUseCase: LoadNovelNotificationSubscriptionsUseCase,
         deleteNovelNotificationSubscriptionsUseCase: DeleteNovelNotificationSubscriptionsUseCase,
         logger: Logger?,
-        onBrowseNovels: @escaping () -> Void,
+        onRoute: @escaping (NovelNotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NovelNotificationListViewModel(
@@ -259,7 +249,7 @@ public enum SettingFeatureFactory {
         return NovelNotificationListView(
             title: type.novelNotificationListTitle,
             viewModel: viewModel,
-            onBrowseNovels: onBrowseNovels,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

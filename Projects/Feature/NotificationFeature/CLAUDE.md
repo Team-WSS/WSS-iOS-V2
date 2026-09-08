@@ -5,7 +5,7 @@
 
 - 식별자: `ModuleType.feature(.notification)` / 의존: `BaseDomain`, `NotificationDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점(둘 다 `NotificationFeatureFactory` — 대등한 화면이라 양쪽 다 `makeXxxView`):
-  - `makeNotificationListView(loadPagedNotificationsUseCase:markNotificationAsReadUseCase:logger:onNotificationSelected:onFeedSelected:onNovelSelected:onAuthenticationRequired:)` — 홈 알림 벨에서 **push**
+  - `makeNotificationListView(loadPagedNotificationsUseCase:markNotificationAsReadUseCase:logger:onRoute:onAuthenticationRequired:)` — 홈 알림 벨에서 **push**. 화면 전환은 `onRoute: (NotificationListRoute) -> Void` 하나(#253 — 알림 딥링크 종류 그대로 `.notificationDetail`/`.feedDetail`/`.novelDetail` 3케이스, `Sources/Navigation/`)
   - `makeNotificationDetailView(notificationID:loadNotificationDetailUseCase:logger:onAuthenticationRequired:)` — 목록에서 **push**
 - **모듈 안에 `navigationDestination`은 없다** — 목록 → 상세 전환도 콜백으로 올리고 배선은 호출자(App/Demo)가 한다.
 
@@ -61,7 +61,7 @@
   - **서버 이미지는 배경 없는 글리프만 온다**(실서버 실측 — #181). 그래서 **배경 캡슐은 반드시 로컬로 그려야**
     하고, 이미지를 배경과 같은 36으로 키우면 캡슐이 가려져 사라진다. 27을 임의로 키우지 말 것.
 - **작품 알림(완결·휴재 복귀)은 작품 상세로 간다** — 응답의 `novelId`를 매퍼가 `.novelDetail`로 옮기고
-  `onNovelSelected` 콜백이 발화한다(#181에서 연결). 알림 상세 API를 타지 않는 경로라 **`read` 호출도 함께 나간다**.
+  `onRoute(.novelDetail(_:))`가 발화한다(#181에서 연결, #253부터 Route enum). 알림 상세 API를 타지 않는 경로라 **`read` 호출도 함께 나간다**.
   매퍼는 **id 존재를 `isNotice`보다 우선**하므로 novelId만 있으면 서버가 isNotice를 뭘로 주든 작품 상세로 간다
   ("novelId 있으면 다 작품 상세" 규칙 — → [NotificationData/NotificationMapper](../../Data/NotificationData/CLAUDE.md)).
   ✅ **실앱 빌드에서 실제 알림 진입으로 작품 상세 전환 확인 완료(2026-09-05)** — 그전까지 테스트 계정 알림이 전부

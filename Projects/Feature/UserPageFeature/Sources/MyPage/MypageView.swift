@@ -22,37 +22,18 @@ struct MypageView: View {
     /// 뜬다 — `UserPageFeature`의 스크롤 반응형 네비 타이틀과 동일 패턴(아래 toolbar 주석 참고).
     @State private var isScrolledFromTop = false
 
-    /// 컬렉션 섹션 헤더 행 탭 콜백 — `CollectionFeature`는 서로 import 못 하는 다른 Feature 모듈이라
-    /// 실제 화면 전환은 이 화면이 모른다(App 조정 계층 몫).
-    private let onCollectionTapped: () -> Void
-    /// 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세로 이동. `onCollectionTapped`(헤더 → 목록)와 별개 콜백.
-    private let onCollectionItemTapped: (CollectionID) -> Void
-    /// 프로필 편집 진입 콜백 — 실제 화면 전환(`MypageFeatureFactory.makeEditView` 조립)은 호출자(App 조정 계층)가
-    /// 수행한다. "저장됨" 토스트도 그 화면 전환을 조립하는 쪽(App)이 `onSaved` 시점에 보여준다.
-    private let onEditProfileTapped: () -> Void
-    /// 우측 상단 톱니바퀴 → 설정 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeView` 조립)은 호출자가 수행한다.
-    private let onSettingTapped: () -> Void
-    /// 서재 블록 탭 → "서재" 탭으로 전환 콜백. 이 화면 자신을 push하는 게 아니라 탭 자체를 바꾸는
-    /// 것이라(`MainTabView`의 `TabView(selection:)`), 화면 전환이 아닌 탭 전환 콜백을 따로 받는다.
-    private let onLibraryTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `MypageRoute`(Navigation/)가 정본.
+    private let onRoute: (MypageRoute) -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 마이페이지 로드가 401로 막히면 발화(Feature 공통 계약).
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: MypageViewModel,
-        onCollectionTapped: @escaping () -> Void,
-        onCollectionItemTapped: @escaping (CollectionID) -> Void,
-        onEditProfileTapped: @escaping () -> Void,
-        onSettingTapped: @escaping () -> Void,
-        onLibraryTapped: @escaping () -> Void,
+        onRoute: @escaping (MypageRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onCollectionTapped = onCollectionTapped
-        self.onCollectionItemTapped = onCollectionItemTapped
-        self.onEditProfileTapped = onEditProfileTapped
-        self.onSettingTapped = onSettingTapped
-        self.onLibraryTapped = onLibraryTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -83,7 +64,7 @@ struct MypageView: View {
                             watching: viewModel.state.registeredNovelStats?.watching ?? 0,
                             watched: viewModel.state.registeredNovelStats?.watched ?? 0,
                             quit: viewModel.state.registeredNovelStats?.quit ?? 0,
-                            action: onLibraryTapped
+                            action: { onRoute(.libraryTab) }
                         )
 
                         divider
@@ -91,8 +72,8 @@ struct MypageView: View {
                         CollectionSection(
                             previews: viewModel.state.collectionPreviews,
                             totalCount: viewModel.state.collectionCount,
-                            action: onCollectionTapped,
-                            onItemSelected: onCollectionItemTapped
+                            action: { onRoute(.collectionList) },
+                            onItemSelected: { onRoute(.collectionDetail($0)) }
                         )
 
                         divider
@@ -145,7 +126,7 @@ struct MypageView: View {
             HStack(spacing: 0) {
                 Spacer()
 
-                Button(action: onSettingTapped) {
+                Button(action: { onRoute(.setting) }) {
                     WSSImage.icSetting.swiftUIImage
                 }
                 .padding(.trailing, 20)
@@ -164,7 +145,7 @@ struct MypageView: View {
                 .clipShape(Circle())
                 .frame(width: 86, height: 86)
                 .overlay(alignment: .bottomTrailing) {
-                Button(action: onEditProfileTapped) {
+                Button(action: { onRoute(.editProfile) }) {
                     WSSImage.icEditProfileMypage.swiftUIImage
                 }
                 .buttonStyle(.plain)
@@ -244,11 +225,7 @@ private extension MypageView {
                 loadRegisteredNovelStatsUseCase: PreviewLoadRegisteredNovelStatsUseCase(),
                 loadCollectionPreviewsUseCase: PreviewLoadCollectionPreviewsUseCase()
             ),
-            onCollectionTapped: { print("컬렉션 뷰로 이동") },
-            onCollectionItemTapped: { print("컬렉션 상세로 이동: \($0)") },
-            onEditProfileTapped: { print("프로필 편집 진입") },
-            onSettingTapped: { print("설정 진입") },
-            onLibraryTapped: { print("서재 탭으로 전환") }
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

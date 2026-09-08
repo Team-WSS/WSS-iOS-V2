@@ -23,17 +23,8 @@ public enum MypageFeatureFactory {
     ///   - userID: 컬렉션 미리보기(`fetchCollections`)가 명시적으로 요구한다 — `ProfileDomain`의
     ///     `.me`/`LoadRegisteredNovelStatsUseCase.execute()`처럼 로그인 사용자를 알아서 가리키는
     ///     계약이 아니다(`CollectionDomain/CLAUDE.md` 참고).
-    ///   - onCollectionTapped: 컬렉션 섹션 헤더 행 탭 콜백. 실제 화면 전환(`CollectionFeature`의
-    ///     목록 화면으로 이동)은 호출자(App 조정 계층)가 수행한다 — 두 Feature는 서로 import 못 한다.
-    ///   - onCollectionItemTapped: 컬렉션 미리보기 항목 탭 콜백. 실제 화면 전환(`CollectionFeature`의
-    ///     그 컬렉션 상세 화면으로 이동)은 호출자가 수행한다 — `onCollectionTapped`(목록)와 별개 목적지.
-    ///   - onEditProfileTapped: 프로필 편집 진입 콜백. 실제 화면 전환(`makeEditView` 조립)은
-    ///     호출자(App 조정 계층)가 수행한다 — 캐릭터 선택 시트(`makeCharacterEditSheet`)와 달리 프로필
-    ///     편집은 별개 화면으로의 진짜 이동이라 이 모듈 안에서 직접 열지 않는다.
-    ///   - onSettingTapped: 우측 상단 톱니바퀴 → 설정 진입 콜백. 실제 화면 전환(`SettingFactory.makeView`
-    ///     조립)은 호출자가 수행한다.
-    ///   - onLibraryTapped: 서재 블록 탭 → "서재" 탭으로 전환 콜백. 화면 push가 아니라 탭 전환이라
-    ///     호출자(App)가 자기 `TabView` selection을 바꾸는 방식으로 처리한다.
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `MypageRoute`(Navigation/) 참고(#253).
+    ///     `.libraryTab`은 push가 아니라 **탭 전환**이라 App이 `MainTabView.selectedTab` 변경으로 매핑한다.
     ///   - onAuthenticationRequired: 마이페이지 로드가 401로 막히면 발화 — 세션 종료라 로그인/온보딩으로
     ///     되돌리는 배선(App)에 연결한다(Feature 공통 "인증 만료 처리 계약"). idempotent해야 한다.
     @MainActor
@@ -45,11 +36,7 @@ public enum MypageFeatureFactory {
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         loadCollectionPreviewsUseCase: LoadCollectionPreviewsUseCase,
         logger: Logger? = nil,
-        onCollectionTapped: @escaping () -> Void,
-        onCollectionItemTapped: @escaping (CollectionID) -> Void,
-        onEditProfileTapped: @escaping () -> Void,
-        onSettingTapped: @escaping () -> Void,
-        onLibraryTapped: @escaping () -> Void,
+        onRoute: @escaping (MypageRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = MypageViewModel(
@@ -63,11 +50,7 @@ public enum MypageFeatureFactory {
         )
         return MypageView(
             viewModel: viewModel,
-            onCollectionTapped: onCollectionTapped,
-            onCollectionItemTapped: onCollectionItemTapped,
-            onEditProfileTapped: onEditProfileTapped,
-            onSettingTapped: onSettingTapped,
-            onLibraryTapped: onLibraryTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

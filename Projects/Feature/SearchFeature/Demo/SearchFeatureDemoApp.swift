@@ -92,7 +92,8 @@ private struct DemoRootView: View {
             searchAutoCompletionWordsUseCase: DemoSearchAutoCompletionWordsUseCase(),
             searchNovelUseCase: DemoSearchNovelUseCase(),
             loadPopularKeywordsUseCase: DemoLoadPopularKeywordsUseCase(),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onRoute: handleNormalSearchRoute
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
@@ -127,9 +128,22 @@ private struct DemoRootView: View {
             searchAutoCompletionWordsUseCase: DefaultSearchAutoCompletionWordsUseCase(searchAutoCompletionRepository: searchRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: keywordRepository),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onRoute: handleNormalSearchRoute
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    /// 화면 전환 의도 콜백(#253). 실제 앱은 App 조정 계층이 목적지 화면을 조립·push한다 — Demo는 로그만.
+    private func handleNormalSearchRoute(_ route: NormalSearchRoute) {
+        switch route {
+        case .novelDetail(let novelID):
+            consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+        case .detailSearchResult(let filter):
+            consoleLogger.info("상세탐색 결과 진입 요청: \(filter)")
+        case .detailSearchFilter(let tab):
+            consoleLogger.info("상세탐색 필터 진입 요청: \(tab)")
+        }
     }
 
     /// "상세탐색 필터 화면 단독 보기"의 키워드 탭 전용 실서버 조립 — `makeLiveView()`와 별개 `NetworkingClient`를
@@ -164,7 +178,13 @@ private struct DemoRootView: View {
         return SearchFeatureFactory.makeDetailSearchResultView(
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: searchRepository),
-            logger: consoleLogger
+            logger: consoleLogger,
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+                }
+            }
         )
     }
 }

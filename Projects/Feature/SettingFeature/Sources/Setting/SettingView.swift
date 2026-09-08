@@ -20,27 +20,16 @@ struct SettingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
-    /// 계정정보 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeAccountInfoView` 조립)은
-    /// 호출자(App 조정 계층)가 수행한다.
-    private let onAccountInfoTapped: () -> Void
-    /// 프로필 공개 설정 진입 콜백. 실제 화면 전환(`SettingFeatureFactory.makeProfilePublicView` 조립)은
-    /// 호출자가 수행한다 — "저장됨" 토스트도 그 전환을 조립하는 쪽(App)이 `onSaveSuccess` 시점에 띄운다
-    /// (`MypageRootView`의 프로필 편집 "저장됨" 토스트와 동일 패턴).
-    private let onProfilePublicTapped: () -> Void
-    /// 알림 설정 진입 콜백 — 이 화면이 시스템 푸시 권한을 먼저 확인한 뒤(denied면 알럿만 띄우고 호출
-    /// 안 함) 발화한다. 실제 화면 전환은 호출자(App)가 수행한다.
-    private let onNotificationSettingTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `SettingRoute`(Navigation/)가 정본. 실제 화면 전환
+    /// (`SettingFeatureFactory.makeXxxView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onRoute: (SettingRoute) -> Void
 
     init(
         viewModel: SettingViewModel,
-        onAccountInfoTapped: @escaping () -> Void = {},
-        onProfilePublicTapped: @escaping () -> Void = {},
-        onNotificationSettingTapped: @escaping () -> Void = {}
+        onRoute: @escaping (SettingRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onAccountInfoTapped = onAccountInfoTapped
-        self.onProfilePublicTapped = onProfilePublicTapped
-        self.onNotificationSettingTapped = onNotificationSettingTapped
+        self.onRoute = onRoute
     }
 
     var body: some View {
@@ -61,7 +50,7 @@ struct SettingView: View {
         .onChange(of: viewModel.state.shouldNavigateToNotificationSetting) { _, shouldNavigate in
             guard shouldNavigate else { return }
             viewModel.handle(.consumeNotificationSettingNavigation)
-            onNotificationSettingTapped()
+            onRoute(.notificationSetting)
         }
         .showWSSAlert(
             isPresented: pushAuthorizationAlertBinding,
@@ -81,9 +70,9 @@ struct SettingView: View {
     private func select(_ menu: SettingMenu) {
         switch menu {
         case .accountInfo:
-            onAccountInfoTapped()
+            onRoute(.accountInfo)
         case .profileVisibility:
-            onProfilePublicTapped()
+            onRoute(.profilePublicSetting)
         case .notification:
             viewModel.handle(.notificationMenuTapped)
         case .officialAccount, .inquiry, .privacyPolicy, .termsOfService:
@@ -142,7 +131,8 @@ extension SettingView {
 #Preview {
     NavigationStack {
         SettingView(
-            viewModel: SettingViewModel(pushAuthorizationChecker: PreviewPushAuthorizationChecker())
+            viewModel: SettingViewModel(pushAuthorizationChecker: PreviewPushAuthorizationChecker()),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

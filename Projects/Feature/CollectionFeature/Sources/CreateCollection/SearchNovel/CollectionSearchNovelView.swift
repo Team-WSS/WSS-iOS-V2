@@ -25,20 +25,21 @@ struct CollectionSearchNovelView: View {
     /// 확정 콜백 — 최종 선택 결과 전체를 발화한다(호출자가 `CreateCollectionView`까지 pop하며
     /// 반영한다). 콜백은 VM이 아니라 View가 소유한다(프로젝트 관례).
     private let onConfirm: ([CollectionNovel]) -> Void
-    /// "서재에서 추가" 탭 콜백 — 현재까지 선택된 목록을 실어 올린다. 실제 화면 전환
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CollectionSearchNovelRoute`(Navigation/)가 정본.
+    /// `.myLibrarySelect`는 현재까지 선택된 목록을 실어 올리고, 실제 화면 전환
     /// (`CollectionFeatureFactory.makeMyLibrarySelectView` 조립)은 호출자(App 조정 계층)가 수행한다.
-    private let onLibrarySelectTapped: ([CollectionNovel]) -> Void
+    private let onRoute: (CollectionSearchNovelRoute) -> Void
     private let onAuthenticationRequired: () -> Void
 
     init(
         viewModel: CollectionSearchNovelViewModel,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
-        onLibrarySelectTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CollectionSearchNovelRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onConfirm = onConfirm
-        self.onLibrarySelectTapped = onLibrarySelectTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -125,7 +126,7 @@ private extension CollectionSearchNovelView {
             Spacer()
 
             Button {
-                onLibrarySelectTapped(viewModel.state.selectedNovels)
+                onRoute(.myLibrarySelect(viewModel.state.selectedNovels))
             } label: {
                 Text("서재에서 추가")
                     .underline()
@@ -254,7 +255,7 @@ private extension CollectionSearchNovelView {
                 searchNovelUseCase: PreviewSearchNovelUseCase()
             ),
             onConfirm: { novels in print("확정: \(novels.count)개") },
-            onLibrarySelectTapped: { novels in print("서재에서 추가 진입, 현재 \(novels.count)개") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }

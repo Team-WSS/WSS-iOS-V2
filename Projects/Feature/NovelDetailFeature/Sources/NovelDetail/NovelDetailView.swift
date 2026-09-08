@@ -60,27 +60,11 @@ struct NovelDetailView: View {
     @Environment(\.dismiss) private var dismiss
     /// 오류 제보 링크(외부 브라우저) 열기용.
     @Environment(\.openURL) private var openURL
-    /// 작품 평가(NovelReviewFeature) 진입 콜백. Feature 간 직접 의존 금지 —
-    /// 화면 전환은 호출자(App 조정 계층)가 수행한다. status는 평가 초안에 seed할 읽기 상태.
-    private let onReviewTapped: (NovelInformation, ReadingStatus) -> Void
-    /// 피드 작성(CreateFeed) 진입 콜백 — "나도 한마디" 버튼·피드 탭 플로팅 버튼 공용. 지금 보고 있는
-    /// 작품을 `ConnectedNovel`로 넘겨, 작성 화면이 그 작품을 미리 연결된 상태로 열 수 있게 한다(#197).
-    private let onCreateFeedTapped: (ConnectedNovel) -> Void
-    /// 피드 상세 진입 콜백 — 피드 탭의 셀 탭.
-    private let onFeedTapped: (FeedID) -> Void
-    /// 유저 프로필 진입 콜백 — 피드 셀 프로필 영역(이미지+닉네임) 탭(내 글 제외).
-    private let onUserProfileTapped: (UserID) -> Void
-    /// 작품 상세 진입 콜백 — 피드 셀 연결 작품 배너 탭.
-    private let onNovelTapped: (NovelID) -> Void
-    /// 피드 수정 진입 콜백 — 내 글 드롭다운의 "수정하기". 대상 피드 `FeedID`만 넘긴다 — 실제 데이터
-    /// 로드는 수정 화면 자신이 하므로 화면 전환(`makeEditFeedView` 조립)은 호출자(App 조정 계층)가
-    /// 값만 그대로 받아 하면 된다.
-    private let onEditFeedTapped: (FeedID) -> Void
-    /// 작가 검색 진입 콜백 — 헤더 작품 정보의 작가 이름 탭. 전달값은 탭한 작가 한 명의 이름.
-    /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onAuthorTapped: (String) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `NovelDetailRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다.
+    private let onRoute: (NovelDetailRoute) -> Void
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 어느 서버 호출에서 발생하든 공통.
-    /// 화면 전환은 호출자(App 조정 계층)가 수행한다.
+    /// 화면 전환 "의도"가 아니라 세션 이벤트라 `onRoute`에 합치지 않는다.
     private let onAuthenticationRequired: () -> Void
 
     private let novelID: NovelID
@@ -96,13 +80,7 @@ struct NovelDetailView: View {
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
-        onReviewTapped: @escaping (NovelInformation, ReadingStatus) -> Void,
-        onCreateFeedTapped: @escaping (ConnectedNovel) -> Void,
-        onFeedTapped: @escaping (FeedID) -> Void,
-        onUserProfileTapped: @escaping (UserID) -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (FeedID) -> Void,
-        onAuthorTapped: @escaping (String) -> Void,
+        onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self.novelID = novelID
@@ -110,13 +88,7 @@ struct NovelDetailView: View {
         self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
         self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
         self.logger = logger
-        self.onReviewTapped = onReviewTapped
-        self.onCreateFeedTapped = onCreateFeedTapped
-        self.onFeedTapped = onFeedTapped
-        self.onUserProfileTapped = onUserProfileTapped
-        self.onNovelTapped = onNovelTapped
-        self.onEditFeedTapped = onEditFeedTapped
-        self.onAuthorTapped = onAuthorTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -222,15 +194,15 @@ struct NovelDetailView: View {
                         topInset: navigationBarBottomY,
                         scrollSpaceName: scrollSpaceName,
                         onCoverTapped: { isLargeCoverPresented = true },
-                        onAuthorTapped: onAuthorTapped
+                        onAuthorTapped: { onRoute(.authorSearch($0)) }
                     )
                     NovelDetailReviewSection(
                         information: information,
                         novel: viewModel.state.novel ?? information.novel,
                         scrollSpaceName: scrollSpaceName,
-                        onSelectStatus: { onReviewTapped(information, $0) },
+                        onSelectStatus: { onRoute(.review(information, $0)) },
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
-                        onCreateFeedTapped: { onCreateFeedTapped(connectedNovel(from: information.novel)) },
+                        onCreateFeedTapped: { onRoute(.createFeed(connectedNovel(from: information.novel))) },
                         onReviewBoxFrameChange: { reviewBoxFrame = $0 }
                     )
                     // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
@@ -268,10 +240,10 @@ struct NovelDetailView: View {
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onRetry: { viewModel.handle(.retryFeeds) },
-                                onFeedTapped: onFeedTapped,
-                                onUserProfileTapped: onUserProfileTapped,
+                                onFeedTapped: { onRoute(.feedDetail($0)) },
+                                onUserProfileTapped: { onRoute(.userProfile($0)) },
                                 onUnavailableUserProfileTapped: { viewModel.handle(.userProfileUnavailable) },
-                                onNovelTapped: onNovelTapped,
+                                onNovelTapped: { onRoute(.novelDetail($0)) },
                                 onThreeDotsTapped: { feed, anchorY in
                                     feedMenuContext = FeedMenuContext(feed: feed, anchorY: anchorY)
                                 },
@@ -598,7 +570,7 @@ private extension NovelDetailView {
     var floatingWriteButton: some View {
         Button {
             guard let novel = viewModel.state.information?.novel else { return }
-            onCreateFeedTapped(connectedNovel(from: novel))
+            onRoute(.createFeed(connectedNovel(from: novel)))
         } label: {
             UnevenRoundedRectangle(
                 topLeadingRadius: 54.75,
@@ -700,7 +672,7 @@ private extension NovelDetailView {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
-                    onEditFeedTapped(feed.feedId)
+                    onRoute(.editFeed(feed.feedId))
                 },
                 WSSDropdownItem(title: "삭제하기") {
                     feedMenuContext = nil
@@ -806,13 +778,7 @@ private extension View {
             ),
             loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
             updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
-            onReviewTapped: { _, status in print("리뷰 진입: \(status)") },
-            onCreateFeedTapped: { print("피드 작성 진입: \($0.title) 연결") },
-            onFeedTapped: { print("피드 상세 진입: \($0)") },
-            onUserProfileTapped: { print("유저 프로필 진입: \($0)") },
-            onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditFeedTapped: { print("피드 수정 진입: \($0)") },
-            onAuthorTapped: { print("작가 검색 진입: \($0)") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
     }

@@ -9,9 +9,9 @@
 | **타유저 서재**(`UserLibrary/`) | `NavigationStack` push(dismiss로 빠짐) | 커스텀 네비바(뒤로가기 + 중앙 "서재") / 카운트·정렬·아이콘 토글 **(필터 없음)** |
 
 - 식별자: `ModuleType.feature(.library)` / 의존: `BaseDomain`, **`NovelDomain`**(서재 Domain 코드가 별도 LibraryDomain이 아니라 여기 있음 — `LoadMyLibraryUseCase`·`LoadUserLibraryUseCase`·`LoadMyLibraryKeywordsUseCase`·`LibraryNovel(s)`·`MyLibraryFilter`·`LibraryFilter`), `DesignSystem`, `WSSComponent`, `Logger`
-- 진입점(둘 다 `LibraryFeatureFactory`):
-  - `makeMyLibraryView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:logger:onNovelSelected:onSearchTapped:onRegisterTapped:onNotificationTapped:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫)
-  - `makeUserLibraryView(userID:loadUserLibraryUseCase:logger:onNovelSelected:onAuthenticationRequired:)` — **push 대상**. 대상 사용자는 진입 시점(유저 프로필 등)에서 `UserID`로 넘긴다.
+- 진입점(둘 다 `LibraryFeatureFactory`, 화면 전환은 #253부터 화면별 Route enum + `onRoute` 하나 — `Sources/Navigation/`):
+  - `makeMyLibraryView(loadMyLibraryUseCase:loadMyLibraryKeywordsUseCase:loadMyLibraryFilterUseCase:saveMyLibraryFilterUseCase:logger:onRoute:onAuthenticationRequired:)` — 탭 **콘텐츠만** 반환(탭바·화면 전환은 App 몫). `MyLibraryRoute` = `.novelDetail(NovelID)`/`.search`(빈 상태 CTA)/`.register`(우상단 등록 — App은 전용 화면이 없어 검색으로 매핑, 사용자 확정 #196)/`.notificationSetting`("알림 관리" 직행).
+  - `makeUserLibraryView(userID:loadUserLibraryUseCase:logger:onRoute:onAuthenticationRequired:)` — **push 대상**. 대상 사용자는 진입 시점(유저 프로필 등)에서 `UserID`로 넘긴다. `UserLibraryRoute` = `.novelDetail(NovelID)` 단일 케이스.
 - 공유 자산: `LibraryListCell`(리스트 셀), `LibrarySortSheet`(정렬 6종), `LibraryDisplayMode(+Icon)`(표시 모드·아이콘), `LibrarySortType+Library`(카피). 그리드 셀은 `WSSComponent.WSSLibraryGridCell`(2026-08, `CollectionFeature`의 "서재에서 추가" 화면과 공용 승격 — 아래 주의사항 참고).
 
 ## 핵심 시나리오

@@ -8,12 +8,16 @@
   아니라 이 화면들이 직접 UseCase를 받아 조립한다, 서로 import 못 하는 `CollectionFeature`와는 무관),
   `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점:
-  - `MypageFeatureFactory.makeView(userID:loadProfileUseCase:loadGenrePreferencesUseCase:loadNovelPreferencesUseCase:loadRegisteredNovelStatsUseCase:loadCollectionPreviewsUseCase:logger:onCollectionTapped:onCollectionItemTapped:onEditProfileTapped:onSettingTapped:onLibraryTapped:)`
-    (내 화면 탭 콘텐츠), `.makeEditView(...)`(프로필 편집 — App이 `onEditProfileTapped` 콜백을 받아 조립),
+  - `MypageFeatureFactory.makeView(userID:...:onRoute:onAuthenticationRequired:)`(내 화면 탭 콘텐츠) —
+    화면 전환 의도는 `onRoute: (MypageRoute) -> Void` 하나(#253 — `.collectionList`/`.collectionDetail`/
+    `.editProfile`/`.setting`/`.libraryTab`(탭 전환), 정본 `Sources/Navigation/MypageRoute.swift`).
+    `.makeEditView(...)`(프로필 편집 — App이 `.editProfile` 라우트를 받아 조립),
     `.makeCharacterEditSheet(...)`(캐릭터 선택 시트, 예외적으로 Feature 내부에서 직접 연다)
-  - `UserPageFeatureFactory.makeView(...)`(유저 페이지) — "활동기록 더보기"도 `onFeedListTapped`
-    콜백만 올린다(#201부터, `UserPageView`가 더 이상 로컬로 push하지 않는다).
-    `.makeFeedListView(...)`(전체 피드 목록)는 그 콜백을 받은 App이 조립한다.
+  - `UserPageFeatureFactory.makeView(...)`(유저 페이지) — 화면 전환 의도는 `onRoute: (UserPageRoute) -> Void`
+    하나(#253 — `.userLibrary`/`.userFeedList(userID:nickname:profileImage:)`/`.collectionDetail`/`.collectionList`,
+    정본 `Sources/Navigation/UserPageRoute.swift`). "활동기록 더보기"도 `.userFeedList` 라우트만 올린다
+    (#201부터, `UserPageView`가 더 이상 로컬로 push하지 않는다). `.makeFeedListView(...)`(전체 피드 목록)는
+    그 라우트를 받은 App이 조립한다. 차단 완료(`onUserBlocked`)는 결과 콜백이라 Route 밖.
 
 ## MyPage
 
@@ -25,12 +29,12 @@
 - **마이페이지(`MypageView`)**: `onAppear`마다 프로필·장르 뱃지·작품 취향·서재 통계·컬렉션 미리보기
   5개를 병렬 로드(`MypageViewModel.loadMypage`). **탭 복귀마다 다시 로드**한다(1회 가드 없음) — 프로필
   편집에서 저장하고 돌아왔을 때 바뀐 값을 반영해야 해서.
-- **컬렉션 섹션(`CollectionSection`, #200)**: "컬렉션 N개" 헤더 행(탭 → `onCollectionTapped`, 목록
+- **컬렉션 섹션(`CollectionSection`, #200)**: "컬렉션 N개" 헤더 행(탭 → `onRoute(.collectionList)`, 목록
   화면으로 이동) + 개수 1 이상이면 그 아래 대표 표지 미리보기 최대 3개(`LoadCollectionPreviewsUseCase.execute(userID:size:3)`,
   마이페이지 전용 API가 없어 컬렉션 목록 API를 `size=3`으로 호출 — `CollectionDomain/CLAUDE.md` 참고).
   `N`은 미리보기 배열 개수가 아니라 그 UseCase가 함께 돌려주는 **전체** 개수다. **미리보기 항목 각각도
   개별로 탭 가능하다(#201)** — `CollectionPreviewRow.onItemTapped(CollectionID)` → `CollectionSection.onItemSelected`
-  → `MypageView.onCollectionItemTapped` → `MypageFeatureFactory.makeView`까지 그대로 관통해 App
+  → `MypageView`의 `onRoute(.collectionDetail)` → `MypageFeatureFactory.makeView`까지 그대로 관통해 App
   (`MypageRootView`)이 그 컬렉션 **상세**로 push한다 — 헤더 탭(목록)과는 별개 목적지·별개 콜백. 실제
   화면 전환은 두 콜백 다 App 몫(`CollectionFeature`와 서로 import 못 함).
   **`UserPageView`(타유저 프로필)도 같은 `CollectionPreviewRow`를 쓰고, 이 항목 탭·헤더 탭(목록) 둘
@@ -44,17 +48,17 @@
   스크롤과 무관하게 항상 `wssWhite`로 고정**한다(`.toolbarBackground(.visible, for:)`도 함께 강제 —
   기본값은 스크롤 전 투명이라 안 걸면 콘텐츠가 비친다).
 - **프로필 편집(`MyPageEditView`) 진입은 App 몫**(#196~#197) — `MypageView`는 연필 아이콘 탭 시
-  `onEditProfileTapped()` 콜백만 부르고, 실제로 `MypageFeatureFactory.makeEditView`를 조립해 push하는 건
+  `onRoute(.editProfile)`만 올리고, 실제로 `MypageFeatureFactory.makeEditView`를 조립해 push하는 건
   App(`MypageRootView`)이다("화면 간 연결 조립은 무조건 App" 원칙, 사용자 확정 — 컬렉션 섹션과 동일 원칙을
   편집에도 확장 적용, 예전엔 이 화면이 `navigationDestination`으로 `makeEditView`를 직접 push했다).
   `MyPageEditView` 자신은 여전히 저장 성공 시 스스로 `@Environment(\.dismiss)`로 닫힌다(안 바뀜) —
   "저장됨" 토스트는 **App이** `onSaved` 콜백을 받아 띄운다(예전엔 `MypageView`가 띄웠음). App 쪽에서
   `onSaved`에 또 `path.removeLast()`를 넣으면 `dismiss()`와 겹쳐 이중 pop이 되니 주의(`App/CLAUDE.md` 참고).
-- **툴바 톱니바퀴(`onSettingTapped`)·서재 블록(`onLibraryTapped`)도 같은 원칙**(#197) — 둘 다
-  `MypageView`는 콜백만 부르고 실제 조립은 App(`MypageRootView`)이 한다. 단 **서재는 "화면 전환"이
-  아니라 "탭 전환"**이라 App이 `MypageFeatureFactory.makeView`에 push용 콜백이 아니라 `MainTabView`의
-  `TabView(selection:)`을 바꾸는 클로저를 그대로 물려준다(`App/CLAUDE.md`의 "다른 탭으로 전환" 항목
-  참고) — `MypageView`/`MypageFeatureFactory` 입장에선 둘 다 그냥 `() -> Void` 콜백이라 차이가 안 보인다.
+- **툴바 톱니바퀴(`.setting`)·서재 블록(`.libraryTab`)도 같은 원칙**(#197) — 둘 다
+  `MypageView`는 라우트만 올리고 실제 조립은 App(`MypageRootView`)이 한다. 단 **서재는 "화면 전환"이
+  아니라 "탭 전환"**이라 App이 `.libraryTab` 케이스를 `path.append`가 아니라 `MainTabView`의
+  `TabView(selection:)`을 바꾸는 클로저 호출로 매핑한다(`App/CLAUDE.md`의 "다른 탭으로 전환" 항목
+  참고) — Feature 입장에선 다른 케이스와 똑같은 라우트라 차이가 안 보인다.
 - **캐릭터 선택(`MypageCharacterEditSheet`)은 예외 — App으로 옮기지 않는다**(사용자 확정, #196).
   프로필 편집 화면의 `+` 버튼 → `.sheet(item:)`으로 여전히 `MyPageEditView` 내부에서 직접 진입한다.
   다른 화면으로의 이동이 아니라 **이 화면 자신의 draft를 채우는 로컬 값 선택기**라서다 — App으로
@@ -195,13 +199,13 @@
     `TotalFeed.preservingLikeState`(좋아요 두 필드만 로컬 우선)로 병합한다. `NovelDetailViewModel.refreshFeeds`가
     정본 패턴 — 셀 전체를 로컬로 되돌리면 그 사이 서버 변경(본문 수정 등)까지 버리므로 두 필드만.
 - **서재 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입은 App 몫**(#196) — `UserPageView`는
-  `onLibraryTapped()` 콜백만 부르고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
+  `onRoute(.userLibrary)`만 올리고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +
   `LibrarySection` 블록 전체) 모두 같은 콜백을 부른다 — 어느 쪽을 눌러도 같은 화면으로 간다.
 - **차단**: 툴바 threedots 드롭다운("차단하기") → `WSSAlertType.blockUser` 확인 알럿 → `BlockUserUseCase`. **성공하면 화면을 dismiss한다**(`state.shouldDismiss`) — 차단하면 상대 프로필을 다시 볼 수 없어 화면에 남아있을 이유가 없다는 판단(사용자 확정).
   - **차단했어요 크로스스크린 안내 seam(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser(nickname)`를 post해 **복귀 화면**이 "차단했어요" 토스트를 띄웠다(V2 parity 대상, `V1_BEHAVIOR_CONTRACT.md` 4.6). 이 화면은 차단 성공과 동시에 pop되므로 토스트는 자기가 못 띄운다 — `UserPageView.onUserBlocked(nickname)` 콜백을 `shouldDismiss` 전이에서 `dismiss()` **직전**에 부르는 것까지만 뚫어뒀다(Factory·`UserPageAssembly`까지 전달, 전부 기본 no-op). `shouldDismiss`가 **차단 성공에서만** 켜지므로(뒤로가기는 툴바 버튼이 직접 `dismiss`) 이 전이 = 차단 성공으로 봐도 된다. **실제 토스트("{nickname}님을 차단했어요")는 App의 통합 크로스스크린 피드백 채널이 띄운다**(#236 — `App/Sources/Main/CrossScreenFeedback.swift`, `feedEdited`·`novelReviewed`와 한 채널. #221의 4탭 4벌 복붙은 이 채널로 흡수됨). 각 탭 Root가 `onUserBlocked`를 받아 `crossScreenFeedback.present(.userBlocked(nickname:))`로 연결하고, 토스트는 `NavigationStack` **컨테이너** 오버레이라 pop 후 최상단이 된 **직전 뷰**(소소피드/피드상세/작품상세 등) 위에 뜬다. V1은 전역 `NotificationCenter.blockUser`를 **피드 탭 하나(`FeedViewController`)만** 캐치해 띄웠던 것과 달리, V2는 **차단한 바로 그 탭**에서 뜬다(더 정확).
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
-- **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onFeedListTapped(userID, nickname, profileImage)` 콜백만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 콜백을 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
+- **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onRoute(.userFeedList(userID:nickname:profileImage:))`만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 라우트를 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
 - **컬렉션 섹션(#200)의 타이틀 행은 컬렉션 개수와 무관하게 항상 노출된다**(사용자 확정, 2026-08-25 —
   **이전엔** `viewModel.state.collectionCount > 0`일 때만 섹션 전체를 보여줬다). 0개면 타이틀 행만
@@ -223,11 +227,11 @@
   `FeedRootView`가 피드 셀 프로필 탭에서 push) — 홈·서재 탭엔 아직 진입 경로가 없다(연결 작품 배너만
   뚫려 있고 작성자 프로필 탭 자체가 없는 화면들이라서). 다른 화면에 유저 프로필 진입이 필요해지면
   `UserPageAssembly`를 재사용할 것 — App이 UseCase를 다시 조립하지 않는다. 그 화면에서 다시 여는
-  타유저 서재(`onLibraryTapped` → `LibraryFactory.makeUserLibraryView`)도 마찬가지로 지금은
-  `FeedRootView`만 배선했다 — `UserPageAssembly.makeView`에 `onLibraryTapped` 콜백이 있으니 다른
-  탭이 `UserPageAssembly`를 재사용하면 그 콜백만 채우면 된다.
-- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`는 `onEditProfileTapped`/`onSettingTapped`/
-  `onLibraryTapped`를 전부 콘솔 로그만 찍는 no-op으로 연결한다**(`onCollectionTapped`와 동일 패턴) —
+  타유저 서재(`.userLibrary` 라우트 → `LibraryFactory.makeUserLibraryView`)도 이제 4탭 전부 배선돼
+  있다(#201 이후 순차 확장 — `LibraryRootView` 주석 참고). 새 진입점이 생기면 `UserPageAssembly`의
+  `onRoute` switch에서 `.userLibrary` 케이스만 자기 `Destination`으로 매핑하면 된다.
+- ⚠️ **`Demo/UserPageFeatureDemoApp.swift`의 `makeMypageView`는 `onRoute`(`handleMypageRoute`)를 전부
+  콘솔 로그만 찍는 no-op으로 연결한다** —
   develop 라인 #200 컬렉션 통합과 이 브랜치의 #197 콜백 확장이 각자 진행되며 이 Demo가 컴파일이 안
   되게 어긋났던 걸 rebase 중 최소 수정으로 되살렸다(2026-08-28). 실제 push/무시 여부는 아직 미설계 —
   Demo/Preview 필수 원칙([Feature/CLAUDE.md](../CLAUDE.md))상 완전하진 않다는 것만 기록
@@ -257,7 +261,7 @@
   그대로 관통하고, App(홈/피드/서재/My 4탭 Root 전부)이 새로 뽑은 `CollectionDetailAssembly`/
   `CollectionListAssembly`로 각각 상세/목록을 push한다.
   - **헤더 탭은 `viewModel.hasCollections`로 View가 직접 분기한다**(`collectionSectionHeader`) —
-    있으면 `onCollectionListTapped()`를 바로 부르고, 없으면 `viewModel.handle(.collectionSectionTapped)`로
+    있으면 `onRoute(.collectionList)`를 바로 올리고, 없으면 `viewModel.handle(.collectionSectionTapped)`로
     "컬렉션을 등록하지 않은 유저에요" 토스트만 띄운다("서재" 블록과 동일 원칙 — 순수 네비게이션은
     View가 콜백을 직접 부르고 VM은 상태만 관리, `UserPageViewModel.tapCollectionSection()`도 이제
     토스트 설정 하나만 한다).
@@ -268,9 +272,9 @@
     만들기" 버튼을 숨기고 "내 컬렉션"(`userID` 기준, 항상 타유저) 콘텐츠만 보여준다 — 세그먼트 탭이
     없어 `viewModel.state.selectedTab`이 전환될 방법이 없으므로 `CollectionListViewModel`은 손대지
     않았다(기본값 `.mine`에 계속 머문다). 자세한 계약은 `CollectionFeature/CLAUDE.md` 참고.
-  - `onEditTapped`(`CollectionDetailAssembly`)는 기본값 no-op으로 둔다 — 타유저 프로필에서 여는
-    컬렉션은 항상 남의 것이라(`detail.isMine == false`) "컬렉션 수정" 버튼 자체가 안 뜬다(마이페이지만
-    실제 `onEditTapped`를 채워 자기 컬렉션 편집 진입점으로 쓴다).
+  - 컬렉션 상세의 "수정" 진입은 #253부터 `CollectionDetailRoute.editCollection` exhaustive switch라
+    기본값 no-op이 없다 — 타유저 프로필에서 여는 컬렉션은 항상 남의 것이라(`detail.isMine == false`)
+    "컬렉션 수정" 버튼 자체가 안 뜨지만, 호출자는 매핑을 명시해야 컴파일된다(#228 죽은 버튼 사고 예방).
 - ⚠️ **조용한 재조회(`load()`→`loadUserPage(isSilentRefresh:)`)는 병렬(`async let`) 5개 결과를 로컬
   변수로 다 받은 뒤 `state`에 일괄 대입한다(#236)** — 받는 족족 `state`에 대입하면 중간 하나가 실패했을 때
   실패 지점 앞의 값만 새로 교체돼 프로필 묶음이 부분 갱신된 채 남고(닉네임은 새 값·통계는 옛 값 등),

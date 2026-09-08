@@ -21,7 +21,8 @@ let allRules: [Rule] = [
         layerPathFragment: "/Projects/Domain/",
         folderName: "Repository",
         requiredSuffix: "Repository"
-    )
+    ),
+    FeatureRouteCallbackRule()
 ]
 
 /// 등록된 모듈 단위 규칙 전체. 파일 하나가 아니라 모듈 전체를 봐야 하는 규칙(존재성 등)을 여기 둔다.

@@ -20,15 +20,15 @@ struct DetailSearchResultView: View {
 
     @State private var viewModel: DetailSearchResultViewModel
 
-    /// 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onNovelSelected: (NovelID) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `DetailSearchResultRoute`(Navigation/)가 정본.
+    private let onRoute: (DetailSearchResultRoute) -> Void
 
     init(
         viewModel: DetailSearchResultViewModel,
-        onNovelSelected: @escaping (NovelID) -> Void = { _ in }
+        onRoute: @escaping (DetailSearchResultRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelSelected = onNovelSelected
+        self.onRoute = onRoute
     }
 
     var body: some View {
@@ -159,7 +159,7 @@ struct DetailSearchResultView: View {
                     ) {
                         ForEach(viewModel.state.novels, id: \.id) { novel in
                             Button {
-                                onNovelSelected(novel.id)
+                                onRoute(.novelDetail(novel.id))
                             } label: {
                                 WSSNovelGridCell(
                                     thumbnailImage: novel.thumbnailImage,
@@ -218,7 +218,8 @@ private extension DetailSearchResultView {
             viewModel: DetailSearchResultViewModel(
                 filter: SearchFilter(genres: [.romance], keywords: [Keyword(id: KeywordID(1), name: "환생")]),
                 searchNovelUseCase: PreviewSearchNovelUseCase()
-            )
+            ),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

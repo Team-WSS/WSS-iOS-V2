@@ -26,10 +26,9 @@ public enum CollectionFeatureFactory {
     ///   - pendingNovelSelection: "작품 추가" 화면(App이 push)이 확정한 결과를 돌려받는 통로 —
     ///     `nil→값` 전이로 감지하는 1회성 신호(`OnboardingFeature`의 확정 신호 패턴과 동일). 이 화면이
     ///     소비 즉시 다시 `nil`로 되돌린다. 호출자(App)는 "작품 추가" 화면이 확정될 때 이 Binding에
-    ///     결과를 채우고 그만큼 pop하면 된다(`onAddNovelTapped` 문서 참고).
-    ///   - onAddNovelTapped: "작품 추가" 타일 탭 콜백. 현재 선택된 작품 목록을 실어 올린다(그 화면이
-    ///     이미 담긴 작품도 선택된 채로 보여주는 편집 화면이라서). 실제 화면 전환
-    ///     (`makeSearchNovelView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///     결과를 채우고 그만큼 pop하면 된다(`CreateCollectionRoute.addNovel` 문서 참고).
+    ///   - onRoute: 화면 전환 의도 콜백(`CreateCollectionRoute.addNovel` — 실제 화면 전환
+    ///     (`makeSearchNovelView` 조립)은 호출자(App 조정 계층)가 수행한다, #253).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백. 실제 화면 전환은
     ///     호출자(App 조정 계층)가 수행한다.
     @MainActor
@@ -37,7 +36,7 @@ public enum CollectionFeatureFactory {
         createCollectionUseCase: CreateCollectionUseCase,
         logger: Logger? = nil,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
-        onAddNovelTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = CreateCollectionViewModel(
@@ -48,7 +47,7 @@ public enum CollectionFeatureFactory {
         return CreateCollectionView(
             viewModel: viewModel,
             pendingNovelSelection: pendingNovelSelection,
-            onAddNovelTapped: onAddNovelTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -64,7 +63,7 @@ public enum CollectionFeatureFactory {
         loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
         logger: Logger? = nil,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
-        onAddNovelTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = CreateCollectionViewModel(
@@ -76,7 +75,7 @@ public enum CollectionFeatureFactory {
         return CreateCollectionView(
             viewModel: viewModel,
             pendingNovelSelection: pendingNovelSelection,
-            onAddNovelTapped: onAddNovelTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -89,15 +88,15 @@ public enum CollectionFeatureFactory {
     ///     draft 기준으로 넘긴다) — 이 화면은 처음부터 그 상태로 보여준다.
     ///   - onConfirm: "완료" 확정 콜백. 이 화면 자신은 dismiss()하지 않는다 — 호출자(App)가 받아서
     ///     `CreateCollectionView`까지 pop한다.
-    ///   - onLibrarySelectTapped: "서재에서 추가" 탭 콜백. 현재까지 선택된 목록을 실어 올린다. 실제
-    ///     화면 전환(`makeMyLibrarySelectView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onRoute: 화면 전환 의도 콜백(`CollectionSearchNovelRoute.myLibrarySelect` — 실제 화면 전환
+    ///     (`makeMyLibrarySelectView` 조립)은 호출자(App 조정 계층)가 수행한다, #253).
     @MainActor
     public static func makeSearchNovelView(
         initialSelection: [CollectionNovel],
         searchNovelUseCase: SearchNovelUseCase,
         logger: Logger? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
-        onLibrarySelectTapped: @escaping ([CollectionNovel]) -> Void,
+        onRoute: @escaping (CollectionSearchNovelRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         CollectionSearchNovelView(
@@ -107,7 +106,7 @@ public enum CollectionFeatureFactory {
                 logger: logger
             ),
             onConfirm: onConfirm,
-            onLibrarySelectTapped: onLibrarySelectTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -140,10 +139,9 @@ public enum CollectionFeatureFactory {
     ///   - userID: `fetchCollections`(내 목록)가 명시적으로 요구한다 — `ProfileDomain`의 `.me` 타깃처럼
     ///     로그인 사용자를 알아서 가리키는 계약이 아니다(`CollectionDomain/CLAUDE.md` 참고). 좋아요한
     ///     목록은 세션 토큰 기준이라 이 값이 필요 없다.
-    ///   - onCreateTapped: "컬렉션 만들기" 버튼 탭 콜백. 실제 화면 전환(`makeCreateCollectionView`
-    ///     조립)은 호출자(App 조정 계층)가 수행한다.
-    ///   - onCollectionSelected: 카드 탭 → 컬렉션 상세 진입 콜백. 실제 화면 전환
-    ///     (`makeCollectionDetailView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    ///   - onRoute: 화면 전환 의도 콜백(`CollectionListRoute` — `.createCollection`은
+    ///     `makeCreateCollectionView`, `.collectionDetail`은 `makeCollectionDetailView` 조립.
+    ///     실제 화면 전환은 호출자(App 조정 계층)가 수행한다, #253).
     ///   - isOwnCollections: `false`면 남의 컬렉션을 보는 자리다(타유저 프로필의 "컬렉션" 헤더 탭) —
     ///     세그먼트 탭·"컬렉션 만들기"를 숨기고 "내 컬렉션"(`userID` 기준) 콘텐츠만 보여준다.
     ///     "좋아요한 컬렉션" 탭은 세션 토큰=로그인 사용자 자신 기준이라 타유저 페이지에 재사용할 수
@@ -157,8 +155,7 @@ public enum CollectionFeatureFactory {
         loadLikedCollectionsUseCase: LoadLikedCollectionsUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
-        onCreateTapped: @escaping () -> Void,
-        onCollectionSelected: @escaping (CollectionID) -> Void,
+        onRoute: @escaping (CollectionListRoute) -> Void,
         isOwnCollections: Bool = true
     ) -> some View {
         let viewModel = CollectionListViewModel(
@@ -170,8 +167,7 @@ public enum CollectionFeatureFactory {
         return CollectionListView(
             viewModel: viewModel,
             onAuthenticationRequired: onAuthenticationRequired,
-            onCreateTapped: onCreateTapped,
-            onCollectionSelected: onCollectionSelected,
+            onRoute: onRoute,
             isOwnCollections: isOwnCollections
         )
     }
@@ -180,11 +176,9 @@ public enum CollectionFeatureFactory {
     ///   - id: 조회할 컬렉션. `CollectionListView`의 카드 탭에서 넘어온다.
     ///   - deleteCollectionUseCase: 우상단 더보기(소유자에게만 노출)의 "컬렉션 삭제".
     ///   - onAuthenticationRequired: 이 화면 자신의 서버 호출이 인증 만료를 만날 수 있어 받는다.
-    ///   - onNovelTapped: 작품 그리드 셀 탭 → 작품 상세(`NovelDetailFeature`) 진입 콜백. Feature 모듈끼리
-    ///     서로 import 못 해 이 화면이 직접 만들 수 없다 — 실제 화면 전환은 호출자(App)가 수행한다.
-    ///   - onEditTapped: 더보기 "컬렉션 수정" 탭 콜백. 실제 화면 전환(`makeEditCollectionView` 조립)은
-    ///     호출자(App 조정 계층)가 수행한다 — 그 화면이 `id`로 대상을 스스로 다시 불러오므로(자기 로드
-    ///     방식) 이 콜백은 파라미터가 필요 없다.
+    ///   - onRoute: 화면 전환 의도 콜백(`CollectionDetailRoute`, #253) — `.novelDetail`은 Feature
+    ///     모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없어 호출자(App)가 조립하고,
+    ///     `.editCollection`은 그 화면이 `id`로 대상을 스스로 다시 불러오므로 payload가 없다.
     ///   - kakaoCollectionShareTemplateID1/2/3: 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장
     ///     전용 — Kakao 커스텀 템플릿은 이미지 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다).
     ///     Feature가 `Data`를 못 읽어(레이어 규칙) 호출자가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를
@@ -198,8 +192,7 @@ public enum CollectionFeatureFactory {
         deleteCollectionUseCase: DeleteCollectionUseCase,
         logger: Logger? = nil,
         onAuthenticationRequired: @escaping () -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void,
+        onRoute: @escaping (CollectionDetailRoute) -> Void,
         kakaoCollectionShareTemplateID1: Int64 = 0,
         kakaoCollectionShareTemplateID2: Int64 = 0,
         kakaoCollectionShareTemplateID3: Int64 = 0
@@ -213,8 +206,7 @@ public enum CollectionFeatureFactory {
                 logger: logger
             ),
             onAuthenticationRequired: onAuthenticationRequired,
-            onNovelTapped: onNovelTapped,
-            onEditTapped: onEditTapped,
+            onRoute: onRoute,
             kakaoCollectionShareTemplateID1: kakaoCollectionShareTemplateID1,
             kakaoCollectionShareTemplateID2: kakaoCollectionShareTemplateID2,
             kakaoCollectionShareTemplateID3: kakaoCollectionShareTemplateID3

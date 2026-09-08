@@ -153,7 +153,8 @@ final class SosoFeedViewModel {
     private let logger: Logger?
 
     /// "내 피드" 목록 API가 작성자 정보(닉네임/프로필 이미지)를 내려주지 않아, 별도로 받아온 내 프로필로 채워 넣는다.
-    /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시한다.
+    /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시하되, 당겨서 새로고침 시엔 무효화된다(`.pullToRefresh`) —
+    /// 그래야 프로필 편집 후 돌아와도 편집 전 닉네임/이미지가 안 남는다.
     private var cachedMyProfile: Profile?
 
     /// 목록 로드의 성격 — 시작 표시·커서·반영이 전부 여기서 갈린다(서재 `LoadKind`와 같은 형태).
@@ -222,6 +223,10 @@ final class SosoFeedViewModel {
         case .loadMore:
             loadMore()
         case .pullToRefresh:
+            // 당겨서 새로고침은 "전체 최신화"가 계약이라 캐시된 내 프로필도 함께 무효화한다 — 안 그러면
+            // 프로필 편집 후 여기로 당겨도 편집 전 닉네임/이미지가 계속 붙는다(닉네임/프로필 이미지는
+            // 목록 API가 안 내려줘 이 캐시로 채워 넣으므로, `myProfile()`이 재조회하게 해야 반영된다).
+            cachedMyProfile = nil
             reloadFromScratch(state.selectedTab)
         case .reloadForCreatedFeed:
             state.listGeneration += 1

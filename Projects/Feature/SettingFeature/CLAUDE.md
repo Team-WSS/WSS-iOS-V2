@@ -11,7 +11,9 @@
   `makeAccountInfoView`(계정정보)·`makeChangeGenderOrAgeView`·`makeBlockUserListView`·
   `makeWithdrawFlowView`·`makeProfilePublicView`·`makeNotificationSettingView`·
   `makeCompletionNotificationListView`/`makeHiatusReturnNotificationListView` — 각 화면은 자기
-  하위 화면을 만들지 않고 탭 콜백만 올린다(`onXxxTapped`). "저장됨" 계열 토스트(성별/나이 변경,
+  하위 화면을 만들지 않고 화면 전환 의도만 올린다(#253부터 화면별 Route enum + `onRoute` 하나 —
+  `SettingRoute`/`SettingAccountInfoRoute`/`NotificationSettingRoute`/`NovelNotificationListRoute`, 정본 `Sources/Navigation/SettingRoutes.swift`).
+  "저장됨" 계열 토스트(성별/나이 변경,
   프로필 공개 설정)도 그 화면 자신이 아니라 돌아온 화면 쪽(App)이 `onSaveSuccess` 시점에 띄운다.
 
 ## 핵심 시나리오
@@ -48,7 +50,7 @@
   - 삭제는 `WSSAlertType.deleteNovelNotificationSubscriptions(summary:)`(신규, `WSSComponent`) 확인 알럿을 거친다. `summary`는 **목록에 보이는 순서 기준 첫 선택 항목 제목**("{제목} 외 N작품", View의 `Presentation` 확장이 조합 — 알럿 컴포넌트는 문구를 모른다).
   - 페이지네이션은 서버가 명시적으로 내려주는 `nextSubscriptionID` 커서를 쓴다(`NotificationDomain`의 `Notification`처럼 마지막 항목 id로 유추하지 않음).
   - ⚠️ **현재 로드된 페이지를 통째로 선택 삭제하면 목록은 비지만 다음 페이지가 남아있을 수 있다** — `state.subscriptions.isEmpty`만 보고 빈 상태(`WSSEmptyView`)로 판정하면 서버에 남은 구독이 화면에서 사라진 것처럼 보인다. VM이 삭제 직후 `subscriptions.isEmpty && hasNextPage`면 자동으로 다음 페이지를 이어 로드하고(`loadMore()`), View는 그 과도기를 빈 상태 대신 `LoadingView()`로 가린다. 삭제 로직을 만질 땐 이 자동 이어받기를 빠뜨리지 말 것.
-  - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `onBrowseNovels` 콜백을 그대로 받아 실제 이동은 App이 정한다(#201부터 `MypageRootView`/`LibraryRootView` 둘 다 일반 검색 화면으로 push해 배선 완료).
+  - 목록이 비면 `WSSEmptyView(type: .novelNotification)`의 "작품 둘러보기" CTA가 뜨는데, 검색 화면은 다른 Feature 모듈이라 이 화면이 직접 못 연다 — `NovelNotificationListRoute.browseNovels`(#253 리뷰에서 Route로 편입 — 처음엔 "빈 상태 CTA"라 클로저로 남겼다가, App이 실제로 push하는 화면 전환 의도인데 기본값 no-op까지 있어 `MyLibraryRoute.search`와 판정이 어긋난다는 지적으로 정정)를 올리면 실제 이동은 App이 정한다(#201부터 `MypageRootView`/`LibraryRootView` 둘 다 일반 검색 화면으로 push해 배선 완료).
   - ✅ **인증 만료(`authenticationRequired`) 로그인 라우팅은 이제 모듈 전 서버 호출 화면에 들어와 있다**(#244 — 예전엔 모듈 전체에 없던 갭이었고, "고칠 땐 모듈 전체를 한 번에"라는 방침대로 한 번에 배선했다). 각 VM이 `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고 catch(에러 매핑 헬퍼 `presentXxxError`/`presentError` 최상단)에서 실패 플래그·토스트보다 **먼저** 걸러 `return`한다(정본은 `NotificationFeature/NotificationListViewModel`, 계약은 `Feature/CLAUDE.md` "인증 만료 처리 계약"). 각 View는 `onChange(of: state.requiresAuthentication)` → `onAuthenticationRequired` 콜백으로 올리고 App(`MypageRootView`/`LibraryRootView`)이 로그인/온보딩 라우팅에 연결한다. **예외 둘**: (1) `SettingView`(설정 목록)는 서버 호출이 아예 없어(pushAuthorizationChecker만) 대상이 아니다. (2) `SettingChangeGenderOrAgeView`의 `loadDraft`는 userDefaults 로컬 읽기라 401이 없어 저장(서버 PUT)만 라우팅한다. **로그아웃·탈퇴 401**은 이미 세션이 끝난 것이라 실패 토스트 대신 이 신호로 로그인/온보딩으로 되돌린다(성공 경로 `onLogoutSuccess`/`onWithdrawSuccess`=`onSessionEnded`와 결과는 같지만 App이 딥링크 복원 여부를 달리 걸어 별개 콜백, `App/CLAUDE.md`). 새 서버 호출 화면을 추가하면 이 패턴을 되풀이할 것.
 
 ## 주의사항 (작업 중 발견 시 누적)
@@ -57,8 +59,8 @@
 - **`SettingChangeBirthYearPickerSheet`가 쓰는 연도 휠은 `WSSComponent`의 `WSSBirthYearWheel`이다** — Feature 화면 전용이 아니라 UI 레이어로 승격된 **공용** 컴포넌트다(과거엔 `ChangeGenderOrAge/` 안의 화면 전용 타입이었다가 이동했다). `NovelReviewFeature`의 연/월/일 3열 `WSSDateWheel`과 이름은 비슷하지만 다른 컴포넌트다(연도 1열 전용). 연도 배열 자체가 `BirthYear.minYear...maxYear`로 하드 바운드돼 있어 오버슈트(미래 연도) 방지용 되돌림 로직이 필요 없다 — `WSSDateWheel`의 settle/bounce 로직을 그대로 가져오지 말 것. 수정은 `Projects/UI/WSSComponent/Sources/WSSBirthYearWheel.swift`에서.
 - ⚠️ **`SettingFeatureFactory`는 화면마다 독립된 진입점이다(#201부터) — 더 이상 `makeView(...)` 하나가
   하위 화면까지 전부 조립하지 않는다.** `SettingView`/`SettingAccountInfoView`/`NotificationSettingView`는
-  `onXxxTapped` 콜백만 올리고, 그 콜백을 받아 실제로 다음 화면을 조립(`SettingFeatureFactory.makeXxxView`
-  호출)하는 건 App(`MypageRootView`)이다 — CollectionFeature #201 이관과 동일 원칙. 이 덕분에 각
+  `onRoute`(화면별 Route enum, #253)만 올리고, 그 라우트를 받아 실제로 다음 화면을 조립
+  (`SettingFeatureFactory.makeXxxView` 호출)하는 건 App(`MypageRootView`)이다 — CollectionFeature #201 이관과 동일 원칙. 이 덕분에 각
   `makeXxxView`가 받는 UseCase도 그 화면 자신이 실제로 쓰는 것만으로 줄었다(예: `makeView`는
   `pushAuthorizationChecker` 하나뿐, 하위 화면용 UseCase 10여 개를 더 안 받는다). 유일한 예외는
   `makeWithdrawFlowView` — "확인→사유" 2단계는 여전히 그 화면 내부에서 로컬로 진행되므로 App은 이

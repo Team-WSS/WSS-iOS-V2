@@ -120,7 +120,18 @@ public enum XxxFeatureFactory {         // 유일한 public 진입점. opaque �
 ```
 
 - **접근제어(구조 강제)**: 모듈의 top-level public은 **`*Factory` 하나뿐**이어야 한다. View·ViewModel·상태 enum은 전부 `internal`로 두고, **Factory는 `some View`(opaque)로 반환**해 구체 타입을 숨긴다 — 구체 View 타입을 반환하면 그게 public으로 새고 VM·상태까지 끌려나온다. arch-lint `feature-exclusivity`(규칙⑬)가 CI에서 강제한다(→ `Tooling/ArchLint`). Factory 이름은 `XxxFeatureFactory`로 통일한다(Data의 `XxxDataFactory`와 대칭 — 규칙⑬이 `FeatureFactory` 접미사로 진입점을 식별).
-- **조립 seam은 `Sources/Navigation/`에**: Feature 간 직접 의존 없이 App이 다른 Feature 콘텐츠를 주입해야 할 때(예: 상세탐색의 키워드 탭 → `KeywordTabContentBuilder`), 그 public 타입(주로 `typealias`)은 `Navigation/` 폴더에 둔다 — 규칙⑬이 이 폴더의 public만 진입점 외 예외로 허용한다. Factory·seam 외의 것을 public으로 열어야 할 것 같으면 배선을 다시 볼 신호다.
+- **화면 전환은 `Route` enum + `onRoute` 단일 클로저로 내보낸다**(#253 — 여기가 정본): 화면 전환 의도를
+  낱개 클로저(`onXxxTapped:`/`onXxxSelected:`)로 나열하지 않고, 화면마다 **public `<Screen>Route` enum**
+  (`Sources/Navigation/<Screen>Route.swift`)에 목적지·payload를 케이스로 담아 Factory가
+  `onRoute: @escaping (<Screen>Route) -> Void` **하나**만 받는다. 호출자(App 탭 Root)는 exhaustive
+  switch로 자기 `Destination`에 매핑하고, 그 탭에 없는 목적지는 `break`로 **의도적 무시를 명시**한다 —
+  기본값 no-op 클로저가 배선 누락을 조용히 삼키던 사고(#228의 죽은 "수정" 버튼)를 컴파일러가 막는다.
+  arch-lint `feature-route-callback`(규칙⑭, warning)이 Factory의 낱개 라우팅 클로저를 잡는다.
+  - **Route에 넣지 않는 것**: 세션 이벤트(`onAuthenticationRequired`/`onSessionEnded` — App 쪽 딥링크
+    복원 여부가 갈리는 별도 계약)와 완료 결과 콜백(`onSubmitted`/`onSaved`/`onUserBlocked` 등 pop 직전
+    발화하는 CrossScreenFeedback 채널)은 화면 전환 "의도"가 아니라 별도 클로저로 유지한다.
+  - 패턴 정본: `NovelDetailFeature/Sources/Navigation/NovelDetailRoute.swift`(파일럿) + 4탭 Root의 매핑 switch.
+- **조립 seam은 `Sources/Navigation/`에**: Feature 간 직접 의존 없이 App이 다른 Feature 콘텐츠를 주입해야 할 때(예: 상세탐색의 키워드 탭 → `KeywordTabContentBuilder`), 그 public 타입(주로 `typealias`)과 위 `*Route` enum은 `Navigation/` 폴더에 둔다 — 규칙⑬이 이 폴더의 public(계약 타입: typealias·protocol·`*Route` enum)만 진입점 외 예외로 허용한다. Factory·seam 외의 것을 public으로 열어야 할 것 같으면 배선을 다시 볼 신호다.
 - **`makeView`는 모듈에 화면이 하나일 때만 쓴다** — 화면이 둘 이상이면 **전부** `makeXxxView`로 무엇을 만드는지 이름에 넣는다(`makeCreateFeedView`·`makeMyLibraryView`·`makeUserLibraryView`). 대등한 화면 중 하나만 `makeView`로 남기면 호출부에서 어느 화면인지 읽히지 않는다(`LibraryFeatureFactory`가 실제로 그랬다). 단 `SettingFeatureFactory`는 **메인 설정 화면 + 그 하위 상세들**이라 대표 화면이 `makeView`인 게 자연스러운 경우다 — 대등한지 종속인지로 판단할 것.
 - **Demo·Preview 필수**: `.demo` 타깃의 Demo 앱이 Factory를 `NavigationStack`에 띄워 단독 실행. Preview는 Sources 내부(internal 접근).
 - **⚠️ Demo 앱 `init()`에서 `DesignSystemFontFamily.registerAllCustomFonts()` 호출.** `applyWSSFont`가 `UIFont(name:)!`를 강제 언래핑 → 폰트 미등록 시 **런타임 크래시(SIGTRAP)**. 프리뷰도 Demo 앱을 호스트로 띄우므로 같이 죽는다.

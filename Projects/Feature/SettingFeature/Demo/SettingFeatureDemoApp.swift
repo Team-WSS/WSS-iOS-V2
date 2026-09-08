@@ -175,9 +175,13 @@ private struct DemoRootView: View {
         SettingFeatureFactory.makeView(
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
-            onAccountInfoTapped: { path.append(Destination.accountInfo) },
-            onProfilePublicTapped: { path.append(Destination.profilePublic) },
-            onNotificationSettingTapped: { path.append(Destination.notificationSetting) }
+            onRoute: { route in
+                switch route {
+                case .accountInfo: path.append(Destination.accountInfo)
+                case .profilePublicSetting: path.append(Destination.profilePublic)
+                case .notificationSetting: path.append(Destination.notificationSetting)
+                }
+            }
         )
     }
 
@@ -190,9 +194,13 @@ private struct DemoRootView: View {
                 logoutUseCase: DemoLogoutUseCase(),
                 logger: consoleLogger,
                 onLogoutSuccess: { path = NavigationPath() },
-                onChangeGenderOrAgeTapped: { path.append(Destination.changeGenderOrAge) },
-                onBlockUserListTapped: { path.append(Destination.blockUserList) },
-                onWithdrawTapped: { path.append(Destination.withdrawFlow) }
+                onRoute: { route in
+                    switch route {
+                    case .changeGenderOrAge: path.append(Destination.changeGenderOrAge)
+                    case .blockUserList: path.append(Destination.blockUserList)
+                    case .withdraw: path.append(Destination.withdrawFlow)
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -201,9 +209,13 @@ private struct DemoRootView: View {
                 logoutUseCase: DefaultLogoutUseCase(authRepository: dependencies.authRepository),
                 logger: consoleLogger,
                 onLogoutSuccess: { path = NavigationPath() },
-                onChangeGenderOrAgeTapped: { path.append(Destination.changeGenderOrAge) },
-                onBlockUserListTapped: { path.append(Destination.blockUserList) },
-                onWithdrawTapped: { path.append(Destination.withdrawFlow) }
+                onRoute: { route in
+                    switch route {
+                    case .changeGenderOrAge: path.append(Destination.changeGenderOrAge)
+                    case .blockUserList: path.append(Destination.blockUserList)
+                    case .withdraw: path.append(Destination.withdrawFlow)
+                    }
+                }
             )
         }
     }
@@ -300,8 +312,12 @@ private struct DemoRootView: View {
                 loadPushPreferenceUseCase: DemoLoadPushPreferenceUseCase(store: mockPushPreferenceStore),
                 updatePushPreferenceUseCase: DemoUpdatePushPreferenceUseCase(store: mockPushPreferenceStore),
                 logger: consoleLogger,
-                onCompletionListTapped: { path.append(Destination.completionNotificationList) },
-                onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) }
+                onRoute: { route in
+                    switch route {
+                    case .completionNotificationList: path.append(Destination.completionNotificationList)
+                    case .hiatusReturnNotificationList: path.append(Destination.hiatusReturnNotificationList)
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -309,8 +325,12 @@ private struct DemoRootView: View {
                 loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
                 updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
                 logger: consoleLogger,
-                onCompletionListTapped: { path.append(Destination.completionNotificationList) },
-                onHiatusReturnListTapped: { path.append(Destination.hiatusReturnNotificationList) }
+                onRoute: { route in
+                    switch route {
+                    case .completionNotificationList: path.append(Destination.completionNotificationList)
+                    case .hiatusReturnNotificationList: path.append(Destination.hiatusReturnNotificationList)
+                    }
+                }
             )
         }
     }
@@ -323,7 +343,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -331,7 +355,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         }
     }
@@ -344,7 +372,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DemoLoadNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 deleteNovelNotificationSubscriptionsUseCase: DemoDeleteNovelNotificationSubscriptionsUseCase(store: mockNovelNotificationStore),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         case .live:
             let dependencies = makeLiveDependencies()
@@ -352,7 +384,11 @@ private struct DemoRootView: View {
                 loadNovelNotificationSubscriptionsUseCase: DefaultLoadNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 deleteNovelNotificationSubscriptionsUseCase: DefaultDeleteNovelNotificationSubscriptionsUseCase(repository: dependencies.novelNotificationRepository),
                 logger: consoleLogger,
-                onBrowseNovels: logBrowseNovels
+                onRoute: { route in
+                    switch route {
+                    case .browseNovels: logBrowseNovels()
+                    }
+                }
             )
         }
     }

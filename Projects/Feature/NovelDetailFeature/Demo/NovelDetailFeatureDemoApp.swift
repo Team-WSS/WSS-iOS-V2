@@ -360,13 +360,7 @@ private struct DemoRootView: View {
                 updateNotificationSettingUseCase: DemoUpdateNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 onboardingHintUseCase: DemoOnboardingHintUseCase(),
                 logger: consoleLogger,
-                onReviewTapped: handleReviewTapped,
-                onCreateFeedTapped: handleCreateFeedTapped,
-                onFeedTapped: handleFeedTapped,
-                onUserProfileTapped: handleUserProfileTapped,
-                onNovelTapped: handleNovelTapped,
-                onEditFeedTapped: handleEditFeedTapped,
-                onAuthorTapped: handleAuthorTapped,
+                onRoute: handleRoute,
                 onAuthenticationRequired: handleAuthenticationRequired
             )
         case .live:
@@ -436,50 +430,29 @@ private struct DemoRootView: View {
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             onboardingHintUseCase: DemoOnboardingHintUseCase(),
             logger: consoleLogger,
-            onReviewTapped: handleReviewTapped,
-            onCreateFeedTapped: handleCreateFeedTapped,
-            onFeedTapped: handleFeedTapped,
-            onUserProfileTapped: handleUserProfileTapped,
-            onNovelTapped: handleNovelTapped,
-            onEditFeedTapped: handleEditFeedTapped,
-            onAuthorTapped: handleAuthorTapped,
+            onRoute: handleRoute,
             onAuthenticationRequired: handleAuthenticationRequired
         )
     }
 
-    /// 작품 평가 진입 콜백. 실제 앱은 App 조정 계층이 NovelReviewFactory로 전환한다 — Demo는 로그만.
-    private func handleReviewTapped(_ information: NovelInformation, _ status: ReadingStatus) {
-        consoleLogger.info("작품 평가 진입 요청: \(information.novel.title) / seed 상태: \(status)")
-    }
-
-    /// 피드 작성 진입 콜백. 실제 앱은 App 조정 계층이 CreateFeed로 전환한다 — Demo는 로그만.
-    private func handleCreateFeedTapped(_ connectedNovel: ConnectedNovel) {
-        consoleLogger.info("피드 작성 진입 요청 — 연결 작품: \(connectedNovel.title)")
-    }
-
-    /// 피드 상세 진입 콜백. 실제 앱은 App 조정 계층이 피드 상세로 전환한다 — Demo는 로그만.
-    private func handleFeedTapped(_ feedID: FeedID) {
-        consoleLogger.info("피드 상세 진입 요청: \(feedID)")
-    }
-
-    /// 유저 프로필 진입 콜백(내 글이면 호출 안 됨). 실제 앱은 App 조정 계층이 프로필로 전환한다 — Demo는 로그만.
-    private func handleUserProfileTapped(_ userID: UserID) {
-        consoleLogger.info("유저 프로필 진입 요청: \(userID)")
-    }
-
-    /// 연결 작품 배너 탭 콜백. 실제 앱은 App 조정 계층이 해당 작품 상세로 전환한다 — Demo는 로그만.
-    private func handleNovelTapped(_ novelID: NovelID) {
-        consoleLogger.info("작품 상세 진입 요청: \(novelID)")
-    }
-
-    /// 피드 수정 진입 콜백(내 글 드롭다운의 "수정하기"). 실제 앱은 CreateFeed 수정 모드로 전환한다 — Demo는 로그만.
-    private func handleEditFeedTapped(_ feedID: FeedID) {
-        consoleLogger.info("피드 수정 진입 요청: \(feedID)")
-    }
-
-    /// 작가 이름 탭 콜백(헤더 작품 정보). 실제 앱은 App 조정 계층이 작가 검색 화면으로 전환한다 — Demo는 로그만.
-    private func handleAuthorTapped(_ name: String) {
-        consoleLogger.info("작가 검색 진입 요청: \(name)")
+    /// 화면 전환 의도 콜백(#253). 실제 앱은 App 조정 계층이 목적지 화면을 조립·push한다 — Demo는 로그만.
+    private func handleRoute(_ route: NovelDetailRoute) {
+        switch route {
+        case .review(let information, let status):
+            consoleLogger.info("작품 평가 진입 요청: \(information.novel.title) / seed 상태: \(status)")
+        case .createFeed(let connectedNovel):
+            consoleLogger.info("피드 작성 진입 요청 — 연결 작품: \(connectedNovel.title)")
+        case .feedDetail(let feedID):
+            consoleLogger.info("피드 상세 진입 요청: \(feedID)")
+        case .userProfile(let userID):
+            consoleLogger.info("유저 프로필 진입 요청: \(userID)")
+        case .novelDetail(let novelID):
+            consoleLogger.info("작품 상세 진입 요청: \(novelID)")
+        case .editFeed(let feedID):
+            consoleLogger.info("피드 수정 진입 요청: \(feedID)")
+        case .authorSearch(let name):
+            consoleLogger.info("작가 검색 진입 요청: \(name)")
+        }
     }
 
     /// 인증 만료 콜백(화면 내 모든 서버 호출 공통). 실제 앱은 App 조정 계층이 로그인 화면으로 전환한다 — Demo는 로그만.

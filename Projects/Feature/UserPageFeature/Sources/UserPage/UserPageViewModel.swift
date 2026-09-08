@@ -300,7 +300,7 @@ private extension UserPageViewModel {
 
     /// 컬렉션 섹션 타이틀 행 탭(컬렉션 없음) — "컬렉션을 등록하지 않은 유저에요" 토스트로 안내한다
     /// (사용자 확정, 2026-08-25). 컬렉션이 있을 때의 목록 이동은 순수 네비게이션이라 View가
-    /// `hasCollections`를 직접 보고 이 액션을 거치지 않은 채 `onCollectionListTapped`를 바로 부른다
+    /// `hasCollections`를 직접 보고 이 액션을 거치지 않은 채 `onRoute(.collectionList)`를 바로 부른다
     /// ("서재" 블록과 동일 원칙 — `UserPageFeature/CLAUDE.md` 참고).
     func tapCollectionSection() {
         state.isNoCollectionsToastPresented = true

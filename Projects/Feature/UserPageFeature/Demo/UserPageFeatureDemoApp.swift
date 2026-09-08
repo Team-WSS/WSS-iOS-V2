@@ -241,11 +241,7 @@ private enum DemoFactory {
                 loadRegisteredNovelStatsUseCase: DemoLoadRegisteredNovelStatsUseCase(),
                 loadCollectionPreviewsUseCase: DemoLoadCollectionPreviewsUseCase(),
                 logger: consoleLogger,
-                onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
-                onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
-                onSettingTapped: { consoleLogger.info("설정 진입") },
-                onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
+                onRoute: handleMypageRoute
             )
         case .live:
             makeMypageLiveView()
@@ -273,11 +269,7 @@ private enum DemoFactory {
                 reportSpoilerFeedUseCase: DemoReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: DemoReportImproperFeedUseCase(),
                 logger: consoleLogger,
-                onFeedListTapped: { userID, nickname, _ in
-                    consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
-                },
-                onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
-                onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") },
+                onRoute: handleUserPageRoute,
                 onUserBlocked: onUserBlocked
             )
         case .live:
@@ -309,11 +301,7 @@ private enum DemoFactory {
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
             logger: consoleLogger,
-            onCollectionTapped: { consoleLogger.info("컬렉션 뷰로 이동") },
-            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
-            onEditProfileTapped: { consoleLogger.info("프로필 편집 진입") },
-            onSettingTapped: { consoleLogger.info("설정 진입") },
-            onLibraryTapped: { consoleLogger.info("서재 탭으로 전환") }
+            onRoute: handleMypageRoute
         )
     }
 
@@ -349,12 +337,30 @@ private enum DemoFactory {
             reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: socialRepository),
             reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: socialRepository),
             logger: consoleLogger,
-            onFeedListTapped: { userID, nickname, _ in
-                consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
-            },
-            onCollectionItemTapped: { consoleLogger.info("컬렉션 상세로 이동: \($0)") },
-            onCollectionListTapped: { consoleLogger.info("컬렉션 목록으로 이동") }
+            onRoute: handleUserPageRoute
         )
+    }
+
+    /// 마이페이지 화면 전환 의도 콜백(#253). 실제 앱은 App 조정 계층이 조립·push한다 — Demo는 로그만.
+    private static func handleMypageRoute(_ route: MypageRoute) {
+        switch route {
+        case .collectionList: consoleLogger.info("컬렉션 뷰로 이동")
+        case .collectionDetail(let id): consoleLogger.info("컬렉션 상세로 이동: \(id)")
+        case .editProfile: consoleLogger.info("프로필 편집 진입")
+        case .setting: consoleLogger.info("설정 진입")
+        case .libraryTab: consoleLogger.info("서재 탭으로 전환")
+        }
+    }
+
+    /// 타유저 프로필 화면 전환 의도 콜백(#253) — Demo는 로그만.
+    private static func handleUserPageRoute(_ route: UserPageRoute) {
+        switch route {
+        case .userLibrary: consoleLogger.info("타유저 서재 진입 요청")
+        case .userFeedList(let userID, let nickname, _):
+            consoleLogger.info("전체 피드 목록 진입 요청: \(userID), \(nickname)")
+        case .collectionDetail(let id): consoleLogger.info("컬렉션 상세로 이동: \(id)")
+        case .collectionList: consoleLogger.info("컬렉션 목록으로 이동")
+        }
     }
 
     private static func makeLiveRepositories() -> (ProfileRepository, NovelRepository, KeywordRepository, FeedRepository) {

@@ -113,19 +113,27 @@ struct HomeRootView: View {
                 ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
-                onNovelSelected: { path.append(Destination.novel($0)) },
-                onFeedSelected: { path.append(Destination.feed($0)) },
-                onSearchTapped: { path.append(Destination.search) },
-                onDetailSearchTapped: { path.append(Destination.detailSearchFilter(.info)) },
-                onNotificationTapped: {
-                    path.append(Destination.notification)
-                    Task {
-                        if await DefaultPushAuthorizationChecker().authorizationStatus() == .denied {
-                            isPushAuthorizationAlertPresented = true
+                onRoute: { route in
+                    switch route {
+                    case .novelDetail(let novelID):
+                        path.append(Destination.novel(novelID))
+                    case .feedDetail(let feedID):
+                        path.append(Destination.feed(feedID))
+                    case .search:
+                        path.append(Destination.search)
+                    case .detailSearch:
+                        path.append(Destination.detailSearchFilter(.info))
+                    case .notification:
+                        path.append(Destination.notification)
+                        Task {
+                            if await DefaultPushAuthorizationChecker().authorizationStatus() == .denied {
+                                isPushAuthorizationAlertPresented = true
+                            }
                         }
+                    case .preferenceGenreSetting:
+                        path.append(Destination.preferenceGenreSetting)
                     }
                 },
-                onPreferenceGenreSettingTapped: { path.append(Destination.preferenceGenreSetting) },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .toolbar(.hidden, for: .navigationBar)
@@ -148,12 +156,18 @@ struct HomeRootView: View {
                         UserPageAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
-                            onLibraryTapped: { path.append(Destination.userLibrary(userID)) },
-                            onFeedListTapped: { userID, nickname, profileImage in
-                                path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                            onRoute: { route in
+                                switch route {
+                                case .userLibrary:
+                                    path.append(Destination.userLibrary(userID))
+                                case .userFeedList(let userID, let nickname, let profileImage):
+                                    path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
+                                case .collectionList:
+                                    path.append(Destination.collectionList(userID))
+                                }
                             },
-                            onCollectionItemTapped: { path.append(Destination.collectionDetail($0)) },
-                            onCollectionListTapped: { path.append(Destination.collectionList(userID)) },
                             onUserBlocked: { crossScreenFeedback.present(.userBlocked(nickname: $0)) }
                         )
                     case .userLibrary(let userID):
@@ -170,15 +184,29 @@ struct HomeRootView: View {
                             id: id,
                             dependencies: dependencies,
                             onAuthenticationRequired: onAuthenticationRequired,
-                            onNovelTapped: { path.append(Destination.novel($0)) },
-                            onEditTapped: { path.append(Destination.editCollection(id)) }
+                            onRoute: { route in
+                                switch route {
+                                case .novelDetail(let novelID):
+                                    path.append(Destination.novel(novelID))
+                                case .editCollection:
+                                    path.append(Destination.editCollection(id))
+                                }
+                            }
                         )
                     case .collectionList(let userID):
                         CollectionListAssembly.makeView(
                             userID: userID,
                             dependencies: dependencies,
                             onAuthenticationRequired: onAuthenticationRequired,
-                            onCollectionSelected: { path.append(Destination.collectionDetail($0)) }
+                            onRoute: { route in
+                                switch route {
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
+                                case .createCollection:
+                                    // 타유저 컬렉션 목록(isOwnCollections=false)엔 "만들기" 버튼이 안 떠 도달 불가.
+                                    break
+                                }
+                            }
                         )
                     case .editCollection(let id):
                         editCollectionView(id: id)
@@ -258,19 +286,26 @@ private extension HomeRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
-            onReviewTapped: { information, status in
-                path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+            onRoute: { route in
+                switch route {
+                case .review(let information, let status):
+                    path.append(Destination.novelReview(novelID: information.novel.id, title: information.novel.title, status: status))
+                case .createFeed(let connectedNovel):
+                    path.append(Destination.createFeedFromNovel(connectedNovel))
+                case .feedDetail(let feedID):
+                    path.append(Destination.feed(feedID))
+                case .userProfile(let userID):
+                    // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                    guard userID != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .editFeed(let feedID):
+                    path.append(Destination.editFeed(feedID))
+                case .authorSearch(let name):
+                    path.append(Destination.authorSearch(name))
+                }
             },
-            onCreateFeedTapped: { path.append(Destination.createFeedFromNovel($0)) },
-            onFeedTapped: { path.append(Destination.feed($0)) },
-            onUserProfileTapped: {
-                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
-                guard $0 != currentUserID else { return }
-                path.append(Destination.userPage($0))
-            },
-            onNovelTapped: { path.append(Destination.novel($0)) },
-            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-            onAuthorTapped: { path.append(Destination.authorSearch($0)) },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -285,7 +320,12 @@ private extension HomeRootView {
             id: id,
             dependencies: dependencies,
             pendingNovelSelection: $pendingCollectionNovelSelection,
-            onAddNovelTapped: handleCollectionAddNovelTapped,
+            onRoute: { route in
+                switch route {
+                case .addNovel(let currentSelection):
+                    handleCollectionAddNovelTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -295,7 +335,12 @@ private extension HomeRootView {
             initialSelection: initialSelection,
             dependencies: dependencies,
             onConfirm: handleCollectionSearchNovelConfirm,
-            onLibrarySelectTapped: handleCollectionLibrarySelectTapped,
+            onRoute: { route in
+                switch route {
+                case .myLibrarySelect(let currentSelection):
+                    handleCollectionLibrarySelectTapped(currentSelection)
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -343,7 +388,12 @@ private extension HomeRootView {
                 keywordRepository: dependencies.keywordRepository
             ),
             logger: dependencies.logger,
-            onNovelSelected: { path.append(Destination.novel($0)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
@@ -356,12 +406,17 @@ private extension HomeRootView {
         FeedDetailAssembly.makeView(
             feedID: feedID,
             dependencies: dependencies,
-            onNovelTapped: { path.append(Destination.novel($0)) },
-            onEditFeedTapped: { path.append(Destination.editFeed($0)) },
-            onUserProfileTapped: {
-                // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
-                guard $0 != currentUserID else { return }
-                path.append(Destination.userPage($0))
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .editFeed(let feedID):
+                    path.append(Destination.editFeed(feedID))
+                case .userProfile(let userID):
+                    // 피드 탭 셀의 프로필 탭과 같은 이중 가드(#196) — 내 프로필로는 절대 안 간다.
+                    guard userID != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
+                }
             },
             onAuthenticationRequired: onAuthenticationRequired
         )
@@ -395,9 +450,16 @@ private extension HomeRootView {
     func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(
             dependencies: dependencies,
-            onNovelSelected: { path.append(Destination.novel($0)) },
-            onDetailSearchRequested: { path.append(Destination.detailSearch($0)) },
-            onDetailSearchFilterRequested: { path.append(Destination.detailSearchFilter($0)) },
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                case .detailSearchResult(let filter):
+                    path.append(Destination.detailSearch(filter))
+                case .detailSearchFilter(let tab):
+                    path.append(Destination.detailSearchFilter(tab))
+                }
+            },
             initialQuery: initialQuery
         )
     }
@@ -406,7 +468,12 @@ private extension HomeRootView {
         SearchAssembly.makeDetailSearchResultView(
             filter: filter,
             dependencies: dependencies,
-            onNovelSelected: { path.append(Destination.novel($0)) }
+            onRoute: { route in
+                switch route {
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            }
         )
     }
 }
@@ -432,9 +499,16 @@ private extension HomeRootView {
             loadPagedNotificationsUseCase: DefaultLoadPagedNotificationsUseCase(repository: dependencies.notificationRepository),
             markNotificationAsReadUseCase: DefaultMarkNotificationAsReadUseCase(repository: dependencies.notificationRepository),
             logger: dependencies.logger,
-            onNotificationSelected: { path.append(Destination.notificationDetail($0)) },
-            onFeedSelected: { path.append(Destination.feed($0)) },
-            onNovelSelected: { path.append(Destination.novel($0)) },
+            onRoute: { route in
+                switch route {
+                case .notificationDetail(let notificationID):
+                    path.append(Destination.notificationDetail(notificationID))
+                case .feedDetail(let feedID):
+                    path.append(Destination.feed(feedID))
+                case .novelDetail(let novelID):
+                    path.append(Destination.novel(novelID))
+                }
+            },
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

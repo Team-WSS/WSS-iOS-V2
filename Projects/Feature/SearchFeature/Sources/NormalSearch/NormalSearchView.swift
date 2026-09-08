@@ -29,26 +29,17 @@ struct NormalSearchView: View {
     /// 바로 하면 네이티브 필드가 초과분을 화면에 들고 있는 함정이 있어서다(글자수 제한 TextField 2단계 패턴, #222).
     @State private var searchDraft: String
 
-    /// 검색 결과 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onNovelSelected: (NovelID) -> Void
-    /// 장르 탭·인기 키워드 칩 탭 → 상세탐색 결과(`DetailSearchResultView`) 진입 콜백. 실제 화면 전환은
-    /// 호출자(App 조정 계층)가 수행한다 — App이 소유한 `NavigationPath`에 직접 push해야 그 안에서 다시
-    /// `onNovelSelected`로 작품 상세를 열 때 화면이 제대로 쌓인다(아래 주의사항 참고, #196).
-    private let onDetailSearchRequested: (SearchFilter) -> Void
-    /// 장르·키워드 섹션 "더보기" 헤더 → 상세탐색 **필터 화면** 진입 콜백(#236, V1 parity).
-    /// 장르 더보기는 정보 탭(`.info`), 키워드 더보기는 키워드 탭(`.keyword`)으로 연다.
-    private let onDetailSearchFilterRequested: (DetailSearchFilterTab) -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `NormalSearchRoute`(Navigation/)가 정본.
+    /// 상세탐색 결과 진입도 App이 소유한 `NavigationPath`에 직접 push해야 그 안에서 다시 작품 상세를
+    /// 열 때 화면이 제대로 쌓인다(아래 주의사항 참고, #196).
+    private let onRoute: (NormalSearchRoute) -> Void
 
     init(
         viewModel: NormalSearchViewModel,
-        onNovelSelected: @escaping (NovelID) -> Void = { _ in },
-        onDetailSearchRequested: @escaping (SearchFilter) -> Void = { _ in },
-        onDetailSearchFilterRequested: @escaping (DetailSearchFilterTab) -> Void = { _ in }
+        onRoute: @escaping (NormalSearchRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelSelected = onNovelSelected
-        self.onDetailSearchRequested = onDetailSearchRequested
-        self.onDetailSearchFilterRequested = onDetailSearchFilterRequested
+        self.onRoute = onRoute
         // initialQuery로 진입 시 VM이 init에서 이미 searchText를 채워두므로 로컬 버퍼도 그 값으로 시작한다.
         self._searchDraft = State(initialValue: viewModel.state.searchText)
     }
@@ -71,7 +62,7 @@ struct NormalSearchView: View {
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
                         onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) },
-                        onNovelSelected: onNovelSelected
+                        onNovelSelected: { onRoute(.novelDetail($0)) }
                     )
                 } else if isFocused, !viewModel.state.searchText.isEmpty {
                     NormalSearchAutoCompletionView(
@@ -232,7 +223,7 @@ struct NormalSearchView: View {
                 Spacer().frame(width: 3)
                 
                 Button {
-                    onDetailSearchFilterRequested(.info)
+                    onRoute(.detailSearchFilter(.info))
                 } label: {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
@@ -259,7 +250,7 @@ struct NormalSearchView: View {
     
     private func genreItem(genre: NovelGenre) -> some View {
         Button {
-            onDetailSearchRequested(SearchFilter(genres: [genre]))
+            onRoute(.detailSearchResult(SearchFilter(genres: [genre])))
         } label: {
             VStack(spacing: 9) {
                 genre.iconImage
@@ -287,7 +278,7 @@ struct NormalSearchView: View {
                 Spacer().frame(width: 3)
                 
                 Button {
-                    onDetailSearchFilterRequested(.keyword)
+                    onRoute(.detailSearchFilter(.keyword))
                 } label: {
                     WSSImage.icNavigateRight.swiftUIImage
                         .resizable()
@@ -305,7 +296,7 @@ struct NormalSearchView: View {
                         keyword: keyword.name,
                         isSelected: false,
                         action: {
-                            onDetailSearchRequested(SearchFilter(keywords: [keyword]))
+                            onRoute(.detailSearchResult(SearchFilter(keywords: [keyword])))
                         }
                     )
                 }
@@ -344,7 +335,7 @@ struct NormalSearchView: View {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.sosoPickNovels, id: \.novelID) { pick in
                         Button {
-                            onNovelSelected(pick.novelID)
+                            onRoute(.novelDetail(pick.novelID))
                         } label: {
                             sosoPickItem(imageURL: pick.novelThumbnailimage,
                                          title: pick.novelTitle)
@@ -384,7 +375,8 @@ struct NormalSearchView: View {
                 searchAutoCompletionWordsUseCase: PreviewSearchAutoCompletionWordsUseCase(),
                 searchNovelUseCase: PreviewSearchNovelUseCase(),
                 loadPopularKeywordsUseCase: PreviewLoadPopularKeywordsUseCase()
-            )
+            ),
+            onRoute: { print("화면 전환 요청: \($0)") }
         )
     }
 }

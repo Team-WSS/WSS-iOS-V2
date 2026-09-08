@@ -42,14 +42,11 @@ struct CollectionDetailView: View {
 
     /// 인증 만료 시 로그인 화면 진입 콜백.
     private let onAuthenticationRequired: () -> Void
-    /// 작품 그리드 셀 탭 → 작품 상세 진입 콜백. `NovelDetailFeature`로 가야 하지만 Feature 모듈끼리는
-    /// 서로 import 못 해 이 화면이 직접 만들 수 없다 — `NovelDetailFeature.onAuthorTapped`와 동일하게
-    /// VM을 거치지 않고 View가 탭 즉시 호출하고, 실제 화면 전환은 호출자(App)가 수행한다.
-    private let onNovelTapped: (NovelID) -> Void
-    /// 더보기 "컬렉션 수정" 탭 콜백. 실제 화면 전환(`CollectionFeatureFactory.makeCreateCollectionView`를
-    /// 수정 모드로 조립)은 호출자(App 조정 계층)가 수행한다 — `CreateCollectionView`가 대상 컬렉션을
-    /// `id`로 스스로 다시 불러오므로(자기 로드 방식) 이 화면은 `id`만 알면 된다.
-    private let onEditTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CollectionDetailRoute`(Navigation/)가 정본. `.novelDetail`은
+    /// Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없어 VM을 거치지 않고 View가 탭 즉시
+    /// 올리고, `.editCollection`은 수정 화면(`CreateCollectionView`)이 대상 컬렉션을 `id`로 스스로 다시
+    /// 불러오므로 payload가 없다 — 실제 화면 조립·push는 호출자(App)가 수행한다.
+    private let onRoute: (CollectionDetailRoute) -> Void
     /// 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장 전용 — Kakao 커스텀 템플릿은 이미지
     /// 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다). Feature가 `Data`를 못 읽어(레이어 규칙)
     /// 호출자(App/Demo)가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를 읽어 그대로 넘긴다 —
@@ -61,16 +58,14 @@ struct CollectionDetailView: View {
     init(
         viewModel: CollectionDetailViewModel,
         onAuthenticationRequired: @escaping () -> Void,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditTapped: @escaping () -> Void,
+        onRoute: @escaping (CollectionDetailRoute) -> Void,
         kakaoCollectionShareTemplateID1: Int64,
         kakaoCollectionShareTemplateID2: Int64,
         kakaoCollectionShareTemplateID3: Int64
     ) {
         self._viewModel = State(initialValue: viewModel)
         self.onAuthenticationRequired = onAuthenticationRequired
-        self.onNovelTapped = onNovelTapped
-        self.onEditTapped = onEditTapped
+        self.onRoute = onRoute
         self.kakaoCollectionShareTemplateID1 = kakaoCollectionShareTemplateID1
         self.kakaoCollectionShareTemplateID2 = kakaoCollectionShareTemplateID2
         self.kakaoCollectionShareTemplateID3 = kakaoCollectionShareTemplateID3
@@ -412,7 +407,7 @@ private extension CollectionDetailView {
     /// 카카오톡, 없으면 카카오 웹 공유(Safari). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력).
     /// **카드는 작품 수별 커스텀 템플릿뿐이라 버튼 컴포넌트가 없다**(#241) — 대신 카드 자체를 탭하면
     /// 앱으로 딥링크된다(콘솔 템플릿 설정, `CollectionKakaoShare` 헤더 주석 참고). 순수 표현이라 VM을 거치지 않는다
-    /// (`onNovelTapped`와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는 사용자
+    /// (`.novelDetail` 라우트와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는 사용자
     /// 액션 실패라 토스트로 알린다.
     func shareButton(_ detail: CollectionDetail) -> some View {
         Button {
@@ -540,7 +535,7 @@ private extension CollectionDetailView {
     /// 표지(독립 크기) + 정보 영역(제목 최대 2줄 + 작가, 고정 높이).
     func novelCell(_ novel: CollectionNovel) -> some View {
         Button {
-            onNovelTapped(novel.id)
+            onRoute(.novelDetail(novel.id))
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio, placeholderStyle: .grid)
@@ -604,7 +599,7 @@ private extension CollectionDetailView {
             WSSDropdownMenu(items: [
                 WSSDropdownItem(title: "컬렉션 수정") {
                     viewModel.handle(.editTapped)
-                    onEditTapped()
+                    onRoute(.editCollection)
                 },
                 WSSDropdownItem(title: "컬렉션 삭제") { viewModel.handle(.deleteTapped) }
             ])
@@ -649,8 +644,7 @@ private extension CollectionDetailView {
                 deleteCollectionUseCase: PreviewDeleteCollectionUseCase()
             ),
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
-            onNovelTapped: { print("작품 상세 진입: \($0)") },
-            onEditTapped: { print("컬렉션 수정 진입") },
+            onRoute: { print("화면 전환 요청: \($0)") },
             kakaoCollectionShareTemplateID1: 0,
             kakaoCollectionShareTemplateID2: 0,
             kakaoCollectionShareTemplateID3: 0

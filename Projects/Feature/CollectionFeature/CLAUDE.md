@@ -11,14 +11,15 @@
 - 진입점 (#201부터 — **화면 간 이동은 전부 App이 조립한다.** "작품 추가"/"서재에서 추가"처럼 다른
   화면의 draft를 채우는 값 선택기까지 포함해 예외 없이 App으로 옮겼다(사용자 확정) — 이 모듈 안에는
   `navigationDestination`이 없다. 화면이 6개라 전부 `makeXxxView`로 이름을 붙였다):
-  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:logger:pendingNovelSelection:onAddNovelTapped:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
-  - `CollectionFeatureFactory.makeEditCollectionView(id:updateCollectionUseCase:loadCollectionDetailUseCase:logger:pendingNovelSelection:onAddNovelTapped:onAuthenticationRequired:)` — 수정 전용(`Mode.edit(id)` 고정). `CreateCollectionView`를 수정 모드로 재사용하지만, `Mode`가 `internal`이라 `public` 시그니처에 노출할 수 없어(Swift 접근제어 제약) 생성과 별도 진입점으로 쪼갰다.
-  - `CollectionFeatureFactory.makeSearchNovelView(initialSelection:searchNovelUseCase:logger:onConfirm:onLibrarySelectTapped:onAuthenticationRequired:)` — "작품 추가" 화면.
+  - (#253부터 화면 전환 의도는 화면별 Route enum + `onRoute` 하나 — `Sources/Navigation/CollectionRoutes.swift`가 정본. `onConfirm`(확정 값)·`pendingNovelSelection`(결과 Binding)은 Route가 아니라 그대로다.)
+  - `CollectionFeatureFactory.makeCreateCollectionView(createCollectionUseCase:logger:pendingNovelSelection:onRoute:onAuthenticationRequired:)` — 생성 전용(`Mode.create` 고정).
+  - `CollectionFeatureFactory.makeEditCollectionView(id:updateCollectionUseCase:loadCollectionDetailUseCase:logger:pendingNovelSelection:onRoute:onAuthenticationRequired:)` — 수정 전용(`Mode.edit(id)` 고정). `CreateCollectionView`를 수정 모드로 재사용하지만, `Mode`가 `internal`이라 `public` 시그니처에 노출할 수 없어(Swift 접근제어 제약) 생성과 별도 진입점으로 쪼갰다.
+  - `CollectionFeatureFactory.makeSearchNovelView(initialSelection:searchNovelUseCase:logger:onConfirm:onRoute:onAuthenticationRequired:)` — "작품 추가" 화면.
   - `CollectionFeatureFactory.makeMyLibrarySelectView(initialSelection:loadMyLibraryUseCase:logger:onConfirm:onAuthenticationRequired:)` — "서재에서 추가" 화면.
-  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:logger:onAuthenticationRequired:onCreateTapped:onCollectionSelected:isOwnCollections:)`
+  - `CollectionFeatureFactory.makeCollectionListView(userID:loadCollectionsUseCase:loadLikedCollectionsUseCase:logger:onAuthenticationRequired:onRoute:isOwnCollections:)`
     (`isOwnCollections` 기본값 `true` — `false`면 세그먼트 탭·"컬렉션 만들기"를 숨기고 "내 컬렉션"
     콘텐츠만 보여준다, 타유저 프로필 재사용 — 아래 주의사항 참고)
-  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:onNovelTapped:onEditTapped:)`(#201, 컬렉션 상세)
+  - `CollectionFeatureFactory.makeCollectionDetailView(id:loadCollectionDetailUseCase:collectionLikeUseCase:deleteCollectionUseCase:logger:onAuthenticationRequired:onRoute:)`(#201, 컬렉션 상세)
   - **`pendingNovelSelection: Binding<[CollectionNovel]?>`**은 "작품 추가"/"서재에서 추가" 확정 결과를
     생성/수정 화면에 **돌려주는**(return) 1회성 nil→값 채널(`OnboardingFeature`의 확정 신호 패턴과
     동일) — App이 확정 시점에 값을 채우고 그만큼 pop한다(아래 "2단계 pop" 주의사항 참고). 이 방향은
@@ -43,7 +44,7 @@
   넘겨야 한다** — 그리드는 `draft.novelIDs`가 아니라 이 캐시를 보고 그리므로, 안 채우면 "N/100" 개수
   표시는 맞는데 그리드 셀이 하나도 안 그려진다(실측, `novelListSection` 참고).
 - **작품 추가/제거는 `CollectionSearchNovelView`(`makeSearchNovelView`, Factory 노출)에서 이뤄진다** —
-  `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 `onAddNovelTapped`로 App에 알리면 App이 이
+  `CreateCollectionView`의 "작품 추가"/"작품 수정" 타일이 `onRoute(.addNovel)`로 App에 알리면 App이 이
   화면을 push하고, `SearchNovelUseCase`로 검색·다중선택한 뒤 "완료"를 누르면 선택 목록 **전체**가
   `onConfirm` → App의 `pendingNovelSelection` → `.setNovels`로 `draft.novelIDs`를 통째로 교체한다
   (부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를
@@ -55,7 +56,7 @@
   `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
   `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
 - **"서재에서 추가"(`CollectionMyLibrarySelectView`, `makeMyLibrarySelectView`, Factory 노출)** —
-  `CollectionSearchNovelView`의 "서재에서 추가" 버튼이 `onLibrarySelectTapped`로 App에 알리면 App이
+  `CollectionSearchNovelView`의 "서재에서 추가" 버튼이 `onRoute(.myLibrarySelect)`로 App에 알리면 App이
   push. 사용자의 서재를 `LoadMyLibraryUseCase`(필터 없음, `MyLibraryFilter()`
   기본값)로 3열 그리드 조회하며 다중 선택 → "추가"로 확정한다. 데이터 로드는 정수 `page`가 아니라
   `LibraryFeature.LibraryViewModel`과 동일한 **커서 + generation 카운터** 패턴(`LoadMyLibraryUseCase`가
@@ -81,7 +82,7 @@
   `LoadCollectionsUseCase`(userID 필수)/`LoadLikedCollectionsUseCase`(userID 불필요, 세션 토큰 기준)를
   탭마다 독립된 커서+generation 부기로 lazy 로드한다 — 처음 그 탭을 볼 때만 첫 페이지를 요청하고, 이미
   본 탭은 오갈 때마다 재요청하지 않는다(`CollectionListViewModel`, `CollectionMyLibrarySelectViewModel`의
-  패턴을 탭 2개로 확장). "내 컬렉션" 탭에서만 "컬렉션 만들기" 버튼이 보이고, 탭하면 `onCreateTapped`로
+  패턴을 탭 2개로 확장). "내 컬렉션" 탭에서만 "컬렉션 만들기" 버튼이 보이고, 탭하면 `onRoute(.createCollection)`로
   App에 알려 `makeCreateCollectionView`가 push된다 — 그 화면은 성공 콜백이 없는 계약이라(자기완결
   dismiss만) **이 화면은 복귀를 "성공/취소"로 구분하지 않고** `hasAppearedOnce` 플래그로 감지한다(이
   화면의 App 경로엔 자식이 이 화면 하나뿐이라, 최초 `onAppear` 이후의 재발화는 정의상 "그 자식에서
@@ -93,7 +94,7 @@
   하려는 의도, 작품 수는 카드 부제 `작품 N`으로만 알린다). 오버플로 배지("+N")는 없다 — Figma 목업의
   숫자 배지는 실제 컴포넌트가 아니라 더미 데이터의 잔재였다(사용자 확정).
 - **컬렉션 상세(`CollectionDetailView`, Factory 노출, #201)** — `CollectionListView`의 카드 탭이
-  `onCollectionSelected(CollectionID)`로 App에 알리면 App이 push한다(#201부터 로컬
+  `onRoute(.collectionDetail(CollectionID))`로 App에 알리면 App이 push한다(#201부터 로컬
   `.navigationDestination(item:)`이 아니라 App의 `NavigationPath`). 히어로 배경은 `representativeNovelID`로
   `novels` 배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼
   블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시
@@ -146,8 +147,8 @@
     삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
-  - **작품 카드 탭은 `onNovelTapped(NovelID)` 콜백까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
-    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailFeature.onAuthorTapped`와
+  - **작품 카드 탭은 `onRoute(.novelDetail(NovelID))` 라우트까지 뚫려 있다** — `NovelDetailFeature`로 가야 하지만
+    Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없다. `NovelDetailRoute.authorSearch`와
     동일하게 VM을 거치지 않고 View가 탭 즉시 호출하고, `CollectionFeatureFactory`까지 그대로 관통시켰다.
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201에서 해소된
     옛 TODO 항목) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
@@ -192,7 +193,7 @@
       "Core parameter(s) missing"으로 거부 — App은 커스텀 plist라 실제로 빠져 있었다, `App/CLAUDE.md`). `Tuist/Package.swift` `productTypes`에
       `.framework` 강제 필수(안 하면 `MustInitAppKey` 크래시, `OnboardingFeature/CLAUDE.md`).
     - 받는 쪽 라우팅은 App 몫(`App/CLAUDE.md`의 딥링크 항목). VM에 `shareTapped` 액션은 없다 — 순수 표현이라
-      View가 직접 처리한다(`onNovelTapped`와 같은 위상).
+      View가 직접 처리한다(`.novelDetail` 라우트와 같은 위상).
     - **폐기 이력(시스템 공유 시트, 커밋 `0cd2f144`·`bffdbe1e`·`5d1e0b78`에 구현이 남아 있다)** — 나중에 Universal
       Link로 시트를 되살릴 때 같은 함정을 다시 밟지 않도록 요점만: `ShareLink(item: URL, message:)`는 "복사"가
       URL과 메시지를 별개 pasteboard 항목으로 넣어 plain-text 입력창(카카오톡)에 URL이 빠지고,
@@ -202,7 +203,7 @@
       iOS 26 공유 시트가 우리 설정을 무시하며, 컨테이너 child로 강제하면 흰 백드롭이 앱을 덮는다(전부 iOS 26.5
       실측, 2026-08-29). 미리보기 표지 로드용으로 만든 `WSSComponent.WSSImageLoader`는 `WSSAsyncImage`가 쓰므로 남아 있다.
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
-    (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onEditTapped()`로 App에 알리면 App이 push한다
+    (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onRoute(.editCollection)`으로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
     감지한다(App 경로의 자식이 수정 화면 하나뿐이라 최초 이후 재발화는 곧 "수정에서 돌아옴") —
     성공/취소 구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(이미 `state.detail`이 있어 전면

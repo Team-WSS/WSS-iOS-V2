@@ -18,11 +18,11 @@ import SearchDomain
 import SocialDomain
 
 /// 피드 상세(`FeedFeatureFactory.makeFeedDetailView`) 조립 — 홈/피드/서재/My 4탭이 전부 같은 방식으로
-/// push해서(#196) 공용으로 뽑았다. `onNovelTapped`/`onUserProfileTapped`는 호출자별로 다르다(각 탭 Root가
+/// push해서(#196) 공용으로 뽑았다. 화면 전환은 `onRoute`(`FeedDetailRoute` exhaustive switch, #253)로 받고 호출자별로 다르다(각 탭 Root가
 /// 자기 `Destination` enum에 맞게 push해야 해서). 내 글 "수정" 드롭다운도 `makeEditFeedView`로 여기서
 /// 같이 조립한다 — 수정 화면 자신이 `feedID`로 대상 피드를 불러오므로(#197) App은 UseCase만 물리면 된다.
 ///
-/// ⚠️ **`onUserProfileTapped`는 처음엔 `FeedDetailView`가 콜백 자체를 노출하지 않아 프로필 탭이
+/// ⚠️ **유저 프로필 탭(`.userProfile`)은 처음엔 `FeedDetailView`가 콜백 자체를 노출하지 않아 프로필 탭이
 /// `print`만 찍는 죽은 버튼이었다(#197 뒤늦게 발견, 2026-08-28)** — `SosoFeedView`의 동명 콜백과 달리
 /// 이 화면엔 애초에 파라미터가 없었다. `FeedDetailView`/`FeedFeatureFactory.makeFeedDetailView`까지
 /// 함께 열어야 여기서 받을 수 있다 — 이 Assembly만 고쳐서 될 일이 아니었다.
@@ -37,9 +37,7 @@ enum FeedDetailAssembly {
     static func makeView(
         feedID: FeedID,
         dependencies: AppDependencies,
-        onNovelTapped: @escaping (NovelID) -> Void,
-        onEditFeedTapped: @escaping (FeedID) -> Void = { _ in },
-        onUserProfileTapped: @escaping (UserID) -> Void = { _ in },
+        onRoute: @escaping (FeedDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         FeedFeatureFactory.makeFeedDetailView(
@@ -58,9 +56,7 @@ enum FeedDetailAssembly {
             reportImproperCommentUseCase: DefaultReportImproperCommentUseCase(repository: dependencies.socialRepository),
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: dependencies.profileRepository),
             logger: dependencies.logger,
-            onNovelTapped: onNovelTapped,
-            onEditFeedTapped: onEditFeedTapped,
-            onUserProfileTapped: onUserProfileTapped,
+            onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }

@@ -101,8 +101,15 @@ struct SosoFeedDemoScene: View {
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: OSLogger.feed,
-                onEditFeedTapped: { print("피드 수정 진입: \($0)") },
-                onFeedTapped: { openedFeedID = $0 }
+                onRoute: { route in
+                    switch route {
+                    case .feedDetail(let feedID): openedFeedID = feedID
+                    case .createFeed: print("피드 작성 진입")
+                    case .editFeed(let feedID): print("피드 수정 진입: \(feedID)")
+                    case .userProfile(let userID): print("유저 프로필 진입: \(userID)")
+                    case .novelDetail(let novelID): print("작품 상세 진입: \(novelID)")
+                    }
+                }
             )
             .navigationDestination(item: $openedFeedID) { feedID in
                 FeedFeatureFactory.makeFeedDetailView(
@@ -121,7 +128,7 @@ struct SosoFeedDemoScene: View {
                     reportImproperCommentUseCase: reportImproperCommentUseCase,
                     loadProfileUseCase: loadProfileUseCase,
                     logger: OSLogger.feed,
-                    onNovelTapped: { print("작품 상세 진입: \($0)") }
+                    onRoute: { print("화면 전환 요청: \($0)") }
                 )
             }
         }

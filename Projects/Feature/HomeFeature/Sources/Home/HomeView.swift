@@ -20,12 +20,8 @@ import WSSComponent
 struct HomeView: View {
 
     @State private var viewModel: HomeViewModel
-    private let onNovelSelected: (NovelID) -> Void
-    private let onFeedSelected: (FeedID) -> Void
-    private let onSearchTapped: () -> Void
-    private let onDetailSearchTapped: () -> Void
-    private let onNotificationTapped: () -> Void
-    private let onPreferenceGenreSettingTapped: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `HomeRoute`(Navigation/)가 정본.
+    private let onRoute: (HomeRoute) -> Void
     private let onAuthenticationRequired: () -> Void
 
     private enum Metric {
@@ -41,21 +37,11 @@ struct HomeView: View {
 
     init(
         viewModel: HomeViewModel,
-        onNovelSelected: @escaping (NovelID) -> Void,
-        onFeedSelected: @escaping (FeedID) -> Void,
-        onSearchTapped: @escaping () -> Void,
-        onDetailSearchTapped: @escaping () -> Void,
-        onNotificationTapped: @escaping () -> Void,
-        onPreferenceGenreSettingTapped: @escaping () -> Void,
+        onRoute: @escaping (HomeRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.onNovelSelected = onNovelSelected
-        self.onFeedSelected = onFeedSelected
-        self.onSearchTapped = onSearchTapped
-        self.onDetailSearchTapped = onDetailSearchTapped
-        self.onNotificationTapped = onNotificationTapped
-        self.onPreferenceGenreSettingTapped = onPreferenceGenreSettingTapped
+        self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
@@ -74,7 +60,7 @@ struct HomeView: View {
             .onChange(of: viewModel.state.shouldNavigateToNotifications) { _, shouldNavigate in
                 guard shouldNavigate else { return }
                 viewModel.handle(.consumeNotificationNavigation)
-                onNotificationTapped()
+                onRoute(.notification)
             }
     }
 
@@ -117,8 +103,8 @@ private extension HomeView {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 HomeSearchSection(
-                    onSearchTapped: onSearchTapped,
-                    onDetailSearchTapped: onDetailSearchTapped
+                    onSearchTapped: { onRoute(.search) },
+                    onDetailSearchTapped: { onRoute(.detailSearch) }
                 )
 
                 // 섹션은 값이 없으면 제목까지 통째로 사라진다 — 아래 섹션이 그만큼 올라붙는다.
@@ -132,7 +118,7 @@ private extension HomeView {
                     TrendingFeedSection(
                         nickname: state.nickname,
                         feeds: state.trendingFeeds,
-                        onFeedSelected: onFeedSelected
+                        onFeedSelected: { onRoute(.feedDetail($0)) }
                     )
                 }
 
@@ -143,8 +129,8 @@ private extension HomeView {
                     Spacer().frame(height: Metric.trendingToPreference)
                     PreferenceGenreSection(
                         state: preferenceGenreNovelState,
-                        onNovelSelected: onNovelSelected,
-                        onSettingTapped: onPreferenceGenreSettingTapped
+                        onNovelSelected: { onRoute(.novelDetail($0)) },
+                        onSettingTapped: { onRoute(.preferenceGenreSetting) }
                     )
                 }
 
@@ -168,7 +154,7 @@ private extension HomeView {
                 LazyHStack(spacing: Metric.cardSpacing) {
                     ForEach(discoveries, id: \.novelID) { discovery in
                         TodayDiscoveryCard(discovery: discovery) {
-                            onNovelSelected(discovery.novelID)
+                            onRoute(.novelDetail(discovery.novelID))
                         }
                     }
                 }
@@ -188,12 +174,7 @@ private extension HomeView {
             loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase(),
             pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         ),
-        onNovelSelected: { _ in },
-        onFeedSelected: { _ in },
-        onSearchTapped: {},
-        onDetailSearchTapped: {},
-        onNotificationTapped: {},
-        onPreferenceGenreSettingTapped: {},
+        onRoute: { print("화면 전환 요청: \($0)") },
         onAuthenticationRequired: {}
     )
 }

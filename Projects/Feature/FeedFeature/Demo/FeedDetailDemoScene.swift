@@ -137,7 +137,7 @@ struct FeedDetailDemoScene: View {
                     reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                     reportImproperCommentUseCase: reportImproperCommentUseCase,
                     loadProfileUseCase: loadProfileUseCase,
-                    onNovelTapped: { print("작품 상세 진입: \($0)") }
+                    onRoute: { print("화면 전환 요청: \($0)") }
                 )
             }
         }
