@@ -30,8 +30,20 @@ struct UserFeedListView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: UserFeedListViewModel) {
+    /// 피드 셀 탭 → 피드 상세 진입 콜백. 실제 화면 전환은 호출자(App)가 수행한다
+    /// (`UserPageView.onFeedTapped`와 동일 계약).
+    private let onFeedTapped: (FeedID) -> Void
+    /// 피드 셀의 연결 작품 배너 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App)가 수행한다.
+    private let onNovelTapped: (NovelID) -> Void
+
+    init(
+        viewModel: UserFeedListViewModel,
+        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
+    ) {
         self._viewModel = State(initialValue: viewModel)
+        self.onFeedTapped = onFeedTapped
+        self.onNovelTapped = onNovelTapped
     }
 
     var body: some View {
@@ -60,6 +72,13 @@ struct UserFeedListView: View {
                                             }
                                     }
                                 )
+                                // 프로필·좋아요·threedots·연결 작품 배너는 각자 실제 Button이라 자기
+                                // hit-test 영역에서 이 onTapGesture보다 우선한다 — 그 영역 밖만
+                                // 여기로 떨어져 피드 상세로 이동한다(`UserPageView`와 동일 패턴).
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onFeedTapped(feed.feedId)
+                                }
                                 .onAppear {
                                     if feed == viewModel.state.feeds.last {
                                         viewModel.handle(.loadMoreFeeds)
@@ -125,7 +144,7 @@ struct UserFeedListView: View {
                         novelTitle: connected.title,
                         novelRating: connected.rating ?? 0,
                         linkNovelTapped: {
-                            //TODO: - 연결 작품 상세로 이동
+                            onNovelTapped(connected.id)
                         }
                     )
                 }

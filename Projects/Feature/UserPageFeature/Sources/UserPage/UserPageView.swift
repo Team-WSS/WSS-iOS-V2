@@ -43,7 +43,8 @@ struct UserPageView: View {
 
     private let userID: UserID
 
-    /// 화면 전환 의도 콜백(#253) — 계약은 `UserPageRoute`(Navigation/)가 정본.
+    /// 화면 전환 의도 콜백(#253) — 계약은 `UserPageRoute`(Navigation/)가 정본
+    /// (`.feed`/`.novel`은 #255 QA로 추가).
     private let onRoute: (UserPageRoute) -> Void
     /// 차단 성공(이 화면 dismiss) 직전에 차단한 상대의 닉네임을 실어 올리는 콜백 — V1의 "차단했어요"
     /// 크로스스크린 안내(`NotificationCenter.blockUser`) 재도입용 seam. 이 화면은 곧 pop되므로 실제
@@ -471,6 +472,14 @@ struct UserPageView: View {
                                         }
                                 }
                             )
+                            // 프로필·좋아요·threedots·연결 작품 배너는 각자 실제 Button이라 자기
+                            // hit-test 영역에서 이 onTapGesture보다 우선한다(WSSComponent CLAUDE.md
+                            // "Button은 조상의 onTapGesture보다 우선") — 그 영역 밖만 여기로 떨어져
+                            // 피드 상세로 이동한다(`SosoFeedView`의 행 탭과 동일 패턴).
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onRoute(.feed(feed.feedId))
+                            }
                         Rectangle()
                             .frame(height: 1)
                             .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
@@ -564,7 +573,7 @@ struct UserPageView: View {
                         novelTitle: connected.title,
                         novelRating: connected.rating ?? 0,
                         linkNovelTapped: {
-                            //TODO: - 연결 작품 상세로 이동
+                            onRoute(.novel(connected.id))
                         }
                     )
                 }

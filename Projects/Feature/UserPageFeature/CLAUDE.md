@@ -286,3 +286,21 @@
   - 알려진 절충(#236 리뷰에서 수용): 재조회 중 프로필 조회와 활동 피드 조회가 병렬이라, 그 사이 상대가
     프로필을 바꾸면 피드 author 닉네임(응답에 없어 호출 측 프로필 값으로 채움)이 한 박자 옛 값일 수 있다 —
     창이 매우 좁고 다음 재진입에 자가 치유되므로 순차화하지 않는다.
+- ⚠️ **"활동" 탭의 피드 셀 탭(→피드 상세)·연결 작품 배너 탭(→작품 상세)은 #255 QA 전까지 아무 동작이
+  없었다**(연결 작품 배너는 `//TODO: - 연결 작품 상세로 이동` 주석만 있는 no-op, 피드 셀 자체는 탭 제스처가
+  아예 없었음) — `UserPageView`뿐 아니라 **"전체보기"(`UserFeedListView`)도 화면 구조가 복제돼 있어 동일하게
+  비어 있었다**. 두 View 모두 콜백을 추가했지만 형태는 갈린다:
+  - **`UserPageView`는 #253의 `onRoute: (UserPageRoute) -> Void` 단일 창구에 얹었다** — 개별 콜백을
+    새로 추가하는 대신 `UserPageRoute`에 `case feed(FeedID)`/`case novel(NovelID)`를 추가하고
+    `onRoute(.feed(id))`/`onRoute(.novel(id))`로 발화한다(rebase로 #253과 #255가 합쳐지며 정리, 애초에
+    개별 `onFeedTapped`/`onNovelTapped` 콜백으로 짰던 걸 이 형태로 흡수). `UserPageFeatureFactory.makeView` →
+    `UserPageAssembly.makeView` → 4탭 Root(`FeedRootView`/`HomeRootView`/`LibraryRootView`/`MypageRootView`)의
+    `onRoute` switch가 각자 `Destination.feed`/`Destination.novel`로 push한다.
+  - **`UserFeedListView`("전체보기")는 아직 Route 타입이 없어 개별 `onFeedTapped: (FeedID) -> Void`/
+    `onNovelTapped: (NovelID) -> Void`(기본값 `{ _ in }`) 콜백 그대로 뒀다** — `UserPageFeatureFactory.makeFeedListView` →
+    `UserPageAssembly.makeFeedListView` → 4탭 Root까지 관통. 이 화면에 Route를 새로 도입하는 건 이번
+    범위 밖(#253이 손대지 않은 화면이라 굳이 함께 바꾸지 않았다).
+  이 모듈에 진입 콜백을 새로 추가할 땐 `UserPageView`·`UserFeedListView` 둘 다 짝을 맞춰야 한다(화면
+  구조가 의도적으로 복제돼 있다는 점은 이미 위쪽에 기록돼 있었으나, 이번처럼 "콜백 자체가 아예 없던"
+  누락은 두 화면에서 동시에 났다) — 다만 **형태(Route vs 개별 콜백)까지 반드시 같을 필요는 없다**,
+  각 화면이 이미 쓰고 있는 방식을 따라간다.
