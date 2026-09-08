@@ -74,6 +74,9 @@ final class NovelDetailViewModel {
         case likeFailed
         case deleteFeedFailed
         case reportFeedFailed
+        /// 이미 신고한 피드에 같은 종류의 신고를 다시 시도함(#255 QA, 서버 `REPORT-002`) — `reportFeedFailed`와
+        /// 분리해 "이미 신고한 피드예요" 전용 문구로 안내한다.
+        case reportFeedAlreadyReported
         /// 평가 삭제 완료 — 결과가 화면 재로드로만 보이면 알아차리기 어려워 성공도 토스트로 알린다.
         case reviewDeleted
         /// ⚠️ 유일하게 네트워크 실패가 아닌 케이스 — 피드 탭 셀 프로필을 탭했는데 그 작성자가 탈퇴한
@@ -621,7 +624,7 @@ private extension NovelDetailViewModel {
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
             guard !isClosing, !Task.isCancelled else { return }
-            presentError(error, as: .reportFeedFailed)
+            presentError(error, as: error == .alreadyReported ? .reportFeedAlreadyReported : .reportFeedFailed)
         }
     }
 

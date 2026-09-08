@@ -114,6 +114,7 @@ struct UserFeedListView: View {
             buttonActions: feedAlertActions
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: alreadyReportedToastBinding, type: .alreadyReportedFeed)
         .onAppear {
             viewModel.handle(.load)
         }
@@ -235,6 +236,13 @@ private extension UserFeedListView {
         Binding(
             get: { viewModel.state.hasActionError },
             set: { if !$0 { viewModel.handle(.dismissActionErrorToast) } }
+        )
+    }
+
+    var alreadyReportedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isAlreadyReportedToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissAlreadyReportedToast) } }
         )
     }
 }

@@ -62,6 +62,9 @@ final class UserPageViewModel {
 
         /// 차단·피드 신고 실패 공통 에러 토스트 — 둘 다 같은 문구(`WSSToastType.unknownError`)라 하나로 묶는다.
         var hasActionError = false
+        /// 이미 신고한 피드에 같은 종류의 신고를 다시 시도함(#255 QA) — `hasActionError`와 분리해
+        /// "이미 신고한 피드/댓글이에요" 전용 토스트로 안내한다.
+        var isAlreadyReportedToastPresented = false
     }
 
     /// 피드 셀 신고 알럿의 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
@@ -123,6 +126,7 @@ final class UserPageViewModel {
         case confirmFeedAlert
         case dismissFeedAlert
         case dismissActionErrorToast
+        case dismissAlreadyReportedToast
         case collectionSectionTapped
         case dismissNoCollectionsToast
     }
@@ -229,6 +233,8 @@ final class UserPageViewModel {
             state.presentedFeedAlert = nil
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .dismissAlreadyReportedToast:
+            state.isAlreadyReportedToastPresented = false
         case .collectionSectionTapped:
             tapCollectionSection()
         case .dismissNoCollectionsToast:
@@ -478,6 +484,10 @@ private extension UserPageViewModel {
 
     func presentActionError(_ error: Error, context: String) {
         logger?.error("UserPage \(context) 실패: \(String(describing: error))")
+        guard (error as? RepositoryError) != .alreadyReported else {
+            state.isAlreadyReportedToastPresented = true
+            return
+        }
         state.hasActionError = true
     }
 }

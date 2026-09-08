@@ -87,6 +87,10 @@
   결). `reloadFromScratch`가 시작 시 그 탭 에러를 되돌리므로 실패 뷰와 로딩이 공존하지 않는다(안 되돌리면
   재시도 버튼이 "눌러도 반응 없는" 상태가 된다 — NovelDetail `selectTab`에서 실측된 함정). 사용자 액션
   실패(좋아요·삭제·신고)는 `isActionFailedToastPresented` → `.networkDelay` 토스트(FeedDetail과 동일 lane).
+  - ⚠️ **`reportFeed`만은 이미 신고한 경우를 그 lane과 분리한다**(#255 QA) — 서버 `REPORT-002`/`REPORT-004`
+    (`RepositoryError.alreadyReported`)면 `isActionFailedToastPresented` 대신 `isAlreadyReportedToastPresented`
+    → 전용 `WSSToastType.alreadyReportedFeed` 토스트("이미 신고한 피드예요")로 안내하고, 그 외 실패는 위
+    일반 액션 실패 lane 그대로다.
   - ⚠️ **인증 만료 라우팅(`onAuthenticationRequired`)은 여전히 없다**(`App/FeedRootView` 주석 참고) — 계약상
     auth는 실패 뷰 대신 로그인 라우팅이어야 하지만 이 화면엔 그 lane 자체가 없어, 401도
     `NetworkErrorView`의 default("일시적 오류")로 흡수된다(재시도는 같은 401로 되돌아온다 — 조용한 빈
@@ -100,8 +104,14 @@
   ⚠️ **좋아요·댓글 작성/수정/삭제·삭제·신고 같은 개별 사용자 액션 실패는 일부러 auth 라우팅에 태우지 않았다** —
   이미 로드된 화면의 "사용자 액션 실패" 토스트 lane([상위 CLAUDE.md] 로드 실패 표현 계약)이 담당하고, 화면을
   "갇히게" 만드는 건 로드 401뿐이라서다(게다가 `create/editComment`는 성공 여부를 `Bool`로 돌려주는 구조,
-  `toggleLike`·신고는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
+  `toggleLike`는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
   넓히려면 그 Bool/`try?` 설계부터 다시 볼 것.
+  ⚠️ **`reportSpoiler`/`reportImproper`는 #255 QA로 더 이상 `try?`가 아니다** — 예전엔 성공·실패를 구분 못 해
+  **에러를 삼킨 채 항상 "신고가 완료됐습니다" 알럿으로 전환**하는 버그가 있었다(이미 신고한 피드/댓글을 다시
+  신고해도 완료로 뜸). 지금은 두 함수가 `Bool`을 반환해 `confirmAlert`가 성공일 때만 완료 알럿으로 전환하고,
+  실패 시(특히 서버 `REPORT-002`/`REPORT-004` → `RepositoryError.alreadyReported`) `state.alreadyReportedTarget`
+  (`.feed`/`.comment`로 문구 분리, `WSSToastType.alreadyReportedFeed`/`.alreadyReportedComment`)을 세운다 —
+  단 이 실패도 **여전히 auth 라우팅엔 안 태운다**(위 문단의 정책 그대로, 방식만 `try?`→`do/catch`로 바뀜).
 
 - ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
   초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계

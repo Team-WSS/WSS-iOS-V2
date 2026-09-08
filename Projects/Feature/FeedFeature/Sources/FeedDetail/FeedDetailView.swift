@@ -118,6 +118,7 @@ struct FeedDetailView: View {
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
+        .showWSSToast(isPresented: alreadyReportedToastBinding, type: alreadyReportedToastType)
         .onChange(of: viewModel.state.requiresAuthentication) { _, required in
             guard required else { return }
             onAuthenticationRequired()
@@ -467,6 +468,20 @@ struct FeedDetailView: View {
                 if !newValue { Task { await viewModel.handle(.dismissActionFailedToast) } }
             }
         )
+    }
+
+    /// 이미 신고한 피드/댓글에 같은 종류의 신고를 다시 시도했을 때(#255 QA).
+    private var alreadyReportedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.alreadyReportedTarget != nil },
+            set: { newValue in
+                if !newValue { Task { await viewModel.handle(.dismissAlreadyReportedToast) } }
+            }
+        )
+    }
+
+    private var alreadyReportedToastType: WSSToastType {
+        viewModel.state.alreadyReportedTarget == .comment ? .alreadyReportedComment : .alreadyReportedFeed
     }
 
     /// VM의 의미 알럿 → 실제 `WSSAlertType`(문구·버튼 개수) 매핑. `nil`이면 안 뜨므로 값은 임의.

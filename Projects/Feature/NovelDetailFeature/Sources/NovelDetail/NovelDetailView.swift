@@ -687,6 +687,7 @@ private extension NovelDetailView {
         switch viewModel.state.presentedToast {
         case .reviewDeleted: .novelReviewDeleted
         case .unavailableUser: .unknownUser
+        case .reportFeedAlreadyReported: .alreadyReportedFeed
         default: .unknownError
         }
     }

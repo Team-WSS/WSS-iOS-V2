@@ -50,9 +50,18 @@ final class FeedDetailViewModel {
         /// 콘텐츠는 멀쩡하고 그 행동만 실패한 "사용자 액션 실패"라 전면 뷰가 아니라 토스트로 표현한다
         /// ([Feature CLAUDE.md](../CLAUDE.md)의 로드 실패 표현 계약).
         var isActionFailedToastPresented = false
+        /// 이미 신고한 피드/댓글에 같은 종류의 신고를 다시 시도했을 때(#255 QA, 서버 `REPORT-002`/`REPORT-004`) —
+        /// nil이면 안 뜬 상태. `isActionFailedToastPresented`(공통 실패 문구)와 분리해 대상별 전용 문구로 안내한다.
+        var alreadyReportedTarget: AlreadyReportedTarget?
         /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
         /// 로드(상세·댓글·프로필 이미지) 실패가 401이면 실패 뷰/토스트 대신 이 신호로 로그인 유도한다.
         var requiresAuthentication = false
+    }
+
+    /// `alreadyReportedTarget`이 가리키는 대상 — 피드/댓글 문구를 분리하기 위한 값.
+    public enum AlreadyReportedTarget: Equatable {
+        case feed
+        case comment
     }
 
     public func isMyComment(_ comment: FeedComment) -> Bool {
@@ -170,6 +179,7 @@ final class FeedDetailViewModel {
         case dismissUnavailableUserToast
 
         case dismissActionFailedToast
+        case dismissAlreadyReportedToast
     }
 
     public func handle(_ action: Action) async {
@@ -229,6 +239,9 @@ final class FeedDetailViewModel {
 
         case .dismissActionFailedToast:
             state.isActionFailedToastPresented = false
+
+        case .dismissAlreadyReportedToast:
+            state.alreadyReportedTarget = nil
         }
     }
 
@@ -301,12 +314,10 @@ final class FeedDetailViewModel {
         guard let alert = state.alert else { return }
         switch alert {
         case .reportSpoiler(let commentID):
-            await reportSpoiler(commentID: commentID)
-            state.alert = .reportSpoilerCompleted
+            state.alert = await reportSpoiler(commentID: commentID) ? .reportSpoilerCompleted : nil
 
         case .reportImproper(let commentID):
-            await reportImproper(commentID: commentID)
-            state.alert = .reportImproperCompleted
+            state.alert = await reportImproper(commentID: commentID) ? .reportImproperCompleted : nil
 
         case .reportSpoilerCompleted, .reportImproperCompleted, .feedUnavailable:
             state.alert = nil
@@ -321,21 +332,43 @@ final class FeedDetailViewModel {
         }
     }
 
-    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고.
-    private func reportSpoiler(commentID: CommentID?) async {
-        if let commentID {
-            try? await reportSpoilerCommentUseCase.execute(feedID: feedID, commentID: commentID)
-        } else {
-            try? await reportSpoilerFeedUseCase.execute(id: feedID)
+    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고. 성공하면 true(완료 알럿으로 전환 판단용).
+    private func reportSpoiler(commentID: CommentID?) async -> Bool {
+        do {
+            if let commentID {
+                try await reportSpoilerCommentUseCase.execute(feedID: feedID, commentID: commentID)
+            } else {
+                try await reportSpoilerFeedUseCase.execute(id: feedID)
+            }
+            return true
+        } catch {
+            presentReportFailure(error, isComment: commentID != nil)
+            return false
         }
     }
 
-    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고.
-    private func reportImproper(commentID: CommentID?) async {
-        if let commentID {
-            try? await reportImproperCommentUseCase.execute(feedID: feedID, commentID: commentID)
+    /// `commentID`가 있으면 댓글 신고, 없으면 피드 자체 신고. 성공하면 true(완료 알럿으로 전환 판단용).
+    private func reportImproper(commentID: CommentID?) async -> Bool {
+        do {
+            if let commentID {
+                try await reportImproperCommentUseCase.execute(feedID: feedID, commentID: commentID)
+            } else {
+                try await reportImproperFeedUseCase.execute(id: feedID)
+            }
+            return true
+        } catch {
+            presentReportFailure(error, isComment: commentID != nil)
+            return false
+        }
+    }
+
+    /// 신고 실패 처리 — 이미 신고한 경우는 대상(피드/댓글)별 전용 토스트, 그 외는 공통 실패 토스트.
+    private func presentReportFailure(_ error: Error, isComment: Bool) {
+        logger?.error("FeedDetail 신고 실패: \(String(describing: error))")
+        if (error as? RepositoryError) == .alreadyReported {
+            state.alreadyReportedTarget = isComment ? .comment : .feed
         } else {
-            try? await reportImproperFeedUseCase.execute(id: feedID)
+            state.isActionFailedToastPresented = true
         }
     }
 

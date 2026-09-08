@@ -56,6 +56,12 @@
 - **Alert 버튼 탭은 `isPresented`를 자동으로 닫지 않는다**(SwiftUI `.alert`와 다름) — 취소 버튼 포함 **모든 buttonActions가 스스로 표시 상태를 되돌려야** 한다. 안 그러면 알럿이 안 닫힌다.
 - **`isPresented`는 그대로 두고 `alertType`만 바뀌는 다단계 알럿**(예: "신고할까요?" 확인 → "신고 접수했습니다" 완료)은 `WSSAlertView`에 `.id(alertType)`를 걸어 뷰 정체성을 갈라야 `.transition`이 실제로 발동한다 — 안 걸면 SwiftUI가 "같은 뷰"로 보고 내용만 즉시 스냅 교체해버려 애니메이션이 없다(`WSSAlertType`을 `Hashable`로 만든 이유). `.animation(value:)`도 `isPresented`뿐 아니라 `alertType` 변화에도 걸어야 이 전환이 애니메이션된다.
 - **`WSSAlertType`은 원래 전 케이스가 정적 카피라 `CaseIterable` 자동 합성이었지만, `deleteNovelNotificationSubscriptions(summary:)`(#188, "선택 N개 삭제할까요?" 류처럼 화면마다 문구가 달라지는 알럿)가 연관값을 가지면서 깨졌다** — `CaseIterable` 준수를 별도 `extension`으로 옮기고 `allCases`를 수동 나열한다(Demo 프리뷰 목록용, 동적 케이스는 샘플 문자열로 채움). 새 정적 케이스를 추가하면 이 수동 `allCases`에도 반드시 같이 넣을 것 — 안 넣으면 컴파일은 되지만 Demo에서 조용히 안 보인다. 문구 조합(예: "제목 외 N작품")은 컴포넌트가 판단하지 않고 **호출부가 완성된 문자열을 넘긴다**.
+- **`WSSToastType.alreadyReportedFeed`/`.alreadyReportedComment`(#255 QA)는 의도적으로 케이스를 나눴다** —
+  처음엔 "이미 신고한 피드/댓글이에요" 하나로 합쳤으나, 사용자가 "피드/댓글 각각 보이게 하고 싶다"고
+  명시해 대상별 전용 문구(`.alreadyReportedFeed`="이미 신고한 피드예요", `.alreadyReportedComment`="이미
+  신고한 댓글이에요")로 분리했다 — `selectionOverLimit(count:)`처럼 화면마다 파라미터만 다른 게 아니라
+  **문구 자체가 다른** 경우라 연관값이 아니라 케이스를 나누는 쪽을 택함(아래 `selectionOverLimit` 항목의
+  "화면별로 문구를 가르고 싶으면 케이스를 나눠야 한다"는 원칙과 동일 결론).
 - ⚠️ **`WSSToastType.selectionOverLimit(count:)`의 문구는 `NovelReviewFeature`(매력포인트 3개)·
   `KeywordFeature`(키워드 20개)·`CollectionFeature`(작품 100개) 세 화면이 공유하는 범용 텍스트다**
   (`WSSToastStyle.text`) — `count`만 다를 뿐 "N개까지 선택이 가능해요" 카피 자체는 하나라, 한 화면만
