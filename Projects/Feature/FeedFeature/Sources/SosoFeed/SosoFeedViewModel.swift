@@ -541,7 +541,14 @@ final class SosoFeedViewModel {
         }
     }
 
+    /// "n개의 기록" 헤더(`myFeedsTotalCount`)도 함께 내린다 — 안 내리면 다 지워도 헤더는 "4개의 기록",
+    /// 본문은 빈 뷰인 모순이 남는다(다음 재조회까지 서버 값이 안 온다). 로드된 범위(`myFeeds`)에 있던
+    /// 것만 확인할 수 있으므로 best-effort — 깊은 페이지의 내 글을 소소피드 쪽에서 지우는 극단 케이스는
+    /// 놓치지만, 당겨서 새로고침이 서버 값으로 복구한다.
     private func removeCell(_ feedID: FeedID) {
+        if state.myFeeds.contains(where: { $0.feedId == feedID }) {
+            state.myFeedsTotalCount = state.myFeedsTotalCount.map { max(0, $0 - 1) }
+        }
         state.myFeeds.removeAll { $0.feedId == feedID }
         state.sosoFeeds.removeAll { $0.feedId == feedID }
     }
