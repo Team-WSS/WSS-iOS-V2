@@ -21,6 +21,7 @@ struct CollectionSearchNovelView: View {
     @State private var viewModel: CollectionSearchNovelViewModel
     @FocusState private var isSearchBarFocused: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     /// 확정 콜백 — 최종 선택 결과 전체를 발화한다(호출자가 `CreateCollectionView`까지 pop하며
     /// 반영한다). 콜백은 VM이 아니라 View가 소유한다(프로젝트 관례).
@@ -148,7 +149,9 @@ private extension CollectionSearchNovelView {
         } else if !viewModel.state.hasSearched {
             Spacer()
         } else if viewModel.state.searchedNovels.isEmpty {
-            WSSEmptyView(type: .novel, action: {})
+            WSSEmptyView(type: .novel, action: {
+                if let url = AppURL.inquiryAddNovel { openURL(url) }
+            })
         } else {
             resultList
         }
