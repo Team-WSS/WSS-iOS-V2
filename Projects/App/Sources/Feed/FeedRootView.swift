@@ -92,6 +92,9 @@ struct FeedRootView: View {
     /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
     /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
     @State private var crossScreenFeedback = CrossScreenFeedbackState()
+    /// 연필 아이콘 작성 성공 복귀 신호(#256) — 피드 탭 목록(`SosoFeedView`)이 onAppear에서 소비해 두 목록을
+    /// 초기 로드처럼 다시 받는다. 작품 상세 경유 작성(`.createFeedFromNovel`)은 이 신호를 켜지 않는다.
+    @State private var needsFeedListReloadForCreatedFeed = false
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -111,8 +114,8 @@ struct FeedRootView: View {
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
-                // 앱 어느 탭에서든 피드 작성이 끝나면 오르는 카운터 — 목록이 새 글을 받는 유일한 경로(`FeedListInvalidation`).
-                feedCreatedVersion: dependencies.feedListInvalidation.feedCreatedVersion,
+                // 연필 아이콘 작성 성공 복귀 시에만 켜지는 1회성 신호 — 목록이 새 글을 받는 유일한 경로(#256).
+                needsReloadForCreatedFeed: $needsFeedListReloadForCreatedFeed,
                 onRoute: { route in
                     switch route {
                     case .feedDetail(let feedID):
@@ -143,9 +146,9 @@ struct FeedRootView: View {
                     case .notificationDetail(let id):
                         notificationDetailView(id)
                     case .createFeed:
-                        createFeedView(connectedNovel: nil)
+                        createFeedView(connectedNovel: nil, reloadsFeedListOnSubmit: true)
                     case .createFeedFromNovel(let connectedNovel):
-                        createFeedView(connectedNovel: connectedNovel)
+                        createFeedView(connectedNovel: connectedNovel, reloadsFeedListOnSubmit: false)
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(
                             feedID: feedID,
@@ -439,7 +442,10 @@ private extension FeedRootView {
 private extension FeedRootView {
     /// `.createFeed`(연필 아이콘)는 `nil`로, `.createFeedFromNovel`(작품 상세)은 그 작품으로 이 헬퍼를
     /// 공유한다 — `connectedNovel`이 있으면 작성 화면이 그 작품이 미리 연결된 상태로 뜬다.
-    func createFeedView(connectedNovel: ConnectedNovel?) -> some View {
+    /// `reloadsFeedListOnSubmit`은 연필 아이콘 경로만 true(#256) — 작성 성공 복귀 시 피드 탭 목록이 두 목록을
+    /// 초기 로드처럼 다시 받는다. 작품 상세 경유 작성은 그 작품 상세가 자기 피드 섹션을 리셋하므로(사용자 확정)
+    /// 이 목록엔 신호를 보내지 않는다.
+    func createFeedView(connectedNovel: ConnectedNovel?, reloadsFeedListOnSubmit: Bool) -> some View {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
@@ -447,7 +453,9 @@ private extension FeedRootView {
             connectedNovel: connectedNovel,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
-                dependencies.feedListInvalidation.markFeedCreated()
+                if reloadsFeedListOnSubmit {
+                    needsFeedListReloadForCreatedFeed = true
+                }
             }
         )
     }

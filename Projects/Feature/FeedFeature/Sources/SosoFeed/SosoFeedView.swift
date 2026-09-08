@@ -40,11 +40,11 @@ struct SosoFeedView: View {
     /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다(`.userProfile`은 `Author.userId`가
     /// nil이면 호출하지 않는다).
     private let onRoute: (SosoFeedRoute) -> Void
-    /// 피드 작성 완료 신호(App이 올리는 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터 다시 받고 스크롤을
-    /// 최상단으로 — 이 화면은 재진입에 목록을 다시 받지 않으므로(다녀온 셀만 동기화) 새 글은 이 신호로만 들어온다.
-    /// 앱 어느 탭에서 작성해도 오도록 App 전역 값이며, TabView가 이 뷰를 계속 mount해 두므로 다른 탭에 있어도
-    /// `onChange`가 받아 미리 재로드한다.
-    private let feedCreatedVersion: Int
+    /// 피드 탭 연필 아이콘 작성 성공 복귀 신호(#256) — App 탭 Root 로컬 `@State`와 연결된 1회성 채널.
+    /// 작성 성공 pop 복귀의 `onAppear`가 true를 소비(false로 되돌림)하고 두 목록을 초기 로드처럼 다시 받는다
+    /// (새 글이 맨 위). 이 화면은 재진입에 목록을 다시 받지 않으므로(다녀온 셀만 동기화) 새 글은 이 신호로만
+    /// 들어온다 — 작품 상세 경유 작성·수정 완료는 이 신호를 켜지 않는다.
+    @Binding private var needsReloadForCreatedFeed: Bool
 
     /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
     private let threeDotsBottomOffset: CGFloat = 52
@@ -53,11 +53,11 @@ struct SosoFeedView: View {
 
     init(
         viewModel: SosoFeedViewModel,
-        feedCreatedVersion: Int = 0,
+        needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (SosoFeedRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
-        self.feedCreatedVersion = feedCreatedVersion
+        self._needsReloadForCreatedFeed = needsReloadForCreatedFeed
         self.onRoute = onRoute
     }
 
@@ -106,10 +106,12 @@ struct SosoFeedView: View {
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .onAppear {
-            viewModel.handle(.load)
-        }
-        .onChange(of: feedCreatedVersion) { _, _ in
-            viewModel.handle(.reloadForCreatedFeed)
+            if needsReloadForCreatedFeed {
+                needsReloadForCreatedFeed = false
+                viewModel.handle(.reloadForCreatedFeed)
+            } else {
+                viewModel.handle(.load)
+            }
         }
     }
 
@@ -264,15 +266,15 @@ struct SosoFeedView: View {
         }
     }
 
-    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다, 그리고 작성 완료 재로드(`listGeneration`)
-    /// 마다 다른 값 — ScrollView의 `.id()`로 걸어 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로
-    /// 리셋시킨다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다.
+    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다 다른 값 — ScrollView의 `.id()`로 걸어
+    /// SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다. 재진입·당겨서 새로고침에선
+    /// 어느 축도 안 바뀌어 스크롤이 유지된다. 작성 완료 재로드는 여기 안 낀다 — 목록을 통째로 비워 로딩 분기로
+    /// 갈아타므로 ScrollView 자체가 내려갔다 새로 서며 스크롤이 자연히 리셋된다(`.reloadForCreatedFeed`).
     private var scrollIdentity: String {
         let option = viewModel.state.myFeedOption
         let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
         return "\(viewModel.state.selectedTab)_\(viewModel.state.selectedSosoFeedOption.rawValue)"
             + "_\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
-            + "_\(viewModel.state.listGeneration)"
     }
 
     @ViewBuilder

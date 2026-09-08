@@ -60,11 +60,6 @@ final class SosoFeedViewModel {
         var isLoading: Bool = false
         var errorMessage: String?
 
-        /// 작성 완료로 목록을 처음부터 다시 채울 때 +1 — View가 `scrollIdentity`에 합쳐 ScrollView를 새 뷰로
-        /// 취급하게(스크롤 최상단, 새 글이 맨 위) 한다. 탭/옵션/필터 전환은 그 값 자체가 `scrollIdentity`에
-        /// 들어 있어 이 카운터가 필요 없다.
-        var listGeneration = 0
-
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
         var presentedFeedAlert: FeedAlert?
         /// 프로필 탭이 탈퇴 유저(`Author.userId == -1`)를 가리킬 때 뜨는 안내 토스트
@@ -90,7 +85,8 @@ final class SosoFeedViewModel {
         case loadMore
         /// 당겨서 새로고침 — 현재 탭을 처음부터 다시 받는다(전체 최신화는 이 경로뿐).
         case pullToRefresh
-        /// 피드 작성 완료(App 신호) — 현재 탭을 처음부터 다시 받고 스크롤을 최상단으로(새 글이 맨 위).
+        /// 피드 탭 연필 아이콘 작성 성공 복귀(App 신호 소비) — **두 목록을 초기 로드처럼 완전히 비우고**
+        /// 현재 탭을 처음부터 다시 받는다(새 글이 맨 위, 스크롤 최상단).
         case reloadForCreatedFeed
         /// View가 이 피드로 화면을 떠나기(셀 탭 → 상세, "수정하기" → 수정) 직전에 부른다 — 돌아오면 그 셀만
         /// 상세 API로 맞춘다.
@@ -229,8 +225,7 @@ final class SosoFeedViewModel {
             cachedMyProfile = nil
             reloadFromScratch(state.selectedTab)
         case .reloadForCreatedFeed:
-            state.listGeneration += 1
-            reloadFromScratch(state.selectedTab)
+            reloadForCreatedFeed()
         case .feedVisited(let feedID):
             pendingSyncFeedIDs.insert(feedID)
         case .toggleLike(let feedID):
@@ -311,6 +306,19 @@ final class SosoFeedViewModel {
         let tab = state.selectedTab
         guard feedsTask == nil, hasLoaded(tab), hasMore(tab) else { return }
         feedsTask = Task { await loadFeeds(.more(tab)) }
+    }
+
+    /// 피드 탭 연필 작성 성공 복귀 — 작성한 글은 내 피드·소소피드 둘 다의 신규 글이라 **두 목록을 함께**
+    /// 초기 로드 이전 상태로 되돌리고(hasLoaded까지 꺼서 다른 탭도 전환 시 첫 로드를 탄다) 현재 탭을 처음부터
+    /// 받는다. 목록이 비면 View의 로딩 분기(`isLoading && currentFeeds.isEmpty`)가 LoadingView로 갈아타
+    /// ScrollView가 내려갔다 새로 서므로 스크롤도 자연히 최상단이다(별도 스크롤 리셋 장치 불필요).
+    private func reloadForCreatedFeed() {
+        state.myFeeds = []
+        state.sosoFeeds = []
+        state.myFeedsTotalCount = nil
+        hasLoadedMyFeeds = false
+        hasLoadedSosoFeeds = false
+        reloadFromScratch(state.selectedTab)
     }
 
     /// 처음부터 다시 채운다 — 진행 중이던 이전 로드를 **취소하고 곧바로 재대입**한다(취소만 하고 재대입하지 않는

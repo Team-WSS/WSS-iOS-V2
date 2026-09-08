@@ -77,9 +77,6 @@ final class AppDependencies {
     let launchGateRepository: LaunchGateRepository
     /// 런치 부수 태스크 4종(users/me·FCM·키워드·홈 프리페치) — 위와 같은 UseCase로 묶인다.
     let launchTaskRepository: LaunchTaskRepository
-    /// 피드 작성 완료 → 피드 탭 목록 재로드 신호(앱 전역). Repository가 아니라 App 조정 계층 소유의
-    /// 화면 간 상태라 여기 두되, 4탭 Root가 공유해야 해서 `AppDependencies`에 실어 나른다.
-    let feedListInvalidation = FeedListInvalidation()
     /// 이벤트 트래킹(#249) — Release 스킴에서만 실제 Amplitude 인스턴스, Debug는 nil(모든 호출부가
     /// `analyticsTracker?.track(...)`라 자동 no-op). `Logger`와 동일한 옵셔널 주입 패턴.
     let analyticsTracker: AnalyticsTracker?
