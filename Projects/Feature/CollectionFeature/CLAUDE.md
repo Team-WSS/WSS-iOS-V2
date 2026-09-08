@@ -49,9 +49,10 @@
   `onConfirm` → App의 `pendingNovelSelection` → `.setNovels`로 `draft.novelIDs`를 통째로 교체한다
   (부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를
   바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더
-  담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — **문구는 범용 텍스트("100개까지 선택
-  가능해요")를 임시로 쓰는 중**, 기획팀 확정 문구 전달 예정(2026-08-24). 문구가 오면 `WSSToastType`
-  텍스트만 교체하면 된다(구조는 이미 확정).
+  담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — 문구는 "100개까지 선택이 가능해요"로
+  기획팀 확정(2026-09-08, #255 QA). 이 문구는 `WSSComponent`가 소유한 범용 텍스트라 `NovelReviewFeature`
+  (매력포인트 3개)·`KeywordFeature`(키워드 20개)와 공유한다 — 여기서만 바꾸면 나머지 두 화면의 문구도
+  함께 바뀐다(의도된 공유, 개수만 다를 뿐 같은 의미의 안내라 화면별로 문구를 가르지 않기로 함).
 - **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
   `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
   `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.

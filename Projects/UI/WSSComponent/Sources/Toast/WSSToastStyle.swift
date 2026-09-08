@@ -30,7 +30,7 @@ public extension WSSToastType {
         case .noCollections:                    "컬렉션을 등록하지 않은 유저에요"
         case .deleteBlockUser(let nickname):    "\(nickname)님을 차단 해제했어요"
         case .novelAlreadyConnected:            "하나의 작품만 연결할 수 있어요"
-        case .selectionOverLimit(let count):    "\(count)개까지 선택 가능해요"
+        case .selectionOverLimit(let count):    "\(count)개까지 선택이 가능해요"
         case .limitAddImage(let limitCount):    "\(limitCount)장까지 업로드 가능해요"
         case .novelReviewed:                    "평가 완료!"
         case .novelReviewDeleted:               "평가를 모두 삭제했어요"
