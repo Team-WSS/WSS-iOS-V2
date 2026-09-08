@@ -91,12 +91,12 @@
 - ✅ **Keep** — 상단 탭 2종(**내 피드 / 소소피드**), 소소피드 선택 시 하위 옵션 2종(**전체글 / 추천글**)이 추가로 뜬다.
   - V2: `FeedTab(myFeed/sosoFeed)` + `SosoFeedOption(all/recommended)`. 소소피드일 때만 옵션 칩 노출.
   - 근거: V1 `FeedViewController.swift:20-21`,`102-120`, `FeedTab.swift:10-53` · V2 `SosoFeedView.swift:198-245`, `SosoFeedViewModel.swift:18-31`
-- 🔧 **Improve (수단)** — V1은 화면을 **`UIPageViewController` 3페이지**(내피드/소소전체/소소추천 각각 별도 VC+VM)로 만들고 좌우 스와이프는 막았다(탭 버튼으로만 전환). V2는 **단일 뷰**가 탭/옵션에 따라 목록 배열을 교체한다.
-  - V2: `state.myFeeds`/`state.sosoFeeds` 두 배열을 한 VM이 들고, `currentFeeds`로 가른다. 관찰 동작(탭 누르면 그 목록)은 같다.
-  - 근거: V1 `FeedViewController.swift:28-31`,`207-229`(3 VC 생성·스크롤 잠금) · V2 `SosoFeedView.swift:252-257`, `SosoFeedViewModel.swift:33-34`
-- ✅ **Keep** — 탭/옵션을 바꾸면 목록을 **처음부터 다시 채운다**(페이징 상태 리셋 후 재조회).
-  - V2: VM `selectTab`/`selectSosoFeedOption`이 `reloadFromScratch`(진행 중 로드 취소+재대입, 같은 값 재선택은 무시 — 2026-09-03). 스크롤 위치도 `.id(scrollIdentity)`로 최상단 리셋.
-  - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedView.swift:98-104`,`259-266`, `SosoFeedViewModel.swift:160-163`
+- 🔧 **Improve (수단)** — V1은 화면을 **`UIPageViewController` 3페이지**(내피드/소소전체/소소추천 각각 별도 VC+VM)로 만들고 좌우 스와이프는 막았다(탭 버튼으로만 전환). V2는 **단일 VM**이 두 배열을 들고, View가 두 탭 리스트를 ZStack에 상시 mount해 보이는 쪽만 켠다(2026-09-09 — 페이지 VC를 갈아타지 않던 V1처럼 탭별 스크롤 상태가 산다). 관찰 동작(탭 누르면 그 목록)은 같다.
+  - V2: `state.myFeeds`/`state.sosoFeeds` + `tabList(for:)` 상시 mount.
+  - 근거: V1 `FeedViewController.swift:28-31`,`207-229`(3 VC 생성·스크롤 잠금) · V2 `SosoFeedView.swift`(`FeedListSection`/`tabList`), `SosoFeedViewModel.swift:33-34`
+- 🔧 **Improve** (확정 2026-09-09) — **탭 전환 재조회는 하지 않는다.** V1은 탭을 바꾸면 그 페이지를 처음부터 다시 채웠지만(페이징 리셋+재조회), V2는 이미 세운 탭이면 캐시를 그대로 보여주고 **탭별 스크롤 깊이까지 보존**한다(첫 진입·작성 복귀 후 첫 전환만 로드). **옵션(전체글/추천글)·필터/정렬 전환은 V1대로 처음부터 다시 채운다**(진행 중 로드 취소+재대입, 같은 값 재선택은 무시 — 2026-09-03, 그 탭만 `.id(scrollIdentity(for:))`로 최상단 리셋).
+  - V2: VM `selectTab`이 `hasLoaded(tab)`이면 재조회 생략 / `selectSosoFeedOption` 등은 `reloadFromScratch`.
+  - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedViewModel.swift`(`selectTab`), 정본은 `CLAUDE.md` 화면 동작 계약
 - ✅ **Keep + Improve** (확정 2026-09-03: V1처럼 재진입 재조회 없음, 대신 다녀온 셀만 동기화) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(5)이나 탭 재선택으로만 일어났다.
   - V2: `SosoFeedView.onAppear → .load`는 탭별 첫 페이지를 세운 뒤엔 **목록을 다시 받지 않고**, 목록에서 들어갔던 피드(셀 탭·"수정하기")만 복귀 시 피드 상세 API로 그 셀을 교체한다(삭제·숨김이면 제거 — V1엔 없던 개선, 스크롤·길이 보존). 전체 최신화는 당겨서 새로고침. 피드 탭 연필 작성 성공 복귀는 두 목록을 처음부터 다시 채운다(#256 — 탭 Root 로컬 Binding 신호. V1 `feedEdited` 전역 알림과 달리 작품 상세 경유 작성은 이 목록에 신호를 보내지 않는다). V2 규약 "탭 콘텐츠는 복귀마다 갱신"의 명시적 예외(정본: `CLAUDE.md` 화면 동작 계약). 한때(#236) 복귀마다 커서 0·20개로 통째 재조회해 깊이 스크롤한 위치가 튀었던 것을 되돌린 것.
   - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.swift:95-97`

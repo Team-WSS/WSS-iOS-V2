@@ -82,7 +82,9 @@ final class SosoFeedViewModel {
         case selectSosoFeedOption(SosoFeedOption)
         /// 진입/재진입(onAppear). 첫 진입은 첫 페이지 로드, 재진입은 **목록 재조회 없이** 다녀온 셀만 동기화.
         case load
-        case loadMore
+        /// 그 탭 마지막 셀 onAppear — 두 리스트가 상시 mount라 숨은 리스트의 셀 실현(삭제로 밀려 올라오는
+        /// 경우 등)도 이 액션을 쏠 수 있어, 어느 탭에서 왔는지를 실어 VM이 현재 탭이 아니면 버린다.
+        case loadMore(FeedTab)
         /// 당겨서 새로고침 — 현재 탭을 처음부터 다시 받는다(전체 최신화는 이 경로뿐).
         case pullToRefresh
         /// 피드 탭 연필 아이콘 작성 성공 복귀(App 신호 소비) — **두 목록을 초기 로드처럼 완전히 비우고**
@@ -216,8 +218,8 @@ final class SosoFeedViewModel {
             selectSosoFeedOption(option)
         case .load:
             load()
-        case .loadMore:
-            loadMore()
+        case .loadMore(let tab):
+            loadMore(tab)
         case .pullToRefresh:
             // 당겨서 새로고침은 "전체 최신화"가 계약이라 캐시된 내 프로필도 함께 무효화한다 — 안 그러면
             // 프로필 편집 후 여기로 당겨도 편집 전 닉네임/이미지가 계속 붙는다(닉네임/프로필 이미지는
@@ -273,9 +275,14 @@ final class SosoFeedViewModel {
     //MARK: - Tab / Option
 
     /// 같은 탭 재탭은 무시한다 — 처음부터 다시 받으면 목록이 첫 페이지로 줄어 스크롤이 튄다.
+    /// 이미 세운 탭으로의 전환은 **재조회 없이 캐시를 그대로 보여준다**(2026-09-09 사용자 확정) — View가
+    /// 두 리스트를 상시 mount해 탭별 스크롤 깊이까지 보존된다. 첫 진입과 작성 복귀
+    /// (`reloadForCreatedFeed`가 hasLoaded를 끈다) 후 첫 전환만 첫 로드를 탄다.
+    /// 절충: 다른 유저의 변경은 전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
     private func selectTab(_ tab: FeedTab) {
         guard tab != state.selectedTab else { return }
         state.selectedTab = tab
+        guard !hasLoaded(tab) else { return }
         reloadFromScratch(tab)
     }
 
@@ -301,17 +308,19 @@ final class SosoFeedViewModel {
         }
     }
 
-    /// 현재 탭의 다음 페이지를 이어붙인다. 진행 중인 로드가 있으면 드롭된다(재로드 중 바닥 도달 등 — 셀 재실현으로 복구).
-    private func loadMore() {
-        let tab = state.selectedTab
-        guard feedsTask == nil, hasLoaded(tab), hasMore(tab) else { return }
+    /// 다음 페이지를 이어붙인다 — **현재 탭에서 온 신호만** 받는다(숨은 리스트의 셀 실현이 쏜 건 버린다.
+    /// 로드는 언제나 현재 탭만 대상이라는 불변식 유지). 진행 중인 로드가 있으면 드롭된다(재로드 중 바닥
+    /// 도달 등 — 셀 재실현으로 복구).
+    private func loadMore(_ tab: FeedTab) {
+        guard tab == state.selectedTab, feedsTask == nil, hasLoaded(tab), hasMore(tab) else { return }
         feedsTask = Task { await loadFeeds(.more(tab)) }
     }
 
     /// 피드 탭 연필 작성 성공 복귀 — 작성한 글은 내 피드·소소피드 둘 다의 신규 글이라 **두 목록을 함께**
     /// 초기 로드 이전 상태로 되돌리고(hasLoaded까지 꺼서 다른 탭도 전환 시 첫 로드를 탄다) 현재 탭을 처음부터
-    /// 받는다. 목록이 비면 View의 로딩 분기(`isLoading && currentFeeds.isEmpty`)가 LoadingView로 갈아타
-    /// ScrollView가 내려갔다 새로 서므로 스크롤도 자연히 최상단이다(별도 스크롤 리셋 장치 불필요).
+    /// 받는다. 목록이 비면 View의 로딩 분기(`isLoading && 그 탭 feeds.isEmpty`)가 LoadingView로 갈아타
+    /// ScrollView가 내려갔다 새로 서므로 스크롤도 자연히 최상단이다(별도 스크롤 리셋 장치 불필요 —
+    /// 상시 mount 대상은 탭 전환 보존이지, 이 재로드는 두 리스트 다 비워 둘 다 새로 서는 게 맞다).
     private func reloadForCreatedFeed() {
         state.myFeeds = []
         state.sosoFeeds = []

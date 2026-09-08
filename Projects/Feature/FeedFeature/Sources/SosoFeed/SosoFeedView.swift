@@ -29,8 +29,11 @@ struct SosoFeedView: View {
 
     /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다. VM 판단이 필요 없는 순수 표시 상태.
     @State private var feedMenuContext: FeedMenuContext?
-    /// 각 셀 상단의 화면 y(루트 좌표공간 실측) — threedots 앵커 계산용.
-    @State private var cellTopYs: [FeedID: CGFloat] = [:]
+    /// 각 셀 상단의 화면 y(루트 좌표공간 실측) — threedots 앵커 계산용. **탭별로 따로 둔다** —
+    /// 두 리스트가 상시 mount라 내 글처럼 같은 feedId가 양쪽에 있으면 숨은 리스트의 GeometryReader가
+    /// 보이는 쪽 앵커를 덮어써 드롭다운이 엉뚱한 y에 뜬다(한 딕셔너리로 합치면 안 되는 이유).
+    @State private var myFeedCellTopYs: [FeedID: CGFloat] = [:]
+    @State private var sosoFeedCellTopYs: [FeedID: CGFloat] = [:]
     /// 드롭다운이 화면 밖으로 잘리지 않게 클램프하기 위한 화면 가용 높이.
     @State private var containerHeight: CGFloat = 0
 
@@ -259,49 +262,76 @@ struct SosoFeedView: View {
 
     //MARK: - 피드 리스트
 
-    private var currentFeeds: [TotalFeed] {
-        switch viewModel.state.selectedTab {
+    private func feeds(for tab: FeedTab) -> [TotalFeed] {
+        switch tab {
         case .myFeed:   viewModel.state.myFeeds
         case .sosoFeed: viewModel.state.sosoFeeds
         }
     }
 
-    /// 탭·소소피드 옵션·내 피드 필터(장르/공개여부/정렬)가 바뀔 때마다 다른 값 — ScrollView의 `.id()`로 걸어
-    /// SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다. 재진입·당겨서 새로고침에선
-    /// 어느 축도 안 바뀌어 스크롤이 유지된다. 작성 완료 재로드는 여기 안 낀다 — 목록을 통째로 비워 로딩 분기로
-    /// 갈아타므로 ScrollView 자체가 내려갔다 새로 서며 스크롤이 자연히 리셋된다(`.reloadForCreatedFeed`).
-    private var scrollIdentity: String {
-        let option = viewModel.state.myFeedOption
-        let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
-        return "\(viewModel.state.selectedTab)_\(viewModel.state.selectedSosoFeedOption.rawValue)"
-            + "_\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
+    /// 그 탭의 자기 축(내 피드=필터·정렬, 소소피드=옵션)이 바뀔 때마다 다른 값 — ScrollView의 `.id()`로
+    /// 걸어 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다. **탭 축은 없다** —
+    /// 탭 전환은 두 리스트 상시 mount로 스크롤을 보존하는 게 계약이다(2026-09-09 사용자 확정).
+    /// 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. 작성 완료 재로드는 여기 안 낀다 —
+    /// 목록을 통째로 비워 로딩 분기로 갈아타므로 ScrollView 자체가 내려갔다 새로 서며 스크롤이 자연히
+    /// 리셋된다(`.reloadForCreatedFeed`).
+    private func scrollIdentity(for tab: FeedTab) -> String {
+        switch tab {
+        case .myFeed:
+            let option = viewModel.state.myFeedOption
+            let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
+            return "\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
+        case .sosoFeed:
+            return "\(viewModel.state.selectedSosoFeedOption.rawValue)"
+        }
+    }
+
+    /// 두 탭 리스트를 **둘 다 상시 mount**하고 보이는 쪽만 켠다(2026-09-09 사용자 확정) — if/else로
+    /// 갈아끼우면 branch를 떠나는 순간 UIScrollView가 파괴돼 탭을 오갈 때마다 스크롤이 최상단으로 리셋된다.
+    /// 숨은 쪽은 터치(당겨서 새로고침 포함)와 접근성에서 완전히 제외한다.
+    private var FeedListSection: some View {
+        ZStack {
+            tabList(for: .myFeed)
+            tabList(for: .sosoFeed)
+        }
     }
 
     @ViewBuilder
-    private var FeedListSection: some View {
-        if viewModel.state.isLoading, currentFeeds.isEmpty {
+    private func tabList(for tab: FeedTab) -> some View {
+        let isSelected = viewModel.state.selectedTab == tab
+        tabListContent(for: tab)
+            .opacity(isSelected ? 1 : 0)
+            .allowsHitTesting(isSelected)
+            .accessibilityHidden(!isSelected)
+    }
+
+    /// 로딩 분기는 `isSelected`도 본다 — `isLoading`은 언제나 현재 탭의 로드라(로드를 시작하는 모든 경로가
+    /// 현재 탭 대상), 숨은 미로드 탭까지 로딩 뷰를 세우면 의미가 어긋나고 LoadingView 애니메이션이 숨은 채 돈다.
+    @ViewBuilder
+    private func tabListContent(for tab: FeedTab) -> some View {
+        let tabFeeds = feeds(for: tab)
+        if viewModel.state.selectedTab == tab, viewModel.state.isLoading, tabFeeds.isEmpty {
             LoadingView()
-        } else if viewModel.state.selectedTab == .myFeed,
-           currentFeeds.isEmpty {
+        } else if tab == .myFeed, tabFeeds.isEmpty {
             WSSEmptyView(type: .myFeed,
                          action: { })
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(currentFeeds, id: \.feedId) { feed in
-                        feedRow(feed)
+                    ForEach(tabFeeds, id: \.feedId) { feed in
+                        feedRow(feed, in: tab)
                             .background(
                                 GeometryReader { proxy in
                                     Color.clear
                                         .onChange(of: proxy.frame(in: .named(feedMenuSpaceName)).minY,
                                                   initial: true) { _, newY in
-                                            cellTopYs[feed.feedId] = newY
+                                            setCellTopY(newY, for: feed.feedId, in: tab)
                                         }
                                 }
                             )
                             .onAppear {
-                                if feed.feedId == currentFeeds.last?.feedId {
-                                    viewModel.handle(.loadMore)
+                                if feed.feedId == tabFeeds.last?.feedId {
+                                    viewModel.handle(.loadMore(tab))
                                 }
                             }
                             // 프로필·좋아요(Button)·연결 작품 배너(Button)는 각자 실제 Button이라
@@ -323,7 +353,7 @@ struct SosoFeedView: View {
                     }
                 }
             }
-            .id(scrollIdentity)
+            .id(scrollIdentity(for: tab))
             .refreshable {
                 // `handle`은 동기 반환이라 그대로 두면 인디케이터가 즉시 사라진다 — 진행 중 로드의 종료를 기다린다.
                 viewModel.handle(.pullToRefresh)
@@ -334,8 +364,24 @@ struct SosoFeedView: View {
         }
     }
 
+    private func cellTopY(for feedID: FeedID, in tab: FeedTab) -> CGFloat? {
+        switch tab {
+        case .myFeed:   myFeedCellTopYs[feedID]
+        case .sosoFeed: sosoFeedCellTopYs[feedID]
+        }
+    }
+
+    private func setCellTopY(_ y: CGFloat, for feedID: FeedID, in tab: FeedTab) {
+        switch tab {
+        case .myFeed:   myFeedCellTopYs[feedID] = y
+        case .sosoFeed: sosoFeedCellTopYs[feedID] = y
+        }
+    }
+
+    /// `tab`은 threedots 앵커를 그 탭 딕셔너리에서 찾기 위한 컨텍스트 — 같은 feedId(내 글)가 양쪽 리스트에
+    /// 있어도 자기 리스트에서 실측한 y를 쓴다.
     @ViewBuilder
-    private func feedRow(_ feed: TotalFeed) -> some View {
+    private func feedRow(_ feed: TotalFeed, in tab: FeedTab) -> some View {
         WSSFeadView(
             header: FeedHeader(
                 profileImageURL: feed.author.profileImage,
@@ -357,7 +403,7 @@ struct SosoFeedView: View {
             threeDotsButtonTapped: {
                 feedMenuContext = FeedMenuContext(
                     feed: feed,
-                    anchorY: (cellTopYs[feed.feedId] ?? 0) + threeDotsBottomOffset
+                    anchorY: (cellTopY(for: feed.feedId, in: tab) ?? 0) + threeDotsBottomOffset
                 )
             },
             content: feed.content,

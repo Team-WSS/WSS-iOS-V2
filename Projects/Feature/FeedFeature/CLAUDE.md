@@ -36,8 +36,15 @@
   `onAppear`가 소비한다(true→false + 리셋. 예전 앱 전역 `FeedListInvalidation` 카운터는 #256에서 제거).
   **수정 완료·작품 상세 경유 작성엔 켜지 않는다**(수정은 셀 동기화가 처리 — 켜면 복귀마다 스크롤이 튄다.
   작품 상세 경유 작성은 그 작품 상세가 자기 피드 섹션을 리셋한다 — 사용자 확정).
-- **탭/소소피드 옵션/필터/정렬 전환은 처음부터 다시**(`reloadFromScratch` — 진행 중 로드 취소 + 재대입) +
-  스크롤 최상단(`.id(scrollIdentity)`). **같은 값 재선택은 무시**한다 — 재로드하면 목록이 20개로 줄어 스크롤이 튄다.
+- **탭(내 피드↔소소피드) 전환은 재조회하지 않는다**(2026-09-09 사용자 확정) — 이미 세운 탭은 캐시를 그대로
+  보여주고 **탭별 스크롤 깊이까지 보존**된다. View가 두 리스트를 ZStack에 상시 mount하고 보이는 쪽만 켠다
+  (`tabList(for:)` — 숨은 쪽은 `opacity 0`+`allowsHitTesting(false)`+`accessibilityHidden(true)`. if/else로
+  갈아끼우면 branch 이탈 순간 UIScrollView가 파괴돼 스크롤이 리셋되므로 안 된다). 첫 진입·작성 복귀 후
+  첫 전환만 첫 로드를 탄다(`selectTab`이 `hasLoaded(tab)`이면 재조회 생략). 절충: 다른 유저의 변경은
+  전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
+- **소소피드 옵션/내 피드 필터/정렬 전환은 그 탭만 처음부터 다시**(`reloadFromScratch` — 진행 중 로드 취소 +
+  재대입) + 그 탭 스크롤 최상단(`.id(scrollIdentity(for:))` — 자기 축만 담겨 다른 탭 스크롤은 안 건드린다).
+  **같은 값 재선택은 무시**한다 — 재로드하면 목록이 20개로 줄어 스크롤이 튄다.
 - **좋아요**: 낙관 반영(두 목록 모두 — 내 글은 소소피드에도 섞여 나온다), 실패 시 스냅샷의 좋아요 두 필드만
   롤백(`preservingLikeState`, 목록별 스냅샷), 같은 셀 연타는 서버 동기화가 끝날 때까지 무시. 목록 교체·셀
   동기화가 in-flight 좋아요를 되덮지 않게 병합 보호를 건다(전체 목록 재조회 병합의 정본은 UserPage 쪽).
@@ -126,9 +133,10 @@
 - 이 조합 로직 때문에 FeedFeature가 `ProfileDomain`(다른 최상위 도메인)을 직접 의존한다 — Domain 레이어 규칙상 Domain끼리는 `BaseDomain` 외 서로 의존 못 하므로, 이런 두 도메인 조합은 Feature(ViewModel) 레벨에서 한다.
 - `MyFeedOption.sortType`은 genres/visibilityType과 달리 필터 시트의 draft→`applyMyFeedFilter` 커밋 흐름을 타지 않는다. `WSSSortButton` 탭이 `.toggleMyFeedSort`로 `state.myFeedOption`을 즉시 갱신하고 바로 재조회한다(시트를 열 필요 없음) — 필터 시트가 열릴 때 draft가 `resetMyFeedFilterDraft`로 이 값도 그대로 복사해가므로 두 경로가 어긋나지 않는다.
 - `state.myFeedOption.genres` 기본값은 "전체 선택" UX를 `NovelGenre.allCases`(9개 전부) + `includesUncategorized: true`로 표현한다(연결 작품 없는 내 피드까지 포함). FeedData는 이를 그대로 명시적 장르 필터로 보낼 뿐 정규화하지 않는다 — 카테고리 칩(장르+"그 외")을 전부 해제하면 `MyFeedOption.genres == []`가 되고 FeedData의 `genres.isEmpty ? nil : genres`가 이를 무필터로 해석해 전체 목록이 온다. **이는 의도된 동작**(빈 선택 = 무필터)이라 공개/비공개 체크박스와 달리 최소 1개 선택 가드를 두지 않는다.
-- **피드 셀 threedots 드롭다운**(`SosoFeedView.feedMenuContext`)은 `NovelDetailFeature`의 같은 패턴을 참고했지만 좌표공간 태깅 위치가 다르다 — `NovelDetailView`는 몰입형 헤더라 `ScrollView` 자체에 `coordinateSpace(name:)`를 걸고 `ignoresSafeArea`로 화면 최상단과 맞춘다. `SosoFeedView`는 일반 화면(시스템 safe area 존중)이라 그 방식 대신 **루트 `ZStack`에 직접 `coordinateSpace(name: feedMenuSpaceName)`를 건다** — 셀 앵커(`cellTopYs`)와 오버레이(`feedMenuOverlay`)가 같은 루트의 형제이므로 이러면 별도 오프셋 계산 없이 좌표가 바로 맞는다. 이 화면에 몰입형 헤더 같은 걸 얹게 되면 이 가정이 깨지니 재검토할 것.
+- **피드 셀 threedots 드롭다운**(`SosoFeedView.feedMenuContext`)은 `NovelDetailFeature`의 같은 패턴을 참고했지만 좌표공간 태깅 위치가 다르다 — `NovelDetailView`는 몰입형 헤더라 `ScrollView` 자체에 `coordinateSpace(name:)`를 걸고 `ignoresSafeArea`로 화면 최상단과 맞춘다. `SosoFeedView`는 일반 화면(시스템 safe area 존중)이라 그 방식 대신 **루트 `ZStack`에 직접 `coordinateSpace(name: feedMenuSpaceName)`를 건다** — 셀 앵커(탭별 `myFeedCellTopYs`/`sosoFeedCellTopYs`)와 오버레이(`feedMenuOverlay`)가 같은 루트의 형제이므로 이러면 별도 오프셋 계산 없이 좌표가 바로 맞는다. 이 화면에 몰입형 헤더 같은 걸 얹게 되면 이 가정이 깨지니 재검토할 것.
 - 피드 삭제/신고 확인·완료 알럿은 `WSSComponent`의 공용 `WSSAlertType`(`deleteMyFeed`/`reportSpoilerContent`/`reportImproperContent`/`receivedReportSpoilerContent`/`receivedReportImproperContent`) 5종을 그대로 재사용한다 — `NovelDetailFeature`와 동일한 타입을 공유하므로 카피를 바꾸려면 두 Feature 모두에 영향이 간다.
-- **탭(내 피드/소소피드)·소소피드 옵션(전체글/추천글)·내 피드 필터(장르/공개여부/정렬) 전환 시 스크롤이 이전 위치에 남는 문제**는 `FeedListSection`의 `ScrollView`에 `.id(scrollIdentity)`를 걸어 해결한다 — `scrollIdentity`는 이 모든 축(탭, 소소피드 옵션, `myFeedOption`의 genres/includesUncategorized/visibilityType/sortType)을 문자열로 합친 값이라 그중 하나라도 바뀌면 SwiftUI가 ScrollView를 "새 뷰"로 취급해 스크롤 오프셋을 버리고 최상단부터 다시 그린다. 배열 교체 자체는 `reloadFromScratch`가 하므로, 이 `.id()`는 순수하게 "화면(스크롤 위치)"만 리셋하는 역할이다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. **새 필터 축을 추가하면 `scrollIdentity`에도 반영해야** 그 축 변경 시에도 스크롤이 리셋된다. 작성 완료 재로드는 이 장치를 안 탄다 — 목록을 통째로 비워 로딩 분기로 갈아타므로 ScrollView가 내려갔다 새로 서며 자연히 리셋된다(예전 `listGeneration` 항은 #256에서 제거).
+- **소소피드 옵션(전체글/추천글)·내 피드 필터(장르/공개여부/정렬) 전환 시 스크롤이 이전 위치에 남는 문제**는 각 탭 `ScrollView`에 `.id(scrollIdentity(for:))`를 걸어 해결한다 — 그 탭의 자기 축(내 피드=genres/includesUncategorized/visibilityType/sortType, 소소피드=옵션)만 문자열로 합친 값이라 그중 하나가 바뀌면 SwiftUI가 그 탭 ScrollView만 "새 뷰"로 취급해 스크롤 오프셋을 버리고 최상단부터 다시 그린다(**탭 축은 일부러 없다** — 탭 전환은 스크롤 보존이 계약, 위 화면 동작 계약 참고). 배열 교체 자체는 `reloadFromScratch`가 하므로, 이 `.id()`는 순수하게 "화면(스크롤 위치)"만 리셋하는 역할이다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. **새 필터 축을 추가하면 그 탭 `scrollIdentity(for:)`에도 반영해야** 그 축 변경 시에도 스크롤이 리셋된다. 작성 완료 재로드는 이 장치를 안 탄다 — 두 목록을 통째로 비워 로딩/빈 분기로 갈아타므로 ScrollView가 내려갔다 새로 서며 자연히 리셋된다(예전 `listGeneration` 항은 #256에서 제거).
+- ⚠️ **두 탭 리스트 상시 mount(2026-09-09)의 파생 함정 2개** — ① 셀 상단 y 실측(`myFeedCellTopYs`/`sosoFeedCellTopYs`)은 **탭별 딕셔너리로 분리**돼 있다. 내 글은 같은 feedId가 양쪽 리스트에 동시에 있어, 한 딕셔너리로 합치면 숨은 리스트의 GeometryReader가 보이는 쪽 threedots 앵커를 덮어써 드롭다운이 엉뚱한 y에 뜬다. ② `.loadMore(FeedTab)`은 발화한 탭을 실어 보내고 VM이 `tab == state.selectedTab`이 아니면 버린다 — 숨은 리스트도 레이아웃은 살아 있어서, 삭제(`removeCell`)로 셀이 밀려 올라오며 숨은 쪽 마지막 셀이 새로 실현되면 onAppear가 발화하는데, 가드가 없으면 그게 **현재 탭**의 다음 페이지를 당겨버린다. 숨은 리스트에 상호작용/실현 부수효과가 있는 장치를 새로 달 땐 이 두 사례처럼 "어느 탭에서 온 신호인지"를 항상 판별할 것.
 - 피드 셀 좋아요 버튼은 `feedRow`에서 `WSSFeadView`의 `likeButtonTapped`로 `.toggleLike(feed.feedId)`를 발화한다 — 낙관 반영/실패 롤백은 `SosoFeedViewModel.toggleLike`(엔티티 `TotalFeed.toggleLike()` 사용) 참고.
 - **화면 전환 의도는 `onRoute: (SosoFeedRoute) -> Void` 하나로 나간다**(#253 — 낱개 클로저 5개(`onFeedTapped`/`onCreateFeedTapped`/`onEditFeedTapped`/`onUserProfileTapped`/`onNovelTapped`)와 기본값 no-op을 통합·제거). 셀 탭(안쪽 인터랙션 제외)=`.feedDetail`, 프로필 탭(`Author.userId` nil이면 호출 안 함)=`.userProfile`, 연결 작품 배너=`.novelDetail`, 연필 아이콘=`.createFeed`, 내 글 "수정하기"=`.editFeed`. 정본은 `Sources/Navigation/SosoFeedRoute.swift`.
   - **내 글이면 프로필 탭 자체가 비활성화된다** — `feedRow`가 `WSSFeadView`에 `isProfileTappable: !feed.isMyFeed`를 넘긴다(내 프로필로 "이동"할 곳이 없어서, #196). 탭이 죽은 영역이 되는 게 아니라 그대로 행의 나머지 영역과 동일하게 피드 상세 진입으로 흘러간다 — 구현 방식은 `WSSComponent/CLAUDE.md`의 `isProfileTappable` 항목 참고. 소소피드 탭에 내 글이 섞여 나오는 경우(전체글/추천글)도 `feed.isMyFeed` 기준이라 탭과 무관하게 항상 맞게 적용된다.
