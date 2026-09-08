@@ -66,6 +66,11 @@ struct NovelDetailView: View {
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 어느 서버 호출에서 발생하든 공통.
     /// 화면 전환 "의도"가 아니라 세션 이벤트라 `onRoute`에 합치지 않는다.
     private let onAuthenticationRequired: () -> Void
+    /// 이 화면에서 발화한 피드 작성(`.createFeed` 라우트)이 성공해 복귀했다는 신호(#256) — App 탭 Root
+    /// 로컬 `@State`와 연결된 1회성 채널. 복귀 `onAppear`가 true를 소비(false로 되돌림)하고 피드 섹션을
+    /// 초기 로드처럼 리셋한다(새 글이 맨 위). 작성 화면은 발화한 작품 상세 바로 위에 push되므로 pop 시
+    /// 그 인스턴스의 onAppear가 먼저 소비한다(스택에 작품 상세가 여럿이어도 안전).
+    @Binding private var needsFeedReloadForCreatedFeed: Bool
 
     private let novelID: NovelID
     private let logger: Logger?
@@ -80,6 +85,7 @@ struct NovelDetailView: View {
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
+        needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
@@ -88,6 +94,7 @@ struct NovelDetailView: View {
         self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
         self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
         self.logger = logger
+        self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -98,7 +105,15 @@ struct NovelDetailView: View {
             .toolbar(.hidden, for: .navigationBar)
             // 네비바를 숨기면 스와이프 뒤로가기까지 함께 꺼진다 → 제스처만 따로 되살린다.
             .enableSwipeBack()
-            .onAppear { viewModel.handle(.load) }
+            .onAppear {
+                // 작성 성공 복귀면 피드 섹션 리셋을 먼저 — `.load`의 셀 동기화가 pending을 먼저 소비해
+                // 곧 버려질 요청을 내지 않게 한다. `.load`(작품 정보 조용한 갱신)는 그대로 항상 부른다.
+                if needsFeedReloadForCreatedFeed {
+                    needsFeedReloadForCreatedFeed = false
+                    viewModel.handle(.reloadFeedsForCreatedFeed)
+                }
+                viewModel.handle(.load)
+            }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
             .showWSSToast(isPresented: toastBinding, type: toastType)
@@ -240,7 +255,11 @@ struct NovelDetailView: View {
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onRetry: { viewModel.handle(.retryFeeds) },
-                                onFeedTapped: { onRoute(.feedDetail($0)) },
+                                onFeedTapped: { feedID in
+                                    // 돌아왔을 때 이 셀만 상세로 다시 맞추기 위해 떠나기 전에 기억시킨다(#256).
+                                    viewModel.handle(.feedVisited(feedID))
+                                    onRoute(.feedDetail(feedID))
+                                },
                                 onUserProfileTapped: { onRoute(.userProfile($0)) },
                                 onUnavailableUserProfileTapped: { viewModel.handle(.userProfileUnavailable) },
                                 onNovelTapped: { onRoute(.novelDetail($0)) },
@@ -672,6 +691,8 @@ private extension NovelDetailView {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
+                    // 수정하고 돌아오면 이 셀만 상세로 다시 맞춘다(작성 성공 리셋은 작성에만 붙는다, #256).
+                    viewModel.handle(.feedVisited(feed.feedId))
                     onRoute(.editFeed(feed.feedId))
                 },
                 WSSDropdownItem(title: "삭제하기") {
@@ -769,6 +790,7 @@ private extension View {
                 loadNovelUseCase: PreviewLoadNovelUseCase(),
                 novelInterestUseCase: PreviewNovelInterestUseCase(),
                 loadNovelFeedsUseCase: PreviewLoadNovelFeedsUseCase(),
+                loadFeedDetailUseCase: PreviewLoadFeedDetailUseCase(),
                 feedLikeUseCase: PreviewFeedLikeUseCase(),
                 deleteFeedUseCase: PreviewDeleteFeedUseCase(),
                 deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase(),
@@ -830,6 +852,12 @@ private struct PreviewDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
 private struct PreviewFeedLikeUseCase: FeedLikeUseCase {
     func like(feedID: FeedID) async throws(RepositoryError) {}
     func unlike(feedID: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadFeedDetailUseCase: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .notFound
+    }
 }
 
 private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {

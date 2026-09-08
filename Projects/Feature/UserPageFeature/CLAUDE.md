@@ -191,13 +191,15 @@
   처음부터 + 로딩뷰" 대신). 모든 로드가 단일 Task 가드(`loadTask`/`feedsTask == nil`)로 직렬화돼 취소 장치
   없이 안전하다.
   - **깊이 스크롤 후 복귀 시 목록이 첫 페이지로 줄어드는 건 판정된 절충이다**(#236 리뷰에서 인지) —
-    NovelDetail 피드는 `size = 보던 개수` 정책(`NovelFeedPageSizePolicy`)으로 window를 보존하지만, 이
-    화면(과 알림 목록)은 push 복귀의 목적이 "최신순 맨 위 갱신"이고 `LoadUserFeedsUseCase`에 size 배관이
-    없어 비용 대비 이득이 작아 1페이지 리셋을 감수한다. 되살리려면 피드 쪽과 같은 Repository size 배관이 선행.
+    이 화면(과 알림 목록)은 push 복귀의 목적이 "최신순 맨 위 갱신"이고 `LoadUserFeedsUseCase`에 size 배관이
+    없어 1페이지 리셋을 감수한다. (한때 NovelDetail 피드가 `size = 보던 개수` 정책(`NovelFeedPageSizePolicy`)
+    으로 window를 보존하는 대안 사례였으나, 그 방식은 새 글 유입 시 기존 글이 창 밖으로 밀리는 결함으로
+    #256에서 셀 동기화로 교체·정책 삭제됐다 — window 보존을 되살릴 근거로 삼지 말 것.)
   - **통째 교체는 진행 중 낙관 좋아요를 되덮을 수 있어 병합으로 보호한다**(#236) — 첫 페이지 교체 직전
     "요청 시작 시 in-flight + 요청 중 토글"(`syncingLikeFeedIDs` ∪ `likeToggledDuringRefresh`) 셀만
-    `TotalFeed.preservingLikeState`(좋아요 두 필드만 로컬 우선)로 병합한다. `NovelDetailViewModel.refreshFeeds`가
-    정본 패턴 — 셀 전체를 로컬로 되돌리면 그 사이 서버 변경(본문 수정 등)까지 버리므로 두 필드만.
+    `TotalFeed.preservingLikeState`(좋아요 두 필드만 로컬 우선)로 병합한다. **전체 목록 재조회 병합은 #256부터
+    이 화면 계열이 정본이다**(원조였던 `NovelDetailViewModel.refreshFeeds`는 셀 동기화로 교체돼 삭제) —
+    셀 전체를 로컬로 되돌리면 그 사이 서버 변경(본문 수정 등)까지 버리므로 두 필드만.
 - **서재 블록(화살표 아이콘·통계 행) 탭 → 이 유저의 서재 진입은 App 몫**(#196) — `UserPageView`는
   `onRoute(.userLibrary)`만 올리고, 실제로 `LibraryFactory.makeUserLibraryView`를 조립해 push하는 건
   App(`UserPageAssembly`를 소비하는 탭 Root — 지금은 `FeedRootView`뿐)이다. 두 탭 자리(화살표 아이콘 +

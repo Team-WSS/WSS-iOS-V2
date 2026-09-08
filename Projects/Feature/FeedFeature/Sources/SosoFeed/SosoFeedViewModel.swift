@@ -176,7 +176,7 @@ final class SosoFeedViewModel {
     /// 좋아요 서버 동기화가 진행 중인 셀 — 같은 셀 연타 가드 + 목록 교체/셀 동기화가 낙관 토글을 되덮지 않게 보호.
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
     /// 마지막 `.reload` 요청 이후 토글한 셀 — 요청이 도는 동안 눌린 좋아요는 응답 스냅샷에 없을 수 있어 병합 보호
-    /// 대상에 합친다(`NovelDetailViewModel.likeToggledDuringRefresh`와 동일).
+    /// 대상에 합친다(`UserPageViewModel.likeToggledDuringRefresh`와 동일 — #256부터 그쪽이 이 패턴의 정본).
     @ObservationIgnored private var likeToggledDuringReload: Set<FeedID> = []
 
     /// 피드 삭제/신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다.

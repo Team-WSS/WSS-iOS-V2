@@ -141,6 +141,9 @@ struct MypageRootView: View {
     /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통.
     /// 위 저장/변경 토스트들과 달리 push 목적지가 발화하는 완료라 이 채널을 탄다).
     @State private var crossScreenFeedback = CrossScreenFeedbackState()
+    /// 작품 상세발 피드 작성(`.createFeedFromNovel`) 성공 복귀 신호(#256) — 복귀한 그 작품 상세가
+    /// onAppear에서 소비해 자기 피드 섹션을 초기 로드처럼 리셋한다(4탭 공통 배선).
+    @State private var needsNovelDetailFeedReload = false
 
     /// "작품 추가"/"서재에서 추가" 확정 결과를 생성/수정 컬렉션 화면에 돌려주는 1회성 nil→값 채널
     /// (`CollectionFeatureFactory.makeCreateCollectionView` 문서 참고). 생성·수정이 동시에 열릴 일이
@@ -627,6 +630,7 @@ private extension MypageRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            needsFeedReloadForCreatedFeed: $needsNovelDetailFeedReload,
             onRoute: { route in
                 switch route {
                 case .review(let information, let status):
@@ -719,6 +723,8 @@ private extension MypageRootView {
             connectedNovel: connectedNovel,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
+                // 작품 상세 경유 작성 — 복귀할 그 작품 상세가 자기 피드 섹션을 초기 로드처럼 리셋한다(#256).
+                needsNovelDetailFeedReload = true
             }
         )
     }

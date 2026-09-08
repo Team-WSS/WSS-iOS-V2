@@ -20,6 +20,11 @@ import Logger
 public enum NovelDetailFeatureFactory {
 
     /// - Parameters:
+    ///   - loadFeedDetailUseCase: 재진입 시 **다녀온 셀만** 상세 API로 다시 맞추는 데 쓴다(#256 — 이 화면은
+    ///     재진입에 피드 목록을 다시 받지 않는다). 구현 클래스명은 `DefaultLoadFeedUseCase`.
+    ///   - needsFeedReloadForCreatedFeed: 이 화면발 피드 작성(`.createFeed` 라우트) 성공 복귀 신호(#256 —
+    ///     호출자 탭 Root 로컬 `@State`의 Binding). true면 복귀 `onAppear`가 소비(false로 되돌림)하고 피드
+    ///     섹션을 초기 로드처럼 리셋한다(새 글이 맨 위). 수정 완료엔 켜지 말 것(셀 동기화가 처리).
     ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `NovelDetailRoute`(Navigation/) 참고.
     ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
     ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 모든 서버 호출 공통.
@@ -30,6 +35,7 @@ public enum NovelDetailFeatureFactory {
         loadNovelUseCase: LoadNovelUseCase,
         novelInterestUseCase: NovelInterestUseCase,
         loadNovelFeedsUseCase: LoadNovelFeedsUseCase,
+        loadFeedDetailUseCase: LoadFeedDetailUseCase,
         feedLikeUseCase: FeedLikeUseCase,
         deleteFeedUseCase: DeleteFeedUseCase,
         deleteNovelReviewUseCase: DeleteNovelReviewUseCase,
@@ -39,6 +45,7 @@ public enum NovelDetailFeatureFactory {
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         onboardingHintUseCase: OnboardingHintUseCase,
         logger: Logger? = nil,
+        needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -49,6 +56,7 @@ public enum NovelDetailFeatureFactory {
                 loadNovelUseCase: loadNovelUseCase,
                 novelInterestUseCase: novelInterestUseCase,
                 loadNovelFeedsUseCase: loadNovelFeedsUseCase,
+                loadFeedDetailUseCase: loadFeedDetailUseCase,
                 feedLikeUseCase: feedLikeUseCase,
                 deleteFeedUseCase: deleteFeedUseCase,
                 deleteNovelReviewUseCase: deleteNovelReviewUseCase,
@@ -60,6 +68,7 @@ public enum NovelDetailFeatureFactory {
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
             logger: logger,
+            needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )

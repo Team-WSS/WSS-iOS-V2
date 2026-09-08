@@ -95,6 +95,9 @@ struct FeedRootView: View {
     /// 연필 아이콘 작성 성공 복귀 신호(#256) — 피드 탭 목록(`SosoFeedView`)이 onAppear에서 소비해 두 목록을
     /// 초기 로드처럼 다시 받는다. 작품 상세 경유 작성(`.createFeedFromNovel`)은 이 신호를 켜지 않는다.
     @State private var needsFeedListReloadForCreatedFeed = false
+    /// 작품 상세발 피드 작성(`.createFeedFromNovel`) 성공 복귀 신호(#256) — 복귀한 그 작품 상세가
+    /// onAppear에서 소비해 자기 피드 섹션을 초기 로드처럼 리셋한다(4탭 공통 배선).
+    @State private var needsNovelDetailFeedReload = false
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -358,6 +361,7 @@ private extension FeedRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            needsFeedReloadForCreatedFeed: $needsNovelDetailFeedReload,
             onRoute: { route in
                 switch route {
                 case .review(let information, let status):
@@ -455,6 +459,9 @@ private extension FeedRootView {
                 crossScreenFeedback.present(.feedEdited)
                 if reloadsFeedListOnSubmit {
                     needsFeedListReloadForCreatedFeed = true
+                } else {
+                    // 작품 상세 경유(.createFeedFromNovel) — 복귀할 그 작품 상세가 자기 피드 섹션을 리셋한다.
+                    needsNovelDetailFeedReload = true
                 }
             }
         )
