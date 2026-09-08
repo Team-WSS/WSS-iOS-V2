@@ -322,7 +322,11 @@ private struct DemoSearchNovelUseCase: SearchNovelUseCase {
     /// Mock에서도 무한스크롤을 시연할 수 있도록 3페이지(0~2)까지는 채워서 반환하고 그 뒤로는 hasNext를 끈다.
     private static let demoPageCount = 3
 
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         try? await Task.sleep(nanoseconds: 500_000_000)
         guard page < Self.demoPageCount else {
             return (Paginated(items: [], hasNext: false), 5 * Self.demoPageCount)

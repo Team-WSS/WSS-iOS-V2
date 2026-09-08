@@ -10,6 +10,9 @@
 
 - **실시간 인기 키워드(`BaseDomain.PopularKeywords`, `KeywordRepository.fetchPopularKeywords`)는 이 모듈이 아니라 `BaseData`가 구현한다** — Entity/Repository가 `BaseDomain`(Search가 아니라)에 있기 때문. `SearchData`에 넣지 않도록 주의.
 - 최근 검색어는 검색 실행 시 서버가 자동 기록하므로 이 모듈에 별도 "add" API는 없다(조회/삭제/전체삭제만, `SearchEndpoint`의 `getRecentSearchWords`/`deleteRecentSearchWord`/`deleteAllRecentSearchWords`).
+  기록 여부는 `NormalSearchQuery.recordRecentSearch`(#255 QA로 신설 — 서버 쿼리 파라미터, `SearchDomain/CLAUDE.md`
+  참고)로 호출부가 껐다 켰다 한다 — `.usesTokenIfAvailable`(아래)은 "로그인 상태인가"만 가르고,
+  "이번 검색을 기록할 건가"는 이 파라미터가 별도로 가른다(둘 다 `true`여야 실제로 기록됨).
 - **작품 텍스트/필터 검색(`searchNovelByText`/`searchNovelByFilter`)은 원래 `NovelData` 소유였다가 이 모듈로 이관됐다** — 엔드포인트(`/novels`, `/novels/filtered`), DTO(`NormalSearchQuery`/`DetailSearchQuery`/`SearchNovelsResponse`), 매퍼(`SearchMapper.searchNovels`/`searchNovel`/`detailSearchQuery`)가 전부 여기로 옮겨왔다. `NovelData`는 더 이상 이 두 엔드포인트를 모른다.
 
 ## 주의사항 (작업 중 발견 시 누적)

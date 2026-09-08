@@ -479,7 +479,11 @@ private struct PreviewAppReviewRequestUseCase: AppReviewRequestUseCase {
 }
 
 private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
 

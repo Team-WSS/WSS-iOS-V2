@@ -98,9 +98,13 @@ struct DefaultSearchRepository: RecentSearchRepository, SearchAutoCompletionRepo
         }
     }
 
-    public func searchNovelByText(_ text: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    public func searchNovelByText(
+        _ text: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         let action = SearchAction.searchNovelByText(query: text)
-        let query = NormalSearchQuery(query: text, page: page, size: 20)
+        let query = NormalSearchQuery(query: text, page: page, size: 20, recordRecentSearch: recordRecentSearch)
 
         do {
             let response = try await service.getNormalSearchNovels(query: query)

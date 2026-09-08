@@ -51,6 +51,12 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`SearchNovelUseCase.searchByText`는 `recordRecentSearch: Bool` 필수 파라미터를 받는다**(#255 QA로
+  추가, 기본값 없음 — `SearchDomain/CLAUDE.md` 참고). 이 화면(`NormalSearchViewModel`)은 사용자가 검색을
+  **목적으로** 실행하는 유일한 화면이라 `loadSearchResult`/`loadMoreSearchResultPage` 둘 다 `true`를
+  넘긴다 — 다른 화면(작품 연결·컬렉션 작품 추가)은 `false`를 넘긴다. 이 화면에 새 검색 호출부를 추가할
+  땐 그것도 "사용자가 검색을 목적으로 하는 행위"가 맞는지부터 확인할 것(예: 브라우즈성 탐색이면 false가
+  맞을 수 있음).
 - **진입 시 검색창 자동 포커스(#222 V1 parity)는 `Task { @MainActor in … isFocused = true }`로 건다** —
   ⚠️ `@MainActor`를 빼면 안 걸린다. `onAppear` 클로저는 메인에서 돌지만 정적 `@MainActor`가 아니라, 그 안의
   평범한 `Task {}`는 메인 액터를 상속하지 않고 글로벌 executor에서 실행돼 `@FocusState`(main-actor) 설정이

@@ -191,7 +191,11 @@ private struct StubAppReviewRequestUseCase: AppReviewRequestUseCase {
 }
 
 private struct StubSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(BaseDomain.RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
 

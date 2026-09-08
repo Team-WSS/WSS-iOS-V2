@@ -122,6 +122,9 @@
   `isActionFailedToastPresented`로 `WSSToastType.networkDelay` 토스트를 띄우고, 전송 실패 시 입력 내용·수정
   모드를 보존해 재시도하게 한다(성공했을 때만 입력 비우고 목록 재조회). `create/editComment`가 성공 여부를
   `Bool`로 돌려주는 이유. "사용자 액션 실패"라 전면 뷰가 아니라 토스트([상위 CLAUDE.md] 로드 실패 표현 계약).
+- **`CreateFeedConnectNovelSheet`(작품 연결 검색)는 `searchNovelUseCase.searchByText`를
+  `recordRecentSearch: false`로 호출한다**(#255 QA) — 이 검색은 피드에 작품을 태깅하려는 부수 수단이지
+  "일반 검색 화면"에서의 검색이 아니라, 최근 검색어로 기록되면 안 된다(`SearchDomain/CLAUDE.md` 참고).
 - **`CreateFeedConnectNovelSheet`(작품 연결 검색)의 결과 영역은 `searchedNovels`가 아니라
   `CreateFeedViewModel.state.hasSearchedNovel` 플래그로 가른다** — `WSSSearchBar.onSearch`는 제출
   (엔터/검색 버튼)에만 발화하고 타이핑 자체는 매 글자마다 `updateConnectedNovelSearchText`로 바로

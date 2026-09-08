@@ -380,7 +380,7 @@ private extension CreateFeedViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
             state.hasSearchedNovel = true
@@ -400,7 +400,7 @@ private extension CreateFeedViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextNovelSearchPage)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextNovelSearchPage, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels.append(contentsOf: paginated.items)
             state.hasNextNovelPage = paginated.hasNext

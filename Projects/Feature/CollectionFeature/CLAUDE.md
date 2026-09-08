@@ -366,6 +366,9 @@
   `CollectionMyLibrarySelectView`의 셀 래퍼에 걸어야 자동화 탭 대상으로 잡힌다(2단계 pop 실측 검증에
   실제로 필요했다). 이 컴포넌트를 새 화면에서 탭 가능하게 감쌀 때 이 트레잇을 빠뜨리지 말 것 — 특히
   다중선택 화면처럼 탭이 핵심 동작인 셀일수록 VoiceOver 접근성 공백이 치명적이다.
+- **`CollectionSearchNovelViewModel`(작품 추가 검색)는 `searchNovelUseCase.searchByText`를
+  `recordRecentSearch: false`로 호출한다**(#255 QA) — 컬렉션에 작품을 담으려는 부수 수단이지 "일반
+  검색 화면"에서의 검색이 아니라, 최근 검색어로 기록되면 안 된다(`SearchDomain/CLAUDE.md` 참고).
 - ⚠️ **`CollectionSearchNovelViewModel`(구 `AddNovelViewModel`)의 검색 결과 영역은 `searchedNovels`가
   아니라 `hasSearched` 플래그로 가른다** — `WSSSearchBar`의 `onSearch`는 제출(엔터/검색 버튼)에만
   발화하고, 타이핑 자체는 `updateSearchText`로 매 글자마다 바로 반영된다. `searchedNovels`(또는

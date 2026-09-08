@@ -7,7 +7,13 @@
 
 ## 핵심 시나리오
 
-- **최근 검색어**(`RecentSearchWord`): `RecentSearchRepository`는 **서버 호출**이다 — 검색 실행 시 서버가 자동 기록하므로 클라이언트에 명시적 "add" UseCase는 없고 `Load`/`Remove`/`Clear`만 있다.
+- **최근 검색어**(`RecentSearchWord`): `RecentSearchRepository`는 **서버 호출**이다 — `SearchNovelUseCase.searchByText`가 검색을 실행하면 서버가 자동 기록하므로 클라이언트에 명시적 "add" UseCase는 없고 `Load`/`Remove`/`Clear`만 있다.
+  ⚠️ **기록 여부 자체는 `searchByText`의 `recordRecentSearch: Bool`(필수, 기본값 없음)로 호출부가 매번
+  결정한다**(#255 QA — "일반 검색 화면에서 검색했을 때만 기록되게 해달라"는 요구로 도입) — 사용자가
+  검색을 **목적으로** 실행한 화면(`SearchFeature.NormalSearchView`)만 `true`, 검색이 다른 작업의
+  부수 수단인 화면(`FeedFeature`의 "작품 연결", `CollectionFeature`의 "작품 추가")은 전부 `false`.
+  기본값을 두지 않은 이유는 새 호출부가 이 판단을 빠뜨리고 조용히 최근 검색어를 오염시키는 사고를
+  막기 위해서다.
 - **제목 자동완성**(`SearchAutoCompletionWord`): `SearchAutoCompletionWordsUseCase.execute(searchText:)`가 앞뒤 공백을 trim하고, 빈 문자열이면 서버 호출 없이 빈 배열을 즉시 반환한다(타이핑 중 불필요한 네트워크 호출 방지).
 - **작품 제목/필터 검색**(`SearchNovelUseCase`, `SearchFilter`, `SearchNovelRepository`): 원래 `NovelDomain` 소유였으나 이 모듈로 이동했다 — `Novel` 엔티티가 `NovelDomain`과 이 모듈 양쪽에서 필요해지면서 `BaseDomain`으로 공용화됐고(`BaseDomain/CLAUDE.md` 참고), 그 김에 작품 검색 계약 자체와 **구현(엔드포인트·매퍼)까지 전부 `SearchData`로 이관**했다 — `NovelData`는 더 이상 검색을 모른다.
 - 같은 이유로 **실시간 인기 키워드(`PopularKeywords`)는 `BaseDomain`**에 있다(키워드 카탈로그 소유가 `BaseDomain`이라서) — 이 모듈로 옮기지 않는다.

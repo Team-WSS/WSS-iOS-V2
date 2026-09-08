@@ -341,7 +341,7 @@ private extension NormalSearchViewModel {
         }
 
         do {
-            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: 0)
+            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: 0, recordRecentSearch: true)
             guard !Task.isCancelled else { return }
             state.searchResultNovels = paginated.items
             state.searchResultCount = resultCount
@@ -362,7 +362,7 @@ private extension NormalSearchViewModel {
         }
 
         do {
-            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: nextSearchResultPage)
+            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: nextSearchResultPage, recordRecentSearch: true)
             guard !Task.isCancelled else { return }
             state.searchResultNovels.append(contentsOf: paginated.items)
             state.searchResultCount = resultCount
