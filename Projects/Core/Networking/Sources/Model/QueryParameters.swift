@@ -50,7 +50,7 @@ public extension QueryItemConvertible {
 
             // 3) 배열인 경우: 요소별로 다시 한 번 타입 체크 후 ","로 join
             if let array = value as? [Any] {
-                let joined = array.compactMap { element -> String? in
+                let elements = array.compactMap { element -> String? in
                     // 배열 안의 null도 제거
                     if element is NSNull { return nil }
 
@@ -59,8 +59,14 @@ public extension QueryItemConvertible {
                     }
 
                     return String(describing: element)
-                }.joined(separator: ",")
-                return URLQueryItem(name: key, value: joined)
+                }
+
+                // 빈 배열은 "key=" 대신 쿼리 자체를 생략 (서버는 미전송과 동일 취급)
+                if elements.isEmpty {
+                    return nil
+                }
+
+                return URLQueryItem(name: key, value: elements.joined(separator: ","))
             }
 
             // 4) 나머지 단일 값(Int, String 등)은 문자열로 변환
