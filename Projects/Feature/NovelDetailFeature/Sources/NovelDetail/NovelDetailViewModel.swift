@@ -500,17 +500,24 @@ private extension NovelDetailViewModel {
     /// 예전 조용한 전체 재조회(refreshFeeds)의 대체, `SosoFeedViewModel.syncVisitedFeeds`와 동일 패턴).
     /// 로딩·토스트 없이 그 셀만 교체하고, 상세가 `.notFound`/`.forbidden`(삭제·숨김·차단)이면 셀을 제거한다.
     /// 그 외 실패는 셀을 그대로 둔다(잘못 지우는 것보다 낫다 — 단 인증 만료는 로그인 라우팅에 합류).
-    /// 이전 동기화가 아직 도는 중이면 pending은 다음 복귀까지 남는다(보통 셀 하나라 수백 ms).
+    /// 이전 동기화가 도는 동안 새로 쌓인 pending은 그 동기화가 끝나는 즉시 이어서 소비한다(아래 drain) —
+    /// 다음 복귀까지 미루면 사용자가 이 화면에 머무는 동안 그 셀이 영영 안 맞는 창이 생긴다.
     func syncVisitedFeeds() {
         guard cellSyncTask == nil, !pendingSyncFeedIDs.isEmpty, !isClosing else { return }
         let feedIDs = pendingSyncFeedIDs
         pendingSyncFeedIDs = []
         cellSyncTask = Task {
-            defer { if !Task.isCancelled { cellSyncTask = nil } }
             for feedID in feedIDs {
                 await syncCell(feedID)
+                // 취소된 태스크는 아무것도 정리하지 않는다 — 취소한 쪽이 슬롯·대기열을 정리하거나(reload 계열)
+                // isClosing 가드가 이후 진입을 막는다(close).
                 if Task.isCancelled { return }
             }
+            // drain: 도는 동안 새로 다녀온 셀이 쌓였으면 즉시 이어서 동기화한다. 슬롯을 먼저 비워야
+            // 재귀 호출의 `cellSyncTask == nil` 가드를 통과한다(defer로 두면 새로 대입된 다음 태스크를
+            // defer가 도로 지우는 순서 함정이 있어 명시로 정리).
+            cellSyncTask = nil
+            syncVisitedFeeds()
         }
     }
 

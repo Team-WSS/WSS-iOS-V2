@@ -164,6 +164,8 @@ struct SosoFeedView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.state.selectedTab)
+        // 커스텀 탭 영역 규칙(Feature CLAUDE.md) — 없으면 라벨·인디케이터 사이 spacing 구간이 죽은 영역이 된다.
+        .contentShape(Rectangle())
         .onTapGesture {
             viewModel.handle(.selectTab(tab))
         }
@@ -305,16 +307,18 @@ struct SosoFeedView: View {
             .accessibilityHidden(!isSelected)
     }
 
-    /// 로딩 분기는 `isSelected`도 본다 — `isLoading`은 언제나 현재 탭의 로드라(로드를 시작하는 모든 경로가
-    /// 현재 탭 대상), 숨은 미로드 탭까지 로딩 뷰를 세우면 의미가 어긋나고 LoadingView 애니메이션이 숨은 채 돈다.
+    /// 로딩 분기는 `loadingTab == tab`으로 가른다 — 로드는 언제나 특정 탭을 대상으로 돌고,
+    /// `selectTab`이 진행 중 로드를 취소하지 않아 A탭 로드가 도는 채로 B탭이 보일 수 있다.
+    /// `selectedTab`으로 가르면 그때 이미 로드가 끝난 B탭에 A탭 로드의 스피너가 잘못 뜬다(#256 리뷰).
     @ViewBuilder
     private func tabListContent(for tab: FeedTab) -> some View {
         let tabFeeds = feeds(for: tab)
-        if viewModel.state.selectedTab == tab, viewModel.state.isLoading, tabFeeds.isEmpty {
+        if viewModel.state.loadingTab == tab, tabFeeds.isEmpty {
             LoadingView()
         } else if tab == .myFeed, tabFeeds.isEmpty {
+            // 우상단 연필과 같은 작성 진입(V1 emptyView.writeFeedButton parity — V1_BEHAVIOR_CONTRACT 1.4).
             WSSEmptyView(type: .myFeed,
-                         action: { })
+                         action: { onRoute(.createFeed) })
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {

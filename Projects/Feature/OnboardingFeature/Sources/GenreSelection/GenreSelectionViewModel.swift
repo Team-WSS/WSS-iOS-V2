@@ -52,9 +52,9 @@ final class GenreSelectionViewModel {
     /// 이전 단계에서 확정돼 등록 시 `ProfileRegistration`을 완성하는 데 쓰는 값. **생성 시엔 없고**
     /// (컨테이너가 이 VM을 처음부터 만들어 항상 mount하므로), 성별/출생연도 확정 시 `setProfileContext`로
     /// 채워진다. 장르 단계는 그 확정 뒤에만 도달하므로 등록 시점엔 항상 채워져 있다(guard로 방어).
-    private var nickname: String?
-    private var gender: Gender?
-    private var birthYear: BirthYear?
+    @ObservationIgnored private var nickname: String?
+    @ObservationIgnored private var gender: Gender?
+    @ObservationIgnored private var birthYear: BirthYear?
 
     // MARK: - Dependency
 

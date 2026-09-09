@@ -400,6 +400,9 @@ private extension NovelDetailView {
                     // 투명일 땐(히어로 위) 바 영역에서 시작하는 드래그를 스크롤로 넘기고,
                     // 흰 배경이 콘텐츠를 덮는 동안엔 배경이 터치를 소비한다 — 안 그러면
                     // 바에 가려 안 보이는 셀·버튼이 바 위 탭에 반응한다(탭 관통).
+                    // 감수한 손실: 솔리드 구간엔 바 영역(상단 44pt 밴드)에서 시작한 드래그로는
+                    // 스크롤할 수 없다 — 탭 관통을 막는 대가로 의도한 트레이드오프이니
+                    // "바 위에서 스크롤이 안 된다"는 이유로 false로 되돌리지 말 것(관통 재발).
                     .allowsHitTesting(showNavTitle)
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navigationBarBottomY = height

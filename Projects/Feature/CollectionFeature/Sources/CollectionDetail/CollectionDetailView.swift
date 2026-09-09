@@ -221,6 +221,8 @@ private extension CollectionDetailView {
             // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
             GeometryReader { proxy in
                 (isBarSolid ? Color.wssWhite : Color.clear)
+                    // 감수한 손실: 솔리드 구간엔 바 영역에서 시작한 드래그로는 스크롤할 수 없다 —
+                    // 탭 관통을 막는 대가로 의도한 트레이드오프(NovelDetailView와 동일). false로 되돌리지 말 것.
                     .allowsHitTesting(isBarSolid)
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navBarBottomY = height

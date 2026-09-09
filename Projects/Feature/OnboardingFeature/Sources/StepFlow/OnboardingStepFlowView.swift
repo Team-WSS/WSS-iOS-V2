@@ -56,7 +56,6 @@ struct OnboardingStepFlowView: View {
     /// 화면(`OnboardingCompleteView`, #178)으로 컨테이너 콘텐츠 전체를 교체하는 순수 표시 플래그.
     @State private var isRegistrationCompleted = false
 
-    private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
     /// 프로필 등록 성공 시 발화 — 온보딩 종료 후 어디로 갈지(Home 등)는 호출자(App)가 결정한다.
     private let onCompleted: () -> Void
@@ -76,7 +75,6 @@ struct OnboardingStepFlowView: View {
         self._genreSelectionViewModel = State(
             initialValue: GenreSelectionViewModel(registerProfileUseCase: registerProfileUseCase, logger: logger)
         )
-        self.logger = logger
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onCompleted = onCompleted
     }

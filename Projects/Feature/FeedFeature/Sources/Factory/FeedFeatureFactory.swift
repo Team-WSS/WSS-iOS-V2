@@ -14,7 +14,6 @@ import SearchDomain
 import CommentDomain
 import SocialDomain
 import ProfileDomain
-import SocialDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.

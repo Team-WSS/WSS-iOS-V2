@@ -56,8 +56,11 @@ final class SosoFeedViewModel {
         var hasMoreMyFeeds: Bool = true
         var hasMoreSosoFeeds: Bool = true
 
-        /// 처음부터 다시 채우는 로드(`LoadKind.reload`)가 도는 중. View는 보여줄 목록이 없을 때만 로딩 뷰로 쓴다.
-        var isLoading: Bool = false
+        /// 처음부터 다시 채우는 로드(`LoadKind.reload`)가 도는 중인 **탭**(없으면 nil). View는 그 탭에
+        /// 보여줄 목록이 없을 때만 로딩 뷰로 쓴다. ⚠️ Bool로 되돌리지 말 것 — 두 리스트 상시 mount +
+        /// `selectTab`이 진행 중 로드를 취소하지 않는 구조라, A탭 로드가 도는 채로 B탭이 선택될 수 있어
+        /// "지금 로딩 중인 게 어느 탭인지"를 잃으면 엉뚱한 탭에 스피너가 뜬다(#256 리뷰에서 발견).
+        var loadingTab: FeedTab?
         var errorMessage: String?
 
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
@@ -300,10 +303,14 @@ final class SosoFeedViewModel {
     /// 세웠으면 **목록을 다시 받지 않고** 다녀온 셀만 상세로 맞춘다 — 목록을 다시 받으면 20개로 줄어 스크롤이
     /// 튀기 때문. 전체 최신화는 당겨서 새로고침이 맡는다(탭 콘텐츠 "복귀마다 갱신" 규약의 의도된 예외).
     private func load() {
-        guard feedsTask == nil else { return }
         if hasLoaded(state.selectedTab) {
+            // 셀 동기화는 별도 슬롯(cellSyncTask)이라 목록 로드(더보기)가 도는 중이어도 진행한다 —
+            // feedsTask 가드에 같이 걸면 더보기가 in-flight인 복귀에서 다녀온 셀 동기화가 조용히
+            // 건너뛰어져 다음 재진입까지 미뤄진다(둘 다 MainActor라 교차 반영도 안전: 더보기는
+            // append, 동기화는 feedId로 제자리 교체/제거).
             syncVisitedFeeds()
         } else {
+            guard feedsTask == nil else { return }
             reloadFromScratch(state.selectedTab)
         }
     }
@@ -318,7 +325,7 @@ final class SosoFeedViewModel {
 
     /// 피드 탭 연필 작성 성공 복귀 — 작성한 글은 내 피드·소소피드 둘 다의 신규 글이라 **두 목록을 함께**
     /// 초기 로드 이전 상태로 되돌리고(hasLoaded까지 꺼서 다른 탭도 전환 시 첫 로드를 탄다) 현재 탭을 처음부터
-    /// 받는다. 목록이 비면 View의 로딩 분기(`isLoading && 그 탭 feeds.isEmpty`)가 LoadingView로 갈아타
+    /// 받는다. 목록이 비면 View의 로딩 분기(`loadingTab == tab && 그 탭 feeds.isEmpty`)가 LoadingView로 갈아타
     /// ScrollView가 내려갔다 새로 서므로 스크롤도 자연히 최상단이다(별도 스크롤 리셋 장치 불필요 —
     /// 상시 mount 대상은 탭 전환 보존이지, 이 재로드는 두 리스트 다 비워 둘 다 새로 서는 게 맞다).
     private func reloadForCreatedFeed() {
@@ -332,7 +339,7 @@ final class SosoFeedViewModel {
 
     /// 처음부터 다시 채운다 — 진행 중이던 이전 로드를 **취소하고 곧바로 재대입**한다(취소만 하고 재대입하지 않는
     /// 경로를 만들면 슬롯이 non-nil로 굳어 `load`가 영구 차단된다). 다녀온 셀 동기화도 무의미해지므로 함께 버린다.
-    /// 시작 표시(`isLoading`)는 Task 스폰 **전** 동기 구간에서 세운다 — 취소된 옛 로드는 아무것도 정리하지
+    /// 시작 표시(`loadingTab`)는 Task 스폰 **전** 동기 구간에서 세운다 — 취소된 옛 로드는 아무것도 정리하지
     /// 않으므로(`loadFeeds`의 defer) 새 로드의 표시를 지우지 못한다.
     private func reloadFromScratch(_ tab: FeedTab) {
         feedsTask?.cancel()
@@ -340,7 +347,7 @@ final class SosoFeedViewModel {
         cellSyncTask = nil
         pendingSyncFeedIDs = []
         setHasLoaded(false, for: tab)
-        state.isLoading = true
+        state.loadingTab = tab
         feedsTask = Task { await loadFeeds(.reload(tab)) }
     }
 
@@ -356,7 +363,7 @@ final class SosoFeedViewModel {
         defer {
             if !Task.isCancelled {
                 feedsTask = nil
-                state.isLoading = false
+                state.loadingTab = nil
             }
         }
         if case .reload = kind { likeToggledDuringReload = [] }
@@ -498,17 +505,23 @@ final class SosoFeedViewModel {
     /// 로딩·토스트 없이 그 셀만 교체하고, 상세가 `.notFound`/`.forbidden`(삭제·숨김·차단 —
     /// `FeedDetailViewModel.isFeedUnavailable`와 같은 판정)이면 셀을 제거한다. 그 외 실패는 셀을 그대로 둔다
     /// (잘못 지우는 것보다 낫고, 당겨서 새로고침으로 복구된다).
-    /// 이전 동기화가 아직 도는 중이면 pending은 다음 복귀까지 남는다(보통 셀 하나라 수백 ms).
+    /// 이전 동기화가 도는 동안 새로 쌓인 pending은 그 동기화가 끝나는 즉시 이어서 소비한다(아래 drain) —
+    /// 다음 복귀까지 미루면 사용자가 목록에 머무는 동안 그 셀이 영영 안 맞는 창이 생긴다.
     private func syncVisitedFeeds() {
         guard cellSyncTask == nil, !pendingSyncFeedIDs.isEmpty else { return }
         let feedIDs = pendingSyncFeedIDs
         pendingSyncFeedIDs = []
         cellSyncTask = Task {
-            defer { if !Task.isCancelled { cellSyncTask = nil } }
             for feedID in feedIDs {
                 await syncCell(feedID)
+                // 취소된 태스크는 아무것도 정리하지 않는다 — 취소한 쪽(reloadFromScratch)이 슬롯·대기열을 이미 비웠다.
                 if Task.isCancelled { return }
             }
+            // drain: 도는 동안 새로 다녀온 셀이 쌓였으면 즉시 이어서 동기화한다. 슬롯을 먼저 비워야
+            // 재귀 호출의 `cellSyncTask == nil` 가드를 통과한다(마지막 취소 확인 뒤라 defer로 두면
+            // 새로 대입된 다음 태스크를 defer가 도로 지우는 순서 함정이 있어 명시로 정리).
+            cellSyncTask = nil
+            syncVisitedFeeds()
         }
     }
 
