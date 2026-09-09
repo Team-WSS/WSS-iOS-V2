@@ -106,7 +106,7 @@
   - **선택 칩 행은 칩이 없으면 구분선까지 통째로 사라진다**(정본 동작). 빈 높이를 남겨 "점프 방지"할 필요가 없다 — 위 콘텐츠 영역이 유연해서 그 차이를 흡수한다.
   - `presentationCornerRadius` 금지 규약은 정렬 시트뿐 아니라 **필터 시트에도 동일 적용**(아래 시트 공통 항목 참고).
 - **별점 범위 슬라이더는 `WSSComponent.WSSRangeSlider`**(구 `LibraryRatingSlider`) — `SearchFeature`(#185, 상세탐색 필터)도 같은 모양(0.0~5.0, 0.5 단위)을 필요로 해 WSSComponent로 승격했다. 드래그 좌표계 함정(트랙이 핸들 반지름만큼 안쪽, 핸들 판정은 드래그 시작에 한 번만)은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)가 정본 — 이 화면에 로컬로 다시 구현하지 말 것.
-- **매력포인트·장르의 시트 표시 순서는 디자인 전용 로컬 배열** — `AttractivePoint.allCases`(필력이 마지막)·`NovelGenre.filterGenre`(로맨스 먼저)와 순서가 다르다. 임의로 공용 순서로 되돌리지 말 것.
+- **장르의 시트 표시 순서는 디자인 전용 로컬 배열**(`genreOrder`) — `NovelGenre`의 다른 공용 순서와 다르니 임의로 되돌리지 말 것. 매력포인트는 `AttractivePoint.allCases`를 그대로 쓴다 — enum 선언 순서 자체가 디자인 정본(필력 3번째)이고, 리스트 셀의 사용자 평가 매력포인트 정렬도 같은 순서를 쓴다(→ BaseDomain CLAUDE.md).
 - **메인 필터 칩은 WSSComponent `WSSFilterButton`(h33·body4)과 다른 화면 전용 칩(h30·body5)** — 서재 디자인이 검색 필터 칩보다 작다. 컴포넌트 재사용으로 교체하지 말 것.
   - ⚠️ 이 칩·토글·시트 버튼의 테두리는 **`.strokeBorder`로 그린다**. `.stroke`면 선의 절반이 프레임 밖으로 나가, 칩 행(가로 ScrollView)·키워드 탭(세로 ScrollView, 첫 줄이 y=0에 붙음)·선택 칩 행에서 **클립돼 테두리가 잘린다**(실제 발생). → WSSComponent CLAUDE.md의 같은 항목이 정본.
 - 상단 아이콘 3종(`icAlarm`·`icBookRegister`·`icReset`)은 이 작업(#166)에서 DesignSystem에 추가한 신규 에셋.
