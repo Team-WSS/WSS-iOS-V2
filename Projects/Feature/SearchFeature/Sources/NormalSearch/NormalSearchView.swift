@@ -65,7 +65,7 @@ struct NormalSearchView: View {
                         loadError: viewModel.state.hasSearchResultError,
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
-                        onRetry: { viewModel.handle(.executeSearch(viewModel.state.searchText)) },
+                        onRetry: { viewModel.handle(.retrySearch) },
                         onNovelSelected: { onRoute(.novelDetail($0)) }
                     )
                 } else if isFocused, !viewModel.state.searchText.isEmpty {
@@ -115,16 +115,21 @@ struct NormalSearchView: View {
             // 작가 이름 탭 등 initialQuery 진입 경로 — VM의 init은 검색어만 채워두고 실제 검색 실행은
             // 여기서 1회만 한다(#255 QA 수정, `NormalSearchViewModel.init` 주석 참고). `onAppear`는
             // 실제로 화면에 붙는 이 View 인스턴스에서만 발화하므로, destination 재평가로 만들어졌다
-            // 버려지는 고아 ViewModel은 이 경로를 타지 않는다.
+            // 버려지는 고아 ViewModel은 이 경로를 타지 않는다. `.executeInitialSearch`는 최근 검색어로
+            // 기록하지 않는다 — 사용자가 검색을 의도한 게 아니라 작품 상세에서 진입했을 뿐이라서다.
             if !didRunInitialSearch {
                 didRunInitialSearch = true
                 if !viewModel.state.searchText.isEmpty, !viewModel.state.isSearchExecuted {
-                    viewModel.handle(.executeSearch(viewModel.state.searchText))
+                    viewModel.handle(.executeInitialSearch(viewModel.state.searchText))
                 }
             }
-            viewModel.handle(.loadSosoPick)
-            viewModel.handle(.loadRecentSearchWords)
-            viewModel.handle(.loadPopularKeywords)
+            // initialQuery로 바로 검색 결과 화면이 뜨는 경로는 브라우즈 섹션(소소픽·최근 검색어·인기
+            // 키워드)이 애초에 안 보이므로 그 데이터를 받아올 필요가 없다(#255 QA — 불필요한 API 호출 방지).
+            if !viewModel.state.isSearchExecuted {
+                viewModel.handle(.loadSosoPick)
+                viewModel.handle(.loadRecentSearchWords)
+                viewModel.handle(.loadPopularKeywords)
+            }
             // V1 parity: 진입 시 검색창에 자동 포커스(키보드 바로 뜸). 단 initialQuery로 이미 검색이
             // 실행된 경우(작가명 탭 등)엔 결과 화면을 보여줘야 하므로 포커스하지 않는다. 최초 1회만,
             // push 애니메이션이 끝난 뒤(포커스가 씹히지 않게) 건다.

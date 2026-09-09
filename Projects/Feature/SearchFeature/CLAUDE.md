@@ -72,12 +72,29 @@
   1회성 가드 패턴)로 딱 한 번만 한다 — `onAppear`는 실제로 마운트되는 그 하나의 View에서만 발화하므로
   고아 인스턴스는 이 경로를 타지 않는다. **`@State(initialValue:)`로 쓰이는 타입의 `init`에 부수효과를
   넣지 말 것**이 이 함정의 일반 교훈 — 값 계산은 몇 번이든 다시 실행될 수 있다는 전제로 짜야 한다.
+  ⚠️ **같은 QA 라운드에서 후속으로 두 가지를 더 정리했다**(초기 수정 직후 사용자가 실제 네트워크 로그를
+  대조하며 지적):
+  1. `initialQuery` 진입은 `onAppear`에서 `.loadSosoPick`/`.loadRecentSearchWords`/`.loadPopularKeywords`도
+     같이 부르고 있었다 — 이 경로는 브라우즈 섹션(소소픽·최근 검색어·인기 키워드) 자체가 안 보이므로
+     그 데이터가 필요 없다. 지금은 이 세 액션을 `!viewModel.state.isSearchExecuted`로 가드해, 검색이
+     이미 실행된 진입(=initialQuery)에서는 호출하지 않는다.
+  2. 작가 이름 탭으로 실행되는 검색은 사용자가 의도한 검색이 아니므로 최근 검색어로 남기면 안 된다 —
+     `executeSearch(String)`(사용자가 직접 실행 — 검색바 제출·최근 검색어 칩·자동완성 제안어 탭,
+     항상 `recordRecentSearch: true`)와 별개로 **`executeInitialSearch(String)`** 액션을 신설해
+     `recordRecentSearch: false`로 검색한다. `onAppear`는 `.executeInitialSearch`만 부른다.
+     실패 후 재시도(`onRetry`)는 새 검색이 아니라 "방금 그 검색을 다시"이므로, 어느 쪽이었는지
+     (`currentSearchRecordsRecentSearch`, 세션 동안 고정)를 그대로 유지하는 별도 **`retrySearch`**
+     액션으로 뺐다 — `onRetry`가 무조건 `executeSearch`(=항상 true)를 부르면 작가 이름 검색이 실패
+     후 재시도할 때 갑자기 기록 대상으로 바뀌는 모순이 생긴다.
+  3. `loadSearchResult`가 성공 후 `refreshRecentSearchWordsAfterSearch()`를 부르는 것도
+     `recordRecentSearch`가 `true`일 때만으로 좁혔다 — 기록 안 한 검색은 서버에 아무것도 새로
+     남지 않아, 그래도 목록을 다시 받으면 결과가 그대로인 `/novels/recent-searches` 호출만 낭비된다.
 - **`SearchNovelUseCase.searchByText`는 `recordRecentSearch: Bool` 필수 파라미터를 받는다**(#255 QA로
   추가, 기본값 없음 — `SearchDomain/CLAUDE.md` 참고). 이 화면(`NormalSearchViewModel`)은 사용자가 검색을
-  **목적으로** 실행하는 유일한 화면이라 `loadSearchResult`/`loadMoreSearchResultPage` 둘 다 `true`를
-  넘긴다 — 다른 화면(작품 연결·컬렉션 작품 추가)은 `false`를 넘긴다. 이 화면에 새 검색 호출부를 추가할
-  땐 그것도 "사용자가 검색을 목적으로 하는 행위"가 맞는지부터 확인할 것(예: 브라우즈성 탐색이면 false가
-  맞을 수 있음).
+  **목적으로** 실행하는 유일한 화면이지만, 그 안에서도 "사용자가 직접 실행"(`executeSearch`)과 "작가
+  이름 탭으로 대신 실행됨"(`executeInitialSearch`)은 서로 다른 값을 넘긴다(위 항목 참고) — 다른
+  화면(작품 연결·컬렉션 작품 추가)은 항상 `false`. 이 화면에 새 검색 호출부를 추가할 땐 "사용자가
+  검색을 직접 의도했는가"부터 확인할 것.
 - **진입 시 검색창 자동 포커스(#222 V1 parity)는 `Task { @MainActor in … isFocused = true }`로 건다** —
   ⚠️ `@MainActor`를 빼면 안 걸린다. `onAppear` 클로저는 메인에서 돌지만 정적 `@MainActor`가 아니라, 그 안의
   평범한 `Task {}`는 메인 액터를 상속하지 않고 글로벌 executor에서 실행돼 `@FocusState`(main-actor) 설정이
