@@ -332,6 +332,9 @@ private extension NovelDetailView {
 
             Spacer()
 
+            // 아이콘 크기 그대로는 탭 타깃이 너무 작아 라벨 패딩으로 터치영역을 넓힌다(아이콘 시각
+            // 위치는 그대로 — 아이콘 간 시각 간격 6+4+6=16, trailing 20 유지). threedots의 trailing 20도
+            // 라벨 안에 두어 디바이스 우측 끝까지 탭이 먹는다. 높이 44는 네비바(뒤로가기 프레임)와 동일.
             HStack(spacing: 0) {
                 Button {
                     isNotificationSettingSheetPresented = true
@@ -341,11 +344,14 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 24, height: 24)
                         .foregroundStyle(Color.wssBlack)
+                        .padding(.leading, 20)
+                        .padding(.trailing, 6)
+                        .frame(height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
-                Spacer().frame(width: 16)
+                Spacer().frame(width: 4)
 
                 Button {
                     isMenuPresented.toggle()
@@ -355,26 +361,27 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 20, height: 20)
                         .foregroundStyle(Color.wssBlack)
+                        .padding(.leading, 6)
+                        .padding(.trailing, 20)
+                        .frame(height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Spacer().frame(width: 20)
             }
         }
-        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(80pt)으로 맞춘다.
-        // 우측 클러스터(종 24pt+간격 16+threedots 20pt+trailing 간격 20 = 80pt)가 좌측(뒤로가기 44pt
-        // + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어, 좌측 여백도 80으로 맞춰야
-        // 대칭이 된다 — 코드상 44가 아니라 74인 건 이 6pt를 상쇄하기 위해서(74+6=80). 한쪽만
-        // 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
+        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(100pt)으로 맞춘다.
+        // 우측 클러스터(종 버튼 20+24+6=50pt + 간격 4 + threedots 버튼 6+20+20=46pt = 100pt, 터치영역
+        // 포함)가 좌측(뒤로가기 44pt + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어,
+        // 좌측 여백도 100으로 맞춰야 대칭이 된다 — 코드상 94인 건 이 6pt를 상쇄하기 위해서(94+6=100).
+        // 한쪽만 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
         .overlay {
             Text(novelTitle)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.leading, 74)
-                .padding(.trailing, 80)
+                .padding(.leading, 94)
+                .padding(.trailing, 100)
                 .opacity(showNavTitle ? 1 : 0)
         }
         .padding(.leading, 6)
