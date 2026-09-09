@@ -63,6 +63,11 @@ struct DefaultAuthRepository: AuthRepository {
             // 지워진 어정쩡한 상태가 된다(#236 리뷰).
             clearUserScopedCache()
 
+            // isRegister(가입 여부)를 로컬에 심는다(#257) — 세션은 있으나 온보딩 미완료(false)인 유저를
+            // 다음 콜드 스타트의 부트스트랩이 인트로로 되돌리기 위함. **clearUserScopedCache() 뒤에** 둬야
+            // (그 목록이 이 키도 지우므로) 새 값이 살아남는다. 온보딩 완료 시 ProfileData가 true로 갱신.
+            appStorage.set(.isRegistered, loginResponse.isRegister)
+
             logger?.logSuccess(action: action.name)
             return AuthMapper.needOnboarding(from: loginResponse)
         } catch let error as NetworkingError {
@@ -155,5 +160,8 @@ private extension DefaultAuthRepository {
         // 내 서재 필터·정렬(#221)도 사용자별 선호라 함께 지운다 — 남기면 다음 계정의 서재에
         // 이전 사용자의 필터가 그대로 적용된다.
         appStorage.remove(.myLibraryFilter)
+        // 가입/온보딩 완료 여부(#257)도 사용자 스코프 — 로그아웃/탈퇴 시 지운다. 로그인 경로에선 여기서
+        // 지운 뒤 곧바로 서버 isRegister 값으로 다시 세팅한다(login()의 set 순서 참고).
+        appStorage.remove(.isRegistered)
     }
 }

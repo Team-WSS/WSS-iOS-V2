@@ -32,6 +32,8 @@ public let env = ProjectEnvironment(
     releaseBundleId: "kr.websoso",
     appleDeveloperTeamID: "9SVDHQS4M3",
     deploymentTarget: .iOS("17.0"),
-    destination: .iOS,
+    // .iOS 축약은 .macWithiPadDesign("Mac (Designed for iPad)" 실행 대상)까지 포함해
+    // Mac 타겟이 생기므로 iPhone/iPad만 명시한다.
+    destination: [.iPhone, .iPad],
     baseSetting: [:]
 )

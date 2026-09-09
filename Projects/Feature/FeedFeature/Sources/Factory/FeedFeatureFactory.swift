@@ -14,7 +14,6 @@ import SearchDomain
 import CommentDomain
 import SocialDomain
 import ProfileDomain
-import SocialDomain
 import Logger
 
 /// FeedFeature 모듈의 외부 진입점.
@@ -129,9 +128,10 @@ public enum FeedFeatureFactory {
     /// - Parameters:
     ///   - loadFeedDetailUseCase: 재진입 시 **다녀온 셀만** 상세 API로 다시 맞추는 데 쓴다(이 화면은 재진입에
     ///     목록을 다시 받지 않는다 — 스크롤·길이 보존). 구현 클래스명은 `DefaultLoadFeedUseCase`.
-    ///   - feedCreatedVersion: 피드 작성 완료 신호(App 전역 단조 증가 카운터). 값이 바뀌면 현재 탭을 처음부터
-    ///     다시 받고 스크롤을 최상단으로 올린다 — 새 글은 이 신호로만 목록에 들어온다. 수정 완료엔 붙이지 말 것
-    ///     (수정은 이 화면이 다녀온 셀 동기화로 처리한다).
+    ///   - needsReloadForCreatedFeed: 피드 탭 연필 아이콘 작성 성공 복귀 신호(#256 — 호출자 탭 Root 로컬
+    ///     `@State`의 Binding). true면 복귀 `onAppear`가 소비(false로 되돌림)하고 두 목록(내 피드/소소피드)을
+    ///     초기 로드처럼 다시 받는다(새 글이 맨 위, 스크롤 최상단). 새 글은 이 신호로만 목록에 들어온다 —
+    ///     수정 완료(셀 동기화가 처리)·작품 상세 경유 작성(그 화면이 자기 피드 섹션을 리셋)엔 켜지 말 것.
     ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `SosoFeedRoute`(Navigation/) 참고.
     ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
     @MainActor
@@ -145,7 +145,7 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
-        feedCreatedVersion: Int = 0,
+        needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (SosoFeedRoute) -> Void
     ) -> some View {
         SosoFeedView(
@@ -160,7 +160,7 @@ public enum FeedFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 logger: logger
             ),
-            feedCreatedVersion: feedCreatedVersion,
+            needsReloadForCreatedFeed: needsReloadForCreatedFeed,
             onRoute: onRoute
         )
     }

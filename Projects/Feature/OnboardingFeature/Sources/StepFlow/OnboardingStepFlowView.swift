@@ -49,13 +49,13 @@ struct OnboardingStepFlowView: View {
     @State private var viewModel = OnboardingStepFlowViewModel()
     @State private var nicknameViewModel: NicknameViewModel
     @State private var genderBirthYearViewModel = GenderBirthYearViewModel()
-    @State private var genreSelectionViewModel: GenreSelectionViewModel?
+    /// 세 단계 VM 모두 컨테이너가 처음부터 만들어 **항상 mount**한다 — 장르 VM도 예외가 아니다(#257).
+    /// 앞 단계 값(닉네임·성별/출생연도)은 생성이 아니라 성별/출생연도 확정 시 `setProfileContext`로 주입한다.
+    @State private var genreSelectionViewModel: GenreSelectionViewModel
     /// 장르 선택(마지막 단계)의 프로필 등록이 성공하면 세운다 — 진행바·뒤로가기가 없는 "계약 완료"
     /// 화면(`OnboardingCompleteView`, #178)으로 컨테이너 콘텐츠 전체를 교체하는 순수 표시 플래그.
     @State private var isRegistrationCompleted = false
 
-    private let registerProfileUseCase: RegisterProfileUseCase
-    private let logger: Logger?
     private let onAuthenticationRequired: () -> Void
     /// 프로필 등록 성공 시 발화 — 온보딩 종료 후 어디로 갈지(Home 등)는 호출자(App)가 결정한다.
     private let onCompleted: () -> Void
@@ -70,8 +70,11 @@ struct OnboardingStepFlowView: View {
         self._nicknameViewModel = State(
             initialValue: NicknameViewModel(validateNicknameUseCase: validateNicknameUseCase, logger: logger)
         )
-        self.registerProfileUseCase = registerProfileUseCase
-        self.logger = logger
+        // 장르 VM도 다른 단계 VM처럼 여기서 미리 만들어 항상 mount한다(#257) — 앞 단계 값은 나중에
+        // setProfileContext로 주입하므로 생성 시엔 UseCase만 있으면 된다.
+        self._genreSelectionViewModel = State(
+            initialValue: GenreSelectionViewModel(registerProfileUseCase: registerProfileUseCase, logger: logger)
+        )
         self.onAuthenticationRequired = onAuthenticationRequired
         self.onCompleted = onCompleted
     }
@@ -121,14 +124,14 @@ private extension OnboardingStepFlowView {
                 .frame(width: 44, height: 44)
                 .padding(.leading, 6)
                 .contentShape(Rectangle())
-                .disabled(genreSelectionViewModel?.state.isSubmitting ?? false)
+                .disabled(genreSelectionViewModel.state.isSubmitting)
             }
 
             Spacer()
 
             if viewModel.state.currentStep == .genreSelection {
                 Button {
-                    genreSelectionViewModel?.handle(.skip)
+                    genreSelectionViewModel.handle(.skip)
                 } label: {
                     Text("건너뛰기")
                         .applyWSSFont(.body2)
@@ -136,7 +139,7 @@ private extension OnboardingStepFlowView {
                 }
                 .padding(10)
                 .contentShape(Rectangle())
-                .disabled(genreSelectionViewModel?.state.isSubmitting ?? false)
+                .disabled(genreSelectionViewModel.state.isSubmitting)
 
                 Spacer().frame(width: 12)
             }
@@ -183,44 +186,31 @@ private extension OnboardingStepFlowView {
         .clipped()
     }
 
-    /// 성별/출생년도가 아직 확정 전이면(장르 선택 슬롯에 아직 못 들어가 있는 동안) 빈 자리만 차지한다 —
-    /// 어차피 `offset`상 그 자리까지 밀려야 보이는데, 그 시점엔 이미 `genreSelectionViewModel`이
-    /// 존재한다(`handleGenderBirthYearConfirmed`가 단계 전환과 같은 탭 핸들러에서 함께 만들기 때문).
+    /// 장르 슬롯은 다른 두 단계처럼 **항상 실제 뷰**다(#257) — 장르 VM이 컨테이너 init에서 미리 만들어져
+    /// 항상 mount되므로, 지연 생성(`if let ... else Color.clear`)도 인스턴스 교체용 `.id` 리시드도 필요 없다.
+    /// 덕분에 성별/출생년도 → 장르 전환이 앞 단계 전환과 **동일한 순수 슬라이드**가 된다(지연 mount 시
+    /// 삽입 트랜지션 opacity가 슬라이드에 겹쳐 "불투명도 변화"처럼 보이던 문제가 구조적으로 사라진다).
     ///
     /// 등록 성공(`onCompleted` 원래 콜백) 시 곧장 호출자에게 넘기지 않고 `isRegistrationCompleted`부터
     /// 세운다 — "계약 완료" 화면(`OnboardingCompleteView`)을 먼저 보여주고, 그 화면의 "웹소소 시작하기"
     /// 버튼이 눌렸을 때 비로소 진짜 `onCompleted`(Home 진입은 App 책임)를 발화한다.
-    @ViewBuilder
     var genreSelectionSlot: some View {
-        if let genreSelectionViewModel {
-            GenreSelectionView(
-                viewModel: genreSelectionViewModel,
-                onAuthenticationRequired: onAuthenticationRequired,
-                onCompleted: { isRegistrationCompleted = true }
-            )
-            // 재확정마다 새 인스턴스가 대입돼도(handleGenderBirthYearConfirmed) `if let` 분기 자체는
-            // 안 바뀌어 뷰 정체성이 유지되면 GenreSelectionView의 `@State`가 최초 initialValue만 쓰고
-            // 새 인스턴스를 무시한다(.sheet(isPresented:) 트랩과 동일 메커니즘) — 인스턴스가 바뀔 때마다
-            // 뷰 정체성도 강제로 바꿔 `@State`가 다시 시드되게 한다.
-            .id(ObjectIdentifier(genreSelectionViewModel))
-        } else {
-            Color.clear
-        }
+        GenreSelectionView(
+            viewModel: genreSelectionViewModel,
+            onAuthenticationRequired: onAuthenticationRequired,
+            onCompleted: { isRegistrationCompleted = true }
+        )
     }
 
-    /// 성별/출생년도 확정 시점에만 `GenreSelectionViewModel`을 만들 수 있다(그 전엔 값이 없다) —
-    /// 단계 전환(`viewModel.handle`)과 같은 탭 핸들러 안에서 함께 처리해, 다음 렌더 패스에 두 상태가
-    /// 항상 같이 반영되도록 한다(`currentStep == .genreSelection`인데 `genreSelectionViewModel`이
-    /// 아직 nil인 프레임이 생기지 않게).
+    /// 성별/출생년도 확정 시 앞 단계 값(닉네임 포함)을 장르 VM에 주입하고(등록에 필요) 단계를 전환한다.
+    /// 장르 VM은 항상 mount돼 있으므로 값 주입과 단계 전환을 **같은 탭 핸들러(한 트랜잭션)**에서 해도
+    /// 순수 슬라이드가 유지된다(지연 mount가 없어 opacity 삽입 전환이 안 겹친다). 뒤로 갔다 재확정하면
+    /// 값만 갱신되고 인스턴스는 그대로라 **선택한 장르가 보존**된다(예전 재생성 방식의 초기화 트레이드오프 제거).
     func handleGenderBirthYearConfirmed(_ gender: Gender, _ birthYear: BirthYear) {
-        viewModel.handle(.genderBirthYearConfirmed(gender, birthYear))
-        genreSelectionViewModel = GenreSelectionViewModel(
-            nickname: viewModel.state.nickname,
-            gender: gender,
-            birthYear: birthYear,
-            registerProfileUseCase: registerProfileUseCase,
-            logger: logger
+        genreSelectionViewModel.handle(
+            .setProfileContext(nickname: viewModel.state.nickname, gender: gender, birthYear: birthYear)
         )
+        viewModel.handle(.genderBirthYearConfirmed(gender, birthYear))
     }
 }
 

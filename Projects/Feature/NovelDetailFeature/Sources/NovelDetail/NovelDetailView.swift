@@ -66,6 +66,11 @@ struct NovelDetailView: View {
     /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 어느 서버 호출에서 발생하든 공통.
     /// 화면 전환 "의도"가 아니라 세션 이벤트라 `onRoute`에 합치지 않는다.
     private let onAuthenticationRequired: () -> Void
+    /// 이 화면에서 발화한 피드 작성(`.createFeed` 라우트)이 성공해 복귀했다는 신호(#256) — App 탭 Root
+    /// 로컬 `@State`와 연결된 1회성 채널. 복귀 `onAppear`가 true를 소비(false로 되돌림)하고 피드 섹션을
+    /// 초기 로드처럼 리셋한다(새 글이 맨 위). 작성 화면은 발화한 작품 상세 바로 위에 push되므로 pop 시
+    /// 그 인스턴스의 onAppear가 먼저 소비한다(스택에 작품 상세가 여럿이어도 안전).
+    @Binding private var needsFeedReloadForCreatedFeed: Bool
 
     private let novelID: NovelID
     private let logger: Logger?
@@ -80,6 +85,7 @@ struct NovelDetailView: View {
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
+        needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) {
@@ -88,6 +94,7 @@ struct NovelDetailView: View {
         self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
         self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
         self.logger = logger
+        self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -98,7 +105,15 @@ struct NovelDetailView: View {
             .toolbar(.hidden, for: .navigationBar)
             // 네비바를 숨기면 스와이프 뒤로가기까지 함께 꺼진다 → 제스처만 따로 되살린다.
             .enableSwipeBack()
-            .onAppear { viewModel.handle(.load) }
+            .onAppear {
+                // 작성 성공 복귀면 피드 섹션 리셋을 먼저 — `.load`의 셀 동기화가 pending을 먼저 소비해
+                // 곧 버려질 요청을 내지 않게 한다. `.load`(작품 정보 조용한 갱신)는 그대로 항상 부른다.
+                if needsFeedReloadForCreatedFeed {
+                    needsFeedReloadForCreatedFeed = false
+                    viewModel.handle(.reloadFeedsForCreatedFeed)
+                }
+                viewModel.handle(.load)
+            }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
             .showWSSToast(isPresented: toastBinding, type: toastType)
@@ -240,7 +255,11 @@ struct NovelDetailView: View {
                                 scrollSpaceName: scrollSpaceName,
                                 onReachEnd: { viewModel.handle(.loadMoreFeeds) },
                                 onRetry: { viewModel.handle(.retryFeeds) },
-                                onFeedTapped: { onRoute(.feedDetail($0)) },
+                                onFeedTapped: { feedID in
+                                    // 돌아왔을 때 이 셀만 상세로 다시 맞추기 위해 떠나기 전에 기억시킨다(#256).
+                                    viewModel.handle(.feedVisited(feedID))
+                                    onRoute(.feedDetail(feedID))
+                                },
                                 onUserProfileTapped: { onRoute(.userProfile($0)) },
                                 onUnavailableUserProfileTapped: { viewModel.handle(.userProfileUnavailable) },
                                 onNovelTapped: { onRoute(.novelDetail($0)) },
@@ -313,6 +332,9 @@ private extension NovelDetailView {
 
             Spacer()
 
+            // 아이콘 크기 그대로는 탭 타깃이 너무 작아 라벨 패딩으로 터치영역을 넓힌다(아이콘 시각
+            // 위치는 그대로 — 아이콘 간 시각 간격 6+4+6=16, trailing 20 유지). threedots의 trailing 20도
+            // 라벨 안에 두어 디바이스 우측 끝까지 탭이 먹는다. 높이 44는 네비바(뒤로가기 프레임)와 동일.
             HStack(spacing: 0) {
                 Button {
                     isNotificationSettingSheetPresented = true
@@ -322,11 +344,14 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 24, height: 24)
                         .foregroundStyle(Color.wssBlack)
+                        .padding(.leading, 20)
+                        .padding(.trailing, 6)
+                        .frame(height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
-                Spacer().frame(width: 16)
+                Spacer().frame(width: 4)
 
                 Button {
                     isMenuPresented.toggle()
@@ -336,26 +361,27 @@ private extension NovelDetailView {
                         .resizable()
                         .frame(width: 20, height: 20)
                         .foregroundStyle(Color.wssBlack)
+                        .padding(.leading, 6)
+                        .padding(.trailing, 20)
+                        .frame(height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Spacer().frame(width: 20)
             }
         }
-        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(80pt)으로 맞춘다.
-        // 우측 클러스터(종 24pt+간격 16+threedots 20pt+trailing 간격 20 = 80pt)가 좌측(뒤로가기 44pt
-        // + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어, 좌측 여백도 80으로 맞춰야
-        // 대칭이 된다 — 코드상 44가 아니라 74인 건 이 6pt를 상쇄하기 위해서(74+6=80). 한쪽만
-        // 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
+        // 스크롤 반응형 네비 타이틀 — 화면 정중앙에 오도록 좌우 여백을 대칭(100pt)으로 맞춘다.
+        // 우측 클러스터(종 버튼 20+24+6=50pt + 간격 4 + threedots 버튼 6+20+20=46pt = 100pt, 터치영역
+        // 포함)가 좌측(뒤로가기 44pt + 이 HStack에 걸린 leading 6pt = 화면 기준 실제 50pt)보다 넓어,
+        // 좌측 여백도 100으로 맞춰야 대칭이 된다 — 코드상 94인 건 이 6pt를 상쇄하기 위해서(94+6=100).
+        // 한쪽만 실측값을 쓰면 타이틀이 더 넓은 우측 쪽으로 밀려 정중앙에서 벗어난다.
         .overlay {
             Text(novelTitle)
                 .applyWSSFont(.title2)
                 .foregroundStyle(Color.wssBlack)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.leading, 74)
-                .padding(.trailing, 80)
+                .padding(.leading, 94)
+                .padding(.trailing, 100)
                 .opacity(showNavTitle ? 1 : 0)
         }
         .padding(.leading, 6)
@@ -371,7 +397,13 @@ private extension NovelDetailView {
             GeometryReader { proxy in
                 Color.wssWhite
                     .opacity(showNavTitle ? 1 : 0)
-                    .allowsHitTesting(false)  // 네비바 영역에서 시작하는 드래그도 스크롤로 넘긴다.
+                    // 투명일 땐(히어로 위) 바 영역에서 시작하는 드래그를 스크롤로 넘기고,
+                    // 흰 배경이 콘텐츠를 덮는 동안엔 배경이 터치를 소비한다 — 안 그러면
+                    // 바에 가려 안 보이는 셀·버튼이 바 위 탭에 반응한다(탭 관통).
+                    // 감수한 손실: 솔리드 구간엔 바 영역(상단 44pt 밴드)에서 시작한 드래그로는
+                    // 스크롤할 수 없다 — 탭 관통을 막는 대가로 의도한 트레이드오프이니
+                    // "바 위에서 스크롤이 안 된다"는 이유로 false로 되돌리지 말 것(관통 재발).
+                    .allowsHitTesting(showNavTitle)
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navigationBarBottomY = height
                     }
@@ -672,6 +704,8 @@ private extension NovelDetailView {
             [
                 WSSDropdownItem(title: "수정하기") {
                     feedMenuContext = nil
+                    // 수정하고 돌아오면 이 셀만 상세로 다시 맞춘다(작성 성공 리셋은 작성에만 붙는다, #256).
+                    viewModel.handle(.feedVisited(feed.feedId))
                     onRoute(.editFeed(feed.feedId))
                 },
                 WSSDropdownItem(title: "삭제하기") {
@@ -769,6 +803,7 @@ private extension View {
                 loadNovelUseCase: PreviewLoadNovelUseCase(),
                 novelInterestUseCase: PreviewNovelInterestUseCase(),
                 loadNovelFeedsUseCase: PreviewLoadNovelFeedsUseCase(),
+                loadFeedDetailUseCase: PreviewLoadFeedDetailUseCase(),
                 feedLikeUseCase: PreviewFeedLikeUseCase(),
                 deleteFeedUseCase: PreviewDeleteFeedUseCase(),
                 deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase(),
@@ -830,6 +865,12 @@ private struct PreviewDeleteNovelReviewUseCase: DeleteNovelReviewUseCase {
 private struct PreviewFeedLikeUseCase: FeedLikeUseCase {
     func like(feedID: FeedID) async throws(RepositoryError) {}
     func unlike(feedID: FeedID) async throws(RepositoryError) {}
+}
+
+private struct PreviewLoadFeedDetailUseCase: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .notFound
+    }
 }
 
 private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {

@@ -13,6 +13,7 @@
 - `deviceTokenProvider`가 nil을 주면 FCM 등록은 **조용히 건너뛴다** — 푸시 인프라(APNs/FCM SDK)가 App에 아직 없어서(2026-08-31 기준) 의도된 동작. 인프라가 생기면 App 조립에서 실제 provider만 꽂으면 된다.
 - `checkForceUpdateRequired`는 조회 실패를 **그대로 던진다** — "실패는 통과" 정책은 `BootstrapAppUseCase`(SplashDomain)가 한 곳에서 결정한다. 여기서 삼키지 말 것.
 - `hasValidSession`은 토큰 **존재 여부만** 본다 — 만료 검증은 401 자동 재발급 경로(#184) 담당.
+- ⚠️ **`isOnboardingCompleted`(#257)만은 위임이 아니라 `AppStorage`(BaseData)를 직접 읽는다** — 그래서 이 모듈이 예외적으로 **BaseData에 의존**한다(`Project.swift`). `hasValidSession`이 `SessionTokenStore`(Keychain)를 직접 읽는 것과 같은 결의 로컬 조회라 "위임 전용" 원칙에 어긋나지 않는다(도메인 repo에 위임할 대상이 없는 순수 로컬 플래그). **값이 없으면 `?? true`(완료 간주)** — 기능 도입 전부터 로그인돼 있던 기존 유저를 온보딩으로 되돌리지 않기 위한 하위호환이니, 이 기본값을 false로 바꾸면 기존 유저가 전부 재로그인 유도된다.
 - ⚠️ **App 배선 때: `makeLaunchTaskRepository(recommendationRepository:)`에 넘길 인스턴스는 프리페치 store를
   주입하지 않은 쪽이어야 한다**(#225 리뷰). App에는 조립된 `RecommendationRepository`가 하나뿐이라 그대로
   넘기면 **프리페치가 스스로를 무효화한다**: `prefetchHomeData()`가 부르는 `fetchTodayDiscoveries()`가

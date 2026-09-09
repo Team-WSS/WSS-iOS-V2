@@ -75,9 +75,9 @@ struct CreateCollectionView: View {
 
             content
         }
-        // 미저장 초안이 있어 닫기 전 "그만하기" 확인 알럿을 강제하는 화면 — 스와이프로 그 확인을
-        // 건너뛰지 못하게 swipeBackEnabled: false(hidesBackButton으로 전역 pop 제스처를 막는다).
-        .wssCustomNavigationBar(swipeBackEnabled: false)
+        // 미저장 초안이 있어 닫기 전 "그만하기" 확인 알럿을 강제하는 화면 — 스와이프 pop은 막되,
+        // 스와이프 시도가 감지되면 back 버튼과 똑같이 requestClose(변경 없으면 즉시 닫힘, 있으면 알럿)를 부른다(#256).
+        .wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })
         .showWSSToast(isPresented: toastBinding, type: toastType)
             // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
             // 생성/수정 겸용 화면이라 타이틀만 모드에 따라 갈린다(사용자 확정) — 버튼 문구("그만하기"/

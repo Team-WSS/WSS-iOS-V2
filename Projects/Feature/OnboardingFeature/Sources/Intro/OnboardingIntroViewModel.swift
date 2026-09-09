@@ -31,6 +31,8 @@ final class OnboardingIntroViewModel {
         case loginStarted
         case login(SocialLoginCredential)
         case loginFailed
+        /// 사용자가 SDK 로그인 시트를 스스로 취소함 — 에러가 아니므로 토스트를 띄우지 않는다(#257).
+        case loginCancelled
         case dismissError
     }
 
@@ -65,6 +67,7 @@ final class OnboardingIntroViewModel {
         case .loginStarted:          state.isLoggingIn = true
         case .login(let credential): login(with: credential)
         case .loginFailed:           presentSDKLoginFailure()
+        case .loginCancelled:        cancelSDKLogin()
         case .dismissError:          state.hasLoginError = false
         }
     }
@@ -86,11 +89,18 @@ private extension OnboardingIntroViewModel {
         }
     }
 
-    /// Apple/Kakao SDK 자체 실패(사용자 취소 포함) — credential을 못 받아 UseCase까지 못 간 경우.
+    /// Apple/Kakao SDK 자체 실패(진짜 오류) — credential을 못 받아 UseCase까지 못 간 경우.
+    /// 사용자 취소는 여기가 아니라 `cancelSDKLogin()`으로 분기된다(#257 — 취소는 에러 토스트를 띄우지 않음).
     func presentSDKLoginFailure() {
-        logger?.error("소셜 로그인 SDK 실패(취소 포함)")
+        logger?.error("소셜 로그인 SDK 실패")
         state.isLoggingIn = false
         state.hasLoginError = true
+    }
+
+    /// 사용자가 소셜 로그인 시트를 스스로 취소함 — 정상 흐름이라 에러 토스트를 띄우지 않고 로딩만 해제한다(#257).
+    func cancelSDKLogin() {
+        logger?.info("소셜 로그인 사용자 취소")
+        state.isLoggingIn = false
     }
 }
 

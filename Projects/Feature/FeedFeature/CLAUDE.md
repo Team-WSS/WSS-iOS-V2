@@ -15,51 +15,83 @@
   상세가 `.notFound`/`.forbidden`(삭제·숨김·차단 — `FeedDetailViewModel.isFeedUnavailable`와 같은 판정)이면
   셀을 제거하고, 그 외 실패는 셀을 그대로 둔다(잘못 지우는 것보다 낫고 당겨서 새로고침으로 복구). 로딩·토스트
   없음. 스크롤·목록 길이 그대로.
-  - 왜: 목록을 다시 받으면 커서 0·20개로 줄어 깊이 스크롤한 위치가 위로 튄다. "보던 개수만큼 재조회"(작품 상세
-    피드 탭 `NovelFeedPageSizePolicy` 방식)는 상한 100에서 길이가 잘려 채택하지 않았다. V1도 피드 페이지는
-    진입 1회 로드였다(`V1_BEHAVIOR_CONTRACT.md` 1.1).
+  - 왜: 목록을 다시 받으면 커서 0·20개로 줄어 깊이 스크롤한 위치가 위로 튄다. "보던 개수만큼 재조회"(작품
+    상세 피드 탭이 #256 전까지 쓰던 `NovelFeedPageSizePolicy` 방식 — 새 글 유입 시 기존 글이 밀려나는 결함
+    까지 드러나 그쪽도 #256에서 이 화면과 같은 셀 동기화로 통일·정책 삭제)는 상한 100에서 길이가 잘려
+    채택하지 않았다. V1도 피드 페이지는 진입 1회 로드였다(`V1_BEHAVIOR_CONTRACT.md` 1.1).
   - ⚠️ 이 화면은 [Feature CLAUDE.md](../CLAUDE.md)의 "탭 콘텐츠는 탭 복귀마다 갱신" 규약의 **명시적 예외**다 —
     `.load`가 탭별 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds`로 첫 로드/셀 동기화를 가른다.
   - 실측(2026-09-03, iPhone 17 Pro 시뮬레이터·dev 서버·App 스킴): 소소피드 2페이지(40개) 깊이에서 셀 탭 →
     상세 좋아요 → 복귀 시 요청은 `GET /feeds/{id}` 1건뿐(목록 GET 없음), 셀 배치 그대로, 그 셀 좋아요만 1→2.
     홈 탭 왕복 시 피드 요청 0건·위치 유지. 상세에서 수정·삭제 후 복귀 반영도 확인(사용자 실측).
 - **전체 최신화는 당겨서 새로고침뿐**(`.pullToRefresh` → 현재 탭을 커서 0·20개로 교체, 인디케이터는
-  `awaitFeedsLoad()`로 로드 완료까지 유지). **다른 탭·다른 경로에서 일어난 좋아요/댓글/수정/삭제는 반영되지
-  않는다** — 의도된 절충(V1과 동일). 필요해지면 App `FeedListInvalidation`에 `edited(FeedID)`를 얹어 셀
-  동기화로 확장할 수 있다.
-- **피드 작성 완료(앱 어느 탭에서든)는 목록을 처음부터 다시 받고 스크롤을 최상단으로**(`.reloadForCreatedFeed` —
-  `state.listGeneration`이 `scrollIdentity`에 합쳐져 ScrollView가 새 뷰로 선다). 새 글이 이 목록에 들어오는
-  **유일한 경로**다. 신호는 App의 `FeedListInvalidation.feedCreatedVersion`(V1 `feedEdited` 알림 parity, 4탭
-  Root 작성 `onSubmitted`가 올림)을 `makeSosoFeedView(feedCreatedVersion:)`로 받아 View `onChange`가 반응한다.
-  **수정 완료엔 붙이지 않는다**(셀 동기화가 처리 — 붙이면 수정 후 복귀마다 스크롤이 튄다).
-- **탭/소소피드 옵션/필터/정렬 전환은 처음부터 다시**(`reloadFromScratch` — 진행 중 로드 취소 + 재대입) +
-  스크롤 최상단(`.id(scrollIdentity)`). **같은 값 재선택은 무시**한다 — 재로드하면 목록이 20개로 줄어 스크롤이 튄다.
+  `awaitFeedsLoad()`로 로드 완료까지 유지). **다른 탭·다른 경로에서 일어난 좋아요/댓글/작성/수정/삭제는
+  반영되지 않는다** — 의도된 절충(V1과 동일. #256에서 "앱 어느 탭에서든 작성 시 재로드"하던 전역 신호를
+  걷어내며 홈/서재/My 경유 작성도 이 절충에 합류했다).
+- **피드 탭 연필 아이콘으로 작성해 성공 복귀하면 두 목록(내 피드/소소피드)을 초기 로드처럼 완전히 새로 받는다**
+  (#256, `.reloadForCreatedFeed` — 두 목록·`myFeedsTotalCount`·탭별 hasLoaded를 전부 비우고 현재 탭을 커서
+  0·20개로 재로드. 목록이 비면 View 로딩 분기가 LoadingView로 갈아타 ScrollView가 새로 서며 스크롤도 자연히
+  최상단 — 예전 `listGeneration` 카운터는 제거됐다). 새 글이 이 목록에 들어오는 **유일한 경로**다. 신호는
+  App `FeedRootView` 로컬 `@State`를 `makeSosoFeedView(needsReloadForCreatedFeed:)`(Binding)로 받아 복귀
+  `onAppear`가 소비한다(true→false + 리셋. 예전 앱 전역 `FeedListInvalidation` 카운터는 #256에서 제거).
+  **수정 완료·작품 상세 경유 작성엔 켜지 않는다**(수정은 셀 동기화가 처리 — 켜면 복귀마다 스크롤이 튄다.
+  작품 상세 경유 작성은 그 작품 상세가 자기 피드 섹션을 리셋한다 — 사용자 확정).
+- **탭(내 피드↔소소피드) 전환은 재조회하지 않는다**(2026-09-09 사용자 확정) — 이미 세운 탭은 캐시를 그대로
+  보여주고 **탭별 스크롤 깊이까지 보존**된다. View가 두 리스트를 ZStack에 상시 mount하고 보이는 쪽만 켠다
+  (`tabList(for:)` — 숨은 쪽은 `opacity 0`+`allowsHitTesting(false)`+`accessibilityHidden(true)`. if/else로
+  갈아끼우면 branch 이탈 순간 UIScrollView가 파괴돼 스크롤이 리셋되므로 안 된다). 첫 진입·작성 복귀 후
+  첫 전환만 첫 로드를 탄다(`selectTab`이 `hasLoaded(tab)`이면 재조회 생략). 절충: 다른 유저의 변경은
+  전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
+- **소소피드 옵션/내 피드 필터/정렬 전환은 그 탭만 처음부터 다시**(`reloadFromScratch` — 진행 중 로드 취소 +
+  재대입) + 그 탭 스크롤 최상단(`.id(scrollIdentity(for:))` — 자기 축만 담겨 다른 탭 스크롤은 안 건드린다).
+  **같은 값 재선택은 무시**한다 — 재로드하면 목록이 20개로 줄어 스크롤이 튄다.
 - **좋아요**: 낙관 반영(두 목록 모두 — 내 글은 소소피드에도 섞여 나온다), 실패 시 스냅샷의 좋아요 두 필드만
   롤백(`preservingLikeState`, 목록별 스냅샷), 같은 셀 연타는 서버 동기화가 끝날 때까지 무시. 목록 교체·셀
-  동기화가 in-flight 좋아요를 되덮지 않게 `NovelDetailViewModel.refreshFeeds`와 같은 병합 보호를 건다.
+  동기화가 in-flight 좋아요를 되덮지 않게 병합 보호를 건다(전체 목록 재조회 병합의 정본은 UserPage 쪽).
+- **목록 로드 실패(첫 페이지·더보기·당겨서 새로고침·작성 복귀 재로드 불문)는 그 탭 콘텐츠 자리를
+  `NetworkErrorView`(재시도)로 대체한다**(#195 계약 적용, 2026-09-10) — 실패를 목록보다 먼저 판단하고(더보기
+  실패도 남은 목록을 걷어냄), 재시도는 그 탭을 비우고 처음부터 다시 세운다. 사용자 액션 실패(좋아요·삭제·
+  신고)는 `.networkDelay` 토스트 lane. 인증 만료의 예외 처리는 아직 없다(아래 주의사항).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
 - **네비바는 시스템 툴바가 아니라 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 패턴 정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). 이 모듈의 두 화면에 코드만 봐선 모르는 배치 결정이 있다:
-  - ⚠️ **`CreateFeedView`의 `WSSNavigationBar`는 content를 감싼 `allowsHitTesting`/`opacity`/`overlay(로딩)` 스코프 *밖*(바깥 VStack)에 둔다** — 제출 중(`isSubmitting`)·수정 로드 중(`isLoadingForEdit`)에도 back(→ `showDismissAlert` 확인 알럿)이 눌려야 하기 때문. content VStack 안에 넣으면 그 스코프에 걸려 back이 죽고 로딩 오버레이가 네비바까지 덮는다. **미저장 초안 확인 알럿이 있어 `swipeBackEnabled: false`**(스와이프로 확인을 건너뛰지 못하게). 이 화면은 principal 타이틀이 없어 `WSSNavigationBar(title: "")`.
+  - ⚠️ **`CreateFeedView`의 `WSSNavigationBar`는 content를 감싼 `allowsHitTesting`/`opacity`/`overlay(로딩)` 스코프 *밖*(바깥 VStack)에 둔다** — 제출 중(`isSubmitting`)·수정 로드 중(`isLoadingForEdit`)에도 back(→ `showDismissAlert` 확인 알럿)이 눌려야 하기 때문. content VStack 안에 넣으면 그 스코프에 걸려 back이 죽고 로딩 오버레이가 네비바까지 덮는다. **미저장 초안 확인 알럿이 있어 `swipeBackConfirmation: { showDismissAlert = true }`**(#256 — 스와이프 pop은 막되, 시도가 감지되면 back 버튼과 같은 확인 알럿이 뜬다). 이 화면은 principal 타이틀이 없어 `WSSNavigationBar(title: "")`.
   - ⚠️ **`FeedDetailView`의 threedots 드롭다운 `overlay(alignment: .topTrailing)`과 "바깥 탭 닫기" `onTapGesture`는 네비바를 감싼 VStack이 아니라 content(`Group`)에 걸어야 한다** — (1) `.padding(.top, 4)`가 네비바 *아래* 4pt에 드롭다운을 앉히려면 기준이 content 상단이어야 하고, (2) VStack(네비바 포함)에 `onTapGesture`를 걸면 네비바 trailing의 threedots 탭(`showFeedDropdown.toggle()`)과 부모 탭이 충돌한다. threedots는 `trailing` 슬롯으로 옮겼고, 일반 상세라 스와이프백은 허용(기본 true). ⚠️ **`loadedFeedDetailView` 안 ScrollView에 있던 중복 `.navigationBarBackButtonHidden()`는 제거했다** — 그게 `hidesBackButton=true`를 세우면 전역 pop 제스처 delegate가 이 화면 스와이프백을 거부해(swipe 허용과 모순) 죽는다.
 - ⚠️ **`SosoFeedViewModel`의 목록 로드는 `feedsTask` 한 슬롯**이고 동시성 불변식은 서재 `LibraryViewModel.loadPage`와
   같다(정본은 [LibraryFeature](../LibraryFeature/CLAUDE.md)): 시작 경로는 `nil` 확인(`load`/`loadMore`) 또는
   취소+즉시 재대입(`reloadFromScratch`) 둘 중 하나, 취소된 로드의 `defer`는 **아무것도 정리하지 않는다**
-  (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`isLoading`)는
+  (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`loadingTab` — 로드 중인 탭, Bool 아님: 상시 mount 구조에서 어느 탭의 스피너인지 잃으면 엉뚱한 탭에 뜬다)는
   Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.unknown`으로
   도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.unknown`; #244에서 오프라인만 `networkUnavailable`로
   가르며 취소는 `.unknown`이 됐다 — 값이 뭐든 로직엔 무관) — 실패 경로 첫 줄도
   `guard !Task.isCancelled`여야 옛 로드가 에러를 세우지 않는다. 다녀온 셀 동기화(`cellSyncTask`)는 별개 슬롯이고
   `reloadFromScratch`가 취소+nil로 함께 버린다.
+  - ⚠️ **`syncVisitedFeeds`의 슬롯 정리는 defer가 아니라 루프 끝 명시 정리 + 재귀 drain이다**(#256 리뷰) —
+    도는 동안 새로 쌓인 pending을 즉시 이어서 소비하려면 `cellSyncTask = nil` 후 자기 재귀를 불러야 하는데,
+    이 정리를 defer로 되돌리면 **재귀가 새로 대입한 다음 태스크를 defer가 도로 지워** 그 동기화가 유실된다
+    (defer는 마지막에 실행). 취소된 태스크는 여전히 아무것도 정리하지 않는다(취소한 쪽이 슬롯·대기열을 비움).
+    같은 이유로 `.load`의 `feedsTask == nil` 가드는 **첫 로드 분기에만** 걸려 있다 — 셀 동기화는 별개
+    슬롯이라 더보기가 in-flight인 복귀에도 진행해야 한다(가드를 함수 전체로 되돌리면 그 복귀의 동기화가
+    다음 재진입까지 밀린다).
 - ⚠️ **재진입 `.load`의 첫 로드/셀 동기화 분기는 탭별 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds` 플래그다 —
   `state.myFeeds.isEmpty`로 대체하면 안 된다.** 피드 0건 유저는 첫 로드가 성공해도 배열이 비어, 복귀마다
   `LoadingView`↔빈 뷰가 깜빡인다(서재 `hasLoadedContent`와 같은 이유).
 - 재로드가 도는 중 바닥에 닿은 `loadMore`는 슬롯 가드에 조용히 드롭된다(작품 상세·서재와 같은 좁은 창 — 스크롤
   재실현으로 복구). "밀린 요청 기억" 방어는 넣지 말 것(서재 #195에서 더 나쁜 결함으로 판명).
-- `SosoFeedViewModel.state.errorMessage`는 View가 어디서도 읽지 않는 죽은 상태다(목록 로드 실패가 무표시) —
-  이 화면(`SosoFeedView`)엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
-  재진입 갱신 작업의 범위 밖으로 남겨둔 것. **`FeedDetailView`는 이와 별개로 #244에서 auth 라우팅이 들어왔다**(아래).
+- **목록 로드 실패는 탭별 `myFeedsLoadError`/`sosoFeedsLoadError`(`RepositoryError?`)가 표현한다**(2026-09-10,
+  #195 계약 적용 — 예전엔 View가 안 읽는 죽은 `errorMessage`뿐이라 무표시였고, #256 작성 복귀 리셋 실패 시
+  "아직 남긴 기록이 없어요" 빈 화면 트랩이 감수 사항으로 남아 있었다 — 이제 실패 뷰+재시도로 해소).
+  재시도(`.retryLoad`)는 그 탭 목록을 비우고 `reloadFromScratch`를 태운다 — 더보기 실패로 목록이 남아 있던
+  경우도 로딩 분기로 갈아탄다(옛 목록이 재시도 중 잠깐 비치지 않게, `NovelDetailViewModel.retryFeeds`와 같은
+  결). `reloadFromScratch`가 시작 시 그 탭 에러를 되돌리므로 실패 뷰와 로딩이 공존하지 않는다(안 되돌리면
+  재시도 버튼이 "눌러도 반응 없는" 상태가 된다 — NovelDetail `selectTab`에서 실측된 함정). 사용자 액션
+  실패(좋아요·삭제·신고)는 `isActionFailedToastPresented` → `.networkDelay` 토스트(FeedDetail과 동일 lane).
+  - ⚠️ **인증 만료 라우팅(`onAuthenticationRequired`)은 여전히 없다**(`App/FeedRootView` 주석 참고) — 계약상
+    auth는 실패 뷰 대신 로그인 라우팅이어야 하지만 이 화면엔 그 lane 자체가 없어, 401도
+    `NetworkErrorView`의 default("일시적 오류")로 흡수된다(재시도는 같은 401로 되돌아온다 — 조용한 빈
+    화면이던 예전보단 낫지만 근본 해결은 라우팅 배선, FeedFeature 후속 작업). **`FeedDetailView`는 이와
+    별개로 #244에서 auth 라우팅이 들어왔다**(아래).
 - **`FeedDetailView`의 인증 만료 라우팅은 로드 경로에만 건다**(#244) — `FeedDetailViewModel`이
   `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고, **상세/댓글/프로필 이미지
   로드**(`loadFeed`·`loadComments`·`loadCurrentUserProfileImage`)의 catch에서 실패 플래그·알럿보다 **먼저** 걸러
@@ -107,10 +139,10 @@
     목록 재조회 없이 다녀온 셀만 동기화되는지(스크롤 유지·좋아요/댓글수/삭제 반영)를 앱 로그인 없이 보기 위한
     배선. Demo 앱 진입 씬(`FeedFeatureDemoApp`)도 이 씬으로 바꿔뒀다.
     ⚠️ **Demo 실서버 모드는 `TEST_API_KEY`(`Config/Config_Debug.xcconfig` → Info.plist)가 만료되면
-    `authenticationRequired`로 조용히 실패해 "0개의 기록 / 아직 남긴 기록이 없어요"가 뜬다** — 이 화면은
-    인증 만료 라우팅도 에러 표시도 없어(`state.errorMessage`는 View가 안 읽음) "피드가 없는 계정"으로 오진하기
-    딱 좋다(2026-09-03 실측 — OSLog에 `피드 목록 로드 실패(reload(...)): authenticationRequired`가 찍혔다).
-    빈 목록이 뜨면 먼저 OSLog(`kr.websoso.FeedFeatureDemo:feed`)부터 볼 것. 토큰 갱신은 사람만 할 수 있다.
+    `authenticationRequired`로 실패해 "일시적인 오류가 발생했어요" 실패 뷰가 뜬다**(2026-09-10부터 —
+    예전엔 무표시라 "0개의 기록 / 아직 남긴 기록이 없어요"로 떠 "피드가 없는 계정" 오진이 잦았다,
+    2026-09-03 실측). 재시도를 눌러도 같은 401이라 안 풀린다 — 실패 뷰가 뜨면 OSLog
+    (`kr.websoso.FeedFeatureDemo:feed`)에서 `authenticationRequired`인지부터 볼 것. 토큰 갱신은 사람만 할 수 있다.
   - **피드 상세 데모는 씬이 둘이다** — `FeedDetailDemoScene`은 실서버(`NetworkingClient` + 토큰)로만
     떠서 네트워크가 막힌 시뮬레이터/샌드박스에선 화면 자체가 안 뜬다. `FeedDetailMockDemoScene`은
     mock UseCase 12개를 주입해 **dev 서버 없이** 상세를 띄우고, create/edit/delete UseCase가 일부러
@@ -122,10 +154,12 @@
 - 이 조합 로직 때문에 FeedFeature가 `ProfileDomain`(다른 최상위 도메인)을 직접 의존한다 — Domain 레이어 규칙상 Domain끼리는 `BaseDomain` 외 서로 의존 못 하므로, 이런 두 도메인 조합은 Feature(ViewModel) 레벨에서 한다.
 - `MyFeedOption.sortType`은 genres/visibilityType과 달리 필터 시트의 draft→`applyMyFeedFilter` 커밋 흐름을 타지 않는다. `WSSSortButton` 탭이 `.toggleMyFeedSort`로 `state.myFeedOption`을 즉시 갱신하고 바로 재조회한다(시트를 열 필요 없음) — 필터 시트가 열릴 때 draft가 `resetMyFeedFilterDraft`로 이 값도 그대로 복사해가므로 두 경로가 어긋나지 않는다.
 - `state.myFeedOption.genres` 기본값은 "전체 선택" UX를 `NovelGenre.allCases`(9개 전부) + `includesUncategorized: true`로 표현한다(연결 작품 없는 내 피드까지 포함). FeedData는 이를 그대로 명시적 장르 필터로 보낼 뿐 정규화하지 않는다 — 카테고리 칩(장르+"그 외")을 전부 해제하면 `MyFeedOption.genres == []`가 되고 FeedData의 `genres.isEmpty ? nil : genres`가 이를 무필터로 해석해 전체 목록이 온다. **이는 의도된 동작**(빈 선택 = 무필터)이라 공개/비공개 체크박스와 달리 최소 1개 선택 가드를 두지 않는다.
-- **피드 셀 threedots 드롭다운**(`SosoFeedView.feedMenuContext`)은 `NovelDetailFeature`의 같은 패턴을 참고했지만 좌표공간 태깅 위치가 다르다 — `NovelDetailView`는 몰입형 헤더라 `ScrollView` 자체에 `coordinateSpace(name:)`를 걸고 `ignoresSafeArea`로 화면 최상단과 맞춘다. `SosoFeedView`는 일반 화면(시스템 safe area 존중)이라 그 방식 대신 **루트 `ZStack`에 직접 `coordinateSpace(name: feedMenuSpaceName)`를 건다** — 셀 앵커(`cellTopYs`)와 오버레이(`feedMenuOverlay`)가 같은 루트의 형제이므로 이러면 별도 오프셋 계산 없이 좌표가 바로 맞는다. 이 화면에 몰입형 헤더 같은 걸 얹게 되면 이 가정이 깨지니 재검토할 것.
+- **피드 셀 threedots 드롭다운**(`SosoFeedView.feedMenuContext`)은 `NovelDetailFeature`의 같은 패턴을 참고했지만 좌표공간 태깅 위치가 다르다 — `NovelDetailView`는 몰입형 헤더라 `ScrollView` 자체에 `coordinateSpace(name:)`를 걸고 `ignoresSafeArea`로 화면 최상단과 맞춘다. `SosoFeedView`는 일반 화면(시스템 safe area 존중)이라 그 방식 대신 **루트 `ZStack`에 직접 `coordinateSpace(name: feedMenuSpaceName)`를 건다** — 셀 앵커(탭별 `myFeedCellTopYs`/`sosoFeedCellTopYs`)와 오버레이(`feedMenuOverlay`)가 같은 루트의 형제이므로 이러면 별도 오프셋 계산 없이 좌표가 바로 맞는다. 이 화면에 몰입형 헤더 같은 걸 얹게 되면 이 가정이 깨지니 재검토할 것.
 - 피드 삭제/신고 확인·완료 알럿은 `WSSComponent`의 공용 `WSSAlertType`(`deleteMyFeed`/`reportSpoilerContent`/`reportImproperContent`/`receivedReportSpoilerContent`/`receivedReportImproperContent`) 5종을 그대로 재사용한다 — `NovelDetailFeature`와 동일한 타입을 공유하므로 카피를 바꾸려면 두 Feature 모두에 영향이 간다.
-- **탭(내 피드/소소피드)·소소피드 옵션(전체글/추천글)·내 피드 필터(장르/공개여부/정렬) 전환 시 스크롤이 이전 위치에 남는 문제**는 `FeedListSection`의 `ScrollView`에 `.id(scrollIdentity)`를 걸어 해결한다 — `scrollIdentity`는 이 모든 축(탭, 소소피드 옵션, `myFeedOption`의 genres/includesUncategorized/visibilityType/sortType) + 작성 완료 재로드 카운터(`state.listGeneration`)를 문자열로 합친 값이라 그중 하나라도 바뀌면 SwiftUI가 ScrollView를 "새 뷰"로 취급해 스크롤 오프셋을 버리고 최상단부터 다시 그린다. 배열 교체 자체는 `reloadFromScratch`가 하므로, 이 `.id()`는 순수하게 "화면(스크롤 위치)"만 리셋하는 역할이다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. **새 필터 축을 추가하면 `scrollIdentity`에도 반영해야** 그 축 변경 시에도 스크롤이 리셋된다.
+- **소소피드 옵션(전체글/추천글)·내 피드 필터(장르/공개여부/정렬) 전환 시 스크롤이 이전 위치에 남는 문제**는 각 탭 `ScrollView`에 `.id(scrollIdentity(for:))`를 걸어 해결한다 — 그 탭의 자기 축(내 피드=genres/includesUncategorized/visibilityType/sortType, 소소피드=옵션)만 문자열로 합친 값이라 그중 하나가 바뀌면 SwiftUI가 그 탭 ScrollView만 "새 뷰"로 취급해 스크롤 오프셋을 버리고 최상단부터 다시 그린다(**탭 축은 일부러 없다** — 탭 전환은 스크롤 보존이 계약, 위 화면 동작 계약 참고). 배열 교체 자체는 `reloadFromScratch`가 하므로, 이 `.id()`는 순수하게 "화면(스크롤 위치)"만 리셋하는 역할이다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. **새 필터 축을 추가하면 그 탭 `scrollIdentity(for:)`에도 반영해야** 그 축 변경 시에도 스크롤이 리셋된다. 작성 완료 재로드는 이 장치를 안 탄다 — 두 목록을 통째로 비워 로딩/빈 분기로 갈아타므로 ScrollView가 내려갔다 새로 서며 자연히 리셋된다(예전 `listGeneration` 항은 #256에서 제거).
+- ⚠️ **두 탭 리스트 상시 mount(2026-09-09)의 파생 함정 2개** — ① 셀 상단 y 실측(`myFeedCellTopYs`/`sosoFeedCellTopYs`)은 **탭별 딕셔너리로 분리**돼 있다. 내 글은 같은 feedId가 양쪽 리스트에 동시에 있어, 한 딕셔너리로 합치면 숨은 리스트의 GeometryReader가 보이는 쪽 threedots 앵커를 덮어써 드롭다운이 엉뚱한 y에 뜬다. ② `.loadMore(FeedTab)`은 발화한 탭을 실어 보내고 VM이 `tab == state.selectedTab`이 아니면 버린다 — 숨은 리스트도 레이아웃은 살아 있어서, 삭제(`removeCell`)로 셀이 밀려 올라오며 숨은 쪽 마지막 셀이 새로 실현되면 onAppear가 발화하는데, 가드가 없으면 그게 **현재 탭**의 다음 페이지를 당겨버린다. 숨은 리스트에 상호작용/실현 부수효과가 있는 장치를 새로 달 땐 이 두 사례처럼 "어느 탭에서 온 신호인지"를 항상 판별할 것.
 - 피드 셀 좋아요 버튼은 `feedRow`에서 `WSSFeadView`의 `likeButtonTapped`로 `.toggleLike(feed.feedId)`를 발화한다 — 낙관 반영/실패 롤백은 `SosoFeedViewModel.toggleLike`(엔티티 `TotalFeed.toggleLike()` 사용) 참고.
+- **셀 제거(`removeCell` — 삭제·셀 동기화의 notFound/forbidden)는 "n개의 기록" 헤더(`myFeedsTotalCount`)도 함께 내린다** — 안 내리면 다 지워도 헤더만 옛 개수로 남는 모순이 생긴다(2026-09-09 실측 발견·수정). 로드된 `myFeeds`에 있던 것만 판별 가능한 best-effort고, 놓친 케이스는 당겨서 새로고침이 서버 값으로 복구한다.
 - **화면 전환 의도는 `onRoute: (SosoFeedRoute) -> Void` 하나로 나간다**(#253 — 낱개 클로저 5개(`onFeedTapped`/`onCreateFeedTapped`/`onEditFeedTapped`/`onUserProfileTapped`/`onNovelTapped`)와 기본값 no-op을 통합·제거). 셀 탭(안쪽 인터랙션 제외)=`.feedDetail`, 프로필 탭(`Author.userId` nil이면 호출 안 함)=`.userProfile`, 연결 작품 배너=`.novelDetail`, 연필 아이콘=`.createFeed`, 내 글 "수정하기"=`.editFeed`. 정본은 `Sources/Navigation/SosoFeedRoute.swift`.
   - **내 글이면 프로필 탭 자체가 비활성화된다** — `feedRow`가 `WSSFeadView`에 `isProfileTappable: !feed.isMyFeed`를 넘긴다(내 프로필로 "이동"할 곳이 없어서, #196). 탭이 죽은 영역이 되는 게 아니라 그대로 행의 나머지 영역과 동일하게 피드 상세 진입으로 흘러간다 — 구현 방식은 `WSSComponent/CLAUDE.md`의 `isProfileTappable` 항목 참고. 소소피드 탭에 내 글이 섞여 나오는 경우(전체글/추천글)도 `feed.isMyFeed` 기준이라 탭과 무관하게 항상 맞게 적용된다.
   - ⚠️ **`FeedDetailView`(피드 상세, 목록과는 별개 화면)의 프로필 탭은 #197까지 `print`만 찍는 죽은 버튼이었다** — `makeSosoFeedView`가 처음부터 `onUserProfileTapped`를 가졌던 것과 달리, `makeFeedDetailView`엔 그 파라미터 자체가 없었다(사용자 리포트로 발견, 2026-08-28). 이제 `FeedDetailView`/`makeFeedDetailView` 둘 다 `FeedDetailRoute.userProfile`(#253 전엔 `onUserProfileTapped` 낱개 클로저)로 받고, `viewModel.isMyFeed`로 `isProfileTappable`을 계산해 `WSSFeadHeaderView`에 넘긴다 — 목록 화면과 동일한 계약이 됐다. 이 화면에 새 콜백형 진입점을 추가할 때 "Factory에 파라미터가 있다고 View까지 실제로 쓰는 건 아니다"를 전제로 짝을 맞춰 확인할 것.

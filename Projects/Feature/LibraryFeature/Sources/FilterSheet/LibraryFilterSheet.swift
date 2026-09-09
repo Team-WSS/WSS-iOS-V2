@@ -296,7 +296,7 @@ private extension LibraryFilterSheet {
     /// 매력포인트 — 6개 균등, 아이콘 36 + 라벨. 선택 시 보라.
     var attractivePointContent: some View {
         HStack(spacing: 0) {
-            ForEach(AttractivePoint.displayOrder, id: \.self) { point in
+            ForEach(AttractivePoint.allCases, id: \.self) { point in
                 attractivePointItem(point)
                     .frame(maxWidth: .infinity)
             }

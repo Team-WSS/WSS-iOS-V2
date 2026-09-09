@@ -76,6 +76,21 @@ struct TodayDiscoveryCard: View {
             .clipShape(RoundedRectangle(cornerRadius: Metric.cornerRadius))
             .contentShape(Rectangle())
         }
+        // 기본(automatic) 스타일을 쓰면 눌림 투명도가 카드의 층(블러 배경·그라데이션·표지·머티리얼
+        // 패널)마다 따로 걸려 밝은 층만 씻겨나가고 어두운 표지만 도드라진다(실기기 리포트).
+        .buttonStyle(UnifiedFadeButtonStyle())
+    }
+}
+
+/// 다층 카드를 **한 장으로 합성한 뒤** 전체를 같은 비율로 옅어지게 하는 눌림 스타일.
+/// `compositingGroup()`이 핵심 — 이게 없으면 opacity가 층마다 분배돼 겹친 반투명 레이어들이
+/// 서로 비쳐 보인다(기본 스타일의 증상과 동일).
+private struct UnifiedFadeButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .compositingGroup()
+            .opacity(configuration.isPressed ? 0.3 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
     }
 }
 
@@ -93,7 +108,9 @@ private extension TodayDiscoveryCard {
     /// 위아래가 같이 잘려 표지의 인상(제목·인물)이 사라진다(구 레포도 `alignment = .top`).
     var backdrop: some View {
         ZStack {
-            WSSNovelCoverImage(url: discovery.novelThumbnailImage)
+            // .backdrop: 로딩 스피너를 안 그린다 — alignment .top 자리에 놓인 스피너가 아래 blur에
+            // 뭉개져 카드 상단 중앙에 회색 네모 잔상으로 보였다(실측). 전경 표지가 이미 스피너를 돌린다.
+            WSSNovelCoverImage(url: discovery.novelThumbnailImage, placeholderStyle: .backdrop)
                 .frame(width: Metric.width, height: Metric.height, alignment: .top)
                 .clipped()
                 // 구 레포는 `CIGaussianBlur`(radius 8) + `CIAffineClamp`를 원본 이미지에 구웠다 —

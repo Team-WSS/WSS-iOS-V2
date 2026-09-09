@@ -119,6 +119,66 @@ struct BootstrapAppUseCaseTests {
         #expect(outcome == .intro)
     }
 
+    // MARK: - 2-1. 온보딩 게이트 — 세션은 있으나 가입 미완료면 인트로로(#257)
+
+    @Test("세션은 있으나 온보딩(가입)을 끝내지 않았으면 intro를 반환한다")
+    func sessionWithoutOnboardingRoutesToIntro() async {
+        let gate = MockLaunchGateRepository()
+        gate.hasValidSessionReturnValue = true
+        gate.isOnboardingCompletedReturnValue = false
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .intro)
+    }
+
+    @Test("온보딩 미완료면 부수 태스크를 하나도 시작하지 않는다")
+    func onboardingIncompleteSkipsLaunchTasks() async {
+        let gate = MockLaunchGateRepository()
+        gate.isOnboardingCompletedReturnValue = false
+        let spy = BackgroundWorkSpy()
+        let sut = makeSUT(gate: gate, spy: spy)
+
+        _ = await sut.execute()
+
+        #expect(spy.capturedCount == 0)
+    }
+
+    @Test("온보딩 미완료면 약관을 조회하지 않는다")
+    func onboardingIncompleteSkipsTermsCheck() async {
+        let gate = MockLaunchGateRepository()
+        gate.isOnboardingCompletedReturnValue = false
+        let sut = makeSUT(gate: gate)
+
+        _ = await sut.execute()
+
+        #expect(gate.isRequiredTermsAgreedCallCount == 0)
+    }
+
+    @Test("세션이 없으면 온보딩 완료 여부는 아예 확인하지 않는다")
+    func noSessionSkipsOnboardingCheck() async {
+        let gate = MockLaunchGateRepository()
+        gate.hasValidSessionReturnValue = false
+        let sut = makeSUT(gate: gate)
+
+        _ = await sut.execute()
+
+        #expect(gate.isOnboardingCompletedCallCount == 0)
+    }
+
+    @Test("세션이 있고 온보딩도 끝냈으면 온보딩 게이트를 통과해 main으로 진입한다")
+    func sessionWithOnboardingEntersMain() async {
+        let gate = MockLaunchGateRepository()
+        gate.hasValidSessionReturnValue = true
+        gate.isOnboardingCompletedReturnValue = true
+        let sut = makeSUT(gate: gate)
+
+        let outcome = await sut.execute()
+
+        #expect(outcome == .main(needsTermsAgreement: false))
+    }
+
     // MARK: - 3. 부수 태스크 4종 — 던지고 진입(fire-and-forget), 실패·지연이 진입을 막지 않는다
 
     @Test("세션이 있으면 부수 태스크 4종을 모두 시작한다")
@@ -329,6 +389,8 @@ private final class HangingLaunchGateRepository: LaunchGateRepository, @unchecke
     }
 
     func hasValidSession() -> Bool { true }
+
+    func isOnboardingCompleted() -> Bool { true }
 
     func checkForceUpdateRequired() async throws(RepositoryError) -> Bool {
         if hangsForceUpdate { await hang() }

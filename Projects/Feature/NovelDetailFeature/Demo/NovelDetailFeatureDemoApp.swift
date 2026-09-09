@@ -351,6 +351,7 @@ private struct DemoRootView: View {
                 loadNovelUseCase: DemoLoadNovelUseCase(scenario: scenario, reviewDeletion: reviewDeletion),
                 novelInterestUseCase: DemoNovelInterestUseCase(),
                 loadNovelFeedsUseCase: DemoLoadNovelFeedsUseCase(scenario: scenario),
+                loadFeedDetailUseCase: DemoLoadFeedDetailUseCase(),
                 feedLikeUseCase: DemoFeedLikeUseCase(),
                 deleteFeedUseCase: DemoDeleteFeedUseCase(),
                 deleteNovelReviewUseCase: DemoDeleteNovelReviewUseCase(reviewDeletion: reviewDeletion),
@@ -421,6 +422,7 @@ private struct DemoRootView: View {
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),
+            loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: feedRepository),
             feedLikeUseCase: DefaultLikeUseCase(feedRepository: feedRepository),
             deleteFeedUseCase: DefaultDeleteFeedUseCase(repository: feedRepository),
             deleteNovelReviewUseCase: DefaultDeleteNovelReviewUseCase(repository: novelReviewRepository),
@@ -605,6 +607,14 @@ private struct DemoFeedLikeUseCase: FeedLikeUseCase {
 private struct DemoDeleteFeedUseCase: DeleteFeedUseCase {
     func execute(feedID: FeedID) async throws(RepositoryError) {
         try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+}
+
+/// Mock 다녀온 셀 동기화(#256) — Demo엔 이 시나리오가 없어 항상 실패(.unknown)로 둔다.
+/// 실패 시 셀을 그대로 두는 조용한 실패 계약이라 화면엔 아무 변화가 없다(로그만).
+private struct DemoLoadFeedDetailUseCase: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .unknown
     }
 }
 

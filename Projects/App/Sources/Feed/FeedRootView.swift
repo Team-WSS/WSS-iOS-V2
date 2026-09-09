@@ -32,9 +32,10 @@ import WSSComponent
 /// 재사용)까지 push한다.
 ///
 /// ⚠️ **`makeSosoFeedView` 자체는 `onAuthenticationRequired`를 안 받는다** — 그 콜백을 아예 몰라서
-/// 소소피드/내 피드 로드가 401로 막혀도 이 화면은 조용히 빈 상태로 남는다(Feature/CLAUDE.md의 "인증
-/// 만료 처리 계약"이 이 화면엔 아직 안 들어와 있음, App 쪽에서 고칠 수 있는 부분이 아니라 FeedFeature
-/// 쪽 후속 작업). 다만 여기서 push하는 **작품 상세(`NovelDetailFactory`)는 그 콜백을 받으므로**, 그
+/// 소소피드/내 피드 로드가 401로 막히면 로그인 라우팅 대신 탭 콘텐츠 자리의 실패 뷰("일시적 오류",
+/// 2026-09-10부터 — 그 전엔 조용한 빈 상태)로 흡수된다(Feature/CLAUDE.md의 "인증 만료 처리 계약"이
+/// 이 화면엔 아직 안 들어와 있음, App 쪽에서 고칠 수 있는 부분이 아니라 FeedFeature 쪽 후속 작업).
+/// 다만 여기서 push하는 **작품 상세(`NovelDetailFactory`)는 그 콜백을 받으므로**, 그
 /// 안에서 발생하는 인증 만료는 정상적으로 처리하도록 `onAuthenticationRequired`를 받아 전달한다.
 struct FeedRootView: View {
 
@@ -92,6 +93,12 @@ struct FeedRootView: View {
     /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
     /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
     @State private var crossScreenFeedback = CrossScreenFeedbackState()
+    /// 연필 아이콘 작성 성공 복귀 신호(#256) — 피드 탭 목록(`SosoFeedView`)이 onAppear에서 소비해 두 목록을
+    /// 초기 로드처럼 다시 받는다. 작품 상세 경유 작성(`.createFeedFromNovel`)은 이 신호를 켜지 않는다.
+    @State private var needsFeedListReloadForCreatedFeed = false
+    /// 작품 상세발 피드 작성(`.createFeedFromNovel`) 성공 복귀 신호(#256) — 복귀한 그 작품 상세가
+    /// onAppear에서 소비해 자기 피드 섹션을 초기 로드처럼 리셋한다(4탭 공통 배선).
+    @State private var needsNovelDetailFeedReload = false
 
     /// 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시(`FeedDetailAssembly.currentUserID`와 동일
     /// 출처) — 내 프로필로의 "타유저 프로필" 진입을 막는 라우팅 가드에 쓴다.
@@ -111,8 +118,8 @@ struct FeedRootView: View {
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
-                // 앱 어느 탭에서든 피드 작성이 끝나면 오르는 카운터 — 목록이 새 글을 받는 유일한 경로(`FeedListInvalidation`).
-                feedCreatedVersion: dependencies.feedListInvalidation.feedCreatedVersion,
+                // 연필 아이콘 작성 성공 복귀 시에만 켜지는 1회성 신호 — 목록이 새 글을 받는 유일한 경로(#256).
+                needsReloadForCreatedFeed: $needsFeedListReloadForCreatedFeed,
                 onRoute: { route in
                     switch route {
                     case .feedDetail(let feedID):
@@ -143,9 +150,9 @@ struct FeedRootView: View {
                     case .notificationDetail(let id):
                         notificationDetailView(id)
                     case .createFeed:
-                        createFeedView(connectedNovel: nil)
+                        createFeedView(connectedNovel: nil, reloadsFeedListOnSubmit: true)
                     case .createFeedFromNovel(let connectedNovel):
-                        createFeedView(connectedNovel: connectedNovel)
+                        createFeedView(connectedNovel: connectedNovel, reloadsFeedListOnSubmit: false)
                     case .editFeed(let feedID):
                         FeedDetailAssembly.makeEditFeedView(
                             feedID: feedID,
@@ -355,6 +362,7 @@ private extension FeedRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            needsFeedReloadForCreatedFeed: $needsNovelDetailFeedReload,
             onRoute: { route in
                 switch route {
                 case .review(let information, let status):
@@ -439,7 +447,10 @@ private extension FeedRootView {
 private extension FeedRootView {
     /// `.createFeed`(연필 아이콘)는 `nil`로, `.createFeedFromNovel`(작품 상세)은 그 작품으로 이 헬퍼를
     /// 공유한다 — `connectedNovel`이 있으면 작성 화면이 그 작품이 미리 연결된 상태로 뜬다.
-    func createFeedView(connectedNovel: ConnectedNovel?) -> some View {
+    /// `reloadsFeedListOnSubmit`은 연필 아이콘 경로만 true(#256) — 작성 성공 복귀 시 피드 탭 목록이 두 목록을
+    /// 초기 로드처럼 다시 받는다. 작품 상세 경유 작성은 그 작품 상세가 자기 피드 섹션을 리셋하므로(사용자 확정)
+    /// 이 목록엔 신호를 보내지 않는다.
+    func createFeedView(connectedNovel: ConnectedNovel?, reloadsFeedListOnSubmit: Bool) -> some View {
         FeedFeatureFactory.makeCreateFeedView(
             createFeedUseCase: DefaultCreateFeedUseCase(repository: dependencies.feedRepository),
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
@@ -447,7 +458,12 @@ private extension FeedRootView {
             connectedNovel: connectedNovel,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
-                dependencies.feedListInvalidation.markFeedCreated()
+                if reloadsFeedListOnSubmit {
+                    needsFeedListReloadForCreatedFeed = true
+                } else {
+                    // 작품 상세 경유(.createFeedFromNovel) — 복귀할 그 작품 상세가 자기 피드 섹션을 리셋한다.
+                    needsNovelDetailFeedReload = true
+                }
             }
         )
     }

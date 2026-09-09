@@ -87,10 +87,13 @@ let appBaseSettings: SettingsDictionary = env.baseSetting.merging([
 let targets: [Target] = [
     .target(
         name: env.targetName,
-        destinations: .iOS,
+        destinations: env.destination,
         product: .app,
         productName: env.appName,
         bundleId: env.releaseBundleId,
+        // ⚠️ deploymentTargets가 없으면 IPHONEOS_DEPLOYMENT_TARGET 미설정 → Xcode 기본(최신 SDK)이 돼
+        // 최신 iOS에서만 설치 가능해진다. 모듈들과 같은 env 값(17.0)을 명시한다.
+        deploymentTargets: env.deploymentTarget,
         infoPlist: .file(path: "Support/Info.plist"),
         sources: ["Sources/**"],
         // ⚠️ 이게 빠져있어 Resources/Assets.xcassets(앱 아이콘 포함)가 빌드에 전혀 안 들어가고
@@ -179,9 +182,10 @@ let targets: [Target] = [
     ),
     .target(
         name: env.targetTestName,
-        destinations: .iOS,
+        destinations: env.destination,
         product: .unitTests,
         bundleId: "\(env.organizationName).\(env.targetName)Tests",
+        deploymentTargets: env.deploymentTarget,
         infoPlist: .file(path: "Support/Info.plist"),
         sources: ["Tests/**"],
         resources: [],

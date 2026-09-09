@@ -11,6 +11,7 @@ import Testing
 
 @testable import SplashData
 import BaseDomain
+import BaseData
 import Networking
 import SettingDomain
 import SettingDomainTesting
@@ -43,6 +44,34 @@ struct DefaultLaunchGateRepositoryTests {
         let sut = makeSUT(tokenStore: StubSessionTokenStore(error: StubError.keychain))
 
         #expect(sut.hasValidSession() == false)
+    }
+
+    // MARK: - isOnboardingCompleted (#257)
+
+    @Test("isRegistered가 true면 온보딩 완료로 판정한다")
+    func registeredMeansOnboardingCompleted() {
+        let appStorage = StubAppStorage()
+        appStorage.set(.isRegistered, true)
+        let sut = makeSUT(appStorage: appStorage)
+
+        #expect(sut.isOnboardingCompleted() == true)
+    }
+
+    @Test("isRegistered가 false면 온보딩 미완료로 판정한다")
+    func notRegisteredMeansOnboardingIncomplete() {
+        let appStorage = StubAppStorage()
+        appStorage.set(.isRegistered, false)
+        let sut = makeSUT(appStorage: appStorage)
+
+        #expect(sut.isOnboardingCompleted() == false)
+    }
+
+    // 기능 도입 전부터 로그인돼 있던 기존 유저는 이 키가 없다 — 온보딩으로 되돌리면 안 되므로 완료로 간주.
+    @Test("isRegistered 값이 없으면(기존 로그인 유저) 온보딩 완료로 간주한다")
+    func missingRegisteredDefaultsToCompleted() {
+        let sut = makeSUT(appStorage: StubAppStorage())
+
+        #expect(sut.isOnboardingCompleted() == true)
     }
 
     // MARK: - checkForceUpdateRequired
@@ -128,12 +157,14 @@ extension DefaultLaunchGateRepositoryTests {
 
     private func makeSUT(
         tokenStore: SessionTokenStore = StubSessionTokenStore(accessTokenValue: nil),
+        appStorage: AppStorage = StubAppStorage(),
         appUpdateRepository: MockAppUpdateRepository = MockAppUpdateRepository(),
         versionProvider: MockAppVersionProvider = MockAppVersionProvider(currentVersion: AppVersion(major: 1, minor: 0, patch: 0)),
         termsAgreementRepository: MockTermsAgreementRepository = MockTermsAgreementRepository()
     ) -> DefaultLaunchGateRepository {
         DefaultLaunchGateRepository(
             tokenStore: tokenStore,
+            appStorage: appStorage,
             appUpdateRepository: appUpdateRepository,
             versionProvider: versionProvider,
             termsAgreementRepository: termsAgreementRepository
@@ -166,4 +197,25 @@ private struct StubSessionTokenStore: SessionTokenStore {
     }
 
     func clearTokens() throws {}
+}
+
+/// 온보딩 완료 여부(#257) 판정만 검증하므로 `.isRegistered` 하나만 다루면 충분한 인메모리 저장소.
+private final class StubAppStorage: AppStorage, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+
+    func get<V>(_ key: StorageKey<V>) -> V? {
+        values[key.rawValue] as? V
+    }
+
+    func set<V>(_ key: StorageKey<V>, _ value: V?) {
+        if let value {
+            values[key.rawValue] = value
+        } else {
+            values.removeValue(forKey: key.rawValue)
+        }
+    }
+
+    func remove<V>(_ key: StorageKey<V>) {
+        values.removeValue(forKey: key.rawValue)
+    }
 }

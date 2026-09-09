@@ -76,6 +76,29 @@ struct DefaultProfileRepositoryTests {
         }
     }
 
+    // MARK: - registerProfile
+
+    @Test("registerProfile 성공 시 온보딩 완료(isRegistered=true)를 localStorage에 기록")
+    func registerProfile_success_marksIsRegistered() async throws {
+        let (sut, service, localStorage) = makeRepository()
+
+        try await sut.registerProfile(makeRegistration())
+
+        #expect(service.postRegisterProfileCallCount == 1)
+        #expect(localStorage.get(.isRegistered) == true)
+    }
+
+    @Test("registerProfile 실패 시 isRegistered를 기록하지 않는다(서버 확정 후에만 로컬 갱신)")
+    func registerProfile_failure_doesNotMarkIsRegistered() async {
+        let (sut, service, localStorage) = makeRepository()
+        service.postRegisterProfileResult = .failure(NetworkingError.unknown(MockError.stub))
+
+        await #expect(throws: RepositoryError.self) {
+            try await sut.registerProfile(makeRegistration())
+        }
+        #expect(localStorage.get(.isRegistered) == nil)
+    }
+
     // MARK: - fetchUserProfile
 
     @Test("fetchUserProfile .me 타겟 시 localStorage UserID 사용")
@@ -286,6 +309,15 @@ private extension DefaultProfileRepositoryTests {
             logger: DataLogger(moduleName: "ProfileData")
         )
         return (sut, service, localStorage)
+    }
+
+    func makeRegistration() -> ProfileRegistration {
+        ProfileRegistration(
+            nickname: "새유저",
+            gender: .female,
+            birthYear: try! BirthYear(2000),
+            genrePreferences: [.romance]
+        )
     }
 
     func makeDraft(nickname: String, characterID: Int) -> ProfileDraft {

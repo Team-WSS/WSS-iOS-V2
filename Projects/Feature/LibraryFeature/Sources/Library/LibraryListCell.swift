@@ -139,9 +139,11 @@ struct LibraryListCell: View {
     private var hasNovelRating: Bool { novel.rating > 0 }
 
     /// 매력포인트 — 아이콘 12px + 이름, 항목 사이 2px 점 구분자.
+    /// 서버 응답 순서와 무관하게 enum 선언 순서(디자인 정본 — 작품 평가·필터와 동일)로 정렬해 그린다.
     private func attractivePointRow(_ points: [AttractivePoint]) -> some View {
-        HStack(spacing: 8) {
-            ForEach(Array(points.enumerated()), id: \.offset) { index, point in
+        let orderedPoints = AttractivePoint.allCases.filter(points.contains)
+        return HStack(spacing: 8) {
+            ForEach(Array(orderedPoints.enumerated()), id: \.offset) { index, point in
                 if index > 0 {
                     Circle()
                         .fill(Color.wssPrimary100)

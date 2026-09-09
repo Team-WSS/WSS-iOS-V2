@@ -90,8 +90,9 @@ struct NovelReviewView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
         }
-        // 커스텀 헤더. 저장 전 "그만하기" 확인 알럿이 있어 스와이프백은 막는다(swipeBackEnabled: false).
-        .wssCustomNavigationBar(swipeBackEnabled: false)
+        // 커스텀 헤더. 저장 전 "그만하기" 확인 알럿이 있어 스와이프 pop은 막되, 스와이프 시도가
+        // 감지되면 back 버튼과 똑같이 requestClose(변경 없으면 즉시 닫힘, 있으면 알럿)를 부른다(#256).
+        .wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })
         .onAppear {
             viewModel.handle(.load)
         }
@@ -274,7 +275,7 @@ private extension NovelReviewView {
             Spacer().frame(height: 14)
 
             HStack(spacing: 0) {
-                ForEach(AttractivePoint.displayOrder, id: \.self) { point in
+                ForEach(AttractivePoint.allCases, id: \.self) { point in
                     let isSelected = viewModel.state.draft.attractivePoints.contains(point)
                     let imageColor = isSelected ? Color.wssPrimary100 : Color.wssGray80
                     let textColor = isSelected ? Color.wssPrimary100 : Color.wssGray200

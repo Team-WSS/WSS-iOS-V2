@@ -37,6 +37,11 @@ public struct WSSNovelCoverImage: View {
         /// 셀이 한 화면에 동시에 뜨는 자리 전용** — 셀마다 스피너가 따로 도는 대신 조용한 배경으로
         /// 채워, 그리드 전체가 한꺼번에 로딩 중일 때 스피너가 여러 개 겹쳐 산만해지는 걸 피한다.
         case grid
+        /// 로딩 중엔 `wssGray50`만(스피너 없음), 그 외엔 기본 표지. **블러 아래 깔리는 장식용 배경
+        /// 전용** — 스피너를 그리면 `blur(opaque: true)`에 뭉개져 회색 네모 잔상으로 보이고,
+        /// `.frame(alignment: .top)` 자리에선 그 잔상이 상단 중앙에 붙는다(홈 오늘의 발견 카드에서 실측).
+        /// 같은 URL의 전경 표지가 이미 스피너를 돌리고 있으니 배경까지 로딩을 알릴 이유도 없다.
+        case backdrop
     }
 
     private let url: URL?
@@ -87,6 +92,12 @@ public struct WSSNovelCoverImage: View {
             if isLoading {
                 Color.wssGray50
                     .overlay { ProgressView() }
+            } else {
+                defaultCover
+            }
+        case .backdrop:
+            if isLoading {
+                Color.wssGray50
             } else {
                 defaultCover
             }

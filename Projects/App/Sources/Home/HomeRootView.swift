@@ -88,6 +88,9 @@ struct HomeRootView: View {
     /// 크로스스크린 완료 피드백(#236) — push된 화면이 pop되며 남긴 완료("차단했어요"·"작성 완료!"·
     /// "평가 완료!")를 복귀 화면 위 토스트로 알린다(`CrossScreenFeedback.swift` 참고, 4탭 공통).
     @State private var crossScreenFeedback = CrossScreenFeedbackState()
+    /// 작품 상세발 피드 작성(`.createFeedFromNovel`) 성공 복귀 신호(#256) — 복귀한 그 작품 상세가
+    /// onAppear에서 소비해 자기 피드 섹션을 초기 로드처럼 리셋한다(4탭 공통 배선).
+    @State private var needsNovelDetailFeedReload = false
     /// 알림 목록으로 이동한 뒤, 그 화면 위에 기기 설정 유도 알럿을 띄워야 하는지(#193) — `.overlay` 기반
     /// `showWSSAlert`가 push 전환과 동시에 뜨면 전환에 밀려 사라지므로(`HomeFeature/CLAUDE.md` 참고),
     /// `HomeFeature`가 아니라 여기(`NavigationStack` 컨테이너)에 붙여 push가 끝난 뒤에도 살아남게 한다.
@@ -286,6 +289,7 @@ private extension HomeRootView {
         NovelDetailAssembly.makeView(
             novelID: novelID,
             dependencies: dependencies,
+            needsFeedReloadForCreatedFeed: $needsNovelDetailFeedReload,
             onRoute: { route in
                 switch route {
                 case .review(let information, let status):
@@ -435,8 +439,8 @@ private extension HomeRootView {
             connectedNovel: connectedNovel,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
-                // 피드 탭 목록은 재진입에 목록을 다시 받지 않아, 다른 탭에서 쓴 새 글은 이 신호로만 들어간다.
-                dependencies.feedListInvalidation.markFeedCreated()
+                // 작품 상세 경유 작성 — 복귀할 그 작품 상세가 자기 피드 섹션을 초기 로드처럼 리셋한다(#256).
+                needsNovelDetailFeedReload = true
             }
         )
     }

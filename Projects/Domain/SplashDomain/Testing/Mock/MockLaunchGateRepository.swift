@@ -17,10 +17,12 @@ public final class MockLaunchGateRepository: LaunchGateRepository, @unchecked Se
 
     private struct State {
         var hasValidSessionReturnValue = true
+        var isOnboardingCompletedReturnValue = true
         var checkForceUpdateRequiredResult: Result<Bool, RepositoryError> = .success(false)
         var isRequiredTermsAgreedResult: Result<Bool, RepositoryError> = .success(true)
 
         var hasValidSessionCallCount = 0
+        var isOnboardingCompletedCallCount = 0
         var checkForceUpdateRequiredCallCount = 0
         var isRequiredTermsAgreedCallCount = 0
     }
@@ -33,6 +35,11 @@ public final class MockLaunchGateRepository: LaunchGateRepository, @unchecked Se
     public var hasValidSessionReturnValue: Bool {
         get { lock.withLock { state.hasValidSessionReturnValue } }
         set { lock.withLock { state.hasValidSessionReturnValue = newValue } }
+    }
+
+    public var isOnboardingCompletedReturnValue: Bool {
+        get { lock.withLock { state.isOnboardingCompletedReturnValue } }
+        set { lock.withLock { state.isOnboardingCompletedReturnValue = newValue } }
     }
 
     public var checkForceUpdateRequiredResult: Result<Bool, RepositoryError> {
@@ -48,6 +55,7 @@ public final class MockLaunchGateRepository: LaunchGateRepository, @unchecked Se
     // MARK: - 호출 기록
 
     public var hasValidSessionCallCount: Int { lock.withLock { state.hasValidSessionCallCount } }
+    public var isOnboardingCompletedCallCount: Int { lock.withLock { state.isOnboardingCompletedCallCount } }
     public var checkForceUpdateRequiredCallCount: Int { lock.withLock { state.checkForceUpdateRequiredCallCount } }
     public var isRequiredTermsAgreedCallCount: Int { lock.withLock { state.isRequiredTermsAgreedCallCount } }
 
@@ -57,6 +65,13 @@ public final class MockLaunchGateRepository: LaunchGateRepository, @unchecked Se
         lock.withLock {
             state.hasValidSessionCallCount += 1
             return state.hasValidSessionReturnValue
+        }
+    }
+
+    public func isOnboardingCompleted() -> Bool {
+        lock.withLock {
+            state.isOnboardingCompletedCallCount += 1
+            return state.isOnboardingCompletedReturnValue
         }
     }
 

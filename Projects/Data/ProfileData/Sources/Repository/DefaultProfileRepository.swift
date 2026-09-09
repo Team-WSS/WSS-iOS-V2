@@ -73,6 +73,10 @@ struct DefaultProfileRepository: ProfileRepository {
                 genrePreferences: profile.genrePreferences.map { ProfileMapper.novelGenreRawValue(from: $0) }
             )
             try await service.postRegisterProfile(request)
+            // 프로필 등록 성공 = 온보딩(가입) 완료 → 로컬 isRegister를 true로 갱신(#257). 이 서버 호출이
+            // 서버 측 isRegister를 true로 바꾸는 시점이라 여기가 정확한 로컬 반영 지점이다(로그인 시 AuthData가
+            // false로 심고, 여기서 true로 올린다). 다음 콜드 스타트의 부트스트랩이 이 값을 보고 홈으로 보낸다.
+            localStorage.set(.isRegistered, true)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

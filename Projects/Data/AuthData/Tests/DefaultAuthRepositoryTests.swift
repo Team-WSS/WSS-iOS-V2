@@ -132,6 +132,31 @@ struct DefaultAuthRepositoryTests {
         #expect(appStorage.removedKeys.isEmpty)
     }
 
+    @Test("로그인 성공 시 서버 isRegister(가입 완료)를 로컬에 저장한다(#257)")
+    func loginStoresIsRegisteredWhenRegistered() async throws {
+        let service = MockAuthService()
+        service.postKakaoLoginResult = .success(makeLoginSuccessResponse(isRegister: true))
+        let appStorage = MockAppStorage()
+
+        let sut = makeRepository(service: service, appStorage: appStorage)
+        _ = try await sut.login(with: .kakao(accessToken: "kakaoToken"))
+
+        #expect(appStorage.get(.isRegistered) == true)
+    }
+
+    @Test("로그인 시 isRegister가 false면 로컬에 false로 저장한다 — 온보딩 미완료 유저(#257)")
+    func loginStoresIsRegisteredFalseWhenNewUser() async throws {
+        let service = MockAuthService()
+        service.postAppleLoginResult = .success(makeLoginSuccessResponse(isRegister: false))
+        // 이전 세션 값(캐시 정리 대상)이 남아 있어도 로그인이 새 값으로 덮어써야 한다.
+        let appStorage = makeAppStorageWithUserCache()
+
+        let sut = makeRepository(service: service, appStorage: appStorage)
+        _ = try await sut.login(with: .apple(authorizationCode: "code", idToken: "token"))
+
+        #expect(appStorage.get(.isRegistered) == false)
+    }
+
     @Test("NetworkingError를 AuthError로 올바르게 변환한다")
     func translatesNetworkingErrorToAuthError() async {
         let cases: [(error: NetworkingError, expected: AuthError)] = [
@@ -206,6 +231,24 @@ struct DefaultAuthRepositoryTests {
         expectUserScopedCacheCleared(appStorage)
     }
 
+    @Test("로그아웃 성공 시 isRegistered도 지운다(#257)")
+    func logoutClearsIsRegistered() async throws {
+        let tokenStore = MockTokenStore()
+        try tokenStore.saveRefreshToken("refresh")
+        let appStorage = MockAppStorage()
+        appStorage.set(.isRegistered, true)
+
+        let sut = makeRepository(
+            tokenStore: tokenStore,
+            deviceIdentifierStore: MockDeviceIdentifierStore(deviceIdentifier: "device"),
+            appStorage: appStorage
+        )
+
+        try await sut.logout()
+
+        #expect(appStorage.get(.isRegistered) == nil)
+    }
+
     @Test("로그아웃 요청 실패 시 사용자 스코프 캐시를 보존한다")
     func logoutFailureKeepsUserScopedCache() async {
         let service = MockAuthService()
@@ -276,6 +319,17 @@ struct DefaultAuthRepositoryTests {
         try await sut.withdraw(draft: WithdrawalReasonDraft())
 
         expectUserScopedCacheCleared(appStorage)
+    }
+
+    @Test("회원 탈퇴 성공 시 isRegistered도 지운다(#257)")
+    func withdrawClearsIsRegistered() async throws {
+        let appStorage = MockAppStorage()
+        appStorage.set(.isRegistered, true)
+        let sut = makeRepository(appStorage: appStorage)
+
+        try await sut.withdraw(draft: WithdrawalReasonDraft())
+
+        #expect(appStorage.get(.isRegistered) == nil)
     }
 
     // MARK: - syncAppleCredential

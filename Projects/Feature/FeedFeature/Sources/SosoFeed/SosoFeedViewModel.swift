@@ -56,14 +56,19 @@ final class SosoFeedViewModel {
         var hasMoreMyFeeds: Bool = true
         var hasMoreSosoFeeds: Bool = true
 
-        /// 처음부터 다시 채우는 로드(`LoadKind.reload`)가 도는 중. View는 보여줄 목록이 없을 때만 로딩 뷰로 쓴다.
-        var isLoading: Bool = false
-        var errorMessage: String?
-
-        /// 작성 완료로 목록을 처음부터 다시 채울 때 +1 — View가 `scrollIdentity`에 합쳐 ScrollView를 새 뷰로
-        /// 취급하게(스크롤 최상단, 새 글이 맨 위) 한다. 탭/옵션/필터 전환은 그 값 자체가 `scrollIdentity`에
-        /// 들어 있어 이 카운터가 필요 없다.
-        var listGeneration = 0
+        /// 처음부터 다시 채우는 로드(`LoadKind.reload`)가 도는 중인 **탭**(없으면 nil). View는 그 탭에
+        /// 보여줄 목록이 없을 때만 로딩 뷰로 쓴다. ⚠️ Bool로 되돌리지 말 것 — 두 리스트 상시 mount +
+        /// `selectTab`이 진행 중 로드를 취소하지 않는 구조라, A탭 로드가 도는 채로 B탭이 선택될 수 있어
+        /// "지금 로딩 중인 게 어느 탭인지"를 잃으면 엉뚱한 탭에 스피너가 뜬다(#256 리뷰에서 발견).
+        var loadingTab: FeedTab?
+        /// 탭별 목록 로드 실패(첫 페이지·더보기·당겨서 새로고침·작성 복귀 재로드 불문) — 그 탭 콘텐츠
+        /// 자리를 `NetworkErrorView`(재시도)로 대체한다(#195 로드 실패 표현 계약). 새 로드 시작
+        /// (`reloadFromScratch`)이 되돌리므로 로딩 표시와 공존하지 않는다.
+        var myFeedsLoadError: RepositoryError?
+        var sosoFeedsLoadError: RepositoryError?
+        /// 사용자 액션(좋아요·삭제·신고) 실패 토스트 — 콘텐츠는 멀쩡하고 그 행동만 실패한 경우의
+        /// 토스트 lane(`FeedDetailViewModel`의 같은 이름 상태와 동일 계약).
+        var isActionFailedToastPresented = false
 
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
         var presentedFeedAlert: FeedAlert?
@@ -87,10 +92,15 @@ final class SosoFeedViewModel {
         case selectSosoFeedOption(SosoFeedOption)
         /// 진입/재진입(onAppear). 첫 진입은 첫 페이지 로드, 재진입은 **목록 재조회 없이** 다녀온 셀만 동기화.
         case load
-        case loadMore
+        /// 그 탭 마지막 셀 onAppear — 두 리스트가 상시 mount라 숨은 리스트의 셀 실현(삭제로 밀려 올라오는
+        /// 경우 등)도 이 액션을 쏠 수 있어, 어느 탭에서 왔는지를 실어 VM이 현재 탭이 아니면 버린다.
+        case loadMore(FeedTab)
         /// 당겨서 새로고침 — 현재 탭을 처음부터 다시 받는다(전체 최신화는 이 경로뿐).
         case pullToRefresh
-        /// 피드 작성 완료(App 신호) — 현재 탭을 처음부터 다시 받고 스크롤을 최상단으로(새 글이 맨 위).
+        /// 실패 뷰(`NetworkErrorView`)의 재시도 — 그 탭을 처음부터 다시 세운다.
+        case retryLoad(FeedTab)
+        /// 피드 탭 연필 아이콘 작성 성공 복귀(App 신호 소비) — **두 목록을 초기 로드처럼 완전히 비우고**
+        /// 현재 탭을 처음부터 다시 받는다(새 글이 맨 위, 스크롤 최상단).
         case reloadForCreatedFeed
         /// View가 이 피드로 화면을 떠나기(셀 탭 → 상세, "수정하기" → 수정) 직전에 부른다 — 돌아오면 그 셀만
         /// 상세 API로 맞춘다.
@@ -117,6 +127,7 @@ final class SosoFeedViewModel {
         /// 콜백 대신 여기서 그친다.
         case userProfileUnavailableTapped
         case dismissUnavailableUserToast
+        case dismissActionFailedToast
     }
 
     //MARK: - Filter Selection Helpers
@@ -163,6 +174,12 @@ final class SosoFeedViewModel {
         case reload(FeedTab)
         /// 다음 페이지를 **이어붙임** — 마지막 셀 onAppear.
         case more(FeedTab)
+
+        var tab: FeedTab {
+            switch self {
+            case .reload(let tab), .more(let tab): tab
+            }
+        }
     }
 
     /// 목록 로드(첫 페이지·더보기)는 **이 한 슬롯**에만 산다. 시작하는 모든 경로는 `nil`을 확인하거나
@@ -180,7 +197,7 @@ final class SosoFeedViewModel {
     /// 좋아요 서버 동기화가 진행 중인 셀 — 같은 셀 연타 가드 + 목록 교체/셀 동기화가 낙관 토글을 되덮지 않게 보호.
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
     /// 마지막 `.reload` 요청 이후 토글한 셀 — 요청이 도는 동안 눌린 좋아요는 응답 스냅샷에 없을 수 있어 병합 보호
-    /// 대상에 합친다(`NovelDetailViewModel.likeToggledDuringRefresh`와 동일).
+    /// 대상에 합친다(`UserPageViewModel.likeToggledDuringRefresh`와 동일 — #256부터 그쪽이 이 패턴의 정본).
     @ObservationIgnored private var likeToggledDuringReload: Set<FeedID> = []
 
     /// 피드 삭제/신고는 한 번에 하나만 — 알럿을 거치므로 동시에 두 개가 뜰 일이 없다.
@@ -220,17 +237,18 @@ final class SosoFeedViewModel {
             selectSosoFeedOption(option)
         case .load:
             load()
-        case .loadMore:
-            loadMore()
+        case .loadMore(let tab):
+            loadMore(tab)
         case .pullToRefresh:
             // 당겨서 새로고침은 "전체 최신화"가 계약이라 캐시된 내 프로필도 함께 무효화한다 — 안 그러면
             // 프로필 편집 후 여기로 당겨도 편집 전 닉네임/이미지가 계속 붙는다(닉네임/프로필 이미지는
             // 목록 API가 안 내려줘 이 캐시로 채워 넣으므로, `myProfile()`이 재조회하게 해야 반영된다).
             cachedMyProfile = nil
             reloadFromScratch(state.selectedTab)
+        case .retryLoad(let tab):
+            retryLoad(tab)
         case .reloadForCreatedFeed:
-            state.listGeneration += 1
-            reloadFromScratch(state.selectedTab)
+            reloadForCreatedFeed()
         case .feedVisited(let feedID):
             pendingSyncFeedIDs.insert(feedID)
         case .toggleLike(let feedID):
@@ -266,6 +284,8 @@ final class SosoFeedViewModel {
             state.isUnavailableUserToastPresented = true
         case .dismissUnavailableUserToast:
             state.isUnavailableUserToastPresented = false
+        case .dismissActionFailedToast:
+            state.isActionFailedToastPresented = false
         }
     }
 
@@ -278,9 +298,14 @@ final class SosoFeedViewModel {
     //MARK: - Tab / Option
 
     /// 같은 탭 재탭은 무시한다 — 처음부터 다시 받으면 목록이 첫 페이지로 줄어 스크롤이 튄다.
+    /// 이미 세운 탭으로의 전환은 **재조회 없이 캐시를 그대로 보여준다**(2026-09-09 사용자 확정) — View가
+    /// 두 리스트를 상시 mount해 탭별 스크롤 깊이까지 보존된다. 첫 진입과 작성 복귀
+    /// (`reloadForCreatedFeed`가 hasLoaded를 끈다) 후 첫 전환만 첫 로드를 탄다.
+    /// 절충: 다른 유저의 변경은 전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
     private func selectTab(_ tab: FeedTab) {
         guard tab != state.selectedTab else { return }
         state.selectedTab = tab
+        guard !hasLoaded(tab) else { return }
         reloadFromScratch(tab)
     }
 
@@ -298,24 +323,58 @@ final class SosoFeedViewModel {
     /// 세웠으면 **목록을 다시 받지 않고** 다녀온 셀만 상세로 맞춘다 — 목록을 다시 받으면 20개로 줄어 스크롤이
     /// 튀기 때문. 전체 최신화는 당겨서 새로고침이 맡는다(탭 콘텐츠 "복귀마다 갱신" 규약의 의도된 예외).
     private func load() {
-        guard feedsTask == nil else { return }
         if hasLoaded(state.selectedTab) {
+            // 셀 동기화는 별도 슬롯(cellSyncTask)이라 목록 로드(더보기)가 도는 중이어도 진행한다 —
+            // feedsTask 가드에 같이 걸면 더보기가 in-flight인 복귀에서 다녀온 셀 동기화가 조용히
+            // 건너뛰어져 다음 재진입까지 미뤄진다(둘 다 MainActor라 교차 반영도 안전: 더보기는
+            // append, 동기화는 feedId로 제자리 교체/제거).
             syncVisitedFeeds()
         } else {
+            guard feedsTask == nil else { return }
             reloadFromScratch(state.selectedTab)
         }
     }
 
-    /// 현재 탭의 다음 페이지를 이어붙인다. 진행 중인 로드가 있으면 드롭된다(재로드 중 바닥 도달 등 — 셀 재실현으로 복구).
-    private func loadMore() {
-        let tab = state.selectedTab
-        guard feedsTask == nil, hasLoaded(tab), hasMore(tab) else { return }
+    /// 다음 페이지를 이어붙인다 — **현재 탭에서 온 신호만** 받는다(숨은 리스트의 셀 실현이 쏜 건 버린다.
+    /// 로드는 언제나 현재 탭만 대상이라는 불변식 유지). 진행 중인 로드가 있으면 드롭된다(재로드 중 바닥
+    /// 도달 등 — 셀 재실현으로 복구).
+    private func loadMore(_ tab: FeedTab) {
+        guard tab == state.selectedTab, feedsTask == nil, hasLoaded(tab), hasMore(tab) else { return }
         feedsTask = Task { await loadFeeds(.more(tab)) }
+    }
+
+    /// 피드 탭 연필 작성 성공 복귀 — 작성한 글은 내 피드·소소피드 둘 다의 신규 글이라 **두 목록을 함께**
+    /// 초기 로드 이전 상태로 되돌리고(hasLoaded까지 꺼서 다른 탭도 전환 시 첫 로드를 탄다) 현재 탭을 처음부터
+    /// 받는다. 목록이 비면 View의 로딩 분기(`loadingTab == tab && 그 탭 feeds.isEmpty`)가 LoadingView로 갈아타
+    /// ScrollView가 내려갔다 새로 서므로 스크롤도 자연히 최상단이다(별도 스크롤 리셋 장치 불필요 —
+    /// 상시 mount 대상은 탭 전환 보존이지, 이 재로드는 두 리스트 다 비워 둘 다 새로 서는 게 맞다).
+    private func reloadForCreatedFeed() {
+        state.myFeeds = []
+        state.sosoFeeds = []
+        state.myFeedsTotalCount = nil
+        // 실패 뷰도 두 탭 모두 걷어낸다(reloadFromScratch는 현재 탭 것만 되돌린다) — 다른 탭도
+        // 초기 로드 이전 상태로 되돌리는 게 이 리셋의 계약이다.
+        state.myFeedsLoadError = nil
+        state.sosoFeedsLoadError = nil
+        hasLoadedMyFeeds = false
+        hasLoadedSosoFeeds = false
+        reloadFromScratch(state.selectedTab)
+    }
+
+    /// 실패 뷰의 재시도 — 그 탭을 처음부터 다시 세운다. 더보기 실패로 목록이 남아 있던 경우도 이 경로로
+    /// 오므로 목록을 비워 로딩 분기로 갈아탄다(재시도 중 옛 목록이 잠깐 비치지 않게 —
+    /// `NovelDetailViewModel.retryFeeds`와 같은 결).
+    private func retryLoad(_ tab: FeedTab) {
+        switch tab {
+        case .myFeed: state.myFeeds = []
+        case .sosoFeed: state.sosoFeeds = []
+        }
+        reloadFromScratch(tab)
     }
 
     /// 처음부터 다시 채운다 — 진행 중이던 이전 로드를 **취소하고 곧바로 재대입**한다(취소만 하고 재대입하지 않는
     /// 경로를 만들면 슬롯이 non-nil로 굳어 `load`가 영구 차단된다). 다녀온 셀 동기화도 무의미해지므로 함께 버린다.
-    /// 시작 표시(`isLoading`)는 Task 스폰 **전** 동기 구간에서 세운다 — 취소된 옛 로드는 아무것도 정리하지
+    /// 시작 표시(`loadingTab`)는 Task 스폰 **전** 동기 구간에서 세운다 — 취소된 옛 로드는 아무것도 정리하지
     /// 않으므로(`loadFeeds`의 defer) 새 로드의 표시를 지우지 못한다.
     private func reloadFromScratch(_ tab: FeedTab) {
         feedsTask?.cancel()
@@ -323,7 +382,10 @@ final class SosoFeedViewModel {
         cellSyncTask = nil
         pendingSyncFeedIDs = []
         setHasLoaded(false, for: tab)
-        state.isLoading = true
+        // 실패 뷰를 되돌려야 로딩 분기가 보인다 — 안 되돌리면 재시도가 도는 내내 실패 뷰가 남아
+        // 그 버튼이 "눌러도 반응 없는" 상태가 된다(NovelDetail selectTab에서 실측된 함정과 동일).
+        setLoadError(nil, for: tab)
+        state.loadingTab = tab
         feedsTask = Task { await loadFeeds(.reload(tab)) }
     }
 
@@ -339,7 +401,7 @@ final class SosoFeedViewModel {
         defer {
             if !Task.isCancelled {
                 feedsTask = nil
-                state.isLoading = false
+                state.loadingTab = nil
             }
         }
         if case .reload = kind { likeToggledDuringReload = [] }
@@ -349,12 +411,10 @@ final class SosoFeedViewModel {
             apply(page, kind: kind)
         } catch {
             guard !Task.isCancelled else { return }
-            switch kind {
-            case .reload(.myFeed), .more(.myFeed):
-                state.errorMessage = "내 피드를 불러오지 못했어요."
-            case .reload(.sosoFeed), .more(.sosoFeed):
-                state.errorMessage = "소소피드를 불러오지 못했어요."
-            }
+            // 인증 만료(authenticationRequired)도 실패 뷰로 간다(NetworkErrorView가 "일시적 오류"로
+            // 흡수) — 이 화면엔 아직 로그인 라우팅 배선이 없어(`App/FeedRootView` 주석 참고) 계약상
+            // 예외 lane 자체가 없다. 배선이 들어오면 여기서 auth를 먼저 걸러낼 것.
+            setLoadError(error, for: kind.tab)
             logger?.error("피드 목록 로드 실패(\(kind)): \(String(describing: error))")
         }
     }
@@ -435,6 +495,13 @@ final class SosoFeedViewModel {
         }
     }
 
+    private func setLoadError(_ error: RepositoryError?, for tab: FeedTab) {
+        switch tab {
+        case .myFeed: state.myFeedsLoadError = error
+        case .sosoFeed: state.sosoFeedsLoadError = error
+        }
+    }
+
     private func hasMore(_ tab: FeedTab) -> Bool {
         switch tab {
         case .myFeed: state.hasMoreMyFeeds
@@ -481,17 +548,23 @@ final class SosoFeedViewModel {
     /// 로딩·토스트 없이 그 셀만 교체하고, 상세가 `.notFound`/`.forbidden`(삭제·숨김·차단 —
     /// `FeedDetailViewModel.isFeedUnavailable`와 같은 판정)이면 셀을 제거한다. 그 외 실패는 셀을 그대로 둔다
     /// (잘못 지우는 것보다 낫고, 당겨서 새로고침으로 복구된다).
-    /// 이전 동기화가 아직 도는 중이면 pending은 다음 복귀까지 남는다(보통 셀 하나라 수백 ms).
+    /// 이전 동기화가 도는 동안 새로 쌓인 pending은 그 동기화가 끝나는 즉시 이어서 소비한다(아래 drain) —
+    /// 다음 복귀까지 미루면 사용자가 목록에 머무는 동안 그 셀이 영영 안 맞는 창이 생긴다.
     private func syncVisitedFeeds() {
         guard cellSyncTask == nil, !pendingSyncFeedIDs.isEmpty else { return }
         let feedIDs = pendingSyncFeedIDs
         pendingSyncFeedIDs = []
         cellSyncTask = Task {
-            defer { if !Task.isCancelled { cellSyncTask = nil } }
             for feedID in feedIDs {
                 await syncCell(feedID)
+                // 취소된 태스크는 아무것도 정리하지 않는다 — 취소한 쪽(reloadFromScratch)이 슬롯·대기열을 이미 비웠다.
                 if Task.isCancelled { return }
             }
+            // drain: 도는 동안 새로 다녀온 셀이 쌓였으면 즉시 이어서 동기화한다. 슬롯을 먼저 비워야
+            // 재귀 호출의 `cellSyncTask == nil` 가드를 통과한다(마지막 취소 확인 뒤라 defer로 두면
+            // 새로 대입된 다음 태스크를 defer가 도로 지우는 순서 함정이 있어 명시로 정리).
+            cellSyncTask = nil
+            syncVisitedFeeds()
         }
     }
 
@@ -524,7 +597,14 @@ final class SosoFeedViewModel {
         }
     }
 
+    /// "n개의 기록" 헤더(`myFeedsTotalCount`)도 함께 내린다 — 안 내리면 다 지워도 헤더는 "4개의 기록",
+    /// 본문은 빈 뷰인 모순이 남는다(다음 재조회까지 서버 값이 안 온다). 로드된 범위(`myFeeds`)에 있던
+    /// 것만 확인할 수 있으므로 best-effort — 깊은 페이지의 내 글을 소소피드 쪽에서 지우는 극단 케이스는
+    /// 놓치지만, 당겨서 새로고침이 서버 값으로 복구한다.
     private func removeCell(_ feedID: FeedID) {
+        if state.myFeeds.contains(where: { $0.feedId == feedID }) {
+            state.myFeedsTotalCount = state.myFeedsTotalCount.map { max(0, $0 - 1) }
+        }
         state.myFeeds.removeAll { $0.feedId == feedID }
         state.sosoFeeds.removeAll { $0.feedId == feedID }
     }
@@ -590,7 +670,7 @@ final class SosoFeedViewModel {
                let index = state.sosoFeeds.firstIndex(where: { $0.feedId == feedID }) {
                 state.sosoFeeds[index] = state.sosoFeeds[index].preservingLikeState(of: beforeSoso)
             }
-            state.errorMessage = "좋아요 처리에 실패했어요."
+            state.isActionFailedToastPresented = true
             logger?.error("피드 좋아요 동기화 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
@@ -694,7 +774,8 @@ final class SosoFeedViewModel {
             pendingSyncFeedIDs.remove(feedID)
             removeCell(feedID)
         } catch {
-            state.errorMessage = "피드 삭제에 실패했어요."
+            state.isActionFailedToastPresented = true
+            logger?.error("피드 삭제 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
 
@@ -709,7 +790,8 @@ final class SosoFeedViewModel {
             }
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
-            state.errorMessage = "신고 접수에 실패했어요."
+            state.isActionFailedToastPresented = true
+            logger?.error("피드 신고 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
 }

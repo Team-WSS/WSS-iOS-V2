@@ -45,6 +45,7 @@ public struct WSSNicknameField: View {
     private let isSuccess: Bool
     private let caption: Caption?
     private let showsCharacterCount: Bool
+    private let treatsFilledAsFocused: Bool
     private let isDuplicationCheckEnabled: Bool
     private let isCheckingDuplication: Bool
     private let onCheckDuplication: () -> Void
@@ -59,6 +60,9 @@ public struct WSSNicknameField: View {
     ///   - isSuccess: 중복확인 통과(사용 가능) 상태.
     ///   - caption: 검증 상태에 대응하는 문구+색(문구는 화면마다 다를 수 있어 호출자가 결정).
     ///   - showsCharacterCount: 글자수 카운터(`n / maxLength`) 노출 여부 — 마이페이지는 켜고 온보딩은 끈다.
+    ///   - treatsFilledAsFocused: `true`면 값이 비어있지 않은 동안 포커스가 풀려도 포커스 시 모양(흰 배경 +
+    ///     gray70 폴백 테두리)을 유지한다 — 온보딩 닉네임 화면이 켠다(#256). 기본 `false`는 기존 동작
+    ///     (포커스 여부로만 배경 전환) 그대로라 마이페이지 편집 등 다른 호출부는 영향 없다.
     ///   - onCheckDuplication: "중복확인" 탭 시 발화.
     public init(
         text: Binding<String>,
@@ -69,6 +73,7 @@ public struct WSSNicknameField: View {
         isSuccess: Bool,
         caption: Caption?,
         showsCharacterCount: Bool = false,
+        treatsFilledAsFocused: Bool = false,
         isDuplicationCheckEnabled: Bool,
         isCheckingDuplication: Bool,
         onCheckDuplication: @escaping () -> Void
@@ -82,6 +87,7 @@ public struct WSSNicknameField: View {
         self.isSuccess = isSuccess
         self.caption = caption
         self.showsCharacterCount = showsCharacterCount
+        self.treatsFilledAsFocused = treatsFilledAsFocused
         self.isDuplicationCheckEnabled = isDuplicationCheckEnabled
         self.isCheckingDuplication = isCheckingDuplication
         self.onCheckDuplication = onCheckDuplication
@@ -135,7 +141,7 @@ private extension WSSNicknameField {
                 }
             }
         }
-        .background(isFocused.wrappedValue ? Color.wssWhite : Color.wssGray50)
+        .background(showsFocusedAppearance ? Color.wssWhite : Color.wssGray50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -166,11 +172,18 @@ private extension WSSNicknameField {
         .animation(.easeInOut(duration: 0.1), value: isError)
     }
 
+    /// 포커스 중이거나, `treatsFilledAsFocused`가 켜진 채 값이 있으면 포커스 시 모양(흰 배경 + gray70
+    /// 폴백 테두리)을 유지한다. 배경만 희게 하면 검증 테두리가 없는 상태(확인 대기 등)에서 흰 화면 위
+    /// 필드 윤곽이 사라지므로 배경·테두리를 한 조건으로 묶는다.
+    var showsFocusedAppearance: Bool {
+        isFocused.wrappedValue || (treatsFilledAsFocused && !fieldText.isEmpty)
+    }
+
     /// 에러=secondary100, 성공(사용 가능)=primary100, 그 외(입력 전·미변경·확인 대기)엔 테두리 없음.
     var borderColor: Color? {
         if isError { return Color.wssSecondary100 }
         if isSuccess { return Color.wssPrimary100 }
-        if isFocused.wrappedValue { return Color.wssGray70 }
+        if showsFocusedAppearance { return Color.wssGray70 }
         return nil
     }
 

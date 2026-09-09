@@ -9,6 +9,7 @@
 import Foundation
 
 import BaseDomain
+import BaseData
 import NotificationDomain
 import ProfileDomain
 import RecommendationDomain
@@ -22,12 +23,14 @@ public enum SplashDataFactory {
 
     public static func makeLaunchGateRepository(
         tokenStore: SessionTokenStore,
+        appStorage: AppStorage,
         appUpdateRepository: AppUpdateRepository,
         versionProvider: AppVersionProviding,
         termsAgreementRepository: TermsAgreementRepository
     ) -> LaunchGateRepository {
         DefaultLaunchGateRepository(
             tokenStore: tokenStore,
+            appStorage: appStorage,
             appUpdateRepository: appUpdateRepository,
             versionProvider: versionProvider,
             termsAgreementRepository: termsAgreementRepository

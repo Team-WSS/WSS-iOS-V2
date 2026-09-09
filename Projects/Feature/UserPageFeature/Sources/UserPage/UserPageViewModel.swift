@@ -376,7 +376,8 @@ private extension UserPageViewModel {
             feedsTask = nil
             state.isLoadingFeeds = false
         }
-        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글) — NovelDetail refreshFeeds와 동일 규칙(#236).
+        // 보호 대상 좋아요(요청 시작 시 in-flight + 요청 중 토글, #236) — 전체 목록 재조회 병합의 정본은
+        // 이 화면 계열이다(원조였던 NovelDetail refreshFeeds는 #256에서 셀 동기화로 교체돼 삭제).
         var likeProtectedIDs = syncingLikeFeedIDs
         likeToggledDuringRefresh = []
 

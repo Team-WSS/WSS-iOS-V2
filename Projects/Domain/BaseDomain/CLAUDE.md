@@ -43,7 +43,7 @@
   재사용할 것(Feature 3곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab` — 이 이미 이걸 쓴다).
 - `NovelGenre.myFeedFilter`(피드 필터용, 구 `filterGenre`)·`.searchGenre`(검색 화면 장르 그리드용)·`.onboardingGenre`(온보딩 3x3 배지 그리드용, #178)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다.
-  - ⚠️ **매력포인트 표시 순서는 `AttractivePoint.allCases`(enum 선언 순서)가 아니라 `AttractivePoint.displayOrder`(WSSComponent `DomainPresentation`)를 쓴다** — 디자인 정본은 **필력이 3번째**라 `allCases`와 다르다. 감상평 작성·서재 필터가 이 단일 순서를 공유한다(NovelGenre가 화면별로 여러 순서를 갖는 것과 달리 매력포인트는 하나). enum 순서에 맞춰 나열하면 UI 순서가 어긋난다. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.
+  - ⚠️ **매력포인트 표시 순서는 `AttractivePoint.allCases`(enum 선언 순서)가 정본이다** — enum 선언 순서 자체를 디자인 정본(**필력이 3번째**)에 맞춰뒀다(2026-09-09, 과거엔 WSSComponent의 `displayOrder` 별도 배열이 이 역할을 했으나 enum 순서를 정본으로 승격하며 제거). 감상평 작성·서재 필터·서재 리스트 셀(사용자 평가 매력포인트 정렬)이 전부 이 단일 순서를 공유한다(NovelGenre가 화면별로 여러 순서를 갖는 것과 달리 매력포인트는 하나). **케이스 선언 순서를 바꾸면 화면 표시 순서가 통째로 바뀌므로** 함부로 재정렬하지 말 것. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.
 - `RepositoryError.privateProfile`: 상대가 프로필을 비공개로 설정해 접근 자체가 거부된 경우 전용(서버 비즈니스 코드 `USER-015`) — `authenticationRequired`(내 세션 문제)와는 원인이 달라 재로그인으로 해결되지 않는다. 매핑은 공용 `NetworkingError.toRepositoryError()`가 아니라 영향받는 개별 Data 리포지토리 메서드가 한다(UserPageFeature #172, 자세한 이유는 `ProfileData`/`FeedData` 주의사항 참고).
 - **`ConnectedNovel`은 `Hashable`을 준수한다**(#197) — 두 가지 이유가 겹친다. ① `FeedFeature`의
   `CreateFeedViewModel`이 `FeedDraft`(이 값을 담음) 전체를 원본과 비교해 "변경 없음"을 판단(수정

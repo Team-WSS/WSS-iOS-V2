@@ -175,6 +175,19 @@ struct NetworkingClientTests {
         #expect(queryItems.contains(URLQueryItem(name: "isAdult", value: "false")))
     }
 
+    @Test("convertible query의 빈 배열은 쿼리에서 제외되고, 값이 있는 배열은 comma join된다")
+    func omitsEmptyArrayFromConvertibleQuery() throws {
+        let request = try MockEndpoint(
+            query: .convertible(SampleArrayQuery(genres: ["romance", "fantasy"], keywordIds: []))
+        ).makeURLRequest()
+        let url = try #require(request.url)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+
+        #expect(queryItems == [URLQueryItem(name: "genres", value: "romance,fantasy")])
+        #expect(!queryItems.contains { $0.name == "keywordIds" })
+    }
+
     @Test("custom query는 전달한 URLQueryItem을 그대로 URL에 반영한다")
     func appliesCustomQueryToURL() throws {
         let request = try MockEndpoint(
@@ -748,6 +761,11 @@ private struct SampleQuery: QueryItemConvertible {
     let keyword: String
     let page: Int
     let isAdult: Bool
+}
+
+private struct SampleArrayQuery: QueryItemConvertible {
+    let genres: [String]
+    let keywordIds: [Int]
 }
 
 private struct FailingRequest: Encodable {
