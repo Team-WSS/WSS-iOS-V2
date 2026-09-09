@@ -44,7 +44,7 @@ struct NovelDetailHeaderView: View {
 
     /// 커버를 크게 깔아 블러하고 그 위에 디자인의 radial gradient 에셋(#D2D3F8→#F4F5F8)을 덮는다
     /// → 아래 회색(wssGray50) 영역으로 자연 연결. 커버·backdrop 모두 `WSSNovelCoverImage`라 표지가
-    /// 없거나 로딩 중이면 컴포넌트 폴백(기본 표지/스피너)이 뜨지만, 그라데이션(상단 85%)에 가려 상단에서만 은은히 비친다.
+    /// 없으면 기본 표지, 로딩 중이면 회색 채움(`.backdrop` — 스피너 없음)이 깔리지만, 그라데이션(상단 85%)에 가려 상단에서만 은은히 비친다.
     /// ⚠️ 그라데이션 에셋의 알파는 85%(상단)~100%(하단) — 블러 표지는 상단에서만 은은히 비친다.
     /// - 블러를 radius 12→6→3으로 완화해 표지 아트가 상단에서 더 또렷이 비치게 했다(#221·#244 사용자 피드백).
     ///   보라 그라데이션은 디자인대로 **full opacity로 커버 위에 그대로** 얹는다(opacity를 낮춰 보라가
@@ -63,7 +63,9 @@ struct NovelDetailHeaderView: View {
                 ZStack {
                     // 전경 표지와 같은 WSSNovelCoverImage → 같은 URL을 인메모리 캐시로 공유(중복 다운로드
                     // 없음, 재진입 시 배경도 번쩍임 없음). fill이 프레임 밖으로 넘치므로 .clipped()로 자른다.
-                    WSSNovelCoverImage(url: novel.thumbnailImage)
+                    // .backdrop: 로딩 스피너를 안 그린다 — alignment .top 자리의 스피너가 blur에 뭉개져
+                    // 회색 네모 잔상이 된다(홈 오늘의 발견 카드에서 실측한 것과 같은 패턴).
+                    WSSNovelCoverImage(url: novel.thumbnailImage, placeholderStyle: .backdrop)
                         .frame(width: proxy.size.width, height: backdropHeight, alignment: .top)
                         .clipped()
                         .blur(radius: 3, opaque: true)

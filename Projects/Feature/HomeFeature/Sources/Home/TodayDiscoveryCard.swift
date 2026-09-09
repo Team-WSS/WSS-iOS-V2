@@ -93,7 +93,9 @@ private extension TodayDiscoveryCard {
     /// 위아래가 같이 잘려 표지의 인상(제목·인물)이 사라진다(구 레포도 `alignment = .top`).
     var backdrop: some View {
         ZStack {
-            WSSNovelCoverImage(url: discovery.novelThumbnailImage)
+            // .backdrop: 로딩 스피너를 안 그린다 — alignment .top 자리에 놓인 스피너가 아래 blur에
+            // 뭉개져 카드 상단 중앙에 회색 네모 잔상으로 보였다(실측). 전경 표지가 이미 스피너를 돌린다.
+            WSSNovelCoverImage(url: discovery.novelThumbnailImage, placeholderStyle: .backdrop)
                 .frame(width: Metric.width, height: Metric.height, alignment: .top)
                 .clipped()
                 // 구 레포는 `CIGaussianBlur`(radius 8) + `CIAffineClamp`를 원본 이미지에 구웠다 —
