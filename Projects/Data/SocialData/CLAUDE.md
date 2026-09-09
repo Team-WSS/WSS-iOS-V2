@@ -14,4 +14,7 @@
   (#255 QA, `ProfileData`의 `USER-018`/`USER-015` 선례와 동일 `if case .responseFailure(_, let body) = error,
   body?.code == "..."` 패턴). 이 스펙은 `api-spec` 스킴의 OpenAPI 문서엔 없다(신고 엔드포인트가 15개
   문서화 목록에 없음) — 실제 코드는 사용자가 dev 서버에서 중복 신고를 재현해 확인한 값이다. 새 신고
-  관련 서버 에러 코드가 필요해지면 문서보다 이 방식(실측 확인)을 우선할 것.
+  관련 서버 에러 코드가 필요해지면 문서보다 이 방식(실측 확인)을 우선할 것. `DefaultSocialRepositoryTests`에
+  4메서드 모두 `NetworkingError.responseFailure(code:409, body: ErrorResponse(code:"REPORT-00X", ...))` →
+  `RepositoryError.alreadyReported` 커버리지가 있다(#255 리뷰 Nit 반영 — 이 패턴을 처음 쓴 `ProfileData`의
+  `USER-015`/`USER-018`엔 아직 이런 개별 테스트가 없다, 새로 그쪽을 만질 땐 같이 채울지 고려할 것).
