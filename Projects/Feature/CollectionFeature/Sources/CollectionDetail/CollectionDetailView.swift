@@ -212,14 +212,16 @@ private extension CollectionDetailView {
         .frame(height: 44)
         .background(
             // 배경만 상태바까지 확장한다(버튼은 안전영역 안). clear일 땐 히어로가 그대로 비치고,
-            // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ allowsHitTesting(false) — 없으면 바 영역
-            // 드래그가 Color에 먹혀 스크롤이 안 된다(NovelDetail과 동일 함정).
+            // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ 히트테스트는 isBarSolid와 묶는다 —
+            // 투명(히어로 위)일 땐 바 영역 드래그를 스크롤로 넘기고, 솔리드로 콘텐츠를 덮는
+            // 동안엔 배경이 터치를 소비한다(안 그러면 바에 가려 안 보이는 그리드 셀이 바 위
+            // 탭에 반응하는 탭 관통 — NovelDetail과 동일 함정).
             // 스티키 정렬 바의 임계선(네비바 하단 y)도 여기서 얻는다 — 이 배경은 ignoresSafeArea로
             // 이미 상태바까지 확장돼 있어 그 실측 높이가 곧 "안전영역 top + 네비바 높이"다.
             // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
             GeometryReader { proxy in
                 (isBarSolid ? Color.wssWhite : Color.clear)
-                    .allowsHitTesting(false)
+                    .allowsHitTesting(isBarSolid)
                     .onChange(of: proxy.size.height, initial: true) { _, height in
                         navBarBottomY = height
                     }
