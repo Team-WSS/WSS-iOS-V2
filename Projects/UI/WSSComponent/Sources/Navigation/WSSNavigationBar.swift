@@ -105,23 +105,33 @@ public extension View {
     /// `.toolbar(.hidden, for: .navigationBar)` + `.enableSwipeBack()` 두 줄을 대신한다.
     /// 그래서 커스텀 헤더 화면은 `SwipeBackEnabler`(`.enableSwipeBack()`)를 따로 선언할 필요가 없다.
     ///
-    /// - Parameter swipeBackEnabled: 기본 `true`. **닫기 전 확인이 필요한 화면**(작성 중 초안 등,
-    ///   예: `NovelReviewView`의 "그만하기" 알럿, `CreateCollectionView`)은 `false`로 준다 —
-    ///   `navigationItem.hidesBackButton`을 세워 **전역 pop 제스처 delegate가 이 화면에서 스와이프 pop 시작을
-    ///   거부**하게 한다(delegate가 스택 공유라, 부모 화면이 이미 `.enableSwipeBack()`을 걸었어도 이 플래그로 막힌다).
-    ///   그 대신 화면은 커스텀 back 버튼 → 확인 알럿 → 닫기로만 나가게 한다.
-    func wssCustomNavigationBar(swipeBackEnabled: Bool = true) -> some View {
-        modifier(WSSCustomNavigationBarModifier(swipeBackEnabled: swipeBackEnabled))
+    /// - Parameter swipeBackConfirmation: 기본 `nil`(스와이프 뒤로가기 그대로 동작). **닫기 전 확인이
+    ///   필요한 화면**(작성 중 초안 등, 예: `NovelReviewView`의 "그만하기" 알럿)은 back 버튼과 같은
+    ///   확인 핸들러를 넘긴다 — 스와이프 pop은 시작되지 않고, 스와이프 **시도가 감지되면 이 핸들러가
+    ///   대신 불린다**(#256, 알럿 없이 빠져나가 초안이 사라지는 걸 막으면서 제스처엔 반응). 내부적으로
+    ///   `navigationItem.hidesBackButton`을 세워 전역 pop 제스처 delegate가 pop을 거부하게 하고
+    ///   (delegate가 스택 공유라, 부모 화면이 이미 `.enableSwipeBack()`을 걸었어도 이 플래그로 막힌다),
+    ///   그 delegate가 등록된 핸들러를 발화한다.
+    func wssCustomNavigationBar(swipeBackConfirmation: (() -> Void)? = nil) -> some View {
+        modifier(WSSCustomNavigationBarModifier(swipeBackConfirmation: swipeBackConfirmation))
     }
 }
 
 private struct WSSCustomNavigationBarModifier: ViewModifier {
 
-    let swipeBackEnabled: Bool
+    let swipeBackConfirmation: (() -> Void)?
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if swipeBackEnabled {
+        if let swipeBackConfirmation {
+            // 닫기 전 확인이 필요한 화면(작성 중 초안 등): hidesBackButton=true로 전역 pop 제스처
+            // delegate가 이 화면의 스와이프 pop 시작을 거부하게 하고, 그 자리에서 확인 핸들러(알럿)를
+            // 대신 부르게 등록한다 — 스와이프를 무시하지 않고 "인지해서 확인을 띄우는" 동작(#256).
+            content
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
+                .enableSwipeBack(confirmation: swipeBackConfirmation)
+        } else {
             // 시스템 네비바만 숨기고, 네비바 숨김이 함께 꺼버리는 스와이프백을 제스처로 되살린다
             // (Notification·NovelDetail 등 검증된 패턴과 동일).
             // ⚠️ `.navigationBarBackButtonHidden(false)`를 명시로 걸지 말 것 — iOS 26에서 그게 시스템
@@ -130,12 +140,6 @@ private struct WSSCustomNavigationBarModifier: ViewModifier {
             content
                 .toolbar(.hidden, for: .navigationBar)
                 .enableSwipeBack()
-        } else {
-            // 닫기 전 확인이 필요한 화면(작성 중 초안 등): hidesBackButton=true로 전역 pop 제스처
-            // delegate가 이 화면의 스와이프 pop 시작을 거부하게 한다(스와이프백 미적용).
-            content
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
         }
     }
 }

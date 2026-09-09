@@ -195,8 +195,9 @@ struct CreateFeedView: View {
                     }
                 }
             }
-            // 커스텀 헤더(빈 타이틀 + 완료). 미저장 초안 확인(showDismissAlert)이 있어 스와이프백은 막는다.
-            .wssCustomNavigationBar(swipeBackEnabled: false)
+            // 커스텀 헤더(빈 타이틀 + 완료). 미저장 초안 확인(showDismissAlert)이 있어 스와이프 pop은
+            // 막되, 스와이프 시도가 감지되면 back 버튼과 똑같이 확인 알럿을 띄운다(#256).
+            .wssCustomNavigationBar(swipeBackConfirmation: { showDismissAlert = true })
         }
         .showWSSAlert(
             isPresented: $showDismissAlert,
