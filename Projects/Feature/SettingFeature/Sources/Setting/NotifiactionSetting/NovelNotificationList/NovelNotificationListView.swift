@@ -139,6 +139,7 @@ private extension NovelNotificationListView {
                 }
             }
             .padding(.horizontal, 20)
+            .padding(.top, 8)  // 첫 행이 네비바에 딱 붙지 않게 목록 시작점에 여유를 둔다.
         }
         .scrollBounceBehavior(.basedOnSize)
     }
