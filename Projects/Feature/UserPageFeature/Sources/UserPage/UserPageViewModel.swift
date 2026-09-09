@@ -357,7 +357,7 @@ private extension UserPageViewModel {
         async let profileSection: Void = loadProfileSection(isSilentRefresh: isSilentRefresh)
         async let statsSection: Void = loadRegisteredNovelStatsSection()
         async let collectionPreviews: Void = loadCollectionPreviewsSection()
-        async let preferenceBundle: Void = loadPreferenceBundle(isSilentRefresh: isSilentRefresh)
+        async let preferenceBundle: Void = loadPreferenceBundle()
         _ = await (profileSection, statsSection, collectionPreviews, preferenceBundle)
     }
 
@@ -407,8 +407,10 @@ private extension UserPageViewModel {
     /// `state.hasLoadError`를 세워 `UserPageView`가 body 전체를 `NetworkErrorView`로 덮는데, 그러면
     /// 이 함수와 독립적으로 병렬 실행되는 `loadProfileSection`이 이미 성공시킨 프로필(닉네임·소개·이미지)
     /// 까지 함께 가려진다 — 이 함수를 프로필과 완전히 격리한 목적 자체가 무의미해진다(#255 QA 리뷰에서
-    /// 발견). 서재 통계·컬렉션 미리보기와 동일하게 실패를 조용히 흡수한다(장르/취향 섹션만 비게 됨).
-    func loadPreferenceBundle(isSilentRefresh: Bool) async {
+    /// 발견). 서재 통계·컬렉션 미리보기와 동일하게 실패를 조용히 흡수한다(장르/취향 섹션만 비게 됨) —
+    /// silent/fresh 구분 없이 항상 이렇게 동작해 `loadProfileSection`과 달리 `isSilentRefresh`를
+    /// 받지 않는다(PR 리뷰 지적 — 안 쓰는 파라미터를 시그니처만 맞춰 남겨두지 않는다).
+    func loadPreferenceBundle() async {
         do {
             async let genrePreferences = loadGenrePreferencesUseCase.execute(.user(userID))
             async let novelPreference = loadNovelPreferencesUseCase.execute(.user(userID))
