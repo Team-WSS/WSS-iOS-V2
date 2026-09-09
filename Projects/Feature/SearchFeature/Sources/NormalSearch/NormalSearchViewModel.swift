@@ -109,11 +109,18 @@ final class NormalSearchViewModel {
         self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
 
-        // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — `init`이 이
-        // ViewModel 인스턴스 생애주기에서 정확히 한 번만 실행되므로, `onAppear`처럼 재발화를 막는
-        // 가드가 따로 필요 없다(#197).
+        // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — 검색어만 미리
+        // 채워둔다. ⚠️ **실제 검색 실행(Task 스폰)은 여기서 하지 않는다(#255 QA 실측 버그 수정)** —
+        // 이 인스턴스는 `NormalSearchView.init`의 `State(initialValue:)` 인자 표현식으로 만들어지는데,
+        // 그 표현식은 "값이 저장에 반영되는 건 최초 1회"와 무관하게 **`.navigationDestination(for:)`가
+        // 재평가될 때마다(App Root의 다른 `@State`가 바뀌기만 해도) 매번 다시 실행된다** — 그때마다
+        // 새로 만들어졌다 버려지는 "고아" 인스턴스가 여기서 `executeSearch`로 Task를 스폰해버리면 그
+        // 고아도 실제 네트워크 요청(`/novels` 검색 + 성공 시 `/novels/recent-searches` 재조회)을
+        // 끝까지 완주한다 — 화면을 가만히 둬도 두 API가 계속 반복 호출되는 버그로 실측됐다. 실제 검색
+        // 실행은 `NormalSearchView`가 `onAppear`에서 1회 가드(`didRunInitialSearch`)로 호출한다 —
+        // `onAppear`는 실제로 화면에 붙는 단 하나의 인스턴스에서만 발화하므로 고아는 이 경로를 안 탄다.
         if let initialQuery, !initialQuery.isEmpty {
-            executeSearch(initialQuery)
+            state.searchText = initialQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 

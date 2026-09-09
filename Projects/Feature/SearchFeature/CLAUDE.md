@@ -17,7 +17,14 @@
 - 식별자: `ModuleType.feature(.search)` / 의존: `BaseDomain`, `RecommendationDomain`, `SearchDomain`, `DesignSystem`, `WSSComponent`, `Logger`
 - 진입점: `SearchFeatureFactory.makeNormalSearchView(...)`(실제 앱 진입점) + `makeDetailSearchResultView(filter:searchNovelUseCase:logger:onRoute:)`(`DetailSearchResultView`, #196부터 App도 실사용하는 독립 진입점 — 아래 "화면 간 이동" 참고) + `makeDetailSearchFilterView(filter:initialTab:keywordTabContent:onSearch:)`(#185, `initialTab`은 #236 — #201부터 App(4탭 Root 공용 `SearchAssembly`)이 실사용). `NormalSearchResultView`(props-only 서브뷰)는 여전히 `NormalSearchView`가 내부에서 조립해서 별도 Factory 메서드가 없다. `keywordTabContent`는 `makeDetailSearchFilterView`에만 있다 — `makeNormalSearchView`/`makeDetailSearchResultView`는 더 이상 받지 않는다(아래 참고).
   - **화면 전환은 화면별 Route enum + `onRoute` 하나로 나간다**(#253 — 낱개 클로저 3종에서 통합, 기본값 no-op도 함께 제거): `makeNormalSearchView`는 `onRoute: (NormalSearchRoute) -> Void`(`.novelDetail(NovelID)` — 일반 검색 결과·소소픽 작품 셀 / `.detailSearchResult(SearchFilter)` — 장르 탭·인기 키워드 칩(#196) / `.detailSearchFilter(DetailSearchFilterTab)` — 장르·키워드 "더보기" 헤더(#236, 장르 `.info`·키워드 `.keyword`)), `makeDetailSearchResultView`는 `onRoute: (DetailSearchResultRoute) -> Void`(`.novelDetail(NovelID)` 단일 케이스). **`NormalSearchView`는 `DetailSearchResultView`를 직접 push하지 않는다** — 호출자(App)가 `.detailSearchResult`를 받아 자기 `NavigationPath`에 `makeDetailSearchResultView`를 push해야 한다(이유는 아래 주의사항 "화면이 안 쌓이는 버그" 참고). `makeDetailSearchFilterView`의 `onSearch`는 화면 전환 "의도"가 아니라 확정 값 콜백이라 Route로 안 옮겼다(pop/push 판단이 호출부 책임인 것도 그대로).
-  - `initialQuery: String? = nil`(#197, `NovelDetailFeature`의 "작가 이름 탭" → 사전 검색된 결과로 진입하기 위해 추가) — 비어있지 않으면 `NormalSearchViewModel.init`이 **끝에서 바로** `executeSearch(initialQuery)`를 호출해 화면이 뜨자마자 검색 결과부터 보여준다. 별도 UseCase 없이 기존 텍스트 검색(`searchByText`)을 그대로 재사용한다 — 이 검색은 애초에 제목/작가를 구분하지 않는 단일 텍스트 검색이라(검색바 placeholder도 "작품 제목, 작가를 검색하세요") 작가 이름을 그냥 검색어로 흘려보내면 된다. `onAppear`가 아니라 **`init`에서 1회성으로 처리**하는 이유: `init`은 그 ViewModel 인스턴스 생애주기에서 정확히 한 번만 실행되므로, 화면이 스택에 남아있는 동안 `onAppear`가 재발화돼도(작품 상세로 갔다 돌아오는 등) 검색이 다시 실행되며 사용자가 그 사이 입력한 텍스트를 덮어쓸 걱정이 없다 — `hasLoaded`류 가드가 아예 필요 없다.
+  - `initialQuery: String? = nil`(#197, `NovelDetailFeature`의 "작가 이름 탭" → 사전 검색된 결과로 진입하기
+    위해 추가) — 비어있지 않으면 화면이 뜨자마자 검색 결과부터 보여준다. 별도 UseCase 없이 기존 텍스트
+    검색(`searchByText`)을 그대로 재사용한다 — 이 검색은 애초에 제목/작가를 구분하지 않는 단일 텍스트
+    검색이라(검색바 placeholder도 "작품 제목, 작가를 검색하세요") 작가 이름을 그냥 검색어로 흘려보내면
+    된다. ⚠️ **`NormalSearchViewModel.init`은 검색어만 채우고, 실제 검색 실행은 `NormalSearchView`의
+    `onAppear`가 1회 가드로 한다**(#255 QA로 정정 — 한때 "init에서 1회성으로 처리"였으나, 그 근거였던
+    "init은 인스턴스 생애주기에서 정확히 한 번만 실행된다"가 `@State(initialValue:)` 인자로 쓰이는
+    타입엔 성립하지 않아 실제 버그로 이어졌다. 아래 주의사항 항목이 정본).
 
 **필터 화면 진입·복귀(#185)** — 확정 후 pop할지 push할지는 화면마다 다를 수 있어, `DetailSearchFilterView`는 그 판단을 스스로 하지 않는다:
 - ⚠️ **`DetailSearchFilterView`는 "작품 찾기" 확정 시 `onSearch` 콜백만 호출하고 자기 자신을 pop하지 않는다.** pop·push 여부는 **항상 호출부 책임**이다 — 새 호출부를 추가할 때 반드시 직접 결정할 것. 실사용처인 4탭 Root(#201 홈 배너 → #236부터 4탭 "더보기")는 확정 시 자기 `Destination.detailSearch(filter)`로 결과 화면을 **앞으로 push**한다(필터 화면은 스택에 그대로 남는다) — Demo의 `DetailSearchDemoFlow`도 같은 패턴.
@@ -51,6 +58,20 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`NormalSearchViewModel.init`에서 `initialQuery`(작가 이름 탭 등 "이미 검색된 결과로 진입") 처리는
+  검색어를 `state.searchText`에 채우기만 하고, 실제 검색(Task 스폰)은 절대 하지 않는다**(#255 QA 실측
+  버그 수정 — 원래는 init 안에서 바로 `executeSearch`를 불렀다). 이 `init`은
+  `NormalSearchView.init`의 `State(initialValue:)` 인자 표현식으로 쓰이는데, **그 표현식은 "저장값은
+  최초 1회만 반영"과 무관하게 App 탭 Root의 `.navigationDestination(for:)` 클로저가 재평가될 때마다
+  (그 Root의 아무 `@State`나 바뀌기만 해도) 매번 다시 실행된다** — 그렇게 만들어졌다 버려지는 "고아"
+  인스턴스가 `init` 안에서 네트워크 Task를 스폰해버리면, 화면을 그대로 두기만 해도 `/novels` 검색과
+  성공 시 뒤따르는 `/novels/recent-searches` 재조회가 반복적으로 나가는 것으로 실측됐다(화면에
+  실제로 붙은 `@State` 인스턴스의 `init`이 1회만 도는 건 맞지만, 그 인스턴스를 만들기 위해 먼저 지어졌다
+  버려지는 다른 인스턴스들도 각자 자기 `init`을 완주해 부수효과를 낸다는 게 함정이었다). 실제 검색
+  실행은 `NormalSearchView`의 `onAppear`가 `didRunInitialSearch`(같은 파일의 `didAutoFocus`와 동일
+  1회성 가드 패턴)로 딱 한 번만 한다 — `onAppear`는 실제로 마운트되는 그 하나의 View에서만 발화하므로
+  고아 인스턴스는 이 경로를 타지 않는다. **`@State(initialValue:)`로 쓰이는 타입의 `init`에 부수효과를
+  넣지 말 것**이 이 함정의 일반 교훈 — 값 계산은 몇 번이든 다시 실행될 수 있다는 전제로 짜야 한다.
 - **`SearchNovelUseCase.searchByText`는 `recordRecentSearch: Bool` 필수 파라미터를 받는다**(#255 QA로
   추가, 기본값 없음 — `SearchDomain/CLAUDE.md` 참고). 이 화면(`NormalSearchViewModel`)은 사용자가 검색을
   **목적으로** 실행하는 유일한 화면이라 `loadSearchResult`/`loadMoreSearchResultPage` 둘 다 `true`를

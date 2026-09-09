@@ -25,6 +25,10 @@ struct NormalSearchView: View {
     /// 진입 시 검색창 자동 포커스를 최초 1회만 걸기 위한 가드(작품 상세 등에서 복귀 시 재발화 방지, #222 V1 parity).
     @State private var didAutoFocus = false
 
+    /// initialQuery 진입 시 실제 검색 실행을 최초 1회만 하기 위한 가드(#255 QA — 상세 참고는
+    /// `NormalSearchViewModel.init` 주석).
+    @State private var didRunInitialSearch = false
+
     /// 검색어 `TextField`는 VM 상태에 직접 물리지 않고 이 로컬 버퍼를 거친다 — 30자 clamp를 `Binding.set`에서
     /// 바로 하면 네이티브 필드가 초과분을 화면에 들고 있는 함정이 있어서다(글자수 제한 TextField 2단계 패턴, #222).
     @State private var searchDraft: String
@@ -108,6 +112,16 @@ struct NormalSearchView: View {
         // 네비바 숨김이 함께 꺼버리는 스와이프 뒤로가기를 되살린다.
         .wssCustomNavigationBar()
         .onAppear {
+            // 작가 이름 탭 등 initialQuery 진입 경로 — VM의 init은 검색어만 채워두고 실제 검색 실행은
+            // 여기서 1회만 한다(#255 QA 수정, `NormalSearchViewModel.init` 주석 참고). `onAppear`는
+            // 실제로 화면에 붙는 이 View 인스턴스에서만 발화하므로, destination 재평가로 만들어졌다
+            // 버려지는 고아 ViewModel은 이 경로를 타지 않는다.
+            if !didRunInitialSearch {
+                didRunInitialSearch = true
+                if !viewModel.state.searchText.isEmpty, !viewModel.state.isSearchExecuted {
+                    viewModel.handle(.executeSearch(viewModel.state.searchText))
+                }
+            }
             viewModel.handle(.loadSosoPick)
             viewModel.handle(.loadRecentSearchWords)
             viewModel.handle(.loadPopularKeywords)
