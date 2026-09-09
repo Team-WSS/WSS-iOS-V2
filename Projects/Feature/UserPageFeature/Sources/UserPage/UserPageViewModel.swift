@@ -403,6 +403,11 @@ private extension UserPageViewModel {
     }
 
     /// 장르 뱃지·작품 취향 — 비공개 프로필이면 `USER-015`로 막힌다(상단 프로필과 달리 여전히 비공개 대상).
+    /// ⚠️ 일반 에러(네트워크 순간 오류 등)도 `presentError`로 넘기지 않는다 — `presentError`는
+    /// `state.hasLoadError`를 세워 `UserPageView`가 body 전체를 `NetworkErrorView`로 덮는데, 그러면
+    /// 이 함수와 독립적으로 병렬 실행되는 `loadProfileSection`이 이미 성공시킨 프로필(닉네임·소개·이미지)
+    /// 까지 함께 가려진다 — 이 함수를 프로필과 완전히 격리한 목적 자체가 무의미해진다(#255 QA 리뷰에서
+    /// 발견). 서재 통계·컬렉션 미리보기와 동일하게 실패를 조용히 흡수한다(장르/취향 섹션만 비게 됨).
     func loadPreferenceBundle(isSilentRefresh: Bool) async {
         do {
             async let genrePreferences = loadGenrePreferencesUseCase.execute(.user(userID))
@@ -415,11 +420,7 @@ private extension UserPageViewModel {
         } catch RepositoryError.privateProfile {
             state.isProfilePrivate = true
         } catch {
-            if isSilentRefresh {
-                logger?.error("UserPage 취향 재조회 실패(기존 화면 유지): \(String(describing: error))")
-            } else {
-                presentError(error)
-            }
+            logger?.error("UserPage 취향 로드 실패(무시): \(String(describing: error))")
         }
     }
 
