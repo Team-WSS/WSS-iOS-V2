@@ -144,6 +144,11 @@
     `.default`로 두면 첫 로딩(캐시 미스) 동안 로딩 스피너가 `alignment: .top` 자리(카드 상단 중앙)에 놓인 채
     blur에 뭉개져 **회색 네모 잔상**으로 보인다(실기기 리포트로 발견). 스타일 정본은
     [WSSComponent](../../UI/WSSComponent/CLAUDE.md)의 `placeholderStyle` 항목.
+  - ⚠️ **발견 카드처럼 다층(블러 배경·반투명 그라데이션·머티리얼 패널) 셀은 `Button` 기본(automatic)
+    스타일로 두지 말 것**(#256) — 기본 눌림 투명도가 층마다 따로 걸려 밝은 층만 씻겨나가고 어두운 표지만
+    도드라진다(실기기 리포트). `TodayDiscoveryCard`의 `UnifiedFadeButtonStyle`(`compositingGroup()` 후
+    opacity 0.3)이 해법 정본 — 한 장으로 합성한 뒤 옅어져 카드가 통째로 페이드된다(시뮬레이터 픽셀
+    실측으로 균일성 확인, 머티리얼도 `compositingGroup` 안에서 안 깨짐).
 - **"이 웹소설은 어때요?" 그리드의 셀 자체는 이 모듈에 없다 — 공용 `WSSNovelGridCell`(WSSComponent)이다.**
   이 화면은 열 개수·간격·좌우 여백만 정하고, 표지 비율·정보 스택 고정 높이(72)·아이콘 색 같은
   셀 내부 함정은 그 컴포넌트 문서가 정본이다. **셀 모양을 고치려고 이 파일을 뒤지지 말 것.**
