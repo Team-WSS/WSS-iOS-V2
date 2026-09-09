@@ -72,12 +72,11 @@ Feature  ──(UseCase.execute)──▶  Domain UseCase
 단일 진실 소스다. 여기엔 **코드만 봐선 모르는 구현 단계**만 남긴다:
 
 - **Feature**: 레지스트리의 13개가 **모두 디스크에 구현되어 있다.** 각 모듈은 Demo 앱으로 단독 실행된다.
-  - 단 **`SplashFeature`(#225)는 아직 App에 배선되지 않았다** — 모듈·Demo는 있지만 `Projects/App`에 참조가 없어
-    실제 앱 실행 경로에서는 스플래시가 뜨지 않고 런치 게이트(강제 업데이트·세션·약관)도 돌지 않는다. 배선은 별도 PR.
+  - **`SplashFeature`(#225)는 #236에서 App에 배선됐다** — `ContentView`가 초기 route로 `SplashFeatureFactory.makeView(bootstrapAppUseCase:)`를 상시 마운트해 스플래시와 런치 게이트(강제 업데이트·세션·약관, #256부터 온보딩 완료 게이트 포함)가 실제 앱 실행 경로에서 돈다.
 - **App**: `AppDependencies`(DI 조립 — Auth/Setting/Profile Repository, 2-client `NetworkingClient`)와
   `OnboardingRootView`(온보딩 플로우 실배선: 인트로→약관동의→닉네임/성별출생년도/장르선택)가 #196에서
-  들어왔다. `ContentView`는 `.onboarding`/`.main` 두 Route를 전환하지만 `.main`은 여전히 placeholder —
-  메인 탭바·컬렉션 등 다른 Feature 화면 조립은 아직 없다.
+  들어왔다. `ContentView`는 `.splash`/`.onboarding`/`.main` Route를 전환하고, `.main`은 `MainTabView`
+  (홈·피드·서재·My 4탭 Root — 각 탭이 `NavigationPath`로 하위 Feature 화면을 조립)가 실배선돼 있다.
 
 > ⚠️ **유령 폴더 주의**: `Projects/Domain|Data/`에 suffix 없는 폴더(`Comment/`, `Feed/`, `KeywordData/` 등)나
 > 미등록 폴더가 디스크에 보일 수 있다. 모듈 rename·브랜치 전환이 남긴 **gitignore된 잔재**(`.xcodeproj`/`Derived`)로

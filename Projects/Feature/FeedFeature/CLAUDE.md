@@ -57,12 +57,19 @@
 - ⚠️ **`SosoFeedViewModel`의 목록 로드는 `feedsTask` 한 슬롯**이고 동시성 불변식은 서재 `LibraryViewModel.loadPage`와
   같다(정본은 [LibraryFeature](../LibraryFeature/CLAUDE.md)): 시작 경로는 `nil` 확인(`load`/`loadMore`) 또는
   취소+즉시 재대입(`reloadFromScratch`) 둘 중 하나, 취소된 로드의 `defer`는 **아무것도 정리하지 않는다**
-  (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`isLoading`)는
+  (`if !Task.isCancelled`) — 정리하면 자기를 밀어낸 새 로드의 슬롯·로딩 표시를 지운다. 시작 표시(`loadingTab` — 로드 중인 탭, Bool 아님: 상시 mount 구조에서 어느 탭의 스피너인지 잃으면 엉뚱한 탭에 뜬다)는
   Task 스폰 **전** 동기 구간에서 세운다. ⚠️ 취소는 `CancellationError`가 아니라 `RepositoryError.unknown`으로
   도착한다(`URLError.cancelled` → `NetworkingError.unknown` → `.unknown`; #244에서 오프라인만 `networkUnavailable`로
   가르며 취소는 `.unknown`이 됐다 — 값이 뭐든 로직엔 무관) — 실패 경로 첫 줄도
   `guard !Task.isCancelled`여야 옛 로드가 에러를 세우지 않는다. 다녀온 셀 동기화(`cellSyncTask`)는 별개 슬롯이고
   `reloadFromScratch`가 취소+nil로 함께 버린다.
+  - ⚠️ **`syncVisitedFeeds`의 슬롯 정리는 defer가 아니라 루프 끝 명시 정리 + 재귀 drain이다**(#256 리뷰) —
+    도는 동안 새로 쌓인 pending을 즉시 이어서 소비하려면 `cellSyncTask = nil` 후 자기 재귀를 불러야 하는데,
+    이 정리를 defer로 되돌리면 **재귀가 새로 대입한 다음 태스크를 defer가 도로 지워** 그 동기화가 유실된다
+    (defer는 마지막에 실행). 취소된 태스크는 여전히 아무것도 정리하지 않는다(취소한 쪽이 슬롯·대기열을 비움).
+    같은 이유로 `.load`의 `feedsTask == nil` 가드는 **첫 로드 분기에만** 걸려 있다 — 셀 동기화는 별개
+    슬롯이라 더보기가 in-flight인 복귀에도 진행해야 한다(가드를 함수 전체로 되돌리면 그 복귀의 동기화가
+    다음 재진입까지 밀린다).
 - ⚠️ **재진입 `.load`의 첫 로드/셀 동기화 분기는 탭별 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds` 플래그다 —
   `state.myFeeds.isEmpty`로 대체하면 안 된다.** 피드 0건 유저는 첫 로드가 성공해도 배열이 비어, 복귀마다
   `LoadingView`↔빈 뷰가 깜빡인다(서재 `hasLoadedContent`와 같은 이유).
@@ -71,6 +78,12 @@
 - `SosoFeedViewModel.state.errorMessage`는 View가 어디서도 읽지 않는 죽은 상태다(목록 로드 실패가 무표시) —
   이 화면(`SosoFeedView`)엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
   재진입 갱신 작업의 범위 밖으로 남겨둔 것. **`FeedDetailView`는 이와 별개로 #244에서 auth 라우팅이 들어왔다**(아래).
+  - ⚠️ **이 무표시 갭이 #256의 작성 복귀 리셋과 만나면 눈에 띄는 자리로 옮겨진다**(리뷰 지적, 알려진 감수
+    사항): `.reloadForCreatedFeed`가 두 목록을 먼저 비우고 재로드하는데 그 재로드가 실패하면, 방금 글을 쓴
+    사용자에게 "아직 남긴 기록이 없어요"(내 피드) 또는 빈 화면(소소피드)이 뜨고 — 빈 상태에선 당겨서
+    새로고침도 안 잡혀(`scrollBounceBehavior(.basedOnSize)`) — 복구는 탭을 떠났다 돌아오기(`hasLoaded`가
+    false라 `.load`가 재시도)뿐이다. 이 화면의 로드 실패 표현(#195 계약 적용)이 구현되면 자연 해소된다 —
+    그 전까지 리셋 순서를 "성공 후 교체"로 바꾸는 우회는 스크롤 리셋·로딩 분기 계약을 깨므로 하지 말 것.
 - **`FeedDetailView`의 인증 만료 라우팅은 로드 경로에만 건다**(#244) — `FeedDetailViewModel`이
   `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고, **상세/댓글/프로필 이미지
   로드**(`loadFeed`·`loadComments`·`loadCurrentUserProfileImage`)의 catch에서 실패 플래그·알럿보다 **먼저** 걸러

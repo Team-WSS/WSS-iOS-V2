@@ -8,10 +8,10 @@
 > **이 문서가 아닌 것** — V2 화면의 정본 계약이 아니다. V2의 "코드만 봐선 모르는 것"은 여전히
 > [`CLAUDE.md`](CLAUDE.md)가 정본이다. 이 문서는 **V1 기준으로 훑은 것**이고, 분류는 **초안**이다.
 >
-> ⚠️ **V2 FeedFeature는 아직 배선 진행 중(WIP)이다** — 특히 소소피드/내 피드 목록 화면(`SosoFeedView`)은
-> 화면 전환(작성·상세·프로필·작품)이 대부분 `print`/주석 스텁이고, 목록 로드 실패·인증 만료 처리가 없다.
-> 그래서 아래에는 "V2가 V1 동작을 **아직 안 붙였다**"는 🔧 미배선이 많다 — **의도적 삭제가 아니라 미구현**이니
-> Break로 단정하지 말 것(0절에서 판정 완료). 상세(`FeedDetailView`)·작성(`CreateFeedView`)은 거의 완성돼 있다.
+> 추출 당시(2026-08) "배선 진행 중(WIP)"이던 목록 화면의 화면 전환(작성·상세·프로필·작품)은 이후
+> **전부 배선 완료**됐다(#196·#197·#253 — `SosoFeedRoute`/`FeedDetailRoute` + App 4탭 Root 조립).
+> 아래 항목의 ✅/🔧 배지가 그 이후 상태를 반영한다. 아직 남은 미구현은 **목록 화면의 로드 실패 표현·
+> 인증 만료 라우팅**뿐이다(본문 1.4 배지가 현황 정본).
 
 ## 읽는 법 · 분류 범례
 
@@ -32,7 +32,7 @@
 
 | V2 (이 모듈) | V1 원본 | 성격 차이 |
 |---|---|---|
-| `Sources/SosoFeed/SosoFeedView.swift`+VM (내 피드/소소피드 목록) | `…/Feed/FeedViewController/FeedViewController.swift`(탭 컨테이너)·`FeedPageContentViewController.swift`·`FeedPageContentViewModel/FeedPageContentViewModel.swift` | **V1은 3-page `UIPageViewController`**(내 피드/소소전체/소소추천), V2는 탭+옵션 전환으로 한 뷰가 목록 교체 |
+| `Sources/SosoFeed/SosoFeedView.swift`+VM (내 피드/소소피드 목록) | `…/Feed/FeedViewController/FeedViewController.swift`(탭 컨테이너)·`FeedPageContentViewController.swift`·`FeedPageContentViewModel/FeedPageContentViewModel.swift` | **V1은 3-page `UIPageViewController`**(내 피드/소소전체/소소추천), V2는 탭 2개+옵션 전환 — 두 리스트를 `ZStack`에 상시 mount해 탭별 스크롤까지 보존(2026-09-09) |
 | `Sources/SosoFeed/MyFeedFilterSheet.swift` (내 피드 필터 시트) | `…/Feed/Filter/FeedFilterViewController/FeedFilterViewController.swift` | 장르 + 공개/비공개 필터 |
 | `Sources/FeedDetail/FeedDetailView.swift`+VM (피드 상세) | `…/FeedDetail/FeedDetailViewController/FeedDetailViewController.swift`·`FeedDetailViewModel/FeedDetailViewModel.swift` | 상세+댓글. RxSwift 다중 스트림 → 구조적 동시성 |
 | `Sources/CreateFeed/CreateFeedView.swift`+VM (피드 작성/수정) | `…/FeedEdit/FeedEditViewController/FeedEditViewController.swift`·`FeedEditViewModel/FeedEditViewModel.swift` | **V1은 작성/수정 겸용 VC**, V2도 `Mode(create/edit)` 겸용 |
@@ -44,9 +44,10 @@
 
 ## 0. 점검 대기 요약
 
-> **판정 상태(2026-08-28 갱신)**: 아래 항목의 배지는 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건**(마지막 3건도
-> 2026-08-28 사용자 확정으로 고치기로 결정). **결정된 것**(고치기로/삭제)은 `docs/TODO.md` 12절, **미배선**은 V2 WIP
-> (삭제가 아니라 아직 안 붙인 것 — 배선되면 해소). FeedFeature는 목록 화면이 배선 진행 중이라 미배선이 유독 많다.
+> **판정 상태(2026-09-09 갱신)**: 아래 항목의 배지는 본문 각 절의 확정 배지와 일치한다. **판정 대기 0건**.
+> 추출 당시 "미배선(WIP)"이던 라우팅·prefill·카운트류는 이후 배선·구현 완료돼 ✅로 갱신됐다(각 항목 참조).
+> 아직 결정만 되고 구현이 남은 것은 목록 화면의 **로드 실패 표현·인증 만료 라우팅**(본문 1.4의 🔨/🔧
+> 배지가 현황 정본 — `FeedFeature/CLAUDE.md` 주의사항의 `errorMessage` 죽은 상태 항목 참조).
 
 **되살리기/고치기로 결정 → 구현 대기 (`docs/TODO.md` 12절)**
 
@@ -57,14 +58,14 @@
 5. 🔧 **피드 좋아요 햅틱 복원** — V1 목록 좋아요에 light impact, V2 없음(정렬 토글엔 있음). → [1.5](#15-좋아요리액션)
 6. ✅ **작성/수정 성공 후 앱 리뷰 요청 재도입 (#221 구현 완료)** — 참여 임계치+버전 게이트로 타이밍을 재설계해 재도입(감상평과 공유). → [4.3](#43-작성수정-완료저장)
 
-**미배선 (App/Feature 배선 대기 · V2 WIP · 삭제 아님)**
+**배선 완료 (추출 당시 미배선이던 것 — 이후 구현·배선됨)**
 
-7. 🔧 **미배선** — **목록 화면 전환 4종** — 셀→상세, 프로필→유저, 연결작품→상세, 작성 버튼→작성이 전부 `print`/주석 스텁. App 라우터 배선 대기. → [1.6](#16-상호작용네비게이션)
-8. 🔧 **미배선** — **프로필 탭 → 유저 페이지 / 탈퇴 유저(userId == -1) 처리** — 프로필 탭 배선 시 V1의 "탈퇴 유저" 토스트 가드도 함께 복원. → [1.6](#16-상호작용네비게이션)·[3.6](#36-상호작용네비게이션-상세)
-9. 🔧 **미배선** — **셀 선택 더블탭 가드** — V1 throttle(1s/500ms). 화면 전환 자체가 미배선이라 배선 시 함께. → [1.6](#16-상호작용네비게이션)
-10. 🔧 **미배선** — **수정 기존 이미지 prefill** — V1은 첨부 이미지를 Kingfisher로 내려받아 채움. V2는 `initialDraft` 데이터가 있어야(App 배선 의존) 채워진다. → [4.1](#41-진입prefill)
-11. ✅ **구현 완료(#236)** — **작성 성공 후 dismiss·목록 갱신·완료 피드백** — V1의 `feedEdited`/`popFeedDetailViewController` 크로스스크린 알림 배관을 V2는 다르게 채웠다: dismiss는 `.submitted` onChange(#197), 목록 갱신은 push 재진입 조용한 재조회(#236), 완료 토스트는 App `CrossScreenFeedback` 채널의 `onSubmitted` seam(#236). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
-12. 🔧 **미배선** — **빈 화면 "피드 작성" CTA** — `WSSEmptyView(type: .myFeed)`는 뜨지만 버튼 액션이 빈 클로저(작성 화면 배선 대기). → [1.4](#14-빈-화면에러로딩)
+7. ✅ **구현 완료(#196·#253)** — **목록 화면 전환 4종** — 셀→상세·프로필→유저·연결작품→상세·작성 버튼→작성이 전부 `SosoFeedRoute`(`.feedDetail`/`.userProfile`/`.novelDetail`/`.createFeed`/`.editFeed`)로 App `FeedRootView`(및 각 탭 Root)에 배선됐다. → [1.6](#16-상호작용네비게이션)
+8. ✅ **구현 완료(#197 후속)** — **프로필 탭 → 유저 페이지 / 탈퇴 유저 처리** — 목록·상세·댓글 모두 `Author.accessibleUserId == nil`이면 이동 대신 `WSSToastType.unknownUser` 토스트(`-1` 센티널은 `BaseDomain.Author`에 캡슐화). → [1.6](#16-상호작용네비게이션)·[3.6](#36-상호작용네비게이션-상세)
+9. ✅ **Keep(레포 공통 확정과 동일 해소)** — **셀 선택 더블탭 가드** — V1 throttle(1s/500ms) 대신 서버 호출류는 VM Task 슬롯 가드, 화면 전환 중복 push는 `NavigationStack`이 막는다(NovelDetail·서재·홈과 같은 2026-08-28 확정 결론). → [1.6](#16-상호작용네비게이션)
+10. ✅ **구현 완료(#197)** — **수정 기존 이미지 prefill** — `initialDraft` 주입 계약을 폐기하고 수정 화면(`CreateFeedViewModel`)이 `feedID`로 스스로 상세를 로드, 첨부 이미지는 `URLSession`으로 내려받아 채운다(V1의 Kingfisher prefill과 같은 관찰 동작). → [4.1](#41-진입prefill)
+11. ✅ **구현 완료(#236·#256)** — **작성 성공 후 dismiss·목록 갱신·완료 피드백** — dismiss는 `.submitted` onChange(#197), 목록 갱신은 **피드 탭 연필 작성 성공 복귀 시 탭 Root 로컬 Binding 신호로 두 목록 초기 로드식 리셋**(#256 — #236의 "push 재진입 조용한 재조회"를 대체), 완료 토스트는 App `CrossScreenFeedback` 채널의 `onSubmitted` seam(#236). → [4.3](#43-작성수정-완료저장)·[3.6](#36-상호작용네비게이션-상세)
+12. ✅ **구현 완료(#256)** — **빈 화면 "피드 작성" CTA** — `WSSEmptyView(type: .myFeed)`의 액션이 우상단 연필과 같은 `onRoute(.createFeed)`로 배선됐다. → [1.4](#14-빈-화면에러로딩)
 
 **의도적 변경 (확인 완료)**
 
@@ -72,11 +73,11 @@
 14. 🗑 **Amplitude 이벤트 제거** — 피드 진입·작성·좋아요·신고 등. 홈·리뷰와 함께 횡단 재도입 대상(12절). → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 15. ✅ **구현 완료(#236 — App 크로스스크린 피드백 채널)** — **`BlockUser`/`feedEdited` 알림 토스트** — V1의 싱글톤 `NotificationCenter` 배관 대신 App `CrossScreenFeedback` 채널(콜백 seam)이 차단·작성/수정 완료·평가 완료 토스트를 복귀 화면 위에 띄운다. → [5](#5-부수-작업-v1이-피드에서-하던-것들)
 
-**추가 확정 (2026-08-28 사용자) → 구현 대기 (`docs/TODO.md` 12절)**
+**추가 확정 (2026-08-28 사용자) → 전부 구현 완료**
 
-16. 🔧 **내 피드 개수 표시 출처 → 서버 `feedsCount` 사용** — V2는 로드된 배열 길이(`myFeeds.count`)라 페이지네이션 전엔 최대 20까지만 세어 실제 총량과 다르다. 서버 응답 `UserFeedListResponse.feedsCount`(전체 개수)가 **실제로 존재**하므로 그 값을 노출해 표시(V1 parity). → [1.3](#13-정렬내-피드-카운트)
-17. 🔧 **수정 "변경 감지" 게이트 복원** — V2 `canSubmit`이 "내용 비어있지 않음"만 봐 무변경 재저장 가능(불필요 PUT·이미지 재업로드). V1처럼 내용·스포일러·공개·연결작품·이미지 중 하나라도 바뀌어야 완료 버튼 활성. → [4.3](#43-작성수정-완료저장)
-18. 🔧 **댓글 전송 버튼 무변경 재전송 가드 복원** (사소) — V1은 수정 시 초기값과 다를 때만 활성. V2도 동일 복원. → [3.4](#34-댓글-작성수정삭제)
+16. ✅ **구현 완료** — **내 피드 개수 표시 출처 → 서버 `feedsCount` 사용** — `SosoFeedViewModel.myFeedsTotalCount`가 `page.totalCount`(서버 전체 개수)를 반영하고 View가 이를 우선 표시한다(없으면 배열 길이 폴백). → [1.3](#13-정렬내-피드-카운트)
+17. ✅ **구현 완료(#197)** — **수정 "변경 감지" 게이트 복원** — `canSubmit`이 내용 비어있지 않음 + `originalDraft` 대비 `hasChanges`를 함께 본다(내용·스포일러·공개·연결작품·이미지 어느 것이든 바뀌어야 활성 — `FeedDraft: Equatable` 합성 비교). → [4.3](#43-작성수정-완료저장)
+18. ✅ **구현 완료(#222 복원)** — **댓글 전송 버튼 무변경 재전송 가드 복원** — `FeedDetailView.isCommentSendEnabled`가 "비어있지 않고 수정 모드면 원본과 다름"을 계산해 `FeedDetailCommentInputBar`에 넘긴다. → [3.4](#34-댓글-작성수정삭제)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
 
@@ -99,7 +100,7 @@
   - 근거: V1 `FeedPageContentViewModel.swift:282-288`(`resetFeedPagingState`+refresh), `:370-375` · V2 `SosoFeedViewModel.swift`(`selectTab`), 정본은 `CLAUDE.md` 화면 동작 계약
 - ✅ **Keep + Improve** (확정 2026-09-03: V1처럼 재진입 재조회 없음, 대신 다녀온 셀만 동기화) — V1 각 페이지 VC는 `viewDidLoad`에서 1회 `reloadFeed`만 한다(진입 시 로드). **`viewWillAppear` 재조회는 없다** — 피드 작성/수정 후 목록 갱신은 위 `feedEdited` 알림(5)이나 탭 재선택으로만 일어났다.
   - V2: `SosoFeedView.onAppear → .load`는 탭별 첫 페이지를 세운 뒤엔 **목록을 다시 받지 않고**, 목록에서 들어갔던 피드(셀 탭·"수정하기")만 복귀 시 피드 상세 API로 그 셀을 교체한다(삭제·숨김이면 제거 — V1엔 없던 개선, 스크롤·길이 보존). 전체 최신화는 당겨서 새로고침. 피드 탭 연필 작성 성공 복귀는 두 목록을 처음부터 다시 채운다(#256 — 탭 Root 로컬 Binding 신호. V1 `feedEdited` 전역 알림과 달리 작품 상세 경유 작성은 이 목록에 신호를 보내지 않는다). V2 규약 "탭 콘텐츠는 복귀마다 갱신"의 명시적 예외(정본: `CLAUDE.md` 화면 동작 계약). 한때(#236) 복귀마다 커서 0·20개로 통째 재조회해 깊이 스크롤한 위치가 튀었던 것을 되돌린 것.
-  - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.swift:95-97`
+  - 근거: V1 `FeedPageContentViewController.swift:47-54` · V2 `SosoFeedView.onAppear`(`.load`) → `SosoFeedViewModel.load`/`syncVisitedFeeds`
 
 ### 1.2 목록 로드·페이지네이션
 
@@ -129,15 +130,15 @@
   - 근거: V1 `FeedPageContentViewModel.swift:113-117`, `FeedPageContentViewController.swift:283-287`(sort 햅틱) · V2 `SosoFeedView.swift:222-226`, `SosoFeedViewModel.swift:303-315`, `CLAUDE.md`(sortType는 필터 커밋 흐름과 별개)
 - ✅ **Keep** — 정렬은 **내 피드에만** 있다(소소피드엔 정렬 컨트롤 없음).
   - 근거: V1 `FeedPageContentView`(`myFeedFilterHeaderView`가 my 페이지에만) · V2 `SosoFeedView.swift:200-245`(myFeed 케이스에만 sort 버튼)
-- 🔧 **복원 확정→TODO** (2026-08-28: 서버 `feedsCount` 사용) — **내 피드 개수 표시 출처**. V1은 서버 응답의 **전체 개수**(`userFeedListEntity.feedsCount`)를 필터 버튼에 "n개"로 표시. 서버 응답 `UserFeedListResponse.feedsCount`가 V2에도 실재하므로 그 값을 매퍼/상태로 노출해 표시(V1 parity).
-  - V2: **현재 로드된 배열 길이**(`state.myFeeds.count`)를 "n개의 기록"으로 표시 → 페이지네이션 전엔 최대 20까지만 세어 서버 전체 수와 다를 수 있다.
-  - 근거: V1 `FeedPageContentViewModel.swift:332-334`, `FeedPageContentViewController.swift:97-101` · V2 `SosoFeedView.swift:206-208`
+- ✅ **구현 완료** (2026-08-28 확정 → 복원됨: 서버 `feedsCount` 사용) — **내 피드 개수 표시 출처**. V1은 서버 응답의 **전체 개수**(`userFeedListEntity.feedsCount`)를 필터 버튼에 "n개"로 표시.
+  - V2: `SosoFeedViewModel.state.myFeedsTotalCount`가 `Paginated.totalCount`(서버 전체 개수)를 반영하고 View가 `myFeedsTotalCount ?? myFeeds.count`로 우선 표시한다. 셀 제거 시 이 카운트도 함께 감소(2026-09-09 — 헤더만 옛 개수로 남는 모순 방지, best-effort·당겨서 새로고침이 서버 값으로 복구).
+  - 근거: V1 `FeedPageContentViewModel.swift:332-334`, `FeedPageContentViewController.swift:97-101` · V2 `SosoFeedView`("n개의 기록" 헤더), `SosoFeedViewModel.removeCell`
 
 ### 1.4 빈 화면·에러·로딩
 
 - ✅ **Keep** — 내 피드가 0건이면 **빈 화면**(피드 없음 + "피드 작성" 유도)을 띄운다.
-  - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). 단 CTA 액션은 아직 빈 클로저(1.6과 함께 미배선).
-  - 근거: V1 `FeedPageContentViewController.swift:118-124`,`299-303`(emptyView.writeFeedButton) · V2 `SosoFeedView.swift:272-275`
+  - V2: `WSSEmptyView(type: .myFeed)`(내 피드 탭 한정). CTA 액션은 우상단 연필과 같은 `onRoute(.createFeed)`로 배선됐다(#256).
+  - 근거: V1 `FeedPageContentViewController.swift:118-124`,`299-303`(emptyView.writeFeedButton) · V2 `SosoFeedView.tabListContent`(빈 상태 분기)
 - 🔨 **회귀 확정→TODO** (2026-08-28: V2 계약대로 전면 뷰 표현) — **목록 로드 실패 표현**. V1은 목록 로드 에러를 **`onError`에서 `print`만** 하고 UI로 알리지 않았다(전면 에러 뷰 없음, 빈/직전 목록 유지). V2도 `catch`에서 `state.errorMessage`만 세팅하고 **`SosoFeedView`가 그 값을 안 그린다**(토스트도 전면 뷰도 없음 → 관찰상 V1과 같은 무처리).
   - **결정**: V1 parity(조용)를 답습하지 않고 **V2 Feature 계약(#195)대로** "목록 로드 실패=전면 `NetworkErrorView`+재시도"로 표현한다(계약이 V1보다 우선). 인증 만료는 위 라우팅으로 먼저 분기. 구현은 C1 범위 밖이라 `docs/TODO.md` 12절.
   - 근거: V1 `FeedPageContentViewModel.swift:108-110`,`252-254`,`277-279`(print) · V2 `SosoFeedViewModel.swift:241-243`,`296-298`, `SosoFeedView.swift:268-316`(errorMessage 미표시), [Feature CLAUDE.md](../CLAUDE.md)(로드 실패 표현 계약)
@@ -152,19 +153,18 @@
 - ✅ **Keep** — 좋아요 토글은 **낙관 반영 후 실패 시 롤백**(카운트·상태 되돌림).
   - V2: `TotalFeed.toggleLike()` 낙관 반영 → 실패 시 동일 토글로 롤백(내 피드/소소피드 두 배열 중 있는 쪽). 관찰 동작 동일.
   - 근거: V1 `FeedPageContentViewModel.swift:186-223` · V2 `SosoFeedViewModel.swift:319-348`, `CLAUDE.md`(toggleLike)
-- 🔧 **복원 확정→TODO** (2026-08-28) — V1 좋아요는 **햅틱(light impact)**을 준다. V2 목록 좋아요엔 햅틱이 없다(정렬 토글엔 있음).
-  - 근거: V1 `FeedPageContentViewModel.swift:196` · V2 `SosoFeedViewModel.swift:319-339`
+- ✅ **구현 완료** (2026-08-28 확정 → 복원됨) — V1 좋아요는 **햅틱(light impact)**을 준다. V2 목록 좋아요도 `HapticManager.impact(.light)`를 준다(정렬 토글의 `.selection()`과 같은 결).
+  - 근거: V1 `FeedPageContentViewModel.swift:196` · V2 `SosoFeedView.feedRow`(likeButtonTapped 햅틱)
 
 ### 1.6 상호작용·네비게이션
 
-- 🔧 **미배선(App 배선 대기·삭제 아님)** — V1 목록의 화면 전환 4종:
-  - **셀 탭 → 피드 상세**(`throttle(1s)` + push `throttle(500ms)` 이중 가드).
-  - **프로필 탭 → 유저 페이지**(단, 내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
-  - **연결 작품 탭 → 작품 상세**.
-  - **작성 버튼(연필) → 피드 작성**(`throttle(1s)`).
-  - **V2 `SosoFeedView`는 이 넷이 전부 스텁**이다(`// 이동`, `print`). 유일하게 배선된 건 내 글 드롭다운의 "수정하기"(`onEditFeedTapped`).
-  - 근거: V1 `FeedPageContentViewModel.swift:126-153`,`134-146`(탈퇴 유저), `FeedPageContentViewController.swift:126-138`, `FeedViewController.swift:122-128`(작성 버튼) · V2 `SosoFeedView.swift:118-124`,`298-300`,`327`,`347`, `FeedFeatureFactory.swift:111-136`(onEditFeedTapped만 콜백)
-  - **판정 근거**: 미구현(설계상 콜백 위임 예정)으로 확정 — 의도적 삭제 아님.
+- ✅ **구현 완료(#196·#197·#253)** — V1 목록의 화면 전환 4종이 전부 배선됐다:
+  - **셀 탭 → 피드 상세**(`.feedDetail` — 떠나기 전 `.feedVisited`로 기억시켜 복귀 시 그 셀만 동기화).
+  - **프로필 탭 → 유저 페이지**(`.userProfile` — 내 글이면 `isProfileTappable: false`로 탭 자체 비활성, `accessibleUserId == nil`(탈퇴 유저)이면 `unknownUser` 토스트).
+  - **연결 작품 탭 → 작품 상세**(`.novelDetail`).
+  - **작성 버튼(연필) → 피드 작성**(`.createFeed` — 빈 화면 CTA도 같은 라우트, #256).
+  - 화면 전환 의도는 `SosoFeedRoute` enum + `onRoute` 하나로 App `FeedRootView`(및 각 탭 Root)에 위임한다(#253). V1의 throttle 이중 가드는 Task 슬롯 가드 + `NavigationStack`으로 대체(요약 9).
+  - 근거: V1 `FeedPageContentViewModel.swift:126-153`,`134-146`(탈퇴 유저), `FeedPageContentViewController.swift:126-138`, `FeedViewController.swift:122-128`(작성 버튼) · V2 `Sources/Navigation/SosoFeedRoute.swift`, `SosoFeedView`(각 `onRoute(...)` 발화), App `FeedRootView`(Destination 매핑), `CLAUDE.md`(onRoute 항목)
 - ✅ **Keep** — 피드 셀 threedots 드롭다운: **내 글 = 수정/삭제, 남의 글 = 스포일러·부적절 신고(빨강)**.
   - V2: `feedMenuItems`가 `feed.isMyFeed`로 갈라 같은 2×2 구성. 삭제·신고는 확인/완료 알럿(`WSSAlertType` 5종 공용).
   - 근거: V1 `FeedPageContentViewModel.swift:155-184`(dropdown 분기) · V2 `SosoFeedView.swift:384-417`, `SosoFeedViewModel.swift:415-465`, `CLAUDE.md`(알럿 5종 공용)
@@ -279,9 +279,9 @@
 - ✅ **Keep** — 뒤로가기 → pop/dismiss, 신고·삭제 알럿·드롭다운은 배경 탭으로 닫힘.
   - V2: 툴바 back → `dismiss()`, `.onTapGesture`로 드롭다운/포커스 해제.
   - 근거: V1 `FeedDetailViewController.swift:71-73`,`442-447` · V2 `FeedDetailView.swift:77-81`,`271-280`
-- 🔧 **미배선(App 배선 대기)** — **프로필 탭 → 유저 페이지 / 탈퇴 유저 처리**. V1은 상세·댓글에서 프로필 탭 시 유저 페이지로 push(내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
-  - V2: 상세 프로필 탭이 `print` 스텁, 탈퇴 유저 분기 없음.
-  - 근거: V1 `FeedDetailViewModel.swift:272-281`,`451-465` · V2 `FeedDetailView.swift:110-114`(print)
+- ✅ **구현 완료(#197 후속·#253)** — **프로필 탭 → 유저 페이지 / 탈퇴 유저 처리**. V1은 상세·댓글에서 프로필 탭 시 유저 페이지로 push(내 글이면 무시, `userId == -1`이면 "탈퇴 유저" 토스트).
+  - V2: 상세·댓글 모두 `FeedDetailRoute.userProfile`로 App에 위임하고, 내 글이면 `isProfileTappable: false`, `Author.accessibleUserId == nil`(탈퇴 유저)이면 이동 대신 `WSSToastType.unknownUser` 토스트를 띄운다. 차단/숨김 댓글도 프로필 탭 비활성(사용자 확정).
+  - 근거: V1 `FeedDetailViewModel.swift:272-281`,`451-465` · V2 `FeedDetailView`(`userProfileUnavailableTapped`·`isProfileTappable`), `CLAUDE.md`(탈퇴 유저 판정·CommentRow 항목)
 
 ---
 
@@ -294,9 +294,9 @@
 - ✅ **Keep** — **작성/수정 겸용 화면**. 수정이면 대상 피드의 내용·스포일러·공개여부·연결작품·이미지를 채워 넣고 상단 타이틀이 "피드 수정"이 된다.
   - V2: `CreateFeedViewModel.Mode(create/edit(FeedID))`, `isEditing` → 타이틀 "피드 작성"/"피드 수정".
   - 근거: V1 `FeedEditViewModel.swift:60-72`,`112-152`, `FeedEditViewController` · V2 `CreateFeedViewModel.swift:19-24`,`62-66`, `CreateFeedView.swift:179-183`, `FeedFeatureFactory.swift:40-55`
-- 🔧 **미배선(App 배선 의존)** — **수정 prefill 방식**. V1은 `viewDidLoad`에서 `getSingleFeed`로 피드를 직접 받아 채우고, **기존 첨부 이미지를 Kingfisher로 내려받아** `selectedImages`에 넣었다.
-  - V2는 `makeEditFeedView(initialDraft:)`로 **App(호출자)이 미리 채운 `FeedDraft`를 주입**받는다. 이미지의 경우 `initialDraft.attachedImages`(ID)만 있고 `attachedImageDatas`가 비면 회색 placeholder로 뜬다 — 기존 이미지 데이터 주입은 App 배선에 달림.
-  - 근거: V1 `FeedEditViewModel.swift:112-152`(getSingleFeed + Kingfisher) · V2 `FeedFeatureFactory.swift:40-55`, `CreateFeedView.swift:324-334`
+- ✅ **구현 완료(#197 — V1과 같은 자기 로드 방식으로 수렴)** — **수정 prefill 방식**. V1은 `viewDidLoad`에서 `getSingleFeed`로 피드를 직접 받아 채우고, **기존 첨부 이미지를 Kingfisher로 내려받아** `selectedImages`에 넣었다.
+  - V2도 `makeEditFeedView(feedID:...)`로 대상만 받고 **수정 화면 자신이 `LoadFeedDetailUseCase`로 로드**해 draft를 채우며, 첨부 이미지는 URL만 와서 `URLSession`으로 내려받아 `attachedImageDatas`를 채운다(`loadForEdit` — 서버 수정 API가 전체 교체 방식이라 필요). 로드 중엔 `isLoadingForEdit` 오버레이로 편집을 막는다. 한때 검토했던 `initialDraft`(App이 미리 채워 주입) 계약은 폐기됐다.
+  - 근거: V1 `FeedEditViewModel.swift:112-152`(getSingleFeed + Kingfisher) · V2 `FeedFeatureFactory.makeEditFeedView`, `CreateFeedViewModel.loadForEdit`, `CLAUDE.md`(수정 모드 자기 로드 항목)
 
 ### 4.2 입력·검증·컨트롤
 

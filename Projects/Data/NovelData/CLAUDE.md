@@ -27,7 +27,7 @@
 - **내 서재·타유저 서재 둘 다 V2 엔드포인트(`/users/{id}/novels/v2`)를 쓴다**(#166). ⚠️ **두 조회의 유일한 차이는 경로에 넣는 userID뿐** — `fetchMyLibraryNovels`는 `appStorage.get(.userID)`로 내 ID를 채우고, `fetchUserLibraryNovels`는 인자로 받은 `UserID`를 넣는다. 쿼리·응답·매퍼(`libraryNovelsV2`)는 완전히 공유한다.
   - ⚠️ **구 V1 경로(`/users/{id}/novels`)는 이제 아무 데서도 호출되지 않는다** — `getUserLibraryNovels`·`UserLibraryQuery`·`UserLibraryNovelsResponse`·`libraryNovels(from:)`가 통째로 미사용이다(#166에서 타유저 서재를 V2로 옮기며 마지막 호출자가 사라짐). V1은 `lastUserNovelId: 0` 하드코딩이라 애초에 첫 페이지 고정·필터 무시였다. 되살려 쓰지 말고, 정리는 별도로 다룰 것.
   - V2 쿼리(`UserLibraryV2Query`) 함정 — 아래 4가지는 **양쪽 조회에 공통**이다:
-    - **미적용 필터는 nil로 보내 파라미터를 생략**한다. 빈 배열을 넣으면 `?genres=`(빈 값)로 직렬화돼 서버가 `[""]` 필터로 오해한다(`QueryItemConvertible`이 배열을 콤마 join).
+    - **미적용 필터는 nil로 보내 파라미터를 생략**한다. 예전엔 빈 배열이 `?genres=`(빈 값)로 직렬화돼 서버가 `[""]` 필터로 오해하는 함정이 있었으나 **#256부터 `QueryItemConvertible`이 빈 배열도 쿼리에서 생략**해 그 함정 자체는 사라졌다 — "미적용 = nil" 관례는 의도를 드러내는 표기라 유지한다.
     - **`isInterest`는 true일 때만 전송** — false를 보내면 "비관심 작품만" 필터가 되어버린다(관심 토글 OFF ≠ 비관심 필터).
     - **`genres`는 영문 라벨**(`mapNovelGenreString` — 서버 DB `genreName`이 영문), **`keywords`는 한글 `keywordName`** — 검색 API의 `keywordIds`(ID 배열)와 다르다.
     - 정렬 문자열은 `created_desc/created_asc/title/read_date/rating_desc/rating_asc` (서버 `UserNovelSortType`). 타유저 서재도 같은 문자열을 쓴다(`userLibraryV2Query`가 정렬만 싣고 나머지는 nil).

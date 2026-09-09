@@ -34,11 +34,12 @@
 | `Sources/NovelDetailReviewSection.swift` (유저 평가 + CTA) | `NovelDetailHeaderReviewResultView.swift` + `NovelDetailHeaderInterestFeedWriteButton.swift` | 평가 없음=셀렉터 / 있음=칩+상태바 **동일**. 2 참조 |
 | `Sources/NovelDetailInfoTab.swift` (정보 탭) | `…/NovelDetailInfoView/**`(Description·Platform·Review·Graph) | 소개 아코디언·플랫폼·감상평 3요소·그래프 **동일**. visibility 2단 판정 **동일**(3) |
 | `Sources/NovelDetailFeedTab.swift` (피드 탭) | `…/NovelDetailFeedView/**` + `FeedListView`(공용) | 커서 페이지네이션·좋아요·드롭다운·신고 **동일**. **지연 로드·실패 표현이 갈림**(4) |
-| *(없음)* | `firstReviewDescription` 온보딩 오버레이(NovelDetailView.swift·VM) | **V2엔 통째로 없다**(6.4) |
+| `Sources/NovelDetailView.swift`의 `reviewOnboardingOverlay` | `firstReviewDescription` 온보딩 오버레이(NovelDetailView.swift·VM) | **V2 재도입 완료**(6.4) — 복제본 대신 실제 상태바를 뚫는 스포트라이트로 개선 |
 
-> **작가 검색 결과 화면**(V1 `pushToNormalSearchViewController`)은 V2에서 `onAuthorTapped` 콜백으로 위임하나
-> **App 라우팅이 아직 미구현(후속)**이라 이 문서 범위 밖이다(6.2). 평가 화면(NovelReview)·피드 작성/수정·피드 상세·
-> 유저 프로필도 전부 콜백 위임이라 목적지 화면 자체는 각 모듈 문서 소관이다.
+> **작가 검색 결과 화면**(V1 `pushToNormalSearchViewController`)은 V2에서 `NovelDetailRoute.authorSearch`로
+> 위임하고 **App이 기존 일반 검색 화면(`SearchAssembly.makeView(initialQuery:)`)으로 배선 완료**(#197)라 이 문서
+> 범위 밖이다(6.2). 평가 화면(NovelReview)·피드 작성/수정·피드 상세·유저 프로필도 전부 콜백 위임이라 목적지
+> 화면 자체는 각 모듈 문서 소관이다.
 
 ---
 
@@ -49,7 +50,7 @@
 1. 🔧 **Improve 확정(#256, 2026-09-08 — 피드만 V1 방식에서 재이탈)** — V1은 `viewWillAppear`마다 header·info·feed를 **전부 다시 조회**한다(재진입할 때마다 최신 집계 반영). V2는 header·info 상당(`loadNovel`)만 재진입 조용한 재조회를 유지하고, **피드는 다녀온 셀만 상세 API로 동기화 + 이 화면발 작성 성공 복귀 시 초기 로드식 리셋**으로 바꿨다. → [1.1](#11-진입재조회생명주기)
    - 경위: **🔧 확정(2026-08-28, 사용자): 재진입 재조회 복원**(실측 회귀: 평가 후 복귀 시 헤더 집계 미갱신) → #236에서 V1 방식(`lastFeedId 0 + size=보던 개수` 통째 교체)으로 피드까지 복원했으나, **그 window 교체는 새 글이 생기면 기존 글이 창 밖으로 밀려 사라져 보이는 실결함**(글 2개에서 작성 시 이전 글 소실 — 2026-09-08 사용자 실측)이라 #256에서 셀 동기화로 재이탈(`NovelFeedPageSizePolicy` 삭제). V1의 "타 유저 변경까지 재진입 반영" 성질은 판정된 절충으로 포기(정본: V2 `CLAUDE.md` 로드 절 2026-09-08 재판정).
 2. ✅ **Keep 확정** (2026-08-28: VM Task 슬롯 가드+NavigationStack로 해소, 순수 네비 중복만 App 몫 — 본문 6.1) — **더블탭 가드(throttle) 제거**: V1은 관심·피드작성·평가·셀선택·드롭다운·뒤로가기에 **1초 throttle**을 걸어 중복 발화를 막았다. V2는 Task 슬롯 가드(`isSyncingInterest`/`feedsTask == nil` 등)로 대체하나, **화면 전환 콜백**(`onFeedTapped`/`onReviewTapped`/`onCreateFeedTapped`/`onAuthorTapped`)엔 명시 throttle이 없다 → 중복 push 방지가 App 배선에 있는지 확인 필요. → [6.1](#61-더블탭-가드throttle)
-3. 🔧 **미배선(App 배선 대기·삭제 아님)** — **작가 검색 화면 라우팅 미구현**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2는 `onAuthorTapped` 콜백만 있고 **App 라우팅이 아직 미구현(후속)**이라 현재 소비처가 Demo 로그뿐(V2 `CLAUDE.md` 명문). 후속 배선 전까지는 탭해도 아무 일도 안 일어난다. → [6.2](#62-작가-검색-진입)
+3. ✅ **구현 완료(#197 — 기존 검색 화면 재사용으로 배선)** — **작가 검색 라우팅**: V1은 헤더 작가 이름 탭 → **작가명으로 검색 결과 화면 push**. V2도 `NovelDetailRoute.authorSearch(작가명)` → App(`NovelDetailAssembly`)이 `SearchAssembly.makeView(initialQuery:)`로 **이미 검색 실행된 일반 검색 화면**을 push한다(전용 작가 검색 화면이 따로 있는 게 아니라 `searchByText`가 제목/작가 구분 없는 단일 검색이라 기존 화면 재사용으로 충분 — V2 `CLAUDE.md` 진입점 절). → [6.2](#62-작가-검색-진입)
 4. ✅ **구현 완료** (2026-08-31 — 되살림) — **첫 감상평 안내 오버레이** — V1은 정보 탭의 감상평을 처음 볼 때 **1회성 온보딩 오버레이**(딤 + 상태바 미리보기 + 말풍선 "당신의 감상이 궁금해요" 류 힌트)를 띄우고, 탭하면 닫으며 `UserDefaults.showReviewFirstDescription`로 다시 안 뜨게 저장했다. **V2에 재도입**했다 — 복제본 대신 **실제 상태바를 딤에서 뚫는 스포트라이트**로 개선(사용자 선택). 저장은 `BaseDomain.OnboardingHintUseCase`(범용 온보딩 플래그, UserDefaults). → [6.4](#64-첫-감상평-안내-오버레이)
 5. 🔧 **횡단 이슈→TODO 12절** (Amplitude 재도입) — **Amplitude 이벤트 트래킹 전부 제거** — V1은 상세 진입·평가·관심·피드작성·플랫폼 이동·좋아요·신고 등 십여 곳에 Amplitude 이벤트를 심었다. **V2엔 없다**(분석 미이식으로 보이나 확인 필요 — Home과 동일 사안). → [6.3](#63-amplitude-트래킹)
 
@@ -59,7 +60,7 @@
 7. 🔧 **Improve 확정** (2026-08-28, 사용자) — **관심 토글 방식** — V1은 관심 토글 후 **header·info·feed를 전부 재조회**(무거운 재로드). V2는 낙관 반영 + 서버 실패 시 롤백(재조회 없음). → [2.2](#22-관심-토글)
 8. 🔧 **Improve 확정** (2026-08-28, 사용자) — **피드 지연 로드** — V1은 피드를 `viewWillAppear`마다 **eager**로 받는다. V2는 **피드 탭 첫 진입 시 지연 로드**(V2 `CLAUDE.md` 명문). → [4.1](#41-지연-로드페이지네이션)
 9. 🔧 **Improve 확정** (2026-08-28, 사용자 — #195 계약) — **피드 로드 실패 표현 통일** — V1은 실패 경로가 갈렸다(eager 로드 실패=전면 에러 뷰 / 탭탭·페이지네이션 실패=`print`만, 무음). V2는 첫 페이지·더보기를 가리지 않고 **탭 자리를 `NetworkErrorView`+재시도로 대체**(#195). → [4.4](#44-빈-화면실패)
-10. 🔧 **복원 확정→TODO 12절** (2026-08-28, 사용자: Feed 8·UserPage 4(USER-018)와 통일 — 화면마다 다르지 않게) — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2는 `userId`가 없으면 조용히 무시(토스트 없음). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
+10. ✅ **구현 완료(#197 후속, 2026-08-28 — Feed·UserPage와 통일 복원)** — **탈퇴 유저 프로필 탭 토스트** — V1은 피드 프로필 탭 시 `userId == -1`이면 "unknownUser" 토스트를 띄웠다. V2도 `Author.accessibleUserId == nil`이면 이동 대신 `WSSToastType.unknownUser` 토스트를 띄운다(`-1` 센티널 판별은 `BaseDomain.Author`에 캡슐화). → [4.3](#43-피드-셀-상호작용-탭프로필드롭다운신고)
 11. ✅ **구현 완료(#236 — App 크로스스크린 피드백 채널, Feed 15와 한 묶음)** — **피드 수정·평가 완료 토스트** — V1은 `feedEditedNotification`·`novelReviewedNotification`을 관찰해 복귀 시 "수정 완료"·"평가 완료" 토스트를 띄웠다. V2는 App의 `CrossScreenFeedback` 채널(`feedEdited`·`novelReviewed` 케이스)이 복귀 화면 위에 띄운다(싱글톤 NotificationCenter 대신 콜백 seam). → [6.5](#65-알림-관찰자-토스트)
 
 (나머지는 대부분 ✅ Keep 또는 문서화된 🔧 Improve.)
@@ -208,10 +209,10 @@
 - ✅ **Keep** — 신고(스포일러/부적절)는 **확인 알럿 → API → 접수 완료 알럿**의 2단. 삭제는 확인 알럿 → API → 목록 제거.
   - V2: `FeedAlert` 의미값으로 관리(신고는 완료 케이스 분리 — 문구가 종류별로 다름). 삭제 성공 시 목록 제거 + **상세 재로드**(헤더 피드 수 집계 동기화). V1은 삭제 후 `reloadNovelDetailFeed`(피드만 리셋)로 목록만 갱신 — **V2는 집계까지 재동기화**하는 차이(경미한 Improve).
   - 근거: V1 `NovelDetailViewController.swift:353-453`(신고/삭제 2단 알럿), `NovelDetailViewModel.swift:458-477` · V2 `NovelDetailViewModel.swift:291-312`,`433-463`, `NovelDetailView.swift:615-644`, `CLAUDE.md`(피드 삭제/신고 2단 알럿)
-- 🔧 **복원 확정→TODO 12절** (2026-08-28, 사용자: Feed·UserPage 결정과 통일) — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
-  - V2: `feed.author.userId`가 없으면(응답 미제공) 조용히 무시(토스트 없음). 탈퇴 유저 안내가 사라졌다.
-  - 근거: V1 `NovelDetailViewModel.swift:514-522`(userId==-1→토스트) · V2 `NovelDetailFeedTab.swift:108-112`(userId nil→return)
-  - ⚠️ **복원 시 함정**: V2 `FeedMapper.author`는 `userId`를 non-optional `UserID`로 넘기므로 서버가 탈퇴 유저를 `-1`로 주면 **nil 가드에 안 걸리고 `UserID(-1)`로 유저 페이지 push → USER-018**. `-1` 판별을 매퍼(→ nil)에서 할지, 유저 페이지의 USER-018 폴백(UserPage 4.7 복원)에 맡길지 구현 시 결정.
+- ✅ **구현 완료(#197 후속, 2026-08-28 — Feed·UserPage 결정과 통일 복원)** — V1은 프로필 탭 시 **`userId == -1`(탈퇴 유저)이면 "unknownUser" 토스트**를 띄웠다.
+  - V2: `NovelDetailFeedTab`이 `feed.author.accessibleUserId == nil`이면 이동 대신 `onUnavailableUserProfileTapped()` → `DetailToast.unavailableUser`(`WSSToastType.unknownUser`) 토스트를 띄운다.
+  - 근거: V1 `NovelDetailViewModel.swift:514-522`(userId==-1→토스트) · V2 `NovelDetailViewModel.swift`(`DetailToast.unavailableUser`·`userProfileUnavailable` 액션), `CLAUDE.md`(피드 셀 인터랙션 항목)
+  - 복원 시 걱정하던 `-1` 센티널 함정은 **`BaseDomain.Author.accessibleUserId`로 캡슐화해 해소**했다 — 화면이 `-1` 리터럴을 직접 비교하지 않는다(`SosoFeedView`/`FeedDetailView`와 같은 API 공유).
 - ✅ **Keep** — 스포일러 피드는 본문 대신 "스포일러가 포함된 글" 대체 표기(공용 피드 셀이 처리).
   - V2: `WSSFeadView(isSpoiler:)`. V1도 공용 `FeedListTableViewCell`이 처리.
   - 근거: V1 `NovelDetailViewController.swift:293-300`(FeedListTableViewCell) · V2 `NovelDetailFeedTab.swift:137`
@@ -254,10 +255,9 @@
 
 ### 6.2 작가 검색 진입
 
-- 🔧 **미배선 확정→App 배선 대기** (2026-08-28: 삭제 아님) — V1은 헤더 작가 이름 탭 → **그 작가명으로 검색 결과 화면을 push**(`pushToNormalSearchViewController(searchText: authorName)`).
-  - V2: `onAuthorTapped(작가명)` 콜백만 있고 **작가 검색 화면의 Feature·App 라우팅이 아직 미구현(후속)**이라, 현재 소비처는 Demo 로그뿐이다(V2 `CLAUDE.md` 명문). 즉 지금은 탭해도 화면이 안 열린다.
-  - 근거: V1 `NovelDetailViewController.swift:229-234`(push search), `NovelDetailViewModel.swift:283-287` · V2 `NovelDetailFeatureFactory.swift:30-31`, `CLAUDE.md`("작가 검색 화면 Feature·App 라우팅은 아직 미구현(후속)")
-  - **결정(배선 대기)**: 삭제 아님 — 후속으로 작가 검색 라우팅을 App에 배선(목적지는 V1과 같은 검색 결과 화면).
+- ✅ **구현 완료(#197 — 기존 일반 검색 화면 재사용으로 배선)** — V1은 헤더 작가 이름 탭 → **그 작가명으로 검색 결과 화면을 push**(`pushToNormalSearchViewController(searchText: authorName)`).
+  - V2: `NovelDetailRoute.authorSearch(작가명)` → App(`NovelDetailAssembly`)이 `SearchAssembly.makeView(initialQuery:)`로 **그 작가명으로 이미 검색 실행된 일반 검색 화면**을 push한다. 전용 작가 검색 화면을 새로 만들지 않은 이유: `SearchNovelUseCase.searchByText`가 제목/작가 구분 없는 단일 텍스트 검색이라 기존 화면 재사용으로 충분(V2 `CLAUDE.md` 진입점 절).
+  - 근거: V1 `NovelDetailViewController.swift:229-234`(push search), `NovelDetailViewModel.swift:283-287` · V2 `Sources/Navigation/NovelDetailRoute.swift`(`.authorSearch`), App `HomeRootView` 등 4탭 Root의 `Destination.authorSearch` 매핑
 
 ### 6.3 Amplitude 트래킹
 
