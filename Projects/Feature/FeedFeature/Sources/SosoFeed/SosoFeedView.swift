@@ -108,6 +108,7 @@ struct SosoFeedView: View {
             buttonActions: feedAlertActions
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
+        .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
         .onAppear {
             if needsReloadForCreatedFeed {
                 needsReloadForCreatedFeed = false
@@ -313,7 +314,12 @@ struct SosoFeedView: View {
     @ViewBuilder
     private func tabListContent(for tab: FeedTab) -> some View {
         let tabFeeds = feeds(for: tab)
-        if viewModel.state.loadingTab == tab, tabFeeds.isEmpty {
+        // 실패를 목록보다 먼저 판단한다(NovelDetailFeedTab과 같은 순서, #195) — 더보기 실패는 목록이
+        // 남아 있어 그대로 두면 실패를 알릴 자리가 없다. 재시도가 시작되면 reloadFromScratch가 에러를
+        // 되돌려 로딩 분기로 넘어가므로 실패 뷰와 로딩이 공존하지 않는다.
+        if let loadError = loadError(for: tab) {
+            NetworkErrorView(error: loadError) { viewModel.handle(.retryLoad(tab)) }
+        } else if viewModel.state.loadingTab == tab, tabFeeds.isEmpty {
             LoadingView()
         } else if tab == .myFeed, tabFeeds.isEmpty {
             // 우상단 연필과 같은 작성 진입(V1 emptyView.writeFeedButton parity — V1_BEHAVIOR_CONTRACT 1.4).
@@ -365,6 +371,13 @@ struct SosoFeedView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(.hidden)
+        }
+    }
+
+    private func loadError(for tab: FeedTab) -> RepositoryError? {
+        switch tab {
+        case .myFeed:   viewModel.state.myFeedsLoadError
+        case .sosoFeed: viewModel.state.sosoFeedsLoadError
         }
     }
 
@@ -513,6 +526,13 @@ struct SosoFeedView: View {
         Binding(
             get: { viewModel.state.isUnavailableUserToastPresented },
             set: { if !$0 { viewModel.handle(.dismissUnavailableUserToast) } }
+        )
+    }
+
+    private var actionFailedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isActionFailedToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissActionFailedToast) } }
         )
     }
 

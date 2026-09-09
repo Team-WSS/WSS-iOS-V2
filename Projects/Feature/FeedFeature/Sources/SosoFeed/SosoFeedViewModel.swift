@@ -61,7 +61,14 @@ final class SosoFeedViewModel {
         /// `selectTab`이 진행 중 로드를 취소하지 않는 구조라, A탭 로드가 도는 채로 B탭이 선택될 수 있어
         /// "지금 로딩 중인 게 어느 탭인지"를 잃으면 엉뚱한 탭에 스피너가 뜬다(#256 리뷰에서 발견).
         var loadingTab: FeedTab?
-        var errorMessage: String?
+        /// 탭별 목록 로드 실패(첫 페이지·더보기·당겨서 새로고침·작성 복귀 재로드 불문) — 그 탭 콘텐츠
+        /// 자리를 `NetworkErrorView`(재시도)로 대체한다(#195 로드 실패 표현 계약). 새 로드 시작
+        /// (`reloadFromScratch`)이 되돌리므로 로딩 표시와 공존하지 않는다.
+        var myFeedsLoadError: RepositoryError?
+        var sosoFeedsLoadError: RepositoryError?
+        /// 사용자 액션(좋아요·삭제·신고) 실패 토스트 — 콘텐츠는 멀쩡하고 그 행동만 실패한 경우의
+        /// 토스트 lane(`FeedDetailViewModel`의 같은 이름 상태와 동일 계약).
+        var isActionFailedToastPresented = false
 
         /// 피드 셀 액션(삭제/신고)의 확인·완료 알럿 — 확정 시 실행할 대상 피드를 함께 보관한다.
         var presentedFeedAlert: FeedAlert?
@@ -90,6 +97,8 @@ final class SosoFeedViewModel {
         case loadMore(FeedTab)
         /// 당겨서 새로고침 — 현재 탭을 처음부터 다시 받는다(전체 최신화는 이 경로뿐).
         case pullToRefresh
+        /// 실패 뷰(`NetworkErrorView`)의 재시도 — 그 탭을 처음부터 다시 세운다.
+        case retryLoad(FeedTab)
         /// 피드 탭 연필 아이콘 작성 성공 복귀(App 신호 소비) — **두 목록을 초기 로드처럼 완전히 비우고**
         /// 현재 탭을 처음부터 다시 받는다(새 글이 맨 위, 스크롤 최상단).
         case reloadForCreatedFeed
@@ -118,6 +127,7 @@ final class SosoFeedViewModel {
         /// 콜백 대신 여기서 그친다.
         case userProfileUnavailableTapped
         case dismissUnavailableUserToast
+        case dismissActionFailedToast
     }
 
     //MARK: - Filter Selection Helpers
@@ -164,6 +174,12 @@ final class SosoFeedViewModel {
         case reload(FeedTab)
         /// 다음 페이지를 **이어붙임** — 마지막 셀 onAppear.
         case more(FeedTab)
+
+        var tab: FeedTab {
+            switch self {
+            case .reload(let tab), .more(let tab): tab
+            }
+        }
     }
 
     /// 목록 로드(첫 페이지·더보기)는 **이 한 슬롯**에만 산다. 시작하는 모든 경로는 `nil`을 확인하거나
@@ -229,6 +245,8 @@ final class SosoFeedViewModel {
             // 목록 API가 안 내려줘 이 캐시로 채워 넣으므로, `myProfile()`이 재조회하게 해야 반영된다).
             cachedMyProfile = nil
             reloadFromScratch(state.selectedTab)
+        case .retryLoad(let tab):
+            retryLoad(tab)
         case .reloadForCreatedFeed:
             reloadForCreatedFeed()
         case .feedVisited(let feedID):
@@ -266,6 +284,8 @@ final class SosoFeedViewModel {
             state.isUnavailableUserToastPresented = true
         case .dismissUnavailableUserToast:
             state.isUnavailableUserToastPresented = false
+        case .dismissActionFailedToast:
+            state.isActionFailedToastPresented = false
         }
     }
 
@@ -332,9 +352,24 @@ final class SosoFeedViewModel {
         state.myFeeds = []
         state.sosoFeeds = []
         state.myFeedsTotalCount = nil
+        // 실패 뷰도 두 탭 모두 걷어낸다(reloadFromScratch는 현재 탭 것만 되돌린다) — 다른 탭도
+        // 초기 로드 이전 상태로 되돌리는 게 이 리셋의 계약이다.
+        state.myFeedsLoadError = nil
+        state.sosoFeedsLoadError = nil
         hasLoadedMyFeeds = false
         hasLoadedSosoFeeds = false
         reloadFromScratch(state.selectedTab)
+    }
+
+    /// 실패 뷰의 재시도 — 그 탭을 처음부터 다시 세운다. 더보기 실패로 목록이 남아 있던 경우도 이 경로로
+    /// 오므로 목록을 비워 로딩 분기로 갈아탄다(재시도 중 옛 목록이 잠깐 비치지 않게 —
+    /// `NovelDetailViewModel.retryFeeds`와 같은 결).
+    private func retryLoad(_ tab: FeedTab) {
+        switch tab {
+        case .myFeed: state.myFeeds = []
+        case .sosoFeed: state.sosoFeeds = []
+        }
+        reloadFromScratch(tab)
     }
 
     /// 처음부터 다시 채운다 — 진행 중이던 이전 로드를 **취소하고 곧바로 재대입**한다(취소만 하고 재대입하지 않는
@@ -347,6 +382,9 @@ final class SosoFeedViewModel {
         cellSyncTask = nil
         pendingSyncFeedIDs = []
         setHasLoaded(false, for: tab)
+        // 실패 뷰를 되돌려야 로딩 분기가 보인다 — 안 되돌리면 재시도가 도는 내내 실패 뷰가 남아
+        // 그 버튼이 "눌러도 반응 없는" 상태가 된다(NovelDetail selectTab에서 실측된 함정과 동일).
+        setLoadError(nil, for: tab)
         state.loadingTab = tab
         feedsTask = Task { await loadFeeds(.reload(tab)) }
     }
@@ -373,12 +411,10 @@ final class SosoFeedViewModel {
             apply(page, kind: kind)
         } catch {
             guard !Task.isCancelled else { return }
-            switch kind {
-            case .reload(.myFeed), .more(.myFeed):
-                state.errorMessage = "내 피드를 불러오지 못했어요."
-            case .reload(.sosoFeed), .more(.sosoFeed):
-                state.errorMessage = "소소피드를 불러오지 못했어요."
-            }
+            // 인증 만료(authenticationRequired)도 실패 뷰로 간다(NetworkErrorView가 "일시적 오류"로
+            // 흡수) — 이 화면엔 아직 로그인 라우팅 배선이 없어(`App/FeedRootView` 주석 참고) 계약상
+            // 예외 lane 자체가 없다. 배선이 들어오면 여기서 auth를 먼저 걸러낼 것.
+            setLoadError(error, for: kind.tab)
             logger?.error("피드 목록 로드 실패(\(kind)): \(String(describing: error))")
         }
     }
@@ -456,6 +492,13 @@ final class SosoFeedViewModel {
         switch tab {
         case .myFeed: hasLoadedMyFeeds = value
         case .sosoFeed: hasLoadedSosoFeeds = value
+        }
+    }
+
+    private func setLoadError(_ error: RepositoryError?, for tab: FeedTab) {
+        switch tab {
+        case .myFeed: state.myFeedsLoadError = error
+        case .sosoFeed: state.sosoFeedsLoadError = error
         }
     }
 
@@ -627,7 +670,7 @@ final class SosoFeedViewModel {
                let index = state.sosoFeeds.firstIndex(where: { $0.feedId == feedID }) {
                 state.sosoFeeds[index] = state.sosoFeeds[index].preservingLikeState(of: beforeSoso)
             }
-            state.errorMessage = "좋아요 처리에 실패했어요."
+            state.isActionFailedToastPresented = true
             logger?.error("피드 좋아요 동기화 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
@@ -731,7 +774,8 @@ final class SosoFeedViewModel {
             pendingSyncFeedIDs.remove(feedID)
             removeCell(feedID)
         } catch {
-            state.errorMessage = "피드 삭제에 실패했어요."
+            state.isActionFailedToastPresented = true
+            logger?.error("피드 삭제 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
 
@@ -746,7 +790,8 @@ final class SosoFeedViewModel {
             }
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
-            state.errorMessage = "신고 접수에 실패했어요."
+            state.isActionFailedToastPresented = true
+            logger?.error("피드 신고 실패(\(feedID.value)): \(String(describing: error))")
         }
     }
 }

@@ -48,6 +48,10 @@
 - **좋아요**: 낙관 반영(두 목록 모두 — 내 글은 소소피드에도 섞여 나온다), 실패 시 스냅샷의 좋아요 두 필드만
   롤백(`preservingLikeState`, 목록별 스냅샷), 같은 셀 연타는 서버 동기화가 끝날 때까지 무시. 목록 교체·셀
   동기화가 in-flight 좋아요를 되덮지 않게 병합 보호를 건다(전체 목록 재조회 병합의 정본은 UserPage 쪽).
+- **목록 로드 실패(첫 페이지·더보기·당겨서 새로고침·작성 복귀 재로드 불문)는 그 탭 콘텐츠 자리를
+  `NetworkErrorView`(재시도)로 대체한다**(#195 계약 적용, 2026-09-10) — 실패를 목록보다 먼저 판단하고(더보기
+  실패도 남은 목록을 걷어냄), 재시도는 그 탭을 비우고 처음부터 다시 세운다. 사용자 액션 실패(좋아요·삭제·
+  신고)는 `.networkDelay` 토스트 lane. 인증 만료의 예외 처리는 아직 없다(아래 주의사항).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
@@ -75,15 +79,19 @@
   `LoadingView`↔빈 뷰가 깜빡인다(서재 `hasLoadedContent`와 같은 이유).
 - 재로드가 도는 중 바닥에 닿은 `loadMore`는 슬롯 가드에 조용히 드롭된다(작품 상세·서재와 같은 좁은 창 — 스크롤
   재실현으로 복구). "밀린 요청 기억" 방어는 넣지 말 것(서재 #195에서 더 나쁜 결함으로 판명).
-- `SosoFeedViewModel.state.errorMessage`는 View가 어디서도 읽지 않는 죽은 상태다(목록 로드 실패가 무표시) —
-  이 화면(`SosoFeedView`)엔 인증 만료 라우팅(`onAuthenticationRequired`)도 없다(`App/FeedRootView` 주석 참고). 2026-09-03
-  재진입 갱신 작업의 범위 밖으로 남겨둔 것. **`FeedDetailView`는 이와 별개로 #244에서 auth 라우팅이 들어왔다**(아래).
-  - ⚠️ **이 무표시 갭이 #256의 작성 복귀 리셋과 만나면 눈에 띄는 자리로 옮겨진다**(리뷰 지적, 알려진 감수
-    사항): `.reloadForCreatedFeed`가 두 목록을 먼저 비우고 재로드하는데 그 재로드가 실패하면, 방금 글을 쓴
-    사용자에게 "아직 남긴 기록이 없어요"(내 피드) 또는 빈 화면(소소피드)이 뜨고 — 빈 상태에선 당겨서
-    새로고침도 안 잡혀(`scrollBounceBehavior(.basedOnSize)`) — 복구는 탭을 떠났다 돌아오기(`hasLoaded`가
-    false라 `.load`가 재시도)뿐이다. 이 화면의 로드 실패 표현(#195 계약 적용)이 구현되면 자연 해소된다 —
-    그 전까지 리셋 순서를 "성공 후 교체"로 바꾸는 우회는 스크롤 리셋·로딩 분기 계약을 깨므로 하지 말 것.
+- **목록 로드 실패는 탭별 `myFeedsLoadError`/`sosoFeedsLoadError`(`RepositoryError?`)가 표현한다**(2026-09-10,
+  #195 계약 적용 — 예전엔 View가 안 읽는 죽은 `errorMessage`뿐이라 무표시였고, #256 작성 복귀 리셋 실패 시
+  "아직 남긴 기록이 없어요" 빈 화면 트랩이 감수 사항으로 남아 있었다 — 이제 실패 뷰+재시도로 해소).
+  재시도(`.retryLoad`)는 그 탭 목록을 비우고 `reloadFromScratch`를 태운다 — 더보기 실패로 목록이 남아 있던
+  경우도 로딩 분기로 갈아탄다(옛 목록이 재시도 중 잠깐 비치지 않게, `NovelDetailViewModel.retryFeeds`와 같은
+  결). `reloadFromScratch`가 시작 시 그 탭 에러를 되돌리므로 실패 뷰와 로딩이 공존하지 않는다(안 되돌리면
+  재시도 버튼이 "눌러도 반응 없는" 상태가 된다 — NovelDetail `selectTab`에서 실측된 함정). 사용자 액션
+  실패(좋아요·삭제·신고)는 `isActionFailedToastPresented` → `.networkDelay` 토스트(FeedDetail과 동일 lane).
+  - ⚠️ **인증 만료 라우팅(`onAuthenticationRequired`)은 여전히 없다**(`App/FeedRootView` 주석 참고) — 계약상
+    auth는 실패 뷰 대신 로그인 라우팅이어야 하지만 이 화면엔 그 lane 자체가 없어, 401도
+    `NetworkErrorView`의 default("일시적 오류")로 흡수된다(재시도는 같은 401로 되돌아온다 — 조용한 빈
+    화면이던 예전보단 낫지만 근본 해결은 라우팅 배선, FeedFeature 후속 작업). **`FeedDetailView`는 이와
+    별개로 #244에서 auth 라우팅이 들어왔다**(아래).
 - **`FeedDetailView`의 인증 만료 라우팅은 로드 경로에만 건다**(#244) — `FeedDetailViewModel`이
   `State.requiresAuthentication` + `routeToLoginIfAuthenticationRequired(_:)`를 두고, **상세/댓글/프로필 이미지
   로드**(`loadFeed`·`loadComments`·`loadCurrentUserProfileImage`)의 catch에서 실패 플래그·알럿보다 **먼저** 걸러
@@ -131,10 +139,10 @@
     목록 재조회 없이 다녀온 셀만 동기화되는지(스크롤 유지·좋아요/댓글수/삭제 반영)를 앱 로그인 없이 보기 위한
     배선. Demo 앱 진입 씬(`FeedFeatureDemoApp`)도 이 씬으로 바꿔뒀다.
     ⚠️ **Demo 실서버 모드는 `TEST_API_KEY`(`Config/Config_Debug.xcconfig` → Info.plist)가 만료되면
-    `authenticationRequired`로 조용히 실패해 "0개의 기록 / 아직 남긴 기록이 없어요"가 뜬다** — 이 화면은
-    인증 만료 라우팅도 에러 표시도 없어(`state.errorMessage`는 View가 안 읽음) "피드가 없는 계정"으로 오진하기
-    딱 좋다(2026-09-03 실측 — OSLog에 `피드 목록 로드 실패(reload(...)): authenticationRequired`가 찍혔다).
-    빈 목록이 뜨면 먼저 OSLog(`kr.websoso.FeedFeatureDemo:feed`)부터 볼 것. 토큰 갱신은 사람만 할 수 있다.
+    `authenticationRequired`로 실패해 "일시적인 오류가 발생했어요" 실패 뷰가 뜬다**(2026-09-10부터 —
+    예전엔 무표시라 "0개의 기록 / 아직 남긴 기록이 없어요"로 떠 "피드가 없는 계정" 오진이 잦았다,
+    2026-09-03 실측). 재시도를 눌러도 같은 401이라 안 풀린다 — 실패 뷰가 뜨면 OSLog
+    (`kr.websoso.FeedFeatureDemo:feed`)에서 `authenticationRequired`인지부터 볼 것. 토큰 갱신은 사람만 할 수 있다.
   - **피드 상세 데모는 씬이 둘이다** — `FeedDetailDemoScene`은 실서버(`NetworkingClient` + 토큰)로만
     떠서 네트워크가 막힌 시뮬레이터/샌드박스에선 화면 자체가 안 뜬다. `FeedDetailMockDemoScene`은
     mock UseCase 12개를 주입해 **dev 서버 없이** 상세를 띄우고, create/edit/delete UseCase가 일부러

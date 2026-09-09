@@ -32,9 +32,10 @@ import WSSComponent
 /// 재사용)까지 push한다.
 ///
 /// ⚠️ **`makeSosoFeedView` 자체는 `onAuthenticationRequired`를 안 받는다** — 그 콜백을 아예 몰라서
-/// 소소피드/내 피드 로드가 401로 막혀도 이 화면은 조용히 빈 상태로 남는다(Feature/CLAUDE.md의 "인증
-/// 만료 처리 계약"이 이 화면엔 아직 안 들어와 있음, App 쪽에서 고칠 수 있는 부분이 아니라 FeedFeature
-/// 쪽 후속 작업). 다만 여기서 push하는 **작품 상세(`NovelDetailFactory`)는 그 콜백을 받으므로**, 그
+/// 소소피드/내 피드 로드가 401로 막히면 로그인 라우팅 대신 탭 콘텐츠 자리의 실패 뷰("일시적 오류",
+/// 2026-09-10부터 — 그 전엔 조용한 빈 상태)로 흡수된다(Feature/CLAUDE.md의 "인증 만료 처리 계약"이
+/// 이 화면엔 아직 안 들어와 있음, App 쪽에서 고칠 수 있는 부분이 아니라 FeedFeature 쪽 후속 작업).
+/// 다만 여기서 push하는 **작품 상세(`NovelDetailFactory`)는 그 콜백을 받으므로**, 그
 /// 안에서 발생하는 인증 만료는 정상적으로 처리하도록 `onAuthenticationRequired`를 받아 전달한다.
 struct FeedRootView: View {
 
