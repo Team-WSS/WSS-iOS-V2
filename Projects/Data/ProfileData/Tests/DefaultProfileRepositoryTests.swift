@@ -212,7 +212,7 @@ struct DefaultProfileRepositoryTests {
 
         try await sut.saveAccountInfo(AccountInfoDraft(email: nil, gender: .male, birth: try BirthYear(1995)))
 
-        #expect(localStorage.gender == "MALE")
+        #expect(localStorage.gender == "M")
         #expect(localStorage.birthYear == 1995)
     }
 
@@ -231,6 +231,17 @@ struct DefaultProfileRepositoryTests {
         #expect(draft.email == nil)
     }
 
+    @Test("loadLocalGenderAndBirth는 새 포맷(\"F\"/\"M\")으로 캐시된 값도 읽는다")
+    func loadLocalGenderAndBirth_newFormat_success() async throws {
+        let (sut, _, localStorage) = makeRepository()
+        localStorage.gender = "F"
+        localStorage.birthYear = 1998
+
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+    }
+
     @Test("loadLocalGenderAndBirth localStorage에 값이 없으면 서버로 폴백하고 결과를 localStorage에 캐시")
     func loadLocalGenderAndBirth_missing_fallsBackToServerAndCaches() async throws {
         let (sut, service, localStorage) = makeRepository()
@@ -242,7 +253,7 @@ struct DefaultProfileRepositoryTests {
 
         #expect(draft.gender == .female)
         #expect(draft.birth.value == 1998)
-        #expect(localStorage.gender == "FEMALE")
+        #expect(localStorage.gender == "F")
         #expect(localStorage.birthYear == 1998)
     }
 
