@@ -32,7 +32,7 @@
 ## 주의사항 (작업 중 발견 시 누적)
 
 #### 네비게이션 바 (#244)
-- 시스템 툴바가 아니라 플랫 `WSSNavigationBar`(타이틀=작품명, 완료 버튼=`trailing` 슬롯) + `.wssCustomNavigationBar(swipeBackEnabled: false)`다(패턴 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). **`swipeBackEnabled: false`인 이유**: 좌측 back이 `requestClose`(저장 전 "그만하기" 확인 알럿)라, 스와이프로 그 확인을 건너뛰면 작성 중이던 draft가 사라진다. 로딩/실패 `overlay`는 content에만 걸려 네비바를 덮지 않는다. ⚠️ **뒤로가기 화살표 색을 회색(`wssGray200`)에서 표준 검정으로 통일**했다(#244, 전 화면 통일 목적) — 이 화면만 회색이던 걸 되돌리지 말 것.
+- 시스템 툴바가 아니라 플랫 `WSSNavigationBar`(타이틀=작품명, 완료 버튼=`trailing` 슬롯) + `.wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })`다(패턴 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). **확인 핸들러를 넘기는 이유**: 좌측 back이 `requestClose`(저장 전 "그만하기" 확인 알럿)라 스와이프로 그 확인을 건너뛰면 작성 중이던 draft가 사라진다 — #256부터 스와이프 pop은 막되 시도가 감지되면 back과 같은 `requestClose`가 불린다(변경 없으면 즉시 닫힘). 로딩/실패 `overlay`는 content에만 걸려 네비바를 덮지 않는다. ⚠️ **뒤로가기 화살표 색을 회색(`wssGray200`)에서 표준 검정으로 통일**했다(#244, 전 화면 통일 목적) — 이 화면만 회색이던 걸 되돌리지 말 것.
 
 #### 저장 성공 시 앱스토어 평점 요청 (#221 재도입)
 - `saveDraft()` 성공 직후 `recordEngagementAndGateReview()`가 `AppReviewRequestUseCase`(BaseDomain, **피드와 공유** → 앱 전역 게이트)에 참여를 기록하고, 게이트(누적 참여 ≥ 임계치 AND 이번 버전 미요청) 통과 시 `state.shouldRequestReview = true`. 실제 프롬프트는 `NovelReviewView`가 `import StoreKit` + `@Environment(\.requestReview)`로 띄운다.
