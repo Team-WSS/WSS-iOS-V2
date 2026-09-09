@@ -144,7 +144,7 @@
   - 페이지 크기(`size`)는 서버 권장값이 없어 20으로 고정(컬렉션 도메인 공통 — `LoadCollectionsUseCase`/
     `LoadLikedCollectionsUseCase` 둘 다).
 - **컬렉션 상세(#201) — 사용자 확정 사항**:
-  - 우상단 더보기(`icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
+  - 우상단 더보기(`icThreedotsVertical`, #255 QA — `NovelDetailFeature`/`UserPageFeature`와 동일 아이콘으로 통일, 구 `icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
     삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).

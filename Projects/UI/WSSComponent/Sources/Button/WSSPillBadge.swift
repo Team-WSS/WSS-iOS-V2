@@ -39,8 +39,10 @@ public struct WSSPillBadge: View {
     private let style: Style
     private let action: (() -> Void)?
 
-    /// - Parameter action: `nil`(기본값)이면 순수 표시용 — 부모 뷰가 탭을 처리한다(`CollectionSearchNovelView`
-    ///   처럼 행 전체가 탭 영역인 경우). 값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다.
+    /// - Parameter action: `nil`(기본값)이면 순수 표시용 — 부모 뷰가 탭을 처리한다(행 전체가 탭 영역인
+    ///   경우. ⚠️ 2026-09 기준 이 분기를 실제로 쓰는 콜사이트는 없다 — 원래 유일한 사용처였던
+    ///   `CollectionSearchNovelView`가 #255 QA로 배지 단독 탭 방식으로 바뀌었다, `WSSComponent/CLAUDE.md`
+    ///   참고. API는 남겨둔다). 값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다.
     public init(style: Style, action: (() -> Void)? = nil) {
         self.style = style
         self.action = action
