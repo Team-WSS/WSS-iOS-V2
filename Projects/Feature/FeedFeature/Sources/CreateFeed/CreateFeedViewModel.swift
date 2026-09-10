@@ -380,7 +380,7 @@ private extension CreateFeedViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(trimmed, page: 0, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
             state.hasSearchedNovel = true
@@ -400,7 +400,7 @@ private extension CreateFeedViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextNovelSearchPage)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextNovelSearchPage, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels.append(contentsOf: paginated.items)
             state.hasNextNovelPage = paginated.hasNext
@@ -432,12 +432,23 @@ private extension CreateFeedViewModel {
 
     /// `state.validationError` 중 토스트로 노출해야 하는 종류를 판단하는 단일 진입점.
     /// 어떤 `WSSToastType`으로 표현할지는 View가 결정한다.
-    /// 매 액션 종료 시 호출된다.
+    /// 매 액션 종료 시 호출된다 — `handle(_:)`가 액션마다 `validationError`를 먼저 `nil`로 리셋해두므로,
+    /// 여기서 `showToast`도 그 값과 **매번 함께** 다시 정해야 한다(`showToast`는 이 함수와 `.dismissToast`
+    /// 외엔 아무도 안 건드리는 파생값이라는 불변식). ⚠️ **예전엔 `nil`일 때 `guard`로 조용히 return해
+    /// `showToast`를 그대로 뒀다** — 그러면 토스트가 떠 있는 동안(`showToast == true`) 그 원인과 무관한
+    /// 다른 액션(예: `.removeConnectedNovel`)이 들어와도 `validationError`만 `nil`로 리셋되고
+    /// `showToast`는 안 꺼져, 이미 뜬 토스트가 사라지지 않은 채 View의 `toastType`만 `nil` 분기(`.networkDelay`)로
+    /// 바뀌어 **엉뚱한 문구로 둔갑**했다(#255 QA — "이미 연결된 작품" 토스트가 떠 있는 동안 작품 연결을
+    /// 해제하면 "알 수 없는 오류" 토스트로 바뀌어 보임). 지금은 `nil`/무토스트 케이스 모두 `showToast`를
+    /// 명시적으로 다시 대입해 항상 `validationError`와 동기 상태를 유지한다.
     func presentValidationError(_ state: inout State) {
-        guard let error = state.validationError else { return }
+        guard let error = state.validationError else {
+            state.showToast = false
+            return
+        }
         switch error {
         case .contentOverLimit, .emptyContent:
-            break
+            state.showToast = false
         case .imageOverLimit, .connectedNovelOverLimit:
             state.showToast = true
         }

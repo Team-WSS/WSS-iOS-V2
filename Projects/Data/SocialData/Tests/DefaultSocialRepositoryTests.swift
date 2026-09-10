@@ -150,6 +150,56 @@ struct DefaultSocialRepositoryTests {
         #expect(service.postReportImproperCommentCallCount == 1)
     }
 
+    // MARK: - 이미 신고한 경우(REPORT-002/REPORT-004) → alreadyReported 변환
+
+    @Test("reportSpoilerFeed REPORT-002는 alreadyReported로 변환")
+    func reportSpoilerFeed_alreadyReported_convertsToAlreadyReported() async {
+        let (sut, service) = makeRepository()
+        service.postReportSpoilerFeedResult = .failure(
+            NetworkingError.responseFailure(code: 409, body: ErrorResponse(code: "REPORT-002", message: "이미 신고했어요"))
+        )
+
+        await #expect(throws: RepositoryError.alreadyReported) {
+            try await sut.reportSpoilerFeed(id: FeedID(5))
+        }
+    }
+
+    @Test("reportImproperFeed REPORT-002는 alreadyReported로 변환")
+    func reportImproperFeed_alreadyReported_convertsToAlreadyReported() async {
+        let (sut, service) = makeRepository()
+        service.postReportImproperFeedResult = .failure(
+            NetworkingError.responseFailure(code: 409, body: ErrorResponse(code: "REPORT-002", message: "이미 신고했어요"))
+        )
+
+        await #expect(throws: RepositoryError.alreadyReported) {
+            try await sut.reportImproperFeed(id: FeedID(6))
+        }
+    }
+
+    @Test("reportSpoilerComment REPORT-004는 alreadyReported로 변환")
+    func reportSpoilerComment_alreadyReported_convertsToAlreadyReported() async {
+        let (sut, service) = makeRepository()
+        service.postReportSpoilerCommentResult = .failure(
+            NetworkingError.responseFailure(code: 409, body: ErrorResponse(code: "REPORT-004", message: "이미 신고했어요"))
+        )
+
+        await #expect(throws: RepositoryError.alreadyReported) {
+            try await sut.reportSpoilerComment(feedID: FeedID(1), commentID: CommentID(3))
+        }
+    }
+
+    @Test("reportImproperComment REPORT-004는 alreadyReported로 변환")
+    func reportImproperComment_alreadyReported_convertsToAlreadyReported() async {
+        let (sut, service) = makeRepository()
+        service.postReportImproperCommentResult = .failure(
+            NetworkingError.responseFailure(code: 409, body: ErrorResponse(code: "REPORT-004", message: "이미 신고했어요"))
+        )
+
+        await #expect(throws: RepositoryError.alreadyReported) {
+            try await sut.reportImproperComment(feedID: FeedID(1), commentID: CommentID(4))
+        }
+    }
+
     // MARK: - 네트워크 에러 → RepositoryError 변환
 
     @Test("NetworkingError.responseFailure 401은 authenticationRequired로 변환")

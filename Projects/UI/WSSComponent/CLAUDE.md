@@ -56,6 +56,18 @@
 - **Alert 버튼 탭은 `isPresented`를 자동으로 닫지 않는다**(SwiftUI `.alert`와 다름) — 취소 버튼 포함 **모든 buttonActions가 스스로 표시 상태를 되돌려야** 한다. 안 그러면 알럿이 안 닫힌다.
 - **`isPresented`는 그대로 두고 `alertType`만 바뀌는 다단계 알럿**(예: "신고할까요?" 확인 → "신고 접수했습니다" 완료)은 `WSSAlertView`에 `.id(alertType)`를 걸어 뷰 정체성을 갈라야 `.transition`이 실제로 발동한다 — 안 걸면 SwiftUI가 "같은 뷰"로 보고 내용만 즉시 스냅 교체해버려 애니메이션이 없다(`WSSAlertType`을 `Hashable`로 만든 이유). `.animation(value:)`도 `isPresented`뿐 아니라 `alertType` 변화에도 걸어야 이 전환이 애니메이션된다.
 - **`WSSAlertType`은 원래 전 케이스가 정적 카피라 `CaseIterable` 자동 합성이었지만, `deleteNovelNotificationSubscriptions(summary:)`(#188, "선택 N개 삭제할까요?" 류처럼 화면마다 문구가 달라지는 알럿)가 연관값을 가지면서 깨졌다** — `CaseIterable` 준수를 별도 `extension`으로 옮기고 `allCases`를 수동 나열한다(Demo 프리뷰 목록용, 동적 케이스는 샘플 문자열로 채움). 새 정적 케이스를 추가하면 이 수동 `allCases`에도 반드시 같이 넣을 것 — 안 넣으면 컴파일은 되지만 Demo에서 조용히 안 보인다. 문구 조합(예: "제목 외 N작품")은 컴포넌트가 판단하지 않고 **호출부가 완성된 문자열을 넘긴다**.
+- **`WSSToastType.alreadyReportedFeed`/`.alreadyReportedComment`(#255 QA)는 의도적으로 케이스를 나눴다** —
+  처음엔 "이미 신고한 피드/댓글이에요" 하나로 합쳤으나, 사용자가 "피드/댓글 각각 보이게 하고 싶다"고
+  명시해 대상별 전용 문구(`.alreadyReportedFeed`="이미 신고한 피드예요", `.alreadyReportedComment`="이미
+  신고한 댓글이에요")로 분리했다 — `selectionOverLimit(count:)`처럼 화면마다 파라미터만 다른 게 아니라
+  **문구 자체가 다른** 경우라 연관값이 아니라 케이스를 나누는 쪽을 택함(아래 `selectionOverLimit` 항목의
+  "화면별로 문구를 가르고 싶으면 케이스를 나눠야 한다"는 원칙과 동일 결론).
+- ⚠️ **`WSSToastType.selectionOverLimit(count:)`의 문구는 `NovelReviewFeature`(매력포인트 3개)·
+  `KeywordFeature`(키워드 20개)·`CollectionFeature`(작품 100개) 세 화면이 공유하는 범용 텍스트다**
+  (`WSSToastStyle.text`) — `count`만 다를 뿐 "N개까지 선택이 가능해요" 카피 자체는 하나라, 한 화면만
+  보고 문구를 그 화면 전용으로 손보면 나머지 두 화면 문구도 함께 바뀐다(2026-09-08, #255 QA로
+  "100개까지 선택 가능해요"→"100개까지 선택이 가능해요" 확정하며 실제로 세 화면 다 갱신됨). 화면별로
+  문구를 가르고 싶어지면 `WSSToastType`에 케이스를 나눠야 한다 — `count`만으로는 못 가른다.
 - **이미지 + `onTapGesture` 패턴은 접근성 트리에 안 잡힌다**(VoiceOver·UI 자동화 모두) — 탭 가능한 이미지에는 `.accessibilityLabel` + `.accessibilityAddTraits(.isButton)`을 같이 달거나 `Button`을 쓸 것. `WSSFeadHeaderView`의 프로필·`WSSFeedReactView`의 좋아요가 실제로 이 문제였는데, 접근성 패치만으론 부족해 **결국 둘 다 진짜 `Button`으로 승격**했다(아래 항목 참고) — threedots는 처음부터 `Button`이었다.
 - ⚠️ **셀 행 전체에 "피드 상세 진입" 같은 컨테이너 탭을 걸 계획이면, 그 안의 서브 액션(프로필·좋아요 등)은 처음부터 진짜 `Button`으로 만들 것 — `onTapGesture`로 두면 컨테이너가 `simultaneousGesture`일 때만 "우연히" 공존한다.** `SosoFeedView`의 피드 행이 실제로 이 함정에 걸렸었다(#196) — 셀 프로필/좋아요가 `onTapGesture`였을 땐 행의 "피드 상세 진입"을 `simultaneousGesture`로 걸 수밖에 없었는데, `simultaneousGesture`는 조상·자손 제스처를 **동시에 발화시킨다**(둘 다 실행, 하나가 이기는 게 아님) — 그 자리는 원래 no-op placeholder라 안 드러났다가, 프로필/좋아요에 실제 동작을 연결하자 "눌러도 피드 상세로 같이 넘어가는" 버그로 드러났다. 고친 방법: 프로필·좋아요를 `Button`으로 승격한 뒤, 행의 컨테이너 제스처를 **평범한 `onTapGesture`로 낮춘다** — `Button`은 자기 hit-test 영역에서 조상의 `onTapGesture`보다 우선하므로(아래 "칩·셀 안에 우선순위 서브 액션" 항목과 동일 원리) 그 영역 밖만 컨테이너로 떨어진다. `linkNovelTapped`(연결 작품 배너)는 처음부터 `Button`이라 이 문제가 없었다 — 새 피드/리스트 셀을 만들 때 "서브 액션은 전부 Button, 컨테이너는 평범한 onTapGesture"를 기본값으로 할 것.
 - **`WSSAlertView`의 버튼(`WSSAlertButtonView` = `Text` + `.onTapGesture`)도 같은 이유로 접근성 트리에 안 잡힌다** — 앱 전체 알럿이 이 컴포넌트를 쓰므로, UI 자동화(XcodeBuildMCP `tap` 등)로는 알럿이 뜨는 것까지만 검증 가능하고 버튼 탭은 못 누른다(UserPageFeature #172에서 확인). 자동화로 알럿 버튼까지 검증해야 하면 `Button`으로 바꾸거나 접근성 트레잇을 추가해야 한다.
@@ -179,7 +191,13 @@
   `action: (() -> Void)? = nil` — `nil`(기본값)이면 순수 표시용(부모 행의 `onTapGesture`가 탭을 받음),
   값을 넘기면 배지 자신이 탭을 받는 단독 액션이 된다(`WhiteRemovableKeywordChip`의 `onSelect`/`onDelete`
   분리와 같은 이유 — `nil`일 때 무조건 `onTapGesture`를 걸면 빈 클로저라도 이 뷰가 탭을 소비해버려
-  부모의 `onTapGesture`로 전파되지 않는다). `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
+  부모의 `onTapGesture`로 전파되지 않는다).
+  ⚠️ **`nil`(행 전체 탭) 분기는 2026-09-08(#255 QA) 이후로 실제 호출부가 없다** — 유일한 콜사이트인
+  `CollectionSearchNovelView.novelRow`가 "행 전체를 누르면 실수로 토글되기 쉽다"는 QA 지적으로
+  `action`을 실제로 넘기는 쪽으로 바뀌었다(그 화면의 컨테이너 `onTapGesture`는 제거됨). `nil` 분기
+  자체는 API로 남겨뒀으니(다른 화면이 필요하면 그대로 재사용 가능) 죽은 코드로 보고 지우지 말 것 —
+  단, "지금 실사용 중인 게 하나도 없다"는 사실을 몰랐다면 헷갈릴 수 있어 남긴다.
+  `.remove` 스타일 배경은 `wssSecondary10`(#FFF5F7, 신설) —
   이전엔 이 배지가 `wssSecondary20`(#FFF5FC)을 빌려 쓰고 있었으나, 승격하며 전용 토큰으로 이름을
   확정했다. 다른 콜사이트가 없어 `wssSecondary20` 자체를 제거했다(사용자 확인, 2026-08-23).
 - **`WSSResetButton`(`Sources/Button/`)는 필터류 화면 하단 액션바의 "초기화" 보조 버튼이다**(2026-08,

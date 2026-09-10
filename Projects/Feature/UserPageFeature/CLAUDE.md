@@ -207,8 +207,35 @@
 - **차단**: 툴바 threedots 드롭다운("차단하기") → `WSSAlertType.blockUser` 확인 알럿 → `BlockUserUseCase`. **성공하면 화면을 dismiss한다**(`state.shouldDismiss`) — 차단하면 상대 프로필을 다시 볼 수 없어 화면에 남아있을 이유가 없다는 판단(사용자 확정).
   - **차단했어요 크로스스크린 안내 seam(#221)** — V1은 차단 성공 시 `NotificationCenter.blockUser(nickname)`를 post해 **복귀 화면**이 "차단했어요" 토스트를 띄웠다(V2 parity 대상, `V1_BEHAVIOR_CONTRACT.md` 4.6). 이 화면은 차단 성공과 동시에 pop되므로 토스트는 자기가 못 띄운다 — `UserPageView.onUserBlocked(nickname)` 콜백을 `shouldDismiss` 전이에서 `dismiss()` **직전**에 부르는 것까지만 뚫어뒀다(Factory·`UserPageAssembly`까지 전달, 전부 기본 no-op). `shouldDismiss`가 **차단 성공에서만** 켜지므로(뒤로가기는 툴바 버튼이 직접 `dismiss`) 이 전이 = 차단 성공으로 봐도 된다. **실제 토스트("{nickname}님을 차단했어요")는 App의 통합 크로스스크린 피드백 채널이 띄운다**(#236 — `App/Sources/Main/CrossScreenFeedback.swift`, `feedEdited`·`novelReviewed`와 한 채널. #221의 4탭 4벌 복붙은 이 채널로 흡수됨). 각 탭 Root가 `onUserBlocked`를 받아 `crossScreenFeedback.present(.userBlocked(nickname:))`로 연결하고, 토스트는 `NavigationStack` **컨테이너** 오버레이라 pop 후 최상단이 된 **직전 뷰**(소소피드/피드상세/작품상세 등) 위에 뜬다. V1은 전역 `NotificationCenter.blockUser`를 **피드 탭 하나(`FeedViewController`)만** 캐치해 띄웠던 것과 달리, V2는 **차단한 바로 그 탭**에서 뜬다(더 정확).
 - **피드 신고**: 피드 셀 threedots 드롭다운("스포일러 신고"/"부적절한 표현 신고", 빨강) → 확인→접수완료 2단 알럿(`FeedAlert` 의미값, `NovelDetailFeature`와 동일 패턴) → `ReportSpoilerFeedUseCase`/`ReportImproperFeedUseCase`. 차단·신고 실패는 `hasActionError` 토스트(`.unknownError`)로 공유(카피가 같아 굳이 안 나눔).
+  ⚠️ **단 이미 신고한 피드에 같은 종류를 다시 신고하면(서버 `REPORT-002` → `RepositoryError.alreadyReported`)
+  `hasActionError`가 아니라 별도 `isAlreadyReportedToastPresented` → `WSSToastType.alreadyReportedFeed`
+  ("이미 신고한 피드예요")로 안내한다**(#255 QA — `presentActionError`가 이 코드만 먼저 걸러낸다).
+  `UserFeedListViewModel`("전체보기")도 동일 분기를 갖는다 — `NovelDetailFeature`/`FeedFeature`와 같은
+  서버 코드를 같은 방식으로 처리하므로 토스트 문구가 화면마다 갈라지지 않는다.
 - **"활동" 탭은 미리보기(최대 5개)만** 보여준다(`UserPageViewModel.visibleFeeds`). 6개 이상(`hasMoreFeeds`)이면 "전체보기" 버튼 → `UserFeedListView`(무한스크롤 전용 화면, 별도 `UserFeedListViewModel`)로 이동. **#201부터 App이 조립한다** — `UserPageView`는 `onRoute(.userFeedList(userID:nickname:profileImage:))`만 올리고(이미 로드해둔 프로필 값을 그대로 실어 보낸다), 실제로 `UserPageFeatureFactory.makeFeedListView(...)`를 호출하는 건 App(`UserPageAssembly.makeFeedListView`, 그 라우트를 받은 각 탭 Root)이다 — 예전엔 `SettingFeature`의 내부 네비게이션과 같은 패턴으로 View 자신이 로컬 push했지만, 그 패턴 자체가 걷어내는 대상이 됐다.
 - **비공개 프로필**: 서버가 `USER-015`로 응답하면(장르/작품 취향/피드 조회 각각) `RepositoryError.privateProfile` → **스티키 헤더(통계/활동 탭)는 그대로 두고 그 아래 콘텐츠 영역만** "비공개 프로필이에요" 안내로 대체한다(사용자 확정 — 처음엔 화면 전체를 대체했다가 탭 자체가 사라지는 문제로 `Section` 내부로 옮김). 재시도 버튼 없음(상대가 설정을 바꾸기 전엔 의미 없음).
+  ⚠️ **상단 프로필(닉네임·소개·프로필 이미지)은 비공개 여부와 무관하게 항상 노출된다**(#255 QA — 서버
+  스펙 변경: `GET /users/profile/{id}`가 비공개 유저도 200으로 `nickname`/`intro`/`avatarImage`를 내려준다,
+  `isProfilePublic: false`와 `genrePreferences`도 같이 오지만 **이 화면은 그 둘을 안 쓴다** — 장르 뱃지는
+  `LoadGenrePreferencesUseCase`라는 별도 호출로 채워진다, 사용자 확인). 이 정보가 실제로 화면에 뜨기까지
+  **세 차례에 걸쳐 원인이 다른 회귀가 났다**(전부 2026-09-08 같은 세션에서 실측 발견 — `loadUserPage`가
+  원래 프로필·장르·취향·서재통계·컬렉션미리보기 5개를 한 병렬 묶음으로 일괄 대입하던 설계의 후유증):
+  1. 장르/작품 취향이 `USER-015`(`RepositoryError.privateProfile`)로 실패하면 같은 묶음의 **이미 성공한
+     프로필 응답까지 함께 버려졌다** → 장르/취향을 `loadPreferenceBundle`로 분리.
+  2. 컬렉션 미리보기(`LoadCollectionPreviewsUseCase`)도 비공개 유저에게 실패할 수 있는데,
+     `CollectionData`가 `USER-015`를 `.privateProfile`로 매핑 못 해 **일반** 에러로 떨어져 여전히 프로필과
+     한 묶음에 있었다 → `loadCollectionPreviewsSection`으로 추가 분리, 실패는 조용히 흡수(0개처럼 보임).
+  3. **서재 통계**(`LoadUserRegisteredNovelStatsUseCase`)도 실제로는 비공개 유저에게 403 `USER-015`를
+     반환한다는 게 실측으로 드러났다(이 문서의 "USER-015 감지는 3곳뿐" 서술이 **틀렸었다** — 서재 통계는
+     그 에러코드가 없다고 적혀 있었지만 실제로는 있다) → `loadRegisteredNovelStatsSection`으로 추가 분리,
+     역시 조용히 흡수.
+  결론: **지금은 프로필 자체(`loadProfileSection`)만 유일하게 실패를 전면 에러로 취급**하고, 서재 통계·
+  컬렉션 미리보기·장르/취향은 전부 독립된 `async let`으로 프로필과 완전히 분리돼 있다 — "비공개 시 실패할
+  수 있는 호출은 하나라도 프로필과 같은 do-block에 있으면 안 된다"가 이 반복된 재발의 교훈. 새 병렬 호출을
+  이 화면에 추가할 땐 "비공개 유저에게 실제로 403이 오는지"를 문서 서술만 믿지 말고 **실측으로 확인**할 것.
+  ⚠️ **`ProfileMapper.profile(from:)`도 이 김에 방어적으로 고쳤다** — `genrePreferences`(안 쓰는 필드)를
+  `try`가 아니라 `try?`(`compactMap`)로 매핑해, 서버가 이 화면이 모르는 장르 문자열을 보내도 그것 때문에
+  **정작 필요한 닉네임/소개/이미지까지 통째로 실패하지 않게** 했다(`ProfileData/CLAUDE.md` 참고).
 - **컬렉션 섹션(#200)의 타이틀 행은 컬렉션 개수와 무관하게 항상 노출된다**(사용자 확정, 2026-08-25 —
   **이전엔** `viewModel.state.collectionCount > 0`일 때만 섹션 전체를 보여줬다). 0개면 타이틀 행만
   보이고 그 아래 미리보기 행(`CollectionPreviewRow`)만 생략되며, **행 전체를 탭하면**(`.contentShape(Rectangle())`
@@ -255,8 +282,17 @@
     프로필로 폴백하며 "현재 로직상 진입 불가능하지만 대응" 주석을 달았다). 즉 실사용에서 이 화면에 닿을 경로는 사실상
     없고(모든 진입점이 탈퇴 가드로 이미 막힘, 없는 userID로 들어갈 방법이 없음), Demo의 `998`은 그 방어 경로를 인위적으로
     트리거한 것이다. → 탈퇴 유저 처리를 "여기서 토스트+뒤로가기"로 바꾸려 하지 말 것(그건 탭 시점 ①의 몫이고 이미 됨).
-- **`USER-015`(비공개 프로필) 감지는 장르·작품 취향·피드 3곳뿐** — 서재 통계(`LoadUserRegisteredNovelStatsUseCase`)는 일부러 대상에서 뺐다. 서버가 이 엔드포인트엔 그 에러코드 자체를 정의하지 않고, 작품 피드는 서버가 비공개 글을 알아서 걸러주기 때문(사용자 확정). "다른 병렬 호출도 다 해줘야 하지 않나" 싶어도 이 셋 이상으로 넓히지 말 것.
-  컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200)도 서재 통계와 같은 이유로 대상 밖이다 — `DefaultCollectionRepository.fetchCollectionPreviews`가 `code` 문자열 분기 없이 `NetworkingError.toRepositoryError()`로만 넘겨 `.privateProfile`을 던지지 못한다(`CollectionData/CLAUDE.md` 참고). 이 호출이 실패하면 `loadUserPage()`의 같은 `catch`에서 `presentError`가 일반 `hasLoadError`로 처리한다 — 컬렉션만 골라 조용히 숨기는 동작이 아니다.
+- ⚠️ **`USER-015`(비공개 프로필) 감지가 `RepositoryError.privateProfile`로 매핑돼 있는 곳은 장르·작품
+  취향·피드 3곳뿐이지만, 그 3곳 "이외"의 호출이 비공개에 안전하다는 뜻은 아니다** — 서재 통계
+  (`LoadUserRegisteredNovelStatsUseCase`)·컬렉션 미리보기(`LoadCollectionPreviewsUseCase`, #200) **둘 다
+  비공개 유저에게 실제로 403 `USER-015`를 반환한다**(2026-09-08 실측으로 정정 — 예전엔 "서재 통계는 이
+  에러코드 자체가 없다"고 잘못 적혀 있었다). 다만 `NovelData`/`CollectionData`가 `USER-015`를 개별
+  매핑하지 않아 **일반** `RepositoryError`(`.forbidden`/`.unknown` 등)로만 떨어질 뿐이다. 그래서 이 둘은
+  `.privateProfile`을 캐치해 `isProfilePrivate`를 세우는 대상이 될 수 없고(어떤 일반 에러로 올지 예측 불가),
+  대신 **`loadUserPage`에서 프로필과 완전히 격리된 자기만의 `async let`/do-catch**(`loadRegisteredNovelStatsSection`/
+  `loadCollectionPreviewsSection`)에 두고 실패를 조용히 흡수한다(빈 값/0개처럼 보임, 재시도 없음) — 위
+  "비공개 프로필" 항목의 세 차례 회귀 기록 참고. **새 병렬 호출을 이 화면에 추가할 때 "비공개면 실패하는지"를
+  이 문서 서술만 믿고 판단하지 말 것** — 실측하거나, 확실치 않으면 처음부터 프로필과 격리해서 안전하게 갈 것.
 - **컬렉션 섹션 타이틀 행(`userPageCollectionSection`)·미리보기 개별 항목 탭 둘 다 #201 후속(2026-08-28)으로
   뚫렸다** — `CollectionPreviewRow.onItemTapped`/헤더 `Button`이 각각 `onCollectionItemTapped`/
   `onCollectionListTapped`로 `UserPageFeatureFactory.makeView` → `UserPageAssembly.makeView`까지
@@ -277,12 +313,36 @@
   - 컬렉션 상세의 "수정" 진입은 #253부터 `CollectionDetailRoute.editCollection` exhaustive switch라
     기본값 no-op이 없다 — 타유저 프로필에서 여는 컬렉션은 항상 남의 것이라(`detail.isMine == false`)
     "컬렉션 수정" 버튼 자체가 안 뜨지만, 호출자는 매핑을 명시해야 컴파일된다(#228 죽은 버튼 사고 예방).
-- ⚠️ **조용한 재조회(`load()`→`loadUserPage(isSilentRefresh:)`)는 병렬(`async let`) 5개 결과를 로컬
-  변수로 다 받은 뒤 `state`에 일괄 대입한다(#236)** — 받는 족족 `state`에 대입하면 중간 하나가 실패했을 때
-  실패 지점 앞의 값만 새로 교체돼 프로필 묶음이 부분 갱신된 채 남고(닉네임은 새 값·통계는 옛 값 등),
-  "실패해도 기존 화면 유지"라는 조용한 재조회 계약이 깨진다. fresh 경로는 실패 시 `presentError`로 전면
-  덮여 안 보이지만 silent는 그대로 드러난다. `MypageViewModel.loadMypage`도 같은 5개 병렬 로드 구조라,
-  조용한 재조회를 얹을 땐 동일하게 일괄 대입해야 한다.
+- ⚠️ **조용한 재조회(`load()`→`loadUserPage(isSilentRefresh:)`)는 묶음이 있는 경우에 한해 `async let` 결과를
+  로컬 변수로 다 받은 뒤 `state`에 일괄 대입한다(#236, #255 QA로 5개 단일 묶음→4갈래로 분리:
+  `loadProfileSection`(프로필 단독)·`loadRegisteredNovelStatsSection`(서재 통계 단독)·
+  `loadCollectionPreviewsSection`(컬렉션 미리보기 단독) 셋은 각각 필드 하나뿐이라 묶을 것도 없고,
+  `loadPreferenceBundle`(장르+작품 취향, 2개)만 여전히 일괄 대입 묶음이다)** — 받는 족족 `state`에
+  대입하면 그 묶음 안에서 중간 하나가 실패했을 때 실패 지점 앞의 값만 새로 교체돼 부분 갱신된 채 남고
+  (장르는 새 값·취향은 옛 값 등), "실패해도 기존 화면 유지"라는 조용한 재조회 계약이 깨진다. fresh
+  경로는 실패 시 `presentError`로 전면 덮여 안 보이지만 silent는 그대로 드러난다. **갈래를 가른 기준은
+  성패 단위가 다른가**(위 "비공개 프로필"/"USER-015 감지" 항목 참고) — 네 갈래는 서로 독립된 `async let`으로
+  동시에 실행되고, 하나가 실패해도 다른 갈래의 대입엔 영향이 없다. `MypageViewModel.loadMypage`는 아직
+  5개 단일 묶음 구조라(비공개 요구가 없어서),
+  조용한 재조회를 얹을 땐 그 화면 성패 단위에 맞게 일괄 대입할 것 — 무조건 5개를 따라가지 말 것.
   - 알려진 절충(#236 리뷰에서 수용): 재조회 중 프로필 조회와 활동 피드 조회가 병렬이라, 그 사이 상대가
     프로필을 바꾸면 피드 author 닉네임(응답에 없어 호출 측 프로필 값으로 채움)이 한 박자 옛 값일 수 있다 —
     창이 매우 좁고 다음 재진입에 자가 치유되므로 순차화하지 않는다.
+- ⚠️ **"활동" 탭의 피드 셀 탭(→피드 상세)·연결 작품 배너 탭(→작품 상세)은 #255 QA 전까지 아무 동작이
+  없었다**(연결 작품 배너는 `//TODO: - 연결 작품 상세로 이동` 주석만 있는 no-op, 피드 셀 자체는 탭 제스처가
+  아예 없었음) — `UserPageView`뿐 아니라 **"전체보기"(`UserFeedListView`)도 화면 구조가 복제돼 있어 동일하게
+  비어 있었다**. 두 View 모두 콜백을 추가했지만 형태는 갈린다:
+  - **`UserPageView`는 #253의 `onRoute: (UserPageRoute) -> Void` 단일 창구에 얹었다** — 개별 콜백을
+    새로 추가하는 대신 `UserPageRoute`에 `case feed(FeedID)`/`case novel(NovelID)`를 추가하고
+    `onRoute(.feed(id))`/`onRoute(.novel(id))`로 발화한다(rebase로 #253과 #255가 합쳐지며 정리, 애초에
+    개별 `onFeedTapped`/`onNovelTapped` 콜백으로 짰던 걸 이 형태로 흡수). `UserPageFeatureFactory.makeView` →
+    `UserPageAssembly.makeView` → 4탭 Root(`FeedRootView`/`HomeRootView`/`LibraryRootView`/`MypageRootView`)의
+    `onRoute` switch가 각자 `Destination.feed`/`Destination.novel`로 push한다.
+  - **`UserFeedListView`("전체보기")는 아직 Route 타입이 없어 개별 `onFeedTapped: (FeedID) -> Void`/
+    `onNovelTapped: (NovelID) -> Void`(기본값 `{ _ in }`) 콜백 그대로 뒀다** — `UserPageFeatureFactory.makeFeedListView` →
+    `UserPageAssembly.makeFeedListView` → 4탭 Root까지 관통. 이 화면에 Route를 새로 도입하는 건 이번
+    범위 밖(#253이 손대지 않은 화면이라 굳이 함께 바꾸지 않았다).
+  이 모듈에 진입 콜백을 새로 추가할 땐 `UserPageView`·`UserFeedListView` 둘 다 짝을 맞춰야 한다(화면
+  구조가 의도적으로 복제돼 있다는 점은 이미 위쪽에 기록돼 있었으나, 이번처럼 "콜백 자체가 아예 없던"
+  누락은 두 화면에서 동시에 났다) — 다만 **형태(Route vs 개별 콜백)까지 반드시 같을 필요는 없다**,
+  각 화면이 이미 쓰고 있는 방식을 따라간다.

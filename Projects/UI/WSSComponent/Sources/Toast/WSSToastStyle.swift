@@ -13,7 +13,8 @@ public extension WSSToastType {
     var image: Image {
         switch self {
         case .deleteBlockUser, .novelAlreadyConnected,
-                .selectionOverLimit, .unknownUser, .noCollections, .networkDelay:
+                .selectionOverLimit, .unknownUser, .noCollections, .networkDelay,
+                .alreadyReportedFeed, .alreadyReportedComment:
             return WSSImage.icAlertSuccess.swiftUIImage
         case .novelReviewed, .novelReviewDeleted, .feedEdited, .blockUser,
                 .changePublic, .changePrivate, .changeInfo, .editProfile, .limitAddImage:
@@ -28,9 +29,11 @@ public extension WSSToastType {
         case .blockUser(let nickname):          "\(nickname)님을 차단했어요"
         case .unknownUser:                      "웹소소를 떠난 유저예요"
         case .noCollections:                    "컬렉션을 등록하지 않은 유저에요"
+        case .alreadyReportedFeed:               "이미 신고한 피드예요"
+        case .alreadyReportedComment:            "이미 신고한 댓글이에요"
         case .deleteBlockUser(let nickname):    "\(nickname)님을 차단 해제했어요"
         case .novelAlreadyConnected:            "하나의 작품만 연결할 수 있어요"
-        case .selectionOverLimit(let count):    "\(count)개까지 선택 가능해요"
+        case .selectionOverLimit(let count):    "\(count)개까지 선택이 가능해요"
         case .limitAddImage(let limitCount):    "\(limitCount)장까지 업로드 가능해요"
         case .novelReviewed:                    "평가 완료!"
         case .novelReviewDeleted:               "평가를 모두 삭제했어요"

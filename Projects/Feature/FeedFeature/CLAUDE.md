@@ -87,6 +87,10 @@
   결). `reloadFromScratch`가 시작 시 그 탭 에러를 되돌리므로 실패 뷰와 로딩이 공존하지 않는다(안 되돌리면
   재시도 버튼이 "눌러도 반응 없는" 상태가 된다 — NovelDetail `selectTab`에서 실측된 함정). 사용자 액션
   실패(좋아요·삭제·신고)는 `isActionFailedToastPresented` → `.networkDelay` 토스트(FeedDetail과 동일 lane).
+  - ⚠️ **`reportFeed`만은 이미 신고한 경우를 그 lane과 분리한다**(#255 QA) — 서버 `REPORT-002`/`REPORT-004`
+    (`RepositoryError.alreadyReported`)면 `isActionFailedToastPresented` 대신 `isAlreadyReportedToastPresented`
+    → 전용 `WSSToastType.alreadyReportedFeed` 토스트("이미 신고한 피드예요")로 안내하고, 그 외 실패는 위
+    일반 액션 실패 lane 그대로다.
   - ⚠️ **인증 만료 라우팅(`onAuthenticationRequired`)은 여전히 없다**(`App/FeedRootView` 주석 참고) — 계약상
     auth는 실패 뷰 대신 로그인 라우팅이어야 하지만 이 화면엔 그 lane 자체가 없어, 401도
     `NetworkErrorView`의 default("일시적 오류")로 흡수된다(재시도는 같은 401로 되돌아온다 — 조용한 빈
@@ -100,8 +104,14 @@
   ⚠️ **좋아요·댓글 작성/수정/삭제·삭제·신고 같은 개별 사용자 액션 실패는 일부러 auth 라우팅에 태우지 않았다** —
   이미 로드된 화면의 "사용자 액션 실패" 토스트 lane([상위 CLAUDE.md] 로드 실패 표현 계약)이 담당하고, 화면을
   "갇히게" 만드는 건 로드 401뿐이라서다(게다가 `create/editComment`는 성공 여부를 `Bool`로 돌려주는 구조,
-  `toggleLike`·신고는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
+  `toggleLike`는 `try?`로 에러를 삼켜 라우팅 자체가 어색하다). 이 경계를 "통일하자"며 액션 경로까지
   넓히려면 그 Bool/`try?` 설계부터 다시 볼 것.
+  ⚠️ **`reportSpoiler`/`reportImproper`는 #255 QA로 더 이상 `try?`가 아니다** — 예전엔 성공·실패를 구분 못 해
+  **에러를 삼킨 채 항상 "신고가 완료됐습니다" 알럿으로 전환**하는 버그가 있었다(이미 신고한 피드/댓글을 다시
+  신고해도 완료로 뜸). 지금은 두 함수가 `Bool`을 반환해 `confirmAlert`가 성공일 때만 완료 알럿으로 전환하고,
+  실패 시(특히 서버 `REPORT-002`/`REPORT-004` → `RepositoryError.alreadyReported`) `state.alreadyReportedTarget`
+  (`.feed`/`.comment`로 문구 분리, `WSSToastType.alreadyReportedFeed`/`.alreadyReportedComment`)을 세운다 —
+  단 이 실패도 **여전히 auth 라우팅엔 안 태운다**(위 문단의 정책 그대로, 방식만 `try?`→`do/catch`로 바뀜).
 
 - ⚠️ **댓글 입력은 반드시 `CommentDraft.maxContentCount`(500)로 clamp한다** — `CommentDraft.init`이 DEBUG에서
   초과 시 `assertionFailure`로 죽는다. `FeedDetailView`가 로컬 `@State commentDraft` 버퍼 + `.onChange` 2단계
@@ -112,6 +122,9 @@
   `isActionFailedToastPresented`로 `WSSToastType.networkDelay` 토스트를 띄우고, 전송 실패 시 입력 내용·수정
   모드를 보존해 재시도하게 한다(성공했을 때만 입력 비우고 목록 재조회). `create/editComment`가 성공 여부를
   `Bool`로 돌려주는 이유. "사용자 액션 실패"라 전면 뷰가 아니라 토스트([상위 CLAUDE.md] 로드 실패 표현 계약).
+- **`CreateFeedConnectNovelSheet`(작품 연결 검색)는 `searchNovelUseCase.searchByText`를
+  `recordRecentSearch: false`로 호출한다**(#255 QA) — 이 검색은 피드에 작품을 태깅하려는 부수 수단이지
+  "일반 검색 화면"에서의 검색이 아니라, 최근 검색어로 기록되면 안 된다(`SearchDomain/CLAUDE.md` 참고).
 - **`CreateFeedConnectNovelSheet`(작품 연결 검색)의 결과 영역은 `searchedNovels`가 아니라
   `CreateFeedViewModel.state.hasSearchedNovel` 플래그로 가른다** — `WSSSearchBar.onSearch`는 제출
   (엔터/검색 버튼)에만 발화하고 타이핑 자체는 매 글자마다 `updateConnectedNovelSearchText`로 바로
@@ -188,7 +201,12 @@
   토스트는 이 화면이 dismiss되므로 App의 크로스스크린 피드백 채널이 복귀 화면 위에 띄운다(V1 `feedEdited`
   알림 parity — V1처럼 작성·수정 모두 발화한다). 기본 no-op을 일부러 안 둔 이유: 작성 조립이 탭 Root 4곳에
   복제돼 있어 기본값이 있으면 새 조립 지점이 완료 토스트를 말없이 빼먹어도 컴파일이 통과한다(#236 리뷰).
-- **"수정" 계열 드롭다운(피드 상세 "수정"·목록 셀 "수정하기")은 전부 대상 `FeedID`만 콜백으로 넘긴다**(`.editFeed(FeedID)` 라우트 — 목록은 `SosoFeedRoute`, 상세는 `FeedDetailRoute`) — 이전 화면에서 데이터를 미리 준비하지 않고, App이 `FeedDetailAssembly.makeEditFeedView(feedID:dependencies:)`로 곧장 화면을 전환한다(#197, 빠른 전환 우선 — "누르자마자 로딩 화면이 잠깐 보였다 수정 화면으로 또 전환"되는 이전 방식은 화면이 두 번 깜빡여 UX상 되돌렸다). 실제 로드는 `CreateFeedViewModel` 자신이 한다(아래 항목).
+- **"수정하기" 계열 드롭다운(피드 상세·목록 셀 둘 다 "수정하기"/"삭제하기"로 통일, #255 QA — 예전엔 피드
+  상세만 "수정"/"삭제"로 짧아 목록 셀과 문구가 갈렸다)은 전부 대상 `FeedID`만 콜백으로 넘긴다**(`.editFeed(FeedID)`
+  라우트 — 목록은 `SosoFeedRoute`, 상세는 `FeedDetailRoute`) — 이전 화면에서 데이터를 미리 준비하지 않고, App이
+  `FeedDetailAssembly.makeEditFeedView(feedID:dependencies:)`로 곧장 화면을 전환한다(#197, 빠른 전환 우선 —
+  "누르자마자 로딩 화면이 잠깐 보였다 수정 화면으로 또 전환"되는 이전 방식은 화면이 두 번 깜빡여 UX상
+  되돌렸다). 실제 로드는 `CreateFeedViewModel` 자신이 한다(아래 항목).
 - **`CreateFeedViewModel`은 `mode == .edit`이면 `.load`(View `onAppear`) 시 스스로 대상 피드를 불러온다** — `loadFeedDetailUseCase: LoadFeedDetailUseCase?`(작성 모드에선 `nil`)로 `FeedDetail`을 조회하고, 첨부 이미지는 URL만 있어(서버가 바이트를 안 돌려줌) `URLSession`으로 미리 받아 `draft`/`attachedImageDatas`를 채운다(`loadForEdit`, 서버 수정 API가 전체 교체 방식이라 기존 이미지를 유지하려면 필요 — `FeedDomain/CLAUDE.md`의 `EditFeedUseCase` 항목 참고). 로드 중엔 `state.isLoadingForEdit`로 `CreateFeedView`가 로딩 오버레이 + `allowsHitTesting(false)`를 걸어 **사용자가 로드 완료 전에 draft를 건드릴 수 없게 막는다** — 이 가드가 없으면 로드가 사용자의 진행 중 편집을 덮어쓸 수 있다. `hasLoadedForEdit` 가드로 재진입 시 재요청하지 않는다.
   ⚠️ **`.load`가 스폰하는 `Task`는 `[weak self]`로 감싼다**(#197 PR 리뷰에서 발견 — 처음엔 강한 캡처였다) — 없으면 화면이 로드 완료 전에 닫혀도 `Task`가 VM을 계속 붙잡고 있다가 완료 시점에 이미 죽은 화면의 `state`에 쓰게 된다. `CollectionFeature.CreateCollectionViewModel.loadForEdit`(동일 패턴이라 서로 참조하는 사이)가 처음부터 이 가드를 갖고 있었다 — 두 화면 중 하나만 고칠 게 아니라 앞으로도 짝을 맞출 것.
 - ⚠️ **`CreateFeedViewModel`의 `draft.attachedImages`와 `attachedImageDatas`는 키가 어긋나도 에러 없이 조용히 이미지가 빠진다** — 제출 시 `draft.attachedImages.compactMap { state.attachedImageDatas[$0] }`(`CreateFeedViewModel.swift`)로 매핑하는데, `compactMap`이라 `attachedImages`의 `AttachedImageID`가 `attachedImageDatas`에 없으면 그 이미지만 매핑에서 빠지고 나머지는 정상 제출된다(크래시도, 로그도 없음). `loadForEdit`은 같은 루프에서 `draft.addImage(id)`와 `attachedImageDatas[id] = data`를 1:1로 채워 이 함정을 피한다 — 두 값을 채우는 새 코드를 추가할 땐 같은 방식으로 짝지어 채울 것.

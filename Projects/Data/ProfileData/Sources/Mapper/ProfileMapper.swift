@@ -14,7 +14,12 @@ import BaseData
 enum ProfileMapper {
 
     static func profile(from response: UserProfileResponse) throws -> Profile {
-        let genrePreferences = try response.genrePreferences.map { try novelGenre(from: $0) }
+        // `genrePreferences`는 이 응답의 소비자(UserPage/MyPage 상단 프로필)가 실제로 쓰지 않는 필드다
+        // (닉네임·소개·프로필 이미지만 화면에 반영됨) — 그래서 `try`가 아니라 `try?`로 관대하게 매핑한다.
+        // 여기서 하나라도 못 알아듣는 장르 문자열 때문에 전체 프로필 매핑이 실패하면, 정작 필요한
+        // 닉네임/소개/이미지까지 함께 버려진다(#255 QA 실측 — 비공개 유저 상단 정보가 이 이유로 안 보일
+        // 뻔했다).
+        let genrePreferences = response.genrePreferences.compactMap { try? novelGenre(from: $0) }
         return Profile(
             nickname: response.nickname,
             introduction: response.intro,
@@ -155,12 +160,15 @@ enum ProfileMapper {
         }
     }
 
-    /// userDefaults 로컬 저장 포맷. 계정정보 API(`gender(from:)`/`genderRawValue(from:)`)의 "M"/"F"와 다르다 —
-    /// `syncUserBasicInfo()`가 `UserInfoResponse.gender`(예: "MALE"/"FEMALE")를 원문 그대로 저장하기 때문.
+    /// userDefaults 로컬 저장 포맷. **서버가 "MALE"/"FEMALE"에서 "M"/"F"로 통일하면서(2026-09-08 실측
+    /// — `GET /users/info`도 이제 계정정보 API와 동일하게 "M"/"F"를 준다) 계정정보 API 포맷과 같아졌다.**
+    /// 새로 쓰는 값은 전부 "M"/"F"지만, 이 변경 전에 이미 "MALE"/"FEMALE"로 캐시된 기존 설치는 그대로
+    /// 남아있으므로 하위 호환으로 계속 받아들인다 — 안 받아주면 그 기기는 캐시가 새로 쓰일 때까지
+    /// "성별/나이 변경" 화면 진입마다 매핑 에러가 난다.
     static func localGender(from text: String) throws -> Gender {
         switch text {
-        case "MALE":    return .male
-        case "FEMALE":  return .female
+        case "M", "MALE":   return .male
+        case "F", "FEMALE": return .female
         default:
             throw MappingError.invalidConversion(type: "Gender", value: text)
         }
@@ -168,8 +176,8 @@ enum ProfileMapper {
 
     static func localGenderRawValue(from gender: Gender) -> String {
         switch gender {
-        case .male:     return "MALE"
-        case .female:   return "FEMALE"
+        case .male:     return "M"
+        case .female:   return "F"
         }
     }
 

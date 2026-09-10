@@ -62,6 +62,9 @@ final class UserPageViewModel {
 
         /// 차단·피드 신고 실패 공통 에러 토스트 — 둘 다 같은 문구(`WSSToastType.unknownError`)라 하나로 묶는다.
         var hasActionError = false
+        /// 이미 신고한 피드에 같은 종류의 신고를 다시 시도함(#255 QA) — `hasActionError`와 분리해
+        /// "이미 신고한 피드/댓글이에요" 전용 토스트로 안내한다.
+        var isAlreadyReportedToastPresented = false
     }
 
     /// 피드 셀 신고 알럿의 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
@@ -123,6 +126,7 @@ final class UserPageViewModel {
         case confirmFeedAlert
         case dismissFeedAlert
         case dismissActionErrorToast
+        case dismissAlreadyReportedToast
         case collectionSectionTapped
         case dismissNoCollectionsToast
     }
@@ -229,6 +233,8 @@ final class UserPageViewModel {
             state.presentedFeedAlert = nil
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .dismissAlreadyReportedToast:
+            state.isAlreadyReportedToastPresented = false
         case .collectionSectionTapped:
             tapCollectionSection()
         case .dismissNoCollectionsToast:
@@ -325,47 +331,98 @@ private extension UserPageViewModel {
 // MARK: - UseCase Handling
 
 private extension UserPageViewModel {
-    /// 프로필/장르 뱃지/작품 취향/서재 통계/컬렉션 미리보기를 병렬로 로드한다. 대상은 모두
-    /// `ProfileTarget.user(userID)` / 서재 통계·컬렉션 미리보기는 각각 `LoadUserRegisteredNovelStatsUseCase(id:)`
-    /// / `LoadCollectionPreviewsUseCase.execute(userID:size:)`로 동일한 userID를 사용한다 — 컬렉션
-    /// 목록 API는 대상 사용자를 명시로 받는 계약이라 "본인 조회"와 달리 이 화면이 직접 userID를 넘긴다
-    /// (`CollectionDomain/CLAUDE.md` 참고). 하나가 실패해도(구조적 동시성으로 나머지 자식 태스크는
-    /// 스코프 종료 시 자동 정리) 화면 전체를 에러로 취급한다.
+    /// 프로필/장르 뱃지/작품 취향/서재 통계/컬렉션 미리보기를 로드한다. **성패 단위별로 완전히 독립된
+    /// 갈래로 나뉜다**(#255 QA — 서버가 비공개 유저도 상단 프로필(닉네임·소개·프로필 이미지)은 성공
+    /// 응답을 주도록 바뀌어, 그 정보를 비공개 시 실패할 수 있는 나머지 호출들과 한 성패로 묶으면 안 되게
+    /// 됐다):
+    /// - **프로필**(`loadProfileSection`): 닉네임·소개·프로필 이미지 — 비공개 여부와 무관하게 항상 성공
+    ///   응답을 준다. 유일하게 실패를 전면 에러로 취급하고(`presentError`), 성공하면 `hasLoaded`를 세운다.
+    /// - **서재 통계**(`loadRegisteredNovelStatsSection`)·**컬렉션 미리보기**(`loadCollectionPreviewsSection`):
+    ///   각각 독립 격리 — 둘 다 비공개 유저에게 `RepositoryError.privateProfile`이 아니라 **일반** 에러(403
+    ///   `USER-015`가 공용 `NetworkingError.toRepositoryError()`로만 매핑돼 `.forbidden`이 됨)로 실패할 수
+    ///   있다(실측, 2026-09-08 — 처음엔 컬렉션 미리보기만 이 문제인 줄 알았는데 서재 통계도 동일하게
+    ///   재현됐다). 프로필과 같은 do-block에 있으면 그 실패가 이미 받아온 프로필까지 함께 버리므로, 각각
+    ///   완전히 독립된 `async let`으로 실패를 **조용히 흡수**한다(빈 값처럼 보임, 재시도 없음).
+    /// - **취향 묶음**(`loadPreferenceBundle`): 장르 뱃지·작품 취향 — 비공개면 `RepositoryError.privateProfile`로
+    ///   실패해 `state.isProfilePrivate`만 세우고 상단 정보엔 영향을 주지 않는다.
+    /// 취향 묶음 내부는 여전히 "로컬 변수로 모두 수급 후 일괄 반영"(부분 갱신 방지) 원칙을 유지한다.
     /// `isSilentRefresh`는 재진입의 조용한 재조회(#236) — 전면 로딩을 세우지 않고, 실패해도 기존
-    /// 화면을 그대로 둔다(비공개 전환·탈퇴 같은 의미 상태 변화도 다음 fresh 진입에서 반영).
+    /// 화면을 그대로 둔다(탈퇴 같은 의미 상태 변화는 다음 fresh 진입에서 반영 — 비공개 전환은 아래
+    /// `loadPreferenceBundle`이 두 모드 모두에서 반영한다).
     func loadUserPage(isSilentRefresh: Bool = false) async {
         defer { loadTask = nil }
         if !isSilentRefresh { state.isLoading = true }
         defer { if !isSilentRefresh { state.isLoading = false } }
 
-        do {
-            async let profile = loadProfileUseCase.execute(target: .user(userID))
-            async let genrePreferences = loadGenrePreferencesUseCase.execute(.user(userID))
-            async let novelPreference = loadNovelPreferencesUseCase.execute(.user(userID))
-            async let registeredNovelStats = loadUserRegisteredNovelStatsUseCase.execute(id: userID)
-            async let collectionPreviews = loadCollectionPreviewsUseCase.execute(userID: userID, size: Self.collectionPreviewSize)
+        async let profileSection: Void = loadProfileSection(isSilentRefresh: isSilentRefresh)
+        async let statsSection: Void = loadRegisteredNovelStatsSection()
+        async let collectionPreviews: Void = loadCollectionPreviewsSection()
+        async let preferenceBundle: Void = loadPreferenceBundle()
+        _ = await (profileSection, statsSection, collectionPreviews, preferenceBundle)
+    }
 
-            // 병렬 로드 결과를 로컬 변수로 모두 수급한 뒤 일괄 반영한다 — 중간 하나가 실패하면
-            // 어떤 state도 바꾸지 않아, 조용한 재조회의 "실패해도 기존 화면 유지" 계약을 정확히 지킨다
-            // (즉시 대입은 실패 지점 앞의 값만 교체돼 프로필 묶음이 부분 갱신된 채 남는다).
-            let loadedProfile = try await profile
-            let loadedGenrePreferences = try await genrePreferences
-            let loadedNovelPreference = try await novelPreference
-            let loadedRegisteredNovelStats = try await registeredNovelStats
-            let (loadedCollectionPreviews, loadedCollectionCount) = try await collectionPreviews
+    /// 상단 프로필(닉네임·소개·프로필 이미지) — 비공개 여부와 무관하게 항상 성공 응답을 준다.
+    func loadProfileSection(isSilentRefresh: Bool) async {
+        do {
+            let loadedProfile = try await loadProfileUseCase.execute(target: .user(userID))
             state.profile = loadedProfile
-            state.genrePreferences = loadedGenrePreferences
-            state.novelPreference = loadedNovelPreference
-            state.registeredNovelStats = loadedRegisteredNovelStats
-            state.collectionPreviews = loadedCollectionPreviews
-            state.collectionCount = loadedCollectionCount
             hasLoaded = true
         } catch {
             if isSilentRefresh {
-                logger?.error("UserPage 재조회 실패(기존 화면 유지): \(String(describing: error))")
+                logger?.error("UserPage 프로필 재조회 실패(기존 화면 유지): \(String(describing: error))")
             } else {
                 presentError(error)
             }
+        }
+    }
+
+    /// 서재 통계 — 실패(비공개 등)는 조용히 흡수한다. 프로필과 독립이라 이 실패가 상단 정보를 가리지 않는다
+    /// (위 함수 doc 참고).
+    func loadRegisteredNovelStatsSection() async {
+        do {
+            state.registeredNovelStats = try await loadUserRegisteredNovelStatsUseCase.execute(id: userID)
+        } catch {
+            logger?.error("UserPage 서재 통계 로드 실패(무시): \(String(describing: error))")
+        }
+    }
+
+    /// 컬렉션 미리보기 — 컬렉션 목록 API는 대상 사용자를 명시로 받는 계약이라(`CollectionDomain/CLAUDE.md`)
+    /// 이 화면이 직접 userID를 넘긴다. 실패(비공개 등)는 조용히 흡수한다 — 프로필과 독립이라 이 실패가
+    /// 상단 정보를 가리지 않는다(위 함수 doc 참고).
+    func loadCollectionPreviewsSection() async {
+        do {
+            let (loadedCollectionPreviews, loadedCollectionCount) = try await loadCollectionPreviewsUseCase.execute(
+                userID: userID,
+                size: Self.collectionPreviewSize
+            )
+            state.collectionPreviews = loadedCollectionPreviews
+            state.collectionCount = loadedCollectionCount
+        } catch {
+            logger?.error("UserPage 컬렉션 미리보기 로드 실패(무시): \(String(describing: error))")
+        }
+    }
+
+    /// 장르 뱃지·작품 취향 — 비공개 프로필이면 `USER-015`로 막힌다(상단 프로필과 달리 여전히 비공개 대상).
+    /// ⚠️ 일반 에러(네트워크 순간 오류 등)도 `presentError`로 넘기지 않는다 — `presentError`는
+    /// `state.hasLoadError`를 세워 `UserPageView`가 body 전체를 `NetworkErrorView`로 덮는데, 그러면
+    /// 이 함수와 독립적으로 병렬 실행되는 `loadProfileSection`이 이미 성공시킨 프로필(닉네임·소개·이미지)
+    /// 까지 함께 가려진다 — 이 함수를 프로필과 완전히 격리한 목적 자체가 무의미해진다(#255 QA 리뷰에서
+    /// 발견). 서재 통계·컬렉션 미리보기와 동일하게 실패를 조용히 흡수한다(장르/취향 섹션만 비게 됨) —
+    /// silent/fresh 구분 없이 항상 이렇게 동작해 `loadProfileSection`과 달리 `isSilentRefresh`를
+    /// 받지 않는다(PR 리뷰 지적 — 안 쓰는 파라미터를 시그니처만 맞춰 남겨두지 않는다).
+    func loadPreferenceBundle() async {
+        do {
+            async let genrePreferences = loadGenrePreferencesUseCase.execute(.user(userID))
+            async let novelPreference = loadNovelPreferencesUseCase.execute(.user(userID))
+
+            let loadedGenrePreferences = try await genrePreferences
+            let loadedNovelPreference = try await novelPreference
+            state.genrePreferences = loadedGenrePreferences
+            state.novelPreference = loadedNovelPreference
+        } catch RepositoryError.privateProfile {
+            state.isProfilePrivate = true
+        } catch {
+            logger?.error("UserPage 취향 로드 실패(무시): \(String(describing: error))")
         }
     }
 
@@ -478,6 +535,10 @@ private extension UserPageViewModel {
 
     func presentActionError(_ error: Error, context: String) {
         logger?.error("UserPage \(context) 실패: \(String(describing: error))")
+        guard (error as? RepositoryError) != .alreadyReported else {
+            state.isAlreadyReportedToastPresented = true
+            return
+        }
         state.hasActionError = true
     }
 }

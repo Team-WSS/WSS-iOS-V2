@@ -39,6 +39,7 @@ private func describeError(_ error: RepositoryError) -> String {
     case .notFound:                return "❌ notFound\n→ 리소스를 찾을 수 없음 (HTTP 404)"
     case .forbidden:               return "❌ forbidden\n→ 접근 거부 (HTTP 403)"
     case .privateProfile:          return "❌ privateProfile\n→ 상대가 프로필을 비공개로 설정함"
+    case .alreadyReported:         return "❌ alreadyReported\n→ 이미 같은 종류로 신고함 (REPORT-002/REPORT-004)"
     case .unknown:                 return "❌ unknown\n→ 매핑되지 않은 오류 (기타 HTTP 오류 또는 예외)"
     }
 }

@@ -32,6 +32,8 @@ final class UserFeedListViewModel {
         /// 피드 셀 드롭다운(스포일러/부적절한 표현 신고)의 확인·완료 알럿 — `UserPageViewModel`과 동일 2단 패턴.
         var presentedFeedAlert: FeedAlert?
         var hasActionError = false
+        /// 이미 신고한 피드에 같은 종류의 신고를 다시 시도함(#255 QA) — `UserPageViewModel`과 동일하게 분리.
+        var isAlreadyReportedToastPresented = false
     }
 
     enum FeedAlert: Equatable {
@@ -52,6 +54,7 @@ final class UserFeedListViewModel {
         case confirmFeedAlert
         case dismissFeedAlert
         case dismissActionErrorToast
+        case dismissAlreadyReportedToast
     }
 
     // MARK: - Output
@@ -126,6 +129,8 @@ final class UserFeedListViewModel {
             state.presentedFeedAlert = nil
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .dismissAlreadyReportedToast:
+            state.isAlreadyReportedToastPresented = false
         }
     }
 }
@@ -273,6 +278,10 @@ private extension UserFeedListViewModel {
 
     func presentActionError(_ error: Error, context: String) {
         logger?.error("UserFeedList \(context) 실패: \(String(describing: error))")
+        guard (error as? RepositoryError) != .alreadyReported else {
+            state.isAlreadyReportedToastPresented = true
+            return
+        }
         state.hasActionError = true
     }
 }

@@ -161,7 +161,7 @@ extension SearchDataDemoView {
         defer { isLoading = false }
 
         do {
-            let (paginated, totalCount) = try await repository.searchNovelByText(text, page: 0)
+            let (paginated, totalCount) = try await repository.searchNovelByText(text, page: 0, recordRecentSearch: false)
             let titles = paginated.items.prefix(3).map { $0.title }.joined(separator: ", ")
             log = "✅ 텍스트 검색 '\(text)' (총 \(totalCount)건)\n\n\(titles)"
         } catch {

@@ -49,9 +49,10 @@
   `onConfirm` → App의 `pendingNovelSelection` → `.setNovels`로 `draft.novelIDs`를 통째로 교체한다
   (부분 추가/제거 액션 없음 — 화면을 나갈 때 최종 선택 스냅샷만 반영). 검색 중 골라둔 항목은 검색어를
   바꿔도 별도 상태(`selectedNovels`)로 유지된다. 정원(`CollectionDraft.maxNovelCount`=100)이 차면 더
-  담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — **문구는 범용 텍스트("100개까지 선택
-  가능해요")를 임시로 쓰는 중**, 기획팀 확정 문구 전달 예정(2026-08-24). 문구가 오면 `WSSToastType`
-  텍스트만 교체하면 된다(구조는 이미 확정).
+  담기지 않고 `WSSToastType.selectionOverLimit`로 알린다 — 문구는 "100개까지 선택이 가능해요"로
+  기획팀 확정(2026-09-08, #255 QA). 이 문구는 `WSSComponent`가 소유한 범용 텍스트라 `NovelReviewFeature`
+  (매력포인트 3개)·`KeywordFeature`(키워드 20개)와 공유한다 — 여기서만 바꾸면 나머지 두 화면의 문구도
+  함께 바뀐다(의도된 공유, 개수만 다를 뿐 같은 의미의 안내라 화면별로 문구를 가르지 않기로 함).
 - **검색 결과 무한스크롤** — `SearchFeature.NormalSearchViewModel`과 동일한 정수 `page`(0부터) 방식.
   `LazyVStack` 마지막 행 `onAppear`에서 `.loadMore`를 발화하고, `CollectionSearchNovelViewModel`이
   `hasNextSearchPage`(서버 `Paginated.hasNext`)가 false가 될 때까지 다음 페이지를 이어붙인다.
@@ -143,7 +144,7 @@
   - 페이지 크기(`size`)는 서버 권장값이 없어 20으로 고정(컬렉션 도메인 공통 — `LoadCollectionsUseCase`/
     `LoadLikedCollectionsUseCase` 둘 다).
 - **컬렉션 상세(#201) — 사용자 확정 사항**:
-  - 우상단 더보기(`icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
+  - 우상단 더보기(`icThreedotsVertical`, #255 QA — `NovelDetailFeature`/`UserPageFeature`와 동일 아이콘으로 통일, 구 `icThreedots`)는 `detail.isMine == true`일 때만 노출, 항목은 "컬렉션 수정"/"컬렉션
     삭제". 하단 버튼 둘째 슬롯은 `detail.isPrivate`로 갈린다 — `true`면 "나만 보는 컬렉션" 비활성
     배지, `false`면 "공유하기" 버튼(비공개 컬렉션은 소유자만 볼 수 있어 `isPrivate`와 `isMine`이 실질
     동치라 이 둘을 따로 판단할 필요가 없다 — `CollectionDomain/CLAUDE.md`).
@@ -365,6 +366,9 @@
   `CollectionMyLibrarySelectView`의 셀 래퍼에 걸어야 자동화 탭 대상으로 잡힌다(2단계 pop 실측 검증에
   실제로 필요했다). 이 컴포넌트를 새 화면에서 탭 가능하게 감쌀 때 이 트레잇을 빠뜨리지 말 것 — 특히
   다중선택 화면처럼 탭이 핵심 동작인 셀일수록 VoiceOver 접근성 공백이 치명적이다.
+- **`CollectionSearchNovelViewModel`(작품 추가 검색)는 `searchNovelUseCase.searchByText`를
+  `recordRecentSearch: false`로 호출한다**(#255 QA) — 컬렉션에 작품을 담으려는 부수 수단이지 "일반
+  검색 화면"에서의 검색이 아니라, 최근 검색어로 기록되면 안 된다(`SearchDomain/CLAUDE.md` 참고).
 - ⚠️ **`CollectionSearchNovelViewModel`(구 `AddNovelViewModel`)의 검색 결과 영역은 `searchedNovels`가
   아니라 `hasSearched` 플래그로 가른다** — `WSSSearchBar`의 `onSearch`는 제출(엔터/검색 버튼)에만
   발화하고, 타이핑 자체는 `updateSearchText`로 매 글자마다 바로 반영된다. `searchedNovels`(또는
@@ -542,3 +546,41 @@
   카드를 탭해도 `DeepLink` 파싱이 실패해 그냥 홈 화면으로 열린다** — 새 템플릿을 추가하거나 콘솔 변수
   키 이름을 바꾸면 `multiThumbnailArgs`도 같이 맞출 것. 위 헤더 주석·`App/CLAUDE.md`의 딥링크 항목
   참고 — 받는 쪽 `kakao{APP_KEY}://kakaolink?collectionId={id}` 파싱 자체는 이전과 동일.
+- **`CollectionSearchNovelView`의 작품 검색 행은 필 배지(`WSSPillBadge`)만 탭 영역이다**(#255 QA로
+  방향 전환 — 처음엔 행 전체가 탭 영역이었다) — `WSSPillBadge(style:action:)`의 `action`을 실제로
+  넘겨 배지 자신이 탭을 받게 하고, 행의 `.onTapGesture`는 제거했다. `WSSPillBadge`가 이 `action`
+  파라미터로 실제 쓰인 **첫 프로덕션 사례**다(승격 당시엔 API만 갖추고 아무도 안 씀 — 이 컴포넌트가
+  내부적으로 `Button`이 아니라 `onTapGesture`를 쓴다는 점(`WSSComponent/CLAUDE.md`의 이미지+탭 접근성
+  주의)은 그대로이니, 이 배지가 접근성 자동화 탭 대상으로 안 잡히는 건 기존 한계와 동일하다).
+  ⚠️ **표지·제목·작가 영역은 더 이상 어떤 탭도 받지 않는다** — 다시 행 전체 탭으로 되돌리려 하지 말 것
+  (실수로 토글되기 쉽다는 QA 지적으로 좁힌 것).
+- **컬렉션 설명 입력 박스(`CreateCollectionView.descriptionSection`)는 텍스트필드 영역만 고정 높이로
+  스크롤되고, 글자수 카운터는 그 아래 별도 줄이다**(#255 QA) — 원래 `TextField(axis: .vertical)`에
+  `minHeight`만 줘서 엔터를 칠수록 박스 전체가 계속 늘어났고, 카운터는 `overlay(alignment:
+  .bottomTrailing)`로 떠 있어 텍스트가 박스 하단까지 차면 겹쳤다. 지금은 텍스트필드를 `ScrollView`로
+  감싸 `Metric.descriptionFieldHeight`(78, 기존 minHeight 값 유지)로 높이를 고정하고, 카운터를 그
+  스크롤뷰 **아래**의 독립된 `Text` 행으로 뺐다 — 입력이 고정 높이를 넘으면 박스가 아니라 이 스크롤
+  영역 안에서 스크롤된다. `ScrollViewReader` + `scrollTo(id, anchor: .bottom)`를 매 입력마다 걸어
+  캐럿을 계속 따라가게 한다(멀티라인 `TextField`는 캐럿 좌표를 직접 못 읽어서 — 텍스트필드 자신이
+  줄 수만큼 자라는 성질을 이용해 그 "아래쪽 끝"을 캐럿의 대리 앵커로 쓴다). 다른 화면에서 같은
+  `axis: .vertical` TextField를 고정 높이로 쓰려면 이 패턴(텍스트필드를 ScrollView+ScrollViewReader로
+  감싸고 부가 UI는 그 밖으로)을 재사용할 것.
+- ⚠️ **더보기 드롭다운(`menuOverlay`)은 반드시 화면 루트 `ZStack`의 마지막 자식(최상위 z-order)에
+  둔다**(#255 QA) — 처음엔 스크롤 `Group`의 `.overlay(alignment: .topTrailing)`로 걸려 있었는데,
+  네비바+스티키 정렬 바 `VStack`이 그 `Group` **뒤에**(= 위에) 그려지는 구조라, 스크롤해서 스티키
+  정렬 바가 붙은 상태로 드롭다운을 열면 그 흰 배경이 드롭다운 위쪽을 가렸다. 스티키 바 유무와
+  무관하게 항상 보이려면 `if isMenuPresented { menuOverlay }`를 네비바 `VStack`보다도 뒤(= ZStack의
+  마지막)에 둘 것 — 다른 화면에 몰입형 스티키 헤더 + 드롭다운 조합을 또 만들 때도 같은 순서를 지킬 것.
+  ⚠️ **위치도 같은 QA에서 같이 고쳤다** — `.padding(.top, 120)`로 네비바와 이상하게 멀리 떨어져
+  있던 걸 `NovelDetailFeature.menuOverlay`와 동일하게 `.padding(.top, 44)`(네비바 높이만)로 바꿔
+  "..." 버튼 바로 아래에 붙였다. `menuOverlay`의 `ZStack` 자신은 `.ignoresSafeArea()`가 안 걸려 있어
+  안전영역을 존중한 채 배치되므로(형제인 dismiss용 `Color`가 `.ignoresSafeArea()`를 걸어도 이
+  좌표계엔 영향 없다 — `NovelDetailView.content`의 `Color.wssWhite.ignoresSafeArea()` 배경과 같은
+  원리) 안전영역을 더할 필요 없이 44만으로 네비바 바로 아래가 된다. trailing도 20으로 맞춰
+  `NovelDetailFeature`/`UserPageFeature`의 같은 우상단 더보기 드롭다운과 인셋을 통일했다.
+- **"..." 더보기 버튼은 아이콘(18×18) 프레임을 한 번 더 `.frame(width: 44, height: 44)`로 감싸 탭
+  타깃을 넓힌다**(#255 QA, 애플 권장 44×44) — 원래 아이콘 자체 크기만 `contentShape`였다. 뒤로가기
+  버튼(`icNavigateLeft`)은 처음부터 이 이중 `.frame` 패턴이었는데 "..." 버튼만 빠져 있었다. 시각적
+  위치를 유지하려고 `.padding(.trailing, 20 - (44-18)/2)`로 트레일링 여백을 함께 보정했다(단순히
+  20을 그대로 두면 아이콘이 13pt 안쪽으로 밀린다) — 다른 트레일링 아이콘 버튼의 히트 영역을 넓힐 때도
+  아이콘 시각 위치가 그대로인지 이 계산으로 확인할 것.

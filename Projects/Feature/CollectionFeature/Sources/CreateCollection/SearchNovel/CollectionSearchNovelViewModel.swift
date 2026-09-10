@@ -187,7 +187,7 @@ private extension CollectionSearchNovelViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: 0)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: 0, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels = paginated.items
             state.hasSearched = true
@@ -206,7 +206,7 @@ private extension CollectionSearchNovelViewModel {
         }
 
         do {
-            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextSearchPage)
+            let (paginated, _) = try await searchNovelUseCase.searchByText(query, page: nextSearchPage, recordRecentSearch: false)
             guard !Task.isCancelled else { return }
             state.searchedNovels.append(contentsOf: paginated.items)
             state.hasNextSearchPage = paginated.hasNext

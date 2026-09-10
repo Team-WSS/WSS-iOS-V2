@@ -45,7 +45,14 @@ final class NormalSearchViewModel {
         case clearRecentSearchWords
         case loadPopularKeywords
         case updateSearchText(String)
+        /// 사용자가 직접 실행한 검색(검색바 제출·최근 검색어 칩·자동완성 제안어 탭) — 항상 최근 검색어로 기록한다.
         case executeSearch(String)
+        /// 작가 이름 탭 등 "이미 검색된 결과로 진입"하는 경로 전용(#255 QA) — 사용자가 검색을 의도한 게
+        /// 아니므로 최근 검색어로 기록하지 않는다. `NormalSearchView.onAppear`만 부른다.
+        case executeInitialSearch(String)
+        /// 실패한 검색 재시도 — 새 검색이 아니라 방금 실행했던 검색을 그대로 다시 시도하는 것이므로
+        /// 그 검색의 기록 여부(`executeSearch`/`executeInitialSearch` 중 어느 쪽이었는지)를 그대로 유지한다.
+        case retrySearch
         case loadMoreSearchResults
     }
 
@@ -67,6 +74,9 @@ final class NormalSearchViewModel {
     @ObservationIgnored private var searchResultTask: Task<Void, Never>?
     @ObservationIgnored private var loadMoreSearchResultTask: Task<Void, Never>?
     @ObservationIgnored private var nextSearchResultPage = 0
+    /// 지금 보여주고 있는 검색 세션이 최근 검색어로 기록되는 세션인지 — 첫 페이지에서 정해지면 다음
+    /// 페이지·재시도 전부 같은 값을 그대로 쓴다(세션 도중 기록 여부가 바뀌면 안 됨).
+    @ObservationIgnored private var currentSearchRecordsRecentSearch = true
 
     // MARK: - Dependency
 
@@ -109,11 +119,18 @@ final class NormalSearchViewModel {
         self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
 
-        // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — `init`이 이
-        // ViewModel 인스턴스 생애주기에서 정확히 한 번만 실행되므로, `onAppear`처럼 재발화를 막는
-        // 가드가 따로 필요 없다(#197).
+        // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — 검색어만 미리
+        // 채워둔다. ⚠️ **실제 검색 실행(Task 스폰)은 여기서 하지 않는다(#255 QA 실측 버그 수정)** —
+        // 이 인스턴스는 `NormalSearchView.init`의 `State(initialValue:)` 인자 표현식으로 만들어지는데,
+        // 그 표현식은 "값이 저장에 반영되는 건 최초 1회"와 무관하게 **`.navigationDestination(for:)`가
+        // 재평가될 때마다(App Root의 다른 `@State`가 바뀌기만 해도) 매번 다시 실행된다** — 그때마다
+        // 새로 만들어졌다 버려지는 "고아" 인스턴스가 여기서 `executeSearch`로 Task를 스폰해버리면 그
+        // 고아도 실제 네트워크 요청(`/novels` 검색 + 성공 시 `/novels/recent-searches` 재조회)을
+        // 끝까지 완주한다 — 화면을 가만히 둬도 두 API가 계속 반복 호출되는 버그로 실측됐다. 실제 검색
+        // 실행은 `NormalSearchView`가 `onAppear`에서 1회 가드(`didRunInitialSearch`)로 호출한다 —
+        // `onAppear`는 실제로 화면에 붙는 단 하나의 인스턴스에서만 발화하므로 고아는 이 경로를 안 탄다.
         if let initialQuery, !initialQuery.isEmpty {
-            executeSearch(initialQuery)
+            state.searchText = initialQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 
@@ -135,6 +152,10 @@ final class NormalSearchViewModel {
             updateSearchText(text)
         case .executeSearch(let text):
             executeSearch(text)
+        case .executeInitialSearch(let text):
+            executeInitialSearch(text)
+        case .retrySearch:
+            retrySearch()
         case .loadMoreSearchResults:
             loadMoreSearchResults()
         }
@@ -157,7 +178,10 @@ private extension NormalSearchViewModel {
         recentSearchWordsTask = Task { await loadRecentSearchWordsList() }
     }
 
-    /// 검색 실행 성공 시 서버가 최근 검색어를 자동 기록하므로, 방금 실행한 검색어가 목록에 즉시 반영되도록 무조건 다시 불러온다(`hasLoadedRecentSearchWords` 가드 우회).
+    /// 검색 실행 성공 시 서버가 최근 검색어를 자동 기록하므로, 방금 실행한 검색어가 목록에 즉시 반영되도록
+    /// `hasLoadedRecentSearchWords` 가드를 우회해 다시 불러온다. **기록 대상 검색(`recordRecentSearch: true`)의
+    /// 성공 시에만** `loadSearchResult`가 이 함수를 호출한다 — 기록 안 하는 검색(작가 이름 탭 등)까지 부르면
+    /// 아무것도 안 바뀐 목록을 의미 없이 다시 받아온다.
     func refreshRecentSearchWordsAfterSearch() {
         recentSearchWordsTask?.cancel()
         recentSearchWordsTask = Task { await loadRecentSearchWordsList() }
@@ -206,12 +230,30 @@ private extension NormalSearchViewModel {
         autoCompletionTask = Task { await loadAutoCompletionWords(searchText: text) }
     }
 
-    /// 검색바 onSearch, 최근 검색어·키워드 칩, 자동완성 제안어 선택에서 공통으로 호출하는 검색 실행 지점.
-    /// 자동완성 debounce와 경합하지 않도록 그 Task를 취소하고 결과 조회로 전환한다.
+    /// 검색바 onSearch, 최근 검색어·키워드 칩, 자동완성 제안어 선택에서 공통으로 호출하는 검색 실행 지점 —
+    /// 사용자가 직접 검색을 의도한 경우라 최근 검색어로 기록한다.
     func executeSearch(_ text: String) {
+        performSearch(text, recordRecentSearch: true)
+    }
+
+    /// 작가 이름 탭 등 "이미 검색된 결과로 진입"하는 경로 전용(#255 QA) — 사용자가 검색을 의도한 게
+    /// 아니므로 기록하지 않는다.
+    func executeInitialSearch(_ text: String) {
+        performSearch(text, recordRecentSearch: false)
+    }
+
+    /// 실패한 검색의 재시도 — 새 검색이 아니라 방금 검색을 그대로 다시 시도하는 것이라, 그 검색이
+    /// 기록 대상이었는지 여부(`currentSearchRecordsRecentSearch`)를 그대로 유지한다.
+    func retrySearch() {
+        performSearch(state.searchText, recordRecentSearch: currentSearchRecordsRecentSearch)
+    }
+
+    /// 자동완성 debounce와 경합하지 않도록 그 Task를 취소하고 결과 조회로 전환한다.
+    func performSearch(_ text: String, recordRecentSearch: Bool) {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
 
+        currentSearchRecordsRecentSearch = recordRecentSearch
         state.searchText = trimmedText
         autoCompletionTask?.cancel()
         state.autoCompletionWords = []
@@ -224,7 +266,7 @@ private extension NormalSearchViewModel {
         state.isSearchingResult = true
         state.hasSearchResultError = nil
         state.hasNextSearchResultPage = false
-        searchResultTask = Task { await loadSearchResult(searchText: trimmedText) }
+        searchResultTask = Task { await loadSearchResult(searchText: trimmedText, recordRecentSearch: recordRecentSearch) }
     }
 
     /// 검색 결과 리스트 마지막 행이 보일 때 View가 호출(무한스크롤). 다음 페이지가 없거나 이미 로딩 중이면 무시.
@@ -234,7 +276,9 @@ private extension NormalSearchViewModel {
               searchResultTask == nil,
               loadMoreSearchResultTask == nil else { return }
         state.isLoadingMoreSearchResults = true
-        loadMoreSearchResultTask = Task { await loadMoreSearchResultPage(searchText: state.searchText) }
+        loadMoreSearchResultTask = Task {
+            await loadMoreSearchResultPage(searchText: state.searchText, recordRecentSearch: currentSearchRecordsRecentSearch)
+        }
     }
 }
 
@@ -334,20 +378,24 @@ private extension NormalSearchViewModel {
         }
     }
 
-    func loadSearchResult(searchText: String) async {
+    func loadSearchResult(searchText: String, recordRecentSearch: Bool) async {
         defer {
             searchResultTask = nil
             state.isSearchingResult = false
         }
 
         do {
-            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: 0)
+            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: 0, recordRecentSearch: recordRecentSearch)
             guard !Task.isCancelled else { return }
             state.searchResultNovels = paginated.items
             state.searchResultCount = resultCount
             state.hasNextSearchResultPage = paginated.hasNext
             nextSearchResultPage = 1
-            refreshRecentSearchWordsAfterSearch()
+            // 기록 대상이 아니었던 검색(작가 이름 탭 등)은 서버가 아무것도 새로 안 남겨 다시 불러와도
+            // 목록이 그대로다 — 불필요한 `/novels/recent-searches` 호출을 만들지 않는다.
+            if recordRecentSearch {
+                refreshRecentSearchWordsAfterSearch()
+            }
         } catch {
             guard !Task.isCancelled else { return }
             logger?.error("작품 검색 실패: \(String(describing: error))")
@@ -355,14 +403,14 @@ private extension NormalSearchViewModel {
         }
     }
 
-    func loadMoreSearchResultPage(searchText: String) async {
+    func loadMoreSearchResultPage(searchText: String, recordRecentSearch: Bool) async {
         defer {
             loadMoreSearchResultTask = nil
             state.isLoadingMoreSearchResults = false
         }
 
         do {
-            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: nextSearchResultPage)
+            let (paginated, resultCount) = try await searchNovelUseCase.searchByText(searchText, page: nextSearchResultPage, recordRecentSearch: recordRecentSearch)
             guard !Task.isCancelled else { return }
             state.searchResultNovels.append(contentsOf: paginated.items)
             state.searchResultCount = resultCount

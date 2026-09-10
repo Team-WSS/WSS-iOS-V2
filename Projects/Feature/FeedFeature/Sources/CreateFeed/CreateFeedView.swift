@@ -32,6 +32,7 @@ struct CreateFeedView: View {
     @Environment(\.dismiss) private var dismiss
     /// 앱스토어 평점 프롬프트(StoreKit) — VM이 게이트를 통과시키면(`shouldRequestReview`) 저장 성공 시 호출.
     @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
 
     /// 작성/수정 제출 **성공**으로 닫힐 때 dismiss 직전 발화(#236, 취소로 닫힐 땐 안 부른다) — 이 화면은
     /// dismiss되므로 "작성 완료" 토스트는 복귀 스택(App 크로스스크린 피드백 채널)이 띄운다(V1 `feedEdited` parity).
@@ -162,7 +163,9 @@ struct CreateFeedView: View {
                             viewModel.handle(.confirmSelectedNovel)
                             showLinkNovelSheet = false
                         },
-                        inquiryNovelAction: { },
+                        inquiryNovelAction: {
+                            if let url = AppURL.inquiryAddNovel { openURL(url) }
+                        },
                         dismissSheet: {
                             viewModel.handle(.dismissLinkNovelSheet)
                             showLinkNovelSheet = false
@@ -294,7 +297,6 @@ struct CreateFeedView: View {
                     .renderingMode(.template)
                     .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
                     .padding(.vertical, 12)
-                    .padding(.horizontal, 10)
                     .onTapGesture {
                         showPhotosPicker.toggle()
                     }
@@ -477,7 +479,11 @@ private struct PreviewAppReviewRequestUseCase: AppReviewRequestUseCase {
 }
 
 private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         return (Paginated(items: stubNovels, hasNext: false), 0)
     }
 

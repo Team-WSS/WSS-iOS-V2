@@ -22,7 +22,8 @@ import Logger
 public enum UserPageFeatureFactory {
 
     /// - Parameters:
-    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `UserPageRoute`(Navigation/) 참고(#253).
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `UserPageRoute`(Navigation/) 참고(#253,
+    ///     `.feed`/`.novel`은 #255 QA로 추가).
     ///   - onUserBlocked: 차단 성공(이 화면 dismiss) 직전 → 차단한 상대 닉네임을 실어 올리는 콜백.
     ///     이 화면은 곧 pop되므로 "차단했어요" 토스트(`WSSToastType.blockUser(nickname:)`)는 복귀할
     ///     화면(App 조정 계층)이 띄운다 — 지금은 도관만 뚫어둔 seam이고 실제 표시 배선은 크로스스크린
@@ -78,7 +79,9 @@ public enum UserPageFeatureFactory {
         feedLikeUseCase: FeedLikeUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        onFeedTapped: @escaping (FeedID) -> Void = { _ in },
+        onNovelTapped: @escaping (NovelID) -> Void = { _ in }
     ) -> some View {
         let viewModel = UserFeedListViewModel(
             userID: userID,
@@ -90,6 +93,6 @@ public enum UserPageFeatureFactory {
             reportImproperFeedUseCase: reportImproperFeedUseCase,
             logger: logger
         )
-        return UserFeedListView(viewModel: viewModel)
+        return UserFeedListView(viewModel: viewModel, onFeedTapped: onFeedTapped, onNovelTapped: onNovelTapped)
     }
 }

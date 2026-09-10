@@ -109,6 +109,7 @@ struct SosoFeedView: View {
         )
         .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
+        .showWSSToast(isPresented: alreadyReportedToastBinding, type: .alreadyReportedFeed)
         .onAppear {
             if needsReloadForCreatedFeed {
                 needsReloadForCreatedFeed = false
@@ -533,6 +534,13 @@ struct SosoFeedView: View {
         Binding(
             get: { viewModel.state.isActionFailedToastPresented },
             set: { if !$0 { viewModel.handle(.dismissActionFailedToast) } }
+        )
+    }
+
+    private var alreadyReportedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isAlreadyReportedToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissAlreadyReportedToast) } }
         )
     }
 

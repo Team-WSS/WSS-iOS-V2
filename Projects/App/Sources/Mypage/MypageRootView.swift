@@ -256,6 +256,10 @@ struct MypageRootView: View {
                                     path.append(Destination.userFeedList(userID: userID, nickname: nickname, profileImage: profileImage))
                                 case .collectionDetail(let collectionID):
                                     path.append(Destination.collectionDetail(collectionID))
+                                case .feed(let feedID):
+                                    path.append(Destination.feed(feedID))
+                                case .novel(let novelID):
+                                    path.append(Destination.novel(novelID))
                                 case .collectionList:
                                     path.append(Destination.userCollectionList(userID))
                                 }
@@ -269,7 +273,9 @@ struct MypageRootView: View {
                             userID: userID,
                             nickname: nickname,
                             profileImage: profileImage,
-                            dependencies: dependencies
+                            dependencies: dependencies,
+                            onFeedTapped: { path.append(Destination.feed($0)) },
+                            onNovelTapped: { path.append(Destination.novel($0)) }
                         )
                     case .userCollectionList(let userID):
                         CollectionListAssembly.makeView(

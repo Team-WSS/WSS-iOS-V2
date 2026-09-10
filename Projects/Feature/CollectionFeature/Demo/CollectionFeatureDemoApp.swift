@@ -474,7 +474,11 @@ private struct DemoSearchNovelUseCase: SearchNovelUseCase {
     /// 끈다(`SearchFeatureDemoApp.DemoSearchNovelUseCase`와 동일 관례).
     private static let demoPageCount = 3
 
-    func searchByText(_ query: String, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
         try? await Task.sleep(nanoseconds: 300_000_000)
         guard page < Self.demoPageCount else {
             return (Paginated(items: [], hasNext: false), 5 * Self.demoPageCount)

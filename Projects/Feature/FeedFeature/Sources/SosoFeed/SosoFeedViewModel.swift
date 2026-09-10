@@ -75,6 +75,9 @@ final class SosoFeedViewModel {
         /// 프로필 탭이 탈퇴 유저(`Author.userId == -1`)를 가리킬 때 뜨는 안내 토스트
         /// (`WSSToastType.unknownUser`) — `UserPageViewModel.isNoCollectionsToastPresented`와 동일 패턴.
         var isUnavailableUserToastPresented = false
+        /// 이미 신고한 피드에 같은 종류의 신고를 다시 시도함(#255 QA) — `errorMessage`(View가 안 읽는 죽은
+        /// 상태, 이 화면의 다른 액션 실패와 공유)와 분리해 실제로 뜨는 전용 토스트로 안내한다.
+        var isAlreadyReportedToastPresented = false
     }
 
     /// 피드 셀 액션의 알럿 **의미값**. 카피·버튼 구성 매핑은 View가 한다.
@@ -128,6 +131,7 @@ final class SosoFeedViewModel {
         case userProfileUnavailableTapped
         case dismissUnavailableUserToast
         case dismissActionFailedToast
+        case dismissAlreadyReportedToast
     }
 
     //MARK: - Filter Selection Helpers
@@ -286,6 +290,8 @@ final class SosoFeedViewModel {
             state.isUnavailableUserToastPresented = false
         case .dismissActionFailedToast:
             state.isActionFailedToastPresented = false
+        case .dismissAlreadyReportedToast:
+            state.isAlreadyReportedToastPresented = false
         }
     }
 
@@ -790,7 +796,11 @@ final class SosoFeedViewModel {
             }
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
-            state.isActionFailedToastPresented = true
+            if error == .alreadyReported {
+                state.isAlreadyReportedToastPresented = true
+            } else {
+                state.isActionFailedToastPresented = true
+            }
             logger?.error("피드 신고 실패(\(feedID.value)): \(String(describing: error))")
         }
     }

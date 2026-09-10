@@ -24,7 +24,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((expected, 2))
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
-        let result = try await usecase.searchByText("전지적", page: 0)
+        let result = try await usecase.searchByText("전지적", page: 0, recordRecentSearch: true)
 
         #expect(result.0.items.count == 1)
         #expect(result.0.items.first?.title == "전지적 독자 시점")
@@ -38,7 +38,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: true), 42))
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
-        _ = try await usecase.searchByText("전지적", page: 2)
+        _ = try await usecase.searchByText("전지적", page: 2, recordRecentSearch: true)
 
         #expect(mock.lastSearchTextPage == 2)
     }
@@ -49,7 +49,7 @@ struct SearchNovelUseCaseTests {
         mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 42))
 
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
-        let result = try await usecase.searchByText("전지적", page: 0)
+        let result = try await usecase.searchByText("전지적", page: 0, recordRecentSearch: true)
 
         #expect(result.1 == 42)
     }
@@ -62,10 +62,21 @@ struct SearchNovelUseCaseTests {
         let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
-            try await usecase.searchByText("전지적", page: 0)
+            try await usecase.searchByText("전지적", page: 0, recordRecentSearch: true)
         }
 
         #expect(mock.searchByTextCallCount == 1)
+    }
+
+    @Test("텍스트 검색은 최근 검색어 저장 여부를 그대로 전달한다")
+    func searchByTextForwardsRecordRecentSearch() async throws {
+        let mock = MockSearchNovelRepository()
+        mock.searchByTextResult = .success((Paginated(items: [makeNovel()], hasNext: false), 1))
+
+        let usecase = DefaultSearchNovelUseCase(searchNovelRepository: mock)
+        _ = try await usecase.searchByText("전지적", page: 0, recordRecentSearch: false)
+
+        #expect(mock.lastRecordRecentSearch == false)
     }
 
     // MARK: - Filter Search

@@ -73,12 +73,15 @@ struct DefaultSocialRepository: SocialRepository {
 
     public func reportSpoilerFeed(id: FeedID) async throws(RepositoryError) {
         let action = SocialAction.reportSpoilerFeed
-        
+
         do {
             try await service.postReportSpoilerFeed(feedID: id.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
+            if case .responseFailure(_, let body) = error, body?.code == "REPORT-002" {
+                throw .alreadyReported
+            }
             throw error.toRepositoryError()
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
@@ -88,12 +91,15 @@ struct DefaultSocialRepository: SocialRepository {
 
     public func reportImproperFeed(id: FeedID) async throws(RepositoryError) {
         let action = SocialAction.reportImproperFeed
-        
+
         do {
             try await service.postReportImproperFeed(feedID: id.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
+            if case .responseFailure(_, let body) = error, body?.code == "REPORT-002" {
+                throw .alreadyReported
+            }
             throw error.toRepositoryError()
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
@@ -103,12 +109,15 @@ struct DefaultSocialRepository: SocialRepository {
 
     public func reportSpoilerComment(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
         let action = SocialAction.reportSpoilerComment
-        
+
         do {
             try await service.postReportSpoilerComment(feedID: feedID.value, commentID: commentID.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
+            if case .responseFailure(_, let body) = error, body?.code == "REPORT-004" {
+                throw .alreadyReported
+            }
             throw error.toRepositoryError()
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
@@ -118,12 +127,15 @@ struct DefaultSocialRepository: SocialRepository {
 
     public func reportImproperComment(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
         let action = SocialAction.reportImproperComment
-        
+
         do {
             try await service.postReportImproperComment(feedID: feedID.value, commentID: commentID.value)
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)
+            if case .responseFailure(_, let body) = error, body?.code == "REPORT-004" {
+                throw .alreadyReported
+            }
             throw error.toRepositoryError()
         } catch {
             logger?.logUnknownError(action: action.name, error: error)
