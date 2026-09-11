@@ -18,7 +18,10 @@ struct MainTabView: View {
     /// 탭 콘텐츠(예: 마이페이지의 서재 블록)가 다른 탭으로 push가 아니라 **전환**을 요청할 수 있도록
     /// `selection:` 바인딩과 짝지어 쓴다 — 화면 push와 달리 탭 전환은 대상 탭의 `NavigationPath`를
     /// 건드리지 않는다(그 탭이 이미 쌓아둔 스택은 그대로 유지된 채 앞으로 나온다).
-    private enum Tab {
+    /// ⚠️ **`Tab`이 아니라 `MainTab`이다** — iOS 18+ 분기가 쓰는 `SwiftUI.Tab(value:content:label:)`와
+    /// 이름이 겹치면 이 파일 안에서 `Tab(...)`이 항상 이 enum으로 해석돼(가장 안쪽 스코프 우선)
+    /// `SwiftUI.Tab` 이니셜라이저를 가릴 수 있다 — 다시 `Tab`으로 줄이지 말 것.
+    private enum MainTab {
         case home, feed, library, my
     }
 
@@ -32,7 +35,7 @@ struct MainTabView: View {
     /// (여러 탭이 동시에 API를 호출 중이면 시간차로 여러 번 불릴 수 있음, `HomeFeature`/`LibraryFeature`와 동일 계약).
     let onAuthenticationRequired: () -> Void
 
-    @State private var selectedTab: Tab = .home
+    @State private var selectedTab: MainTab = .home
     /// 피드 탭이 **이미 선택된 상태에서 다시 탭**될 때마다 증가하는 카운터 — 피드 목록을 최상단으로 올리는
     /// 신호로 `FeedRootView`에 내려간다. 시스템 자동 "탭 재탭→최상단"은 피드 화면의 상시 mount된 두 ScrollView
     /// 중 첫 번째(내 피드)에만 걸려 소소피드에선 안 먹어(→ `SosoFeedView`), 재탭을 여기서 직접 감지해 보낸다.
@@ -45,13 +48,13 @@ struct MainTabView: View {
     /// 401에도 옛 컬렉션이 재로그인 후 다시 떠버린다. 로그아웃·탈퇴(`MypageRootView.onSessionEnded`)는 사용자가
     /// 세션을 끝낸 것이라 되살리지 않는다. 어느 탭이 소비했는지도 같이 들어, 다른 탭의 딥링크 화면이 빠질 때
     /// 이 값이 지워지지 않게 한다(탭마다 스택이 따로라 홈의 링크 A와 피드의 링크 B가 동시에 살아 있을 수 있다).
-    @State private var deliveredDeepLink: (tab: Tab, link: DeepLink)?
+    @State private var deliveredDeepLink: (tab: MainTab, link: DeepLink)?
 
     /// `TabView(selection:)`을 감싼 프록시 — 이미 선택된 피드 탭을 다시 탭하면(newValue == 현재 == .feed)
     /// `feedReselectSignal`을 올린다. SwiftUI는 선택된 탭 아이템을 재탭할 때도 이 setter를 같은 값으로 호출한다
     /// (이 기법이 iOS 26 탭바에서도 실제로 발화하는지는 시뮬레이터 실측으로 확인). 나머지 탭 동작·딥링크 로직은
-    /// `selectedTab`을 그대로 갱신하므로 영향 없다.
-    private var tabSelection: Binding<Tab> {
+    /// `selectedTab`을 그대로 갱신하므로 영향 없다. iOS 18+/iOS 17 두 분기 모두 이 프록시를 쓴다.
+    private var tabSelection: Binding<MainTab> {
         Binding(
             get: { selectedTab },
             set: { newValue in
@@ -64,49 +67,17 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView(selection: tabSelection) {
-            HomeRootView(
-                dependencies: dependencies,
-                deepLink: deepLink(for: .home),
-                onDeepLinkConsumed: consumeDeepLink,
-                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .home) },
-                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
-            )
-            .tabItem { tabLabel("홈", icon: WSSImage.icNavigateHome, isSelected: selectedTab == .home) }
-            .tag(Tab.home)
-
-            FeedRootView(
-                dependencies: dependencies,
-                deepLink: deepLink(for: .feed),
-                onDeepLinkConsumed: consumeDeepLink,
-                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
-                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
-                scrollToTopSignal: feedReselectSignal
-            )
-            .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed, isSelected: selectedTab == .feed) }
-            .tag(Tab.feed)
-
-            LibraryRootView(
-                dependencies: dependencies,
-                deepLink: deepLink(for: .library),
-                onDeepLinkConsumed: consumeDeepLink,
-                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .library) },
-                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
-            )
-            .tabItem { tabLabel("서재", icon: WSSImage.icNavigateLibrary, isSelected: selectedTab == .library) }
-            .tag(Tab.library)
-
-            MypageRootView(
-                dependencies: dependencies,
-                deepLink: deepLink(for: .my),
-                onDeepLinkConsumed: consumeDeepLink,
-                onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .my) },
-                onLibraryTapped: { selectedTab = .library },
-                onSessionEnded: onAuthenticationRequired,
-                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
-            )
-            .tabItem { tabLabel("My", icon: WSSImage.icNavigateMy, isSelected: selectedTab == .my) }
-            .tag(Tab.my)
+        Group {
+            // iOS 17은 `.tabItem`(레거시 브릿지)만 지원, iOS 18+는 `Tab(value:content:label:)`
+            // 빌더로 옮긴다 — Liquid Glass 탭바(iOS 26)의 선택 전환 애니메이션은 이 새 API가
+            // 아이콘을 진짜 라이브 뷰로 넘기는 파이프라인을 타야 자연스럽다(레거시 `.tabItem`은
+            // 아이콘을 정적 스냅샷으로 떠 UIKit에 넘겨, `tabLabel`이 색을 어떻게 구워도 탭 전환 시
+            // 크로스페이드 없이 툭 바뀐다 — `tabLabel`의 iOS 26 baked-image 주석 참고).
+            if #available(iOS 18.0, *) {
+                modernTabView
+            } else {
+                legacyTabView
+            }
         }
         .task {
             // 푸시 권한 요청·원격 알림 등록(#243, V1 parity) — 메인 탭 진입 시 1회. `MainTabView`는 세션이
@@ -117,11 +88,124 @@ struct MainTabView: View {
     }
 }
 
+// MARK: - TabView 구성 (iOS 18+ / iOS 17 분기)
+
+@available(iOS 18.0, *)
+private extension MainTabView {
+
+    var modernTabView: some View {
+        TabView(selection: tabSelection) {
+            Tab(value: MainTab.home) {
+                homeRootView
+            } label: {
+                tabLabel("홈", icon: WSSImage.icNavigateHome, isSelected: selectedTab == .home)
+            }
+
+            Tab(value: MainTab.feed) {
+                feedRootView
+            } label: {
+                tabLabel("피드", icon: WSSImage.icNavigateFeed, isSelected: selectedTab == .feed)
+            }
+
+            Tab(value: MainTab.library) {
+                libraryRootView
+            } label: {
+                tabLabel("서재", icon: WSSImage.icNavigateLibrary, isSelected: selectedTab == .library)
+            }
+
+            Tab(value: MainTab.my) {
+                myRootView
+            } label: {
+                tabLabel("My", icon: WSSImage.icNavigateMy, isSelected: selectedTab == .my)
+            }
+        }
+    }
+}
+
+private extension MainTabView {
+
+    var legacyTabView: some View {
+        TabView(selection: tabSelection) {
+            homeRootView
+                .tabItem {
+                    tabLabel("홈", icon: WSSImage.icNavigateHome, isSelected: selectedTab == .home)
+                }
+                .tag(MainTab.home)
+
+            feedRootView
+                .tabItem {
+                    tabLabel("피드", icon: WSSImage.icNavigateFeed, isSelected: selectedTab == .feed)
+                }
+                .tag(MainTab.feed)
+
+            libraryRootView
+                .tabItem {
+                    tabLabel("서재", icon: WSSImage.icNavigateLibrary, isSelected: selectedTab == .library)
+                }
+                .tag(MainTab.library)
+
+            myRootView
+                .tabItem {
+                    tabLabel("My", icon: WSSImage.icNavigateMy, isSelected: selectedTab == .my)
+                }
+                .tag(MainTab.my)
+        }
+    }
+}
+
+// MARK: - 탭 콘텐츠 (두 분기가 공유)
+
+private extension MainTabView {
+
+    var homeRootView: some View {
+        HomeRootView(
+            dependencies: dependencies,
+            deepLink: deepLink(for: .home),
+            onDeepLinkConsumed: consumeDeepLink,
+            onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .home) },
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+        )
+    }
+
+    var feedRootView: some View {
+        FeedRootView(
+            dependencies: dependencies,
+            deepLink: deepLink(for: .feed),
+            onDeepLinkConsumed: consumeDeepLink,
+            onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
+            scrollToTopSignal: feedReselectSignal
+        )
+    }
+
+    var libraryRootView: some View {
+        LibraryRootView(
+            dependencies: dependencies,
+            deepLink: deepLink(for: .library),
+            onDeepLinkConsumed: consumeDeepLink,
+            onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .library) },
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+        )
+    }
+
+    var myRootView: some View {
+        MypageRootView(
+            dependencies: dependencies,
+            deepLink: deepLink(for: .my),
+            onDeepLinkConsumed: consumeDeepLink,
+            onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .my) },
+            onLibraryTapped: { selectedTab = .library },
+            onSessionEnded: onAuthenticationRequired,
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+        )
+    }
+}
+
 // MARK: - 딥링크
 
 private extension MainTabView {
-    /// `Tab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`private extension`의 기본은 fileprivate).
-    private func deepLink(for tab: Tab) -> DeepLink? {
+    /// `MainTab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`private extension`의 기본은 fileprivate).
+    private func deepLink(for tab: MainTab) -> DeepLink? {
         selectedTab == tab ? pendingDeepLink : nil
     }
 
@@ -131,8 +215,8 @@ private extension MainTabView {
         pendingDeepLink = nil
     }
 
-    /// `Tab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`deepLink(for:)`와 같은 이유).
-    private func clearDeliveredDeepLink(for tab: Tab) {
+    /// `MainTab`이 `private`라 이 메서드도 `private`여야 컴파일된다(`deepLink(for:)`와 같은 이유).
+    private func clearDeliveredDeepLink(for tab: MainTab) {
         guard deliveredDeepLink?.tab == tab else { return }
         deliveredDeepLink = nil
     }
