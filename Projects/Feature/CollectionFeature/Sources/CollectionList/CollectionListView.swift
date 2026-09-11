@@ -225,7 +225,7 @@ private extension CollectionListView {
         HStack(spacing: 0) {
             if let description = card.description {
                 Text(description)
-                    .applyWSSFont(.label2, color: .wssGray300)
+                    .applyWSSFont(.label1, color: .wssGray300)
                     .lineLimit(1)
                 
                 Spacer().frame(width: 4)
@@ -239,9 +239,9 @@ private extension CollectionListView {
 
             HStack(spacing: 0) {
                 Text("작품 ")
-                    .applyWSSFont(.label2, color: .wssGray300)
+                    .applyWSSFont(.label1, color: .wssGray300)
                 Text("\(card.novelCount)")
-                    .applyWSSFont(.label2, color: .wssPrimary100)
+                    .applyWSSFont(.label1, color: .wssPrimary100)
             }
             
             Spacer().frame(width: 80)
@@ -256,7 +256,7 @@ private extension CollectionListView {
                 .frame(width: 18, height: 18)
 
             Text("나만 보는 컬렉션")
-                .applyWSSFont(.label2, color: .wssGray200)
+                .applyWSSFont(.label1, color: .wssGray200)
         }
     }
 
