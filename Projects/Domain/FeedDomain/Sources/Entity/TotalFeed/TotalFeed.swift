@@ -86,6 +86,11 @@ public struct TotalFeed: Equatable, Sendable {
     /// **`feedId`·`createdDate`·`author`·`isMyFeed`는 로컬을 유지**한다 — `isMyFeed`는 상세 응답에 없고,
     /// `author`는 내 피드 목록이 프로필 조회로 덧씌운 값이라 상세의 author로 되돌리면 그 조립이 풀린다.
     /// 작성일은 바뀌지 않는 값이라 목록 응답의 표기를 그대로 둔다.
+    ///
+    /// ⚠️ **연결 작품의 `rating`은 상세의 `basicInfo.rating`(작품 전체 평점)이 아니라
+    /// `feedWriterRating`(글쓴이 별점)에서 가져온다** — 목록 셀의 `ConnectedNovel.rating`은 애초에
+    /// "글쓴이 별점"을 뜻한다(목록 API는 이 값을 `novelRating`으로, 상세 API는 `feedWriterNovelRating`으로
+    /// 내려주는 필드명 불일치가 있다). `basicInfo`를 통째로 넣으면 복귀 순간 별점이 전체 평점으로 바뀐다.
     public func updated(from detail: FeedDetail) -> TotalFeed {
         TotalFeed(
             feedId: feedId,
@@ -95,7 +100,14 @@ public struct TotalFeed: Equatable, Sendable {
             likeCount: detail.likeCount,
             isLiked: detail.isLiked,
             commentCount: detail.commentCount,
-            connectedNovel: detail.connectedNovel?.basicInfo,
+            connectedNovel: detail.connectedNovel.map { connected in
+                ConnectedNovel(
+                    id: connected.basicInfo.id,
+                    title: connected.basicInfo.title,
+                    genre: connected.basicInfo.genre,
+                    rating: connected.feedWriterRating
+                )
+            },
             isSpoiler: detail.isSpoiler,
             isModified: detail.isModified,
             isPublic: detail.isPublic,

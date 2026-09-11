@@ -101,9 +101,35 @@ struct TotalFeedTests {
         #expect(updated.isLiked == true)
         #expect(updated.commentCount == 3)
         #expect(updated.isModified == true)
-        #expect(updated.connectedNovel == detail.connectedNovel?.basicInfo)
+        // 연결 작품의 식별 정보(id·제목·장르)는 상세 값을 따른다. 별점은 아래 전용 테스트가 검증한다.
+        #expect(updated.connectedNovel?.id == detail.connectedNovel?.basicInfo.id)
+        #expect(updated.connectedNovel?.title == detail.connectedNovel?.basicInfo.title)
+        #expect(updated.connectedNovel?.genre == detail.connectedNovel?.basicInfo.genre)
         #expect(updated.thumbnailImageURL == firstImage)
         #expect(updated.imageCount == 2)
+    }
+
+    @Test("상세로 갱신할 때 연결 작품 별점은 작품 전체 평점이 아니라 글쓴이 별점을 쓴다")
+    func updatedFromDetailUsesFeedWriterRatingForConnectedNovel() {
+        let local = makeMock()
+        // 상세: 작품 전체 평점(basicInfo.rating)은 1.2345, 글쓴이 별점(feedWriterRating)은 4.5로 서로 다르다.
+        let detail = makeMockDetail(feedWriterRating: 4.5)
+
+        let updated = local.updated(from: detail)
+
+        // 목록 셀의 별점은 "글쓴이 별점"이므로 feedWriterRating을 따라야 한다 — basicInfo.rating(전체 평점)이 아니다.
+        #expect(updated.connectedNovel?.rating == 4.5)
+        #expect(updated.connectedNovel?.rating != detail.connectedNovel?.basicInfo.rating)
+    }
+
+    @Test("상세에 글쓴이 별점이 없으면 연결 작품 별점도 비운다")
+    func updatedFromDetailWithoutFeedWriterRatingClearsConnectedNovelRating() {
+        let local = makeMock()
+        let detail = makeMockDetail(feedWriterRating: nil)
+
+        let updated = local.updated(from: detail)
+
+        #expect(updated.connectedNovel?.rating == nil)
     }
 
     @Test("상세로 갱신해도 feedId·작성일·작성자·내 글 여부는 로컬 값을 유지한다")
@@ -141,7 +167,9 @@ extension TotalFeedTests {
         isLiked: Bool = false,
         commentCount: Int = 0,
         isModified: Bool = false,
-        imageURLs: [URL?] = []
+        imageURLs: [URL?] = [],
+        // basicInfo.rating(작품 전체 평점, 1.2345)과 일부러 다른 값 — 갱신이 글쓴이 별점을 쓰는지 구분하기 위함.
+        feedWriterRating: Float? = 4.5
     ) -> FeedDetail {
         FeedDetail(
             id: FeedID(1),
@@ -153,7 +181,8 @@ extension TotalFeedTests {
             connectedNovel: ConnectedNovelDetail(
                 basicInfo: makeMockConnectedNovel(),
                 thumbnailImageURL: nil,
-                descirption: "소개"
+                descirption: "소개",
+                feedWriterRating: feedWriterRating
             ),
             likeCount: likeCount,
             isLiked: isLiked,

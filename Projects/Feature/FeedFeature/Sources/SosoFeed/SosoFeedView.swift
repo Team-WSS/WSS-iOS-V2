@@ -436,7 +436,7 @@ struct SosoFeedView: View {
                     WSSLinkNovel(
                         genreType: genre,
                         novelTitle: novel.title,
-                        novelRating: novel.rating ?? 0,
+                        novelRating: novel.rating,
                         linkNovelTapped: { onRoute(.novelDetail(novel.id)) }
                     )
                 }

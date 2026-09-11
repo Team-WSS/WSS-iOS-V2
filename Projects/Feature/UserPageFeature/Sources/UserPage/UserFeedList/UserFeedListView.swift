@@ -143,7 +143,7 @@ struct UserFeedListView: View {
                     WSSLinkNovel(
                         genreType: $0,
                         novelTitle: connected.title,
-                        novelRating: connected.rating ?? 0,
+                        novelRating: connected.rating,
                         linkNovelTapped: {
                             onNovelTapped(connected.id)
                         }
