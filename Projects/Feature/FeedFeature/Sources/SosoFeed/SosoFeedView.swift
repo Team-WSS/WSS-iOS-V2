@@ -49,18 +49,29 @@ struct SosoFeedView: View {
     /// 들어온다 — 작품 상세 경유 작성·수정 완료는 이 신호를 켜지 않는다.
     @Binding private var needsReloadForCreatedFeed: Bool
 
+    /// 피드 탭바의 **현재(피드) 탭 재탭** 신호(증가하는 카운터, App `MainTabView`→`FeedRootView`→Factory 경유).
+    /// 값이 바뀌면 지금 보이는 서브탭 리스트만 최상단으로 스크롤한다 — 시스템 자동 "탭 재탭→최상단"이 상시 mount된
+    /// 두 ScrollView 중 첫 번째(내 피드)에만 걸려 소소피드에선 안 먹는 문제를 명시적 스크롤로 우회한다.
+    private let scrollToTopSignal: Int
+
     /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
     private let threeDotsBottomOffset: CGFloat = 52
 
     private let feedMenuSpaceName = "sosoFeedRoot"
 
+    /// 각 리스트 `ScrollView` 최상단에 심는 0높이 앵커의 id — 재탭 신호 시 `scrollTo(_:anchor:.top)`의 목표.
+    /// 두 리스트는 각자의 `ScrollViewReader` 스코프라 같은 상수를 재사용해도 충돌하지 않는다.
+    private let scrollTopAnchorID = "FEED_LIST_TOP"
+
     init(
         viewModel: SosoFeedViewModel,
         needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
+        scrollToTopSignal: Int = 0,
         onRoute: @escaping (SosoFeedRoute) -> Void
     ) {
         self._viewModel = State(initialValue: viewModel)
         self._needsReloadForCreatedFeed = needsReloadForCreatedFeed
+        self.scrollToTopSignal = scrollToTopSignal
         self.onRoute = onRoute
     }
 
@@ -295,9 +306,26 @@ struct SosoFeedView: View {
     /// 숨은 쪽은 터치(당겨서 새로고침 포함)와 접근성에서 완전히 제외한다.
     private var FeedListSection: some View {
         ZStack {
+            // 시스템 자동 "탭 재탭→최상단"을 흡수하는 미끼(#261 후속, 실측 근거는 CLAUDE.md 주의사항).
+            // 자동 동작은 opacity 0인 숨은 리스트도 후보로 잡고 **첫 번째 ScrollView**를 최상단으로 올린다 —
+            // 이 빈 ScrollView를 맨 앞에 둬 자동 동작이 여기에 걸리게 하면, 뒤의 두 실제 리스트는 오직
+            // 명시적 `scrollToTopSignal`(보이는 탭만)로만 움직여 탭별 스크롤 깊이 보존 계약이 지켜진다.
+            // 없으면 자동 동작이 항상 첫 실제 리스트(내 피드)를 숨은 채로도 리셋한다(#261 실측).
+            automaticScrollToTopDecoy
             tabList(for: .myFeed)
             tabList(for: .sosoFeed)
         }
+    }
+
+    /// 위 자동 스크롤 흡수용 미끼. 전체 크기·`opacity 0`·스크롤 가능한 콘텐츠(자동 동작의 유효 대상이 되도록)를
+    /// 갖되 터치·접근성에서 완전히 빠진다. 시각·레이아웃 영향 없음(ZStack 최하단, 투명).
+    private var automaticScrollToTopDecoy: some View {
+        ScrollView {
+            Color.clear.frame(height: 5000)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -327,8 +355,13 @@ struct SosoFeedView: View {
             WSSEmptyView(type: .myFeed,
                          action: { onRoute(.createFeed) })
         } else {
+            ScrollViewReader { scrollProxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    // 재탭 신호 시 최상단으로 올릴 0높이 앵커(리스트 맨 위).
+                    Color.clear
+                        .frame(height: 0)
+                        .id(scrollTopAnchorID)
                     ForEach(tabFeeds, id: \.feedId) { feed in
                         feedRow(feed, in: tab)
                             .background(
@@ -372,6 +405,14 @@ struct SosoFeedView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(.hidden)
+            // 탭바의 현재(피드) 탭 재탭 → 최상단으로. 두 리스트가 상시 mount라 숨은 쪽도 이 onChange를 받지만,
+            // **보이는 서브탭만** 올려 숨은 탭의 스크롤 깊이를 보존한다(상시 mount 계약). 로딩/빈/실패 분기엔
+            // ScrollView가 없어 이 핸들러 자체가 없다 — 올릴 스크롤 위치도 없으니 무해.
+            .onChange(of: scrollToTopSignal) { _, _ in
+                guard viewModel.state.selectedTab == tab else { return }
+                withAnimation { scrollProxy.scrollTo(scrollTopAnchorID, anchor: .top) }
+            }
+            }
         }
     }
 
@@ -436,7 +477,7 @@ struct SosoFeedView: View {
                     WSSLinkNovel(
                         genreType: genre,
                         novelTitle: novel.title,
-                        novelRating: novel.rating ?? 0,
+                        novelRating: novel.rating,
                         linkNovelTapped: { onRoute(.novelDetail(novel.id)) }
                     )
                 }

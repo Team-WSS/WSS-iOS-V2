@@ -171,7 +171,23 @@
 - 피드 삭제/신고 확인·완료 알럿은 `WSSComponent`의 공용 `WSSAlertType`(`deleteMyFeed`/`reportSpoilerContent`/`reportImproperContent`/`receivedReportSpoilerContent`/`receivedReportImproperContent`) 5종을 그대로 재사용한다 — `NovelDetailFeature`와 동일한 타입을 공유하므로 카피를 바꾸려면 두 Feature 모두에 영향이 간다.
 - **소소피드 옵션(전체글/추천글)·내 피드 필터(장르/공개여부/정렬) 전환 시 스크롤이 이전 위치에 남는 문제**는 각 탭 `ScrollView`에 `.id(scrollIdentity(for:))`를 걸어 해결한다 — 그 탭의 자기 축(내 피드=genres/includesUncategorized/visibilityType/sortType, 소소피드=옵션)만 문자열로 합친 값이라 그중 하나가 바뀌면 SwiftUI가 그 탭 ScrollView만 "새 뷰"로 취급해 스크롤 오프셋을 버리고 최상단부터 다시 그린다(**탭 축은 일부러 없다** — 탭 전환은 스크롤 보존이 계약, 위 화면 동작 계약 참고). 배열 교체 자체는 `reloadFromScratch`가 하므로, 이 `.id()`는 순수하게 "화면(스크롤 위치)"만 리셋하는 역할이다. 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. **새 필터 축을 추가하면 그 탭 `scrollIdentity(for:)`에도 반영해야** 그 축 변경 시에도 스크롤이 리셋된다. 작성 완료 재로드는 이 장치를 안 탄다 — 두 목록을 통째로 비워 로딩/빈 분기로 갈아타므로 ScrollView가 내려갔다 새로 서며 자연히 리셋된다(예전 `listGeneration` 항은 #256에서 제거).
 - ⚠️ **두 탭 리스트 상시 mount(2026-09-09)의 파생 함정 2개** — ① 셀 상단 y 실측(`myFeedCellTopYs`/`sosoFeedCellTopYs`)은 **탭별 딕셔너리로 분리**돼 있다. 내 글은 같은 feedId가 양쪽 리스트에 동시에 있어, 한 딕셔너리로 합치면 숨은 리스트의 GeometryReader가 보이는 쪽 threedots 앵커를 덮어써 드롭다운이 엉뚱한 y에 뜬다. ② `.loadMore(FeedTab)`은 발화한 탭을 실어 보내고 VM이 `tab == state.selectedTab`이 아니면 버린다 — 숨은 리스트도 레이아웃은 살아 있어서, 삭제(`removeCell`)로 셀이 밀려 올라오며 숨은 쪽 마지막 셀이 새로 실현되면 onAppear가 발화하는데, 가드가 없으면 그게 **현재 탭**의 다음 페이지를 당겨버린다. 숨은 리스트에 상호작용/실현 부수효과가 있는 장치를 새로 달 땐 이 두 사례처럼 "어느 탭에서 온 신호인지"를 항상 판별할 것.
+- ⚠️ **"탭바 현재 탭 재탭 → 목록 최상단"은 SwiftUI 자동 기능에 맡기지 못하고, 명시 신호 + 미끼 2단계로 구현한다**
+  (상시 mount의 파생, #261 후속 — iPhone 17 Pro Max/iOS 26 시뮬레이터 로그인 세션 실측 완료). 자동 스크롤-투-탑은
+  화면 안 **첫 번째 ScrollView 하나**에만 걸리는데, 상시 mount라 **먼저 선언된 `.myFeed`에** 걸려 (1) 소소피드에선
+  헛돌고 (2) 내 피드는 **숨어 있어도(opacity 0)** 재탭마다 리셋된다(자동 동작이 투명한 뷰도 후보로 잡는다는 뜻 —
+  이게 미끼가 통하는 근거이기도 하다). 그래서:
+  - **① 명시 신호**: App `MainTabView`가 커스텀 `TabView(selection:)` Binding으로 재탭을 감지해(**iOS 26에서도
+    setter가 같은 값으로 발화함을 실측 확인**) `scrollToTopSignal`(증가 카운터)을 `FeedRootView`→`makeSosoFeedView`
+    →`SosoFeedView`로 흘려보내고, 각 리스트 `ScrollViewReader`+최상단 0높이 앵커가 받아 **`viewModel.state.selectedTab
+    == tab` 가드로 보이는 서브탭만** 올린다(숨은 쪽도 onChange를 받지만 가드가 막는다 — 안 막으면 그 탭 스크롤 깊이
+    보존 계약이 깨진다).
+  - **② 미끼 ScrollView**(`automaticScrollToTopDecoy`, `FeedListSection` ZStack 맨 앞): ①만으론 자동 동작이 여전히
+    내 피드를 리셋하므로, **자동 동작이 첫 ScrollView만 잡는 성질을 역이용**해 투명·빈 ScrollView를 실제 두 리스트보다
+    먼저 둬 자동 동작을 흡수시킨다. 그러면 진짜 두 리스트는 오직 ①의 명시 신호로만 움직인다. 미끼는 전체 크기·`opacity 0`
+    ·스크롤 가능한 콘텐츠(자동 동작의 유효 대상이 되게)를 갖되 터치·접근성에서 빠진다. **이 미끼를 지우면 "내 피드는
+    재탭마다 항상 최상단으로 리셋"이 재발한다**(#261 실측).
 - 피드 셀 좋아요 버튼은 `feedRow`에서 `WSSFeadView`의 `likeButtonTapped`로 `.toggleLike(feed.feedId)`를 발화한다 — 낙관 반영/실패 롤백은 `SosoFeedViewModel.toggleLike`(엔티티 `TotalFeed.toggleLike()` 사용) 참고.
+- ⚠️ **피드 셀 연결 작품 별점(`WSSLinkNovel.novelRating`)은 "글쓴이 별점"이지 작품 전체 평점이 아니다** — `feedRow`가 `ConnectedNovel.rating`을 넘길 때 `?? 0`으로 뭉개지 말고 **옵셔널 그대로** 넘긴다(없거나 0이면 셀이 별점 표기를 생략, 상세 `FeedDetailLinkNovelBlock`의 `if feedWriteUserRating > 0`과 같은 규칙). 상세 다녀와서 복귀할 때 이 별점이 전체 평점으로 바뀌던 버그(#261 후속, 2026-09-11)와 목록/상세 API 필드명 불일치(목록=`novelRating`, 상세=`feedWriterNovelRating`)의 전말은 `FeedDomain/CLAUDE.md`의 `TotalFeed.updated(from:)` 항목이 정본. 같은 셀을 쓰는 타유저 피드(UserPage)·작품 상세 피드 탭도 동일.
 - **셀 제거(`removeCell` — 삭제·셀 동기화의 notFound/forbidden)는 "n개의 기록" 헤더(`myFeedsTotalCount`)도 함께 내린다** — 안 내리면 다 지워도 헤더만 옛 개수로 남는 모순이 생긴다(2026-09-09 실측 발견·수정). 로드된 `myFeeds`에 있던 것만 판별 가능한 best-effort고, 놓친 케이스는 당겨서 새로고침이 서버 값으로 복구한다.
 - **화면 전환 의도는 `onRoute: (SosoFeedRoute) -> Void` 하나로 나간다**(#253 — 낱개 클로저 5개(`onFeedTapped`/`onCreateFeedTapped`/`onEditFeedTapped`/`onUserProfileTapped`/`onNovelTapped`)와 기본값 no-op을 통합·제거). 셀 탭(안쪽 인터랙션 제외)=`.feedDetail`, 프로필 탭(`Author.userId` nil이면 호출 안 함)=`.userProfile`, 연결 작품 배너=`.novelDetail`, 연필 아이콘=`.createFeed`, 내 글 "수정하기"=`.editFeed`. 정본은 `Sources/Navigation/SosoFeedRoute.swift`.
   - **내 글이면 프로필 탭 자체가 비활성화된다** — `feedRow`가 `WSSFeadView`에 `isProfileTappable: !feed.isMyFeed`를 넘긴다(내 프로필로 "이동"할 곳이 없어서, #196). 탭이 죽은 영역이 되는 게 아니라 그대로 행의 나머지 영역과 동일하게 피드 상세 진입으로 흘러간다 — 구현 방식은 `WSSComponent/CLAUDE.md`의 `isProfileTappable` 항목 참고. 소소피드 탭에 내 글이 섞여 나오는 경우(전체글/추천글)도 `feed.isMyFeed` 기준이라 탭과 무관하게 항상 맞게 적용된다.

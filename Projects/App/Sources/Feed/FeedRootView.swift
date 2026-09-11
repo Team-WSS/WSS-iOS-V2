@@ -84,6 +84,10 @@ struct FeedRootView: View {
     let onDeepLinkDestinationDismissed: () -> Void
     /// 이 화면이 push하는 작품 상세의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다.
     let onAuthenticationRequired: () -> Void
+    /// 피드 탭바의 **현재(피드) 탭 재탭** 신호(`MainTabView`가 커스텀 selection Binding으로 감지해 증가시키는
+    /// 카운터). `makeSosoFeedView`로 그대로 흘려보내면 지금 보이는 서브탭 목록이 최상단으로 스크롤된다
+    /// (시스템 자동 "탭 재탭→최상단"이 상시 mount된 두 ScrollView 중 첫 번째=내 피드에만 걸리는 문제 우회).
+    let scrollToTopSignal: Int
 
     @State private var path = NavigationPath()
     @State private var deepLinkDestinationDepth: Int?
@@ -120,6 +124,8 @@ struct FeedRootView: View {
                 logger: dependencies.logger,
                 // 연필 아이콘 작성 성공 복귀 시에만 켜지는 1회성 신호 — 목록이 새 글을 받는 유일한 경로(#256).
                 needsReloadForCreatedFeed: $needsFeedListReloadForCreatedFeed,
+                // 피드 탭바 재탭 → 보이는 서브탭 목록 최상단으로(위 프로퍼티 주석 참고).
+                scrollToTopSignal: scrollToTopSignal,
                 onRoute: { route in
                     switch route {
                     case .feedDetail(let feedID):

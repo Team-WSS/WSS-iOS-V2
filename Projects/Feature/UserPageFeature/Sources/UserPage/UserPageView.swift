@@ -572,7 +572,7 @@ struct UserPageView: View {
                     WSSLinkNovel(
                         genreType: $0,
                         novelTitle: connected.title,
-                        novelRating: connected.rating ?? 0,
+                        novelRating: connected.rating,
                         linkNovelTapped: {
                             onRoute(.novel(connected.id))
                         }

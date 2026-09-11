@@ -448,6 +448,12 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
   앞으로 가져올 뿐 각 탭이 쌓아둔 스택은 그대로 보존된다(서재 탭이 이미 뭔가 push된 상태였다면 그
   화면이 그대로 다시 보인다). 다른 탭에도 같은 종류의 "탭 전환" 요구가 생기면 이 패턴(탭 Root가
   `onXxxTabTapped` 콜백을 받고, `MainTabView`가 `selectedTab`을 바꾸는 클로저를 내려줌)을 재사용할 것.
+  - ⚠️ **`TabView(selection:)`은 `$selectedTab`이 아니라 커스텀 프록시 `tabSelection`(get/set Binding)을
+    받는다**(#261) — 이미 선택된 피드 탭을 **재탭**하면(SwiftUI가 선택된 탭 아이템 재탭 시에도 setter를 같은
+    값으로 호출, iOS 26 실측 확인) `feedReselectSignal` 카운터를 올려 `FeedRootView`→`SosoFeedView`로 흘려보내
+    지금 보이는 서브탭을 최상단으로 스크롤한다. **`$selectedTab`로 되돌리면 피드 재탭-최상단이 조용히 깨진다**
+    — 나머지 탭 전환·딥링크 로직은 `selectedTab`을 그대로 갱신해 영향 없다. 전체 계약(자동 스크롤 흡수 미끼
+    ScrollView 포함)은 `FeedFeature/CLAUDE.md`가 정본.
 - **서재의 "알림 관리"는 설정 목록 전체가 아니라 `SettingFactory.makeNotificationSettingView`로
   바로 진입한다**(사용자 확정, #196) — 서재 맥락에서 필요한 건 알림 설정뿐이라 `SettingFactory.makeView`
   (설정 메인 목록)를 거치지 않고 그 하위 화면으로 직행한다. `AppDependencies.pushSettingRepository`

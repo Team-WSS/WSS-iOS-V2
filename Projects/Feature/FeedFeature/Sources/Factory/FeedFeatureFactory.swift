@@ -132,6 +132,10 @@ public enum FeedFeatureFactory {
     ///     `@State`의 Binding). true면 복귀 `onAppear`가 소비(false로 되돌림)하고 두 목록(내 피드/소소피드)을
     ///     초기 로드처럼 다시 받는다(새 글이 맨 위, 스크롤 최상단). 새 글은 이 신호로만 목록에 들어온다 —
     ///     수정 완료(셀 동기화가 처리)·작품 상세 경유 작성(그 화면이 자기 피드 섹션을 리셋)엔 켜지 말 것.
+    ///   - scrollToTopSignal: 피드 탭바의 **현재(피드) 탭 재탭** 신호(증가하는 카운터). 값이 바뀌면 지금 보이는
+    ///     서브탭(내 피드/소소피드)만 목록 최상단으로 스크롤한다 — 시스템 자동 동작이 상시 mount된 두 ScrollView
+    ///     중 첫 번째(내 피드)에만 걸려 소소피드에선 안 먹는 문제를 우회한다(호출자 `MainTabView`가 커스텀
+    ///     selection Binding으로 재탭을 감지해 올린다).
     ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `SosoFeedRoute`(Navigation/) 참고.
     ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
     @MainActor
@@ -146,6 +150,7 @@ public enum FeedFeatureFactory {
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
         needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
+        scrollToTopSignal: Int = 0,
         onRoute: @escaping (SosoFeedRoute) -> Void
     ) -> some View {
         SosoFeedView(
@@ -161,6 +166,7 @@ public enum FeedFeatureFactory {
                 logger: logger
             ),
             needsReloadForCreatedFeed: needsReloadForCreatedFeed,
+            scrollToTopSignal: scrollToTopSignal,
             onRoute: onRoute
         )
     }
