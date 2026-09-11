@@ -33,6 +33,10 @@ struct MainTabView: View {
     let onAuthenticationRequired: () -> Void
 
     @State private var selectedTab: Tab = .home
+    /// 피드 탭이 **이미 선택된 상태에서 다시 탭**될 때마다 증가하는 카운터 — 피드 목록을 최상단으로 올리는
+    /// 신호로 `FeedRootView`에 내려간다. 시스템 자동 "탭 재탭→최상단"은 피드 화면의 상시 mount된 두 ScrollView
+    /// 중 첫 번째(내 피드)에만 걸려 소소피드에선 안 먹어(→ `SosoFeedView`), 재탭을 여기서 직접 감지해 보낸다.
+    @State private var feedReselectSignal: Int = 0
     /// 선택된 탭 Root가 소비해 push한 딥링크 — **그 화면이 스택에 남아 있는 동안만** 값이 있다. 인증 만료(401)로
     /// 온보딩에 되돌아가면 이 탭 트리째 파괴돼 push했던 화면도 함께 사라지므로, 그 시점에 `pendingDeepLink`로
     /// 되살려 로그인 뒤 새 `MainTabView`가 다시 처리한다 — 토큰 없는 콜드 스타트(세션 복원 전까진 매번
@@ -43,8 +47,24 @@ struct MainTabView: View {
     /// 이 값이 지워지지 않게 한다(탭마다 스택이 따로라 홈의 링크 A와 피드의 링크 B가 동시에 살아 있을 수 있다).
     @State private var deliveredDeepLink: (tab: Tab, link: DeepLink)?
 
+    /// `TabView(selection:)`을 감싼 프록시 — 이미 선택된 피드 탭을 다시 탭하면(newValue == 현재 == .feed)
+    /// `feedReselectSignal`을 올린다. SwiftUI는 선택된 탭 아이템을 재탭할 때도 이 setter를 같은 값으로 호출한다
+    /// (이 기법이 iOS 26 탭바에서도 실제로 발화하는지는 시뮬레이터 실측으로 확인). 나머지 탭 동작·딥링크 로직은
+    /// `selectedTab`을 그대로 갱신하므로 영향 없다.
+    private var tabSelection: Binding<Tab> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .feed && selectedTab == .feed {
+                    feedReselectSignal += 1
+                }
+                selectedTab = newValue
+            }
+        )
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             HomeRootView(
                 dependencies: dependencies,
                 deepLink: deepLink(for: .home),
@@ -60,7 +80,8 @@ struct MainTabView: View {
                 deepLink: deepLink(for: .feed),
                 onDeepLinkConsumed: consumeDeepLink,
                 onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
-                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+                onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
+                scrollToTopSignal: feedReselectSignal
             )
             .tabItem { tabLabel("피드", icon: WSSImage.icNavigateFeed, isSelected: selectedTab == .feed) }
             .tag(Tab.feed)
