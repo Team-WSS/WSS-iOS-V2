@@ -76,11 +76,11 @@ struct NovelNotificationSettingSheet: View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .applyWSSFont(.body2)
+                    .applyWSSFont(.title2)
                     .foregroundStyle(Color.wssBlack)
 
                 Text(description)
-                    .applyWSSFont(.body5)
+                    .applyWSSFont(.body4)
                     .foregroundStyle(Color.wssGray200)
             }
 
