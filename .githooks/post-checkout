@@ -44,4 +44,14 @@ elif [ -x "$HOME/.local/bin/mise" ]; then
   "$HOME/.local/bin/mise" exec -- tuist generate
 else
   echo "⚠️  tuist 미발견 — 'mise install' 후 'tuist generate' 수동 실행 필요" >&2
+  exit 0
+fi
+
+# generate가 파생 SPM 리소스 번들 타깃에 낡은 deployment target(13.1)을 다시 심으므로, 매 generate
+# 뒤 patch로 덮어야 Xcode IDE 빌드가 산다 — 안 하면 "supported deployment target" 하드 에러(CLI
+# xcodebuild는 통과해서 안 잡힌다). 이유 전말은 Scripts/patch-spm-deployment-target.sh 헤더·
+# Tuist/Package.swift 주석 참고(tuist/tuist#11163 우회).
+if [ -x "Scripts/patch-spm-deployment-target.sh" ]; then
+  echo "🩹 [post-checkout] SPM deployment target 패치..."
+  Scripts/patch-spm-deployment-target.sh
 fi

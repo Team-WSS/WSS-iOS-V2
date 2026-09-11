@@ -7,7 +7,7 @@
 
 | 작업 | 도구 | 비고 |
 |---|---|---|
-| 프로젝트 생성/의존성 | `tuist install` → `tuist generate` | 모든 빌드/테스트의 선행 |
+| 프로젝트 생성/의존성 | `tuist install` → `tuist generate` → `Scripts/patch-spm-deployment-target.sh` | 모든 빌드/테스트의 선행. **patch는 generate 직후 매번** — 안 돌리면 Xcode 26.6+ IDE 빌드가 하드 에러(CLI 빌드는 통과해서 착각하기 쉬움. 이유는 스크립트 헤더·`Tuist/Package.swift` 주석) |
 | Domain 단위 테스트 | XcodeBuildMCP `test_sim` (scheme **`XxxDomain`**) | CI는 `xcodebuild test`(아래) |
 | 모듈/앱 빌드 | XcodeBuildMCP `build_sim` / `build_run_sim` | 에러를 file:line으로 압축 반환 |
 | **Feature 화면 띄우기** | `build_run_sim` (scheme **`XxxFeature`**) | 전체 App 조립 불필요, Demo 앱 단독 실행 |
@@ -44,4 +44,4 @@
     - 오진 경로가 특히 고약하다: 엉뚱한 스킴이 **SUCCEEDED로 끝나** 빌드가 통과한 줄 알게 되고, `get_sim_app_path`가 준 경로도 그럴듯해 **바꾼 코드가 컴파일조차 안 된 사실을 놓친다**(#181에서 실제로 발생). 빌드 로그의 `-scheme` 값(`grep -o "\-scheme [A-Za-z]*"`)을 보면 1초에 판별된다.
 11. ⚠️ **`ready-merge.sh build-all`(= `tuist build`)은 첫 실패에서 멈추고, 그 실패가 내 변경과 무관할 수 있다** — 지금은 `Logger` 스킴이 항상 실패한다(`Demo/Demo.swift`가 헤더 주석만 있는 빈 스텁이라 `LoggerDemo` 앱에 `@main`이 없어 `Undefined symbols: _main`으로 링크가 깨진다). 그 뒤 scheme들은 **검증되지 않은 채 남으므로**, "전체 통과"로 읽지 말고 **변경한 모듈 스킴을 직접 지정해** 확인할 것(`tuist build <모듈> --platform ios -d "<시뮬레이터>"`). #195 rebase 검증에서 실제로 걸렸다.
     - 기본 시뮬레이터 이름(`iPhone 17`)이 그 머신에 없으면 코드와 무관하게 즉시 FAIL한다 — 출력의 `Did find` 목록에서 골라 인자로 넘긴다(`build-all "iPhone 17 Pro"`).
-12. ⚠️ **rebase·브랜치 전환으로 파일이 새로 들어오면 빌드 전에 `tuist generate`를 다시 돌린다** — 생성된 프로젝트가 낡으면 그 파일이 **컴파일 대상에서 통째로 빠지고**, 에러는 엉뚱하게 그 타입을 쓰는 다른 모듈에서 `cannot find 'X' in scope`로 뜬다(#195 rebase에서 `LibraryPageSizePolicy`가 이렇게 걸렸다). "왜 방금 만든 타입을 못 찾지"가 신호다 — 그 모듈이 해당 `.swift`를 컴파일했는지 빌드 로그에서 먼저 확인할 것.
+12. ⚠️ **rebase·브랜치 전환으로 파일이 새로 들어오면 빌드 전에 `tuist generate`를 다시 돌린다** — 생성된 프로젝트가 낡으면 그 파일이 **컴파일 대상에서 통째로 빠지고**, 에러는 엉뚱하게 그 타입을 쓰는 다른 모듈에서 `cannot find 'X' in scope`로 뜬다(#195 rebase에서 `LibraryPageSizePolicy`가 이렇게 걸렸다). "왜 방금 만든 타입을 못 찾지"가 신호다 — 그 모듈이 해당 `.swift`를 컴파일했는지 빌드 로그에서 먼저 확인할 것. **generate를 다시 돌렸으면 `Scripts/patch-spm-deployment-target.sh`도 다시 돌린다**(generate가 SPM 번들 타깃의 deployment target을 되돌려 놔서 — 위 명령표. Xcode IDE 빌드용, CLI엔 무관). post-checkout 훅의 자동 generate는 patch까지 알아서 붙는다.

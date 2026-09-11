@@ -21,14 +21,14 @@ metadata:
 
 ### 2. 도구·의존성·프로젝트 (멱등)
 - `mise install` — `.mise.toml`에 핀된 tuist 버전 설치(버전 숫자는 `.mise.toml`이 단일 진실 소스 — 여기 박아두지 않는다).
-- `tuist install` → `tuist generate`.
-- `WSS-iOS-V2.xcworkspace` 생성 확인. 이미 있으면 `tuist generate`만 재실행(stale 방지).
+- `tuist install` → `tuist generate` → `Scripts/patch-spm-deployment-target.sh`. ⚠️ **patch는 generate 직후 매번** — SPM 리소스 번들 타깃의 낡은 deployment target(13.1)을 앱과 같은 17.0으로 끌어올린다. 안 돌리면 Xcode 26.6+ IDE 빌드가 "supported deployment target" 하드 에러로 깨진다(CLI 빌드는 통과해서 착각하기 쉬움 — 이유는 스크립트 헤더·`Tuist/Package.swift` 주석, tuist/tuist#11163 우회).
+- `WSS-iOS-V2.xcworkspace` 생성 확인. 이미 있으면 `tuist generate`만 재실행(stale 방지) 후 위 patch도 다시.
 - ⚠️ generate가 **Config 누락**으로 실패하면 4번을 먼저 처리하고 재시도.
 - ⚠️ **tuist 버전이 올라간 브랜치를 받았을 때**(누군가 `.mise.toml`의 tuist 핀을 올린 PR): `mise install`은 핀된 버전을 *자동 설치*까지 해주진 않는다 — 브랜치 전환 후 **`mise install`을 다시 한 번** 돌려야 그 버전이 로컬에 깔린다. 안 돌리면 `tuist generate`가 "미설치" 에러를 낸다. 또 **mise를 거치지 않고 직접 깐 tuist(brew 등)는 `.mise.toml`을 무시**하므로 로컬 버전이 어긋난 채 generate가 깨질 수 있다(예: 4.29.1은 Firebase SPM 매니페스트를 디코딩 못 해 `targets[N].settings[0]` name 없음 에러 — `.mise.toml` 주석 참고). **tuist는 항상 mise 경유로 실행**할 것.
 
 ### 3. git 훅 활성화 (멱등 — 클론 후 1회)
 - `git config --get core.hooksPath` 확인 → `.githooks`가 아니면 `git config core.hooksPath .githooks`.
-- 효과: ① 브랜치 전환 시 프로젝트 구조(매니페스트·파일 추가/삭제/이름변경)가 바뀌면 `.githooks/post-checkout`가 자동으로 `tuist generate`(mise 경유, 단순 내용 수정은 건드리지 않음) ② 커밋 시 `.githooks/commit-msg`가 커밋 양식 `[Type] #이슈 - 내용`을 검증(Xcode/터미널 직접 커밋 포함 — Type 표는 `commit-types.md`).
+- 효과: ① 브랜치 전환 시 프로젝트 구조(매니페스트·파일 추가/삭제/이름변경)가 바뀌면 `.githooks/post-checkout`가 자동으로 `tuist generate`(mise 경유, 단순 내용 수정은 건드리지 않음) + SPM deployment target 패치(위 patch 스크립트를 훅이 이어서 돌린다 — 전환 후에도 Xcode IDE 빌드 유지) ② 커밋 시 `.githooks/commit-msg`가 커밋 양식 `[Type] #이슈 - 내용`을 검증(Xcode/터미널 직접 커밋 포함 — Type 표는 `commit-types.md`).
 
 ### 4. Config 비밀값 (안내 중심 — 스킬은 실제 키를 모른다)
 - `Config/Config_Shared.xcconfig`·`Config_Debug.xcconfig`·`Config_Release.xcconfig` 존재 확인(`*.xcconfig`는 `.gitignore`되어 커밋 안 됨).
