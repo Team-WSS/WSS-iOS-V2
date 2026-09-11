@@ -127,9 +127,10 @@
   대신하고, 결과가 0건이면 "결과 없음" 뷰다(선택 리스트로 되돌아가지 않는다). 아무것도 안 골랐으면 빈 화면.
   삭제는 이 화면이 편집 화면이라 `selectedNovels`에만 반영되고 "완료"를 눌러야 draft에 적용된다(뒤로가기로
   나가면 원복 — 검색 결과 토글과 동일 계약). 행의 작가 줄은 `CollectionNovel.author`가 있을 때만 뜬다 —
-  **서재에서 추가한 작품은 `LibraryNovel`에 작가 필드가 없어 빈 값이라 제목만** 나오고(검색·서버 로드
-  작품은 작가 표시), 이게 `CollectionNovel.author`의 첫 표시 사용처다(서버가 서재 목록에 작가를 주면
-  `CollectionMyLibrarySelectViewModel`이 채울 수 있다).
+  **서재에서 추가한 작품은 `LibraryNovel`에 작가 필드가 없어 빈 값이라 제목만** 나온다(검색·서버 로드
+  작품은 작가 표시). `CollectionNovel.author`는 컬렉션 상세 카드(`CollectionDetailView.novelCellInfo`)에서도
+  쓰이지만 거긴 서버 값이라 항상 채워져 있고, 빈 author가 눈에 드러나는 건 이 로컬 선택 리스트뿐이다 —
+  서버가 서재 목록에 작가를 주면 `CollectionMyLibrarySelectViewModel`이 채운다.
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
   3프레임 모두 "완료" 텍스트가 비활성 회색으로 보이지만(작품까지 채운 프레임도 마찬가지), 이는 목업이
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.

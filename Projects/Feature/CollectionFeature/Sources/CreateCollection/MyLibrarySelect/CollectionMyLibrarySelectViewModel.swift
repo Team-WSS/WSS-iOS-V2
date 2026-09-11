@@ -159,9 +159,9 @@ private extension CollectionMyLibrarySelectViewModel {
     /// (`CollectionSearchNovelViewModel`과 동일 패턴).
     ///
     /// `LibraryNovel`엔 author 필드가 아예 없어(서재 목록 응답에 작가가 안 옴) 빈 문자열로 채운다.
-    /// ⚠️ 예전엔 `CollectionNovel.author`가 어디서도 표시되지 않아 무관했으나, 지금은 "작품 추가"
-    /// 검색 화면의 "추가한 작품" 리스트(#261)가 표시한다 — 그쪽이 빈 author면 작가 줄을 생략하므로
-    /// 서재로 담은 작품은 제목만 나온다. 서버가 서재 목록에 작가를 내려주면 여기서 채울 수 있다.
+    /// ⚠️ 이 빈 author가 "작품 추가" 검색 화면의 "추가한 작품" 리스트(#261)에 그대로 드러난다 —
+    /// 그쪽은 빈 author면 작가 줄을 생략하므로 서재로 담은 작품은 제목만 나온다(검색·서버 로드
+    /// 작품은 작가가 있어 정상 표시). 서버가 서재 목록에 작가를 내려주면 여기서 채울 수 있다.
     func toggleNovel(_ novel: LibraryNovel) {
         if let index = state.selectedNovels.firstIndex(where: { $0.id == novel.id }) {
             state.selectedNovels.remove(at: index)
