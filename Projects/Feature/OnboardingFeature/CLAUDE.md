@@ -55,6 +55,7 @@
 - **이 화면이 곧 온보딩 완료 처리다** — "완료"/"건너뛰기" 둘 다 `ProfileRegistration(nickname:gender:birthYear:genrePreferences:)`을 구성해 `RegisterProfileUseCase.execute(_:)`를 호출한다. 성공 시 `onCompleted`(Home 진입은 App 책임).
 - **선택 배지는 아이콘을 통째로 체크마크로 교체**(오버레이 아님) — 미선택: `wssGray50` 배경 + `NovelGenre.iconImage`. 선택: `wssPrimary50` 배경 + `wssPrimary100` 2pt 테두리 + `WSSImage.icCheckMark`(장르 아이콘은 사라짐). Figma엔 이 체크 전용 에셋(`icOnboardingCheck`)이 있었지만 기존 `icCheckMark`(같은 `#6A5DFD` 스트로크 체크마크, `WSSBirthYearWheel`/`LibrarySortSheet` 등에서 이미 쓰는 자산)과 시각적으로 동일해 새 에셋을 추가하지 않고 재사용했다.
 - **그리드 순서는 `NovelGenre.onboardingGenre`**(WSSComponent `DomainPresentation`, 신규) — `myFeedFilter`/`searchGenre`와 다른 세 번째 순서(로맨스·로판·현판·판타지·무협·BL·라노벨·드라마·미스터리). 화면별 순서는 의도적으로 갈라져 있으니 다른 화면 순서에 맞추지 말 것.
+- **그리드 셀(원 배지)은 화면 폭에 따라 가변**(사용자 확정 스펙) — 좌우 여백 39·열 간격 24·행 간격 25 고정, 원 지름 = `(화면폭 − 39×2 − 24×2) / 3`(정사각이라 세로도 동일). 각 셀은 `.frame(maxWidth: .infinity)`로 3등분 열을 채우고, 일반 기기에선 원 지름 == 열 폭이라 원이 열을 꽉 채운다. **아이콘·체크마크는 원 지름에 비례 스케일**(83 기준 40/44 비율 유지), 라벨은 title3 고정. ⚠️ **SE(375×667)처럼 세로가 짧은 기기는 예외** — 폭 기반으로 키우면 세로로 넘쳐 완료 CTA를 가려서, 좌우 여백 39는 유지하되 원 지름을 **60 고정**한다(그래서 SE에선 원이 열 안에서 가운데 정렬돼 시각적 간격이 24보다 넓어 보임 — 의도된 트레이드오프). 판별은 **화면 높이**로만 한다(mini 375×812는 폭이 SE와 같아 폭으론 못 가른다) — 코드베이스 관례대로 `UIScreen.main.bounds`로 읽는다(온보딩은 세로 고정이라 컨테이너 슬롯 폭 == 화면 폭). SE·17 Pro·17 Pro Max 시뮬레이터로 실측 확인(#261).
 
 ## 핵심 시나리오
 

@@ -52,10 +52,13 @@ struct GenreSelectionView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 titleSection
-                Spacer().frame(height: 61)
+                    .padding(.horizontal, 20)   // 타이틀은 기존 좌우 여백(20) 유지 — 그리드만 39로 인셋
+
+                Spacer().frame(height: 50)      // 서브타이틀 ↔ 그리드 간격
+
                 genreGrid
+                    .padding(.horizontal, Self.gridHorizontalMargin)   // 그리드 좌우 여백 39
             }
-            .padding(.horizontal, 20)
             .padding(.top, 50)
 
             Spacer()
@@ -92,9 +95,9 @@ private extension GenreSelectionView {
     }
 
     var genreGrid: some View {
-        VStack(spacing: 25) {
+        VStack(spacing: Self.rowSpacing) {           // 행 간격 25
             ForEach(genreRows, id: \.self) { row in
-                HStack(spacing: 24) {
+                HStack(spacing: Self.columnSpacing) {  // 열 간격 24
                     ForEach(row, id: \.self) { genre in
                         genreBadge(genre)
                     }
@@ -104,8 +107,15 @@ private extension GenreSelectionView {
         .frame(maxWidth: .infinity)
     }
 
+    /// 셀 = 원 배지 + 라벨 한 덩어리. 원 지름(`badgeSize`)은 화면 폭에 따라 가변(SE는 60 고정)이고,
+    /// 각 셀은 `.frame(maxWidth: .infinity)`로 3등분된 열을 채운다 — 일반 기기에선 원 지름 == 열 폭이라
+    /// 원이 열을 꽉 채우고(여백 39·열간격 24가 정확히 맞음), SE에선 60짜리 원이 열 안에서 가운데 정렬된다.
     func genreBadge(_ genre: NovelGenre) -> some View {
         let isSelected = viewModel.state.selectedGenres.contains(genre)
+        let size = badgeSize
+        // 아이콘·체크마크는 원 지름에 비례 스케일(기존 83 기준 40/44 비율 유지). 라벨 폰트는 title3 고정.
+        let iconSize = size * (40.0 / 83.0)
+        let checkSize = size * (44.0 / 83.0)
 
         return Button {
             viewModel.handle(.toggleGenre(genre))
@@ -119,18 +129,18 @@ private extension GenreSelectionView {
                                 Circle().strokeBorder(Color.wssPrimary100, lineWidth: 2)
                             }
                         }
-                        .frame(width: 83, height: 83)
+                        .frame(width: size, height: size)
 
                     if isSelected {
                         WSSImage.icCheckMark.swiftUIImage
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 44, height: 44)
+                            .frame(width: checkSize, height: checkSize)
                     } else {
                         genre.iconImage
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 40, height: 40)
+                            .frame(width: iconSize, height: iconSize)
                     }
                 }
 
@@ -138,6 +148,7 @@ private extension GenreSelectionView {
                     .applyWSSFont(.title3)
                     .foregroundStyle(Color.wssGray300)
             }
+            .frame(maxWidth: .infinity)   // 3등분 열을 채워 열 폭·탭 영역을 균등 분배
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -159,6 +170,24 @@ private extension GenreSelectionView {
 // MARK: - Presentation
 
 private extension GenreSelectionView {
+    // MARK: 그리드 레이아웃 상수 (사용자 확정 스펙)
+    static let gridHorizontalMargin: CGFloat = 39   // 그리드 좌우 여백
+    static let columnSpacing: CGFloat = 24          // 열(가로) 간격
+    static let rowSpacing: CGFloat = 25             // 행(세로) 간격
+    static let columnCount: CGFloat = 3
+    static let compactBadgeSize: CGFloat = 60       // SE 등 세로 짧은 기기의 고정 셀 크기
+    /// SE(375×667)처럼 세로가 짧은 기기 판별 — mini(375×812)와 폭이 같아 높이로만 가른다.
+    static let compactHeightThreshold: CGFloat = 700
+
+    /// 원 배지 지름 — 화면 폭에서 좌우 여백(39×2)·열 간격(24×2)을 뺀 뒤 3등분(원은 정사각이라 세로도 동일).
+    /// 세로가 짧은 기기(SE)는 세로 공간이 부족해 폭 기반 가변 대신 60 고정(사용자 스펙, 여백 39는 유지).
+    /// 화면 크기는 코드베이스 관례대로 `UIScreen.main.bounds`로 읽는다(온보딩은 세로 고정 = 슬롯 폭 == 화면 폭).
+    var badgeSize: CGFloat {
+        if UIScreen.main.bounds.height < Self.compactHeightThreshold { return Self.compactBadgeSize }
+        let gridWidth = UIScreen.main.bounds.width - Self.gridHorizontalMargin * 2
+        return (gridWidth - Self.columnSpacing * (Self.columnCount - 1)) / Self.columnCount
+    }
+
     /// `NovelGenre.onboardingGenre`(9개)를 3개씩 끊어 3x3 그리드 행으로.
     var genreRows: [[NovelGenre]] {
         stride(from: 0, to: NovelGenre.onboardingGenre.count, by: 3).map {
