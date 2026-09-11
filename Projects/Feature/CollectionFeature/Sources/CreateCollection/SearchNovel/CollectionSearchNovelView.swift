@@ -79,6 +79,9 @@ struct CollectionSearchNovelView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
+            // 네비게이션 바와 검색바 사이 간격
+            Spacer().frame(height: 8)
+
             searchBar
                 .padding(.horizontal, 16)
 
