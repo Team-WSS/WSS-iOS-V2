@@ -117,7 +117,12 @@ final class NovelNotificationSettingSheetViewModel {
 
 private extension NovelNotificationSettingSheetViewModel {
     func load() {
-        guard !hasLoaded, loadTask == nil, !isClosing else { return }
+        // 이 VM은 이제 화면(NovelDetailView) 수명 내내 재사용된다 — 네비바 종 아이콘이 시트를 열지 않아도
+        // 현재 알림 상태를 비춰야 해서, 시트가 열릴 때마다 새로 만들던 걸 화면 진입 시 한 번만 만들어
+        // 들고 있는 방식으로 바꿨다. 그래서 시트를 닫을 때 세운 `isClosing`을 시트 재진입마다 반드시
+        // 풀어야 한다 — 안 풀면 두 번째 여는 시트부터 토글이 전부 무시된다(아래 토글 가드가 영구 차단).
+        isClosing = false
+        guard !hasLoaded, loadTask == nil else { return }
         state.isLoading = true
         loadTask = Task { await loadSetting() }
     }
@@ -141,6 +146,8 @@ private extension NovelNotificationSettingSheetViewModel {
 
     /// 시트가 닫히는 중(스와이프 등) — 진행 중인 로드/동기화를 취소한다. 명시적 닫기 액션이 없는
     /// 시트라 `NovelDetailViewModel.close()`의 역할을 `.onDisappear`가 대신한다.
+    /// ⚠️ 인스턴스 자체는 안 죽는다(화면 수명 내내 재사용, 위 `load()` 주석 참고) — "닫힘"은 일시
+    /// 정지일 뿐이라 `isClosing`은 다음 `load()`(시트 재진입)에서 반드시 다시 풀린다.
     func disappear() {
         guard !isClosing else { return }
         isClosing = true

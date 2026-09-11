@@ -34,6 +34,10 @@ struct NovelDetailView: View {
     /// 종 모양 아이콘 → 완결/휴재복귀 알림 등록 시트(#189). 시트 자체 VM이 로드·토글을 갖고 있어
     /// 여기선 표시 여부만 View가 소유한다(순수 표시 상태).
     @State private var isNotificationSettingSheetPresented = false
+    /// 시트가 열려있지 않아도 네비바 종 아이콘 상태(채움 여부)를 비추려면 로드된 설정값이 필요해서,
+    /// 시트 열릴 때마다 새로 만들던 것과 달리 화면 진입 시 한 번 만들어 화면 수명 내내 들고 있는다
+    /// (`.onAppear`가 로드, 시트는 이 인스턴스를 그대로 재사용) — 토글도 실시간으로 아이콘에 반영된다.
+    @State private var notificationSettingViewModel: NovelNotificationSettingSheetViewModel
     @State private var isDescriptionExpanded = false
     /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다.
     @State private var feedMenuContext: FeedMenuContext?
@@ -93,6 +97,12 @@ struct NovelDetailView: View {
         self._viewModel = State(initialValue: viewModel)
         self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
         self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
+        self._notificationSettingViewModel = State(initialValue: NovelNotificationSettingSheetViewModel(
+            novelID: novelID,
+            loadNotificationSettingUseCase: loadNotificationSettingUseCase,
+            updateNotificationSettingUseCase: updateNotificationSettingUseCase,
+            logger: logger
+        ))
         self.logger = logger
         self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
@@ -113,6 +123,10 @@ struct NovelDetailView: View {
                     viewModel.handle(.reloadFeedsForCreatedFeed)
                 }
                 viewModel.handle(.load)
+                // 종 아이콘 채움 여부(알림 하나라도 켜짐)를 시트를 열기 전에도 비추려면 여기서 로드해야
+                // 한다 — `NovelNotificationSettingSheetViewModel.load()`는 `hasLoaded` 가드가 있어
+                // 재진입마다 다시 부르는 건 무해하다(첫 로드 후엔 no-op).
+                notificationSettingViewModel.handle(.load)
             }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
@@ -139,16 +153,14 @@ struct NovelDetailView: View {
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
             }
+            // notificationSettingViewModel은 시트가 안 떠 있어도(#189 아이콘 반영용) `.load()`가 돌 수
+            // 있어, 그 인증 만료 신호를 시트 내부가 아니라 여기서 듣는다 — 시트가 안 떠 있으면
+            // `NovelNotificationSettingSheet`의 `.onChange`는 애초에 mount조차 안 돼 신호를 놓친다.
+            .onChange(of: notificationSettingViewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
+            }
             .sheet(isPresented: $isNotificationSettingSheetPresented) {
-                NovelNotificationSettingSheet(
-                    viewModel: NovelNotificationSettingSheetViewModel(
-                        novelID: novelID,
-                        loadNotificationSettingUseCase: loadNotificationSettingUseCase,
-                        updateNotificationSettingUseCase: updateNotificationSettingUseCase,
-                        logger: logger
-                    ),
-                    onAuthenticationRequired: onAuthenticationRequired
-                )
+                NovelNotificationSettingSheet(viewModel: notificationSettingViewModel)
             }
     }
 
@@ -339,17 +351,20 @@ private extension NovelDetailView {
                 Button {
                     isNotificationSettingSheetPresented = true
                 } label: {
-                    WSSImage.icAnnouncement.swiftUIImage
+                    // 완결/휴재복귀 알림 둘 중 하나라도 켜져 있으면 채운 아이콘(icAnnouncementFill) +
+                    // wssPrimary100으로 바꿔, 시트를 열지 않아도 알림이 걸려 있는 작품임을 알 수 있다.
+                    (isAnyNotificationEnabled ? WSSImage.icAnnouncementFill : WSSImage.icAnnouncement).swiftUIImage
                         .renderingMode(.template)
                         .resizable()
                         .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.wssBlack)
+                        .foregroundStyle(isAnyNotificationEnabled ? Color.wssPrimary100 : Color.wssBlack)
                         .padding(.leading, 20)
                         .padding(.trailing, 6)
                         .frame(height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.1), value: isAnyNotificationEnabled)
 
                 Spacer().frame(width: 4)
 
@@ -639,6 +654,13 @@ private extension NovelDetailView {
     /// 네비 타이틀에 쓸 작품 제목. 관심 토글이 반영되는 state.novel 우선(제목은 불변이라 어느 쪽이든 동일).
     var novelTitle: String {
         viewModel.state.novel?.title ?? viewModel.state.information?.novel.title ?? ""
+    }
+
+    /// 완결/휴재복귀 알림 둘 중 하나라도 켜져 있는지 — 네비바 종 아이콘을 채운 모양+wssPrimary100으로
+    /// 바꾸는 조건. 로드 전(`isLoading`)엔 둘 다 기본값 false라 자연히 false(빈 종)로 시작한다.
+    var isAnyNotificationEnabled: Bool {
+        notificationSettingViewModel.state.isCompletionNotificationEnabled
+            || notificationSettingViewModel.state.isHiatusReturnNotificationEnabled
     }
 
     /// 피드 작성 화면에 "연결 작품"으로 미리 채워 넘길 값 — `Novel.genres`는 배열이라 첫 번째만 쓴다

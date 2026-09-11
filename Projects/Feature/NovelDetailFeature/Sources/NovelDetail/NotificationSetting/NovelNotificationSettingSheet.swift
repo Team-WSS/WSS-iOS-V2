@@ -20,16 +20,11 @@ struct NovelNotificationSettingSheet: View {
 
     @State private var viewModel: NovelNotificationSettingSheetViewModel
 
-    /// 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 호출자(`NovelDetailView`)가 이미 갖고 있는
-    /// 콜백을 그대로 전달받는다. 화면 전환은 호출자(App 조정 계층)가 수행한다.
-    private let onAuthenticationRequired: () -> Void
-
-    init(
-        viewModel: NovelNotificationSettingSheetViewModel,
-        onAuthenticationRequired: @escaping () -> Void
-    ) {
+    /// ⚠️ 인증 만료(세션 죽음) 콜백은 여기 없다 — `viewModel`이 이제 화면(`NovelDetailView`) 수명 내내
+    /// 재사용돼 시트가 안 떠 있을 때도(아이콘 반영용 로드) 살아 움직일 수 있어, 그 신호는 시트가
+    /// mount돼 있는지와 무관하게 항상 듣는 `NovelDetailView` 쪽 `.onChange`가 전담한다(중복 호출 방지).
+    init(viewModel: NovelNotificationSettingSheetViewModel) {
         self._viewModel = State(initialValue: viewModel)
-        self.onAuthenticationRequired = onAuthenticationRequired
     }
 
     var body: some View {
@@ -39,9 +34,6 @@ struct NovelNotificationSettingSheet: View {
             }
             .onDisappear {
                 viewModel.handle(.disappear)
-            }
-            .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
-                if needsAuth { onAuthenticationRequired() }
             }
             .presentationDetents([.height(174)])
             .presentationDragIndicator(.hidden)
@@ -133,8 +125,7 @@ private extension NovelNotificationSettingSheet {
                     novelID: NovelID(1),
                     loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
                     updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase()
-                ),
-                onAuthenticationRequired: { print("로그인 유도") }
+                )
             )
         }
 }
