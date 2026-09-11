@@ -2,7 +2,7 @@
 import PackageDescription
 
 #if TUIST
-    import struct ProjectDescription.PackageSettings
+    import ProjectDescription
 
     let packageSettings = PackageSettings(
         // Customize the product types for specific package product
@@ -26,7 +26,18 @@ import PackageDescription
             "KakaoSDKShare": .framework,
             "KakaoSDKTemplate": .framework,
             "Alamofire": .framework
-        ]
+        ],
+        // 외부 패키지 deployment target을 앱과 동일한 17.0으로 강제 오버라이드한다 — 패키지들이
+        // 매니페스트의 최소 타깃(13.1 등)을 그대로 쓰면 Xcode 26.6+(지원 하한 iOS 15.0)에서
+        // 전 패키지 타깃이 "supported deployment target versions" 하드 에러로 빌드가 깨진다.
+        baseSettings: .settings(
+            base: ["IPHONEOS_DEPLOYMENT_TARGET": "17.0"]
+        )
+        // ⚠️ 위 baseSettings로도 SPM 리소스 번들(PrivacyInfo 등) 합성 타깃 15개엔 13.1이 남는다 —
+        // Tuist가 번들 타깃엔 패키지 매니페스트의 최소 타깃을 모델 레벨로 직접 복사해서
+        // PackageSettings(baseSettings/targetSettings)로 못 덮는다(tuist/tuist#11163, 실측 확인).
+        // CLI xcodebuild는 통과하지만 Xcode IDE 빌드는 하드 에러 → tuist generate 후
+        // Scripts/patch-spm-deployment-target.sh 실행으로 해결한다.
     )
 #endif
 

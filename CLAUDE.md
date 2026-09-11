@@ -126,6 +126,9 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 mise install        # Tuist 설치
 tuist install       # 의존성 설치
 tuist generate      # 프로젝트 생성
+Scripts/patch-spm-deployment-target.sh  # ⚠️ generate 직후 매번 — SPM 리소스 번들 타깃의
+                    # 낡은 deployment target(13.1)을 패치. 안 돌리면 Xcode 26.6+ IDE 빌드가
+                    # 하드 에러로 깨진다(CLI 빌드는 통과해서 착각하기 쉬움). 이유는 스크립트 주석 참고.
 ```
 
 빌드·테스트·UI 검증은 **XcodeBuildMCP 주력**(시뮬레이터 빌드/실행·`test_sim`·`tap`/`type`).
