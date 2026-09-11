@@ -232,28 +232,51 @@ private extension MainTabView {
 }
 
 private extension MainTabView {
+
     /// ⚠️ `Label(_:image:)`(문자열 이름)는 쓰지 않는다 — 이 아이콘들은 App이 아니라 `DesignSystem`
-    /// 프레임워크의 리소스 번들에 있어서, 이름 문자열만으로 찾는 `Image(_:)`/`Label(_:image:)`는
+    /// 프레임워크의 리소스 번들에 있어서, 이름 문자열만으로 찾는 `Image(_:)/Label(_:image:)`는
     /// 기본 번들(App)만 뒤져 **완전히 새로 설치한 상태에서는 조용히 빈 아이콘**이 된다(#196에서 실측 —
     /// 이전 빌드가 남아있는 상태에선 우연히 다르게 보여 처음엔 못 잡았다). 번들을 이미 아는
     /// `WSSImage.icXxx.swiftUIImage`(전 Feature가 쓰는 정본 경로)로 직접 그린다.
-    func tabLabel(_ title: String, icon: DesignSystemImages, isSelected: Bool) -> some View {
-        // iOS 26 새(Liquid Glass) 탭바는 template 이미지를 자기 틴트로 덮어써(비선택=검정)
-        // `UITabBarAppearance.normal`을 무시한다(실측 — appearance/`foregroundStyle`/`.tint` 모두 비선택은
-        // 검정으로 남았고, tint를 아예 빼도 커스텀 이미지라 자동 회색 처리를 못 받았다). 그래서 틴트에
-        // 맡기지 않고 **색을 미리 구운 `.alwaysOriginal` 이미지**를 선택 상태별로 바꿔 끼운다 —
-        // `.alwaysOriginal`이면 탭바가 재틴트를 못 해 우리가 칠한 색이 그대로 남는다(iOS 버전 무관).
-        // 글씨 색은 어피어런스가 담당(`WSSIOSV2App.configureTabBarAppearance`) — iOS 26 비선택 글씨는
-        // 거기서도 검정으로 남지만(플랫폼 제약, 아이콘만 회색으로 구분), iOS 18 이하는 글씨도 gray200.
+
+    func tabLabel(
+        _ title: String,
+        icon: DesignSystemImages,
+        isSelected: Bool
+    ) -> some View {
+
         let color = UIColor(isSelected ? Color.wssBlack : Color.wssGray200)
-        let tinted = icon.image.withTintColor(color, renderingMode: .alwaysOriginal)
+
         return Label {
             Text(title)
         } icon: {
-            Image(uiImage: tinted)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 24, height: 24)
+            if #available(iOS 26.0, *) {
+                // iOS 26+: Liquid Glass 탭바 대응
+                let tinted = icon.image.withTintColor(
+                    color,
+                    renderingMode: .alwaysOriginal
+                )
+
+                Image(uiImage: tinted)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+
+            } else {
+                // iOS 17~25: 기존 template 방식
+                let image = icon.image
+                    .withRenderingMode(.alwaysTemplate)
+
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(
+                        isSelected
+                            ? Color.wssBlack
+                            : Color.wssGray200
+                    )
+            }
         }
     }
 }
