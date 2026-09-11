@@ -163,21 +163,36 @@ private extension OnboardingIntroView {
     /// `selection`이 어긋나 인디케이터만 돌고 이미지는 안 넘어가는 결함이 있다(실기기 실측 — 시뮬레이터와
     /// 증상까지 달라, 레이아웃을 고쳐도 못 잡아 페이저 자체를 교체했다).
     var bannerCarousel: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 0) {
-                ForEach(Self.paddedBanners.indices, id: \.self) { index in
-                    Self.paddedBanners[index].swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                        .containerRelativeFrame(.horizontal)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    ForEach(Self.paddedBanners.indices, id: \.self) { index in
+                        Self.paddedBanners[index].swiftUIImage
+                            .resizable()
+                            .scaledToFit()
+                            .containerRelativeFrame(.horizontal)
+                            .id(index)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $selection)
+            .scrollIndicators(.hidden)
+            .frame(height: 567)
+            // ⚠️ `.scrollPosition(id:)`의 초기값(`selection = 1`)은 **첫 레이아웃 패스에서 적용되지 않는다**
+            // (iOS 17 한계) — ScrollView가 맨 앞(패딩 인덱스 0 = banner4 복제본)에 주차되고, 바인딩이
+            // 실제 위치를 되쓰지도 않아 인디케이터(selection=1 → 첫 도트)와 한 칸 어긋난다. 첫 프로그램적
+            // selection 변경(auto-advance)이 일어나야 그제서야 재동기화됐다("한 바퀴 돌면 괜찮아짐"의 정체).
+            // 그래서 레이아웃이 확정된 다음 런루프에 초기 위치를 명시적으로 강제한다(`scrollTo`는 첫
+            // 레이아웃 이후엔 정상 동작). `DispatchQueue.main.async` 없이 onAppear에서 곧바로 부르면
+            // 아직 레이아웃 전이라 같은 이유로 먹지 않는다.
+            .onAppear {
+                DispatchQueue.main.async {
+                    proxy.scrollTo(selection ?? 1, anchor: .leading)
                 }
             }
-            .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $selection)
-        .scrollIndicators(.hidden)
-        .frame(height: 567)
     }
 
     var bottomSection: some View {
