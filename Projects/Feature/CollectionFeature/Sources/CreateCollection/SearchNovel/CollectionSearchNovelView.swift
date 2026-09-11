@@ -137,23 +137,48 @@ private extension CollectionSearchNovelView {
         }
     }
 
-    /// `hasSearched`가 꺼져 있으면(=검색 실행 전, 또는 결과를 받은 뒤 다시 타이핑하는 도중) 무조건
-    /// 빈 화면이다 — `searchedNovels`는 이전 검색 결과를 그대로 들고 있을 수 있어서, 그 배열 자체로
-    /// 판단하면 타이핑 중에 직전 검색 결과(또는 "결과 없음" 뷰)가 잘못 남아있는다(실제 발생 — 사용자
-    /// 리포트: 타이핑 도중엔 아무것도 없이 흰 배경이어야 함). `search()`가 실제로 응답을 받아야만
-    /// `hasSearched`가 켜지고, 그제서야 결과 유무에 따라 리스트/결과없음을 가른다.
+    /// `hasSearched`가 꺼져 있으면(=검색 실행 전, 또는 결과를 받은 뒤 다시 타이핑하는 도중) 검색 결과
+    /// 대신 지금까지 고른 작품(`selectedNovels`) 리스트를 보여준다 — 초기 진입·검색어를 지운 상태에서
+    /// 이미 추가한 작품을 확인·삭제할 수 있게(사용자 요청). 아무것도 안 골랐으면 빈 화면이다.
+    /// `searchedNovels`(이전 검색 결과)로 판단하지 않는 이유는 아래 `selectedNovelList` 주석 참고 —
+    /// 타이핑 도중 직전 결과가 잘못 남는 걸 막으려고 `hasSearched`가 켜져야만 검색 리스트/결과없음을 가른다.
     @ViewBuilder
     var resultArea: some View {
         if viewModel.state.isSearching {
             LoadingView()
         } else if !viewModel.state.hasSearched {
-            Spacer()
+            if viewModel.state.selectedNovels.isEmpty {
+                Spacer()
+            } else {
+                selectedNovelList
+            }
         } else if viewModel.state.searchedNovels.isEmpty {
             WSSEmptyView(type: .novel, action: {
                 if let url = AppURL.inquiryAddNovel { openURL(url) }
             })
         } else {
             resultList
+        }
+    }
+
+    /// 검색 전 화면의 "추가한 작품" 리스트. 이미 고른 작품(`CollectionNovel`)만 담겨 전부 삭제(`.remove`)
+    /// 배지이고, 탭하면 선택에서 빠진다 — 검색 결과와 달리 무한스크롤이 없다(최대 100개, `maxNovelCount`).
+    var selectedNovelList: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(viewModel.state.selectedNovels, id: \.id) { novel in
+                    selectedNovelRow(novel)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.immediately)
+        // `resultList`와 동일 — ScrollView가 빈 공간 터치를 가져가므로 키보드 내리기 제스처를 직접 건다.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchBarFocused = false
         }
     }
 
@@ -220,6 +245,39 @@ private extension CollectionSearchNovelView {
 
             WSSPillBadge(style: isSelected ? .remove : .add) {
                 viewModel.handle(.toggleNovel(novel))
+            }
+        }
+    }
+
+    /// "추가한 작품" 리스트 행. `selectedNovels`는 `[CollectionNovel]`이라 `novelRow(Novel)`을 못 써
+    /// 별도 행을 둔다(작가는 단일 `author` 문자열). 배지는 항상 `.remove`(삭제) — 탭하면 선택 해제.
+    func selectedNovelRow(_ novel: CollectionNovel) -> some View {
+        HStack(spacing: 16) {
+            WSSNovelCoverImage(url: novel.thumbnailImage)
+                .frame(width: 73, height: 98)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(novel.title)
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(Color.wssBlack)
+                    .lineLimit(1)
+
+                // 서재에서 추가한 작품은 `author`가 빈 문자열이다(`LibraryNovel`에 작가 필드가 없어
+                // `CollectionMyLibrarySelectViewModel`이 ""로 채움) — 그 경우 작가 줄을 통째로 생략한다.
+                // 검색·서버(수정 모드 로드)로 담은 작품은 작가가 있어 정상 표시된다.
+                if !novel.author.isEmpty {
+                    Text(novel.author)
+                        .applyWSSFont(.body5)
+                        .foregroundStyle(Color.wssGray200)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            WSSPillBadge(style: .remove) {
+                viewModel.handle(.removeSelectedNovel(novel))
             }
         }
     }

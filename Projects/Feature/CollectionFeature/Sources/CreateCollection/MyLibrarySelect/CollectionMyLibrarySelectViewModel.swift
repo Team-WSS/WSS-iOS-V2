@@ -158,8 +158,10 @@ private extension CollectionMyLibrarySelectViewModel {
     /// 선택 토글. 이미 골랐으면 해제, 아니면 담는다 — 정원(100개)이 차면 더 담지 않고 토스트로 알린다
     /// (`CollectionSearchNovelViewModel`과 동일 패턴).
     ///
-    /// `LibraryNovel`엔 author 필드가 아예 없고, `CollectionNovel.author`는 CollectionFeature
-    /// 어디서도 실제로 표시되지 않는다(확인 완료) — 빈 문자열로 채우는 게 안전하고 의도적인 결정이다.
+    /// `LibraryNovel`엔 author 필드가 아예 없어(서재 목록 응답에 작가가 안 옴) 빈 문자열로 채운다.
+    /// ⚠️ 예전엔 `CollectionNovel.author`가 어디서도 표시되지 않아 무관했으나, 지금은 "작품 추가"
+    /// 검색 화면의 "추가한 작품" 리스트(#261)가 표시한다 — 그쪽이 빈 author면 작가 줄을 생략하므로
+    /// 서재로 담은 작품은 제목만 나온다. 서버가 서재 목록에 작가를 내려주면 여기서 채울 수 있다.
     func toggleNovel(_ novel: LibraryNovel) {
         if let index = state.selectedNovels.firstIndex(where: { $0.id == novel.id }) {
             state.selectedNovels.remove(at: index)

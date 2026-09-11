@@ -120,6 +120,16 @@
   확정하면 이 그리드에서도 빠진다.
   대표를 한 번도 안 골라도 제출은 된다 — `effectiveRepresentativeNovelID`가 표시 순서 첫 작품으로
   대신한다(도메인 계약, `CollectionDomain/CLAUDE.md` 참고).
+- **`CollectionSearchNovelView`는 검색 전(초기 진입·검색어를 지운 상태, `hasSearched == false`)에 지금까지
+  고른 작품 리스트(`selectedNovels`)를 보여준다**(사용자 요청, 2026-09-11) — 이미 담긴 작품이라 전부
+  `.remove`(삭제) 배지이고 탭하면 선택에서 빠진다(`removeSelectedNovel` — `selectedNovels`가
+  `[CollectionNovel]`이라 `Novel`을 받는 `toggleNovel`과 별도 액션). 검색을 실행하면 그 자리를 검색 결과가
+  대신하고, 결과가 0건이면 "결과 없음" 뷰다(선택 리스트로 되돌아가지 않는다). 아무것도 안 골랐으면 빈 화면.
+  삭제는 이 화면이 편집 화면이라 `selectedNovels`에만 반영되고 "완료"를 눌러야 draft에 적용된다(뒤로가기로
+  나가면 원복 — 검색 결과 토글과 동일 계약). 행의 작가 줄은 `CollectionNovel.author`가 있을 때만 뜬다 —
+  **서재에서 추가한 작품은 `LibraryNovel`에 작가 필드가 없어 빈 값이라 제목만** 나오고(검색·서버 로드
+  작품은 작가 표시), 이게 `CollectionNovel.author`의 첫 표시 사용처다(서버가 서재 목록에 작가를 주면
+  `CollectionMyLibrarySelectViewModel`이 채울 수 있다).
 - **"완료" 버튼 활성화 기준은 `draft.isSubmittable`**(이름 비어있지 않음 && 작품 1개 이상)이다 — Figma
   3프레임 모두 "완료" 텍스트가 비활성 회색으로 보이지만(작품까지 채운 프레임도 마찬가지), 이는 목업이
   실제 버튼 상태를 반영하지 않은 것으로 보고 도메인 규칙을 그대로 따른다.

@@ -64,6 +64,9 @@ final class CollectionSearchNovelViewModel {
         case search(String)
         case loadMore
         case toggleNovel(Novel)
+        /// 검색 전 화면에 뜨는 "추가한 작품" 리스트에서 삭제 배지를 눌렀을 때. 그 리스트는 이미 고른
+        /// 작품(`CollectionNovel`)만 담겨 항상 해제이므로 `toggleNovel(Novel)`과 별도 액션으로 둔다.
+        case removeSelectedNovel(CollectionNovel)
         case confirm
         case dismissError
     }
@@ -111,6 +114,8 @@ final class CollectionSearchNovelViewModel {
             loadMore()
         case .toggleNovel(let novel):
             toggleNovel(novel)
+        case .removeSelectedNovel(let novel):
+            state.selectedNovels.removeAll { $0.id == novel.id }
         case .confirm:
             state.isConfirmed = true
         case .dismissError:
