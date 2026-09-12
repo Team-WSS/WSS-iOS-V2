@@ -32,6 +32,8 @@ enum SearchAnalyticsEvent: String, AnalyticsEvent {
     case infoPublicationStatusSelected = "seek_info_state"
     /// 상세탐색 필터 — 정보탭 별점 범위 조정(백로그)
     case infoRatingChanged = "seek_info_rating"
+    /// 상세탐색 필터 — 정보탭 플랫폼 선택(V2 신규 — CSV엔 없음, 장르/연재상태 패턴을 따라 명명)
+    case infoPlatformSelected = "seek_info_platform"
 
     // ⚠️ "탐색 > 세계관/소재/캐릭터/관계/분위기 키워드 선택"(seek_keyword_*, 5종)과 "키워드 문의하러
     // 가기"(contact_keyword)는 이 모듈 안에서 발화되지 않는다 — 상세탐색 필터의 "키워드" 탭 콘텐츠는

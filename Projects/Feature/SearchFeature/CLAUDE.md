@@ -58,6 +58,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`seek_info_platform`(상세탐색 필터 — 정보탭 플랫폼 선택)은 기획측 CSV엔 없는 V2 신규 이벤트다** — 장르
+  (`seek_info_genre`)·연재상태(`seek_info_state`)는 CSV에 있는데 플랫폼만 없어서, 같은 파일(정보탭 필터
+  4종 중 하나)이라는 이유로 그 둘과 동일한 명명 패턴(`seek_info_<필드>`)을 따라 새로 지었다. 트래킹
+  시점도 장르/연재상태와 동일(`togglePlatform`의 "선택" 분기에서만, 해제는 트래킹 안 함).
 - ⚠️ **`NormalSearchViewModel.init`에서 `initialQuery`(작가 이름 탭 등 "이미 검색된 결과로 진입") 처리는
   검색어를 `state.searchText`에 채우기만 하고, 실제 검색(Task 스폰)은 절대 하지 않는다**(#255 QA 실측
   버그 수정 — 원래는 init 안에서 바로 `executeSearch`를 불렀다). 이 `init`은

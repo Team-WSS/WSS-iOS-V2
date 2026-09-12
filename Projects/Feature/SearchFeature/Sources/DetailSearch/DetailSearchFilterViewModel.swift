@@ -120,10 +120,12 @@ private extension DetailSearchFilterViewModel {
         }
     }
 
+    // 이벤트가 "선택"만 의미한다 — 해제로 갈 땐 트래킹하지 않는다(장르/연재상태와 동일 관례).
     func togglePlatform(_ platform: NovelPlatform) {
         if state.filter.platforms.contains(platform) {
             state.filter.removePlatform(platform)
         } else {
+            track(.infoPlatformSelected)
             state.filter.addPlatform(platform)
         }
     }
