@@ -95,6 +95,7 @@ struct NovelReviewView: View {
         .wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })
         .onAppear {
             viewModel.handle(.load)
+            viewModel.track(.screenViewed)
         }
         .sheet(isPresented: $isPeriodSheetPresented) {
             ReadingPeriodSheet(

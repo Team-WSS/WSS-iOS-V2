@@ -107,6 +107,7 @@ private extension LibraryView {
                 .applyWSSFont(.headline1, color: .wssBlack)
             Spacer()
             Button {
+                viewModel.track(.registerButtonTapped)
                 onRoute(.register)
             } label: {
                 WSSImage.icBookRegister.swiftUIImage
@@ -158,6 +159,7 @@ private extension LibraryView {
                 .applyWSSFont(.body4, color: .wssGray200)
             Spacer()
             Button {
+                viewModel.track(.notificationTapped)
                 onRoute(.notificationSetting)
             } label: {
                 HStack(spacing: 4) {
@@ -255,6 +257,7 @@ private extension LibraryView {
         ) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
+                    viewModel.track(.novelSelected)
                     onRoute(.novelDetail(novel.id))
                 } label: {
                     WSSLibraryGridCell(
@@ -278,6 +281,7 @@ private extension LibraryView {
         LazyVStack(spacing: 0) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
+                    viewModel.track(.novelSelected)
                     onRoute(.novelDetail(novel.id))
                 } label: {
                     LibraryListCell(novel: novel)
@@ -331,6 +335,7 @@ private extension LibraryView {
                 .applyWSSFont(.body1, color: .wssGray200)
             Spacer().frame(height: 45)
             Button {
+                viewModel.track(.emptySearchTapped)
                 onRoute(.search)
             } label: {
                 Text("웹소설 찾기")

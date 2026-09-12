@@ -11,6 +11,7 @@ import Observation
 
 import BaseDomain
 import SearchDomain
+import Analytics
 
 /// 상세탐색 필터(정보 탭) 전용 순수 입력 VM — UseCase 없이 필터 편집본만 소유한다(`LibraryFilterSheetViewModel` 패턴).
 /// "작품 찾기" 확정은 View가 `state.filter`를 그대로 읽어 위임한다(콜백은 View가 보유, `LibraryFilterSheet`의
@@ -60,16 +61,28 @@ final class DetailSearchFilterViewModel {
 
     private(set) var state: State
 
+    // MARK: - Dependency
+
+    private let analyticsTracker: AnalyticsTracker?
+
     // MARK: - Init
 
-    init(filter: SearchFilter = SearchFilter()) {
+    init(filter: SearchFilter = SearchFilter(), analyticsTracker: AnalyticsTracker? = nil) {
         var ratingMin = NovelRatingRange.bounds.lowerBound
         var ratingMax = NovelRatingRange.bounds.upperBound
         if let range = filter.ratingRange {
             ratingMin = range.min
             ratingMax = range.max
         }
+        self.analyticsTracker = analyticsTracker
         self.state = State(filter: filter, ratingMin: ratingMin, ratingMax: ratingMax)
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -98,31 +111,43 @@ final class DetailSearchFilterViewModel {
 
 private extension DetailSearchFilterViewModel {
     func toggleGenre(_ genre: NovelGenre) {
+        // 이벤트가 "선택"만 의미한다 — 해제로 갈 땐 트래킹하지 않는다.
         if state.filter.genres.contains(genre) {
             state.filter.removeGenre(genre)
         } else {
+            track(.infoGenreSelected)
             state.filter.addGenre(genre)
         }
     }
 
+    // 이벤트가 "선택"만 의미한다 — 해제로 갈 땐 트래킹하지 않는다(장르/연재상태와 동일 관례).
     func togglePlatform(_ platform: NovelPlatform) {
         if state.filter.platforms.contains(platform) {
             state.filter.removePlatform(platform)
         } else {
+            track(.infoPlatformSelected)
             state.filter.addPlatform(platform)
         }
     }
 
     /// 연재상태는 단일 선택 — 같은 값을 다시 탭하면 해제한다.
     func togglePublicationStatus(_ status: NovelPublicationStatus) {
+        // 이벤트가 "선택"만 의미한다 — 같은 값을 다시 탭해 해제할 땐 트래킹하지 않는다.
         if state.filter.publicationStatus == status {
             state.filter.setPublicationStatus(nil)
         } else {
+            track(.infoPublicationStatusSelected)
             state.filter.setPublicationStatus(status)
         }
     }
 
+    /// ⚠️ `WSSRangeSlider.onChange`는 드래그 중 **매 픽셀마다** 불린다 — 값이 실제로 스텝을 넘었을 때만
+    /// 트래킹한다(슬라이더 자신의 `triggerHapticIfStepChanged`와 같은 이유의 가드, 안 걸면 드래그 한 번에
+    /// 수십~수백 건이 쌓인다).
     func changeRatingRange(min: Float, max: Float) {
+        if min != state.ratingMin || max != state.ratingMax {
+            track(.infoRatingChanged)
+        }
         state.ratingMin = min
         state.ratingMax = max
         state.filter.setRatingRange(min: min, max: max)

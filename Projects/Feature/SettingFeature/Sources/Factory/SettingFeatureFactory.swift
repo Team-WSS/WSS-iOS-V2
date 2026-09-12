@@ -15,6 +15,7 @@ import AuthDomain
 import NovelDomain
 import Logger
 import PushAuthorization
+import Analytics
 
 /// 모듈의 public 진입점 — 화면마다 `make<Screen>View`로 짓는다(#201부터, **화면 간 이동은 전부 App이
 /// 조립한다** — 예외는 성별/나이 변경 화면의 생년 선택 시트뿐, 그건 그 화면 자신의 draft를 채우는
@@ -44,6 +45,7 @@ public enum SettingFeatureFactory {
         loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
         logoutUseCase: LogoutUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onLogoutSuccess: @escaping () -> Void = {},
         onRoute: @escaping (SettingAccountInfoRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
@@ -51,7 +53,8 @@ public enum SettingFeatureFactory {
         let viewModel = SettingAccountInfoViewModel(
             loadAccountInfoDraftUseCase: loadAccountInfoDraftUseCase,
             logoutUseCase: logoutUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return SettingAccountInfoView(
             viewModel: viewModel,
@@ -66,13 +69,15 @@ public enum SettingFeatureFactory {
         loadLocalGenderAndBirthUseCase: LoadLocalGenderAndBirthUseCase,
         saveAccountInfoDraftUseCase: SaveAccountInfoDraftUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onSaveSuccess: @escaping () -> Void = {},
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = SettingChangeGenderOrAgeViewModel(
             loadLocalGenderAndBirthUseCase: loadLocalGenderAndBirthUseCase,
             saveAccountInfoDraftUseCase: saveAccountInfoDraftUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return SettingChangeGenderOrAgeView(
             viewModel: viewModel,
@@ -122,6 +127,7 @@ public enum SettingFeatureFactory {
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
@@ -129,6 +135,7 @@ public enum SettingFeatureFactory {
             loadRegisteredNovelStatsUseCase: loadRegisteredNovelStatsUseCase,
             withdrawUseCase: withdrawUseCase,
             logger: logger,
+            analyticsTracker: analyticsTracker,
             onWithdrawSuccess: onWithdrawSuccess,
             onAuthenticationRequired: onAuthenticationRequired
         )
@@ -138,12 +145,14 @@ public enum SettingFeatureFactory {
     public static func makeWithdrawReasonView(
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = WithdrawReasonViewModel(
             withdrawUseCase: withdrawUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return WithdrawReasonView(
             viewModel: viewModel,
@@ -179,13 +188,15 @@ public enum SettingFeatureFactory {
         loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
         updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (NotificationSettingRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
         let viewModel = NotificationSettingViewModel(
             loadPushPreferenceUseCase: loadPushPreferenceUseCase,
             updatePushPreferenceUseCase: updatePushPreferenceUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return NotificationSettingView(
             viewModel: viewModel,

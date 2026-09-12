@@ -20,6 +20,9 @@ struct CollectionSearchNovelView: View {
 
     @State private var viewModel: CollectionSearchNovelViewModel
     @FocusState private var isSearchBarFocused: Bool
+    /// "서재에서 추가"를 거쳐 돌아오면 `onAppear`가 재발화한다 — 화면 진입 트래킹은 최초 1회만
+    /// (`CreateCollectionView.hasTrackedWriteViewed`와 동일 이유).
+    @State private var hasTrackedAddNovelViewed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -64,6 +67,10 @@ struct CollectionSearchNovelView: View {
         .showWSSToast(isPresented: toastBinding, type: toastType)
             .onAppear {
                 isSearchBarFocused = true
+                if !hasTrackedAddNovelViewed {
+                    hasTrackedAddNovelViewed = true
+                    viewModel.track(.addNovelViewed)
+                }
             }
             .onChange(of: viewModel.state.isConfirmed) { _, confirmed in
                 guard confirmed else { return }

@@ -68,6 +68,11 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`OnboardingStepFlowView.genderBirthYearViewModel`은 더 이상 프로퍼티 기본값(`= GenderBirthYearViewModel()`)으로
+  만들지 않는다**(#249) — `analyticsTracker`를 컨테이너 `init`에서 받아 넘겨야 해서 `_genderBirthYearViewModel
+  = State(initialValue:)`로 `init` 안에서 조립한다(`nicknameViewModel`과 동일 패턴). 다른 단계 VM에 새
+  Dependency를 추가할 때도 이 자리(컨테이너 `init`)를 함께 고칠 것 — 프로퍼티 기본값으로 되돌리면 새
+  Dependency를 못 흘려보낸다.
 - **`KakaoSDK*`(와 전이 의존 `Alamofire`)는 반드시 `Tuist/Package.swift`의 `productTypes`에서 `.framework`(dynamic)로 강제해야 한다 — Tuist 기본값(`.staticFramework`)을 쓰면 실기기/시뮬레이터에서 크래시난다.** `OnboardingFeature.framework`(로그인 호출부)와 `OnboardingFeatureDemo`/App(초기화 호출부)이 각자 별도 정적 사본을 링크하게 되어, 한쪽에서 부른 `KakaoSDK.initSDK(appKey:)`가 다른 쪽 사본엔 반영 안 됨 → `UserApi.shared.loginWithKakaoAccount` 호출 시 `KakaoSDKCommon.SdkError.ClientFailed(.MustInitAppKey)` fatal error. 실측(2026-08, XcodeBuildMCP 시뮬레이터 테스트 중 재현) — 증상은 런타임 로그의 `objc[...]: Class ... is implemented in both ...` 중복 경고로 미리 알아챌 수 있다(경고가 보이면 무시하지 말 것).
 - **Apple 로그인 capability(entitlement)는 `Demo/OnboardingFeatureDemo.entitlements` + `Project.swift`의 `demoEntitlements:`로 등록돼 있다**(`com.apple.developer.applesignin: [Default]`). 같은 걸 App 타깃에도 `Support/WSS-iOS.entitlements`로 등록함. `createFeatureModule`에 `demoEntitlements: Entitlements?` 파라미터가 새로 생겼다(`Project+Templates.swift`) — 다른 Feature 모듈이 Demo에서 capability가 필요하면 이 파라미터를 쓰면 된다. entitlement가 없을 땐 버튼 탭이 즉시 실패했지만, 지금은 시스템이 정상적으로 "설정에서 Apple 계정에 로그인해야 합니다" 안내를 띄운다(시뮬레이터에 테스트용 Apple ID가 로그인 안 돼 있을 뿐 — 코드/설정 문제 아님, 실기기·Apple ID 로그인된 환경에서는 실제 인증까지 진행됨).
 - **`OnboardingIntroView.foregroundContent`의 배너↔`bottomSection` 사이 `Spacer()`(유연)는 지우면 안 된다** — 하단 요소(도트+소셜 버튼)를 화면 아래로 밀어붙이는 유일한 메커니즘이다(비로그인 버튼 제거 때 이걸 없애고 고정 `Spacer().frame(height:)`로만 대체했다가 리뷰에서 걸림).

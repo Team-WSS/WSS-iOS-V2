@@ -55,6 +55,21 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`FeedAnalyticsEvent`에 기획측 CSV엔 없는 V2 신규 이벤트 12종이 추가돼 있다** — 이미지 추가/삭제
+  (`write_image_add`/`_remove`), 글 작성 공개/비공개 전환(`write_private_on`/`_off`), 작품 연결 확정/해제
+  (`write_connect_novel_confirm`/`_remove` — CSV의 `write_connect_noevel`은 오탈자로 추정되는 별개
+  항목이라 `connectNovelSheetOpened`가 그대로 쓰고, 이 둘은 "연결 확정"이라는 다른 시점이라 새로 만듦),
+  피드/댓글 삭제(`feed_delete`/`write_comment_delete` — CSV에 삭제 이벤트 자체가 없음), 탭/옵션 전환
+  (`feed_tab_select`/`feed_soso_option_select`), 내 피드 정렬/필터(`feed_myfeed_sort`/`_filter_apply`).
+  CSV에 없는 이름이라 기존 명명 패턴(`write_*`/`feed_*`)을 따라 새로 지었다 — 기획팀 확정 이벤트명이
+  아니니 나중에 실제 스프레드시트와 이름이 갈리면 이 항목부터 볼 것.
+- **`feed_all` 화면진입 이벤트는 `hasTrackedScreenViewed`(전용 1회 가드)로 최초 진입에만 쏜다**(#250
+  리뷰로 정정) — 이 화면은 탭(내 피드/소소피드)별로 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds`를 따로
+  갖는데, "화면 진입" 자체는 어느 탭에서 시작하든 1건이라 탭별 플래그로는 못 가른다. 별도 플래그를 둔 이유.
+- **`CreateFeedConnectNovelSheet`의 `inquiryNovelAction`(검색 결과 없을 때 "작품 문의하기" 버튼)은 이제
+  `CreateFeedView`에서 트래킹(`.connectNovelContactTapped`, #249) + `AppURL.inquiryAddNovel`을 함께 연다**
+  (한때 트래킹 배선 중 빈 클로저(`{ }`)로 남아 탭해도 반응이 없는 죽은 버튼이었던 걸 develop에서 고쳤다 —
+  다른 화면(`SearchFeature`/`KeywordFeature`)과 동일 패턴으로 통일됨).
 - **네비바는 시스템 툴바가 아니라 플랫 `WSSNavigationBar` + `.wssCustomNavigationBar()`다**(#244, 패턴 정본은 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). 이 모듈의 두 화면에 코드만 봐선 모르는 배치 결정이 있다:
   - ⚠️ **`CreateFeedView`의 `WSSNavigationBar`는 content를 감싼 `allowsHitTesting`/`opacity`/`overlay(로딩)` 스코프 *밖*(바깥 VStack)에 둔다** — 제출 중(`isSubmitting`)·수정 로드 중(`isLoadingForEdit`)에도 back(→ `showDismissAlert` 확인 알럿)이 눌려야 하기 때문. content VStack 안에 넣으면 그 스코프에 걸려 back이 죽고 로딩 오버레이가 네비바까지 덮는다. **미저장 초안 확인 알럿이 있어 `swipeBackConfirmation: { showDismissAlert = true }`**(#256 — 스와이프 pop은 막되, 시도가 감지되면 back 버튼과 같은 확인 알럿이 뜬다). 이 화면은 principal 타이틀이 없어 `WSSNavigationBar(title: "")`.
   - ⚠️ **`FeedDetailView`의 threedots 드롭다운 `overlay(alignment: .topTrailing)`과 "바깥 탭 닫기" `onTapGesture`는 네비바를 감싼 VStack이 아니라 content(`Group`)에 걸어야 한다** — (1) `.padding(.top, 4)`가 네비바 *아래* 4pt에 드롭다운을 앉히려면 기준이 content 상단이어야 하고, (2) VStack(네비바 포함)에 `onTapGesture`를 걸면 네비바 trailing의 threedots 탭(`showFeedDropdown.toggle()`)과 부모 탭이 충돌한다. threedots는 `trailing` 슬롯으로 옮겼고, 일반 상세라 스와이프백은 허용(기본 true). ⚠️ **`loadedFeedDetailView` 안 ScrollView에 있던 중복 `.navigationBarBackButtonHidden()`는 제거했다** — 그게 `hidesBackButton=true`를 세우면 전역 pop 제스처 delegate가 이 화면 스와이프백을 거부해(swipe 허용과 모순) 죽는다.

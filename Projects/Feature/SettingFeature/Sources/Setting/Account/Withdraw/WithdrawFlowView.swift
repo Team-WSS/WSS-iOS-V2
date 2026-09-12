@@ -11,6 +11,7 @@ import SwiftUI
 import AuthDomain
 import NovelDomain
 import Logger
+import Analytics
 
 /// `WithdrawConfirmView` → `WithdrawReasonView` 체이닝 전용 컨테이너.
 /// 두 destination을 `SettingAccountInfoView`가 각각 bool로 들면, Confirm 확인 시 두 bool이
@@ -23,6 +24,7 @@ struct WithdrawFlowView: View {
     private let loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase
     private let withdrawUseCase: WithdrawUseCase
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
     private let onWithdrawSuccess: () -> Void
     /// 인증 만료 시 로그인 유도 콜백 — 확인 화면 로드·탈퇴 제출이 401로 막히면 발화. 두 하위 화면에 그대로 흘려보낸다.
     private let onAuthenticationRequired: () -> Void
@@ -31,12 +33,14 @@ struct WithdrawFlowView: View {
         loadRegisteredNovelStatsUseCase: LoadRegisteredNovelStatsUseCase,
         withdrawUseCase: WithdrawUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onWithdrawSuccess: @escaping () -> Void = {},
         onAuthenticationRequired: @escaping () -> Void = {}
     ) {
         self.loadRegisteredNovelStatsUseCase = loadRegisteredNovelStatsUseCase
         self.withdrawUseCase = withdrawUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.onWithdrawSuccess = onWithdrawSuccess
         self.onAuthenticationRequired = onAuthenticationRequired
     }
@@ -52,6 +56,7 @@ struct WithdrawFlowView: View {
             SettingFeatureFactory.makeWithdrawReasonView(
                 withdrawUseCase: withdrawUseCase,
                 logger: logger,
+                analyticsTracker: analyticsTracker,
                 onWithdrawSuccess: onWithdrawSuccess,
                 onAuthenticationRequired: onAuthenticationRequired
             )

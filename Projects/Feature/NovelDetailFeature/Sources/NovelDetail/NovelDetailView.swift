@@ -16,6 +16,7 @@ import NovelReviewDomain
 import SocialDomain
 import Logger
 import PushAuthorization
+import Analytics
 import DesignSystem
 import WSSComponent
 
@@ -76,6 +77,7 @@ struct NovelDetailView: View {
 
     private let novelID: NovelID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     init(
         novelID: NovelID,
@@ -87,6 +89,7 @@ struct NovelDetailView: View {
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -97,9 +100,11 @@ struct NovelDetailView: View {
             novelID: novelID,
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         ))
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
         self.onAuthenticationRequired = onAuthenticationRequired
@@ -252,7 +257,10 @@ struct NovelDetailView: View {
                         scrollSpaceName: scrollSpaceName,
                         onSelectStatus: { onRoute(.review(information, $0)) },
                         onToggleInterest: { viewModel.handle(.toggleInterest) },
-                        onCreateFeedTapped: { onRoute(.createFeed(connectedNovel(from: information.novel))) },
+                        onCreateFeedTapped: {
+                            viewModel.track(.writeButtonTapped)
+                            onRoute(.createFeed(connectedNovel(from: information.novel)))
+                        },
                         onReviewBoxFrameChange: { reviewBoxFrame = $0 }
                     )
                     // 스크롤되는 "원본" 탭바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
@@ -280,7 +288,8 @@ struct NovelDetailView: View {
                         case .info:
                             NovelDetailInfoTab(
                                 information: information,
-                                isDescriptionExpanded: $isDescriptionExpanded
+                                isDescriptionExpanded: $isDescriptionExpanded,
+                                onPlatformLinkTapped: { viewModel.track(.platformLinkTapped) }
                             )
                         case .feed:
                             NovelDetailFeedTab(
@@ -465,10 +474,12 @@ private extension NovelDetailView {
             WSSDropdownMenu(items: [
                 WSSDropdownItem(title: "오류 제보") {
                     isMenuPresented = false
+                    viewModel.track(.errorReportTapped)
                     if let url = AppURL.errorReport { openURL(url) }
                 },
                 WSSDropdownItem(title: "평가 삭제") {
                     isMenuPresented = false
+                    viewModel.track(.reviewDeleteTapped)
                     // 삭제할 평가가 없으면 VM이 무시한다(알럿 표시 여부 판단은 VM 소유).
                     viewModel.handle(.deleteReviewTapped)
                 }
@@ -644,6 +655,7 @@ private extension NovelDetailView {
     var floatingWriteButton: some View {
         Button {
             guard let novel = viewModel.state.information?.novel else { return }
+            viewModel.track(.writeFloatingButtonTapped)
             onRoute(.createFeed(connectedNovel(from: novel)))
         } label: {
             UnevenRoundedRectangle(

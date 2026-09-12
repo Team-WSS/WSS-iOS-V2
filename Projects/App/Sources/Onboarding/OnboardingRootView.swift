@@ -94,6 +94,7 @@ private extension OnboardingRootView {
             validateNicknameUseCase: DefaultValidateNicknameUseCase(repository: dependencies.profileRepository),
             registerProfileUseCase: DefaultRegisterProfileUseCase(repository: dependencies.profileRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onCompleted: handleOnboardingCompleted,
             onAuthenticationRequired: handleAuthenticationRequired
         )

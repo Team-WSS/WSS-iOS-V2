@@ -19,6 +19,8 @@ struct NovelDetailInfoTab: View {
 
     let information: NovelInformation
     @Binding var isDescriptionExpanded: Bool
+    /// 플랫폼 링크(작품 보러가기) 탭(#249, 트래킹용) — URL을 여는 것과 별개로 호출.
+    var onPlatformLinkTapped: () -> Void = {}
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -117,6 +119,7 @@ struct NovelDetailInfoTab: View {
                 HStack(spacing: 16) {
                     ForEach(information.platforms, id: \.name) { platform in
                         Button {
+                            onPlatformLinkTapped()
                             openURL(platform.url)
                         } label: {
                             platformIcon(platform)

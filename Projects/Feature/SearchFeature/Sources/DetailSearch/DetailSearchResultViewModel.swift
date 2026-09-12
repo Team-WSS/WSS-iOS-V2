@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import SearchDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -50,16 +51,30 @@ final class DetailSearchResultViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelDomain
     private let searchNovelUseCase: SearchNovelUseCase
 
     // MARK: - Init
 
-    init(filter: SearchFilter, searchNovelUseCase: SearchNovelUseCase, logger: Logger? = nil) {
+    init(
+        filter: SearchFilter,
+        searchNovelUseCase: SearchNovelUseCase,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
+    ) {
         self.searchNovelUseCase = searchNovelUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State(filter: filter)
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -79,6 +94,7 @@ final class DetailSearchResultViewModel {
 private extension DetailSearchResultViewModel {
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.detailResultViewed)
         state.isLoading = true
         state.hasLoadError = nil
         loadTask = Task { await loadResult() }

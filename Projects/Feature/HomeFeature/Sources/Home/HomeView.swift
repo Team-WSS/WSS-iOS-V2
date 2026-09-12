@@ -103,8 +103,14 @@ private extension HomeView {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 HomeSearchSection(
-                    onSearchTapped: { onRoute(.search) },
-                    onDetailSearchTapped: { onRoute(.detailSearch) }
+                    onSearchTapped: {
+                        viewModel.track(.searchBarTapped)
+                        onRoute(.search)
+                    },
+                    onDetailSearchTapped: {
+                        viewModel.track(.detailSearchBannerTapped)
+                        onRoute(.detailSearch)
+                    }
                 )
 
                 // 섹션은 값이 없으면 제목까지 통째로 사라진다 — 아래 섹션이 그만큼 올라붙는다.
@@ -118,7 +124,10 @@ private extension HomeView {
                     TrendingFeedSection(
                         nickname: state.nickname,
                         feeds: state.trendingFeeds,
-                        onFeedSelected: { onRoute(.feedDetail($0)) }
+                        onFeedSelected: { feedID in
+                            viewModel.track(.trendingFeedSelected)
+                            onRoute(.feedDetail(feedID))
+                        }
                     )
                 }
 
@@ -129,8 +138,14 @@ private extension HomeView {
                     Spacer().frame(height: Metric.trendingToPreference)
                     PreferenceGenreSection(
                         state: preferenceGenreNovelState,
-                        onNovelSelected: { onRoute(.novelDetail($0)) },
-                        onSettingTapped: { onRoute(.preferenceGenreSetting) }
+                        onNovelSelected: { novelID in
+                            viewModel.track(.preferenceGenreNovelSelected)
+                            onRoute(.novelDetail(novelID))
+                        },
+                        onSettingTapped: {
+                            viewModel.track(.preferenceGenreSettingTapped)
+                            onRoute(.preferenceGenreSetting)
+                        }
                     )
                 }
 
@@ -154,6 +169,7 @@ private extension HomeView {
                 LazyHStack(spacing: Metric.cardSpacing) {
                     ForEach(discoveries, id: \.novelID) { discovery in
                         TodayDiscoveryCard(discovery: discovery) {
+                            viewModel.track(.todayDiscoverySelected)
                             onRoute(.novelDetail(discovery.novelID))
                         }
                     }

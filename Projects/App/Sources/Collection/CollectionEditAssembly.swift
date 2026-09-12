@@ -38,6 +38,7 @@ enum CollectionEditAssembly {
                 collectionRepository: dependencies.collectionRepository
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             pendingNovelSelection: pendingNovelSelection,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
@@ -55,6 +56,7 @@ enum CollectionEditAssembly {
             initialSelection: initialSelection,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onConfirm: onConfirm,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
@@ -74,6 +76,7 @@ enum CollectionEditAssembly {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onConfirm: onConfirm,
             onAuthenticationRequired: onAuthenticationRequired
         )

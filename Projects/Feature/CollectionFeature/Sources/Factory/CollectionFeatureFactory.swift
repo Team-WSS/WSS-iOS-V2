@@ -13,6 +13,7 @@ import CollectionDomain
 import SearchDomain
 import NovelDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점. 화면이 둘 이상(생성/상세/리스트 등, #191 이슈 범위)일 예정이라
 /// 대표 `makeView` 대신 화면마다 `make<Screen>View`로 짓는다.
@@ -35,6 +36,7 @@ public enum CollectionFeatureFactory {
     public static func makeCreateCollectionView(
         createCollectionUseCase: CreateCollectionUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
         onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -42,7 +44,8 @@ public enum CollectionFeatureFactory {
         let viewModel = CreateCollectionViewModel(
             mode: .create,
             createCollectionUseCase: createCollectionUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return CreateCollectionView(
             viewModel: viewModel,
@@ -62,6 +65,7 @@ public enum CollectionFeatureFactory {
         updateCollectionUseCase: UpdateCollectionUseCase,
         loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         pendingNovelSelection: Binding<[CollectionNovel]?>,
         onRoute: @escaping (CreateCollectionRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -70,7 +74,8 @@ public enum CollectionFeatureFactory {
             mode: .edit(id),
             updateCollectionUseCase: updateCollectionUseCase,
             loadCollectionDetailUseCase: loadCollectionDetailUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return CreateCollectionView(
             viewModel: viewModel,
@@ -95,6 +100,7 @@ public enum CollectionFeatureFactory {
         initialSelection: [CollectionNovel],
         searchNovelUseCase: SearchNovelUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onRoute: @escaping (CollectionSearchNovelRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -103,7 +109,8 @@ public enum CollectionFeatureFactory {
             viewModel: CollectionSearchNovelViewModel(
                 initialSelection: initialSelection,
                 searchNovelUseCase: searchNovelUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onConfirm: onConfirm,
             onRoute: onRoute,
@@ -121,6 +128,7 @@ public enum CollectionFeatureFactory {
         initialSelection: [CollectionNovel],
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -128,7 +136,8 @@ public enum CollectionFeatureFactory {
             viewModel: CollectionMyLibrarySelectViewModel(
                 initialSelection: initialSelection,
                 loadMyLibraryUseCase: loadMyLibraryUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onConfirm: onConfirm,
             onAuthenticationRequired: onAuthenticationRequired
@@ -154,6 +163,7 @@ public enum CollectionFeatureFactory {
         loadCollectionsUseCase: LoadCollectionsUseCase,
         loadLikedCollectionsUseCase: LoadLikedCollectionsUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onRoute: @escaping (CollectionListRoute) -> Void,
         isOwnCollections: Bool = true
@@ -162,7 +172,8 @@ public enum CollectionFeatureFactory {
             userID: userID,
             loadCollectionsUseCase: loadCollectionsUseCase,
             loadLikedCollectionsUseCase: loadLikedCollectionsUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return CollectionListView(
             viewModel: viewModel,
@@ -191,6 +202,7 @@ public enum CollectionFeatureFactory {
         collectionLikeUseCase: CollectionLikeUseCase,
         deleteCollectionUseCase: DeleteCollectionUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onRoute: @escaping (CollectionDetailRoute) -> Void,
         kakaoCollectionShareTemplateID1: Int64 = 0,
@@ -203,7 +215,8 @@ public enum CollectionFeatureFactory {
                 loadCollectionDetailUseCase: loadCollectionDetailUseCase,
                 collectionLikeUseCase: collectionLikeUseCase,
                 deleteCollectionUseCase: deleteCollectionUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onAuthenticationRequired: onAuthenticationRequired,
             onRoute: onRoute,

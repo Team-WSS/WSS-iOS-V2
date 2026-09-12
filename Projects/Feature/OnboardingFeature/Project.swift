@@ -24,6 +24,7 @@ let project = Project.createFeatureModule(
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
         .module(.core(.logger)),
+        .module(.core(.analytics)),
         .lottie,
         // 인트로 화면의 카카오 로그인 버튼이 UserApi.shared.loginWithKakaoAccount(...)를 직접 호출한다.
         // OAuthToken 타입 때문에 KakaoSDKAuth도 필요.

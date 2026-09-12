@@ -35,6 +35,7 @@ enum CollectionListAssembly {
                 collectionRepository: dependencies.collectionRepository
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onAuthenticationRequired: onAuthenticationRequired,
             onRoute: onRoute,
             isOwnCollections: isOwnCollections

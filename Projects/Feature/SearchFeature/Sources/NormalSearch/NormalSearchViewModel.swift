@@ -12,6 +12,7 @@ import BaseDomain
 import RecommendationDomain
 import SearchDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -96,6 +97,7 @@ final class NormalSearchViewModel {
     private let loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // MARK: - Init
 
@@ -108,6 +110,7 @@ final class NormalSearchViewModel {
         searchNovelUseCase: SearchNovelUseCase,
         loadPopularKeywordsUseCase: LoadPopularKeywordsUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         initialQuery: String? = nil
     ) {
         self.loadSosoPickUseCase = loadSosoPickUseCase
@@ -118,6 +121,7 @@ final class NormalSearchViewModel {
         self.searchNovelUseCase = searchNovelUseCase
         self.loadPopularKeywordsUseCase = loadPopularKeywordsUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
 
         // 작가 이름 탭(`NovelDetailFeature`) 등 "이미 검색된 결과로 진입"하는 경로용 — 검색어만 미리
         // 채워둔다. ⚠️ **실제 검색 실행(Task 스폰)은 여기서 하지 않는다(#255 QA 실측 버그 수정)** —
@@ -132,6 +136,13 @@ final class NormalSearchViewModel {
         if let initialQuery, !initialQuery.isEmpty {
             state.searchText = initialQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: SearchAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -168,6 +179,7 @@ final class NormalSearchViewModel {
 private extension NormalSearchViewModel {
     func loadSosoPick() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.screenViewed)
         state.isLoading = true
         state.hasLoadError = false
         loadTask = Task { await loadSosoPickNovels() }
@@ -259,6 +271,7 @@ private extension NormalSearchViewModel {
         state.autoCompletionWords = []
         state.isLoadingAutoCompletion = false
         state.isSearchExecuted = true
+        track(.resultViewed)
 
         searchResultTask?.cancel()
         loadMoreSearchResultTask?.cancel()

@@ -55,6 +55,7 @@ enum NovelDetailAssembly {
             onboardingHintUseCase: DefaultOnboardingHintUseCase(repository: dependencies.onboardingHintRepository),
             pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

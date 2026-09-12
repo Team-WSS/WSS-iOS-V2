@@ -14,6 +14,7 @@ import FeedDomain
 import ProfileDomain
 import SocialDomain
 import Logger
+import Analytics
 
 enum FeedTab {
     case myFeed
@@ -166,6 +167,7 @@ final class SosoFeedViewModel {
     private let reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase
     private let reportImproperFeedUseCase: ReportImproperFeedUseCase
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     /// "내 피드" 목록 API가 작성자 정보(닉네임/프로필 이미지)를 내려주지 않아, 별도로 받아온 내 프로필로 채워 넣는다.
     /// 탭을 오갈 때마다 다시 조회하지 않도록 캐시하되, 당겨서 새로고침 시엔 무효화된다(`.pullToRefresh`) —
@@ -198,6 +200,8 @@ final class SosoFeedViewModel {
     /// ⚠️ `state.myFeeds.isEmpty`로 대체하면 안 된다 — 피드 0건 유저는 성공해도 배열이 비어 복귀마다 로딩 뷰로 깜빡인다.
     @ObservationIgnored private var hasLoadedMyFeeds = false
     @ObservationIgnored private var hasLoadedSosoFeeds = false
+    /// 화면 진입 트래킹 1회 가드 — 탭 두 개를 넘나드는 "화면 진입" 자체는 탭별 `hasLoaded*`로는 못 가른다.
+    @ObservationIgnored private var hasTrackedScreenViewed = false
     /// 좋아요 서버 동기화가 진행 중인 셀 — 같은 셀 연타 가드 + 목록 교체/셀 동기화가 낙관 토글을 되덮지 않게 보호.
     @ObservationIgnored private var syncingLikeFeedIDs: Set<FeedID> = []
     /// 마지막 `.reload` 요청 이후 토글한 셀 — 요청이 도는 동안 눌린 좋아요는 응답 스냅샷에 없을 수 있어 병합 보호
@@ -216,7 +220,8 @@ final class SosoFeedViewModel {
         deleteFeedUseCase: DeleteFeedUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.state = State()
 
@@ -229,6 +234,14 @@ final class SosoFeedViewModel {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: FeedAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     //MARK: - Handle
@@ -310,6 +323,7 @@ final class SosoFeedViewModel {
     /// 절충: 다른 유저의 변경은 전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
     private func selectTab(_ tab: FeedTab) {
         guard tab != state.selectedTab else { return }
+        track(.tabSelected)
         state.selectedTab = tab
         guard !hasLoaded(tab) else { return }
         reloadFromScratch(tab)
@@ -317,6 +331,7 @@ final class SosoFeedViewModel {
 
     private func selectSosoFeedOption(_ option: SosoFeedOption) {
         guard option != state.selectedSosoFeedOption else { return }
+        track(.sosoOptionSelected)
         state.selectedSosoFeedOption = option
         logger?.info("소소피드 옵션: \(option)")
         guard state.selectedTab == .sosoFeed else { return }
@@ -329,6 +344,11 @@ final class SosoFeedViewModel {
     /// 세웠으면 **목록을 다시 받지 않고** 다녀온 셀만 상세로 맞춘다 — 목록을 다시 받으면 20개로 줄어 스크롤이
     /// 튀기 때문. 전체 최신화는 당겨서 새로고침이 맡는다(탭 콘텐츠 "복귀마다 갱신" 규약의 의도된 예외).
     private func load() {
+        guard feedsTask == nil else { return }
+        if !hasTrackedScreenViewed {
+            hasTrackedScreenViewed = true
+            track(.screenViewed)
+        }
         if hasLoaded(state.selectedTab) {
             // 셀 동기화는 별도 슬롯(cellSyncTask)이라 목록 로드(더보기)가 도는 중이어도 진행한다 —
             // feedsTask 가드에 같이 걸면 더보기가 in-flight인 복귀에서 다녀온 셀 동기화가 조용히
@@ -628,6 +648,7 @@ final class SosoFeedViewModel {
             sortType: nextSortType
         )
         logger?.info("내 피드 정렬: \(nextSortType)")
+        track(.myFeedSortToggled)
         reloadFromScratch(.myFeed)
     }
 
@@ -638,6 +659,7 @@ final class SosoFeedViewModel {
     /// 끼어들면 서버 새 값 위에 이중 토글이 걸린다. 같은 셀은 서버 동기화가 끝날 때까지 연타를 무시한다.
     private func toggleLike(_ feedID: FeedID) {
         guard !syncingLikeFeedIDs.contains(feedID) else { return }
+        track(.likeTapped)
         let beforeMy = state.myFeeds.first { $0.feedId == feedID }
         let beforeSoso = state.sosoFeeds.first { $0.feedId == feedID }
         guard let before = beforeMy ?? beforeSoso else { return }
@@ -687,6 +709,7 @@ final class SosoFeedViewModel {
     private func applyMyFeedFilter() {
         state.myFeedOption = state.myFeedOptionDraft
         logger?.info("\(state.myFeedOption.genres.map { $0.displayName }), \(state.myFeedOption.visibilityType)")
+        track(.myFeedFilterApplied)
         reloadFromScratch(.myFeed)
     }
 
@@ -777,6 +800,7 @@ final class SosoFeedViewModel {
         defer { feedActionTask = nil }
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)
+            track(.feedDeleted)
             pendingSyncFeedIDs.remove(feedID)
             removeCell(feedID)
         } catch {
@@ -788,6 +812,7 @@ final class SosoFeedViewModel {
     /// 피드 신고. 성공하면 접수 완료 알럿으로 전환한다(신고는 목록에 보이는 변화가 없다).
     private func reportFeed(_ feedID: FeedID, spoiler: Bool) async {
         defer { feedActionTask = nil }
+        track(spoiler ? .feedSpoilerReported : .feedAbuseReported)
         do {
             if spoiler {
                 try await reportSpoilerFeedUseCase.execute(id: feedID)

@@ -25,4 +25,9 @@
 - **`CapsuleSelectableKeywordChip`/`WhiteRemovableKeywordChip`은 `Button`이 아니라 `.onTapGesture`라 `snapshot_ui`(UI 자동화) 접근성 트리에 안 잡힌다** — 시뮬레이터 자동 탭 검증이 필요하면 스크린샷으로 좌표를 가늠해 탭해야 한다.
 - **검색 결과가 비어있을 때(`WSSEmptyView(type: .keyword)`)의 "키워드 문의하러 가기" 버튼은 `AppURL.errorReport`(범용 문의)를 연다** — V1도 키워드 전용 폼이 아니라 범용 문의(`ExternalLinks.inquiry`, `errorReport`와 동일 URL)였다. 한때 `AppURL.inquiryAddNovel`(작품 등록 문의)로 잘못 연결됐던 걸 #222 V1 parity로 되돌렸다. 실제로 키워드 전용 폼이 생기면 그때 `AppURL`에 케이스를 추가한다.
 - **다른 화면에 콘텐츠로 얹히기(#185)**: `KeywordFeatureFactory.makeSearchKeywordView`가 `initialSelectedKeywords`(진입 시 이미 선택된 키워드 시딩), `onSelectionChanged`(선택이 바뀔 때마다 실시간 호출, 확정 버튼 불필요)를 받는다. 이 화면엔 애초에 자체 액션바가 없어(위 참고) `showsBottomActionBar` 같은 스위치도 없다 — 콘텐츠(카테고리 브라우징+검색+선택)만 그대로 다른 화면에 얹힌다. `SearchFeature`의 상세탐색 필터 "키워드" 탭이 `onSelectionChanged`로 이 화면의 콘텐츠를 자신의 탭 안에 얹어 재사용한다 — Feature 간 직접 의존 없이(Sources는 KeywordFeature를 모름), App/Demo가 콘텐츠 빌더 클로저를 조립해 값으로 건네는 방식(`SearchFeature`의 `KeywordTabContentBuilder` 참고).
+- **이벤트 트래킹 콜백(`onKeywordCategorySelected`/`onContactTapped`, #249)은 이 모듈이 Analytics를 모른 채
+  넘겨두는 순수 신호다** — 같은 콘텐츠가 탐색 필터(`seek_keyword_*`)·작품 평가(`rate_keyword_*`) 두 문맥에
+  재사용돼 이벤트 *이름*이 문맥마다 갈리므로, 어느 이벤트로 트래킹할지는 호출부(App의 각 Assembly)가
+  정한다 — `logger`처럼 이 모듈이 직접 `AnalyticsTracker`를 받지 않는다(카테고리 정보 자체가 `Keyword`
+  엔티티엔 없고 이 화면의 브라우징 블록 렌더 지점에서만 알 수 있어 콜백으로 노출).
 - **선택 최대 개수는 `SearchKeywordViewModel.maxSelectionCount`(20)로 고정**(#185) — `SearchDomain.SearchFilter`의 키워드 20개 제한과 값을 맞춘 것이지만, 이 모듈은 `SearchDomain`을 모르므로 독립적으로 하드코딩돼 있다. 저쪽 제한이 바뀌면 이 값도 같이 맞춰야 한다(두 상수가 코드로 연결돼 있지 않음). 20개 채운 상태에서 새 키워드를 탭하면 선택되지 않고 `WSSToastType.selectionOverLimit(count:)` 토스트만 뜬다 — `SearchFilter.setKeywords`의 "초과분 조용히 clamp"는 이제 이 화면이 애초에 20개를 못 넘게 막아줘서 실제로는 발동할 일이 없는 안전망 역할만 한다.

@@ -112,6 +112,7 @@ struct LibraryRootView: View {
                     repository: dependencies.myLibraryFilterRepository
                 ),
                 logger: dependencies.logger,
+                analyticsTracker: dependencies.analyticsTracker,
                 onRoute: { route in
                     switch route {
                     case .novelDetail(let novelID):
@@ -384,6 +385,7 @@ private extension LibraryRootView {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .novelDetail(let novelID):
@@ -429,6 +431,7 @@ private extension LibraryRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
+            analyticsTracker: dependencies.analyticsTracker,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
                 // 작품 상세 경유 작성 — 복귀할 그 작품 상세가 자기 피드 섹션을 초기 로드처럼 리셋한다(#256).
@@ -490,6 +493,7 @@ private extension LibraryRootView {
             loadPushPreferenceUseCase: DefaultLoadPushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             updatePushPreferenceUseCase: DefaultUpdatePushPreferenceUseCase(repository: dependencies.pushSettingRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .completionNotificationList:
