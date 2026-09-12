@@ -245,15 +245,5 @@ final class AppDependencies {
             ),
             prefetchStore: prefetchStore
         )
-
-        // 키워드는 로컬 파일 캐시(`KeywordCache`)를 여러 도메인(서재 필터·프로필 취향·검색 등)이
-        // 그대로 읽어 쓰는 구조라(BaseData/CLAUDE.md), 캐시가 비어있으면 그 화면들이 전부 빈 목록으로
-        // 보인다 — 앱이 뜰 때(= AppDependencies가 조립되는 시점, 프로세스당 1회) 한 번 서버와 동기화해
-        // 채워둔다. `syncKeywords()`는 내부에서 실패를 전부 삼키고 로깅만 하는 계약이라(throws 없음)
-        // 여기서도 결과를 기다리거나 실패를 처리하지 않는다 — 화면 진입을 막지 않는 fire-and-forget.
-        // 세션이 있는 런치에선 부트스트랩 부수 태스크(launchTaskRepository.syncKeywords)와 겹쳐 2회
-        // 동기화되지만 허용한다(#236) — 부트스트랩은 세션 없으면 태스크를 안 돌리므로, 이 호출을 빼면
-        // "비로그인 런치 → 로그인" 경로에서 키워드 캐시가 다음 런치까지 빈 채로 남는다.
-        Task { await keywordRepository.syncKeywords() }
     }
 }
