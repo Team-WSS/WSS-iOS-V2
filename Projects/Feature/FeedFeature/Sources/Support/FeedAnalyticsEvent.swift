@@ -47,4 +47,31 @@ enum FeedAnalyticsEvent: String, AnalyticsEvent {
     case commentSpoilerReported = "alert_comment_spoiler"
     /// 댓글 부적절한 표현 신고
     case commentAbuseReported = "alert_comment_abuse"
+
+    // MARK: - V2 신규(CSV에 없음)
+
+    /// 글 작성 이미지 추가
+    case imageAdded = "write_image_add"
+    /// 글 작성 이미지 삭제
+    case imageRemoved = "write_image_remove"
+    /// 글 작성 비공개 전환
+    case privateOn = "write_private_on"
+    /// 글 작성 공개 전환
+    case privateOff = "write_private_off"
+    /// 작품 연결 확정(검색 결과 선택 확정)
+    case novelConnected = "write_connect_novel_confirm"
+    /// 연결된 작품 해제
+    case novelDisconnected = "write_connect_novel_remove"
+    /// 피드 삭제 확정(목록·상세 공용)
+    case feedDeleted = "feed_delete"
+    /// 댓글 삭제 확정
+    case commentDeleted = "write_comment_delete"
+    /// 내 피드/소소피드 탭 전환
+    case tabSelected = "feed_tab_select"
+    /// 소소피드 옵션(전체글/추천글) 전환
+    case sosoOptionSelected = "feed_soso_option_select"
+    /// 내 피드 정렬 토글
+    case myFeedSortToggled = "feed_myfeed_sort"
+    /// 내 피드 필터 시트 "작품 찾기" 적용
+    case myFeedFilterApplied = "feed_myfeed_filter_apply"
 }

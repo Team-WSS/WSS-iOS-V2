@@ -389,6 +389,7 @@ final class FeedDetailViewModel {
     private func deleteFeed() async {
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)
+            track(.feedDeleted)
             state.didDeleteFeed = true
         } catch {
             logger?.error("FeedDetail deleteFeed 실패: \(String(describing: error))")
@@ -422,6 +423,7 @@ final class FeedDetailViewModel {
     private func deleteComment(commentID: CommentID) async {
         do {
             try await deleteCommentUseCase.execute(commentID: commentID, feedID: feedID)
+            track(.commentDeleted)
             state.comments.removeAll { $0.id == commentID }
             state.detail?.removeCommentCount()
         } catch {

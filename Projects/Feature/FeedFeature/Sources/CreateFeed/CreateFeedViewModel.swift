@@ -202,12 +202,15 @@ final class CreateFeedViewModel {
 
         case .togglePrivate:
             newState.draft.togglePrivate()
+            track(newState.draft.isPrivate ? .privateOn : .privateOff)
 
         case .setConnectedNovel(let novel):
             mutate(&newState) { try $0.setConnectedNovel(novel) }
+            if newState.validationError == nil { track(.novelConnected) }
 
         case .removeConnectedNovel:
             newState.draft.removeConnectedNovel()
+            track(.novelDisconnected)
 
         case .alreadyLinkedNovel:
             newState.validationError = .connectedNovelOverLimit
@@ -216,11 +219,13 @@ final class CreateFeedViewModel {
             mutate(&newState) { try $0.addImage(id) }
             if newState.draft.attachedImages.last == id {
                 newState.attachedImageDatas[id] = data
+                track(.imageAdded)
             }
 
         case .removeImage(let id):
             newState.draft.removeImage(id)
             newState.attachedImageDatas[id] = nil
+            track(.imageRemoved)
 
         case .submitFeed:
             Task { await submit() }
@@ -270,6 +275,7 @@ final class CreateFeedViewModel {
                 rating: selected.rating
             )
             mutate(&newState) { try $0.setConnectedNovel(connected) }
+            if newState.validationError == nil { track(.novelConnected) }
             searchNovelTask?.cancel()
             loadMoreNovelsTask?.cancel()
             newState.selectedSearchedNovelID = nil

@@ -55,6 +55,14 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`FeedAnalyticsEvent`에 기획측 CSV엔 없는 V2 신규 이벤트 12종이 추가돼 있다** — 이미지 추가/삭제
+  (`write_image_add`/`_remove`), 글 작성 공개/비공개 전환(`write_private_on`/`_off`), 작품 연결 확정/해제
+  (`write_connect_novel_confirm`/`_remove` — CSV의 `write_connect_noevel`은 오탈자로 추정되는 별개
+  항목이라 `connectNovelSheetOpened`가 그대로 쓰고, 이 둘은 "연결 확정"이라는 다른 시점이라 새로 만듦),
+  피드/댓글 삭제(`feed_delete`/`write_comment_delete` — CSV에 삭제 이벤트 자체가 없음), 탭/옵션 전환
+  (`feed_tab_select`/`feed_soso_option_select`), 내 피드 정렬/필터(`feed_myfeed_sort`/`_filter_apply`).
+  CSV에 없는 이름이라 기존 명명 패턴(`write_*`/`feed_*`)을 따라 새로 지었다 — 기획팀 확정 이벤트명이
+  아니니 나중에 실제 스프레드시트와 이름이 갈리면 이 항목부터 볼 것.
 - **`feed_all` 화면진입 이벤트는 `hasTrackedScreenViewed`(전용 1회 가드)로 최초 진입에만 쏜다**(#250
   리뷰로 정정) — 이 화면은 탭(내 피드/소소피드)별로 `hasLoadedMyFeeds`/`hasLoadedSosoFeeds`를 따로
   갖는데, "화면 진입" 자체는 어느 탭에서 시작하든 1건이라 탭별 플래그로는 못 가른다. 별도 플래그를 둔 이유.

@@ -323,6 +323,7 @@ final class SosoFeedViewModel {
     /// 절충: 다른 유저의 변경은 전환만으론 반영되지 않는다(재진입과 동일 — 전체 최신화는 당겨서 새로고침).
     private func selectTab(_ tab: FeedTab) {
         guard tab != state.selectedTab else { return }
+        track(.tabSelected)
         state.selectedTab = tab
         guard !hasLoaded(tab) else { return }
         reloadFromScratch(tab)
@@ -330,6 +331,7 @@ final class SosoFeedViewModel {
 
     private func selectSosoFeedOption(_ option: SosoFeedOption) {
         guard option != state.selectedSosoFeedOption else { return }
+        track(.sosoOptionSelected)
         state.selectedSosoFeedOption = option
         logger?.info("소소피드 옵션: \(option)")
         guard state.selectedTab == .sosoFeed else { return }
@@ -646,6 +648,7 @@ final class SosoFeedViewModel {
             sortType: nextSortType
         )
         logger?.info("내 피드 정렬: \(nextSortType)")
+        track(.myFeedSortToggled)
         reloadFromScratch(.myFeed)
     }
 
@@ -706,6 +709,7 @@ final class SosoFeedViewModel {
     private func applyMyFeedFilter() {
         state.myFeedOption = state.myFeedOptionDraft
         logger?.info("\(state.myFeedOption.genres.map { $0.displayName }), \(state.myFeedOption.visibilityType)")
+        track(.myFeedFilterApplied)
         reloadFromScratch(.myFeed)
     }
 
@@ -796,6 +800,7 @@ final class SosoFeedViewModel {
         defer { feedActionTask = nil }
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)
+            track(.feedDeleted)
             pendingSyncFeedIDs.remove(feedID)
             removeCell(feedID)
         } catch {
