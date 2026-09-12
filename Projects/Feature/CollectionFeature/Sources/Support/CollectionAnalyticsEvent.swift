@@ -43,4 +43,8 @@ enum CollectionAnalyticsEvent: String, AnalyticsEvent {
     case addNovelViewed = "collection_add_novel_view"
     /// "작품 추가" 화면에서 선택 확정
     case addNovelConfirmed = "collection_add_novel_confirm"
+    /// "서재에서 추가" 화면 진입
+    case myLibrarySelectViewed = "collection_my_library_select_view"
+    /// "서재에서 추가" 화면에서 선택 확정
+    case myLibrarySelectConfirmed = "collection_my_library_select_confirm"
 }

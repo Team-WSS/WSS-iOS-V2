@@ -76,6 +76,7 @@ enum CollectionEditAssembly {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onConfirm: onConfirm,
             onAuthenticationRequired: onAuthenticationRequired
         )

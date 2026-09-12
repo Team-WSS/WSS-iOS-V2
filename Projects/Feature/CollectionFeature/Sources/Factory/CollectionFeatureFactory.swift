@@ -128,6 +128,7 @@ public enum CollectionFeatureFactory {
         initialSelection: [CollectionNovel],
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -135,7 +136,8 @@ public enum CollectionFeatureFactory {
             viewModel: CollectionMyLibrarySelectViewModel(
                 initialSelection: initialSelection,
                 loadMyLibraryUseCase: loadMyLibraryUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onConfirm: onConfirm,
             onAuthenticationRequired: onAuthenticationRequired

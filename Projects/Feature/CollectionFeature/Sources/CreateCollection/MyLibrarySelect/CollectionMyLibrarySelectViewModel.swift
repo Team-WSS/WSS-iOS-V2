@@ -13,6 +13,7 @@ import BaseDomain
 import CollectionDomain
 import NovelDomain
 import Logger
+import Analytics
 
 /// 컬렉션 "작품 추가" 화면(`CollectionSearchNovelView`)의 "서재에서 추가"로 진입하는 화면 —
 /// 사용자의 서재를 조회하며 다중 선택한 결과를 `CollectionSearchNovelView`로 되돌려준다.
@@ -87,6 +88,7 @@ final class CollectionMyLibrarySelectViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelDomain
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
@@ -100,11 +102,19 @@ final class CollectionMyLibrarySelectViewModel {
     init(
         initialSelection: [CollectionNovel],
         loadMyLibraryUseCase: LoadMyLibraryUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State(selectedNovels: initialSelection)
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -120,6 +130,7 @@ final class CollectionMyLibrarySelectViewModel {
         case .toggleNovel(let novel):
             toggleNovel(novel)
         case .confirm:
+            track(.myLibrarySelectConfirmed)
             state.isConfirmed = true
         case .dismissToast:
             state.presentedToast = nil
@@ -135,6 +146,7 @@ private extension CollectionMyLibrarySelectViewModel {
     /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.myLibrarySelectViewed)
         reloadFromScratch()
     }
 
