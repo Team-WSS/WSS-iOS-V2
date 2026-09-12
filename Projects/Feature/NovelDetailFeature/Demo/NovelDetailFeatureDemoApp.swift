@@ -420,7 +420,7 @@ private struct DemoRootView: View {
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: novelRepository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),

@@ -24,14 +24,16 @@ public protocol LoadUserLibraryUseCase: Sendable {
 public final class DefaultLoadUserLibraryUseCase: LoadUserLibraryUseCase {
 
     private let novelRepository: NovelRepository
-    private let keywordRepository: KeywordRepository
+    /// 캐시 미스 시 서버 재동기화까지 책임지는 건 `KeywordRepository`가 아니라 이 UseCase 몫이다 —
+    /// `BaseDomain/CLAUDE.md`의 `LoadTotalKeywordsUseCase` 항목 참고(2026-09-12, 사용자 확정).
+    private let loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase
 
     public init(
         novelRepository: NovelRepository,
-        keywordRepository: KeywordRepository
+        loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase
     ) {
         self.novelRepository = novelRepository
-        self.keywordRepository = keywordRepository
+        self.loadTotalKeywordsUseCase = loadTotalKeywordsUseCase
     }
 
     public func execute(
@@ -41,7 +43,7 @@ public final class DefaultLoadUserLibraryUseCase: LoadUserLibraryUseCase {
     ) async throws(RepositoryError) -> (CursorPaginated<LibraryNovel>, Int) {
         // 서버는 키워드 이름만 내려주므로, 로컬 캐시에서 ID를 찾아 셀에 표시할 `Keyword`로 복원한다.
         // 캐시 조회 실패가 서재 목록 자체를 막지 않도록 내 서재와 동일하게 빈 배열로 폴백한다.
-        let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+        let cachedKeywords = (try? await loadTotalKeywordsUseCase.execute())?.flatMap(\.keywords) ?? []
         return try await novelRepository.fetchUserLibraryNovels(
             id: id,
             filter,

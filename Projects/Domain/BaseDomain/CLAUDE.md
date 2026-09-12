@@ -56,4 +56,15 @@
   ② App의 각 탭 `Destination` enum이 작품 상세 "나도 한마디"(`createFeedFromNovel(ConnectedNovel)`)를
   `NavigationPath`에 직접 push하려면 `Hashable`(`Destination: Hashable` 준수 조건)이 필요하다. 필드가
   전부 이미 Hashable이라 자동 합성만으로 충분했다.
-- ⚠️ **`LoadTotalKeywordsUseCase`/`SearchKeywordsUseCase`의 구현 클래스명은 프로토콜명을 따르지 않는다** — 각각 `DefaultFetchTotalKeywordsUseCase`("Load"가 아니라 "Fetch")와 `DefaultSearchKeywordUseCase`("Keywords"가 아니라 단수 "Keyword")다. 다른 Default 구현체 대부분은 프로토콜명 그대로라(`DefaultDeleteFeedUseCase` 등) 관례를 따라 이름을 추측하면 컴파일 에러로 걸린다(`LoadFeedDetailUseCase`/`DefaultLoadFeedUseCase`와 같은 종류의 함정, `FeedDomain/CLAUDE.md` 참고). 리네임하면 이 문서도 같이 고칠 것.
+- ⚠️ **`SearchKeywordsUseCase`의 구현 클래스명은 프로토콜명을 따르지 않는다** — `DefaultSearchKeywordUseCase`("Keywords"가 아니라 단수 "Keyword")다. 다른 Default 구현체 대부분은 프로토콜명 그대로라(`DefaultDeleteFeedUseCase` 등) 관례를 따라 이름을 추측하면 컴파일 에러로 걸린다(`LoadFeedDetailUseCase`/`DefaultLoadFeedUseCase`와 같은 종류의 함정, `FeedDomain/CLAUDE.md` 참고). 리네임하면 이 문서도 같이 고칠 것. (`LoadTotalKeywordsUseCase`의 구현체는 한때 `DefaultFetchTotalKeywordsUseCase`로 이 예외에 같이 묶여 있었으나, 관례에 맞춰 `DefaultLoadTotalKeywordsUseCase`로 리네임됐다 — 2026-09-12.)
+- ⚠️ **`LoadTotalKeywordsUseCase`는 캐시 미스(파일 없음·손상 등) 시 조용히 실패하지 않고, 그 자리에서
+  서버와 한 번 동기화(`syncKeywords()`)한 뒤 재조회한다**(재시도는 딱 1회 — `syncKeywords()`가 실패까지
+  삼키는 계약이라 무한 루프 없음). 이 재시도 정책은 **Domain(UseCase) 소유이지 `KeywordRepository`(Data)
+  소유가 아니다** — Repository는 캐시 읽기/서버 동기화라는 데이터 소스 접근만 하고, "실패하면 어떻게
+  할지"는 UseCase가 정한다는 사용자 판단(2026-09-12). 그래서 **캐시 키워드가 필요한 다른 Domain의
+  UseCase(`ProfileDomain.LoadNovelPreferencesUseCase`, `NovelDomain.LoadNovelUseCase`/
+  `LoadMyLibraryUseCase`/`LoadUserLibraryUseCase`)는 전부 `KeywordRepository`를 직접 잡지 않고 이
+  UseCase를 통해서만 캐시를 읽는다** — 새로 키워드 캐시가 필요한 UseCase를 만들 때도 `KeywordRepository.
+  fetchKeywords()`를 직접 부르지 말고 이 UseCase를 재사용할 것(재사용하지 않으면 캐시 미스 시 그
+  UseCase만 재시도 없이 조용히 빈 값으로 폴백한다 — 앱 첫 설치 직후처럼 `syncKeywords()`(fire-and-forget,
+  `App/CLAUDE.md`)가 아직 안 끝난 시점에 실제로 겪은 증상).

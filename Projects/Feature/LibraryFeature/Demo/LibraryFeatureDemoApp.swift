@@ -274,7 +274,7 @@ private struct DemoRootView: View {
             userID: UserID(liveOtherUserID),
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: repositories.novel,
-                keywordRepository: repositories.keyword
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: repositories.keyword)
             ),
             logger: consoleLogger,
             onRoute: { route in
@@ -294,7 +294,7 @@ private struct DemoRootView: View {
         return LibraryFeatureFactory.makeMyLibraryView(
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: repository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(novelRepository: repository),
             loadMyLibraryFilterUseCase: DefaultLoadMyLibraryFilterUseCase(repository: makeFilterRepository()),

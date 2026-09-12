@@ -24,7 +24,7 @@ struct LoadNovelUseCaseTests {
 
         let usecase = DefaultLoadNovelUseCase(
             novelRepository: mock,
-            keywordRepository: MockKeywordRepository()
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: MockKeywordRepository())
         )
         let novelID = NovelID(1)
 
@@ -43,7 +43,7 @@ struct LoadNovelUseCaseTests {
 
         let usecase = DefaultLoadNovelUseCase(
             novelRepository: mock,
-            keywordRepository: MockKeywordRepository()
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: MockKeywordRepository())
         )
 
         await #expect(throws: RepositoryError.unknown) {

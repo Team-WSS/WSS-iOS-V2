@@ -40,7 +40,7 @@ enum NovelDetailAssembly {
             novelID: novelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: dependencies.novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: dependencies.feedRepository),

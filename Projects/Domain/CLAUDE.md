@@ -74,10 +74,12 @@ public protocol LoadNovelUseCase {
 
 public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
     private let novelRepository: NovelRepository
-    private let keywordRepository: KeywordRepository
-    public init(novelRepository: NovelRepository, keywordRepository: KeywordRepository) { ... }
+    // 캐시 미스 시 서버 재동기화까지 하는 건 KeywordRepository가 아니라 이 UseCase(BaseDomain)
+    // 몫이다 — Repository를 직접 잡지 말고 이걸 통해 캐시를 읽는다(BaseDomain/CLAUDE.md 참고).
+    private let loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase
+    public init(novelRepository: NovelRepository, loadTotalKeywordsUseCase: LoadTotalKeywordsUseCase) { ... }
     public func execute(id: NovelID) async throws(RepositoryError) -> NovelInformation {
-        let cachedKeywords = (try? await keywordRepository.fetchKeywords())?.flatMap(\.keywords) ?? []
+        let cachedKeywords = (try? await loadTotalKeywordsUseCase.execute())?.flatMap(\.keywords) ?? []
         return try await novelRepository.fetchNovel(id: id, cachedKeywords: cachedKeywords)
     }
 }

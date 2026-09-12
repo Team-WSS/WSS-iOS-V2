@@ -42,7 +42,7 @@ enum UserPageAssembly {
             ),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
                 profileRepository: dependencies.profileRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             loadUserRegisteredNovelStatsUseCase: DefaultLoadUserRegisteredNovelStatsUseCase(
                 novelRepository: dependencies.novelRepository
