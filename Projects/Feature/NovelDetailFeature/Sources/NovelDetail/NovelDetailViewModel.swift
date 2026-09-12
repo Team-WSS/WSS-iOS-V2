@@ -658,6 +658,7 @@ private extension NovelDetailViewModel {
         defer { feedActionTask = nil }
         do {
             try await deleteFeedUseCase.execute(feedID: feedID)
+            track(.feedDeleted)
             guard !isClosing, !Task.isCancelled else { return }
             // 진행 중인 피드 더보기가 있으면 무효화한다 — 삭제 전 스냅샷을 든 응답이 늦게 도착해 방금 지운
             // 피드를 목록에 되살리는 창을 닫는다(#236 리뷰 — 더보기는 조용히 드롭되고 스크롤 재실현으로 복구).
@@ -686,6 +687,7 @@ private extension NovelDetailViewModel {
             } else {
                 try await reportImproperFeedUseCase.execute(id: feedID)
             }
+            track(spoiler ? .feedSpoilerReported : .feedAbuseReported)
             guard !isClosing, !Task.isCancelled else { return }
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {

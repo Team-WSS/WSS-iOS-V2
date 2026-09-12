@@ -38,4 +38,13 @@ enum NovelDetailAnalyticsEvent: String, AnalyticsEvent {
     case notificationHiatusOn = "novel_notification_hiatus_on"
     /// 휴재복귀 알림 꺼짐
     case notificationHiatusOff = "novel_notification_hiatus_off"
+
+    // MARK: - V2 신규(CSV에 없음)
+
+    /// 수다 탭 피드 삭제 확정
+    case feedDeleted = "novel_feed_delete"
+    /// 수다 탭 피드 스포일러 신고
+    case feedSpoilerReported = "novel_feed_spoiler_report"
+    /// 수다 탭 피드 부적절한 표현 신고
+    case feedAbuseReported = "novel_feed_abuse_report"
 }

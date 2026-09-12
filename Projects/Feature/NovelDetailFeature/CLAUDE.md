@@ -67,6 +67,12 @@ Demo 앱의 Mock 모드는 **버튼 하나 = 데이터 조건 하나**다(`DemoS
   직접 받지 못한다** — `NovelDetailView`가 자기 생성자로 받은 `analyticsTracker`를 시트 생성 시점에 그대로
   넘겨준다(로그인 `logger`와 같은 중계 방식). 알림 등록 4종(`novel_notification_view`/`_completion_on`/`off`/
   `_hiatus_on`/`off`)은 `NovelDetailAnalyticsEvent`에 같이 얹혀 있다 — 별도 모듈 카탈로그를 만들지 않았다.
+- **수다 탭 피드 삭제/신고 3종(`novel_feed_delete`/`novel_feed_spoiler_report`/`novel_feed_abuse_report`)은
+  기획측 CSV엔 없는 V2 신규 이벤트다** — `FeedFeature`엔 같은 의미의 `feed_delete`/`alert_feed_spoiler`/
+  `alert_feed_abuse`가 있지만, 이 모듈은 `FeedFeature`를 import 못 해(Feature 간 직접 의존 금지) 같은
+  문자열을 공유할 수 없다 — `novel_` 접두사로 이 모듈 전용 이름을 새로 지었다(신고 쪽은 `FeedFeature`처럼
+  `alert_` 접두사를 그대로 쓰지 않고 `novel_feed_*_report`로 통일 — 이 모듈 다른 이벤트가 전부 `novel_`
+  접두사라서).
 - **`novel_info` 이벤트("정보 탭 진입")는 `load()`의 `!hasLoaded`(최초 진입) 분기 안에서 트래킹한다**(#249,
   #250 리뷰로 정정) — 기본 진입 탭이 `.info`라 `selectTab` 액션을 안 거쳐 별도로 잡아야 하지만, View의
   `onAppear`에 직접 두면 **재진입(push 복귀)마다 재발화**한다(이 화면은 피드/평가/작성 화면으로 push했다
