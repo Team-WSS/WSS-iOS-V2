@@ -79,13 +79,13 @@ struct NovelDetailView: View {
     private let novelID: NovelID
     private let logger: Logger?
 
-    // NotificationDomain — 알림 등록 시트(#189)용. 시트를 열 때만 조립하므로 화면 진입 시점엔 안 쓰인다.
-    private let loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase
-    private let updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase
-
     init(
         novelID: NovelID,
         viewModel: NovelDetailViewModel,
+        // NotificationDomain — 알림 등록 시트(#189)·네비바 종 아이콘 채움 여부용. `notificationSettingViewModel`을
+        // 조립하는 데만 쓰이고 그 뒤로는 안 읽혀 저장 프로퍼티로 남겨두지 않는다(리뷰에서 지적 — VM이
+        // 화면 진입 시점에 한 번만 조립되는 지금 구조에선 저장할 이유가 없다, 예전엔 시트를 열 때마다
+        // 새 VM을 만들어야 해서 계속 들고 있었다).
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
@@ -95,8 +95,6 @@ struct NovelDetailView: View {
     ) {
         self.novelID = novelID
         self._viewModel = State(initialValue: viewModel)
-        self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
-        self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
         self._notificationSettingViewModel = State(initialValue: NovelNotificationSettingSheetViewModel(
             novelID: novelID,
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
@@ -147,7 +145,19 @@ struct NovelDetailView: View {
                 buttonActions: feedAlertActions
             )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
-                if shouldDismiss { dismiss() }
+                if shouldDismiss {
+                    // `.onDisappear` 대신 이 명시적 신호에서만 부른다 — `NavigationPath`에 다른 화면을
+                    // push할 때도(`onRoute` 7종) `.onDisappear`가 "화면이 진짜로 닫힐 때"와 똑같이
+                    // 발화해, 그걸로 `screenClosed()`를 걸면 forward push마다 로드가 취소된다
+                    // (`CollectionFeature/CLAUDE.md`에 이미 같은 함정이 실제 회귀로 기록돼 있다 — push
+                    // 되는 화면에 `onDisappear` 기반 취소를 걸면 안 되고, 이 화면(`NovelDetailViewModel`)
+                    // 처럼 명시적 액션으로 걸어야 한다는 그 정본). ⚠️ 대신 스와이프 뒤로가기는 이 신호를
+                    // 안 거쳐(`.enableSwipeBack()`이 되살린 네이티브 pop이라) `notificationSettingViewModel`이
+                    // 정리 안 된다 — `NovelDetailViewModel.close()` 자신도 스와이프에서 똑같이 안 불리는
+                    // 이 화면의 기존 한계라 새로 생긴 문제는 아니다(아래 주의사항 참고).
+                    notificationSettingViewModel.handle(.screenClosed)
+                    dismiss()
+                }
             }
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
@@ -353,6 +363,11 @@ private extension NovelDetailView {
                 } label: {
                     // 완결/휴재복귀 알림 둘 중 하나라도 켜져 있으면 채운 아이콘(icAnnouncementFill) +
                     // wssPrimary100으로 바꿔, 시트를 열지 않아도 알림이 걸려 있는 작품임을 알 수 있다.
+                    // ⚠️ 애니메이션을 일부러 안 건다 — 서로 다른 리소스(icAnnouncement↔icAnnouncementFill)
+                    // 전환인 데다 색도 foregroundStyle(tint)만으로 표현돼, `.animation`을 걸어도 보간되지
+                    // 않고 즉시 스냅한다(WSSComponent CLAUDE.md의 같은 함정 — 두 벌을 opacity로 겹쳐
+                    // 크로스페이드해야 하는데, LibraryFeature 필터 칩도 같은 이유로 결국 즉시 전환으로
+                    // 확정됐다). 이 아이콘도 같은 판단으로 크로스페이드를 안 만들고 즉시 전환을 받아들인다.
                     (isAnyNotificationEnabled ? WSSImage.icAnnouncementFill : WSSImage.icAnnouncement).swiftUIImage
                         .renderingMode(.template)
                         .resizable()
@@ -364,7 +379,6 @@ private extension NovelDetailView {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.1), value: isAnyNotificationEnabled)
 
                 Spacer().frame(width: 4)
 
