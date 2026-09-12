@@ -18,6 +18,7 @@ let project = Project.createFeatureModule(
     // 평가 삭제가 포함되어 NovelReviewDomain(DeleteNovelReviewUseCase)도,
     // 피드 신고가 포함되어 SocialDomain(Report*FeedUseCase)도,
     // 작품 알림 등록 시트가 포함되어 NotificationDomain(NovelNotificationSetting)도 의존한다(#189).
+    // 종 아이콘 탭 시 시스템 푸시 권한 확인(#193 SettingFeature와 동일 목적)이 추가되어 PushAuthorization도 의존한다.
     internalDependencies: [
         .module(.domain(.base)),
         .module(.domain(.novel)),
@@ -27,7 +28,8 @@ let project = Project.createFeatureModule(
         .module(.domain(.notification)),
         .module(.ui(.designSystem)),
         .module(.ui(.wssComponent)),
-        .module(.core(.logger))
+        .module(.core(.logger)),
+        .module(.core(.pushAuthorization))
     ],
     // Demo 앱만 실서버 조립을 위해 Data/Networking을 의존한다(App의 DI 역할 대행).
     // Sources는 여전히 Data를 모른다 — Feature 레이어 규칙 유지.

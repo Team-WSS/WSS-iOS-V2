@@ -15,6 +15,7 @@ import NovelDomain
 import NovelReviewDomain
 import SocialDomain
 import Logger
+import PushAuthorization
 import DesignSystem
 import WSSComponent
 
@@ -34,6 +35,9 @@ struct NovelDetailView: View {
     /// 종 모양 아이콘 → 완결/휴재복귀 알림 등록 시트(#189). 시트 자체 VM이 로드·토글을 갖고 있어
     /// 여기선 표시 여부만 View가 소유한다(순수 표시 상태).
     @State private var isNotificationSettingSheetPresented = false
+    /// 종 아이콘 탭 시 시스템 푸시 권한이 denied면 시트 대신 이 알럿(기기 설정 유도)을 띄운다
+    /// (`SettingFeature`의 "알림 설정" 메뉴와 동일 판단 — 권한 없이 그 시트에 들어갈 이유가 없다).
+    @State private var isPushAuthorizationAlertPresented = false
     /// 시트가 열려있지 않아도 네비바 종 아이콘 상태(채움 여부)를 비추려면 로드된 설정값이 필요해서,
     /// 시트 열릴 때마다 새로 만들던 것과 달리 화면 진입 시 한 번 만들어 화면 수명 내내 들고 있는다
     /// (`.onAppear`가 로드, 시트는 이 인스턴스를 그대로 재사용) — 토글도 실시간으로 아이콘에 반영된다.
@@ -78,6 +82,9 @@ struct NovelDetailView: View {
 
     private let novelID: NovelID
     private let logger: Logger?
+    /// 종 아이콘 탭 시 시스템 푸시 권한 확인용(#193 SettingFeature와 동일 목적) — init 이후에도
+    /// 탭할 때마다 다시 물어봐야 해서(`notificationBellTapped()`) 저장 프로퍼티로 둔다.
+    private let pushAuthorizationChecker: PushAuthorizationChecker
 
     init(
         novelID: NovelID,
@@ -88,6 +95,7 @@ struct NovelDetailView: View {
         // 새 VM을 만들어야 해서 계속 들고 있었다).
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
@@ -101,6 +109,7 @@ struct NovelDetailView: View {
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
             logger: logger
         ))
+        self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
@@ -143,6 +152,21 @@ struct NovelDetailView: View {
                 isPresented: feedAlertBinding,
                 type: feedAlertType,
                 buttonActions: feedAlertActions
+            )
+            // 종 아이콘 탭인데 시스템 푸시 권한이 denied일 때(`notificationBellTapped()`) — 어느 버튼이든
+            // 알럿을 닫기만 할 뿐 시트로 이동시키지 않는다(`SettingFeature`의 "알림 설정" 메뉴와 동일 판단).
+            .showWSSAlert(
+                isPresented: $isPushAuthorizationAlertPresented,
+                type: .setAppNotification,
+                buttonActions: [
+                    { isPushAuthorizationAlertPresented = false },  // "다음에 하기"
+                    {
+                        isPushAuthorizationAlertPresented = false
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                            openURL(url)
+                        }
+                    }  // "설정하러 가기"
+                ]
             )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
                 if shouldDismiss {
@@ -359,7 +383,7 @@ private extension NovelDetailView {
             // 라벨 안에 두어 디바이스 우측 끝까지 탭이 먹는다. 높이 44는 네비바(뒤로가기 프레임)와 동일.
             HStack(spacing: 0) {
                 Button {
-                    isNotificationSettingSheetPresented = true
+                    notificationBellTapped()
                 } label: {
                     // 완결/휴재복귀 알림 둘 중 하나라도 켜져 있으면 채운 아이콘(icAnnouncementFill) +
                     // wssPrimary100으로 바꿔, 시트를 열지 않아도 알림이 걸려 있는 작품임을 알 수 있다.
@@ -550,6 +574,25 @@ private extension NovelDetailView {
         guard largeCoverUIImage == nil, let url = coverImageURL else { return }
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
         largeCoverUIImage = UIImage(data: data)
+    }
+
+    /// 종 아이콘 탭 — 시트를 열기 전에 시스템 푸시 권한을 확인한다(`SettingFeature`의 "알림 설정"
+    /// 메뉴와 동일 판단, #193). **denied면 시트를 열지 않고 기기 설정 유도 알럿만 띄운다**(사용자 확정 —
+    /// 권한이 없는 채로 그 시트에 들어갈 이유가 없다). `notDetermined`면 시스템 프롬프트를 띄운 뒤 시트로
+    /// 이동한다(알럿은 안 띄움). 서버 호출이 아니라 로컬 시스템 조회/프롬프트라 실패 처리가 필요 없어
+    /// `NovelDetailViewModel`에 얹지 않고 View가 직접 처리한다(순수 표시 상태만 바뀜).
+    func notificationBellTapped() {
+        Task {
+            switch await pushAuthorizationChecker.authorizationStatus() {
+            case .authorized:
+                isNotificationSettingSheetPresented = true
+            case .notDetermined:
+                _ = await pushAuthorizationChecker.requestAuthorization()
+                isNotificationSettingSheetPresented = true
+            case .denied:
+                isPushAuthorizationAlertPresented = true
+            }
+        }
     }
 
     /// 첫 진입 평가 온보딩 오버레이(#221, V1 parity) — 화면을 딤 처리하되 **평가 상태바 자리만 뚫어**
@@ -850,6 +893,7 @@ private extension View {
             ),
             loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
             updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
+            pushAuthorizationChecker: PreviewPushAuthorizationChecker(),
             onRoute: { print("화면 전환 요청: \($0)") },
             onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
         )
@@ -922,6 +966,11 @@ private struct PreviewLoadNovelNotificationSettingUseCase: LoadNovelNotification
 
 private struct PreviewUpdateNovelNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase {
     func execute(novelID: NovelID, setting: NovelNotificationSetting) async throws(RepositoryError) {}
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
 }
 
 private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
