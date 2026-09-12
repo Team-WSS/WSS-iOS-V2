@@ -262,6 +262,13 @@
 - **`other_block`("타유저 차단 버튼 클릭") 이벤트는 `.blockUserTapped` 액션(확인 알럿을 띄우는 시점)에서
   트래킹한다**(#249) — 실제 차단 API 성공(`confirmBlockUser`)이 아니라 "차단하기" 버튼을 누른 시점 그
   자체다. CSV 설명이 "버튼 클릭"이라 확인 알럿의 최종 확정까지는 기다리지 않는다.
+- **`UserPageAnalyticsEvent`에 기획측 CSV엔 없는 V2 신규 이벤트 4종이 추가돼 있다** — 활동 탭 피드
+  좋아요(`other_feed_like`)·신고 2종(`other_feed_spoiler_report`/`other_feed_abuse_report` — 자기
+  차단 이벤트가 `other_` 접두사라 그 접두사를 따랐다. `FeedFeature`/`NovelDetailFeature`의
+  `feed_delete` 등과 같은 개념이지만 Feature 간 직접 의존이 안 돼 이 모듈 전용 이름을 새로 지었다는
+  점도 동일)·컬렉션 섹션 탭(`other_collection_section`, 컬렉션이 없는 유저 안내 토스트 포함). 트래킹은
+  `analyticsTracker?.track(UserPageAnalyticsEvent.xxx)`로 직접 호출한다(이 모듈은 `track(_:)` 래퍼
+  메서드를 따로 안 둔다).
 - **`UserPageFactory.makeView`의 첫 실제 App 소비자는 피드 탭이다**(#196, `App/UserPageAssembly.swift` →
   `FeedRootView`가 피드 셀 프로필 탭에서 push) — 홈·서재 탭엔 아직 진입 경로가 없다(연결 작품 배너만
   뚫려 있고 작성자 프로필 탭 자체가 없는 화면들이라서). 다른 화면에 유저 프로필 진입이 필요해지면

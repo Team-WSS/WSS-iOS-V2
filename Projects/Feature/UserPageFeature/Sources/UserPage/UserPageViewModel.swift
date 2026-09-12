@@ -292,6 +292,7 @@ private extension UserPageViewModel {
         guard (try? feed.toggleLike()) != nil else { return }
 
         state.feeds[index] = feed
+        analyticsTracker?.track(UserPageAnalyticsEvent.feedLikeTapped)
         syncingLikeFeedIDs.insert(feedID)
         likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
@@ -315,6 +316,7 @@ private extension UserPageViewModel {
     /// `hasCollections`를 직접 보고 이 액션을 거치지 않은 채 `onRoute(.collectionList)`를 바로 부른다
     /// ("서재" 블록과 동일 원칙 — `UserPageFeature/CLAUDE.md` 참고).
     func tapCollectionSection() {
+        analyticsTracker?.track(UserPageAnalyticsEvent.collectionSectionTapped)
         state.isNoCollectionsToastPresented = true
     }
 
@@ -514,6 +516,7 @@ private extension UserPageViewModel {
             } else {
                 try await reportImproperFeedUseCase.execute(id: feedID)
             }
+            analyticsTracker?.track(spoiler ? UserPageAnalyticsEvent.feedSpoilerReported : UserPageAnalyticsEvent.feedAbuseReported)
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
             presentActionError(error, context: "피드 신고")
