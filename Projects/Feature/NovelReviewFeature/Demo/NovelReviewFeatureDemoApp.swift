@@ -139,7 +139,7 @@ private struct DemoRootView: View {
             logger: consoleLogger,
             onAuthenticationRequired: handleAuthenticationRequired,
             keywordSearchSheet: keywordSearchSheetBuilder(
-                loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: keywordRepository),
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository),
                 searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: keywordRepository)
             )
         )
