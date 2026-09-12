@@ -100,7 +100,7 @@ struct LibraryRootView: View {
             LibraryFeatureFactory.makeMyLibraryView(
                 loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                     novelRepository: dependencies.novelRepository,
-                    keywordRepository: dependencies.keywordRepository
+                    loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
                 ),
                 loadMyLibraryKeywordsUseCase: DefaultLoadMyLibraryKeywordsUseCase(
                     novelRepository: dependencies.novelRepository
@@ -381,7 +381,7 @@ private extension LibraryRootView {
             userID: userID,
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
             onRoute: { route in

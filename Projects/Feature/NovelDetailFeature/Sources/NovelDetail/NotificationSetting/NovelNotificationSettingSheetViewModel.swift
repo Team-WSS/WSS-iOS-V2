@@ -49,6 +49,9 @@ final class NovelNotificationSettingSheetViewModel {
         case toggleHiatusReturnNotification(Bool)
         case dismissToast
         case disappear
+        /// 시트가 아니라 이 VM을 들고 있는 화면(`NovelDetailView`) 자체가 닫힐 때 — `disappear()`와
+        /// 달리 재진입을 가정하지 않으므로 로드까지 전부 취소한다(아래 `screenClosed()` 참고).
+        case screenClosed
     }
 
     // MARK: - Output
@@ -109,6 +112,8 @@ final class NovelNotificationSettingSheetViewModel {
             state.toastError = nil
         case .disappear:
             disappear()
+        case .screenClosed:
+            screenClosed()
         }
     }
 }
@@ -117,7 +122,18 @@ final class NovelNotificationSettingSheetViewModel {
 
 private extension NovelNotificationSettingSheetViewModel {
     func load() {
-        guard !hasLoaded, loadTask == nil, !isClosing else { return }
+        // 이 VM은 이제 화면(NovelDetailView) 수명 내내 재사용된다 — 네비바 종 아이콘이 시트를 열지 않아도
+        // 현재 알림 상태를 비춰야 해서, 시트가 열릴 때마다 새로 만들던 걸 화면 진입 시 한 번만 만들어
+        // 들고 있는 방식으로 바꿨다. 그래서 시트를 닫을 때 세운 `isClosing`을 시트 재진입마다 반드시
+        // 풀어야 한다 — 안 풀면 두 번째 여는 시트부터 토글이 전부 무시된다(아래 토글 가드가 영구 차단).
+        isClosing = false
+        // `isSyncing`도 같은 이유로 재진입마다 되돌려야 한다 — 토글 → PUT 진행 중에 시트를 닫으면
+        // `disappear()`가 `syncTask`를 취소하지만, 그 시점 `isClosing`이 이미 true라 `sync()`의
+        // defer가 `isSyncing`을 되돌리지 못하고 영구히 true로 남는다(리뷰에서 발견 — 이러면 그
+        // 화면을 벗어났다 다시 들어오기 전까진 토글이 전부 무반응이 된다). `syncTask == nil`일
+        // 때만 리셋해 혹시 남아있을 진행 중인 동기화는 건드리지 않는다.
+        if syncTask == nil { state.isSyncing = false }
+        guard !hasLoaded, loadTask == nil else { return }
         state.isLoading = true
         loadTask = Task { await loadSetting() }
     }
@@ -139,10 +155,35 @@ private extension NovelNotificationSettingSheetViewModel {
         syncTask = Task { await sync(rollbackTo: rollback) }
     }
 
-    /// 시트가 닫히는 중(스와이프 등) — 진행 중인 로드/동기화를 취소한다. 명시적 닫기 액션이 없는
-    /// 시트라 `NovelDetailViewModel.close()`의 역할을 `.onDisappear`가 대신한다.
+    /// 시트가 닫히는 중(스와이프 등) — 진행 중인 **토글 동기화만** 취소한다. 명시적 닫기 액션이 없는
+    /// 시트라 이 신호를 `.onDisappear`가 대신 보낸다.
+    /// ⚠️ `loadTask`는 여기서 취소하지 않는다 — 그 로드는 시트가 아니라 화면(`NovelDetailView`) 수명에
+    /// 속한다(네비바 종 아이콘이 시트를 안 열어도 서버 상태를 비춰야 해서, `.onAppear`에서 시트와
+    /// 무관하게 시작됨). 여기서 취소하면 시트를 열자마자 바로 닫는 것만으로 `hasLoaded`가 계속 false로
+    /// 남아, 사용자가 시트를 다시 열기 전까지 아이콘이 부정확한 상태(빈 종)로 고착된다(리뷰에서 발견).
+    /// ⚠️ 인스턴스 자체는 안 죽는다(화면 수명 내내 재사용, 위 `load()` 주석 참고) — "닫힘"은 일시
+    /// 정지일 뿐이라 `isClosing`은 다음 `load()`(시트 재진입)에서 반드시 다시 풀린다.
     func disappear() {
         guard !isClosing else { return }
+        isClosing = true
+        syncTask?.cancel()
+    }
+
+    /// 시트가 아니라 이 VM을 들고 있는 화면(`NovelDetailView`) 자체가 닫히는 중 — `NovelDetailView`의
+    /// `viewModel.state.shouldDismiss` onChange(뒤로가기 **버튼**, `NovelDetailViewModel.close()`와
+    /// 같은 신호)에서만 부른다.
+    /// ⚠️ **`.onDisappear`로 걸면 안 된다** — 이 화면은 `onRoute` 7종(작가 검색·평가·피드 등)으로 다른
+    /// 화면을 자기 위에 push하는 "허브" 화면이라, `.onDisappear`는 진짜 종료가 아니라 **forward push
+    /// 때도 SwiftUI 표준 동작으로 똑같이 발화한다**(`CollectionFeature/CLAUDE.md`에 이미 같은 함정이
+    /// 실제 회귀로 기록돼 있다 — 그 문서가 "명시적 액션을 쓸 것"의 정본으로 바로 이 화면을 가리킨다).
+    /// 그래서 명시적 신호로만 건다 — 대신 스와이프 뒤로가기는 이 경로를 안 타 정리가 안 되는데,
+    /// `NovelDetailViewModel.close()` 자신도 스와이프에서 똑같이 안 불리는 이 화면의 기존 한계라
+    /// 새로 생긴 갭은 아니다.
+    /// `loadTask`까지 `disappear()`보다 더 넓게 정리한다는 점이 다르다. `isClosing` 값과 무관하게
+    /// 항상 실행한다(시트가 이미 닫혀 `disappear()`로 `isClosing`이 true인 상태에서도, 그때 취소
+    /// 안 하고 넘어간 `loadTask`가 여전히 돌고 있을 수 있어서 — `guard`로 걸러 스킵하면 그 잔여 로드를
+    /// 놓친다). cancel은 nil/이미 완료된 Task에도 안전하다.
+    func screenClosed() {
         isClosing = true
         loadTask?.cancel()
         syncTask?.cancel()
@@ -152,20 +193,23 @@ private extension NovelNotificationSettingSheetViewModel {
 // MARK: - UseCase Handling
 
 private extension NovelNotificationSettingSheetViewModel {
+    /// ⚠️ 이 로드는 `isClosing`(시트가 닫히는 중 신호)을 보지 않는다 — `disappear()`가 더 이상
+    /// `loadTask`를 취소하지 않아서다(위 `disappear()` 주석 참고). 취소 여부는 오직 `Task.isCancelled`
+    /// (`screenClosed()`가 진짜 취소할 때만 true)로만 판단한다.
     func loadSetting() async {
         defer {
             loadTask = nil
-            if !isClosing { state.isLoading = false }
+            state.isLoading = false
         }
 
         do {
             let setting = try await loadNotificationSettingUseCase.execute(novelID: novelID)
-            guard !isClosing, !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             state.isCompletionNotificationEnabled = setting.isCompletionNotificationEnabled
             state.isHiatusReturnNotificationEnabled = setting.isHiatusReturnNotificationEnabled
             hasLoaded = true
         } catch {
-            guard !isClosing, !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             presentError(error, log: "작품 알림 설정 로드 실패")
         }
     }

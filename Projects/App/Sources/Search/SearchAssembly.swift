@@ -66,7 +66,7 @@ enum SearchAssembly {
             keywordTabContent: { initialKeywords, onSelectionChanged in
                 AnyView(
                     KeywordFeatureFactory.makeSearchKeywordView(
-                        loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
+                        loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
                         searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: dependencies.keywordRepository),
                         initialSelectedKeywords: initialKeywords,
                         onSelectionChanged: onSelectionChanged,

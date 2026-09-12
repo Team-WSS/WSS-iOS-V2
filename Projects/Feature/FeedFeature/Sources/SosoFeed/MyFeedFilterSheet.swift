@@ -62,7 +62,6 @@ struct MyFeedFilterSheet: View {
         .presentationBackgroundInteraction(.disabled)
         .presentationDetents([.height(460)])
         .presentationBackground(WSSColor.wssWhite.swiftUIColor)
-        .presentationCornerRadius(16)
     }
 
     //MARK: - 카테고리

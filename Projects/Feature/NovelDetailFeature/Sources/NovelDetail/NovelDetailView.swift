@@ -15,6 +15,7 @@ import NovelDomain
 import NovelReviewDomain
 import SocialDomain
 import Logger
+import PushAuthorization
 import DesignSystem
 import WSSComponent
 
@@ -31,9 +32,10 @@ struct NovelDetailView: View {
     @State private var viewModel: NovelDetailViewModel
     /// VM 판단이 필요 없는 순수 표시 상태 — View가 소유한다.
     @State private var isMenuPresented = false
-    /// 종 모양 아이콘 → 완결/휴재복귀 알림 등록 시트(#189). 시트 자체 VM이 로드·토글을 갖고 있어
-    /// 여기선 표시 여부만 View가 소유한다(순수 표시 상태).
-    @State private var isNotificationSettingSheetPresented = false
+    /// 시트가 열려있지 않아도 네비바 종 아이콘 상태(채움 여부)를 비추려면 로드된 설정값이 필요해서,
+    /// 시트 열릴 때마다 새로 만들던 것과 달리 화면 진입 시 한 번 만들어 화면 수명 내내 들고 있는다
+    /// (`.onAppear`가 로드, 시트는 이 인스턴스를 그대로 재사용) — 토글도 실시간으로 아이콘에 반영된다.
+    @State private var notificationSettingViewModel: NovelNotificationSettingSheetViewModel
     @State private var isDescriptionExpanded = false
     /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다.
     @State private var feedMenuContext: FeedMenuContext?
@@ -75,13 +77,13 @@ struct NovelDetailView: View {
     private let novelID: NovelID
     private let logger: Logger?
 
-    // NotificationDomain — 알림 등록 시트(#189)용. 시트를 열 때만 조립하므로 화면 진입 시점엔 안 쓰인다.
-    private let loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase
-    private let updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase
-
     init(
         novelID: NovelID,
         viewModel: NovelDetailViewModel,
+        // NotificationDomain — 알림 등록 시트(#189)·네비바 종 아이콘 채움 여부용. `notificationSettingViewModel`을
+        // 조립하는 데만 쓰이고 그 뒤로는 안 읽혀 저장 프로퍼티로 남겨두지 않는다(리뷰에서 지적 — VM이
+        // 화면 진입 시점에 한 번만 조립되는 지금 구조에선 저장할 이유가 없다, 예전엔 시트를 열 때마다
+        // 새 VM을 만들어야 해서 계속 들고 있었다).
         loadNotificationSettingUseCase: LoadNovelNotificationSettingUseCase,
         updateNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase,
         logger: Logger? = nil,
@@ -91,8 +93,12 @@ struct NovelDetailView: View {
     ) {
         self.novelID = novelID
         self._viewModel = State(initialValue: viewModel)
-        self.loadNotificationSettingUseCase = loadNotificationSettingUseCase
-        self.updateNotificationSettingUseCase = updateNotificationSettingUseCase
+        self._notificationSettingViewModel = State(initialValue: NovelNotificationSettingSheetViewModel(
+            novelID: novelID,
+            loadNotificationSettingUseCase: loadNotificationSettingUseCase,
+            updateNotificationSettingUseCase: updateNotificationSettingUseCase,
+            logger: logger
+        ))
         self.logger = logger
         self._needsFeedReloadForCreatedFeed = needsFeedReloadForCreatedFeed
         self.onRoute = onRoute
@@ -113,6 +119,10 @@ struct NovelDetailView: View {
                     viewModel.handle(.reloadFeedsForCreatedFeed)
                 }
                 viewModel.handle(.load)
+                // 종 아이콘 채움 여부(알림 하나라도 켜짐)를 시트를 열기 전에도 비추려면 여기서 로드해야
+                // 한다 — `NovelNotificationSettingSheetViewModel.load()`는 `hasLoaded` 가드가 있어
+                // 재진입마다 다시 부르는 건 무해하다(첫 로드 후엔 no-op).
+                notificationSettingViewModel.handle(.load)
             }
             // 표지 URL이 생기면(로드 완료) 대형 표지를 미리 받아 둔다 — 재시도 후 로드에도 id 갱신으로 재발화.
             .task(id: coverImageURL) { await loadLargeCoverIfNeeded() }
@@ -132,23 +142,48 @@ struct NovelDetailView: View {
                 type: feedAlertType,
                 buttonActions: feedAlertActions
             )
+            // 종 아이콘 탭인데 시스템 푸시 권한이 denied일 때(`notificationBellTapped()`) — 어느 버튼이든
+            // 알럿을 닫기만 할 뿐 시트로 이동시키지 않는다(`SettingFeature`의 "알림 설정" 메뉴와 동일 판단).
+            .showWSSAlert(
+                isPresented: pushAuthorizationAlertBinding,
+                type: .setAppNotification,
+                buttonActions: [
+                    { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
+                    {
+                        viewModel.handle(.dismissPushAuthorizationAlert)
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                            openURL(url)
+                        }
+                    }  // "설정하러 가기"
+                ]
+            )
             .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
-                if shouldDismiss { dismiss() }
+                if shouldDismiss {
+                    // `.onDisappear` 대신 이 명시적 신호에서만 부른다 — `NavigationPath`에 다른 화면을
+                    // push할 때도(`onRoute` 7종) `.onDisappear`가 "화면이 진짜로 닫힐 때"와 똑같이
+                    // 발화해, 그걸로 `screenClosed()`를 걸면 forward push마다 로드가 취소된다
+                    // (`CollectionFeature/CLAUDE.md`에 이미 같은 함정이 실제 회귀로 기록돼 있다 — push
+                    // 되는 화면에 `onDisappear` 기반 취소를 걸면 안 되고, 이 화면(`NovelDetailViewModel`)
+                    // 처럼 명시적 액션으로 걸어야 한다는 그 정본). ⚠️ 대신 스와이프 뒤로가기는 이 신호를
+                    // 안 거쳐(`.enableSwipeBack()`이 되살린 네이티브 pop이라) `notificationSettingViewModel`이
+                    // 정리 안 된다 — `NovelDetailViewModel.close()` 자신도 스와이프에서 똑같이 안 불리는
+                    // 이 화면의 기존 한계라 새로 생긴 문제는 아니다(아래 주의사항 참고).
+                    notificationSettingViewModel.handle(.screenClosed)
+                    dismiss()
+                }
             }
             // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
             .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
                 if needsAuth { onAuthenticationRequired() }
             }
-            .sheet(isPresented: $isNotificationSettingSheetPresented) {
-                NovelNotificationSettingSheet(
-                    viewModel: NovelNotificationSettingSheetViewModel(
-                        novelID: novelID,
-                        loadNotificationSettingUseCase: loadNotificationSettingUseCase,
-                        updateNotificationSettingUseCase: updateNotificationSettingUseCase,
-                        logger: logger
-                    ),
-                    onAuthenticationRequired: onAuthenticationRequired
-                )
+            // notificationSettingViewModel은 시트가 안 떠 있어도(#189 아이콘 반영용) `.load()`가 돌 수
+            // 있어, 그 인증 만료 신호를 시트 내부가 아니라 여기서 듣는다 — 시트가 안 떠 있으면
+            // `NovelNotificationSettingSheet`의 `.onChange`는 애초에 mount조차 안 돼 신호를 놓친다.
+            .onChange(of: notificationSettingViewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
+            }
+            .sheet(isPresented: notificationSettingSheetBinding) {
+                NovelNotificationSettingSheet(viewModel: notificationSettingViewModel)
             }
     }
 
@@ -337,13 +372,20 @@ private extension NovelDetailView {
             // 라벨 안에 두어 디바이스 우측 끝까지 탭이 먹는다. 높이 44는 네비바(뒤로가기 프레임)와 동일.
             HStack(spacing: 0) {
                 Button {
-                    isNotificationSettingSheetPresented = true
+                    viewModel.handle(.notificationBellTapped)
                 } label: {
-                    WSSImage.icAnnouncement.swiftUIImage
+                    // 완결/휴재복귀 알림 둘 중 하나라도 켜져 있으면 채운 아이콘(icAnnouncementFill) +
+                    // wssPrimary100으로 바꿔, 시트를 열지 않아도 알림이 걸려 있는 작품임을 알 수 있다.
+                    // ⚠️ 애니메이션을 일부러 안 건다 — 서로 다른 리소스(icAnnouncement↔icAnnouncementFill)
+                    // 전환인 데다 색도 foregroundStyle(tint)만으로 표현돼, `.animation`을 걸어도 보간되지
+                    // 않고 즉시 스냅한다(WSSComponent CLAUDE.md의 같은 함정 — 두 벌을 opacity로 겹쳐
+                    // 크로스페이드해야 하는데, LibraryFeature 필터 칩도 같은 이유로 결국 즉시 전환으로
+                    // 확정됐다). 이 아이콘도 같은 판단으로 크로스페이드를 안 만들고 즉시 전환을 받아들인다.
+                    (isAnyNotificationEnabled ? WSSImage.icAnnouncementFill : WSSImage.icAnnouncement).swiftUIImage
                         .renderingMode(.template)
                         .resizable()
                         .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.wssBlack)
+                        .foregroundStyle(isAnyNotificationEnabled ? Color.wssPrimary100 : Color.wssBlack)
                         .padding(.leading, 20)
                         .padding(.trailing, 6)
                         .frame(height: 44)
@@ -641,6 +683,13 @@ private extension NovelDetailView {
         viewModel.state.novel?.title ?? viewModel.state.information?.novel.title ?? ""
     }
 
+    /// 완결/휴재복귀 알림 둘 중 하나라도 켜져 있는지 — 네비바 종 아이콘을 채운 모양+wssPrimary100으로
+    /// 바꾸는 조건. 로드 전(`isLoading`)엔 둘 다 기본값 false라 자연히 false(빈 종)로 시작한다.
+    var isAnyNotificationEnabled: Bool {
+        notificationSettingViewModel.state.isCompletionNotificationEnabled
+            || notificationSettingViewModel.state.isHiatusReturnNotificationEnabled
+    }
+
     /// 피드 작성 화면에 "연결 작품"으로 미리 채워 넘길 값 — `Novel.genres`는 배열이라 첫 번째만 쓴다
     /// (`CreateFeedViewModel.confirmSelectedNovel`의 검색 결과 연결과 같은 변환 규칙).
     func connectedNovel(from novel: Novel) -> ConnectedNovel {
@@ -696,6 +745,23 @@ private extension NovelDetailView {
         Binding(
             get: { viewModel.state.isDeleteReviewAlertPresented },
             set: { if !$0 { viewModel.handle(.dismissDeleteReviewAlert) } }
+        )
+    }
+
+    /// 종 아이콘 탭 시 시스템 푸시 권한이 denied일 때(`notificationBellTapped()`)의 기기 설정 유도 알럿 —
+    /// 열지 말지는 VM이 시스템 권한을 확인해 판단한다(`SettingFeature.notificationMenuTapped`와 동일 패턴).
+    var pushAuthorizationAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isPushAuthorizationAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
+        )
+    }
+
+    /// 종 아이콘 탭 → 알림 설정 시트. 열어도 되는지(권한 확인)는 VM이 판단한다.
+    var notificationSettingSheetBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isNotificationSettingSheetPresented },
+            set: { if !$0 { viewModel.handle(.dismissNotificationSettingSheet) } }
         )
     }
 
@@ -810,7 +876,8 @@ private extension View {
                 deleteNovelReviewUseCase: PreviewDeleteNovelReviewUseCase(),
                 reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
                 reportImproperFeedUseCase: PreviewReportImproperFeedUseCase(),
-                onboardingHintUseCase: PreviewOnboardingHintUseCase()
+                onboardingHintUseCase: PreviewOnboardingHintUseCase(),
+                pushAuthorizationChecker: PreviewPushAuthorizationChecker()
             ),
             loadNotificationSettingUseCase: PreviewLoadNovelNotificationSettingUseCase(),
             updateNotificationSettingUseCase: PreviewUpdateNovelNotificationSettingUseCase(),
@@ -886,6 +953,11 @@ private struct PreviewLoadNovelNotificationSettingUseCase: LoadNovelNotification
 
 private struct PreviewUpdateNovelNotificationSettingUseCase: UpdateNovelNotificationSettingUseCase {
     func execute(novelID: NovelID, setting: NovelNotificationSetting) async throws(RepositoryError) {}
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
 }
 
 private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {

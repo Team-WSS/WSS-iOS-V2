@@ -23,7 +23,7 @@ struct LoadNovelPreferencesUseCaseTests {
 
         let sut = DefaultLoadNovelPreferencesUseCase(
             profileRepository: repo,
-            keywordRepository: StubKeywordRepository()
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: StubKeywordRepository())
         )
 
         let result = try await sut.execute(.me)
@@ -44,7 +44,7 @@ struct LoadNovelPreferencesUseCaseTests {
 
         let sut = DefaultLoadNovelPreferencesUseCase(
             profileRepository: repo,
-            keywordRepository: StubKeywordRepository()
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: StubKeywordRepository())
         )
 
         await #expect(throws: RepositoryError.serverUnavailable) {

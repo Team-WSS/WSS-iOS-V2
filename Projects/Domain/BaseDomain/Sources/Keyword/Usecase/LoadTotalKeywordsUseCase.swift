@@ -12,7 +12,7 @@ public protocol LoadTotalKeywordsUseCase: Sendable {
     func execute() async throws(RepositoryError) -> [KeywordGroup]
 }
 
-public final class DefaultFetchTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
+public final class DefaultLoadTotalKeywordsUseCase: LoadTotalKeywordsUseCase {
 
     private let keywordRepository: KeywordRepository
 

@@ -107,7 +107,7 @@ struct LoadMyLibraryUseCaseTests {
         ])
         let usecase = DefaultLoadMyLibraryUseCase(
             novelRepository: novelRepository,
-            keywordRepository: keywordRepository
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
         )
 
         _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
@@ -125,14 +125,16 @@ struct LoadMyLibraryUseCaseTests {
         keywordRepository.fetchKeywordsResult = .failure(RepositoryError.networkUnavailable)
         let usecase = DefaultLoadMyLibraryUseCase(
             novelRepository: novelRepository,
-            keywordRepository: keywordRepository
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
         )
 
         let result = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(result.0.items.count == expected.items.count)
         #expect(novelRepository.lastMyLibraryCachedKeywords == [])
-        #expect(keywordRepository.fetchKeywordsCallCount == 1)
+        // LoadTotalKeywordsUseCase가 캐시 미스 시 서버 동기화 후 1회 재조회하므로 2번 호출된다.
+        #expect(keywordRepository.fetchKeywordsCallCount == 2)
+        #expect(keywordRepository.syncKeywordsCallCount == 1)
     }
 
     @Test("내 서재 조회에 실패하면 에러를 던진다")
@@ -153,7 +155,7 @@ extension LoadMyLibraryUseCaseTests {
     private func makeUseCase(novelRepository: MockNovelRepository) -> DefaultLoadMyLibraryUseCase {
         DefaultLoadMyLibraryUseCase(
             novelRepository: novelRepository,
-            keywordRepository: MockKeywordRepository()
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: MockKeywordRepository())
         )
     }
 

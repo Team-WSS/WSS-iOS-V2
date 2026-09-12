@@ -169,7 +169,7 @@ struct MypageRootView: View {
                 ),
                 loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
                     profileRepository: dependencies.profileRepository,
-                    keywordRepository: dependencies.keywordRepository
+                    loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
                 ),
                 loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(
                     novelRepository: dependencies.novelRepository
@@ -679,7 +679,7 @@ private extension MypageRootView {
             userID: userID,
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
             onRoute: { route in

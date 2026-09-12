@@ -20,7 +20,7 @@ struct LoadTotalKeywordsUseCaseTests {
         let mock = MockKeywordRepository()
         mock.fetchKeywordsResult = .success([makeKeywordGroup()])
 
-        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
         let result = try await usecase.execute()
 
         #expect(result.count == 1)
@@ -37,7 +37,7 @@ struct LoadTotalKeywordsUseCaseTests {
             makeKeywordGroup(category: .character)
         ])
 
-        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
         let result = try await usecase.execute()
 
         #expect(result.count == 3)
@@ -49,7 +49,7 @@ struct LoadTotalKeywordsUseCaseTests {
         let mock = MockKeywordRepository()
         mock.fetchKeywordsResult = .success([])
 
-        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
         let result = try await usecase.execute()
 
         #expect(result.isEmpty)
@@ -61,7 +61,7 @@ struct LoadTotalKeywordsUseCaseTests {
         let mock = MockKeywordRepository()
         mock.fetchKeywordsResult = .failure(RepositoryError.unknown)
 
-        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
 
         await #expect(throws: RepositoryError.unknown) {
             try await usecase.execute()
@@ -80,7 +80,7 @@ struct LoadTotalKeywordsUseCaseTests {
             .success([makeKeywordGroup(category: .vibe)])
         ]
 
-        let usecase = DefaultFetchTotalKeywordsUseCase(keywordRepository: mock)
+        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
         let result = try await usecase.execute()
 
         #expect(result.count == 1)

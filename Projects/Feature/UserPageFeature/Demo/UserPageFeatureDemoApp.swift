@@ -296,7 +296,7 @@ private enum DemoFactory {
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
                 profileRepository: profileRepository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             loadRegisteredNovelStatsUseCase: DefaultLoadRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),
@@ -327,7 +327,7 @@ private enum DemoFactory {
             loadGenrePreferencesUseCase: DefaultLoadGenrePreferencesUseCase(profileRepository: profileRepository),
             loadNovelPreferencesUseCase: DefaultLoadNovelPreferencesUseCase(
                 profileRepository: profileRepository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             loadUserRegisteredNovelStatsUseCase: DefaultLoadUserRegisteredNovelStatsUseCase(novelRepository: novelRepository),
             loadCollectionPreviewsUseCase: DefaultLoadCollectionPreviewsUseCase(collectionRepository: collectionRepository),

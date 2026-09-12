@@ -14,6 +14,7 @@ import NotificationDomain
 import NovelDetailFeature
 import NovelDomain
 import NovelReviewDomain
+import PushAuthorization
 import SocialDomain
 
 /// 작품 상세(`NovelDetailFeatureFactory`) 조립 — 홈/피드/서재 세 탭이 전부 같은 방식으로 push해서(#196) 공용으로
@@ -39,7 +40,7 @@ enum NovelDetailAssembly {
             novelID: novelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: dependencies.novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: dependencies.feedRepository),
@@ -52,6 +53,7 @@ enum NovelDetailAssembly {
             loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: dependencies.novelNotificationRepository),
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: dependencies.novelNotificationRepository),
             onboardingHintUseCase: DefaultOnboardingHintUseCase(repository: dependencies.onboardingHintRepository),
+            pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: dependencies.logger,
             needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,

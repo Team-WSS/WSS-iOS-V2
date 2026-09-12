@@ -14,6 +14,7 @@ import FeedDomain
 import NotificationDomain
 import NovelDomain
 import NovelReviewDomain
+import PushAuthorization
 import SocialDomain
 import BaseData
 import FeedData
@@ -360,6 +361,7 @@ private struct DemoRootView: View {
                 loadNotificationSettingUseCase: DemoLoadNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 updateNotificationSettingUseCase: DemoUpdateNovelNotificationSettingUseCase(store: mockNotificationSettingStore),
                 onboardingHintUseCase: DemoOnboardingHintUseCase(),
+                pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: consoleLogger,
                 onRoute: handleRoute,
                 onAuthenticationRequired: handleAuthenticationRequired
@@ -418,7 +420,7 @@ private struct DemoRootView: View {
             novelID: liveNovelID,
             loadNovelUseCase: DefaultLoadNovelUseCase(
                 novelRepository: novelRepository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             novelInterestUseCase: DefaultNovelInterestUseCase(novelRepository: novelRepository),
             loadNovelFeedsUseCase: DefaultLoadNovelFeedsUseCase(feedRepository: feedRepository),
@@ -431,6 +433,7 @@ private struct DemoRootView: View {
             loadNotificationSettingUseCase: DefaultLoadNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             updateNotificationSettingUseCase: DefaultUpdateNovelNotificationSettingUseCase(repository: novelNotificationRepository),
             onboardingHintUseCase: DemoOnboardingHintUseCase(),
+            pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
             logger: consoleLogger,
             onRoute: handleRoute,
             onAuthenticationRequired: handleAuthenticationRequired

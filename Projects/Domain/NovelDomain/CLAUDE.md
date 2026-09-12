@@ -37,7 +37,14 @@
   Sendable 프로토콜이라 `Default*UseCase`는 `final class`(다른 UseCase와 동일 규칙). 구현·저장 포맷은 `NovelData`.
 - `fetchMyLibraryNovels`/`fetchRegisteredNovelStats`는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` / `fetchUserRegisteredNovelStats(id:)` 별도 — Repository에 "내" 버전과 "유저" 버전이 쌍으로 존재하는 게 이 모듈의 고정 패턴이니, 서재 관련 조회를 새로 추가할 땐 이 쌍을 먼저 따라간다.
 - 키워드 캐시가 호출 측 주입 구조라, UseCase 시그니처에 키워드 의존이 숨어있음.
-- ⚠️ **`KeywordRepository.fetchKeywords()`는 네트워크를 타지 않고 로컬 캐시만 읽는다** — 캐시를 채우는 건 `syncKeywords()` 뿐이다. 즉 **App 조립에서 `syncKeywords()`를 선행하지 않으면 서재·작품 상세의 키워드가 화면상 아무 오류 없이 통째로 빈다**(UseCase의 `try?` + `?? []` 폴백이 실패를 삼킨다 — 목록 자체를 막지 않으려는 의도된 설계. 단, Data 레이어에는 `logger?.logCacheError`가 남으므로 **원인 추적은 로그로** 한다). `LoadNovelUseCase`·`LoadMyLibraryUseCase` 둘 다 해당하며, 서재는 목록 전체가 영향받아 체감이 크다. Demo 앱들이 화면을 띄우기 전에 `await ...syncKeywords()`를 부르는 게 이 때문이다.
+- ⚠️ **`LoadNovelUseCase`/`LoadMyLibraryUseCase`/`LoadUserLibraryUseCase`는 `KeywordRepository`를 직접
+  잡지 않고 `BaseDomain.LoadTotalKeywordsUseCase`를 통해 캐시 키워드를 읽는다**(2026-09-12) — 캐시
+  미스(파일 없음 등)를 그 UseCase가 자체적으로 서버 재동기화 후 재조회로 복구하기 때문에, 이 세
+  UseCase는 더 이상 "캐시가 비면 키워드가 통째로 빈다"는 문제를 직접 신경 쓸 필요가 없다(자세한 이유·
+  재시도 계약은 `BaseDomain/CLAUDE.md`의 `LoadTotalKeywordsUseCase` 항목 참고). ⚠️ **그래도 `try?` +
+  `?? []` 폴백 자체는 남아 있다** — 재시도까지 실패하면(오프라인 등) 여전히 빈 배열로 떨어지고 서재·
+  작품 상세 목록 자체는 막지 않는다(의도된 설계). 새로 키워드 캐시가 필요한 UseCase를 이 모듈에 추가할
+  땐 `KeywordRepository.fetchKeywords()`를 직접 부르지 말고 `LoadTotalKeywordsUseCase`를 재사용할 것.
 - **작품 상세의 키워드는 `NovelKeyword`(공통 `Keyword` + 선택 횟수 count)** — `UserNovelReview.keywords`는 유저 개인 선택이라 count 없는 `[Keyword]` 그대로. 둘을 혼동하지 말 것(#154).
 - 엔티티 시그니처를 바꾸면 **`Testing/` Mock과 `Tests/`도 같이 갱신**할 것 — #135에서 authors/genres/필터 변경이 미반영돼 테스트 타깃이 컴파일 불가로 방치됐었다(#154에서 수리).
 - **`Novel`/`NovelPublicationStatus`는 이 모듈 소유가 아니라 `BaseDomain`에 있다** — `SearchDomain`도 참조해야 해서 공통 토대로 승격됐다. `NovelInformation`/`MyLibraryFilter` 등은 그대로 `import BaseDomain`으로 쓴다.

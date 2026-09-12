@@ -159,7 +159,7 @@ private struct DemoRootView: View {
             logger: DataLogger(moduleName: "BaseData", underlying: consoleLogger)
         )
         return keywordTabContentBuilder(
-            loadTotalKeywordsUseCase: DefaultFetchTotalKeywordsUseCase(keywordRepository: keywordRepository),
+            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository),
             searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: keywordRepository)
         )
     }

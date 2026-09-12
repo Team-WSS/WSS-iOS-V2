@@ -15,6 +15,7 @@ import NovelDomain
 import NovelReviewDomain
 import SocialDomain
 import Logger
+import PushAuthorization
 
 @MainActor
 @Observable
@@ -57,6 +58,11 @@ final class NovelDetailViewModel {
         /// 첫 진입 평가 온보딩 오버레이 표시 여부(#221, V1 parity). 앱 전역 1회 — 첫 로드 성공 시
         /// 아직 안 봤으면 세우고, 닫으면 `markSeen` 후 내린다. 스포트라이트 좌표는 View가 상태바를 실측한다.
         var showReviewOnboarding = false
+        /// 종 아이콘 탭 → 알림 설정 시트를 열어도 되는지(#193 `SettingFeature.notificationMenuTapped`와
+        /// 동일 판단) — VM이 시스템 푸시 권한을 확인해 판단한다(순수 표시 상태가 아니라 VM 판단이 필요).
+        var isNotificationSettingSheetPresented = false
+        /// 시트 대신 이 알럿(기기 설정 유도)을 띄워야 하는지 — 시스템 푸시 권한이 denied일 때.
+        var isPushAuthorizationAlertPresented = false
     }
 
     enum Tab: CaseIterable, Equatable {
@@ -128,6 +134,10 @@ final class NovelDetailViewModel {
         case userProfileUnavailable
         /// 첫 진입 평가 온보딩 오버레이를 닫는다(어디를 탭하든) — 봤음을 기록해 다시 뜨지 않게 한다.
         case dismissReviewOnboarding
+        /// 네비바 종 아이콘 탭 — 시스템 푸시 권한을 먼저 확인한다(#193 `SettingFeature`와 동일 패턴).
+        case notificationBellTapped
+        case dismissNotificationSettingSheet
+        case dismissPushAuthorizationAlert
     }
 
     // MARK: - Output
@@ -152,6 +162,9 @@ final class NovelDetailViewModel {
     /// 화면을 떠나며 들어간 피드들 — 복귀 `.load`에서 꺼내 상세로 동기화한다(`SosoFeedViewModel`과 동일 패턴, #256).
     @ObservationIgnored private var pendingSyncFeedIDs: Set<FeedID> = []
     @ObservationIgnored private var isClosing = false
+    /// 종 아이콘 탭마다 새로 스폰되는 시스템 권한 조회 Task — 연타 시 이전 조회를 취소해 `requestAuthorization()`
+    /// 중복 호출(중복 프롬프트)을 막고, 화면이 닫히면(`close()`) 함께 취소한다.
+    @ObservationIgnored private var notificationBellTask: Task<Void, Never>?
 
     // MARK: - Dependency
 
@@ -179,6 +192,9 @@ final class NovelDetailViewModel {
     // BaseDomain — 첫 진입 평가 온보딩 힌트 1회성 판정/기록(#221).
     private let onboardingHintUseCase: OnboardingHintUseCase
 
+    // PushAuthorization — 종 아이콘 탭 시 시스템 푸시 권한 확인용(#193 SettingFeature와 동일 목적).
+    private let pushAuthorizationChecker: PushAuthorizationChecker
+
     // MARK: - Init
 
     init(
@@ -193,6 +209,7 @@ final class NovelDetailViewModel {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         onboardingHintUseCase: OnboardingHintUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil
     ) {
         self.novelID = novelID
@@ -206,6 +223,7 @@ final class NovelDetailViewModel {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.onboardingHintUseCase = onboardingHintUseCase
+        self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.state = State()
     }
@@ -254,6 +272,12 @@ final class NovelDetailViewModel {
             state.presentedToast = .unavailableUser
         case .dismissReviewOnboarding:
             dismissReviewOnboarding()
+        case .notificationBellTapped:
+            notificationBellTapped()
+        case .dismissNotificationSettingSheet:
+            state.isNotificationSettingSheetPresented = false
+        case .dismissPushAuthorizationAlert:
+            state.isPushAuthorizationAlertPresented = false
         }
     }
 }
@@ -420,6 +444,7 @@ private extension NovelDetailViewModel {
         cellSyncTask?.cancel()
         deleteReviewTask?.cancel()
         feedActionTask?.cancel()
+        notificationBellTask?.cancel()
         state.shouldDismiss = true
     }
 
@@ -428,6 +453,30 @@ private extension NovelDetailViewModel {
         guard state.showReviewOnboarding else { return }
         onboardingHintUseCase.markSeen(.novelDetailReview)
         state.showReviewOnboarding = false
+    }
+
+    /// 네비바 종 아이콘 탭 — 시트를 열기 전에 시스템 푸시 권한을 확인한다(`SettingFeature.notificationMenuTapped`와
+    /// 동일 판단, #193). **denied면 시트를 열지 않고 기기 설정 유도 알럿만 띄운다**(사용자 확정 — 권한이 없는
+    /// 채로 그 시트에 들어갈 이유가 없다). `notDetermined`면 시스템 프롬프트를 띄운 뒤 시트로 이동한다(알럿은
+    /// 안 띄움). 연타 시 이전 조회를 취소해 `requestAuthorization()` 중복 호출을 막는다.
+    func notificationBellTapped() {
+        guard !isClosing else { return }
+        notificationBellTask?.cancel()
+        notificationBellTask = Task { [weak self] in
+            guard let self else { return }
+            switch await pushAuthorizationChecker.authorizationStatus() {
+            case .authorized:
+                guard !isClosing, !Task.isCancelled else { return }
+                state.isNotificationSettingSheetPresented = true
+            case .notDetermined:
+                _ = await pushAuthorizationChecker.requestAuthorization()
+                guard !isClosing, !Task.isCancelled else { return }
+                state.isNotificationSettingSheetPresented = true
+            case .denied:
+                guard !isClosing, !Task.isCancelled else { return }
+                state.isPushAuthorizationAlertPresented = true
+            }
+        }
     }
 }
 

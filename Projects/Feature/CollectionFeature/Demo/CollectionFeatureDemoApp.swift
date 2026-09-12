@@ -444,7 +444,7 @@ private struct DemoRootView: View {
             initialSelection: initialSelection,
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: novelRepository,
-                keywordRepository: keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: keywordRepository)
             ),
             logger: consoleLogger,
             onConfirm: handleLibrarySelectConfirm,

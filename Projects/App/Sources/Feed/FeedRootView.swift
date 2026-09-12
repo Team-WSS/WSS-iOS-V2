@@ -489,7 +489,7 @@ private extension FeedRootView {
             userID: userID,
             loadUserLibraryUseCase: DefaultLoadUserLibraryUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
             onRoute: { route in

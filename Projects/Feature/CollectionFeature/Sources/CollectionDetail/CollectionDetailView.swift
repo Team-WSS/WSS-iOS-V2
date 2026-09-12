@@ -356,7 +356,7 @@ private extension CollectionDetailView {
                 Spacer().frame(height: 8)
                 
                 Text(description)
-                    .applyWSSFont(.body5)
+                    .applyWSSFont(.body3)
                     .foregroundStyle(Color.wssWhite)
                     .lineLimit(2)
             }

@@ -71,7 +71,7 @@ enum CollectionEditAssembly {
             initialSelection: initialSelection,
             loadMyLibraryUseCase: DefaultLoadMyLibraryUseCase(
                 novelRepository: dependencies.novelRepository,
-                keywordRepository: dependencies.keywordRepository
+                loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
             onConfirm: onConfirm,

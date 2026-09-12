@@ -34,6 +34,17 @@ private enum WSSNavigationBarMetric {
     static let backButtonLeading: CGFloat = 6
     /// 우측 액션은 WSS 표준 side margin(20)에 맞춰 오른쪽 끝에서 20pt 안쪽에 둔다.
     static let trailingInset: CGFloat = 20
+    /// 뒤로가기 버튼이 차지하는 고정 폭(안쪽 여백 6 + 버튼 44) — 타이틀이 겹치지 않아야 할 왼쪽 최소 안전폭.
+    /// 우측은 `trailing`의 실측 폭(가변)과 이 값 중 큰 쪽을 타이틀 좌우에 동일하게 적용한다(중앙 정렬 유지).
+    static let leadingSafeWidth: CGFloat = backButtonLeading + backButtonSize
+}
+
+/// `trailing` 슬롯의 실측 폭을 타이틀 쪽으로 전달하는 PreferenceKey.
+private struct WSSNavigationBarTrailingWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
 }
 
 public struct WSSNavigationBar<Trailing: View>: View {
@@ -43,6 +54,10 @@ public struct WSSNavigationBar<Trailing: View>: View {
     private let title: String
     private let onBack: () -> Void
     private let trailing: Trailing
+
+    /// 타이틀 좌우에 동일하게 확보하는 안전폭 — 뒤로가기 쪽 고정값으로 시작해, `trailing`의 실측 폭이
+    /// 더 크면(예: "완료"보다 긴 액션) 그 값으로 갱신된다. 양쪽에 같은 값을 줘야 ZStack 중앙 정렬이 유지된다.
+    @State private var sidePadding: CGFloat = WSSNavigationBarMetric.leadingSafeWidth
 
     public init(
         title: String,
@@ -59,6 +74,12 @@ public struct WSSNavigationBar<Trailing: View>: View {
         ZStack {
             Text(title)
                 .applyWSSFont(.title2, color: .wssBlack)
+                // ⚠️ 타이틀이 길어지면 양쪽 버튼 영역을 넘어서던 문제(lineLimit 없이 자연 폭으로 그려짐) —
+                // 좌우에 sidePadding만큼 여백을 둬 그 폭만큼 proposed width가 줄어들고, lineLimit(1)이
+                // 그 안에서 말줄임되게 한다(SwiftUI padding은 자식에게 줄어든 폭을 제안한다).
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.horizontal, sidePadding)
 
             HStack(spacing: 0) {
                 Button(action: onBack) {
@@ -80,11 +101,19 @@ public struct WSSNavigationBar<Trailing: View>: View {
                 // 우측 액션 슬롯. EmptyView면 자리도 차지하지 않는다(back+title만인 화면).
                 trailing
                     .padding(.trailing, Metric.trailingInset)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(key: WSSNavigationBarTrailingWidthKey.self, value: proxy.size.width)
+                        }
+                    )
             }
             // ⚠️ `.padding(.horizontal,)`을 쓰지 말 것 — 양쪽에 걸려 반대편 요소까지 민다.
             .padding(.leading, Metric.backButtonLeading)
         }
         .frame(height: Metric.barHeight)
+        .onPreferenceChange(WSSNavigationBarTrailingWidthKey.self) { measuredTrailingWidth in
+            sidePadding = max(Metric.leadingSafeWidth, measuredTrailingWidth)
+        }
     }
 }
 
@@ -148,6 +177,14 @@ private struct WSSCustomNavigationBarModifier: ViewModifier {
     VStack(spacing: 0) {
         WSSNavigationBar(title: "알림") { print("뒤로가기") }
         WSSNavigationBar(title: "프로필 공개 설정") {
+            print("뒤로가기")
+        } trailing: {
+            Text("완료")
+                .applyWSSFont(.title2, color: .wssPrimary100)
+        }
+        // 타이틀이 양쪽 버튼 영역을 넘어서지 않고 말줄임되는지 확인하는 케이스.
+        WSSNavigationBar(title: "아주아주아주아주아주아주아주 긴 화면 타이틀입니다") { print("뒤로가기") }
+        WSSNavigationBar(title: "아주아주아주아주아주아주아주 긴 화면 타이틀입니다") {
             print("뒤로가기")
         } trailing: {
             Text("완료")

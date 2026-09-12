@@ -163,12 +163,20 @@ let view       = XxxFactory.makeView(someUseCase: useCase)     // Feature에 전
   - 둘 다 같은 `DefaultTokenStore()`(Keychain)를 공유해야 갱신된 토큰이 바로 반영된다.
 - 로그인 성공 시 토큰 저장은 **Data 레이어(`DefaultAuthRepository.login`)가 이미 처리**한다 — App은
   `TokenStore`를 만들어 Repository에 주입하기만 하면 된다(App이 직접 Keychain을 만지지 않음).
-- **키워드는 `AppDependencies.init()` 마지막에 `Task { await keywordRepository.syncKeywords() }`로
-  앱 실행(프로세스 시작)마다 1회 동기화한다**(#196) — 여러 도메인(서재 필터·프로필 취향·검색 등)이
-  키워드를 **로컬 파일 캐시**(`KeywordCache`)에서만 읽는 구조라(`BaseData/CLAUDE.md`), 이 동기화가
-  한 번도 안 불리면 그 화면들이 전부 빈 목록으로 보인다. `syncKeywords()`는 내부에서 실패를 전부
-  삼키고 로깅만 하는 계약(throws 없음)이라 App도 결과를 기다리거나 에러 처리를 하지 않는다 —
-  `dependencies` 조립과 동시에 백그라운드로 쏘고 화면 진입은 막지 않는 fire-and-forget.
+- ⚠️ **키워드 동기화(`keywordRepository.syncKeywords()`)는 `AppDependencies.init()`이 아니라 부트스트랩
+  (`SplashDomain.BootstrapAppUseCase`의 부수 태스크, `launchTaskRepository.syncKeywords`)에만 맡긴다**
+  (2026-09-12, #196에서 도입했던 `AppDependencies.init()`의 blanket 호출을 제거 — 되살리지 말 것).
+  **제거한 이유**: `AppDependencies()`는 앱 최초 실행과 `ContentView.resetToOnboarding()`(세션이
+  *끝나는* 모든 경로) 두 시점에만 재생성되고 **로그인/온보딩 완료 시점엔 재생성되지 않는다** — 그래서
+  원래 주석이 근거로 들었던 "비로그인 런치 → 로그인" 시나리오는 애초에 이 호출이 관여할 수 없었다
+  (로그인 순간 `AppDependencies`가 안 바뀌니 그때 다시 동기화될 방법이 없다). 실제로 이 호출이 불리는
+  두 시점을 뜯어보면 전부 무가치했다: ① 세션이 있는 정상 런치 — 부트스트랩이 세션 게이트 통과 후
+  똑같이 `syncKeywords()`를 불러 **완전 중복**. ② 세션이 없는 런치(첫 설치·만료)나 `resetToOnboarding()`
+  직후(그 시점엔 이미 `clearTokens()`가 끝나 토큰이 없음) — `/keywords`가 `.requireToken`이라
+  **애초에 성공할 수 없어** 401 + 재인증 시도까지 낭비만 하고 조용히 실패했다(첫 설치 기기에서 실측 —
+  `AUTH-001` 에러 로그가 매 런치 찍히던 원인). 키워드 캐시가 필요한 화면들의 "캐시가 비면 그 자리에서
+  재동기화" 안전망은 이제 `BaseDomain.LoadTotalKeywordsUseCase`(캐시 미스 시 자체 재시도, 아래 표
+  근처 항목·`BaseDomain/CLAUDE.md` 참고)가 담당하므로, 부트스트랩의 세션-게이티드 동기화 하나로 충분하다.
 
 ## 푸시 알림(FCM/APNs) 배선 (#243)
 
