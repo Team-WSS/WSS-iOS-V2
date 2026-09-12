@@ -100,6 +100,7 @@ public enum CollectionFeatureFactory {
         initialSelection: [CollectionNovel],
         searchNovelUseCase: SearchNovelUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onConfirm: @escaping ([CollectionNovel]) -> Void,
         onRoute: @escaping (CollectionSearchNovelRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -108,7 +109,8 @@ public enum CollectionFeatureFactory {
             viewModel: CollectionSearchNovelViewModel(
                 initialSelection: initialSelection,
                 searchNovelUseCase: searchNovelUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onConfirm: onConfirm,
             onRoute: onRoute,

@@ -231,7 +231,15 @@
 
 - `CollectionAnalyticsEvent`(`collection_list`/`collection_write`/`collection_save`/`collection_detail`/
   `collection_like`/`collection_delete`)는 `CreateCollectionView`/`CollectionListView`/`CollectionDetailView`
-  전체가 공유한다. ⚠️ **`CreateCollectionView`는 `hasTrackedWriteViewed` 플래그로 화면 진입 트래킹을 1회만
+  전체가 공유한다.
+- **위 6종 이후 추가된 8종(`collection_tab_select`/`_sort`/`_edit_btn`/`_private_on`/`_off`/
+  `_representative_select`/`_add_novel_view`/`_add_novel_confirm`)은 전부 기획측 CSV엔 없는 V2 신규
+  이벤트다** — 컬렉션 자체가 V1엔 없던 화면이라 CSV에 대응 항목이 애초에 없다. 명명은 기존 6종의
+  `collection_<행동>` 패턴을 그대로 따랐다. `CollectionSearchNovelViewModel`("작품 추가" 화면)은 이번에
+  처음 `analyticsTracker`를 받았다 — `CollectionFeatureFactory.makeSearchNovelView`와 App의
+  `CollectionEditAssembly.makeSearchNovelView`에 파라미터를 함께 추가해야 실제로 흐른다(둘 중 하나만
+  고치면 조용히 `nil`로 굳는다, 이 프로젝트의 옵셔널 DI 공통 함정).
+  ⚠️ **`CreateCollectionView`는 `hasTrackedWriteViewed` 플래그로 화면 진입 트래킹을 1회만
   남긴다** — "작품 추가"/"서재에서 추가"는 실제 push라 그 화면에서 돌아올 때마다 `onAppear`가 재발화한다(다른
   화면의 `hasAppearedOnce`와 같은 이유). `saved`는 `FeedAnalyticsEvent.submitted`와 같은 관례로 생성 성공에만
   걸고 수정 성공은 추적하지 않는다.

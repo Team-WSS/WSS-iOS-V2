@@ -56,6 +56,7 @@ enum CollectionEditAssembly {
             initialSelection: initialSelection,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onConfirm: onConfirm,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

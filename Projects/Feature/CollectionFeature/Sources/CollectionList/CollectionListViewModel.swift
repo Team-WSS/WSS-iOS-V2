@@ -128,6 +128,7 @@ final class CollectionListViewModel {
         case .load:
             loadIfNeeded(state.selectedTab)
         case .selectTab(let tab):
+            track(.tabSelected)
             state.selectedTab = tab
             loadIfNeeded(tab)
         case .retry(let tab):

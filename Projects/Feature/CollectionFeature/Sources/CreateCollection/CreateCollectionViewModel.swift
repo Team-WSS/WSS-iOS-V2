@@ -173,6 +173,7 @@ final class CreateCollectionViewModel {
             updateDescription(value)
         case .togglePrivate:
             state.draft.togglePrivate()
+            track(state.draft.isPrivate ? .privateOn : .privateOff)
         case .selectRepresentativeNovel(let id):
             selectRepresentativeNovel(id)
         case .setNovels(let novels):
@@ -219,6 +220,7 @@ private extension CreateCollectionViewModel {
     func selectRepresentativeNovel(_ id: NovelID) {
         do {
             try state.draft.setRepresentativeNovel(id)
+            track(.representativeNovelSelected)
         } catch {
             logger?.error("CreateCollection 대표 작품 지정 실패(도달하면 안 되는 경로): \(String(describing: error))")
         }

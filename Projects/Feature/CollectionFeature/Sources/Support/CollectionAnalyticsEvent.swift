@@ -24,4 +24,23 @@ enum CollectionAnalyticsEvent: String, AnalyticsEvent {
     case likeToggled = "collection_like"
     /// 컬렉션 삭제 확정
     case deleteConfirmed = "collection_delete"
+
+    // MARK: - V2 신규(CSV에 없음)
+
+    /// 컬렉션 목록 탭 전환(내 컬렉션/좋아요한 컬렉션)
+    case tabSelected = "collection_tab_select"
+    /// 컬렉션 상세 정렬 변경
+    case sortChanged = "collection_sort"
+    /// 컬렉션 상세 더보기 > 수정 클릭
+    case editTapped = "collection_edit_btn"
+    /// 생성/수정 화면 비공개 전환
+    case privateOn = "collection_private_on"
+    /// 생성/수정 화면 공개 전환
+    case privateOff = "collection_private_off"
+    /// 대표 작품 지정
+    case representativeNovelSelected = "collection_representative_select"
+    /// "작품 추가" 화면 진입
+    case addNovelViewed = "collection_add_novel_view"
+    /// "작품 추가" 화면에서 선택 확정
+    case addNovelConfirmed = "collection_add_novel_confirm"
 }

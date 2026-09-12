@@ -129,6 +129,7 @@ final class CollectionDetailViewModel {
         case .editTapped:
             // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환(isEditPresented)은 View가 로컬 상태로
             // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
+            track(.editTapped)
             state.isMenuPresented = false
         case .reloadAfterEdit:
             reloadAfterEdit()
@@ -160,6 +161,7 @@ private extension CollectionDetailViewModel {
     /// 정렬 변경은 진입 1회 가드와 무관하게 매번 새로 조회한다("최신순"↔"오래된순" 토글, `WSSSortButton` 탭).
     func changeSortType(_ sortType: SortType) {
         guard loadTask == nil, !isClosing else { return }
+        track(.sortChanged)
         state.sortType = sortType
         state.isLoading = true
         state.hasLoadError = nil
