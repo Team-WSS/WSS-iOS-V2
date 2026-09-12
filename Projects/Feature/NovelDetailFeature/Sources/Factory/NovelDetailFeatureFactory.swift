@@ -67,11 +67,11 @@ public enum NovelDetailFeatureFactory {
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 onboardingHintUseCase: onboardingHintUseCase,
+                pushAuthorizationChecker: pushAuthorizationChecker,
                 logger: logger
             ),
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
-            pushAuthorizationChecker: pushAuthorizationChecker,
             logger: logger,
             needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,

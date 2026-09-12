@@ -27,6 +27,14 @@
     ⚠️ **`isSyncing`도 `isClosing`과 똑같은 이유로 재진입마다 리셋해야 한다**(PR 리뷰에서 실제 발견 — 처음엔 `isClosing`만 고치고 이건 놓쳤다) — 토글 → PUT 진행 중에 시트를 닫으면 `disappear()`가 `syncTask`를 취소하지만, 그 시점 `isClosing`이 이미 true라 `sync()`의 `defer { if !isClosing { state.isSyncing = false } }`가 리셋을 건너뛴다. `load()`가 `syncTask == nil`일 때 `state.isSyncing = false`도 함께 되돌리지 않으면, 그 화면을 벗어났다 다시 들어오기 전까진 알림 토글이 전부 조용히 무반응이 된다(에러 토스트도 없음 — 완전 침묵 실패라 알아차리기 어렵다).
     ⚠️ **`disappear()`(시트 `.onDisappear`)와 `screenClosed()`(`NovelDetailView`의 `viewModel.state.shouldDismiss` onChange)는 취소 범위가 다르다** — `disappear()`는 `syncTask`만 취소하고 `loadTask`는 그대로 둔다(시트를 열자마자 바로 닫아도, 그 로드는 시트가 아니라 화면 수명에 속하는 아이콘용 배경 로드라 끝까지 돌아야 한다 — 여기서 취소하면 `hasLoaded`가 계속 false로 남아 사용자가 시트를 다시 열기 전까지 아이콘이 부정확한 채 고착된다). 반면 `screenClosed()`는 `loadTask`까지 전부 취소하며 **`isClosing` guard 없이 항상 실행**한다(시트가 이미 닫혀 `isClosing`이 true인 상태에서도, 그때 취소 안 하고 넘어간 `loadTask`가 여전히 돌고 있을 수 있어서). `loadSetting()`의 취소 판정도 이제 `isClosing`이 아니라 `Task.isCancelled`만 본다(로드가 더는 "시트 닫힘"에 안 묶이므로).
     ⚠️ **`screenClosed()`는 `.onDisappear`가 아니라 `viewModel.state.shouldDismiss` onChange(뒤로가기 버튼)에서만 명시적으로 부른다 — `.onDisappear`로 걸면 안 된다**(PR 리뷰 2라운드에서 그렇게 고쳤다가 3라운드에서 다시 지적받아 되돌림). 이 화면은 `onRoute` 7종(작가 검색·평가·피드 등)으로 다른 화면을 자기 위에 push하는 "허브" 화면이라, `.onDisappear`는 진짜 종료가 아니라 **forward push 때도 SwiftUI 표준 동작으로 똑같이 발화한다** — `CollectionFeature/CLAUDE.md`에 이미 이 정확한 함정이 실제 회귀(컬렉션 상세에서 수정 화면을 push할 때마다 `isClosing`이 굳어 이후 상호작용이 전부 무반응)로 기록돼 있고, 그 문서가 "명시적 액션을 쓸 것"의 정본으로 바로 이 화면(`NovelDetailViewModel` 변형)을 가리킨다. ⚠️ **대신 스와이프 뒤로가기는 `shouldDismiss`를 안 거쳐(`.enableSwipeBack()`이 되살린 네이티브 pop) `notificationSettingViewModel`이 정리되지 않는다** — `NovelDetailViewModel.close()` 자신도 스와이프에서 똑같이 안 불리는 이 화면의 기존 한계라 새로 생긴 갭은 아니다(감수한 트레이드오프: "허브 화면의 onDisappear 오발화"보다 "스와이프 시 미정리"가 훨씬 드물고 무해하다 — discard된 VM 인스턴스에 대한 뒤늦은 쓰기일 뿐).
+  - ⚠️ **종 아이콘 탭 시 푸시 권한 확인 로직은 View가 아니라 `NovelDetailViewModel`이 갖는다**(2026-09-12,
+    PR 리뷰에서 재조정) — 처음엔 "서버 호출이 아니라 로컬 시스템 조회/프롬프트라 실패 처리가 필요 없다"는
+    이유로 View가 직접 `pushAuthorizationChecker`를 들고 `Task`를 스폰했으나, 같은 저장소에 이미 확립된
+    선례(`SettingFeature.notificationMenuTapped`·`HomeFeature`)가 둘 다 VM에 Action/State로 두고 있어
+    이 화면만 예외였다(Feature CLAUDE.md의 "View→VM 입력은 오직 handle" 원칙과도 어긋남). `notificationBellTapped`
+    Action + `isNotificationSettingSheetPresented`/`isPushAuthorizationAlertPresented` State로 옮기고,
+    View는 `Binding(get:set:)` 경유로 소비한다. 연타 시 이전 조회를 취소하는 `notificationBellTask`도
+    VM에 둬 `close()`가 다른 Task들과 함께 취소한다 — 로컬 시스템 API라도 "탭마다 새 Task"는 View에 남겨두지 말 것.
   - **아이콘 전환(윤곽선↔채움)엔 일부러 애니메이션을 안 건다** — 서로 다른 리소스 전환인 데다 색도 `foregroundStyle`(tint)만으로 표현돼, `.animation`을 걸어도 보간 없이 즉시 스냅한다(WSSComponent의 같은 함정 → [[WSSComponent]] "선택형인데 색이 아이콘 tint로만 표현되는 컴포넌트" 항목 — `LibraryFeature` 필터 칩도 같은 이유로 크로스페이드까지 만들어봤지만 결국 즉시 전환으로 확정됐다). 처음엔 `.animation(value:)`를 걸었다가(무동작) PR 리뷰에서 지적받아 제거 — 크로스페이드가 필요해지면 두 아이콘을 opacity로 겹치는 방식부터 검토할 것, `.animation`만 다시 붙여선 안 먹는다.
 
 ## Demo 시나리오 (Mock)
