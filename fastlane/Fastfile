@@ -151,8 +151,18 @@ end
 # Release → App Store 제출
 # =====================================
 # ⚠️ 컷오버 전까지 절대 실행하지 말 것 — 운영 앱과 별개로 App Store 심사에 제출된다.
+# CUTOVER_READY 가드가 이걸 강제한다(아래) — main push → release.yml 자동 실행 경로와 로컬
+# 수동 실행 양쪽을 동시에 막는 방어선. 컷오버 체크리스트(docs/TODO.md 4번) 완료 전엔 절대
+# CUTOVER_READY=true로 우회하지 말 것.
 desc "Release 스킴 App Store 제출"
 lane :release do
+  unless ENV["CUTOVER_READY"] == "true"
+    UI.user_error!(
+      "⛔️ CUTOVER_READY가 true가 아닙니다 — 컷오버 체크리스트(docs/TODO.md 4번)를 완료하고 " \
+      "나서만 이 lane을 실행할 수 있습니다."
+    )
+  end
+
   build_with(
     scheme: "WSS-iOS-RELEASE",
     app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE")
@@ -162,10 +172,14 @@ lane :release do
   # 불일치로 걸릴 수 있다(2026-08-29 wss-pr-reviewer가 fastlane gem 소스로 확인 — Appfile의
   # app_identifier([...])는 문자열로 정규화되지 않고 Array 그대로 저장된다). build_with/
   # upload_to_testflight와 동일하게 명시적으로 넘긴다.
+  # 릴리즈 노트는 fastlane/metadata/ko/release_notes.txt에서 자동으로 읽힌다(fastlane 기본
+  # 동작 — 그 파일이 이번 제출의 "새로운 기능" 문구가 된다. 릴리즈 준비 PR마다 갱신할 것).
+  # force: true — CI(비대화형)에서 deliver의 HTML 미리보기 확인 프롬프트에 멈추지 않게 한다.
   deliver(
     app_identifier: ENV.fetch("APP_IDENTIFIER_RELEASE"),
     submit_for_review: true,
-    automatic_release: false
+    automatic_release: false,
+    force: true
   )
 end
 end

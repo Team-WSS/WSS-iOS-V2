@@ -60,6 +60,11 @@
      푸시가 배달된다(안 맞으면 **크래시는 없지만 조용히 안 옴**). Debug=development / Release=production으로
      config 분리가 정석. 실기기 E2E는 development로 검증 완료(2026-09-05), production 경로는 배포 빌드로
      별도 검증 필요.
+  8. **`CUTOVER_READY` GitHub Actions repo variable을 `true`로 전환** — `main` push 시 App Store 심사
+     자동 제출(`.github/workflows/release.yml` → fastlane `release` lane)이 실제로 동작하려면 위 1~7번이
+     전부 끝난 뒤 이 플래그부터 켜야 한다(꺼져 있으면 job이 승인 요청도 없이 skip됨). 전환 전 GitHub
+     저장소 설정도 같이 확인: `app-store-release` Environment의 Required reviewers 지정, 아래 시크릿
+     전체 등록, `main` 브랜치 보호가 `develop` 수준(required status check·force-push/삭제 금지)인지.
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
@@ -84,6 +89,15 @@
   Xcode 프로젝트가 통째로 바뀌는 이관이라 **반드시 실측 검증**할 것 — 추측으로 넘어가지 말 것. Push
   (APNs)·Universal Link(`apple-app-site-association`) 등 Bundle ID에 종속된 다른 설정이 운영 앱에
   더 있다면 같은 시점에 함께 점검 대상.
+- **✅ `main` push → App Store 심사 자동 제출 CI 배선 완료(2026-09-13)**: `.github/workflows/release.yml`
+  신설 — `CUTOVER_READY` repo variable(기본 미설정/false, 위 8번) + `app-store-release` Environment의
+  Required reviewers 승인, 두 겹으로 막아둔 채 실제로 켜는 건 컷오버 완료 후로 미뤘다. 릴리즈 노트는
+  `fastlane/metadata/ko/release_notes.txt`(git 버전관리, 릴리즈 PR마다 갱신). 아직 등록 안 된 것 —
+  GitHub Actions secrets: `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_P8_BASE64`/`TEAM_ID`/
+  `APP_IDENTIFIER_RELEASE`/`MATCH_PASSWORD`/`MATCH_GIT_DEPLOY_KEY`(인증서 저장소 read-only deploy
+  key)/`CONFIG_*`(로컬 `Config/Config_Release.xcconfig`·`Config_Shared.xcconfig`의 실제 값 — 파일
+  자체가 git에 없어 별도 전달 필요, `docs/FASTLANE_ONBOARDING.md`의 `.env` 전달 방식과 동일하게).
+  자세한 배선은 [docs/WORKFLOW.md](WORKFLOW.md)의 "배포(App Store 심사 제출)" 절.
 
 ### 5. 401과 "재발급까지 해봤지만 실패"가 Data 레이어에서 구분되지 않는다
 
