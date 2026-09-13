@@ -62,7 +62,9 @@ metadata:
   **Edit**한다. 그 문자열을 못 찾으면 **추측하지 말고 중단**하고 사용자에게 보고(파일 구조가
   바뀌었을 수 있음).
 - `fastlane/metadata/ko/release_notes.txt`를 2단계에서 받은 릴리즈노트로 **Write**(덮어쓰기)한다.
-- `tuist generate` 1회 실행(일관성 — 다른 스킬들도 `Project.swift` 변경 후 항상 재생성한다).
+- `tuist generate` 1회 실행(일관성 — 다른 스킬들도 `Project.swift` 변경 후 항상 재생성한다) →
+  곧바로 `Scripts/patch-spm-deployment-target.sh` 실행(루트 `CLAUDE.md` 비협상 — 안 돌리면 Xcode
+  IDE 빌드가 하드 에러로 깨진다, CLI 빌드는 통과해서 착각하기 쉬움).
 - 두 파일만 명시적으로 스테이징(`git add -A` ❌):
   ```bash
   git add Projects/App/Project.swift fastlane/metadata/ko/release_notes.txt

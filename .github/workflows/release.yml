@@ -12,6 +12,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 concurrency:
   group: release-main
   cancel-in-progress: false # 심사 제출 도중 취소되면 App Store Connect 상태가 꼬일 수 있다
@@ -46,8 +49,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p Config
+
+          # ⚠️ xcconfig는 "//"를 주석 시작으로 파싱한다 — 로컬 Config/*.xcconfig의 실제 값은
+          # 그래서 BUCKET_URL/BASE_URL만 "https:/$()/…"로 이스케이프돼 있다(나머지 키는 "//"가
+          # 없어 무관). CONFIG_BUCKET_URL/CONFIG_BASE_URL 시크릿은 평범한 "https://…"로 등록해도
+          # 되도록, 여기서 자동으로 같은 이스케이프를 적용한다(시크릿 등록 시 사람이 형식을
+          # 기억해야 하는 함정을 없앰).
+          esc_url() { printf '%s' "$1" | sed 's#://#:/$()/#'; }
+          BUCKET_URL_ESCAPED="$(esc_url "$BUCKET_URL")"
+          BASE_URL_ESCAPED="$(esc_url "$BASE_URL")"
+
           cat > Config/Config_Shared.xcconfig << EOF
-          BUCKET_URL = ${BUCKET_URL}
+          BUCKET_URL = ${BUCKET_URL_ESCAPED}
           APPSTORE_ID = ${APPSTORE_ID}
           EOF
           # Release 스킴 빌드만 하는 워크플로우라 Debug용 값(TEST_API_KEY 등)은 채우지 않는다 —
@@ -58,7 +71,7 @@ jobs:
           EOF
           cat > Config/Config_Release.xcconfig << EOF
           #include "./Config_Shared.xcconfig"
-          BASE_URL = ${BASE_URL}
+          BASE_URL = ${BASE_URL_ESCAPED}
           AMPLITUDE_API_KEY = ${AMPLITUDE_API_KEY}
           CLARITY_PROJECT_ID = ${CLARITY_PROJECT_ID}
           KAKAO_APP_KEY = ${KAKAO_APP_KEY}
@@ -96,6 +109,11 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           APP_IDENTIFIER_RELEASE: ${{ secrets.APP_IDENTIFIER_RELEASE }}
+          # ⚠️ release lane은 APP_IDENTIFIER_RELEASE만 쓰지만, fastlane/Appfile이 lane 실행과
+          # 무관하게 로드 시점에 app_identifier([RELEASE, DEBUG]) 둘 다 ENV.fetch로 요구한다 —
+          # 없으면 Fastfile이 시작되기도 전에 KeyError로 죽는다(실측). Debug 스킴은 안 쓰지만
+          # Appfile 계약을 맞추기 위해 반드시 같이 넘긴다.
+          APP_IDENTIFIER_DEBUG: ${{ secrets.APP_IDENTIFIER_DEBUG }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           CUTOVER_READY: ${{ vars.CUTOVER_READY }}

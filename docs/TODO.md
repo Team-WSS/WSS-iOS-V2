@@ -62,9 +62,15 @@
      별도 검증 필요.
   8. **`CUTOVER_READY` GitHub Actions repo variable을 `true`로 전환** — `main` push 시 App Store 심사
      자동 제출(`.github/workflows/release.yml` → fastlane `release` lane)이 실제로 동작하려면 위 1~7번이
-     전부 끝난 뒤 이 플래그부터 켜야 한다(꺼져 있으면 job이 승인 요청도 없이 skip됨). 전환 전 GitHub
-     저장소 설정도 같이 확인: `app-store-release` Environment의 Required reviewers 지정, 아래 시크릿
-     전체 등록, `main` 브랜치 보호가 `develop` 수준(required status check·force-push/삭제 금지)인지.
+     전부 끝난 뒤 이 플래그부터 켜야 한다(꺼져 있으면 job이 승인 요청도 없이 skip됨).
+     **✅ 이미 끝난 것(2026-09-13)**: `app-store-release` Environment 생성 + Required reviewers(Guryss·
+     Naknakk) 지정 + 배포 브랜치 `main` 제한, `main` 브랜치 보호를 `develop` 수준으로 강화(required
+     status check `All Tests Passed`, force-push·삭제 금지).
+     **전환 전 아직 남은 것**: 아래 GitHub Actions secrets 전체 등록 + App Store Connect에 이미
+     설명·스크린샷 등 기본 메타데이터가 채워져 있는지 확인(`deliver` 호출이 릴리즈노트만 채우고
+     `skip_metadata`/`skip_screenshots` 가드가 없어, 정말 신규 앱 레코드라면 스크린샷 미비로 제출이
+     막힐 수 있다 — 5번 항목대로 "운영 앱과 동일 레코드"라 대부분 이미 채워져 있을 가능성이 높지만
+     확인 필요).
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
@@ -94,9 +100,13 @@
   Required reviewers 승인, 두 겹으로 막아둔 채 실제로 켜는 건 컷오버 완료 후로 미뤘다. 릴리즈 노트는
   `fastlane/metadata/ko/release_notes.txt`(git 버전관리, 릴리즈 PR마다 갱신). 아직 등록 안 된 것 —
   GitHub Actions secrets: `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_P8_BASE64`/`TEAM_ID`/
-  `APP_IDENTIFIER_RELEASE`/`MATCH_PASSWORD`/`MATCH_GIT_DEPLOY_KEY`(인증서 저장소 read-only deploy
-  key)/`CONFIG_*`(로컬 `Config/Config_Release.xcconfig`·`Config_Shared.xcconfig`의 실제 값 — 파일
-  자체가 git에 없어 별도 전달 필요, `docs/FASTLANE_ONBOARDING.md`의 `.env` 전달 방식과 동일하게).
+  `APP_IDENTIFIER_RELEASE`/`APP_IDENTIFIER_DEBUG`(release lane은 안 쓰지만 `fastlane/Appfile`이
+  로드 시점에 둘 다 `ENV.fetch`로 요구해 없으면 Fastfile 시작 전에 죽는다 — wss-pr-reviewer가
+  실측으로 잡은 Blocker, 2026-09-13 반영)/`MATCH_PASSWORD`/`MATCH_GIT_DEPLOY_KEY`(인증서 저장소
+  read-only deploy key)/`CONFIG_*`(로컬 `Config/Config_Release.xcconfig`·`Config_Shared.xcconfig`의
+  실제 값 — 파일 자체가 git에 없어 별도 전달 필요, `docs/FASTLANE_ONBOARDING.md`의 `.env` 전달
+  방식과 동일하게. `CONFIG_BASE_URL`/`CONFIG_BUCKET_URL`은 평범한 `https://` 형태로 등록해도
+  된다 — 워크플로우가 xcconfig의 `//` 주석 파싱을 피하는 이스케이프를 자동 적용한다).
   자세한 배선은 [docs/WORKFLOW.md](WORKFLOW.md)의 "배포(App Store 심사 제출)" 절.
 
 ### 5. 401과 "재발급까지 해봤지만 실패"가 Data 레이어에서 구분되지 않는다
