@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NovelDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -72,6 +73,7 @@ final class UserLibraryViewModel {
     /// 조회 대상 사용자 — 화면 전환 시 호출자가 주입한다.
     private let userID: UserID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelDomain
     private let loadUserLibraryUseCase: LoadUserLibraryUseCase
@@ -81,12 +83,20 @@ final class UserLibraryViewModel {
     init(
         userID: UserID,
         loadUserLibraryUseCase: LoadUserLibraryUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.userID = userID
         self.loadUserLibraryUseCase = loadUserLibraryUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State()
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: LibraryAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -115,6 +125,7 @@ private extension UserLibraryViewModel {
     /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.userScreenViewed)
         reloadFromScratch()
     }
 
@@ -137,6 +148,7 @@ private extension UserLibraryViewModel {
     /// 정렬 선택(정렬 시트). 같은 값 재선택은 무시한다.
     func selectSortType(_ sortType: LibrarySortType) {
         guard state.filter.sortType != sortType else { return }
+        track(.userSortSelected)
         state.filter.setSortType(sortType)
         reloadFromScratch()
     }

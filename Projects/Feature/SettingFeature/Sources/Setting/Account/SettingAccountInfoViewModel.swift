@@ -13,6 +13,7 @@ import BaseDomain
 import ProfileDomain
 import AuthDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -61,6 +62,7 @@ final class SettingAccountInfoViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase
@@ -73,11 +75,13 @@ final class SettingAccountInfoViewModel {
     init(
         loadAccountInfoDraftUseCase: LoadAccountInfoDraftUseCase,
         logoutUseCase: LogoutUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadAccountInfoDraftUseCase = loadAccountInfoDraftUseCase
         self.logoutUseCase = logoutUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -109,6 +113,7 @@ private extension SettingAccountInfoViewModel {
     func confirmLogout() {
         state.isLogoutAlertPresented = false
         guard !state.isLoggingOut else { return }
+        analyticsTracker?.track(SettingAnalyticsEvent.logoutTapped)
         Task { await logout() }
     }
 }

@@ -13,6 +13,7 @@ import BaseDomain
 import CollectionDomain
 import SearchDomain
 import Logger
+import Analytics
 
 /// 컬렉션 "작품 추가" 화면 — 검색해서 다중선택한 결과를 `CreateCollectionView`로 되돌려준다.
 /// `ReadingPeriodSheet`처럼 이 모듈 내부에서만 push되는 로컬 화면이라 Factory로 노출하지 않는다
@@ -85,6 +86,7 @@ final class CollectionSearchNovelViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // SearchDomain
     private let searchNovelUseCase: SearchNovelUseCase
@@ -94,11 +96,19 @@ final class CollectionSearchNovelViewModel {
     init(
         initialSelection: [CollectionNovel],
         searchNovelUseCase: SearchNovelUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.searchNovelUseCase = searchNovelUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State(selectedNovels: initialSelection)
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -117,6 +127,7 @@ final class CollectionSearchNovelViewModel {
         case .removeSelectedNovel(let novel):
             state.selectedNovels.removeAll { $0.id == novel.id }
         case .confirm:
+            track(.addNovelConfirmed)
             state.isConfirmed = true
         case .dismissError:
             state.presentedError = nil

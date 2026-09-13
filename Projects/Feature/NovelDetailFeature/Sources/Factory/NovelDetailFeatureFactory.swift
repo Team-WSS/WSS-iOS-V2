@@ -16,6 +16,7 @@ import NovelReviewDomain
 import SocialDomain
 import Logger
 import PushAuthorization
+import Analytics
 
 /// 소설 상세 화면의 유일한 public 진입점. opaque 반환 → View/VM은 internal 유지.
 public enum NovelDetailFeatureFactory {
@@ -49,6 +50,7 @@ public enum NovelDetailFeatureFactory {
         onboardingHintUseCase: OnboardingHintUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         needsFeedReloadForCreatedFeed: Binding<Bool> = .constant(false),
         onRoute: @escaping (NovelDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
@@ -68,11 +70,13 @@ public enum NovelDetailFeatureFactory {
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
                 onboardingHintUseCase: onboardingHintUseCase,
                 pushAuthorizationChecker: pushAuthorizationChecker,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             loadNotificationSettingUseCase: loadNotificationSettingUseCase,
             updateNotificationSettingUseCase: updateNotificationSettingUseCase,
             logger: logger,
+            analyticsTracker: analyticsTracker,
             needsFeedReloadForCreatedFeed: needsFeedReloadForCreatedFeed,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

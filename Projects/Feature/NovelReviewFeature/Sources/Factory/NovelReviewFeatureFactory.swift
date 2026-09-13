@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import NovelReviewDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -37,6 +38,7 @@ public enum NovelReviewFeatureFactory {
         saveUseCase: SaveNovelReviewUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onAuthenticationRequired: @escaping () -> Void,
         onSaved: @escaping () -> Void = {},
         keywordSearchSheet: @escaping KeywordSearchSheetBuilder
@@ -47,7 +49,8 @@ public enum NovelReviewFeatureFactory {
             loadUseCase: loadUseCase,
             saveUseCase: saveUseCase,
             appReviewUseCase: appReviewUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return NovelReviewView(
             viewModel: viewModel,

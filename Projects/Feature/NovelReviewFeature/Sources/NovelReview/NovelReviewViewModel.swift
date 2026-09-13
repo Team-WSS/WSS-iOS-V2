@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NovelReviewDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -88,6 +89,7 @@ final class NovelReviewViewModel {
     private let novelID: NovelID
     private let initialStatus: ReadingStatus
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelReviewDomain
     private let loadUseCase: LoadNovelReviewDraftUseCase
@@ -104,7 +106,8 @@ final class NovelReviewViewModel {
         loadUseCase: LoadNovelReviewDraftUseCase,
         saveUseCase: SaveNovelReviewUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         let initialDraft = NovelReviewDraft(novelID: novelID, status: status)
         self.novelID = novelID
@@ -115,6 +118,14 @@ final class NovelReviewViewModel {
         self.saveUseCase = saveUseCase
         self.appReviewUseCase = appReviewUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: NovelReviewAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -124,6 +135,7 @@ final class NovelReviewViewModel {
         case .load:
             load()
         case .selectStatus(let status):
+            track(NovelReviewAnalyticsEvent(status: status))
             state.draft.changeStatus(status)
         case .updatePeriod(let start, let end):
             updatePeriod(start: start, end: end)
@@ -170,6 +182,7 @@ private extension NovelReviewViewModel {
         }
         do {
             let period = try ReadingPeriod(start: start, end: end)
+            track(.periodConfirmed)
             state.draft.setPeriod(period)
         } catch {
             presentError(error)
@@ -178,13 +191,18 @@ private extension NovelReviewViewModel {
 
     /// 평점 설정. 도메인 `Rating`은 0.5~5.0(0.5 단위)만 유효하고 0.0은 표현 불가 →
     /// 슬라이더의 0.0(= 평점 없음)은 `nil`로 매핑한다.
+    /// ⚠️ `StarRatingView`는 드래그 기반이라 값이 실제로 바뀔 때만 트래킹한다(연속 호출 스팸 방지,
+    /// `SearchFeature`의 `WSSRangeSlider` 가드와 동일 이유).
     func updateRating(_ value: Double) {
         guard value >= 0.5 else {
+            if state.draft.rating != nil { track(.ratingChanged) }
             state.draft.setRating(nil)
             return
         }
         do {
-            state.draft.setRating(try Rating(value))
+            let rating = try Rating(value)
+            if state.draft.rating != rating { track(.ratingChanged) }
+            state.draft.setRating(rating)
         } catch {
             presentError(error)
         }
@@ -193,6 +211,7 @@ private extension NovelReviewViewModel {
     /// 매력 포인트 토글. 이미 선택돼 있으면 해제, 아니면 추가한다.
     /// 추가 시 최대 개수(3) 정책은 도메인(`NovelReviewDraft`)이 검증하며, 초과 시 throw → 사용자 메시지로 변환.
     func toggleAttractivePoint(_ point: AttractivePoint) {
+        if let event = NovelReviewAnalyticsEvent(attractivePoint: point) { track(event) }
         do {
             if state.draft.attractivePoints.contains(point) {
                 state.draft.removeAttractivePoint(point)
@@ -294,6 +313,7 @@ private extension NovelReviewViewModel {
 
         do {
             try await saveUseCase.execute(draft: state.draft)
+            track(.saved)
             state.didSaveReview = true
             state.shouldDismiss = true
             recordEngagementAndGateReview()

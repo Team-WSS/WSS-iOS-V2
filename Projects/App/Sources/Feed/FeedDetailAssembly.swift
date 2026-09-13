@@ -56,6 +56,7 @@ enum FeedDetailAssembly {
             reportImproperCommentUseCase: DefaultReportImproperCommentUseCase(repository: dependencies.socialRepository),
             loadProfileUseCase: DefaultLoadProfileUseCase(profileRepository: dependencies.profileRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
         )
@@ -76,6 +77,7 @@ enum FeedDetailAssembly {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             loadFeedDetailUseCase: DefaultLoadFeedUseCase(feedRepository: dependencies.feedRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
+            analyticsTracker: dependencies.analyticsTracker,
             onSubmitted: onSubmitted
         )
     }

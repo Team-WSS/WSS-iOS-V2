@@ -143,7 +143,10 @@ struct SosoFeedView: View {
 
             Spacer()
 
-            Button(action: { onRoute(.createFeed) }) {
+            Button(action: {
+                viewModel.track(.writeFloatingButtonTapped)
+                onRoute(.createFeed)
+            }) {
                 WSSImage.icPencilSm.swiftUIImage
             }
         }

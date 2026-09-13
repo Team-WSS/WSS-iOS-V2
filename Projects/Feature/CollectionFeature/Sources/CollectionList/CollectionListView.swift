@@ -70,6 +70,7 @@ struct CollectionListView: View {
                 viewModel.handle(.reloadAfterReturn(viewModel.state.selectedTab))
             } else {
                 hasAppearedOnce = true
+                viewModel.track(.screenViewed)
                 viewModel.handle(.load)
             }
         }
@@ -154,6 +155,7 @@ private extension CollectionListView {
 
     var createCollectionButton: some View {
         Button {
+            viewModel.track(.createButtonTapped)
             onRoute(.createCollection)
         } label: {
             HStack(spacing: 10) {

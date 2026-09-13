@@ -36,6 +36,7 @@ enum CollectionDetailAssembly {
             collectionLikeUseCase: DefaultCollectionLikeUseCase(collectionRepository: dependencies.collectionRepository),
             deleteCollectionUseCase: DefaultDeleteCollectionUseCase(collectionRepository: dependencies.collectionRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onAuthenticationRequired: onAuthenticationRequired,
             onRoute: onRoute,
             kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,

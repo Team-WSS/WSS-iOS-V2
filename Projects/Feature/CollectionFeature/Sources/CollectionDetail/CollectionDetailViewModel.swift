@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -80,6 +81,7 @@ final class CollectionDetailViewModel {
 
     private let id: CollectionID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // CollectionDomain
     private let loadCollectionDetailUseCase: LoadCollectionDetailUseCase
@@ -93,13 +95,21 @@ final class CollectionDetailViewModel {
         loadCollectionDetailUseCase: LoadCollectionDetailUseCase,
         collectionLikeUseCase: CollectionLikeUseCase,
         deleteCollectionUseCase: DeleteCollectionUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.id = id
         self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
         self.collectionLikeUseCase = collectionLikeUseCase
         self.deleteCollectionUseCase = deleteCollectionUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -119,6 +129,7 @@ final class CollectionDetailViewModel {
         case .editTapped:
             // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환(isEditPresented)은 View가 로컬 상태로
             // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
+            track(.editTapped)
             state.isMenuPresented = false
         case .reloadAfterEdit:
             reloadAfterEdit()
@@ -150,6 +161,7 @@ private extension CollectionDetailViewModel {
     /// 정렬 변경은 진입 1회 가드와 무관하게 매번 새로 조회한다("최신순"↔"오래된순" 토글, `WSSSortButton` 탭).
     func changeSortType(_ sortType: SortType) {
         guard loadTask == nil, !isClosing else { return }
+        track(.sortChanged)
         state.sortType = sortType
         state.isLoading = true
         state.hasLoadError = nil
@@ -170,6 +182,7 @@ private extension CollectionDetailViewModel {
     /// UI에 낙관적으로 먼저 반영한 뒤 서버 동기화 실패 시 롤백한다(`UserPageFeature`의 피드 좋아요와 동일 패턴).
     func toggleLike() {
         guard likeTask == nil, !isClosing, var detail = state.detail else { return }
+        track(.likeToggled)
         let before = detail
         detail.toggleLike()
         state.detail = detail
@@ -178,6 +191,7 @@ private extension CollectionDetailViewModel {
 
     func confirmDelete() {
         guard !state.isDeleting, !isClosing else { return }
+        track(.deleteConfirmed)
         state.isDeleteAlertPresented = false
         state.isDeleting = true
         Task { await deleteCollection() }

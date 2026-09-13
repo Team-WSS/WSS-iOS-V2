@@ -15,6 +15,7 @@ import FeedDomain
 import SocialDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 internal로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -42,6 +43,7 @@ public enum UserPageFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (UserPageRoute) -> Void,
         onUserBlocked: @escaping (String) -> Void = { _ in }
     ) -> some View {
@@ -57,7 +59,8 @@ public enum UserPageFeatureFactory {
             blockUserUseCase: blockUserUseCase,
             reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
             reportImproperFeedUseCase: reportImproperFeedUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return UserPageView(
             viewModel: viewModel,

@@ -122,6 +122,7 @@ struct FeedRootView: View {
                 reportSpoilerFeedUseCase: DefaultReportSpoilerFeedUseCase(repository: dependencies.socialRepository),
                 reportImproperFeedUseCase: DefaultReportImproperFeedUseCase(repository: dependencies.socialRepository),
                 logger: dependencies.logger,
+                analyticsTracker: dependencies.analyticsTracker,
                 // 연필 아이콘 작성 성공 복귀 시에만 켜지는 1회성 신호 — 목록이 새 글을 받는 유일한 경로(#256).
                 needsReloadForCreatedFeed: $needsFeedListReloadForCreatedFeed,
                 // 피드 탭바 재탭 → 보이는 서브탭 목록 최상단으로(위 프로퍼티 주석 참고).
@@ -468,6 +469,7 @@ private extension FeedRootView {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             connectedNovel: connectedNovel,
+            analyticsTracker: dependencies.analyticsTracker,
             onSubmitted: {
                 crossScreenFeedback.present(.feedEdited)
                 if reloadsFeedListOnSubmit {
@@ -492,6 +494,7 @@ private extension FeedRootView {
                 loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: dependencies.keywordRepository)
             ),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: { route in
                 switch route {
                 case .novelDetail(let novelID):

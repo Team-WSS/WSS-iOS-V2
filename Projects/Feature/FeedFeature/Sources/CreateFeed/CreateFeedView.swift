@@ -113,6 +113,8 @@ struct CreateFeedView: View {
                 }
                 .onAppear {
                     viewModel.handle(.load)
+                    // CSV 이벤트는 "글 작성 뷰 진입"(신규 작성)만 가리킨다 — 수정 화면 진입은 대상 없음.
+                    if !viewModel.isEditing { viewModel.track(.writeViewed) }
                 }
                 // 글자수 clamp 2단계: prefix로 자른 값이 다르면 로컬 버퍼에 재대입(네이티브 필드가
                 // 강제로 되돌아감) → 같으면 VM에 전달. VM에 직접 물리면 초과분이 화면에 남는다.
@@ -164,6 +166,7 @@ struct CreateFeedView: View {
                             showLinkNovelSheet = false
                         },
                         inquiryNovelAction: {
+                            viewModel.track(.connectNovelContactTapped)
                             if let url = AppURL.inquiryAddNovel { openURL(url) }
                         },
                         dismissSheet: {
@@ -410,6 +413,7 @@ struct CreateFeedView: View {
             .onTapGesture {
                 //TODO: - ViewModel로 로직빼기 + 알럿 띄우는 bool변수도 viewModel에 포함될 수 있도록 한다.
                 if viewModel.state.draft.connectedNovel == nil {
+                    viewModel.track(.connectNovelSheetOpened)
                     showLinkNovelSheet.toggle()
                 } else {
                     viewModel.handle(.alreadyLinkedNovel)

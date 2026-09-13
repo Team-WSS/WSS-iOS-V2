@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import AuthDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -57,15 +58,17 @@ final class WithdrawReasonViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // AuthDomain
     private let withdrawUseCase: WithdrawUseCase
 
     // MARK: - Init
 
-    init(withdrawUseCase: WithdrawUseCase, logger: Logger? = nil) {
+    init(withdrawUseCase: WithdrawUseCase, logger: Logger? = nil, analyticsTracker: AnalyticsTracker? = nil) {
         self.withdrawUseCase = withdrawUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -91,6 +94,7 @@ final class WithdrawReasonViewModel {
 private extension WithdrawReasonViewModel {
     func submit() {
         guard !state.isSubmitting, state.draft.isSubmittable else { return }
+        analyticsTracker?.track(SettingAnalyticsEvent.withdrawTapped)
         Task { await withdraw() }
     }
 }

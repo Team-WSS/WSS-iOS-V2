@@ -10,6 +10,7 @@ import Foundation
 import Observation
 
 import ProfileDomain
+import Analytics
 
 /// 온보딩 2단계 — 성별/출생년도 입력. 저장 UseCase가 없는 순수 입력 VM(닉네임과 동일한 판단) —
 /// 실제 서버 등록은 온보딩 마지막 단계(장르 선택)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
@@ -49,14 +50,33 @@ final class GenderBirthYearViewModel {
 
     private(set) var state = State()
 
+    // MARK: - Dependency
+
+    private let analyticsTracker: AnalyticsTracker?
+
+    // MARK: - Init
+
+    init(analyticsTracker: AnalyticsTracker? = nil) {
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: GenderBirthYearAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
+    }
+
     // MARK: - handle
 
     func handle(_ action: Action) {
         switch action {
         case .selectGender(let gender):
+            track(gender == .male ? .maleSelected : .femaleSelected)
             state.gender = gender
         case .selectBirthYear(let year):
             guard let birthYear = try? BirthYear(year) else { return }
+            track(.birthYearSelected)
             state.birthYear = birthYear
         case .proceed:
             proceed()

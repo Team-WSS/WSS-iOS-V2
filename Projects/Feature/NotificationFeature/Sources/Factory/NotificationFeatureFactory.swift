@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import NotificationDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -32,13 +33,15 @@ public enum NotificationFeatureFactory {
         loadPagedNotificationsUseCase: LoadPagedNotificationsUseCase,
         markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (NotificationListRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NotificationListViewModel(
             loadPagedNotificationsUseCase: loadPagedNotificationsUseCase,
             markNotificationAsReadUseCase: markNotificationAsReadUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return NotificationListView(
             viewModel: viewModel,
@@ -57,12 +60,14 @@ public enum NotificationFeatureFactory {
         notificationID: NotificationID,
         loadNotificationDetailUseCase: LoadNotificationDetailUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = NotificationDetailViewModel(
             notificationID: notificationID,
             loadNotificationDetailUseCase: loadNotificationDetailUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return NotificationDetailView(
             viewModel: viewModel,

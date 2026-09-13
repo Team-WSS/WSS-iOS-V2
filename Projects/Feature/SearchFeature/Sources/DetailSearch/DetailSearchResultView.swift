@@ -36,7 +36,9 @@ struct DetailSearchResultView: View {
             // 커스텀 상단바(뒤로가기+필터 요약)를 자체적으로 그리므로 시스템 네비바를 숨기고 스와이프 뒤로가기를 되살린다.
             .wssCustomNavigationBar()
             .background(WSSColor.wssWhite.swiftUIColor)
-            .onAppear { viewModel.handle(.load) }
+            .onAppear {
+                viewModel.handle(.load)
+            }
     }
 
     private var content: some View {
@@ -110,6 +112,7 @@ struct DetailSearchResultView: View {
             Spacer()
 
             Button {
+                viewModel.track(.contactNovelTapped)
                 if let url = AppURL.inquiryAddNovel { openURL(url) }
             } label: {
                 Text("찾는 작품이 없다면?")
@@ -159,6 +162,7 @@ struct DetailSearchResultView: View {
                     ) {
                         ForEach(viewModel.state.novels, id: \.id) { novel in
                             Button {
+                                viewModel.track(.detailResultSelected)
                                 onRoute(.novelDetail(novel.id))
                             } label: {
                                 WSSNovelGridCell(

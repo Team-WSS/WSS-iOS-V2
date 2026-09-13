@@ -12,6 +12,7 @@ import BaseDomain
 import SearchDomain
 import DesignSystem
 import WSSComponent
+import Analytics
 
 /// 상세탐색 필터 화면 — "정보"/"키워드" 두 탭이 같은 화면 안에서 콘텐츠만 바뀌는 탭바다.
 /// "작품 찾기" 확정 시 `onSearch`로 편집한 필터를 호출부에 올릴 뿐, **화면 자신은 pop하지 않는다**(#185) —
@@ -55,9 +56,10 @@ struct DetailSearchFilterView: View {
         filter: SearchFilter,
         initialTab: DetailSearchFilterTab = .info,
         keywordTabContent: @escaping KeywordTabContentBuilder,
-        onSearch: @escaping (SearchFilter) -> Void
+        onSearch: @escaping (SearchFilter) -> Void,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
-        self._viewModel = State(initialValue: DetailSearchFilterViewModel(filter: filter))
+        self._viewModel = State(initialValue: DetailSearchFilterViewModel(filter: filter, analyticsTracker: analyticsTracker))
         self._selectedTab = State(initialValue: initialTab)
         self.keywordTabContent = keywordTabContent
         self.onSearch = onSearch

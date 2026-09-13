@@ -31,6 +31,12 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`NovelReviewAnalyticsEvent`의 `rate_keyword_*`(5종) 케이스는 이 모듈 안에서 실제로 발화되지 않는다**
+  (#249) — 키워드 시트는 App이 조립하는 `KeywordFeature` 콘텐츠라 이 enum이 카테고리 선택을 못 본다.
+  실제 트래킹은 App의 `NovelReviewAssembly.keywordSearchSheet`가 **같은 문자열을 직접 리터럴로** 들고
+  한다(arch-lint `feature-exclusivity`가 이 enum을 App에 노출 못 하게 막아서) — `rate_keyword_*` rawValue를
+  바꾸면 그 App 파일의 문자열도 수동으로 같이 바꿔야 한다(컴파일러가 못 잡음).
+
 #### 네비게이션 바 (#244)
 - 시스템 툴바가 아니라 플랫 `WSSNavigationBar`(타이틀=작품명, 완료 버튼=`trailing` 슬롯) + `.wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })`다(패턴 정본 [WSSComponent](../../UI/WSSComponent/CLAUDE.md)). **확인 핸들러를 넘기는 이유**: 좌측 back이 `requestClose`(저장 전 "그만하기" 확인 알럿)라 스와이프로 그 확인을 건너뛰면 작성 중이던 draft가 사라진다 — #256부터 스와이프 pop은 막되 시도가 감지되면 back과 같은 `requestClose`가 불린다(변경 없으면 즉시 닫힘). 로딩/실패 `overlay`는 content에만 걸려 네비바를 덮지 않는다. ⚠️ **뒤로가기 화살표 색을 회색(`wssGray200`)에서 표준 검정으로 통일**했다(#244, 전 화면 통일 목적) — 이 화면만 회색이던 걸 되돌리지 말 것.
 

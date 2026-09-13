@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import NovelDomain
 import Logger
+import Analytics
 
 /// 모듈의 유일한 public 진입점.
 /// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
@@ -32,6 +33,7 @@ public enum LibraryFeatureFactory {
         loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase,
         saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (MyLibraryRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -40,7 +42,8 @@ public enum LibraryFeatureFactory {
             loadMyLibraryKeywordsUseCase: loadMyLibraryKeywordsUseCase,
             loadMyLibraryFilterUseCase: loadMyLibraryFilterUseCase,
             saveMyLibraryFilterUseCase: saveMyLibraryFilterUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return LibraryView(
             viewModel: viewModel,
@@ -63,13 +66,15 @@ public enum LibraryFeatureFactory {
         userID: UserID,
         loadUserLibraryUseCase: LoadUserLibraryUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (UserLibraryRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
         let viewModel = UserLibraryViewModel(
             userID: userID,
             loadUserLibraryUseCase: loadUserLibraryUseCase,
-            logger: logger
+            logger: logger,
+            analyticsTracker: analyticsTracker
         )
         return UserLibraryView(
             viewModel: viewModel,

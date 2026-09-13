@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NovelDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -110,6 +111,7 @@ final class LibraryViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NovelDomain
     private let loadMyLibraryUseCase: LoadMyLibraryUseCase
@@ -125,17 +127,25 @@ final class LibraryViewModel {
         loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
         loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase,
         saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadMyLibraryUseCase = loadMyLibraryUseCase
         self.loadMyLibraryKeywordsUseCase = loadMyLibraryKeywordsUseCase
         self.loadMyLibraryFilterUseCase = loadMyLibraryFilterUseCase
         self.saveMyLibraryFilterUseCase = saveMyLibraryFilterUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         // ⚠️ 복원은 **동기**로 여기서 한다 — 첫 `.load`(onAppear)보다 먼저 필터가 서 있어야
         // 첫 조회가 복원된 필터로 나간다(비동기로 복원하면 한 프레임 기본 필터로 로드가 새어 나간다).
         // 저장된 게 없으면 기본 필터로 시작.
         self.state = State(filter: loadMyLibraryFilterUseCase.execute() ?? MyLibraryFilter())
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: LibraryAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -178,6 +188,7 @@ private extension LibraryViewModel {
         guard loadTask == nil else { return }
 
         guard hasLoadedContent else {
+            track(.screenViewed)
             reloadFromScratch()
             return
         }
@@ -199,6 +210,7 @@ private extension LibraryViewModel {
 
     /// 관심 칩 토글 — 필터가 바뀌므로 목록을 처음부터 다시 로드한다.
     func toggleInterestFilter() {
+        track(.interestFilterToggled)
         state.filter.toggleInterest()
         persistFilter()
         reloadFromScratch()
@@ -207,6 +219,7 @@ private extension LibraryViewModel {
     /// 정렬 선택(정렬 시트). 같은 값 재선택은 무시한다.
     func selectSortType(_ sortType: LibrarySortType) {
         guard state.filter.sortType != sortType else { return }
+        track(.sortSelected)
         state.filter.setSortType(sortType)
         persistFilter()
         reloadFromScratch()
@@ -215,6 +228,7 @@ private extension LibraryViewModel {
     /// 필터 시트 "작품 찾기" — 시트가 편집한 필터로 통째로 교체하고 다시 로드한다.
     /// (시트는 현재 필터의 복사본에서 시작하므로 관심·정렬도 보존된 채 돌아온다.)
     func applyFilter(_ filter: MyLibraryFilter) {
+        track(.filterApplied)
         state.filter = filter
         persistFilter()
         reloadFromScratch()

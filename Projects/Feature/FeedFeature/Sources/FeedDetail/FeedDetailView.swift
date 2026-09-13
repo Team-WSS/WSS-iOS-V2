@@ -39,6 +39,9 @@ struct FeedDetailView: View {
     @State private var showFeedDropdown: Bool = false
     @State private var showCommentDropdown: Bool = false
 
+    /// `.load`가 재진입마다 무조건 재조회하므로(가드 없음), 화면 진입 트래킹은 최초 1회만 남긴다.
+    @State private var hasTrackedDetailViewed = false
+
     /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `FeedDetailRoute`(Navigation/)가 정본.
     /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다.
     private let onRoute: (FeedDetailRoute) -> Void
@@ -102,6 +105,10 @@ struct FeedDetailView: View {
         .wssCustomNavigationBar()
         .onAppear {
             Task { await viewModel.handle(.load) }
+            if !hasTrackedDetailViewed {
+                hasTrackedDetailViewed = true
+                viewModel.track(.detailViewed)
+            }
         }
         .fullScreenCover(item: $selectedImage) { item in
             FeedDetailImageViewer(

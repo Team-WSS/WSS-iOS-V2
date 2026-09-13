@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -106,6 +107,7 @@ final class CreateCollectionViewModel {
     // MARK: - Dependency
 
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // CollectionDomain — 모드에 따라 둘 중 하나만 실제로 쓰인다(`CreateFeedViewModel`과 동일 이유로
     // 옵셔널: 생성 화면 조립 시 update UseCase가, 수정 화면 조립 시 create UseCase가 굳이 필요 없다).
@@ -121,15 +123,23 @@ final class CreateCollectionViewModel {
         createCollectionUseCase: CreateCollectionUseCase? = nil,
         updateCollectionUseCase: UpdateCollectionUseCase? = nil,
         loadCollectionDetailUseCase: LoadCollectionDetailUseCase? = nil,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.mode = mode
         self.createCollectionUseCase = createCollectionUseCase
         self.updateCollectionUseCase = updateCollectionUseCase
         self.loadCollectionDetailUseCase = loadCollectionDetailUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State(draft: CollectionDraft())
         self.baselineDraft = CollectionDraft()
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: CollectionAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     #if DEBUG
@@ -145,6 +155,7 @@ final class CreateCollectionViewModel {
         self.updateCollectionUseCase = nil
         self.loadCollectionDetailUseCase = nil
         self.logger = nil
+        self.analyticsTracker = nil
         self.state = State(draft: previewDraft, novelDisplayInfo: previewNovelDisplayInfo)
         self.baselineDraft = previewDraft
     }
@@ -162,6 +173,7 @@ final class CreateCollectionViewModel {
             updateDescription(value)
         case .togglePrivate:
             state.draft.togglePrivate()
+            track(state.draft.isPrivate ? .privateOn : .privateOff)
         case .selectRepresentativeNovel(let id):
             selectRepresentativeNovel(id)
         case .setNovels(let novels):
@@ -208,6 +220,7 @@ private extension CreateCollectionViewModel {
     func selectRepresentativeNovel(_ id: NovelID) {
         do {
             try state.draft.setRepresentativeNovel(id)
+            track(.representativeNovelSelected)
         } catch {
             logger?.error("CreateCollection 대표 작품 지정 실패(도달하면 안 되는 경로): \(String(describing: error))")
         }
@@ -289,6 +302,7 @@ private extension CreateCollectionViewModel {
                     return
                 }
                 _ = try await createCollectionUseCase.execute(state.draft)
+                track(.saved)
             case .edit(let id):
                 guard let updateCollectionUseCase else {
                     logger?.error("CreateCollectionViewModel이 .edit 모드인데 updateCollectionUseCase가 없다(도달하면 안 되는 경로)")

@@ -15,6 +15,7 @@ import CommentDomain
 import SocialDomain
 import ProfileDomain
 import Logger
+import Analytics
 
 /// FeedFeature 모듈의 외부 진입점.
 public enum FeedFeatureFactory {
@@ -29,6 +30,7 @@ public enum FeedFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
         connectedNovel: ConnectedNovel? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         // 기본값을 일부러 두지 않는다 — 작성 조립은 탭 Root 4곳에 복제돼 있어(App/CLAUDE.md "5곳" 경고),
         // 기본 no-op이 있으면 새 조립 지점이 완료 토스트를 말없이 빼먹어도 컴파일이 통과한다(#236 리뷰).
         onSubmitted: @escaping () -> Void
@@ -38,7 +40,8 @@ public enum FeedFeatureFactory {
                 createFeedUseCase: createFeedUseCase,
                 searchNovelUseCase: searchNovelUseCase,
                 appReviewUseCase: appReviewUseCase,
-                initialDraft: emptyDraft(connectedNovel: connectedNovel)
+                initialDraft: emptyDraft(connectedNovel: connectedNovel),
+                analyticsTracker: analyticsTracker
             ),
             onSubmitted: onSubmitted
         )
@@ -54,6 +57,7 @@ public enum FeedFeatureFactory {
         searchNovelUseCase: SearchNovelUseCase,
         loadFeedDetailUseCase: LoadFeedDetailUseCase,
         appReviewUseCase: AppReviewRequestUseCase,
+        analyticsTracker: AnalyticsTracker? = nil,
         onSubmitted: @escaping () -> Void
     ) -> some View {
         CreateFeedView(
@@ -63,7 +67,8 @@ public enum FeedFeatureFactory {
                 searchNovelUseCase: searchNovelUseCase,
                 loadFeedDetailUseCase: loadFeedDetailUseCase,
                 appReviewUseCase: appReviewUseCase,
-                initialDraft: emptyDraft()
+                initialDraft: emptyDraft(),
+                analyticsTracker: analyticsTracker
             ),
             onSubmitted: onSubmitted
         )
@@ -98,6 +103,7 @@ public enum FeedFeatureFactory {
         reportImproperCommentUseCase: ReportImproperCommentUseCase,
         loadProfileUseCase: LoadProfileUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (FeedDetailRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void = {}
     ) -> some View {
@@ -117,7 +123,8 @@ public enum FeedFeatureFactory {
                 reportSpoilerCommentUseCase: reportSpoilerCommentUseCase,
                 reportImproperCommentUseCase: reportImproperCommentUseCase,
                 loadProfileUseCase: loadProfileUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired
@@ -149,6 +156,7 @@ public enum FeedFeatureFactory {
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
         scrollToTopSignal: Int = 0,
         onRoute: @escaping (SosoFeedRoute) -> Void
@@ -163,7 +171,8 @@ public enum FeedFeatureFactory {
                 deleteFeedUseCase: deleteFeedUseCase,
                 reportSpoilerFeedUseCase: reportSpoilerFeedUseCase,
                 reportImproperFeedUseCase: reportImproperFeedUseCase,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             needsReloadForCreatedFeed: needsReloadForCreatedFeed,
             scrollToTopSignal: scrollToTopSignal,

@@ -201,6 +201,7 @@ private extension UserLibraryView {
         ) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
+                    viewModel.track(.userNovelSelected)
                     onRoute(.novelDetail(novel.id))
                 } label: {
                     WSSLibraryGridCell(
@@ -224,6 +225,7 @@ private extension UserLibraryView {
         LazyVStack(spacing: 0) {
             ForEach(viewModel.state.novels, id: \.id) { novel in
                 Button {
+                    viewModel.track(.userNovelSelected)
                     onRoute(.novelDetail(novel.id))
                 } label: {
                     LibraryListCell(novel: novel)

@@ -58,6 +58,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- **`seek_info_platform`(상세탐색 필터 — 정보탭 플랫폼 선택)은 기획측 CSV엔 없는 V2 신규 이벤트다** — 장르
+  (`seek_info_genre`)·연재상태(`seek_info_state`)는 CSV에 있는데 플랫폼만 없어서, 같은 파일(정보탭 필터
+  4종 중 하나)이라는 이유로 그 둘과 동일한 명명 패턴(`seek_info_<필드>`)을 따라 새로 지었다. 트래킹
+  시점도 장르/연재상태와 동일(`togglePlatform`의 "선택" 분기에서만, 해제는 트래킹 안 함).
 - ⚠️ **`NormalSearchViewModel.init`에서 `initialQuery`(작가 이름 탭 등 "이미 검색된 결과로 진입") 처리는
   검색어를 `state.searchText`에 채우기만 하고, 실제 검색(Task 스폰)은 절대 하지 않는다**(#255 QA 실측
   버그 수정 — 원래는 init 안에서 바로 `executeSearch`를 불렀다). 이 `init`은
@@ -95,6 +99,12 @@
   이름 탭으로 대신 실행됨"(`executeInitialSearch`)은 서로 다른 값을 넘긴다(위 항목 참고) — 다른
   화면(작품 연결·컬렉션 작품 추가)은 항상 `false`. 이 화면에 새 검색 호출부를 추가할 땐 "사용자가
   검색을 직접 의도했는가"부터 확인할 것.
+- ⚠️ **`SearchAnalyticsEvent`의 `seek_keyword_*`(5종)·`contact_keyword`는 이 모듈 안에서 실제로 발화되지
+  않는다**(#249) — 상세탐색 필터의 "키워드" 탭 콘텐츠는 App이 조립하는 `KeywordFeature`가 소유해 이
+  enum이 그 선택을 못 본다. 실제 트래킹은 App의 `SearchAssembly.makeDetailSearchFilterView`가 **같은
+  문자열을 직접 리터럴로** 들고 한다(arch-lint `feature-exclusivity`가 이 enum을 App에 노출 못 하게
+  막아서, `NovelReviewFeature`의 `rate_keyword_*`와 동일 이유) — rawValue를 바꾸면 그 App 파일의
+  문자열도 수동으로 같이 바꿔야 한다.
 - **진입 시 검색창 자동 포커스(#222 V1 parity)는 `Task { @MainActor in … isFocused = true }`로 건다** —
   ⚠️ `@MainActor`를 빼면 안 걸린다. `onAppear` 클로저는 메인에서 돌지만 정적 `@MainActor`가 아니라, 그 안의
   평범한 `Task {}`는 메인 액터를 상속하지 않고 글로벌 executor에서 실행돼 `@FocusState`(main-actor) 설정이

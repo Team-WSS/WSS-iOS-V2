@@ -30,6 +30,7 @@ struct NovelNotificationSettingSheet: View {
     var body: some View {
         content
             .onAppear {
+                viewModel.track(.notificationSheetViewed)
                 viewModel.handle(.load)
             }
             .onDisappear {

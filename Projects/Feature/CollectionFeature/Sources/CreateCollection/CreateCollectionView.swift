@@ -29,6 +29,10 @@ struct CreateCollectionView: View {
     @FocusState private var isDescriptionFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
+    /// "작품 추가"/"서재에서 추가"에서 돌아올 때마다 `onAppear`가 재발화하므로, 화면 진입
+    /// 트래킹은 최초 1회만 남긴다.
+    @State private var hasTrackedWriteViewed = false
+
     /// "작품 추가" 화면(App이 push)이 확정한 결과 — `nil→값` 전이로 감지하는 1회성 신호
     /// (`OnboardingFeature`의 확정 신호 패턴과 동일). 소비 즉시 다시 `nil`로 되돌린다.
     private let pendingNovelSelection: Binding<[CollectionNovel]?>
@@ -119,6 +123,10 @@ struct CreateCollectionView: View {
                 }
             }
             .onAppear {
+                if !hasTrackedWriteViewed {
+                    hasTrackedWriteViewed = true
+                    viewModel.track(.writeViewed)
+                }
                 viewModel.handle(.load)
             }
             // 수정 모드 로드가 끝나 draft.name/description이 채워지면, 글자수 clamp 트랩용 로컬

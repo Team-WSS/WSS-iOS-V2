@@ -66,7 +66,11 @@ struct NormalSearchView: View {
                         isLoadingMore: viewModel.state.isLoadingMoreSearchResults,
                         onLoadMore: { viewModel.handle(.loadMoreSearchResults) },
                         onRetry: { viewModel.handle(.retrySearch) },
-                        onNovelSelected: { onRoute(.novelDetail($0)) }
+                        onNovelSelected: { novelID in
+                            viewModel.track(.resultSelected)
+                            onRoute(.novelDetail(novelID))
+                        },
+                        onContactTapped: { viewModel.track(.contactNovelTapped) }
                     )
                 } else if isFocused, !viewModel.state.searchText.isEmpty {
                     NormalSearchAutoCompletionView(
@@ -354,6 +358,7 @@ struct NormalSearchView: View {
                 HStack(spacing: 6) {
                     ForEach(viewModel.state.sosoPickNovels, id: \.novelID) { pick in
                         Button {
+                            viewModel.track(.sosoPickSelected)
                             onRoute(.novelDetail(pick.novelID))
                         } label: {
                             sosoPickItem(imageURL: pick.novelThumbnailimage,

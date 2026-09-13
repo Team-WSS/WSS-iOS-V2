@@ -40,6 +40,11 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- `LibraryAnalyticsEvent`(`library_view`/`library_register_btn`/`library_empty_search_btn`/
+  `library_notification_btn`/`library_interest_filter`/`library_filter_apply`/`library_sort`/
+  `library_novel_select`/`user_library_view`/`user_library_sort`/`user_library_novel_select`)는
+  두 화면이 공유한다. `library_view`/`user_library_view`는 각각 `hasLoadedContent`/`hasLoaded`가
+  아직 안 세워진 첫 진입 분기에서만 쏜다 — 재진입 조용한 갱신(내 서재)·push 재진입(타유저 서재)엔 안 걸린다.
 - ⚠️ **내 서재 필터·정렬은 앱 실행을 넘겨 영속화된다(#221) — 복원은 `init`에서 반드시 *동기*로 한다.**
   `LibraryViewModel`이 `init`에서 `LoadMyLibraryFilterUseCase.execute()`로 마지막 필터·정렬을 읽어
   `State(filter:)`에 넣는다. **동기 복원인 이유**: 첫 `onAppear → .load`보다 body 첫 평가가 먼저라, 비동기로

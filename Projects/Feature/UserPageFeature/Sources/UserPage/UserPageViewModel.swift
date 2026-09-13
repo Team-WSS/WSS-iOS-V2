@@ -16,6 +16,7 @@ import FeedDomain
 import SocialDomain
 import CollectionDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -156,6 +157,7 @@ final class UserPageViewModel {
 
     private let userID: UserID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // ProfileDomain
     private let loadProfileUseCase: LoadProfileUseCase
@@ -191,7 +193,8 @@ final class UserPageViewModel {
         blockUserUseCase: BlockUserUseCase,
         reportSpoilerFeedUseCase: ReportSpoilerFeedUseCase,
         reportImproperFeedUseCase: ReportImproperFeedUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.userID = userID
         self.loadProfileUseCase = loadProfileUseCase
@@ -205,6 +208,7 @@ final class UserPageViewModel {
         self.reportSpoilerFeedUseCase = reportSpoilerFeedUseCase
         self.reportImproperFeedUseCase = reportImproperFeedUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
     }
 
     // MARK: - handle
@@ -218,6 +222,7 @@ final class UserPageViewModel {
         case .toggleFeedLike(let feedID):
             toggleFeedLike(feedID)
         case .blockUserTapped:
+            analyticsTracker?.track(UserPageAnalyticsEvent.otherBlockTapped)
             state.isBlockAlertPresented = true
         case .dismissBlockAlert:
             state.isBlockAlertPresented = false
@@ -260,6 +265,7 @@ private extension UserPageViewModel {
                 feedsTask = Task { await loadFirstFeedsPage(isSilentRefresh: true) }
             }
         } else {
+            analyticsTracker?.track(UserPageAnalyticsEvent.otherMypageViewed)
             state.isLoading = true
             state.hasLoadError = nil
             loadTask = Task { await loadUserPage() }
@@ -286,6 +292,7 @@ private extension UserPageViewModel {
         guard (try? feed.toggleLike()) != nil else { return }
 
         state.feeds[index] = feed
+        analyticsTracker?.track(UserPageAnalyticsEvent.feedLikeTapped)
         syncingLikeFeedIDs.insert(feedID)
         likeToggledDuringRefresh.insert(feedID)
         Task { await syncFeedLike(to: feed.isLiked, feedID: feedID, rollbackTo: before) }
@@ -309,6 +316,7 @@ private extension UserPageViewModel {
     /// `hasCollections`를 직접 보고 이 액션을 거치지 않은 채 `onRoute(.collectionList)`를 바로 부른다
     /// ("서재" 블록과 동일 원칙 — `UserPageFeature/CLAUDE.md` 참고).
     func tapCollectionSection() {
+        analyticsTracker?.track(UserPageAnalyticsEvent.collectionSectionTapped)
         state.isNoCollectionsToastPresented = true
     }
 
@@ -508,6 +516,7 @@ private extension UserPageViewModel {
             } else {
                 try await reportImproperFeedUseCase.execute(id: feedID)
             }
+            analyticsTracker?.track(spoiler ? UserPageAnalyticsEvent.feedSpoilerReported : UserPageAnalyticsEvent.feedAbuseReported)
             state.presentedFeedAlert = spoiler ? .reportSpoilerCompleted : .reportImproperCompleted
         } catch {
             presentActionError(error, context: "피드 신고")

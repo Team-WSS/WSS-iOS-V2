@@ -13,6 +13,7 @@ import NovelReviewDomain
 import NovelReviewFeature
 // 키워드 탐색 시트(KeywordSearchSheetBuilder) 조립 — NovelReviewFeature는 KeywordFeature를 모른다.
 import KeywordFeature
+import Analytics
 
 /// 작품 평가(`NovelReviewFeatureFactory`) 조립 — 4탭의 작품 상세가 전부 같은 방식으로
 /// push해서(#197) 공용으로 뽑았다(`NovelDetailAssembly`/`FeedDetailAssembly`/`SearchAssembly`와 같은
@@ -39,6 +40,7 @@ enum NovelReviewAssembly {
             saveUseCase: DefaultSaveNovelReviewUseCase(repository: dependencies.novelReviewRepository),
             appReviewUseCase: DefaultAppReviewRequestUseCase(repository: dependencies.appReviewRequestRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onAuthenticationRequired: onAuthenticationRequired,
             onSaved: onSaved,
             keywordSearchSheet: keywordSearchSheet(dependencies: dependencies)
@@ -55,6 +57,21 @@ enum NovelReviewAssembly {
                     searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: dependencies.keywordRepository),
                     initialSelectedKeywords: initialKeywords,
                     onSelectionChanged: onSelectionChanged,
+                    // ⚠️ 이벤트 이름 enum(`NovelReviewAnalyticsEvent`)은 NovelReviewFeature 내부 타입이라
+                    // 여기(App)에서 못 본다 — arch-lint `feature-exclusivity`가 Feature 모듈의 top-level
+                    // public을 `*Factory` 하나로 강제해서다(Core/CLAUDE.md). 이 조립 지점(App↔Feature 경계)
+                    // 만 예외로 문자열 리터럴을 직접 쓴다(#249, 백로그 이벤트라 값어치 대비 비용도 낮음).
+                    onKeywordCategorySelected: { category in
+                        let eventName: String
+                        switch category {
+                        case .worldview:    eventName = "rate_keyword_universe"
+                        case .material:     eventName = "rate_keyword_topic"
+                        case .character:    eventName = "rate_keyword_character"
+                        case .relationship: eventName = "rate_keyword_relation"
+                        case .vibe:         eventName = "rate_keyword_mood"
+                        }
+                        dependencies.analyticsTracker?.track(eventName)
+                    },
                     logger: dependencies.logger
                 )
             )

@@ -46,6 +46,7 @@ enum SearchAssembly {
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             loadPopularKeywordsUseCase: DefaultLoadPopularKeywordsUseCase(keywordRepository: dependencies.keywordRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             initialQuery: initialQuery,
             onRoute: onRoute
         )
@@ -70,11 +71,27 @@ enum SearchAssembly {
                         searchKeywordsUseCase: DefaultSearchKeywordUseCase(keywordRepository: dependencies.keywordRepository),
                         initialSelectedKeywords: initialKeywords,
                         onSelectionChanged: onSelectionChanged,
+                        // ⚠️ `SearchAnalyticsEvent`는 SearchFeature 내부 타입이라 여기서 못 본다(arch-lint
+                        // `feature-exclusivity` — Core/CLAUDE.md, `NovelReviewAssembly`의 동일 항목 참고) —
+                        // 이 조립 지점만 예외로 문자열 리터럴을 직접 쓴다(#249, 백로그 이벤트).
+                        onKeywordCategorySelected: { category in
+                            let eventName: String
+                            switch category {
+                            case .worldview:    eventName = "seek_keyword_universe"
+                            case .material:     eventName = "seek_keyword_topic"
+                            case .character:    eventName = "seek_keyword_character"
+                            case .relationship: eventName = "seek_keyword_relation"
+                            case .vibe:         eventName = "seek_keyword_mood"
+                            }
+                            dependencies.analyticsTracker?.track(eventName)
+                        },
+                        onContactTapped: { dependencies.analyticsTracker?.track("contact_keyword") },
                         logger: dependencies.logger
                     )
                 )
             },
-            onSearch: onSearch
+            onSearch: onSearch,
+            analyticsTracker: dependencies.analyticsTracker
         )
     }
 
@@ -87,6 +104,7 @@ enum SearchAssembly {
             filter: filter,
             searchNovelUseCase: DefaultSearchNovelUseCase(searchNovelRepository: dependencies.searchRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onRoute: onRoute
         )
     }

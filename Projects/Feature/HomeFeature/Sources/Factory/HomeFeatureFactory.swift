@@ -13,6 +13,7 @@ import RecommendationDomain
 import NotificationDomain
 import Logger
 import PushAuthorization
+import Analytics
 
 /// 홈 화면의 유일한 public 진입점. View/ViewModel은 internal로 감춘다.
 public enum HomeFeatureFactory {
@@ -26,6 +27,7 @@ public enum HomeFeatureFactory {
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
         onRoute: @escaping (HomeRoute) -> Void,
         onAuthenticationRequired: @escaping () -> Void
     ) -> some View {
@@ -34,7 +36,8 @@ public enum HomeFeatureFactory {
                 loadHomeDataUseCase: loadHomeDataUseCase,
                 loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
                 pushAuthorizationChecker: pushAuthorizationChecker,
-                logger: logger
+                logger: logger,
+                analyticsTracker: analyticsTracker
             ),
             onRoute: onRoute,
             onAuthenticationRequired: onAuthenticationRequired

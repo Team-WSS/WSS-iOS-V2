@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import NotificationDomain
 import Logger
+import Analytics
 
 @MainActor
 @Observable
@@ -53,6 +54,7 @@ final class NotificationDetailViewModel {
     /// 조회 대상 알림. 진입 이전 화면(알림 목록)이 주입한다.
     private let notificationID: NotificationID
     private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
 
     // NotificationDomain
     private let loadNotificationDetailUseCase: LoadNotificationDetailUseCase
@@ -62,12 +64,20 @@ final class NotificationDetailViewModel {
     init(
         notificationID: NotificationID,
         loadNotificationDetailUseCase: LoadNotificationDetailUseCase,
-        logger: Logger? = nil
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.notificationID = notificationID
         self.loadNotificationDetailUseCase = loadNotificationDetailUseCase
         self.logger = logger
+        self.analyticsTracker = analyticsTracker
         self.state = State()
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: NotificationAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
     }
 
     // MARK: - handle
@@ -90,6 +100,7 @@ private extension NotificationDetailViewModel {
     /// 실패는 가드를 소진하지 않아 재진입 시 재시도가 열려 있다.
     func load() {
         guard !hasLoaded, loadTask == nil else { return }
+        track(.detailViewed)
         startLoad()
     }
 

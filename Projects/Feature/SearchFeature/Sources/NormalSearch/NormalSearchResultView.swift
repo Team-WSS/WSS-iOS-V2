@@ -25,6 +25,8 @@ struct NormalSearchResultView: View {
     let onRetry: () -> Void
     /// 작품 셀 탭 → 작품 상세 진입 콜백. 실제 화면 전환은 호출자(App 조정 계층)가 수행한다.
     var onNovelSelected: (NovelID) -> Void = { _ in }
+    /// "찾는 작품이 없다면?"/빈 결과 문의 버튼 탭(#249, 트래킹용) — URL을 여는 것과 별개로 호출.
+    var onContactTapped: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,6 +44,7 @@ struct NormalSearchResultView: View {
             Spacer()
             WSSEmptyView(type: .novel,
                          action: {
+                onContactTapped()
                 if let url = AppURL.inquiryAddNovel { openURL(url) }
             })
             Spacer()
@@ -96,6 +99,7 @@ struct NormalSearchResultView: View {
             Spacer()
 
             Button {
+                onContactTapped()
                 if let url = AppURL.inquiryAddNovel { openURL(url) }
             } label: {
                 Text("찾는 작품이 없다면?")

@@ -27,6 +27,7 @@ enum NotificationDetailAssembly {
             notificationID: notificationID,
             loadNotificationDetailUseCase: DefaultLoadNotificationDetailUseCase(repository: dependencies.notificationRepository),
             logger: dependencies.logger,
+            analyticsTracker: dependencies.analyticsTracker,
             onAuthenticationRequired: onAuthenticationRequired
         )
     }
