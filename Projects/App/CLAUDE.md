@@ -262,6 +262,14 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`Resources/ko.lproj/InfoPlist.strings`(빈 파일, #266)를 지우지 말 것** — 내용이 비어 있어 안 쓰는
+  파일로 오인하기 쉽지만, 이 파일이 존재하는 것 자체가 Xcode 프로젝트 `knownRegions`에 `ko`를
+  등록시키는 유일한 장치다. 이게 없으면(`.lproj` 리소스가 전혀 없으면) 앱이 "영어만 지원"으로
+  선언되고, iOS는 텍스트 필드 편집 메뉴(Copy/Paste/Select All 등 UIKit 시스템 메뉴)의 언어를 **기기
+  언어가 아니라 앱이 선언한 지원 로케일과 기기 선호 언어의 교집합**으로 정해 시스템 메뉴가 기기
+  언어와 무관하게 영어로 고정된다(`Support/Info.plist`엔 `CFBundleDevelopmentRegion`/
+  `CFBundleLocalizations`가 없어 이 방식으로만 등록 가능). 실제 번역 문자열은 필요 없다 — 존재
+  자체가 목적이다.
 - **재발급(/reissue) 전용 URLSession엔 요청 타임아웃 10초가 걸려 있다**(#236, `AppDependencies`의
   `refresherClient`) — 재발급 대기(`SessionRefreshCoordinator`)가 취소에 반응하지 않아 스플래시 게이트
   예산(4초)이 뚫리는 구멍(`SplashDomain/CLAUDE.md`)을 App 조립에서 60초→10초로 좁힌 것. Core는 그대로다
