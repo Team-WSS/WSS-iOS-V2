@@ -58,6 +58,10 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`NormalSearchResultItemRow`는 `.contentShape(Rectangle())`이 반드시 있어야 한다**(#266에서 추가) —
+  표지(78×105 고정)와 텍스트(제목/작가) 사이 간격, 텍스트 오른쪽 남는 공간이 `HStack` 안의 투명
+  영역이라, 이게 없으면 `Button`으로 감싸도 그 빈 곳은 탭이 안 먹는다(Feature CLAUDE.md의 "커스텀
+  탭 영역은 `.contentShape(Rectangle())`" 규칙이 실제로 빠져 있던 사례). 지우지 말 것.
 - **`seek_info_platform`(상세탐색 필터 — 정보탭 플랫폼 선택)은 기획측 CSV엔 없는 V2 신규 이벤트다** — 장르
   (`seek_info_genre`)·연재상태(`seek_info_state`)는 CSV에 있는데 플랫폼만 없어서, 같은 파일(정보탭 필터
   4종 중 하나)이라는 이유로 그 둘과 동일한 명명 패턴(`seek_info_<필드>`)을 따라 새로 지었다. 트래킹
