@@ -23,7 +23,7 @@
 - **에러 표현 규칙(#195에서 단순화)**: **목록을 세우는 로드가 실패하면 첫 페이지·더보기·갱신을 가리지 않고 전면 실패 뷰** — **헤더(타이틀·등록 버튼)만 남기고** 그 아래를 `NetworkErrorView`+재시도로 대체한다(컨트롤·카운트·목록은 함께 숨김 — 실패 상태에서 조작할 게 없음). 예외는 둘: **인증 만료**=`requiresAuthentication` 신호 → `onAuthenticationRequired` 콜백, **키워드 칩 실패**(필터 시트의 부수 데이터)=토스트.
   - ⚠️ **한때 더보기 실패만 토스트였다가 #195에서 전면 뷰로 바꿨다 — 되돌리지 말 것.** 사용자에겐 셋 다 "목록을 못 불러왔다"는 같은 사건이고 몇 번째 페이지였는지는 앱 내부 사정이다. 결정적인 이유는 **복구 수단**이다 — 토스트는 사라지면 끝이라 다시 부를 방법이 없고, 실제로 그 때문에 "하단에서 더보기가 실패하면 그 뒤로 목록이 영영 안 채워지는" 상태가 만들어졌다(아래 항목). 전면 실패 뷰는 재시도 버튼을 달고 온다.
   - 이 규칙의 출처: **더보기=토스트는 디자인·기획이 정한 게 아니라 구현 관행이었다**(NovelDetail 골격 커밋에서 시작, 그 모듈엔 근거 기록이 없다). 반면 홈은 갱신 실패를 첫 로드와 같게 다루는 이유를 명시해뒀고(→ [HomeFeature](../HomeFeature/CLAUDE.md)) 서재도 그쪽에 맞췄다.
-- **빈 상태 2분화**: 서재 자체가 빔=`emptySection`("서재가 비어있어요" + 웹소설 찾기 CTA), 필터로 걸러져 0건=`noMatchSection`("해당하는 작품이 없어요" 2줄, CTA 없음). 가르는 기준은 `filter.hasActiveSheetFilter || filter.isInterest`(정렬은 개수를 안 바꾸니 제외).
+- **빈 상태 2분화**: 서재 자체가 빔=`emptySection`("서재가 비어있어요" + 작품 둘러보기 CTA), 필터로 걸러져 0건=`noMatchSection`("해당하는 작품이 없어요" 2줄, CTA 없음). 가르는 기준은 `filter.hasActiveSheetFilter || filter.isInterest`(정렬은 개수를 안 바꾸니 제외).
 
 ## 화면 동작 계약 — 타유저 서재 (#166)
 
@@ -40,6 +40,13 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`LibraryView.emptySection`(내 서재 빈 상태 CTA)은 `WSSComponent.WSSEmptyView`를 쓰지 않고
+  손으로 직접 구현돼 있다**(#266에서 발견) — 우연히도 `WSSEmptyType.collectionMyLibrary`의 `description`이
+  이미 동일 문구("서재가 비어있어요")고 `WSSEmptyType.novelNotification`의 `buttonTitle`도 이미 동일
+  문구("작품 둘러보기")다. `.collectionMyLibrary`는 `CollectionFeature`에서 CTA 없이 쓰이고 있어 그대로
+  재사용은 못 하고, 이미지 크기·버튼 폭·폰트·모서리 반경도 미묘하게 다르다 — `noMatchSection`(아래
+  `WSSLibraryGridCell` 관련 항목과 별개, `WSSComponent/CLAUDE.md`의 동일 항목 참고)과 같은 미통합
+  상태다. 통합 작업은 `docs/TODO.md` 17번.
 - `LibraryAnalyticsEvent`(`library_view`/`library_register_btn`/`library_empty_search_btn`/
   `library_notification_btn`/`library_interest_filter`/`library_filter_apply`/`library_sort`/
   `library_novel_select`/`user_library_view`/`user_library_sort`/`user_library_novel_select`)는

@@ -209,7 +209,7 @@ private extension LibraryView {
         } else if viewModel.state.novels.isEmpty {
             ScrollView {
                 // 서재 자체가 빈 것과 필터로 걸러져 0건인 것은 필요한 행동이 다르다
-                // ("웹소설 찾기" vs "필터 완화").
+                // ("작품 둘러보기" vs "필터 완화").
                 if hasAnyFilter {
                     noMatchSection
                 } else {
@@ -307,7 +307,7 @@ private extension LibraryView {
         viewModel.state.filter.hasActiveSheetFilter || viewModel.state.filter.isInterest
     }
 
-    /// 필터 결과 0건 — 서재는 비어있지 않으므로 "웹소설 찾기" 대신 범위를 넓히라고 안내한다.
+    /// 필터 결과 0건 — 서재는 비어있지 않으므로 "작품 둘러보기" 대신 범위를 넓히라고 안내한다.
     var noMatchSection: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 120)
@@ -322,7 +322,7 @@ private extension LibraryView {
         .frame(maxWidth: .infinity)
     }
 
-    /// 빈 상태 — "서재가 비어있어요" + 웹소설 찾기.
+    /// 빈 상태 — "서재가 비어있어요" + 작품 둘러보기.
     var emptySection: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 120)
@@ -338,7 +338,7 @@ private extension LibraryView {
                 viewModel.track(.emptySearchTapped)
                 onRoute(.search)
             } label: {
-                Text("웹소설 찾기")
+                Text("작품 둘러보기")
                     .applyWSSFont(.title1, color: .wssPrimary100)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)

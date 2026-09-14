@@ -316,7 +316,7 @@ private struct DemoRootView: View {
         case .novelDetail(let novelID):
             consoleLogger.info("작품 상세 진입 요청: \(novelID)")
         case .search:
-            consoleLogger.info("웹소설 찾기(검색) 진입 요청")
+            consoleLogger.info("작품 둘러보기(검색) 진입 요청")
         case .register:
             consoleLogger.info("작품 등록 진입 요청")
         case .notificationSetting:

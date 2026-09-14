@@ -252,6 +252,23 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   강제)은 범위 밖으로 남겼다(리뷰어 지적 13번). `FeedFeatureFactory.onSubmitted`가 이미 같은 이유로
   기본값을 안 두는 선례(#236)가 있어 방향은 정해져 있다 — 기본값만 지우고 호출부를 채우면 된다.
 
+### 17. `LibraryFeature`의 `emptySection`을 `WSSComponent.WSSEmptyView`로 통합
+
+- **무엇**: `LibraryView.emptySection`(내 서재 빈 상태)이 `WSSEmptyView`를 쓰지 않고 손으로 직접
+  구현돼 있다(#266 텍스트 변경 작업 중 발견). 우연히도 `WSSEmptyType.collectionMyLibrary`의
+  `description`이 이미 동일 문구("서재가 비어있어요")이고, `WSSEmptyType.novelNotification`의
+  `buttonTitle`도 이미 동일 문구("작품 둘러보기")다 — 사실상 같은 빈 상태가 두 곳에 따로 존재.
+- **왜 지금 안 했나**: `.collectionMyLibrary`는 현재 `CollectionFeature`(서재에서 추가 화면)에서
+  **CTA 없이**(`buttonTitle: nil`) 쓰이고 있어 그대로는 재사용 불가 — buttonTitle 추가 또는 새 케이스
+  분리가 필요하다. 또한 렌더 디테일이 다르다: 이미지 크기(39×48 vs 원본), 버튼 폭(`maxWidth: .infinity`
+  vs 고정폭), 버튼 폰트(`.title1` vs `.title2`), 모서리(12 vs 14) — `noMatchSection`(아래 참고)과
+  같은 성격의 미해결 항목이다.
+- **어디를 고치나(할 때)**: `WSSEmptyType`에 buttonTitle 있는 케이스 분리(또는 `.collectionMyLibrary`
+  자체를 파라미터화) → `LibraryView.emptySection`을 `WSSEmptyView(type:action:)` 호출로 교체.
+  렌더 차이는 디자인 확인 후 결정.
+- **놓치기 쉬운 것**: `WSSComponent/CLAUDE.md`에 이미 있는 "`noMatchSection`(필터 0건)은 아직 이
+  컴포넌트로 안 옮겼다" 항목과 **같은 종류의 미통합**이다 — 둘을 함께 검토할 것.
+
 AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205**) 작업에서 파생된 후속. **코드 전수 점검·정리**(예: 3번 swift-format 전체 리포맷)처럼 대개 레포 전체를 훑는 대공사이거나, 게이트 안정화 후로 미룬 것이다. 착수 시 이슈로 승격한다. (번호는 이 절 안에서만 쓰는 지역 번호다 — 위 기능 목록과 별개. 다른 문서·메모리는 "TODO(AI 검증 후속) N번"처럼 절 이름을 함께 적어 참조한다.)
 
 ### 1. SettingFeature·CollectionFeature에 VM 테스트가 없다

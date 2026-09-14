@@ -121,7 +121,7 @@
 ### 1.6 빈 화면·에러
 
 - ✅ **Keep** — 빈 상태 **2분화**: 필터가 걸린 상태로 0건(`filterOption != 기본값`)이면 "필터 결과 없음", 아니면 "서재 비어있음".
-  - V2: `noMatchSection`(CTA 없음) vs `emptySection`("웹소설 찾기" CTA) — 같은 2분화(가르는 기준 `hasActiveSheetFilter || isInterest`).
+  - V2: `noMatchSection`(CTA 없음) vs `emptySection`("작품 둘러보기" CTA) — 같은 2분화(가르는 기준 `hasActiveSheetFilter || isInterest`).
   - 근거: V1 `MyLibraryViewModel.swift:235-249` · V2 `CLAUDE.md`(빈 상태 2분화)
 - ✅ **Keep** — 목록 로드 실패는 **전면 에러 뷰 + 재시도**로 표현하고, 스트림을 끊지 않는다(첫 페이지·더보기·갱신 구분 없음).
   - V2: `loadFailed` → `NetworkErrorView` + 재시도(헤더만 남김). 첫 페이지·더보기·갱신 공통(#195에서 통일). **참고: V1은 애초에 "더보기만 토스트" 관행이 없었다** — V2 내부 히스토리(NovelDetail 관행)를 #195에서 V1과 같은 전면 뷰로 되돌린 것.

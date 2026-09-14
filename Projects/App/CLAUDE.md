@@ -262,6 +262,14 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`Resources/ko.lproj/InfoPlist.strings`(빈 파일, #266)를 지우지 말 것** — 내용이 비어 있어 안 쓰는
+  파일로 오인하기 쉽지만, 이 파일이 존재하는 것 자체가 Xcode 프로젝트 `knownRegions`에 `ko`를
+  등록시키는 유일한 장치다. 이게 없으면(`.lproj` 리소스가 전혀 없으면) 앱이 "영어만 지원"으로
+  선언되고, iOS는 텍스트 필드 편집 메뉴(Copy/Paste/Select All 등 UIKit 시스템 메뉴)의 언어를 **기기
+  언어가 아니라 앱이 선언한 지원 로케일과 기기 선호 언어의 교집합**으로 정해 시스템 메뉴가 기기
+  언어와 무관하게 영어로 고정된다(`Support/Info.plist`엔 `CFBundleDevelopmentRegion`/
+  `CFBundleLocalizations`가 없어 이 방식으로만 등록 가능). 실제 번역 문자열은 필요 없다 — 존재
+  자체가 목적이다.
 - **재발급(/reissue) 전용 URLSession엔 요청 타임아웃 10초가 걸려 있다**(#236, `AppDependencies`의
   `refresherClient`) — 재발급 대기(`SessionRefreshCoordinator`)가 취소에 반응하지 않아 스플래시 게이트
   예산(4초)이 뚫리는 구멍(`SplashDomain/CLAUDE.md`)을 App 조립에서 60초→10초로 좁힌 것. Core는 그대로다
@@ -394,7 +402,7 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
   이 바운스 경로는 "쓰던 중 세션이 죽는" 경우의 안전망으로만 남는다. **홈은 원래 비로그인도 봐야
   하는 화면이라 이 정책이 맞지 않다** — 비로그인 브라우징을 지원하려면 탭을 lazy 로드하거나(진짜
   선택했을 때만 그 탭의 API 호출) 홈만 인증 실패를 무시하도록 정책을 분리해야 한다(여전히 미지원).
-- **서재의 "웹소설 찾기"(빈 상태 CTA, `MyLibraryRoute.search`)와 우상단 등록 버튼(`.register`)은
+- **서재의 "작품 둘러보기"(빈 상태 CTA, `MyLibraryRoute.search`)와 우상단 등록 버튼(`.register`)은
   둘 다 같은 `SearchAssembly`(일반 검색)로 push된다**(사용자 확정, #196) — 서재엔 전용 "작품 등록"
   화면이 없고, 검색해서 찾은 작품을 작품 상세에서 등록하는 흐름이다. 나중에 전용 등록 화면이 생기면
   `.register` 케이스 매핑만 그 화면으로 바꾸면 된다(케이스가 분리돼 있는 이유).

@@ -14,7 +14,7 @@ enum LibraryAnalyticsEvent: String, AnalyticsEvent {
     case screenViewed = "library_view"
     /// 우상단 등록 버튼 클릭
     case registerButtonTapped = "library_register_btn"
-    /// 빈 상태 "웹소설 찾기" 클릭
+    /// 빈 상태 "작품 둘러보기" 클릭
     case emptySearchTapped = "library_empty_search_btn"
     /// "알림 관리" 클릭
     case notificationTapped = "library_notification_btn"

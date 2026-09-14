@@ -245,7 +245,7 @@ private extension UserLibraryView {
         }
     }
 
-    /// 빈 상태 — 남의 서재라 "웹소설 찾기" 같은 CTA가 없다(디자인). 남은 공간 가운데에 놓는다.
+    /// 빈 상태 — 남의 서재라 "작품 둘러보기" 같은 CTA가 없다(디자인). 남은 공간 가운데에 놓는다.
     var emptySection: some View {
         VStack(spacing: 0) {
             Spacer()
