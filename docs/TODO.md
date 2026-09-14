@@ -241,6 +241,23 @@ C1(#222) V1 동작 계약 추출 중 ❓Unknown으로 잡힌 항목을 사람이
   API가 id를 안 돌려줌) `created` 무ID 이벤트로 넣고 목록 전체 재로드로 처리해야 한다(#256의 작성 복귀
   리셋이 이미 그 형태다).
 
+### 17. `LibraryFeature`의 `emptySection`을 `WSSComponent.WSSEmptyView`로 통합
+
+- **무엇**: `LibraryView.emptySection`(내 서재 빈 상태)이 `WSSEmptyView`를 쓰지 않고 손으로 직접
+  구현돼 있다(#266 텍스트 변경 작업 중 발견). 우연히도 `WSSEmptyType.collectionMyLibrary`의
+  `description`이 이미 동일 문구("서재가 비어있어요")이고, `WSSEmptyType.novelNotification`의
+  `buttonTitle`도 이미 동일 문구("작품 둘러보기")다 — 사실상 같은 빈 상태가 두 곳에 따로 존재.
+- **왜 지금 안 했나**: `.collectionMyLibrary`는 현재 `CollectionFeature`(서재에서 추가 화면)에서
+  **CTA 없이**(`buttonTitle: nil`) 쓰이고 있어 그대로는 재사용 불가 — buttonTitle 추가 또는 새 케이스
+  분리가 필요하다. 또한 렌더 디테일이 다르다: 이미지 크기(39×48 vs 원본), 버튼 폭(`maxWidth: .infinity`
+  vs 고정폭), 버튼 폰트(`.title1` vs `.title2`), 모서리(12 vs 14) — `noMatchSection`(아래 참고)과
+  같은 성격의 미해결 항목이다.
+- **어디를 고치나(할 때)**: `WSSEmptyType`에 buttonTitle 있는 케이스 분리(또는 `.collectionMyLibrary`
+  자체를 파라미터화) → `LibraryView.emptySection`을 `WSSEmptyView(type:action:)` 호출로 교체.
+  렌더 차이는 디자인 확인 후 결정.
+- **놓치기 쉬운 것**: `WSSComponent/CLAUDE.md`에 이미 있는 "`noMatchSection`(필터 0건)은 아직 이
+  컴포넌트로 안 옮겼다" 항목과 **같은 종류의 미통합**이다 — 둘을 함께 검토할 것.
+
 ### 16. 세션·완료 결과 콜백의 `= {}` 기본값 제거 검토 (#253 리뷰 파생)
 
 - **무엇**: #253이 화면 전환 클로저의 기본값 no-op을 전부 없앴지만(Route enum + 필수 `onRoute`),

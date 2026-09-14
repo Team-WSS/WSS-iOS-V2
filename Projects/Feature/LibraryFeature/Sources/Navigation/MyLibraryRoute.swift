@@ -12,7 +12,7 @@ import BaseDomain
 public enum MyLibraryRoute {
     /// 작품 상세 — 작품 셀 탭.
     case novelDetail(NovelID)
-    /// 검색 — 빈 상태 "웹소설 찾기" CTA.
+    /// 검색 — 빈 상태 "작품 둘러보기" CTA.
     case search
     /// 작품 등록 — 우상단 등록 버튼. 전용 등록 화면이 없어 현재 App은 검색으로 보낸다(사용자 확정,
     /// #196) — 전용 화면이 생기면 App 쪽 이 케이스 매핑만 바꾸면 되도록 `.search`와 케이스를 분리해 둔다.

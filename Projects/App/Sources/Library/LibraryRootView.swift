@@ -24,7 +24,7 @@ import WSSComponent
 /// "서재" 탭 콘텐츠. 로그인한 본인 서재(`makeMyLibraryView`)를 붙이고, 이 탭에서 push되는 타유저
 /// 프로필의 서재 블록 탭 시 그 유저의 서재(`makeUserLibraryView`)까지 다른 3탭과 동일하게 push한다
 /// (#197 후속, 2026-08-28 — 4탭 전부 `UserPageAssembly.onLibraryTapped`를 연결하기로 확정). 작품 상세(`NovelDetailAssembly`)·
-/// 일반 검색(`SearchAssembly`, "웹소설 찾기"·"작품 등록" 버튼 공용 — 서재는 별도 작품 등록 화면이 없고
+/// 일반 검색(`SearchAssembly`, "작품 둘러보기"·"작품 등록" 버튼 공용 — 서재는 별도 작품 등록 화면이 없고
 /// 검색해서 작품을 찾아 상세에서 등록하는 흐름, 사용자 확정)·알림 설정(`SettingFeatureFactory.makeNotificationSettingView`,
 /// 서재 알림 관리는 설정 목록 전체가 아니라 이 화면으로 바로 진입한다), 그리고 작품 상세에서 열리는
 /// 작품 평가·피드 작성·유저 프로필까지 push한다.
@@ -441,10 +441,10 @@ private extension LibraryRootView {
     }
 }
 
-// MARK: - 일반 검색 (웹소설 찾기 / 작품 등록 공용)
+// MARK: - 일반 검색 (작품 둘러보기 / 작품 등록 공용)
 
 private extension LibraryRootView {
-    /// `.search`(웹소설 찾기/작품 등록, 빈 검색창)와 `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 둘 다
+    /// `.search`(작품 둘러보기/작품 등록, 빈 검색창)와 `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 둘 다
     /// 이 화면을 그대로 재사용한다 — 차이는 `initialQuery` 유무뿐.
     func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(

@@ -40,6 +40,13 @@
 
 ## 주의사항 (작업 중 발견 시 누적)
 
+- ⚠️ **`LibraryView.emptySection`(내 서재 빈 상태 CTA)은 `WSSComponent.WSSEmptyView`를 쓰지 않고
+  손으로 직접 구현돼 있다**(#266에서 발견) — 우연히도 `WSSEmptyType.collectionMyLibrary`의 `description`이
+  이미 동일 문구("서재가 비어있어요")고 `WSSEmptyType.novelNotification`의 `buttonTitle`도 이미 동일
+  문구("작품 둘러보기")다. `.collectionMyLibrary`는 `CollectionFeature`에서 CTA 없이 쓰이고 있어 그대로
+  재사용은 못 하고, 이미지 크기·버튼 폭·폰트·모서리 반경도 미묘하게 다르다 — `noMatchSection`(아래
+  `WSSLibraryGridCell` 관련 항목과 별개, `WSSComponent/CLAUDE.md`의 동일 항목 참고)과 같은 미통합
+  상태다. 통합 작업은 `docs/TODO.md` 17번.
 - `LibraryAnalyticsEvent`(`library_view`/`library_register_btn`/`library_empty_search_btn`/
   `library_notification_btn`/`library_interest_filter`/`library_filter_apply`/`library_sort`/
   `library_novel_select`/`user_library_view`/`user_library_sort`/`user_library_novel_select`)는

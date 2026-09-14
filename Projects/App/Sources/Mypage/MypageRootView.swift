@@ -746,7 +746,7 @@ private extension MypageRootView {
 // MARK: - 일반 검색 (작품 상세 "작가" 탭)
 
 private extension MypageRootView {
-    /// `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 전용 — 이 탭엔 `LibraryRootView`의 "웹소설 찾기"
+    /// `.authorSearch`(작가 이름 탭, 사전 검색된 결과) 전용 — 이 탭엔 `LibraryRootView`의 "작품 둘러보기"
     /// 같은 직접 진입점이 없어 `.search` 케이스는 지금 이 경로로만 도달한다.
     func searchView(initialQuery: String? = nil) -> some View {
         SearchAssembly.makeView(
