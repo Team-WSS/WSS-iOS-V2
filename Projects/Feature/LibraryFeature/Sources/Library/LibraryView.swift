@@ -209,7 +209,7 @@ private extension LibraryView {
         } else if viewModel.state.novels.isEmpty {
             ScrollView {
                 // 서재 자체가 빈 것과 필터로 걸러져 0건인 것은 필요한 행동이 다르다
-                // ("웹소설 찾기" vs "필터 완화").
+                // ("작품 둘러보기" vs "필터 완화").
                 if hasAnyFilter {
                     noMatchSection
                 } else {
