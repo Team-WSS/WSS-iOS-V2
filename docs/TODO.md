@@ -64,7 +64,15 @@
      `1.10.0`(또는 그 이상)에 맞춰 올려야 한다** — 실제 업로드·버전 반영은 `make-release-PR`/
      `archive-release` 스킬이 담당.
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
-     서버 응답으로 리허설 검증.
+     서버 응답으로 리허설 검증. **main 머지/릴리즈 작업 시점에 이어서 진행하기로 보류(2026-09-15,
+     사용자 확정)**. 그때 참고할 것:
+     - `bundle exec fastlane match appstore --readonly true`로 `kr.websoso`/`kr.websoso.debug2` AppStore
+       프로파일·인증서 로컬 동기화까지는 이미 실측 성공(2026-09-15, `fastlane/.env`의
+       `MATCH_PASSWORD` 없이도 macOS Keychain에 저장된 값으로 동작).
+     - ⚠️ **AppStore 배포 프로파일 서명 빌드는 USB/무선으로 실기기에 직접 설치할 수 없다**(대상 기기
+       UDID가 없는 프로파일이라 iOS가 로컬 설치 자체를 막음, Xcode Run·`devicectl install` 둘 다 불가) —
+       **TestFlight 경유가 유일한 경로**다. `release_beta` lane(이미 준비, 미실행)으로 업로드 →
+       기기의 TestFlight 앱에서 설치 → 로그인 테스트 순서로 진행할 것(`archive-release` 스킬).
   7. ~~`aps-environment`를 배포용 `production`으로~~ ✅ 완료(2026-09-15) — `Project.swift`의
      `CODE_SIGN_ENTITLEMENTS`로 Debug(`Support/WSS-iOS.entitlements`=development)/Release
      (`Support/WSS-iOS-Release.entitlements`=production) 분리(`Projects/App/CLAUDE.md` 참고). 실기기
