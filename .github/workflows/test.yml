@@ -2,7 +2,10 @@ name: Run Tests
 
 on:
   pull_request:
-    branches: [ develop ]
+    # develop→main 승격 PR(릴리즈 PR)도 같은 테스트/아키텍처 검사를 받는다 — main 브랜치
+    # 보호가 이 job들("All Tests Passed", "Architecture Rules")을 required status check로
+    # 요구한다(release.yml과 맞물림).
+    branches: [ develop, main ]
   issue_comment:
     types: [ created ]
   workflow_dispatch:

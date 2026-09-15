@@ -237,11 +237,15 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   크래시가 난다(Swift `try`는 Obj-C 예외를 못 잡아 그대로 앱 종료). ⚠️ **시뮬레이터에선 안 나고 실기기에서만** 터지며
   (아키텍처별 링커 최적화 차이), 링크 이슈라 **Debug·Release 배포 빌드 모두** 해당 — 그래서 `base`에 둔다. CocoaPods(V1)는
   이 플래그를 자동으로 넣어줘 안 겪던 것이라, SPM+Tuist static에선 명시가 필수. 실기기 실측으로 발견(2026-09-05).
-- ⚠️ **`aps-environment`(`Support/WSS-iOS.entitlements`)는 현재 `development` 고정** — 실기기 Xcode Run(개발 프로파일)엔
-  맞지만 **App Store/TestFlight 배포판은 `production`이어야** 푸시가 배달된다(안 맞으면 크래시 없이 조용히 안 옴).
-  Debug=development / Release=production 분리가 정석 — **컷오버 전 필수**(`docs/TODO.md` 4번). 실기기 Run은 배포
-  프로파일이 아니라 `match Development` 프로파일을 선택해야 설치되고 `tuist generate`가 그 선택을 App Store로 리셋한다 —
-  이 서명 함정은 `docs/FASTLANE_ONBOARDING.md` 참고.
+- **`aps-environment`는 `Project.swift`의 `CODE_SIGN_ENTITLEMENTS` 빌드 설정으로 Debug/Release가 분리돼 있다**
+  (`docs/TODO.md` 4-7번 완료) — Debug는 `Support/WSS-iOS.entitlements`(`development`), Release는
+  `Support/WSS-iOS-Release.entitlements`(`production`)를 가리킨다. App 타깃 자체는
+  `entitlements: .variable("CODE_SIGN_ENTITLEMENTS")`만 선언하고 실제 파일 경로는 안 갖는다.
+  ⚠️ **두 파일은 물리적으로 별개**라 `com.apple.developer.applesignin` 같은 aps-environment 이외의
+  entitlement를 추가/변경할 땐 **두 파일 다 고쳐야 한다** — 한쪽만 고치면 Debug/Release 중 한쪽만
+  그 capability를 갖게 된다(하나로 합쳐 보이지만 실제로는 파일 두 벌). 실기기 Run은 배포 프로파일이
+  아니라 `match Development` 프로파일을 선택해야 설치되고 `tuist generate`가 그 선택을 App Store로
+  리셋한다 — 이 서명 함정은 `docs/FASTLANE_ONBOARDING.md` 참고.
 
 ## 애널리틱스(Amplitude·Clarity) 배선 (#249)
 

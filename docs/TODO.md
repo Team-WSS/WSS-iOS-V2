@@ -48,18 +48,46 @@
 - **어디를 고치나(남은 것, 컷오버 시점에)**:
   1. ~~Bundle ID 교체~~ ✅ 위에서 완료.
   2. ~~`DEVELOPMENT_TEAM` 추가~~ ✅ 위에서 완료(fastlane match도 이후 도입 완료 — 아래 참고).
-  3. Apple Sign-in capability는 운영 Bundle ID의 App ID에 이미 켜져 있을 것 — 신규 등록 불필요, 확인만.
-  4. Kakao Developers 콘솔의 해당 앱(App Key 그대로) → 플랫폼 → iOS에 운영 Bundle ID + **새로 서명한
-     배포 인증서의 키해시**가 등록돼 있는지 확인/추가.
-  5. App Store Connect에 **운영 앱과 정확히 같은 앱 레코드**로 새 빌드 업로드(별도 신규 리스팅 금지 —
-     기존 유저가 일반 업데이트로 받아야 리뷰·랭킹·설치기반이 유지됨, 사용자 확정).
+  3. ~~Apple Sign-in capability 확인~~ ✅ 완료(2026-09-15) — 운영 Bundle ID(`kr.websoso`)의 App ID에
+     Sign In with Apple이 이미 켜져 있음을 Apple Developer 콘솔에서 실측 확인(사용자).
+  4. ~~Kakao Developers 콘솔 iOS 플랫폼에 운영 Bundle ID 등록 확인~~ ✅ 완료(2026-09-15) — `kr.websoso`로
+     이미 등록됨을 콘솔에서 실측 확인(사용자). ⚠️ **정정**: 원래 이 항목이 요구했던 "새로 서명한 배포
+     인증서의 키해시" 등록은 Android 전용 개념이라 iOS엔 적용되지 않는다(iOS는 번들 ID만 있으면
+     충분, [Kakao Developers 문서](https://developers.kakao.com/docs/ko/app-setting/app) 확인) —
+     이전 서술이 잘못돼 있었다.
+  5. **레코드 확인** ✅ 완료(2026-09-15) — App Store Connect에서 Apple ID `6738299124`(SKU `websoso`)
+     앱의 번들 ID가 `kr.websoso`로 V2 releaseBundleId와 정확히 일치함을 확인(별도 신규 리스팅
+     아님). 메타데이터(이름·카테고리·연령등급·사용권계약)와 iPhone 6.5" 스크린샷(9/10)도 이미
+     채워져 있음. ⚠️ **실제 빌드 업로드는 아직 남음** — 이 레코드엔 이미 사용자가 컷오버용으로
+     예약해둔 `1.10.0` 버전(제출 준비 중, 위 스크린샷도 이 버전에 등록됨)이 있다. **V2
+     `Project.swift`의 `MARKETING_VERSION`(현재 `"1.9.4"`, appBaseSettings)은 컷오버 시점에 이
+     `1.10.0`(또는 그 이상)에 맞춰 올려야 한다** — 실제 업로드·버전 반영은 `make-release-PR`/
+     `archive-release` 스킬이 담당.
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
-     서버 응답으로 리허설 검증.
-  7. **`aps-environment`를 배포용 `production`으로**(#243) — 현재 `Support/WSS-iOS.entitlements`는
-     `development` 고정(실기기 Xcode Run=개발 프로파일용). App Store/TestFlight 배포판은 `production`이어야
-     푸시가 배달된다(안 맞으면 **크래시는 없지만 조용히 안 옴**). Debug=development / Release=production으로
-     config 분리가 정석. 실기기 E2E는 development로 검증 완료(2026-09-05), production 경로는 배포 빌드로
-     별도 검증 필요.
+     서버 응답으로 리허설 검증. **main 머지/릴리즈 작업 시점에 이어서 진행하기로 보류(2026-09-15,
+     사용자 확정)**. 그때 참고할 것:
+     - `bundle exec fastlane match appstore --readonly true`로 `kr.websoso`/`kr.websoso.debug2` AppStore
+       프로파일·인증서 로컬 동기화까지는 이미 실측 성공(2026-09-15, `fastlane/.env`의
+       `MATCH_PASSWORD` 없이도 macOS Keychain에 저장된 값으로 동작).
+     - ⚠️ **AppStore 배포 프로파일 서명 빌드는 USB/무선으로 실기기에 직접 설치할 수 없다**(대상 기기
+       UDID가 없는 프로파일이라 iOS가 로컬 설치 자체를 막음, Xcode Run·`devicectl install` 둘 다 불가) —
+       **TestFlight 경유가 유일한 경로**다. `release_beta` lane(이미 준비, 미실행)으로 업로드 →
+       기기의 TestFlight 앱에서 설치 → 로그인 테스트 순서로 진행할 것(`archive-release` 스킬).
+  7. ~~`aps-environment`를 배포용 `production`으로~~ ✅ 완료(2026-09-15) — `Project.swift`의
+     `CODE_SIGN_ENTITLEMENTS`로 Debug(`Support/WSS-iOS.entitlements`=development)/Release
+     (`Support/WSS-iOS-Release.entitlements`=production) 분리(`Projects/App/CLAUDE.md` 참고). 실기기
+     E2E는 development로 검증 완료(2026-09-05), production 경로는 실제 배포 빌드로 별도 검증 필요(6번).
+  8. **`CUTOVER_READY` GitHub Actions repo variable을 `true`로 전환** — `main` push 시 App Store 심사
+     자동 제출(`.github/workflows/release.yml` → fastlane `release` lane)이 실제로 동작하려면 위 1~7번이
+     전부 끝난 뒤 이 플래그부터 켜야 한다(꺼져 있으면 job이 승인 요청도 없이 skip됨).
+     **✅ 이미 끝난 것(2026-09-13)**: `app-store-release` Environment 생성 + Required reviewers(Guryss·
+     Naknakk) 지정 + 배포 브랜치 `main` 제한, `main` 브랜치 보호를 `develop` 수준으로 강화(required
+     status check `All Tests Passed`, force-push·삭제 금지).
+     **전환 전 아직 남은 것**: 아래 GitHub Actions secrets 전체 등록 + App Store Connect에 이미
+     설명·스크린샷 등 기본 메타데이터가 채워져 있는지 확인(`deliver` 호출이 릴리즈노트만 채우고
+     `skip_metadata`/`skip_screenshots` 가드가 없어, 정말 신규 앱 레코드라면 스크린샷 미비로 제출이
+     막힐 수 있다 — 5번 항목대로 "운영 앱과 동일 레코드"라 대부분 이미 채워져 있을 가능성이 높지만
+     확인 필요).
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
@@ -84,6 +112,19 @@
   Xcode 프로젝트가 통째로 바뀌는 이관이라 **반드시 실측 검증**할 것 — 추측으로 넘어가지 말 것. Push
   (APNs)·Universal Link(`apple-app-site-association`) 등 Bundle ID에 종속된 다른 설정이 운영 앱에
   더 있다면 같은 시점에 함께 점검 대상.
+- **✅ `main` push → App Store 심사 자동 제출 CI 배선 완료(2026-09-13)**: `.github/workflows/release.yml`
+  신설 — `CUTOVER_READY` repo variable(기본 미설정/false, 위 8번) + `app-store-release` Environment의
+  Required reviewers 승인, 두 겹으로 막아둔 채 실제로 켜는 건 컷오버 완료 후로 미뤘다. 릴리즈 노트는
+  `fastlane/metadata/ko/release_notes.txt`(git 버전관리, 릴리즈 PR마다 갱신). 아직 등록 안 된 것 —
+  GitHub Actions secrets: `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_P8_BASE64`/`TEAM_ID`/
+  `APP_IDENTIFIER_RELEASE`/`APP_IDENTIFIER_DEBUG`(release lane은 안 쓰지만 `fastlane/Appfile`이
+  로드 시점에 둘 다 `ENV.fetch`로 요구해 없으면 Fastfile 시작 전에 죽는다 — wss-pr-reviewer가
+  실측으로 잡은 Blocker, 2026-09-13 반영)/`MATCH_PASSWORD`/`MATCH_GIT_DEPLOY_KEY`(인증서 저장소
+  read-only deploy key)/`CONFIG_*`(로컬 `Config/Config_Release.xcconfig`·`Config_Shared.xcconfig`의
+  실제 값 — 파일 자체가 git에 없어 별도 전달 필요, `docs/FASTLANE_ONBOARDING.md`의 `.env` 전달
+  방식과 동일하게. `CONFIG_BASE_URL`/`CONFIG_BUCKET_URL`은 평범한 `https://` 형태로 등록해도
+  된다 — 워크플로우가 xcconfig의 `//` 주석 파싱을 피하는 이스케이프를 자동 적용한다).
+  자세한 배선은 [docs/WORKFLOW.md](WORKFLOW.md)의 "배포(App Store 심사 제출)" 절.
 
 ### 5. 401과 "재발급까지 해봤지만 실패"가 Data 레이어에서 구분되지 않는다
 
