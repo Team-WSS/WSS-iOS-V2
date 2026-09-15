@@ -48,11 +48,21 @@
 - **어디를 고치나(남은 것, 컷오버 시점에)**:
   1. ~~Bundle ID 교체~~ ✅ 위에서 완료.
   2. ~~`DEVELOPMENT_TEAM` 추가~~ ✅ 위에서 완료(fastlane match도 이후 도입 완료 — 아래 참고).
-  3. Apple Sign-in capability는 운영 Bundle ID의 App ID에 이미 켜져 있을 것 — 신규 등록 불필요, 확인만.
-  4. Kakao Developers 콘솔의 해당 앱(App Key 그대로) → 플랫폼 → iOS에 운영 Bundle ID + **새로 서명한
-     배포 인증서의 키해시**가 등록돼 있는지 확인/추가.
-  5. App Store Connect에 **운영 앱과 정확히 같은 앱 레코드**로 새 빌드 업로드(별도 신규 리스팅 금지 —
-     기존 유저가 일반 업데이트로 받아야 리뷰·랭킹·설치기반이 유지됨, 사용자 확정).
+  3. ~~Apple Sign-in capability 확인~~ ✅ 완료(2026-09-15) — 운영 Bundle ID(`kr.websoso`)의 App ID에
+     Sign In with Apple이 이미 켜져 있음을 Apple Developer 콘솔에서 실측 확인(사용자).
+  4. ~~Kakao Developers 콘솔 iOS 플랫폼에 운영 Bundle ID 등록 확인~~ ✅ 완료(2026-09-15) — `kr.websoso`로
+     이미 등록됨을 콘솔에서 실측 확인(사용자). ⚠️ **정정**: 원래 이 항목이 요구했던 "새로 서명한 배포
+     인증서의 키해시" 등록은 Android 전용 개념이라 iOS엔 적용되지 않는다(iOS는 번들 ID만 있으면
+     충분, [Kakao Developers 문서](https://developers.kakao.com/docs/ko/app-setting/app) 확인) —
+     이전 서술이 잘못돼 있었다.
+  5. **레코드 확인** ✅ 완료(2026-09-15) — App Store Connect에서 Apple ID `6738299124`(SKU `websoso`)
+     앱의 번들 ID가 `kr.websoso`로 V2 releaseBundleId와 정확히 일치함을 확인(별도 신규 리스팅
+     아님). 메타데이터(이름·카테고리·연령등급·사용권계약)와 iPhone 6.5" 스크린샷(9/10)도 이미
+     채워져 있음. ⚠️ **실제 빌드 업로드는 아직 남음** — 이 레코드엔 이미 사용자가 컷오버용으로
+     예약해둔 `1.10.0` 버전(제출 준비 중, 위 스크린샷도 이 버전에 등록됨)이 있다. **V2
+     `Project.swift`의 `MARKETING_VERSION`(현재 `"1.9.4"`, appBaseSettings)은 컷오버 시점에 이
+     `1.10.0`(또는 그 이상)에 맞춰 올려야 한다** — 실제 업로드·버전 반영은 `make-release-PR`/
+     `archive-release` 스킬이 담당.
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
      서버 응답으로 리허설 검증.
   7. ~~`aps-environment`를 배포용 `production`으로~~ ✅ 완료(2026-09-15) — `Project.swift`의
