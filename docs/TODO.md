@@ -55,11 +55,10 @@
      기존 유저가 일반 업데이트로 받아야 리뷰·랭킹·설치기반이 유지됨, 사용자 확정).
   6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
      서버 응답으로 리허설 검증.
-  7. **`aps-environment`를 배포용 `production`으로**(#243) — 현재 `Support/WSS-iOS.entitlements`는
-     `development` 고정(실기기 Xcode Run=개발 프로파일용). App Store/TestFlight 배포판은 `production`이어야
-     푸시가 배달된다(안 맞으면 **크래시는 없지만 조용히 안 옴**). Debug=development / Release=production으로
-     config 분리가 정석. 실기기 E2E는 development로 검증 완료(2026-09-05), production 경로는 배포 빌드로
-     별도 검증 필요.
+  7. ~~`aps-environment`를 배포용 `production`으로~~ ✅ 완료(2026-09-15) — `Project.swift`의
+     `CODE_SIGN_ENTITLEMENTS`로 Debug(`Support/WSS-iOS.entitlements`=development)/Release
+     (`Support/WSS-iOS-Release.entitlements`=production) 분리(`Projects/App/CLAUDE.md` 참고). 실기기
+     E2E는 development로 검증 완료(2026-09-05), production 경로는 실제 배포 빌드로 별도 검증 필요(6번).
   8. **`CUTOVER_READY` GitHub Actions repo variable을 `true`로 전환** — `main` push 시 App Store 심사
      자동 제출(`.github/workflows/release.yml` → fastlane `release` lane)이 실제로 동작하려면 위 1~7번이
      전부 끝난 뒤 이 플래그부터 켜야 한다(꺼져 있으면 job이 승인 요청도 없이 skip됨).
