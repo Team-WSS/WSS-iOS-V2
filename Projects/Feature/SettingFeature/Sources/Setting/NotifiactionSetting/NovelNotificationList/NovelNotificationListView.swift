@@ -163,11 +163,11 @@ private extension NovelNotificationListView {
         )
     }
 
-    /// "{첫 선택 작품 제목} 외 N작품" — 목록에 보이는 순서 기준으로 첫 선택 항목을 고른다.
+    /// "Re : {첫 선택 작품 제목} 외 N작품" — 목록에 보이는 순서 기준으로 첫 선택 항목을 고른다.
     var deleteSummaryText: String {
         let selected = viewModel.state.subscriptions.filter { viewModel.state.selectedNovelIDs.contains($0.novelID) }
         guard let first = selected.first else { return "" }
-        return selected.count == 1 ? first.novelTitle : "\(first.novelTitle) 외 \(selected.count - 1)작품"
+        return selected.count == 1 ? first.novelTitle : "Re : \(first.novelTitle) 외 \(selected.count - 1)작품"
     }
 
     var toastBinding: Binding<Bool> {
