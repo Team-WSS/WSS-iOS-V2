@@ -518,6 +518,12 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
      V1은 `GENERATE_INFOPLIST_FILE = YES` + `INFOPLIST_KEY_*` 빌드 설정으로 이 키들을 자동 주입받는
      구조라 V1 Info.plist엔 이 키들이 안 보인다(V2와 전략이 다름, 헷갈리지 말 것) — V2는 `Support/Info.plist`가
      리터럴 `.file(path:)`라 이 키들을 **직접** 파일에 적어야 한다.
+  4-1. **`ITSAppUsesNonExemptEncryption`도 같은 이유로 직접 적어야 한다**(2026-09-20 추가) — 이
+     키가 없으면 앱이 표준 HTTPS/TLS만 쓰고 있어도(커스텀 암호화 없음) TestFlight/App Store 제출마다
+     "수출 규정 관련 문서" 질문이 뜬다(App Store Connect에서 수동 확인 필요 — 자동화된 `release`/
+     `release_beta` lane엔 이 프롬프트를 받을 사람이 없어 CI가 막힐 수 있다). `GENERATE_INFOPLIST_FILE`
+     프로젝트는 Xcode가 이 값을 물어보고 자동 주입하지만 V2는 리터럴 파일이라 안 물어보고 그냥 누락된다.
+     `<false/>`로 명시(표준 암호화만 쓴다는 뜻) — 실제로 커스텀/비표준 암호화를 추가하면 이 값도 재검토할 것.
   5. **`agvtool`(fastlane `increment_build_number`) 기반 빌드 번호 자동 증가가 동작하려면 Apple
      Generic Versioning이 필요하다** — `Project.swift`의 App 타깃 전용 `appBaseSettings`에
      `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`/`VERSIONING_SYSTEM: "apple-generic"`를 두고,
