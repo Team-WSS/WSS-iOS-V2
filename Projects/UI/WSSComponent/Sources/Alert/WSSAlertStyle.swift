@@ -317,14 +317,14 @@ public extension WSSAlertType {
 
         case .deleteNovelNotificationSubscriptions(let summary):
             WSSAlertContent(
-                iconImage: WSSImage.icModalWarning.swiftUIImage,
-                title: "작품 알림을 삭제할까요?",
-                titleFont: .title2,
-                titleBottomPadding: 4,
+                iconImage: nil,
+                title: "해당 작품 알림을 삭제할까요?",
+                titleFont: .title1,
+                titleBottomPadding: 10,
                 description: WSSAlertDescription(
                     title: summary,
-                    font: .label1,
-                    titleColor: WSSColor.wssGray200.swiftUIColor,
+                    font: .body2,
+                    titleColor: WSSColor.wssGray300.swiftUIColor,
                     bottomPadding: 24
                 ),
                 buttons: [
