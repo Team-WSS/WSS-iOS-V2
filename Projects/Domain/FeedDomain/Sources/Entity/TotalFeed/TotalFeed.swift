@@ -1,0 +1,151 @@
+//
+//  TotalFeed.swift
+//  FeedDomain
+//
+//  Created by Seoyeon Choi on 1/29/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import BaseDomain
+
+public struct TotalFeed: Equatable, Sendable {
+    
+    public let feedId: FeedID
+    public static func == (lhs: TotalFeed, rhs: TotalFeed) -> Bool {
+        lhs.feedId == rhs.feedId
+    }
+    
+    public let createdDate: String
+    public let content: String
+    
+    public private(set) var author: Author
+    
+    public private(set) var likeCount: Int
+    public private(set) var isLiked: Bool
+    public private(set) var commentCount: Int
+    
+    public private(set) var connectedNovel: ConnectedNovel?
+    
+    public private(set) var isSpoiler: Bool
+    public private(set) var isModified: Bool
+    public private(set) var isPublic: Bool
+    /// 로그인 사용자의 글인지 — 셀 액션 분기(수정/삭제 vs 신고, 프로필 이동 차단)에 쓴다.
+    public let isMyFeed: Bool
+
+    public private(set) var thumbnailImageURL: URL?
+    public private(set) var imageCount: Int
+    
+    // MARK: - Policy
+    
+    public enum PolicyError: Error, Equatable {
+        case negativeLikeCount
+    }
+    
+    public mutating func toggleLike() throws {
+        if isLiked {
+            guard likeCount > 0 else {
+                throw PolicyError.negativeLikeCount
+            }
+            likeCount -= 1
+        } else {
+            likeCount += 1
+        }
+        isLiked.toggle()
+    }
+
+    /// 재조회로 받은 서버 항목(self)에 **로컬 항목의 좋아요 상태(isLiked·likeCount)만** 얹은 사본.
+    ///
+    /// 재진입 조용한 재조회의 통째 교체가 낙관 좋아요 토글과 겹칠 때 쓴다 — 서버 응답이 토글 이전
+    /// 스냅샷일 수 있어 그대로 교체하면 방금 누른 좋아요가 시각적으로 풀린다. 좋아요 두 필드만
+    /// 로컬 우선으로 보존하고 **본문·댓글수·수정 여부 등 나머지는 서버 값을 따른다**(셀 전체를
+    /// 로컬로 되돌리면 그 사이 서버에서 바뀐 다른 값까지 버리게 된다 — #236 리뷰).
+    public func preservingLikeState(of local: TotalFeed) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: content,
+            author: author,
+            likeCount: local.likeCount,
+            isLiked: local.isLiked,
+            commentCount: commentCount,
+            connectedNovel: connectedNovel,
+            isSpoiler: isSpoiler,
+            isModified: isModified,
+            isPublic: isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: thumbnailImageURL,
+            imageCount: imageCount
+        )
+    }
+
+    /// 피드 상세(`FeedDetail`) 응답으로 이 목록 항목을 갱신한 사본 — 목록에서 **다녀온 셀만** 상세 API로
+    /// 맞추는 데 쓴다(재진입 목록 재조회의 대체 — 목록 전체를 다시 받지 않아 스크롤·길이가 유지된다).
+    ///
+    /// 본문·좋아요·댓글수·스포일러/공개/수정 여부·연결 작품·이미지(썸네일=첫 장, 개수)는 상세 값을 따르고,
+    /// **`feedId`·`createdDate`·`author`·`isMyFeed`는 로컬을 유지**한다 — `isMyFeed`는 상세 응답에 없고,
+    /// `author`는 내 피드 목록이 프로필 조회로 덧씌운 값이라 상세의 author로 되돌리면 그 조립이 풀린다.
+    /// 작성일은 바뀌지 않는 값이라 목록 응답의 표기를 그대로 둔다.
+    ///
+    /// ⚠️ **연결 작품의 `rating`은 상세의 `basicInfo.rating`(작품 전체 평점)이 아니라
+    /// `feedWriterRating`(글쓴이 별점)에서 가져온다** — 목록 셀의 `ConnectedNovel.rating`은 애초에
+    /// "글쓴이 별점"을 뜻한다(목록 API는 이 값을 `novelRating`으로, 상세 API는 `feedWriterNovelRating`으로
+    /// 내려주는 필드명 불일치가 있다). `basicInfo`를 통째로 넣으면 복귀 순간 별점이 전체 평점으로 바뀐다.
+    public func updated(from detail: FeedDetail) -> TotalFeed {
+        TotalFeed(
+            feedId: feedId,
+            createdDate: createdDate,
+            content: detail.feedContent,
+            author: author,
+            likeCount: detail.likeCount,
+            isLiked: detail.isLiked,
+            commentCount: detail.commentCount,
+            connectedNovel: detail.connectedNovel.map { connected in
+                ConnectedNovel(
+                    id: connected.basicInfo.id,
+                    title: connected.basicInfo.title,
+                    genre: connected.basicInfo.genre,
+                    rating: connected.feedWriterRating
+                )
+            },
+            isSpoiler: detail.isSpoiler,
+            isModified: detail.isModified,
+            isPublic: detail.isPublic,
+            isMyFeed: isMyFeed,
+            thumbnailImageURL: detail.feedImageURLs.first ?? nil,
+            imageCount: detail.feedImageURLs.count
+        )
+    }
+
+    public init(
+        feedId: FeedID,
+        createdDate: String,
+        content: String,
+        author: Author,
+        likeCount: Int,
+        isLiked: Bool,
+        commentCount: Int,
+        connectedNovel: ConnectedNovel? = nil,
+        isSpoiler: Bool,
+        isModified: Bool,
+        isPublic: Bool,
+        isMyFeed: Bool,
+        thumbnailImageURL: URL? = nil,
+        imageCount: Int
+    ) {
+        self.feedId = feedId
+        self.createdDate = createdDate
+        self.content = content
+        self.author = author
+        self.likeCount = likeCount
+        self.isLiked = isLiked
+        self.commentCount = commentCount
+        self.connectedNovel = connectedNovel
+        self.isSpoiler = isSpoiler
+        self.isModified = isModified
+        self.isPublic = isPublic
+        self.isMyFeed = isMyFeed
+        self.thumbnailImageURL = thumbnailImageURL
+        self.imageCount = imageCount
+    }
+}

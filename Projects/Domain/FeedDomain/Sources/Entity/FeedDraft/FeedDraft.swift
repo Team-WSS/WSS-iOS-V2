@@ -1,0 +1,94 @@
+//
+//  FeedDraft.swift
+//  FeedDomain
+//
+//  Created by Seoyeon Choi on 1/28/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import BaseDomain
+
+public struct FeedDraft: Sendable, Equatable {
+    
+    public private(set) var content: String
+    public private(set) var isSpoiler: Bool
+    public private(set) var isPrivate: Bool
+    public private(set) var connectedNovel: ConnectedNovel?
+    public private(set) var attachedImages: [AttachedImageID]
+
+    // MARK: - init
+
+    public init(
+        content: String,
+        isSpoiler: Bool,
+        isPrivate: Bool,
+        connectedNovel: ConnectedNovel? = nil,
+        attachedImages: [AttachedImageID]
+    ) {
+        let limitedContent = String(content.prefix(Self.maxContentCount))
+        let limitedImages = Array(attachedImages.prefix(Self.maxImageCount))
+        
+        self.content = limitedContent
+        self.isSpoiler = isSpoiler
+        self.isPrivate = isPrivate
+        self.connectedNovel = connectedNovel
+        self.attachedImages = limitedImages
+    }
+    
+    // MARK: - Policy
+    
+    public static let maxContentCount: Int = 2000
+    public static let maxImageCount: Int = 5
+    
+    public enum ValidationError: Error, Equatable {
+        case contentOverLimit(max: Int)
+        case imageOverLimit(max: Int)
+        case connectedNovelOverLimit
+        case emptyContent
+    }
+    
+    public mutating func updateContent(_ newValue: String) throws {
+        guard newValue.count <= Self.maxContentCount else {
+            throw ValidationError.contentOverLimit(max: Self.maxContentCount)
+        }
+        
+        content = newValue
+    }
+    
+    public func remainsContentCount() -> Int {
+        Self.maxContentCount - content.count
+    }
+    
+    public mutating func togglePrivate() {
+        isPrivate.toggle()
+    }
+    
+    public mutating func toggleSpoiler() {
+        isSpoiler.toggle()
+    }
+    
+    public mutating func setConnectedNovel(_ newValue: ConnectedNovel) throws {
+        guard connectedNovel == nil else {
+            throw ValidationError.connectedNovelOverLimit
+        }
+        
+        connectedNovel = newValue
+    }
+    
+    public mutating func removeConnectedNovel() {
+        connectedNovel = nil
+    }
+    
+    public mutating func addImage(_ image: AttachedImageID) throws {
+        guard attachedImages.count < Self.maxImageCount else {
+            throw ValidationError.imageOverLimit(max: Self.maxImageCount)
+        }
+
+        attachedImages.append(image)
+    }
+
+    public mutating func removeImage(_ image: AttachedImageID) {
+        attachedImages.removeAll { $0 == image }
+    }
+}

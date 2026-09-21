@@ -1,0 +1,342 @@
+//
+//  DefaultProfileRepositoryTests.swift
+//  ProfileDataTests
+//
+//  Created by WonsunLee on 4/23/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Testing
+@testable import ProfileData
+@testable import ProfileDataTesting
+import ProfileDomain
+import BaseDomain
+import BaseData
+import Networking
+
+@Suite
+struct DefaultProfileRepositoryTests {
+
+    // MARK: - syncUserBasicInfo
+
+    @Test("syncUserBasicInfo 성공 시 localStorage에 저장")
+    func syncUserBasicInfo_success_savesToLocalStorage() async throws {
+        let (sut, service, localStorage) = makeRepository()
+        service.getUserBasicInfoResult = .success(
+            UserInfoResponse(userId: 42, gender: "MALE", nickname: "홍길동")
+        )
+
+        try await sut.syncUserBasicInfo()
+
+        #expect(localStorage.userID == 42)
+        #expect(localStorage.nickname == "홍길동")
+        #expect(localStorage.gender == "MALE")
+    }
+
+    @Test("syncUserBasicInfo 네트워크 오류 시 RepositoryError 변환")
+    func syncUserBasicInfo_networkError_throwsRepositoryError() async {
+        let (sut, service, _) = makeRepository()
+        service.getUserBasicInfoResult = .failure(NetworkingError.unknown(MockError.stub))
+
+        await #expect(throws: RepositoryError.self) {
+            try await sut.syncUserBasicInfo()
+        }
+    }
+
+    // MARK: - validateNickname
+
+    @Test("validateNickname 사용 가능한 닉네임")
+    func validateNickname_available() async throws {
+        let (sut, service, _) = makeRepository()
+        service.validateNicknameResult = .success(NicknameValidationResponse(isValid: true))
+
+        let result = try await sut.validateNickname("새닉네임")
+
+        #expect(result == true)
+        #expect(service.validatedNicknames == ["새닉네임"])
+    }
+
+    @Test("validateNickname 중복된 닉네임")
+    func validateNickname_duplicated() async throws {
+        let (sut, service, _) = makeRepository()
+        service.validateNicknameResult = .success(NicknameValidationResponse(isValid: false))
+
+        let result = try await sut.validateNickname("기존닉네임")
+
+        #expect(result == false)
+    }
+
+    @Test("validateNickname 네트워크 오류 시 RepositoryError 변환")
+    func validateNickname_networkError_throwsRepositoryError() async {
+        let (sut, service, _) = makeRepository()
+        service.validateNicknameResult = .failure(NetworkingError.unknown(MockError.stub))
+
+        await #expect(throws: RepositoryError.self) {
+            try await sut.validateNickname("닉네임")
+        }
+    }
+
+    // MARK: - registerProfile
+
+    @Test("registerProfile 성공 시 온보딩 완료(isRegistered=true)를 localStorage에 기록")
+    func registerProfile_success_marksIsRegistered() async throws {
+        let (sut, service, localStorage) = makeRepository()
+
+        try await sut.registerProfile(makeRegistration())
+
+        #expect(service.postRegisterProfileCallCount == 1)
+        #expect(localStorage.get(.isRegistered) == true)
+    }
+
+    @Test("registerProfile 실패 시 isRegistered를 기록하지 않는다(서버 확정 후에만 로컬 갱신)")
+    func registerProfile_failure_doesNotMarkIsRegistered() async {
+        let (sut, service, localStorage) = makeRepository()
+        service.postRegisterProfileResult = .failure(NetworkingError.unknown(MockError.stub))
+
+        await #expect(throws: RepositoryError.self) {
+            try await sut.registerProfile(makeRegistration())
+        }
+        #expect(localStorage.get(.isRegistered) == nil)
+    }
+
+    // MARK: - fetchUserProfile
+
+    @Test("fetchUserProfile .me 타겟 시 localStorage UserID 사용")
+    func fetchUserProfile_me_usesLocalStorageUserID() async throws {
+        let (sut, service, localStorage) = makeRepository()
+        localStorage.userID = 99
+        service.getUserProfileResult = .success(
+            UserProfileResponse(
+                nickname: "testUser", intro: "소개",
+                avatarImage: "", isProfilePublic: true, genrePreferences: ["romance"]
+            )
+        )
+
+        _ = try await sut.fetchUserProfile(target: .me)
+
+        #expect(service.getUserProfileUserIDs == [99])
+    }
+
+    @Test("fetchUserProfile .me 타겟 시 userID 없으면 notFound 에러")
+    func fetchUserProfile_me_noUserID_throwsNotFound() async {
+        let (sut, _, _) = makeRepository()
+
+        await #expect(throws: RepositoryError.notFound) {
+            try await sut.fetchUserProfile(target: .me)
+        }
+    }
+
+    @Test("fetchUserProfile .user 타겟 시 주어진 UserID 사용")
+    func fetchUserProfile_user_usesGivenUserID() async throws {
+        let (sut, service, _) = makeRepository()
+        service.getUserProfileResult = .success(
+            UserProfileResponse(
+                nickname: "otherUser", intro: "",
+                avatarImage: "", isProfilePublic: false, genrePreferences: []
+            )
+        )
+
+        _ = try await sut.fetchUserProfile(target: .user(UserID(55)))
+
+        #expect(service.getUserProfileUserIDs == [55])
+    }
+
+    // MARK: - loadInitialProfile
+
+    @Test("loadInitialProfile 성공 시 localStorage와 API 데이터 결합")
+    func loadInitialProfile_success_combinesLocalStorageAndAPI() async throws {
+        let (sut, service, localStorage) = makeRepository()
+        localStorage.characterID = 7
+        service.getProfileEditInfoResult = .success(
+            UserProfileResponse(
+                nickname: "저장된닉네임",
+                intro: "소개글",
+                avatarImage: "",
+                isProfilePublic: nil,
+                genrePreferences: ["romance"]
+            )
+        )
+
+        let draft = try await sut.loadInitialProfile()
+
+        #expect(draft.nickname.text == "저장된닉네임")
+        #expect(draft.characterID == 7)
+        #expect(draft.introduction == "소개글")
+        #expect(draft.genrePreferences.count == 1)
+    }
+
+    @Test("loadInitialProfile 네트워크 오류 시 RepositoryError 변환")
+    func loadInitialProfile_networkError_throwsRepositoryError() async {
+        let (sut, service, _) = makeRepository()
+        service.getProfileEditInfoResult = .failure(NetworkingError.unknown(MockError.stub))
+
+        await #expect(throws: RepositoryError.self) {
+            try await sut.loadInitialProfile()
+        }
+    }
+
+    // MARK: - updateProfile
+
+    @Test("updateProfile localStorage에 닉네임과 캐릭터ID 저장")
+    func updateProfile_savesNicknameAndCharacterIDToLocalStorage() async throws {
+        let (sut, _, localStorage) = makeRepository()
+        // makeDraft(생성자)로 막 만든 draft는 초기값=현재값이라 "변경 없음" 상태다(#185에서 updateProfile이
+        // 변경 감지 가드를 통과해야만 localStorage에 쓰도록 고쳐지며 드러난 함정) — 실제로 바뀐 상태를
+        // 표현하려면 생성 후 mutate 메서드로 값을 옮겨야 한다.
+        var draft = makeDraft(nickname: "이전닉네임", characterID: 1)
+        draft.setCharacter(5)
+        draft.updateNickname("새닉네임")
+        draft.applyNicknameDuplicationCheck(.notDuplicated, checkedText: "새닉네임")
+
+        try await sut.updateProfile(draft)
+
+        #expect(localStorage.nickname == "새닉네임")
+        #expect(localStorage.characterID == 5)
+    }
+
+    @Test("updateProfile 소개글/장르 변경 없으면 API 미호출")
+    func updateProfile_noContentChange_doesNotCallAPI() async throws {
+        let (sut, service, _) = makeRepository()
+        let draft = makeDraft(nickname: "닉네임", characterID: 1)
+
+        try await sut.updateProfile(draft)
+
+        #expect(service.putProfileCallCount == 0)
+    }
+
+    // MARK: - saveAccountInfo
+
+    @Test("saveAccountInfo 성공 시 localStorage(성별/출생연도) 갱신")
+    func saveAccountInfo_success_updatesLocalStorage() async throws {
+        let (sut, _, localStorage) = makeRepository()
+
+        try await sut.saveAccountInfo(AccountInfoDraft(email: nil, gender: .male, birth: try BirthYear(1995)))
+
+        #expect(localStorage.gender == "M")
+        #expect(localStorage.birthYear == 1995)
+    }
+
+    // MARK: - loadLocalGenderAndBirth
+
+    @Test("loadLocalGenderAndBirth 성공 시 localStorage 값을 반환")
+    func loadLocalGenderAndBirth_success() async throws {
+        let (sut, _, localStorage) = makeRepository()
+        localStorage.gender = "FEMALE"
+        localStorage.birthYear = 1998
+
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+        #expect(draft.birth.value == 1998)
+        #expect(draft.email == nil)
+    }
+
+    @Test("loadLocalGenderAndBirth는 새 포맷(\"F\"/\"M\")으로 캐시된 값도 읽는다")
+    func loadLocalGenderAndBirth_newFormat_success() async throws {
+        let (sut, _, localStorage) = makeRepository()
+        localStorage.gender = "F"
+        localStorage.birthYear = 1998
+
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+    }
+
+    @Test("loadLocalGenderAndBirth localStorage에 값이 없으면 서버로 폴백하고 결과를 localStorage에 캐시")
+    func loadLocalGenderAndBirth_missing_fallsBackToServerAndCaches() async throws {
+        let (sut, service, localStorage) = makeRepository()
+        service.getAccountInfoResult = .success(
+            AccountInfoResponse(email: "user@test.com", gender: "F", birth: 1998)
+        )
+
+        let draft = try await sut.loadLocalGenderAndBirth()
+
+        #expect(draft.gender == .female)
+        #expect(draft.birth.value == 1998)
+        #expect(localStorage.gender == "F")
+        #expect(localStorage.birthYear == 1998)
+    }
+
+    // MARK: - profileVisibility
+
+    @Test("loadProfileVisibility 성공")
+    func loadProfileVisibility_success() async throws {
+        let (sut, service, _) = makeRepository()
+        service.getProfileVisibilityResult = .success(ProfileVisibilityResponse(isProfilePublic: false))
+
+        let visibility = try await sut.loadProfileVisibility()
+
+        #expect(visibility.isPublic == false)
+    }
+
+    @Test("updateProfileVisibility 성공")
+    func updateProfileVisibility_success() async throws {
+        let (sut, service, _) = makeRepository()
+
+        try await sut.updateProfileVisibility(ProfileVisibility(isPublic: true))
+
+        #expect(service.putProfileVisibilityCallCount == 1)
+    }
+
+    // MARK: - 네트워크 에러 → RepositoryError 변환
+
+    @Test("NetworkingError.responseFailure 401은 authenticationRequired로 변환")
+    func networkError_401_convertsToAuthenticationRequired() async {
+        let (sut, service, localStorage) = makeRepository()
+        localStorage.userID = 1
+        service.getUserProfileResult = .failure(NetworkingError.responseFailure(code: 401, body: nil))
+
+        await #expect(throws: RepositoryError.authenticationRequired) {
+            try await sut.fetchUserProfile(target: .me)
+        }
+    }
+
+    @Test("NetworkingError.responseFailure 404는 notFound로 변환")
+    func networkError_404_convertsToNotFound() async {
+        let (sut, service, localStorage) = makeRepository()
+        localStorage.userID = 1
+        service.getUserProfileResult = .failure(NetworkingError.responseFailure(code: 404, body: nil))
+
+        await #expect(throws: RepositoryError.notFound) {
+            try await sut.fetchUserProfile(target: .me)
+        }
+    }
+}
+
+// MARK: - Helpers
+
+private extension DefaultProfileRepositoryTests {
+
+    func makeRepository() -> (
+        DefaultProfileRepository,
+        MockProfileService,
+        MockProfileLocalStorage
+    ) {
+        let service = MockProfileService()
+        let localStorage = MockProfileLocalStorage()
+        let sut = DefaultProfileRepository(
+            service: service,
+            localStorage: localStorage,
+            logger: DataLogger(moduleName: "ProfileData")
+        )
+        return (sut, service, localStorage)
+    }
+
+    func makeRegistration() -> ProfileRegistration {
+        ProfileRegistration(
+            nickname: "새유저",
+            gender: .female,
+            birthYear: try! BirthYear(2000),
+            genrePreferences: [.romance]
+        )
+    }
+
+    func makeDraft(nickname: String, characterID: Int) -> ProfileDraft {
+        ProfileDraft(
+            characterID: characterID,
+            nickname: nickname,
+            introduction: "소개",
+            genrePreferences: []
+        )
+    }
+}

@@ -1,0 +1,497 @@
+//
+//  CreateFeedView.swift
+//  FeedFeature
+//
+//  Created by Seoyeon Choi on 6/4/26.
+//
+
+import SwiftUI
+import PhotosUI
+import StoreKit
+
+import BaseDomain
+import FeedDomain
+import SearchDomain
+import DesignSystem
+import WSSComponent
+
+struct CreateFeedView: View {
+    
+    @State private var viewModel: CreateFeedViewModel
+    /// 글자수 clamp 트랩(로컬 버퍼 → 확정값 반영 2단계, `Feature/CLAUDE.md` 참고) 전용 필드 버퍼.
+    /// VM 상태(`draft.content`)에 TextField를 직접 물리면 초과분이 화면에 그대로 남는다.
+    @State private var contentFieldText: String
+    
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var showPhotosPicker: Bool = false
+    @State private var showLinkNovelSheet: Bool = false
+    @State private var showDismissAlert: Bool = false
+    
+    @FocusState private var isKeyboardFocused: Bool
+    
+    @Environment(\.dismiss) private var dismiss
+    /// 앱스토어 평점 프롬프트(StoreKit) — VM이 게이트를 통과시키면(`shouldRequestReview`) 저장 성공 시 호출.
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
+
+    /// 작성/수정 제출 **성공**으로 닫힐 때 dismiss 직전 발화(#236, 취소로 닫힐 땐 안 부른다) — 이 화면은
+    /// dismiss되므로 "작성 완료" 토스트는 복귀 스택(App 크로스스크린 피드백 채널)이 띄운다(V1 `feedEdited` parity).
+    private let onSubmitted: () -> Void
+
+    init(viewModel: CreateFeedViewModel, onSubmitted: @escaping () -> Void = {}) {
+        self._viewModel = State(initialValue: viewModel)
+        self._contentFieldText = State(initialValue: viewModel.state.draft.content)
+        self.onSubmitted = onSubmitted
+    }
+    
+    var body: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                WSSNavigationBar(title: "") {
+                    showDismissAlert = true
+                } trailing: {
+                    Button {
+                        viewModel.handle(.submitFeed)
+                    } label: {
+                        if viewModel.isSubmitting {
+                            ProgressView()
+                        } else {
+                            Text("완료")
+                                .applyWSSFont(.title2)
+                                .foregroundStyle(viewModel.canSubmit ?
+                                                 WSSColor.wssPrimary100.swiftUIColor : WSSColor.wssGray100.swiftUIColor)
+                        }
+                    }
+                    .disabled(!viewModel.canSubmit)
+                }
+
+                VStack(spacing: 0) {
+                    privateSection
+                    
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            
+                            Spacer().frame(height: 30)
+                            
+                            contentSection
+                            
+                            Spacer().frame(height: 13)
+                            
+                            spoilerSection
+                            
+                            if !viewModel.state.draft.attachedImages.isEmpty {
+                                Spacer().frame(height: 14)
+                                
+                                attachedImagesSection
+                            }
+                            
+                            Spacer().frame(height: 30)
+                            
+                            connectedNovelSection
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.hidden)
+                    .scrollDismissesKeyboard(.immediately)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isKeyboardFocused = false
+                }
+                // 업로드 중·수정 모드 로드 중엔 draft를 더 이상 바꿀 수 없어야 해서 hit-testing 자체를 막는다.
+                // 대부분의 행이 Button이 아니라 onTapGesture라 .disabled()만으론 막히지 않는다.
+                .allowsHitTesting(!viewModel.isSubmitting && !viewModel.state.isLoadingForEdit)
+                .opacity((viewModel.isSubmitting || viewModel.state.isLoadingForEdit) ? 0.5 : 1)
+                // 수정 모드 진입 직후 대상 피드를 불러오는 동안의 대기 표시 — 화면 전환은 바로 일어나고
+                // (이전 화면에서 미리 준비하지 않음, #197) 이 화면 안에서 로드한다.
+                .overlay {
+                    if viewModel.state.isLoadingForEdit {
+                        LoadingView()
+                    }
+                }
+                .onAppear {
+                    viewModel.handle(.load)
+                    // CSV 이벤트는 "글 작성 뷰 진입"(신규 작성)만 가리킨다 — 수정 화면 진입은 대상 없음.
+                    if !viewModel.isEditing { viewModel.track(.writeViewed) }
+                }
+                // 글자수 clamp 2단계: prefix로 자른 값이 다르면 로컬 버퍼에 재대입(네이티브 필드가
+                // 강제로 되돌아감) → 같으면 VM에 전달. VM에 직접 물리면 초과분이 화면에 남는다.
+                .onChange(of: contentFieldText) { _, newValue in
+                    let clamped = String(newValue.prefix(FeedDraft.maxContentCount))
+                    if clamped != newValue {
+                        contentFieldText = clamped
+                    }
+                    viewModel.handle(.updateContent(clamped))
+                }
+                // 수정 모드 로드가 끝나 draft.content가 채워지면 로컬 버퍼도 같이 채운다 —
+                // 이 버퍼는 init 시점에만 시드되므로 비동기 로드 완료를 별도로 반영한다.
+                .onChange(of: viewModel.state.isLoadingForEdit) { wasLoading, isLoading in
+                    guard wasLoading, !isLoading else { return }
+                    contentFieldText = viewModel.state.draft.content
+                }
+                .photosPicker(
+                    isPresented: $showPhotosPicker,
+                    selection: $pickerItems,
+                    maxSelectionCount: max(1, FeedDraft.maxImageCount - viewModel.state.draft.attachedImages.count),
+                    matching: .images
+                )
+                .onChange(of: pickerItems) { _, items in
+                    guard !items.isEmpty else { return }
+                    Task { await dispatchPickedItems(items) }
+                }
+                .sheet(isPresented: $showLinkNovelSheet) {
+                    CreateFeedConnectNovelSheet(
+                        searchText: Binding(
+                            get: { viewModel.state.connectedNovelSearchText },
+                            set: { value in viewModel.handle(.updateConnectedNovelSearchText(value)) }
+                        ),
+                        novels: viewModel.state.searchedNovels,
+                        selectedNovelID: viewModel.state.selectedSearchedNovelID,
+                        isLoading: viewModel.state.isSearchingNovel,
+                        hasSearched: viewModel.state.hasSearchedNovel,
+                        isLoadingMore: viewModel.state.isLoadingMoreNovels,
+                        onSearch: {
+                            viewModel.handle(.searchNovel(viewModel.state.connectedNovelSearchText))
+                        },
+                        onLoadMore: {
+                            viewModel.handle(.loadMoreSearchedNovels)
+                        },
+                        onSelect: { novel in
+                            viewModel.handle(.selectSearchedNovel(novel.id))
+                        },
+                        onConfirm: {
+                            viewModel.handle(.confirmSelectedNovel)
+                            showLinkNovelSheet = false
+                        },
+                        inquiryNovelAction: {
+                            viewModel.track(.connectNovelContactTapped)
+                            if let url = AppURL.inquiryAddNovel { openURL(url) }
+                        },
+                        dismissSheet: {
+                            viewModel.handle(.dismissLinkNovelSheet)
+                            showLinkNovelSheet = false
+                        }
+                    )
+                    .interactiveDismissDisabled()
+                    .presentationBackgroundInteraction(.disabled)
+                    .presentationCornerRadius(16)
+                }
+                .showWSSToast(
+                    isPresented: Binding(
+                        get: { viewModel.state.showToast },
+                        set: { newValue in
+                            if !newValue {
+                                viewModel.handle(.dismissToast)
+                            }
+                        }
+                    ),
+                    type: toastType
+                )
+                // 작성/수정 제출 성공 → 자동으로 화면을 닫는다(작성/수정 완료 후 사용자가 직접
+                // 뒤로가기를 누를 필요 없이 원래 화면으로 돌아간다).
+                .onChange(of: viewModel.state.submitState) { _, newValue in
+                    if newValue == .submitted {
+                        // 리뷰 프롬프트는 화면이 pop되기 전에 띄운다(밑 화면 위로 표시되게).
+                        if viewModel.state.shouldRequestReview { requestReview() }
+                        // 제출 성공 경로에서만 — "작성 완료" 크로스스크린 피드백(#236).
+                        onSubmitted()
+                        dismiss()
+                    }
+                }
+            }
+            // 커스텀 헤더(빈 타이틀 + 완료). 미저장 초안 확인(showDismissAlert)이 있어 스와이프 pop은
+            // 막되, 스와이프 시도가 감지되면 back 버튼과 똑같이 확인 알럿을 띄운다(#256).
+            .wssCustomNavigationBar(swipeBackConfirmation: { showDismissAlert = true })
+        }
+        .showWSSAlert(
+            isPresented: $showDismissAlert,
+            type: .stopWritingFeed,
+            buttonActions: [
+                { dismiss() },
+                { showDismissAlert = false }
+            ]
+        )
+    }
+    
+    // MARK: - Presentation
+
+    /// `state.validationError`를 화면에 노출할 `WSSToastType`으로 매핑한다.
+    /// 어떤 종류를 토스트로 띄울지(`showToast`)는 ViewModel이, 어떤 문구/스타일로 보여줄지는 View가 결정한다.
+    private var toastType: WSSToastType {
+        switch viewModel.state.validationError {
+        case .imageOverLimit(let max):
+            return .limitAddImage(limitCount: max)
+        case .connectedNovelOverLimit:
+            return .novelAlreadyConnected
+        case .contentOverLimit, .emptyContent, nil:
+            return .networkDelay
+        }
+    }
+
+    // 피드 작성/컬렉션 생성이 완전히 같은 룩이라 WSSComponent로 승격됨(#199) — 라벨 문구만 이 화면 값.
+    private var privateSection: some View {
+        WSSPrivateToggleRow(
+            label: "나만 보는 기록",
+            isOn: Binding(
+                get: { viewModel.state.draft.isPrivate },
+                set: { _ in viewModel.handle(.togglePrivate) }
+            )
+        )
+    }
+    
+    private var spoilerSection: some View {
+        HStack(spacing: 0) {
+            Group {
+                Text("잠깐, ")
+                Text("스포일러")
+                    .fontWeight(.semibold)
+                Text("가 있나요?")
+            }
+            .applyWSSFont(.body3)
+            .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+            
+            Spacer()
+            
+            WSSToggleButton(isOn: Binding(
+                get: { viewModel.state.draft.isSpoiler },
+                set: { _ in viewModel.handle(.toggleSpoiler) }
+            ))
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 50)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(WSSColor.wssGray70.swiftUIColor,
+                              lineWidth: 1)
+        )
+    }
+    
+    private var contentSection: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                ZStack(alignment: .topLeading) {
+                    if contentFieldText.isEmpty {
+                        Text("웹소설과 관련된 글을 자유롭게 남겨보세요\n\n • 작품에 대한 한줄평\n • 여운이 남는 명장면, 명대사\n • 수다 떨고 싶은 작품 이야기\n • 다른 독자들과 공유하고 싶은 작품 정보 등")
+                            .applyWSSFont(.body2)
+                            .foregroundStyle(WSSColor.wssGray100.swiftUIColor)
+                            .multilineTextAlignment(.leading)
+                            .allowsHitTesting(false)
+                    }
+                    
+                    TextField("", text: $contentFieldText, axis: .vertical)
+                    .applyWSSFont(.body2)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                    .multilineTextAlignment(.leading)
+                    .focused($isKeyboardFocused)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+               
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isKeyboardFocused = true
+            }
+            
+            HStack(spacing: 0) {
+                WSSImage.icImage.swiftUIImage
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                    .padding(.vertical, 12)
+                    .onTapGesture {
+                        showPhotosPicker.toggle()
+                    }
+                
+                Spacer()
+                
+                Text("(\(String(contentFieldText.count))/\(String(FeedDraft.maxContentCount)))")
+                    .applyWSSFont(.body2)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .frame(height: 360)
+        .background(WSSColor.wssGray50.swiftUIColor)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    
+    private var attachedImagesSection: some View {
+        VStack(spacing: 0) {
+            ScrollView(.horizontal,
+                       showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(viewModel.state.draft.attachedImages, id: \.self) { id in
+                        attachedImageThumbnail(id: id)
+                    }
+                }
+            }
+            
+            Spacer().frame(height: 12)
+            
+            HStack(spacing: 0) {
+                Text("\(viewModel.state.draft.attachedImages.count)")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
+                
+                Text("/\(FeedDraft.maxImageCount)")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                
+                Spacer()
+            }
+            
+        }
+    }
+    
+    private func attachedImageThumbnail(id: AttachedImageID) -> some View {
+        Group {
+            if let data = viewModel.state.attachedImageDatas[id],
+               let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                WSSColor.wssGray50.swiftUIColor
+            }
+        }
+        .frame(width: 100, height: 100)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .topTrailing) {
+            Button {
+                viewModel.handle(.removeImage(id))
+            } label: {
+                WSSImage.icCancel.swiftUIImage
+                    .frame(width: 38, height: 38)
+            }
+        }
+    }
+
+    // MARK: - Image handling
+
+    /// PhotosPicker 결과를 Data로 통역해 ViewModel에 전달한다.
+    /// 도메인 등록/한계 검증/저장은 모두 ViewModel이 담당.
+    private func dispatchPickedItems(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            viewModel.handle(.addImage(id: AttachedImageID(), data: data))
+        }
+        pickerItems = []
+    }
+    
+    private var connectedNovelSection: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Text("작품 연결")
+                    .applyWSSFont(.title2)
+                    .foregroundStyle(WSSColor.wssBlack.swiftUIColor)
+                
+                Spacer()
+            }
+            
+            Spacer().frame(height: 17)
+            
+            HStack(spacing: 0) {
+                Text("작품 제목, 작가 검색")
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(WSSColor.wssGray200.swiftUIColor)
+                
+                Spacer()
+                
+                WSSImage.icSearch.swiftUIImage
+                    .renderingMode(.template)
+                    .foregroundStyle(WSSColor.wssGray300.swiftUIColor)
+                    .frame(width: 36, height: 36)
+            }
+            .padding(.vertical, 3)
+            .padding(.leading, 16)
+            .padding(.trailing, 10)
+            .background(WSSColor.wssGray50.swiftUIColor)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .onTapGesture {
+                //TODO: - ViewModel로 로직빼기 + 알럿 띄우는 bool변수도 viewModel에 포함될 수 있도록 한다.
+                if viewModel.state.draft.connectedNovel == nil {
+                    viewModel.track(.connectNovelSheetOpened)
+                    showLinkNovelSheet.toggle()
+                } else {
+                    viewModel.handle(.alreadyLinkedNovel)
+                }
+            }
+            
+            if (viewModel.state.draft.connectedNovel != nil) {
+                Spacer().frame(height: 12)
+                
+                HStack(spacing: 0) {
+                    WSSImage.icGenreLink.swiftUIImage
+                        .renderingMode(.template)
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(WSSColor.wssPrimary100.swiftUIColor)
+                        .padding(.trailing, 6)
+                    
+                    Text(viewModel.state.draft.connectedNovel?.title ?? "웹소소도 소설이다")
+                        .applyWSSFont(.title3)
+                        .foregroundStyle(Color.wssBlack)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    WSSImage.icCancel.swiftUIImage
+                        .onTapGesture {
+                            viewModel.handle(.removeConnectedNovel)
+                        }
+                }
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
+                .background(WSSColor.wssPrimary20.swiftUIColor)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+    }
+}
+
+
+//MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        CreateFeedView(
+            viewModel: CreateFeedViewModel(
+                createFeedUseCase: PreviewCreateFeedUseCase(),
+                searchNovelUseCase: PreviewSearchNovelUseCase(),
+                appReviewUseCase: PreviewAppReviewRequestUseCase(),
+                initialDraft: FeedDraft(
+                    content: "",
+                    isSpoiler: false,
+                    isPrivate: false,
+                    attachedImages: []
+                )
+            )
+        )
+    }
+}
+
+private struct PreviewCreateFeedUseCase: CreateFeedUseCase {
+    func execute(_ draft: FeedDraft, imageDatas: [Data]) async throws(RepositoryError) { }
+}
+
+private struct PreviewAppReviewRequestUseCase: AppReviewRequestUseCase {
+    func recordEngagement() {}
+    func shouldRequestReview() -> Bool { false }
+    func markReviewRequested() {}
+}
+
+private struct PreviewSearchNovelUseCase: SearchNovelUseCase {
+    func searchByText(
+        _ query: String,
+        page: Int,
+        recordRecentSearch: Bool
+    ) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        return (Paginated(items: stubNovels, hasNext: false), 0)
+    }
+
+    func searchByFilter(_ filter: SearchDomain.SearchFilter, page: Int) async throws(RepositoryError) -> (Paginated<Novel>, Int) {
+        return (Paginated(items: [], hasNext: false), 0)
+    }
+}

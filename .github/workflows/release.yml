@@ -1,0 +1,130 @@
+name: Submit to App Store Review
+
+# main에 push(=릴리즈 PR merge)되면 실제 App Store 심사 제출(fastlane release lane)까지
+# 이어지는 워크플로우. 두 겹의 안전장치가 있다:
+#   1) vars.CUTOVER_READY != 'true'면 job의 `if:`에서 아예 skip — 승인 요청조차 뜨지 않는다.
+#      (컷오버 체크리스트 docs/TODO.md 4번 완료 전까지는 항상 false로 둘 것)
+#   2) CUTOVER_READY가 true라도 `environment: app-store-release`에 걸린 Required reviewers가
+#      실제 실행 전 GitHub에서 수동 승인해야 한다.
+# 추가로 fastlane Fastfile의 release lane 자체에도 같은 CUTOVER_READY 가드가 있다(로컬 수동
+# 실행 방어선) — 이 워크플로우가 우회돼도 거기서 한 번 더 막힌다.
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false # 심사 제출 도중 취소되면 App Store Connect 상태가 꼬일 수 있다
+
+jobs:
+  submit:
+    name: Build & Submit for Review
+    runs-on: macos-15
+    timeout-minutes: 60
+    if: vars.CUTOVER_READY == 'true'
+    environment: app-store-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      # Tuist 프로젝트라 .xcworkspace/.xcodeproj가 저장소에 없다 — 빌드 전 매번 생성해야 한다
+      # (fastlane build_with lane 안에서도 tuist install/generate를 돌리지만, 여기서는 실제
+      # Config_*.xcconfig를 먼저 배치해야 하므로 Config 디렉토리부터 구성한다).
+      - name: 실제 Config_*.xcconfig 조립 (secrets → 파일)
+        env:
+          BUCKET_URL: ${{ secrets.CONFIG_BUCKET_URL }}
+          APPSTORE_ID: ${{ secrets.CONFIG_APPSTORE_ID }}
+          BASE_URL: ${{ secrets.CONFIG_BASE_URL }}
+          AMPLITUDE_API_KEY: ${{ secrets.CONFIG_AMPLITUDE_API_KEY }}
+          CLARITY_PROJECT_ID: ${{ secrets.CONFIG_CLARITY_PROJECT_ID }}
+          KAKAO_APP_KEY: ${{ secrets.CONFIG_KAKAO_APP_KEY }}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1: ${{ secrets.CONFIG_KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1 }}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2: ${{ secrets.CONFIG_KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2 }}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3: ${{ secrets.CONFIG_KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3 }}
+        run: |
+          set -euo pipefail
+          mkdir -p Config
+
+          # ⚠️ xcconfig는 "//"를 주석 시작으로 파싱한다 — 로컬 Config/*.xcconfig의 실제 값은
+          # 그래서 BUCKET_URL/BASE_URL만 "https:/$()/…"로 이스케이프돼 있다(나머지 키는 "//"가
+          # 없어 무관). CONFIG_BUCKET_URL/CONFIG_BASE_URL 시크릿은 평범한 "https://…"로 등록해도
+          # 되도록, 여기서 자동으로 같은 이스케이프를 적용한다(시크릿 등록 시 사람이 형식을
+          # 기억해야 하는 함정을 없앰).
+          esc_url() { printf '%s' "$1" | sed 's#://#:/$()/#'; }
+          BUCKET_URL_ESCAPED="$(esc_url "$BUCKET_URL")"
+          BASE_URL_ESCAPED="$(esc_url "$BASE_URL")"
+
+          cat > Config/Config_Shared.xcconfig << EOF
+          BUCKET_URL = ${BUCKET_URL_ESCAPED}
+          APPSTORE_ID = ${APPSTORE_ID}
+          EOF
+          # Release 스킴 빌드만 하는 워크플로우라 Debug용 값(TEST_API_KEY 등)은 채우지 않는다 —
+          # Config_Debug.xcconfig는 이 워크플로우에서 실제로 쓰이지 않지만 Config_Shared를
+          # include하는 다른 타깃의 project 설정이 파일 존재를 전제할 수 있어 빈 값으로 만든다.
+          cat > Config/Config_Debug.xcconfig << 'EOF'
+          #include "./Config_Shared.xcconfig"
+          EOF
+          cat > Config/Config_Release.xcconfig << EOF
+          #include "./Config_Shared.xcconfig"
+          BASE_URL = ${BASE_URL_ESCAPED}
+          AMPLITUDE_API_KEY = ${AMPLITUDE_API_KEY}
+          CLARITY_PROJECT_ID = ${CLARITY_PROJECT_ID}
+          KAKAO_APP_KEY = ${KAKAO_APP_KEY}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1 = ${KAKAO_COLLECTION_SHARE_TEMPLATE_ID_1}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2 = ${KAKAO_COLLECTION_SHARE_TEMPLATE_ID_2}
+          KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3 = ${KAKAO_COLLECTION_SHARE_TEMPLATE_ID_3}
+          OTHER_SWIFT_FLAGS[config=RELEASE][sdk=*] = \$(inherited) -DRELEASE
+          EOF
+
+      - name: Setup mise & install tools
+        uses: jdx/mise-action@v2
+
+      - name: Setup Ruby & bundler (fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      # match(readonly: true)가 Team-WSS/WSS-iOS-Certificates(private)를 git으로 clone한다.
+      # 이 워크플로우는 읽기 전용이라 read-only deploy key로 충분하다.
+      - name: match 인증서 저장소 SSH 접근 설정
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MATCH_GIT_DEPLOY_KEY }}
+
+      - name: ASC API 키 파일 복원
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "${RUNNER_TEMP}/AuthKey.p8"
+          echo "ASC_KEY_PATH=${RUNNER_TEMP}/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Run fastlane release lane (App Store 심사 제출)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_IDENTIFIER_RELEASE: ${{ secrets.APP_IDENTIFIER_RELEASE }}
+          # ⚠️ release lane은 APP_IDENTIFIER_RELEASE만 쓰지만, fastlane/Appfile이 lane 실행과
+          # 무관하게 로드 시점에 app_identifier([RELEASE, DEBUG]) 둘 다 ENV.fetch로 요구한다 —
+          # 없으면 Fastfile이 시작되기도 전에 KeyError로 죽는다(실측). Debug 스킴은 안 쓰지만
+          # Appfile 계약을 맞추기 위해 반드시 같이 넘긴다.
+          APP_IDENTIFIER_DEBUG: ${{ secrets.APP_IDENTIFIER_DEBUG }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          CUTOVER_READY: ${{ vars.CUTOVER_READY }}
+        run: bundle exec fastlane ios release
+
+      - name: Upload build logs (실패 시)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-logs
+          path: |
+            ~/Library/Logs/gym
+            fastlane/report.xml
+          retention-days: 14

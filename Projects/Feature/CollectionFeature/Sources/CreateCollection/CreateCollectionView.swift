@@ -1,0 +1,516 @@
+//
+//  CreateCollectionView.swift
+//  CollectionFeature
+//
+//  Created by Guryss on 8/20/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import CollectionDomain
+import DesignSystem
+import WSSComponent
+
+// 컬렉션 생성 화면. "얇은 ViewModel" 원칙: 카피·포맷·색 등 표기는 전부 View가 결정한다.
+// 화면 동작 계약(뒤로가기·대표 배지·완료 활성화 등)은 CollectionFeature/CLAUDE.md 참고.
+struct CreateCollectionView: View {
+
+    @State private var viewModel: CreateCollectionViewModel
+    /// 글자수 clamp 트랩(로컬 버퍼 → 확정값 반영 2단계, `Feature/CLAUDE.md` 참고) 전용 필드 버퍼.
+    /// VM 상태에 TextField를 직접 물리지 않는다.
+    @State private var nameFieldText: String
+    @State private var descriptionFieldText: String
+    /// 이름·설명 필드는 각자 독립된 `@FocusState`를 쓴다 — 하나로 공유하면 빈 곳 탭으로 둘 다 내릴 때
+    /// 어느 필드가 포커스인지 구분이 안 된다(`UserPageFeature`의 `MyPageEditView` 동일 패턴).
+    @FocusState private var isNameFieldFocused: Bool
+    /// "컬렉션 설명" 박스는 padding·배경까지 포함한 전체 영역이 탭 타깃이다(아래 `descriptionSection`).
+    @FocusState private var isDescriptionFieldFocused: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    /// "작품 추가"/"서재에서 추가"에서 돌아올 때마다 `onAppear`가 재발화하므로, 화면 진입
+    /// 트래킹은 최초 1회만 남긴다.
+    @State private var hasTrackedWriteViewed = false
+
+    /// "작품 추가" 화면(App이 push)이 확정한 결과 — `nil→값` 전이로 감지하는 1회성 신호
+    /// (`OnboardingFeature`의 확정 신호 패턴과 동일). 소비 즉시 다시 `nil`로 되돌린다.
+    private let pendingNovelSelection: Binding<[CollectionNovel]?>
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CreateCollectionRoute`(Navigation/)가 정본.
+    /// `.addNovel`은 현재 선택된 작품 목록을 실어 올리고("작품 추가" 화면이 이미 담긴 작품도 선택된
+    /// 채로 보여주는 편집 화면이라서), 실제 화면 전환(`CollectionFeatureFactory.makeSearchNovelView`
+    /// 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onRoute: (CreateCollectionRoute) -> Void
+    /// 인증 만료 시 로그인 화면 진입 콜백. 화면 전환은 호출자(App)가 수행.
+    private let onAuthenticationRequired: () -> Void
+
+    init(
+        viewModel: CreateCollectionViewModel,
+        pendingNovelSelection: Binding<[CollectionNovel]?>,
+        onRoute: @escaping (CreateCollectionRoute) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
+        self._viewModel = State(initialValue: viewModel)
+        self._nameFieldText = State(initialValue: viewModel.state.draft.name)
+        self._descriptionFieldText = State(initialValue: viewModel.state.draft.description)
+        self.pendingNovelSelection = pendingNovelSelection
+        self.onRoute = onRoute
+        self.onAuthenticationRequired = onAuthenticationRequired
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: viewModel.isEditing ? "컬렉션 수정" : "컬렉션 만들기") {
+                viewModel.handle(.requestClose)
+            } trailing: {
+                Button {
+                    viewModel.handle(.submit)
+                } label: {
+                    if viewModel.state.isSubmitting {
+                        ProgressView()
+                    } else {
+                        Text("완료")
+                            .applyWSSFont(.title2)
+                            .foregroundStyle(viewModel.canSubmit ? Color.wssPrimary100 : Color.wssGray100)
+                    }
+                }
+                .disabled(!viewModel.canSubmit)
+            }
+
+            content
+        }
+        // 미저장 초안이 있어 닫기 전 "그만하기" 확인 알럿을 강제하는 화면 — 스와이프 pop은 막되,
+        // 스와이프 시도가 감지되면 back 버튼과 똑같이 requestClose(변경 없으면 즉시 닫힘, 있으면 알럿)를 부른다(#256).
+        .wssCustomNavigationBar(swipeBackConfirmation: { viewModel.handle(.requestClose) })
+        .showWSSToast(isPresented: toastBinding, type: toastType)
+            // 알럿 버튼은 자동으로 닫히지 않으므로(버튼 액션만 호출), 각 액션이 직접 isPresented를 내린다.
+            // 생성/수정 겸용 화면이라 타이틀만 모드에 따라 갈린다(사용자 확정) — 버튼 문구("그만하기"/
+            // "계속 작성")는 두 모드 공통.
+            .showWSSAlert(
+                isPresented: stopAlertBinding,
+                type: viewModel.isEditing ? .stopEditingCollection : .stopWritingCollection,
+                buttonActions: [
+                    { viewModel.handle(.confirmStop) },  // "그만하기" → 화면 닫기
+                    { viewModel.handle(.keepWriting) }   // "계속 작성" → 머무름
+                ]
+            )
+            .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
+                guard shouldDismiss else { return }
+                dismiss()
+            }
+            // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
+            .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+                if needsAuth { onAuthenticationRequired() }
+            }
+            // "작품 추가" 화면(App이 push)이 확정한 결과 — 소비 즉시 nil로 되돌린다(nil→값 전이
+            // 신호 패턴, `OnboardingFeature/CLAUDE.md` 참고). App이 몇 단계를 push해 들어갔든(작품
+            // 검색만이든, "서재에서 추가"까지 더 들어갔든) 확정 시 이 화면까지 한 번에 pop하고 이
+            // 신호를 채운다 — 중간 화면 개수는 이 화면이 몰라도 된다.
+            // `CollectionNovel`이 Equatable이 아니라(Hashable 캐스케이드 회피, `CollectionFeatureFactory`
+            // 주석 참고) 배열 자체가 아니라 nil 여부(Bool)로만 전이를 감지한다 — 어차피 1회성
+            // nil→값 신호라 내용 비교는 필요 없다.
+            .onChange(of: pendingNovelSelection.wrappedValue != nil) { _, hasValue in
+                guard hasValue, let novels = pendingNovelSelection.wrappedValue else { return }
+                viewModel.handle(.setNovels(novels))
+                pendingNovelSelection.wrappedValue = nil
+            }
+            // 수정 모드 진입 직후 대상 컬렉션을 불러오는 동안의 대기 표시 — 화면 전환은 바로 일어나고
+            // (이전 화면에서 미리 준비하지 않음, `FeedFeature`와 동일 판단) 이 화면 안에서 로드한다.
+            .allowsHitTesting(!viewModel.state.isLoadingForEdit)
+            .overlay {
+                if viewModel.state.isLoadingForEdit {
+                    LoadingView()
+                }
+            }
+            .onAppear {
+                if !hasTrackedWriteViewed {
+                    hasTrackedWriteViewed = true
+                    viewModel.track(.writeViewed)
+                }
+                viewModel.handle(.load)
+            }
+            // 수정 모드 로드가 끝나 draft.name/description이 채워지면, 글자수 clamp 트랩용 로컬
+            // 버퍼(nameFieldText/descriptionFieldText)도 같이 채운다 — 이 버퍼는 init 시점에만
+            // 시드되므로 비동기 로드 완료를 별도로 반영해줘야 한다.
+            .onChange(of: viewModel.state.isLoadingForEdit) { wasLoading, isLoading in
+                guard wasLoading, !isLoading else { return }
+                nameFieldText = viewModel.state.draft.name
+                descriptionFieldText = viewModel.state.draft.description
+            }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                privateSection
+
+                Spacer().frame(height: 20)
+
+                VStack(spacing: 0) {
+                    nameSection
+
+                    Spacer().frame(height: 30)
+
+                    descriptionSection
+
+                    Spacer().frame(height: 30)
+
+                    novelListSection
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.immediately)
+        // 필드 자체(nameSection·descriptionSection)의 onTapGesture가 각자 포커스를 켜고, 그 바깥
+        // 빈 공간을 탭하면 여기로 흘러와 둘 다 내린다 — 안쪽 제스처가 먼저 소비하므로 서로 충돌하지
+        // 않는다(`FeedFeature`의 `CreateFeedView` 동일 패턴).
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isNameFieldFocused = false
+            isDescriptionFieldFocused = false
+        }
+    }
+}
+
+// MARK: - Sections
+
+private enum Metric {
+    /// 작품 그리드 제목 영역의 고정 높이(`.body4` 2줄 기준) — `WSSFontViewModifier`의 line-spacing/padding
+    /// 보정 덕에 텍스트 블록 총 높이는 항상 "줄 수 × (fontSize × lineHeight)"와 같다: 2 × (13 × 1.45) = 37.7
+    /// → 반올림 38. `novelGridCell`/`addNovelTile` 둘 다 이 상수로 제목 줄 수와 무관하게 높이를 맞춘다
+    /// (`WSSNovelGridCell`의 `Metric.infoHeight`와 같은 패턴, `WSSComponent/CLAUDE.md` 참고).
+    static let novelTitleHeight: CGFloat = 38
+    /// 컬렉션 설명 텍스트필드의 고정 높이(원래 `minHeight` 값 유지) — 입력이 이 높이를 넘으면
+    /// 박스가 늘어나는 대신 이 영역 안에서 스크롤된다(#255 QA, `descriptionSection` 참고).
+    static let descriptionFieldHeight: CGFloat = 78
+    /// `descriptionSection`의 스크롤 앵커 id — 입력마다 이 지점(텍스트필드 하단)으로 스크롤해
+    /// 캐럿을 계속 보이게 한다.
+    static let descriptionFieldID = "descriptionField"
+}
+
+private extension CreateCollectionView {
+
+    var privateSection: some View {
+        WSSPrivateToggleRow(
+            label: "나만 보는 컬렉션",
+            isOn: Binding(
+                get: { viewModel.state.draft.isPrivate },
+                set: { _ in viewModel.handle(.togglePrivate) }
+            )
+        )
+    }
+
+    var nameSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                Text("컬렉션 이름")
+                    .foregroundStyle(Color.wssBlack)
+                Text(" *")
+                    .foregroundStyle(Color.wssPrimary100)
+            }
+            .applyWSSFont(.title2)
+
+            Spacer().frame(height: 10)
+
+            HStack(spacing: 0) {
+                TextField("컬렉션 이름을 입력해주세요", text: $nameFieldText)
+                    .applyWSSFont(.body2)
+                    .focused($isNameFieldFocused)
+
+                Text("(\(nameFieldText.count)/\(CollectionDraft.maxNameCount))")
+                    .applyWSSFont(.body2)
+                    .foregroundStyle(Color.wssGray200)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .background(Color.wssGray50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .onChange(of: nameFieldText) { _, newValue in
+            let clamped = String(newValue.prefix(CollectionDraft.maxNameCount))
+            if clamped != newValue {
+                nameFieldText = clamped
+                return
+            }
+            viewModel.handle(.updateName(clamped))
+        }
+    }
+
+    var descriptionSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("컬렉션 설명")
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+
+            Spacer().frame(height: 10)
+
+            // 박스 전체(텍스트필드+글자수)를 한 컨테이너로 묶어 배경·모서리를 공유한다. 텍스트필드
+            // 영역은 ScrollView로 감싸 높이를 고정한다(#255 QA) — `axis: .vertical` TextField는
+            // 자체적으로 줄 수만큼 계속 자라나서, 그대로 두면 엔터를 칠 때마다 박스 전체가 늘어난다.
+            // 글자수 카운터는 그 아래 별도 줄로 빼 — 이전엔 bottomTrailing overlay였는데 텍스트가
+            // 박스 하단까지 차면 카운터와 겹쳤다.
+            VStack(alignment: .leading, spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        ZStack(alignment: .topLeading) {
+                            if descriptionFieldText.isEmpty {
+                                Text("컬렉션에 관련한 설명을 간단하게 작성해주세요")
+                                    .applyWSSFont(.body2)
+                                    .foregroundStyle(Color.wssGray100)
+                                    .allowsHitTesting(false)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                            }
+
+                            TextField("", text: $descriptionFieldText, axis: .vertical)
+                                .applyWSSFont(.body2)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .focused($isDescriptionFieldFocused)
+                                // 높이가 고정된 스크롤 영역 안에서 커서를 계속 따라가게 하는 앵커 —
+                                // 멀티라인 TextField는 캐럿 좌표를 직접 못 읽어서(SwiftUI 미지원),
+                                // 텍스트필드 자신에 id를 걸고 매 입력마다 그 "아래쪽 끝"으로
+                                // scrollTo(anchor: .bottom)한다. 텍스트필드 높이가 줄 수만큼 자라는
+                                // 성질을 이용한 것 — 끝에 타이핑 중일 땐 이 아래쪽 끝이 곧 캐럿 위치다.
+                                .id(Metric.descriptionFieldID)
+                        }
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(height: Metric.descriptionFieldHeight)
+                    .onChange(of: descriptionFieldText) { _, _ in
+                        proxy.scrollTo(Metric.descriptionFieldID, anchor: .bottom)
+                    }
+                }
+
+                Spacer().frame(height: 8)
+
+                Text("(\(descriptionFieldText.count)/\(CollectionDraft.maxDescriptionCount))")
+                    .applyWSSFont(.body2)
+                    .foregroundStyle(Color.wssGray200)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
+            .background(Color.wssGray50)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            // 박스 안 빈 여백(padding·아래쪽 남는 공간)을 눌러도 포커스되도록 블록 전체를 탭 타깃으로 넓힌다
+            // — 안 그러면 TextField 자신의 프레임 밖은 탭이 안 먹는다(Feature/CLAUDE.md 공통 주의).
+            .contentShape(Rectangle())
+            .onTapGesture { isDescriptionFieldFocused = true }
+        }
+        .onChange(of: descriptionFieldText) { _, newValue in
+            let clamped = String(newValue.prefix(CollectionDraft.maxDescriptionCount))
+            if clamped != newValue {
+                descriptionFieldText = clamped
+                return
+            }
+            viewModel.handle(.updateDescription(clamped))
+        }
+    }
+
+    var novelListSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 9) {
+                HStack(spacing: 0) {
+                    Text("작품 리스트")
+                        .foregroundStyle(Color.wssBlack)
+                    Text(" *")
+                        .foregroundStyle(Color.wssPrimary100)
+                }
+                .applyWSSFont(.title2)
+
+                Text("(\(viewModel.state.draft.novelIDs.count)/\(CollectionDraft.maxNovelCount))")
+                    .applyWSSFont(.body3)
+                    .foregroundStyle(Color.wssGray200)
+            }
+
+            Spacer().frame(height: 12)
+
+            novelGrid
+        }
+    }
+
+    var novelGrid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+            spacing: 12
+        ) {
+            addNovelTile
+
+            ForEach(viewModel.state.draft.novelIDs, id: \.self) { novelID in
+                if let novel = viewModel.state.novelDisplayInfo[novelID] {
+                    novelGridCell(novel)
+                }
+            }
+        }
+    }
+
+    /// 다른 작품 셀(`novelGridCell`)과 같은 골격(커버 박스 + 제목 줄 자리)을 맞춘다 — 이 타일만 제목이
+    /// 없다고 커버 높이를 고정값(156)으로 박아두면, 제목이 있는 이웃 셀과 총 높이가 달라져 그리드 행이
+    /// 어긋나 보인다(#199 리뷰 피드백). 커버는 `novelGridCell`과 동일하게 `aspectRatio`로 폭에 맞춰
+    /// 늘어나게 하고, 제목 자리는 `Metric.novelTitleHeight`만큼 고정 높이로 예약한다.
+    var addNovelTile: some View {
+        Button {
+            let currentSelection = viewModel.state.draft.novelIDs.compactMap { viewModel.state.novelDisplayInfo[$0] }
+            onRoute(.addNovel(currentSelection))
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                // ⚠️ `.aspectRatio`를 VStack에 직접 걸면 VStack이 제 내용물(텍스트+아이콘, ~41pt)의
+                // 자연 크기로 쪼그라든다 — 그 결과로 채워지지 않는다(실측: 그리드 칸을 안 채우고
+                // 왼쪽 위에 작게 뜸). `WSSNovelCoverImage`가 쓰는 것과 같은 방식으로 `Color.clear`가
+                // 비율만 잡고 실제 콘텐츠는 `.overlay`로 그 위에 얹어야 박스 전체가 채워진다
+                // (`WSSComponent/CLAUDE.md`의 표지 비율 항목 참고).
+                Color.clear
+                    .aspectRatio(novelCoverAspectRatio, contentMode: .fit)
+                    .overlay {
+                        VStack(spacing: 4) {
+                            Text(viewModel.state.draft.novelIDs.isEmpty ? "작품 추가" : "작품 수정")
+                                .applyWSSFont(.title4)
+                                .foregroundStyle(Color.wssGray200)
+
+                            WSSImage.icBookRegister.swiftUIImage
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundStyle(Color.wssGray200)
+                        }
+                    }
+                    .background(Color.wssGray50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                // novelGridCell 제목 영역과 같은 고정 높이만 예약 — 제목이 없는 타일이라 폰트를 맞출 필요는 없다.
+                Spacer()
+                    .frame(height: Metric.novelTitleHeight)
+            }
+        }
+        // ⚠️ .buttonStyle(.plain)을 걸지 않는다 — 아이콘·텍스트만 있는 버튼에 걸면 기본 눌림 피드백까지
+        // 사라진다(WSSComponent/CLAUDE.md·Feature/CLAUDE.md 공통 주의). 색은 이미 명시적이라 accent 틴트
+        // 우려도 없다.
+    }
+
+    /// 커버 셀 전체가 대표 지정 탭 영역이다(사용자 확정, #199 — 처음엔 우상단 배지만 탭 대상이었으나
+    /// 셀 자체를 탭해도 바뀌도록 넓힘). 배지는 이제 순수 표시용이라 별도 `Button`으로 중첩하지 않는다
+    /// (중첩 Button은 안쪽 제스처가 불안정해진다 — `WSSComponent/CLAUDE.md` 공통 주의).
+    func novelGridCell(_ novel: CollectionNovel) -> some View {
+        let isRepresentative = novel.id == viewModel.representativeNovelID
+
+        return VStack(alignment: .leading, spacing: 6) {
+            Button {
+                viewModel.handle(.selectRepresentativeNovel(novel.id))
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio, placeholderStyle: .grid)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            if isRepresentative {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.wssPrimary100, lineWidth: 2)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.1), value: isRepresentative)
+
+                    Text(isRepresentative ? "✓ 대표" : "대표")
+                        .applyWSSFont(.label2)
+                        .foregroundStyle(Color.wssWhite)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(isRepresentative ? Color.wssPrimary100 : Color.wssGray100)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        // 미설정 시 기본 크로스페이드가 느리게 번진다(Feature/CLAUDE.md 공통 주의).
+                        .animation(.easeInOut(duration: 0.1), value: isRepresentative)
+                        .padding(8)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Text(novel.title)
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(2)
+                .frame(height: Metric.novelTitleHeight, alignment: .top)
+        }
+    }
+
+    /// 그리드 커버 비율(Figma 108×156) — `addNovelTile`/`novelGridCell` 양쪽이 공유해야 두 셀의
+    /// 커버 높이가 폭 변화(기기별)에도 항상 같이 움직인다.
+    var novelCoverAspectRatio: CGFloat { 108.0 / 156.0 }
+}
+
+// MARK: - Presentation
+
+private extension CreateCollectionView {
+
+    var toastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedError != nil },
+            set: { if !$0 { viewModel.handle(.dismissError) } }
+        )
+    }
+
+    /// 작성 중단 알럿 표시 여부. 실제 닫기 판단은 ViewModel이 하고, View는 표시 상태만 바인딩한다.
+    var stopAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isStopAlertPresented },
+            set: { if !$0 { viewModel.handle(.keepWriting) } }
+        )
+    }
+
+    var toastType: WSSToastType {
+        switch viewModel.state.presentedError {
+        case .unknown, .none:
+            .unknownError
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        CreateCollectionView(
+            viewModel: CreateCollectionViewModel(
+                createCollectionUseCase: PreviewCreateCollectionUseCase()
+            ),
+            pendingNovelSelection: .constant(nil),
+            onRoute: { print("화면 전환 요청: \($0)") },
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+        )
+    }
+}
+
+// Preview 전용 init(`#if DEBUG`)을 쓰므로 Release 빌드에선 함께 제외해야 컴파일된다.
+#if DEBUG
+#Preview("작품 포함") {
+    // 제목 길이를 일부러 섞는다(1줄로 끝나는 제목 + 2줄까지 차는 제목) — 그리드 셀 높이가 제목 줄
+    // 수와 무관하게 맞는지(Metric.novelTitleHeight) 이 프리뷰만으로 육안 확인할 수 있어야 한다.
+    let titles = ["짧은 제목", "샘플 작품 제목 두 줄까지 길게 늘어지는 경우", "또 다른 짧은 제목",
+                  "이것도 두 줄로 넘어갈 만큼 충분히 긴 작품 제목입니다", "제목"]
+    let novels = titles.enumerated().map { index, title in
+        CollectionNovel(id: NovelID(index + 1), title: title, author: "작가 \(index + 1)", thumbnailImage: nil)
+    }
+    let draft = CollectionDraft(
+        name: "인생 회귀물 모음집",
+        description: "다시 읽어도 재밌는 회귀물만 모았어요",
+        novelIDs: novels.map(\.id)
+    )
+    return NavigationStack {
+        CreateCollectionView(
+            viewModel: CreateCollectionViewModel(
+                previewDraft: draft,
+                previewNovelDisplayInfo: Dictionary(uniqueKeysWithValues: novels.map { ($0.id, $0) }),
+                createCollectionUseCase: PreviewCreateCollectionUseCase()
+            ),
+            pendingNovelSelection: .constant(nil),
+            onRoute: { print("화면 전환 요청: \($0)") },
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") }
+        )
+    }
+}
+#endif
+
+private struct PreviewCreateCollectionUseCase: CreateCollectionUseCase {
+    func execute(_ draft: CollectionDraft) async throws(RepositoryError) -> CollectionID {
+        print("생성됨!")
+        return CollectionID(1)
+    }
+}

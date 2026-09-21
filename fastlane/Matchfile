@@ -1,0 +1,13 @@
+# V1(WSS-iOS)과 같은 Apple Developer 팀·같은 인증서 저장소를 그대로 재사용한다 — match는 저장소를
+# 팀 단위로 쓰도록 설계돼 있고, 이 저장소엔 V1의 운영 인증서·프로파일이 이미 들어있다. V2는 지금
+# 별도 Debug bundle id로 개발용 프로파일을 추가하는 것뿐이고, 나중에 운영 앱을 완전히 대체하는 시점
+# (docs/TODO.md 4번, "Bundle ID 이관 컷오버")에는 여기 이미 있는 운영 인증서를 그대로 이어받게 된다.
+git_url("git@github.com:Team-WSS/WSS-iOS-Certificates.git")
+storage_mode("git")
+type("development")
+
+app_identifier([
+  ENV.fetch("APP_IDENTIFIER_RELEASE"),
+  ENV.fetch("APP_IDENTIFIER_DEBUG")
+])
+team_id(ENV["TEAM_ID"])

@@ -1,0 +1,93 @@
+//
+//  NovelReviewDraft.swift
+//  NovelReviewDomain
+//
+//  Created by YunhakLee on 2/5/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import BaseDomain
+
+public struct NovelReviewDraft: Equatable, Sendable {
+    
+    public let novelID: NovelID
+    public private(set) var status: ReadingStatus
+    public private(set) var period: ReadingPeriod?
+    public private(set) var rating: Rating?
+    public private(set) var attractivePoints: [AttractivePoint]
+    public private(set) var keywords: [Keyword]
+    
+    // MARK: - Policy
+    
+    public static let maxAttractivePoints = 3
+    public static let maxKeywords = 20
+    
+    public enum ValidationError: Error, Equatable {
+        case tooManyAttractivePoints(max: Int)
+        case tooManyKeywords(max: Int)
+        case duplicateKeyword
+    }
+    
+    // MARK: - Init
+    
+    public init(
+        novelID: NovelID,
+        status: ReadingStatus,
+        period: ReadingPeriod? = nil,
+        rating: Rating? = nil,
+        attractivePoints: [AttractivePoint] = [],
+        keywords: [Keyword] = []
+    ) {
+        self.novelID = novelID
+        self.status = status
+        self.period = period?.normalized(for: status)
+        self.rating = rating
+        self.attractivePoints = attractivePoints
+        self.keywords = keywords
+    }
+    
+    // MARK: - Draft Editing
+    
+    public mutating func changeStatus(_ newStatus: ReadingStatus) {
+        status = newStatus
+        period = period?.normalized(for: newStatus)
+    }
+    
+    public mutating func setPeriod(_ newPeriod: ReadingPeriod?) {
+        period = newPeriod?.normalized(for: status)
+    }
+    
+    public mutating func setRating(_ newRating: Rating?) {
+        rating = newRating
+    }
+    
+    public mutating func addAttractivePoint(_ point: AttractivePoint) throws {
+        guard !attractivePoints.contains(point) else {
+            return
+        }
+        guard attractivePoints.count < Self.maxAttractivePoints else {
+            throw ValidationError.tooManyAttractivePoints(max: Self.maxAttractivePoints)
+        }
+        attractivePoints.append(point)
+    }
+    
+    public mutating func removeAttractivePoint(_ point: AttractivePoint) {
+        attractivePoints.removeAll { $0 == point }
+    }
+    
+    public mutating func setKeywords(_ newKeywords: [Keyword]) throws {
+        let uniqueKeywords = Array(Set(newKeywords))
+        guard uniqueKeywords.count == newKeywords.count else {
+            throw ValidationError.duplicateKeyword
+        }
+        guard uniqueKeywords.count <= Self.maxKeywords else {
+            throw ValidationError.tooManyKeywords(max: Self.maxKeywords)
+        }
+        keywords = uniqueKeywords
+    }
+    
+    public mutating func removeKeyword(_ keyword: Keyword) {
+        keywords.removeAll { $0 == keyword }
+    }
+}

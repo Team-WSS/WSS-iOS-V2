@@ -1,0 +1,89 @@
+//
+//  LoadNovelFeedsUseCaseTests.swift
+//  FeedDomain
+//
+//  Created by Seoyeon Choi on 2/22/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import Testing
+
+@testable import FeedDomain
+import FeedDomainTesting
+import BaseDomain
+
+@Suite
+struct LoadNovelFeedsUseCaseTests {
+
+    @Test("작품 피드를 정상적으로 불러온다")
+    func loadNovelFeedsSuccess() async throws {
+        let mock = MockFeedRepository()
+        let expected = makeFeeds()
+        mock.fetchNovelFeedsResult = .success(expected)
+
+        let usecase = DefaultLoadNovelFeedsUseCase(feedRepository: mock)
+        let novelID = NovelID(10)
+        let lastFeedID = FeedID(0)
+
+        let result = try await usecase.execute(novelID: novelID, lastFeedID: lastFeedID, size: nil)
+
+        #expect(result.items == expected.items)
+        #expect(result.hasNext == expected.hasNext)
+        #expect(mock.fetchedNovelFeeds.last?.novelID == novelID)
+        #expect(mock.fetchedNovelFeeds.last?.lastFeedID == lastFeedID)
+        #expect(mock.fetchedNovelFeeds.last?.size == nil)
+    }
+
+    @Test("재진입 갱신용 size를 Repository에 그대로 전달한다")
+    func loadNovelFeedsPassesSizeThrough() async throws {
+        let mock = MockFeedRepository()
+        mock.fetchNovelFeedsResult = .success(makeFeeds())
+
+        let usecase = DefaultLoadNovelFeedsUseCase(feedRepository: mock)
+
+        _ = try await usecase.execute(novelID: NovelID(10), lastFeedID: FeedID(0), size: 37)
+
+        #expect(mock.fetchedNovelFeeds.last?.size == 37)
+    }
+
+    @Test("작품 피드 조회에 실패하면 에러를 던진다")
+    func loadNovelFeedsFailureThrows() async {
+        let mock = MockFeedRepository()
+        mock.fetchNovelFeedsResult = .failure(RepositoryError.serverUnavailable)
+
+        let usecase = DefaultLoadNovelFeedsUseCase(feedRepository: mock)
+
+        await #expect(throws: RepositoryError.serverUnavailable) {
+            try await usecase.execute(novelID: NovelID(1), lastFeedID: FeedID(0), size: nil)
+        }
+    }
+}
+
+extension LoadNovelFeedsUseCaseTests {
+    private func makeFeeds() -> Paginated<TotalFeed> {
+        Paginated(
+            items: [
+                TotalFeed(
+                    feedId: FeedID(1),
+                    createdDate: "",
+                    content: "이 작품 진짜 재밌어요",
+                    author: Author(
+                        userId: UserID(1003),
+                        nickname: "구리스",
+                        profileImage: URL(string: "https://example.com/profile.jpg")
+                    ),
+                    likeCount: 5,
+                    isLiked: false,
+                    commentCount: 2,
+                    isSpoiler: false,
+                    isModified: false,
+                    isPublic: true,
+                    isMyFeed: false,
+                    imageCount: 0
+                )
+            ],
+            hasNext: false
+        )
+    }
+}

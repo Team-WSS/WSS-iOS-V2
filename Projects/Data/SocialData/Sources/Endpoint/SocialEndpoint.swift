@@ -1,0 +1,69 @@
+//
+//  SocialEndpoint.swift
+//  SocialData
+//
+//  Created by YunhakLee on 4/23/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import Networking
+import BaseData
+
+enum SocialEndpoint: Endpoint {
+    case blockUser(BlockUserQuery)
+    case unblockUser(blockId: Int)
+    case getBlockedUsers
+    case reportSpoilerFeed(feedID: Int)
+    case reportImproperFeed(feedID: Int)
+    case reportSpoilerComment(feedID: Int, commentID: Int)
+    case reportImproperComment(feedID: Int, commentID: Int)
+
+    var method: HTTPMethod {
+        switch self {
+        case .blockUser:             return .post
+        case .unblockUser:           return .delete
+        case .getBlockedUsers:       return .get
+        case .reportSpoilerFeed:     return .post
+        case .reportImproperFeed:    return .post
+        case .reportSpoilerComment:  return .post
+        case .reportImproperComment: return .post
+        }
+    }
+
+    var baseURL: URL {
+        URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
+    }
+
+    var path: String {
+        switch self {
+        case .blockUser:
+            return "/blocks"
+        case .unblockUser(let blockId):
+            return "/blocks/\(blockId)"
+        case .getBlockedUsers:
+            return "/blocks"
+        case .reportSpoilerFeed(let feedID):
+            return "/feeds/\(feedID)/spoiler"
+        case .reportImproperFeed(let feedID):
+            return "/feeds/\(feedID)/impertinence"
+        case .reportSpoilerComment(let feedID, let commentID):
+            return "/feeds/\(feedID)/comments/\(commentID)/spoiler"
+        case .reportImproperComment(let feedID, let commentID):
+            return "/feeds/\(feedID)/comments/\(commentID)/impertinence"
+        }
+    }
+
+    var query: QueryParameters {
+        switch self {
+        case .blockUser(let query): return .convertible(query)
+        default: return .none
+        }
+    }
+
+    var body: RequestBody { .none }
+
+    var authorization: AuthorizationPolicy { .requireToken }
+    
+    var additionalHeaders: [String : String]? { nil }
+}

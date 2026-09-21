@@ -1,0 +1,85 @@
+//
+//  LibraryFeatureFactory.swift
+//  LibraryFeature
+//
+//  Created by YunhakLee on 7/21/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import NovelDomain
+import Logger
+import Analytics
+
+/// 모듈의 유일한 public 진입점.
+/// View/ViewModel은 `internal`로 감추고, opaque `some View`로 구체 타입을 숨겨 반환한다.
+/// UseCase(프로토콜)는 외부(App/Demo)가 주입한다 — Feature는 Repository/Data 구현을 모른다.
+public enum LibraryFeatureFactory {
+
+    /// 로그인한 사용자 본인의 서재 화면. **탭 콘텐츠로 쓰이는 화면**이라 뒤로가기가 없다
+    /// (타유저 서재는 반대 — push되는 화면이라 스스로 뒤로가기를 갖는다).
+    ///
+    /// - Parameters:
+    ///   - onRoute: 화면 전환 의도 콜백 — 목적지·payload는 `MyLibraryRoute`(Navigation/) 참고.
+    ///     실제 화면 조립·push는 호출자(App 조정 계층)가 exhaustive switch로 수행한다(#253).
+    ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백 — 화면 내 서버 호출 공통.
+    ///     세션 이벤트라 `onRoute`에 합치지 않는다.
+    @MainActor
+    public static func makeMyLibraryView(
+        loadMyLibraryUseCase: LoadMyLibraryUseCase,
+        loadMyLibraryKeywordsUseCase: LoadMyLibraryKeywordsUseCase,
+        loadMyLibraryFilterUseCase: LoadMyLibraryFilterUseCase,
+        saveMyLibraryFilterUseCase: SaveMyLibraryFilterUseCase,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
+        onRoute: @escaping (MyLibraryRoute) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        let viewModel = LibraryViewModel(
+            loadMyLibraryUseCase: loadMyLibraryUseCase,
+            loadMyLibraryKeywordsUseCase: loadMyLibraryKeywordsUseCase,
+            loadMyLibraryFilterUseCase: loadMyLibraryFilterUseCase,
+            saveMyLibraryFilterUseCase: saveMyLibraryFilterUseCase,
+            logger: logger,
+            analyticsTracker: analyticsTracker
+        )
+        return LibraryView(
+            viewModel: viewModel,
+            onRoute: onRoute,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+
+    /// 다른 사용자의 서재 화면. **`NavigationStack`에 push되는 화면**이라 뒤로가기는 화면이 스스로 처리한다
+    /// (내 서재는 탭 콘텐츠라 반대 — 그쪽엔 뒤로가기가 없다).
+    ///
+    /// - Parameters:
+    ///   - userID: 조회 대상 사용자. 진입 시점(유저 프로필 등)에서 넘긴다.
+    ///   - onRoute: 화면 전환 의도 콜백(`UserLibraryRoute`) — 실제 push는 호출자(App)가 수행한다(#253).
+    ///   - onAuthenticationRequired: 인증 만료(세션 죽음) 시 로그인 화면 진입 콜백.
+    ///     ⚠️ **idempotent해야 한다** — 화면이 신호를 소진하고 다시 세우므로 만료가 반복되면 여러 번 불린다.
+    ///     루트 교체는 무해하지만 `path.append(.login)`류면 로그인 화면이 겹쳐 쌓인다.
+    @MainActor
+    public static func makeUserLibraryView(
+        userID: UserID,
+        loadUserLibraryUseCase: LoadUserLibraryUseCase,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
+        onRoute: @escaping (UserLibraryRoute) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        let viewModel = UserLibraryViewModel(
+            userID: userID,
+            loadUserLibraryUseCase: loadUserLibraryUseCase,
+            logger: logger,
+            analyticsTracker: analyticsTracker
+        )
+        return UserLibraryView(
+            viewModel: viewModel,
+            onRoute: onRoute,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}

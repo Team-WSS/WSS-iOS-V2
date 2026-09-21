@@ -1,0 +1,46 @@
+//
+//  HomeFeatureFactory.swift
+//  HomeFeature
+//
+//  Created by YunhakLee on 8/4/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import RecommendationDomain
+import NotificationDomain
+import Logger
+import PushAuthorization
+import Analytics
+
+/// 홈 화면의 유일한 public 진입점. View/ViewModel은 internal로 감춘다.
+public enum HomeFeatureFactory {
+
+    /// 탭 **콘텐츠만** 반환한다 — 탭바·화면 전환은 App 몫이라 전환 의도를 `onRoute`(`HomeRoute`, #253)로 올린다.
+    /// - Parameter onAuthenticationRequired: 인증 만료 신호. 화면(또는 루트) 교체는 호출자가 하며,
+    ///   한 번의 로드에서 여러 번 발화할 수 있으므로 **idempotent해야 한다**.
+    @MainActor
+    public static func makeView(
+        loadHomeDataUseCase: LoadHomeDataUseCase,
+        loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        pushAuthorizationChecker: PushAuthorizationChecker,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil,
+        onRoute: @escaping (HomeRoute) -> Void,
+        onAuthenticationRequired: @escaping () -> Void
+    ) -> some View {
+        HomeView(
+            viewModel: HomeViewModel(
+                loadHomeDataUseCase: loadHomeDataUseCase,
+                loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
+                pushAuthorizationChecker: pushAuthorizationChecker,
+                logger: logger,
+                analyticsTracker: analyticsTracker
+            ),
+            onRoute: onRoute,
+            onAuthenticationRequired: onAuthenticationRequired
+        )
+    }
+}

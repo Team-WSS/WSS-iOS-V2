@@ -1,0 +1,37 @@
+<!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Data/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
+# CollectionData
+
+`CollectionDomain` 계약의 서버 구현. 구성요소는 `Sources/`를 직접 보면 된다.
+
+- 식별자: `ModuleType.data(.collection)` / 진입점: `CollectionDataFactory`
+- 서버 명세: `/api-spec collection`
+
+## 핵심 시나리오
+
+- **하나의 목록 응답 DTO에서 두 Entity가 나온다.** 마이페이지용 `CollectionPreview`와 리스트용 `CollectionCard`는
+  같은 엔드포인트·같은 DTO를 쓰고 **Mapper만 갈린다**. 화면이 늘어도 Endpoint·Service를 복제하지 말 것.
+  (왜 나눴는지는 `CollectionDomain/CLAUDE.md` 참고.)
+
+## 주의사항 (작업 중 발견 시 누적)
+
+- **`isPublic` → `isPrivate` 뒤집기는 여기(Mapper)에서만 한다.** 도메인·화면은 이미 "나만 보는" 방향으로 통일돼 있으니
+  어디서도 다시 뒤집지 말 것.
+- **에러는 상태 코드가 아니라 `code` 문자열로 분기할 여지가 크다(현재는 미구현 — 소비 화면 연결 시 도입 예정).**
+  `400` 하나에 `BAD_REQUEST`·`COLLECTION-002`(작품 1~100개)·`COLLECTION-003`(중복 작품)·
+  `COLLECTION-004`(대표 작품이 목록에 없음)·`COLLECTION-007`(잘못된 커서)·`COLLECTION-008`(size 범위)이 공존하고,
+  `401`도 `AUTH-000`/`AUTH-001`/`AUTH-003`으로 갈린다. 지금 `DefaultCollectionRepository`는 공용
+  `NetworkingError.toRepositoryError()`만 쓴다 — Feature가 아직 없어 코드별 구분을 미뤄뒀다.
+  화면에서만 의미가 다른 코드가 필요해지면 공용 변환에 섞지 말고 이 모듈의 리포지토리 메서드에서 변환할 것
+  (`RepositoryError.privateProfile` 선례 — `BaseDomain/CLAUDE.md`).
+- 커서는 **서버가 발급한 불투명 문자열**이다. 마지막 아이템 ID로 유도하거나 파싱하지 말고 받은 값을 그대로 되돌려 보낸다.
+- **Query DTO는 `Encodable`이 아니라 `QueryItemConvertible`(Networking)을 준수해야 한다.** `Encodable`만 붙이면
+  `.convertible(query)`에서 "does not conform" 컴파일 에러가 난다. 기본 구현이 nil 값을 쿼리에서 알아서 빼주므로
+  첫 페이지의 `cursor: nil`을 따로 분기할 필요가 없다.
+- **정렬 파라미터는 대소문자가 다르다.** 서버는 `RECENT`/`OLD`를 받는데 `BaseDomain.SortType`의 rawValue는 소문자다
+  → `CollectionDetailQuery`가 `uppercased()`로 맞춘다. 도메인 enum을 서버 표기에 맞추려 고치지 말 것(다른 도메인도 쓴다).
+- **목록 API 하나가 Repository 메서드 셋을 떠받친다.** 미리보기·컬렉션 목록이 같은 `getUserCollections`를 호출하고
+  Mapper만 갈린다(`collectionPreviews` / `collectionCards`). 엔드포인트를 추가하기 전에 Mapper로 해결되는지 먼저 볼 것.
+- **Demo 앱은 `TEST_API_KEY`(`Config_Debug.xcconfig`)로 인증한다.** 만료되면 모든 호출이 `AUTH-000`으로 실패한다 —
+  Demo가 안 될 때 코드부터 의심하지 말고 토큰부터 확인할 것. 갱신 방법은 `/api-spec` 스킬 문서에 있다.
+- 컬렉션 상세만 `usesTokenIfAvailable`이다(공유 링크로 들어온 비로그인 조회자에게도 내려간다). 나머지는 `requireToken` —
+  목록 API의 비로그인 허용 여부는 서버 명세에 명시가 없어 보수적으로 잡아뒀다. 비로그인 진입 경로가 생기면 그때 확인해 바꾼다.

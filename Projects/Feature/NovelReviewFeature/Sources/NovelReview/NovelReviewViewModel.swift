@@ -1,0 +1,366 @@
+//
+//  NovelReviewViewModel.swift
+//  NovelReviewFeature
+//
+//  Created by YunhakLee on 6/4/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import Observation
+
+import BaseDomain
+import NovelReviewDomain
+import Logger
+import Analytics
+
+@MainActor
+@Observable
+final class NovelReviewViewModel {
+
+    // MARK: - State
+
+    struct State {
+        var draft: NovelReviewDraft
+        var isLoading = false
+        /// 초안 로드 실패 → 전면 실패 뷰(재시도) 표시. draft는 항상 존재하고
+        /// "초안 없음(nil)=정상"이라 실패를 draft 유무로 판단할 수 없어 별도 플래그로 둔다.
+        var loadFailed: RepositoryError?
+        var isSaving = false
+        var shouldDismiss = false
+        /// 저장 성공으로 닫히는가 — `shouldDismiss`는 취소에도 켜지므로, 저장 성공 경로에서만 세우는
+        /// 별도 플래그(`shouldRequestReview`와 같은 이유). View가 dismiss 직전 "평가 완료" 크로스스크린
+        /// 피드백(`onSaved`)을 올릴지 판단하는 데 쓴다(#236).
+        var didSaveReview = false
+        /// 저장 성공 순간 앱 리뷰 게이트를 통과했는지 — View가 `onChange`로 소비해 `requestReview()`를 부른다.
+        /// `shouldDismiss`는 취소에도 켜지므로, 리뷰 신호는 저장 성공 경로에서만 세우는 별도 플래그로 둔다.
+        var shouldRequestReview = false
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호.
+        /// 어느 서버 호출에서 발생하든 여기로 모이며, View가 `onChange`로 소비한다(`shouldDismiss`와 대칭).
+        var requiresAuthentication = false
+        var isStopAlertPresented = false
+        /// 표시할 에러(의미값). 토스트 문구·아이콘 매핑은 View가 한다(얇은 ViewModel).
+        var presentedError: ReviewError?
+    }
+
+    /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
+    enum ReviewError: Equatable {
+        /// 매력 포인트 최대 개수 초과(사용자가 정상적으로 마주칠 수 있는 검증 에러).
+        case attractivePointLimit(max: Int)
+        /// 그 외 — 원래 도달하면 안 되는 경로. 원인은 로그로 남긴다.
+        case unknown
+    }
+
+    // MARK: - Action
+
+    enum Action {
+        case load
+        case selectStatus(ReadingStatus)
+        case updatePeriod(start: Date?, end: Date?)
+        case updateRating(Double)
+        case toggleAttractivePoint(AttractivePoint)
+        case setKeywords([Keyword])
+        case removeKeyword(Keyword)
+        case clearKeywords
+        case save
+        case requestClose
+        case confirmStop
+        case keepWriting
+        case dismissError
+    }
+
+    // MARK: - Output
+
+    private(set) var state: State
+
+    // MARK: - Property
+
+    @ObservationIgnored private var hasLoaded = false
+    @ObservationIgnored private var baselineDraft: NovelReviewDraft
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var isClosing = false
+
+    /// 로드 기준선 대비 draft가 바뀌었는지. 뒤로가기 시 "그만 작성" 확인 알럿 노출 여부 판단에 쓴다.
+    /// View가 직접 읽지 않는 내부 판단값이라 Derived가 아니라 Property에 둔다.
+    private var hasUnsavedChanges: Bool { state.draft != baselineDraft }
+
+    // MARK: - Dependency
+
+    private let novelID: NovelID
+    private let initialStatus: ReadingStatus
+    private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
+
+    // NovelReviewDomain
+    private let loadUseCase: LoadNovelReviewDraftUseCase
+    private let saveUseCase: SaveNovelReviewUseCase
+
+    /// 앱스토어 평점 프롬프트 게이팅(피드·감상평 공유). 저장 성공 시 참여를 기록하고 요청 여부를 판정한다.
+    private let appReviewUseCase: AppReviewRequestUseCase
+
+    // MARK: - Init
+
+    init(
+        novelID: NovelID,
+        status: ReadingStatus,
+        loadUseCase: LoadNovelReviewDraftUseCase,
+        saveUseCase: SaveNovelReviewUseCase,
+        appReviewUseCase: AppReviewRequestUseCase,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
+    ) {
+        let initialDraft = NovelReviewDraft(novelID: novelID, status: status)
+        self.novelID = novelID
+        self.initialStatus = status
+        self.state = State(draft: initialDraft)
+        self.baselineDraft = initialDraft
+        self.loadUseCase = loadUseCase
+        self.saveUseCase = saveUseCase
+        self.appReviewUseCase = appReviewUseCase
+        self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    /// 이벤트 트래킹 pass-through(#249) — `state`를 건드리지 않아 `handle(_:)`을 거치지 않는다.
+    func track(_ event: NovelReviewAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
+    }
+
+    // MARK: - handle
+
+    func handle(_ action: Action) {
+        switch action {
+        case .load:
+            load()
+        case .selectStatus(let status):
+            track(NovelReviewAnalyticsEvent(status: status))
+            state.draft.changeStatus(status)
+        case .updatePeriod(let start, let end):
+            updatePeriod(start: start, end: end)
+        case .updateRating(let value):
+            updateRating(value)
+        case .toggleAttractivePoint(let point):
+            toggleAttractivePoint(point)
+        case .setKeywords(let keywords):
+            setKeywords(keywords)
+        case .removeKeyword(let keyword):
+            state.draft.removeKeyword(keyword)
+        case .clearKeywords:
+            setKeywords([])
+        case .save:
+            save()
+        case .requestClose:
+            requestClose()
+        case .confirmStop:
+            confirmStop()
+        case .keepWriting:
+            state.isStopAlertPresented = false
+        case .dismissError:
+            state.presentedError = nil
+        }
+    }
+}
+
+// MARK: - Action Handling
+
+private extension NovelReviewViewModel {
+    func load() {
+        guard !hasLoaded, loadTask == nil, !isClosing else { return }
+        state.isLoading = true
+        loadTask = Task { await loadDraft() }
+    }
+
+    /// 독서 기간 설정. 상태별 유효 날짜(watching=시작, watched=시작+종료, quit=종료)는
+    /// 도메인 `ReadingPeriod.normalized(for:)`가 강제한다. ViewModel은 입력 날짜로 `ReadingPeriod`를 만들어 위임만 한다.
+    /// 둘 다 nil이거나 시작>종료면 도메인이 throw → 사용자 메시지로 변환.
+    func updatePeriod(start: Date?, end: Date?) {
+        guard start != nil || end != nil else {
+            state.draft.setPeriod(nil)
+            return
+        }
+        do {
+            let period = try ReadingPeriod(start: start, end: end)
+            track(.periodConfirmed)
+            state.draft.setPeriod(period)
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 평점 설정. 도메인 `Rating`은 0.5~5.0(0.5 단위)만 유효하고 0.0은 표현 불가 →
+    /// 슬라이더의 0.0(= 평점 없음)은 `nil`로 매핑한다.
+    /// ⚠️ `StarRatingView`는 드래그 기반이라 값이 실제로 바뀔 때만 트래킹한다(연속 호출 스팸 방지,
+    /// `SearchFeature`의 `WSSRangeSlider` 가드와 동일 이유).
+    func updateRating(_ value: Double) {
+        guard value >= 0.5 else {
+            if state.draft.rating != nil { track(.ratingChanged) }
+            state.draft.setRating(nil)
+            return
+        }
+        do {
+            let rating = try Rating(value)
+            if state.draft.rating != rating { track(.ratingChanged) }
+            state.draft.setRating(rating)
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 매력 포인트 토글. 이미 선택돼 있으면 해제, 아니면 추가한다.
+    /// 추가 시 최대 개수(3) 정책은 도메인(`NovelReviewDraft`)이 검증하며, 초과 시 throw → 사용자 메시지로 변환.
+    func toggleAttractivePoint(_ point: AttractivePoint) {
+        if let event = NovelReviewAnalyticsEvent(attractivePoint: point) { track(event) }
+        do {
+            if state.draft.attractivePoints.contains(point) {
+                state.draft.removeAttractivePoint(point)
+            } else {
+                try state.draft.addAttractivePoint(point)
+            }
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 키워드 탐색 시트가 실시간 보고하는 선택 전체를 draft에 반영(전체 교체).
+    /// 최대 개수(20)는 시트(`SearchKeywordViewModel.maxSelectionCount`)가 이미 막고 있어 원래
+    /// 도달하면 안 되는 경로지만, 도메인(`setKeywords`)이 최종 방어선으로 남아있어 그대로 위임한다.
+    /// `.clearKeywords`(빈 배열)도 이 함수를 재사용한다 — throw 여지는 없지만(빈 배열은 항상 유효)
+    /// 도메인 진입점을 하나로 유지한다.
+    func setKeywords(_ keywords: [Keyword]) {
+        do {
+            try state.draft.setKeywords(keywords)
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 완료 버튼. 현재 draft를 저장하고, 성공하면 화면을 닫도록 신호한다.
+    func save() {
+        guard !state.isSaving else { return }
+        Task { await saveDraft() }
+    }
+
+    /// 뒤로가기 요청. 로드 중이면 로드 완료를 기다리지 않고 닫기 흐름을 시작한다.
+    func requestClose() {
+        guard !isClosing else { return }
+
+        if state.isLoading || loadTask != nil {
+            close()
+            return
+        }
+
+        if hasUnsavedChanges {
+            state.isStopAlertPresented = true
+        } else {
+            close()
+        }
+    }
+
+    /// "그만하기" 확인. 알럿을 내리고 닫기 신호만 View로 발화한다.
+    func confirmStop() {
+        state.isStopAlertPresented = false
+        close()
+    }
+
+    func close() {
+        isClosing = true
+        state.isStopAlertPresented = false
+        loadTask?.cancel()
+        state.shouldDismiss = true
+    }
+}
+
+// MARK: - UseCase Handling
+
+private extension NovelReviewViewModel {
+
+    func loadDraft() async {
+        defer {
+            loadTask = nil
+            if !isClosing {
+                state.isLoading = false
+            }
+        }
+
+        do {
+            if var loaded = try await loadUseCase.execute(novelID: novelID) {
+                guard !isClosing, !Task.isCancelled else { return }
+                baselineDraft = loaded               // 기준선은 서버에서 로드한 원본
+                loaded.changeStatus(initialStatus)   // 주입된 읽기 상태를 우선 적용(원본과 다르면 '변경됨'으로 잡힘)
+                state.draft = loaded
+            } else {
+                guard !isClosing, !Task.isCancelled else { return }
+                baselineDraft = state.draft          // 초안 없음 → 초기값(주입 상태)을 기준선으로
+            }
+            state.loadFailed = nil                   // 재시도 성공 시 실패 뷰 해제
+            hasLoaded = true
+        } catch {
+            guard !isClosing, !Task.isCancelled else { return }
+            // 인증 만료는 로그인 라우팅으로 일원화한다(전면 실패 뷰 대신).
+            if routeToLoginIfAuthenticationRequired(error) { return }
+            // 로드 실패는 전면 실패 뷰가 표현한다 — 토스트까지 띄우면 에러 시그널이 이중화된다.
+            // (저장/검증 실패만 presentError→토스트, 로드 실패는 전면 뷰로 분화 — NovelDetail과 동일.)
+            logger?.error("NovelReview 실패(loadDraft): \(String(describing: error))")
+            state.loadFailed = (error as? RepositoryError) ?? .unknown
+        }
+    }
+
+    func saveDraft() async {
+        state.isSaving = true
+        defer { state.isSaving = false }
+
+        do {
+            try await saveUseCase.execute(draft: state.draft)
+            track(.saved)
+            state.didSaveReview = true
+            state.shouldDismiss = true
+            recordEngagementAndGateReview()
+        } catch {
+            presentError(error)
+        }
+    }
+
+    /// 저장 성공을 긍정 완료로 기록하고, 앱 리뷰 게이트(누적 참여·버전)를 통과하면 `shouldRequestReview`를
+    /// 세운다 — 실제 프롬프트는 View가 `@Environment(\.requestReview)`로 띄운다.
+    private func recordEngagementAndGateReview() {
+        appReviewUseCase.recordEngagement()
+        guard appReviewUseCase.shouldRequestReview() else { return }
+        appReviewUseCase.markReviewRequested()
+        state.shouldRequestReview = true
+    }
+}
+
+// MARK: - Error Mapping
+
+private extension NovelReviewViewModel {
+
+    /// 도메인/Repository 에러를 사용자 메시지로 변환한다. (`handle(_:)`과 이름이 겹치지 않게 분리)
+    ///
+    /// 매력 포인트 초과(`tooManyAttractivePoints`)만 사용자가 정상적으로 마주칠 수 있는 검증 에러다.
+    /// 그 외(네트워크/인증/서버/기간/평점)는 UI·도메인 가드가 이미 막고 있어 **원래 도달하면 안 되는** 경로이므로,
+    /// 사용자에겐 일반 문구만 보여주고 원인은 로그로 남겨 추적한다.
+    func presentError(_ error: Error) {
+        // 인증 만료는 일반 미지 에러(.unknown 토스트)에 묶지 않고 로그인 유도로 일원화한다.
+        // 모든 catch(로드/저장/검증)가 이 헬퍼로 수렴하므로 여기 한 곳이 화면 내 모든 서버 호출을 커버한다.
+        if routeToLoginIfAuthenticationRequired(error) { return }
+        if state.presentedError != nil { return }
+        switch error {
+        case NovelReviewDraft.ValidationError.tooManyAttractivePoints(let max):
+            state.presentedError = .attractivePointLimit(max: max)
+        default:
+            logger?.error("NovelReview 예기치 못한 에러: \(String(describing: error))")
+            state.presentedError = .unknown
+        }
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환.
+    /// 세션이 죽은 상황이라 개별 실패 토스트 대신 로그인 유도로 일원화한다.
+    /// (`RepositoryError`는 `Equatable` — 여기서 쓰는 건 import된 `BaseDomain.RepositoryError`다.)
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
+    }
+}

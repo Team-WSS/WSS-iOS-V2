@@ -1,0 +1,143 @@
+//
+//  SettingView.swift
+//  SettingFeature
+//
+//  Created by Seoyeon Choi on 7/15/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import DesignSystem
+import WSSComponent
+import Logger
+import PushAuthorization
+
+struct SettingView: View {
+
+    @State private var viewModel: SettingViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    /// 화면 전환 의도 콜백(#253) — 계약은 `SettingRoute`(Navigation/)가 정본. 실제 화면 전환
+    /// (`SettingFeatureFactory.makeXxxView` 조립)은 호출자(App 조정 계층)가 수행한다.
+    private let onRoute: (SettingRoute) -> Void
+
+    init(
+        viewModel: SettingViewModel,
+        onRoute: @escaping (SettingRoute) -> Void
+    ) {
+        self._viewModel = State(initialValue: viewModel)
+        self.onRoute = onRoute
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            WSSNavigationBar(title: "설정") { dismiss() }
+
+            VStack(spacing: 0) {
+                ForEach(SettingMenu.allCases, id: \.self) { menu in
+                    SettingMenuRow(title: menu.title) {
+                        select(menu)
+                    }
+                }
+
+                Spacer()
+            }
+        }
+        .wssCustomNavigationBar()
+        .onChange(of: viewModel.state.shouldNavigateToNotificationSetting) { _, shouldNavigate in
+            guard shouldNavigate else { return }
+            viewModel.handle(.consumeNotificationSettingNavigation)
+            onRoute(.notificationSetting)
+        }
+        .showWSSAlert(
+            isPresented: pushAuthorizationAlertBinding,
+            type: .setAppNotification,
+            buttonActions: [
+                { viewModel.handle(.dismissPushAuthorizationAlert) },  // "다음에 하기"
+                {
+                    viewModel.handle(.dismissPushAuthorizationAlert)
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }  // "설정하러 가기"
+            ]
+        )
+    }
+
+    private func select(_ menu: SettingMenu) {
+        switch menu {
+        case .accountInfo:
+            onRoute(.accountInfo)
+        case .profileVisibility:
+            onRoute(.profilePublicSetting)
+        case .notification:
+            viewModel.handle(.notificationMenuTapped)
+        case .officialAccount, .inquiry, .privacyPolicy, .termsOfService:
+            if let url = menu.externalURL { openURL(url) }
+        }
+    }
+
+    private var pushAuthorizationAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isPushAuthorizationAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissPushAuthorizationAlert) } }
+        )
+    }
+}
+
+// MARK: - Menu
+
+extension SettingView {
+
+    enum SettingMenu: CaseIterable {
+        case accountInfo
+        case profileVisibility
+        case notification
+        case officialAccount
+        case inquiry
+        case privacyPolicy
+        case termsOfService
+
+        var title: String {
+            switch self {
+            case .accountInfo:       "계정정보"
+            case .profileVisibility: "프로필 공개 설정"
+            case .notification:      "알림 설정"
+            case .officialAccount:   "웹소소 공식 계정"
+            case .inquiry:           "문의하기 & 의견 보내기"
+            case .privacyPolicy:     "개인정보 처리방침"
+            case .termsOfService:    "서비스 이용약관"
+            }
+        }
+
+        /// 웹으로 나가는 딥링크. `accountInfo`/`profileVisibility`/`notification`은 앱 내부 화면 전환이라 nil.
+        var externalURL: URL? {
+            switch self {
+            case .officialAccount:   AppURL.instaURL
+            case .inquiry:           AppURL.errorReport
+            case .privacyPolicy:     AppURL.privacyPolicy
+            case .termsOfService:    AppURL.serviceAgreement
+            case .accountInfo, .profileVisibility, .notification: nil
+            }
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        SettingView(
+            viewModel: SettingViewModel(pushAuthorizationChecker: PreviewPushAuthorizationChecker()),
+            onRoute: { print("화면 전환 요청: \($0)") }
+        )
+    }
+}
+
+private struct PreviewPushAuthorizationChecker: PushAuthorizationChecker {
+    func authorizationStatus() async -> PushAuthorizationStatus { .authorized }
+    func requestAuthorization() async -> Bool { true }
+}

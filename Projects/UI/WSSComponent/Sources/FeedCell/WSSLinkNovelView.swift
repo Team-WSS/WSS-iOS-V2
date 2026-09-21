@@ -1,0 +1,110 @@
+//
+//  LinkNovelView.swift
+//  WSSComponent
+//
+//  Created by Seoyeon Choi on 5/5/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import SwiftUI
+import DesignSystem
+import BaseDomain
+
+// MARK: - Link Novel 구조체
+
+public struct WSSLinkNovel {
+    public let genreType: NovelGenre
+    public let novelTitle: String
+    /// 글쓴이 별점. `nil`이거나 0이면 별점 표기 자체를 생략한다(별점을 안 매긴 글).
+    public let novelRating: Float?
+    public let linkNovelTapped: () -> Void
+
+    public init(
+        genreType: NovelGenre,
+        novelTitle: String,
+        novelRating: Float?,
+        linkNovelTapped: @escaping () -> Void
+    ) {
+        self.genreType = genreType
+        self.novelTitle = novelTitle
+        self.novelRating = novelRating
+        self.linkNovelTapped = linkNovelTapped
+    }
+}
+
+// MARK: - Link Novel 뷰
+
+public struct WSSLinkNovelView: View {
+
+    let genreType: NovelGenre
+    let novelTitle: String
+    let novelRating: Float?
+    let linkNovelTapped: () -> Void
+
+    public init(
+        genreType: NovelGenre,
+        novelTitle: String,
+        novelRating: Float?,
+        linkNovelTapped: @escaping () -> Void
+    ) {
+        self.genreType = genreType
+        self.novelTitle = novelTitle
+        self.novelRating = novelRating
+        self.linkNovelTapped = linkNovelTapped
+    }
+
+    public var body: some View {
+        Button(action: linkNovelTapped) {
+            HStack(spacing: 0) {
+                WSSImage.icGenreLink.swiftUIImage
+                    .renderingMode(.template)
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(genreType.linkColor)
+                    .padding(.trailing, 6)
+
+                Text(novelTitle)
+                    .applyWSSFont(.title3)
+                    .foregroundStyle(Color.wssBlack)
+                    .lineLimit(1)
+
+                Spacer(minLength: 60)
+
+                // 글쓴이 별점 — 없거나 0이면 별점 표기를 통째로 생략한다(FeedDetailLinkNovelBlock의 동일 규칙).
+                if let novelRating, novelRating > 0 {
+                    WSSImage.icSmallStarEmpty.swiftUIImage
+                        .renderingMode(.template)
+                        .frame(width: 12, height: 12)
+                        .foregroundStyle(Color.wssGray200)
+                        .padding(.trailing, 5)
+
+                    Text(String(novelRating))
+                        .applyWSSFont(.label1)
+                        .foregroundStyle(Color.wssBlack)
+                        .padding(.trailing, 6)
+                }
+
+                WSSImage.icNavigateRight.swiftUIImage
+                    .renderingMode(.template)
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(Color.wssGray100)
+            }
+            .padding(.vertical, 13)
+            .padding(.horizontal, 16)
+            .background(genreType.blockColor)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+#Preview {
+    VStack {
+        WSSLinkNovelView(
+            genreType: .lightNovel,
+            novelTitle: "스즈미야 하루히의 무료",
+            novelRating: 4.3,
+            linkNovelTapped: { print("연결 작품 클릭!") }
+        )
+    }
+}

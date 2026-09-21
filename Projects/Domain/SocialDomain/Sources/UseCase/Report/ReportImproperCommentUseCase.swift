@@ -1,0 +1,27 @@
+//
+//  ReportImproperCommentUseCase.swift
+//  SocialDomain
+//
+//  Created by YunhakLee on 2/26/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+
+import BaseDomain
+
+public protocol ReportImproperCommentUseCase: Sendable {
+    func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError)
+}
+
+public final class DefaultReportImproperCommentUseCase: ReportImproperCommentUseCase {
+    private let repository: SocialRepository
+
+    public init(repository: SocialRepository) {
+        self.repository = repository
+    }
+
+    public func execute(feedID: FeedID, commentID: CommentID) async throws(RepositoryError) {
+        try await repository.reportImproperComment(feedID: feedID, commentID: commentID)
+    }
+}

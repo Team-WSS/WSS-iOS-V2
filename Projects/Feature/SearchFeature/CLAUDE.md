@@ -1,0 +1,143 @@
+# SearchFeature
+
+화면 세 개:
+- `NormalSearchView` — 일반 검색 진입점. 브라우즈/자동완성/검색 결과가 **같은 화면 안에서** 콘텐츠만 스왑.
+- `DetailSearchResultView` — 장르 탭·키워드 탭에서 **진짜 push**되는 필터 검색 결과 그리드.
+- `DetailSearchFilterView`(#185) — "정보"/"키워드" 탭바, UseCase 없는 순수 입력 화면. **App은 홈 탭의
+  "뭐 읽을지 고민될 때?" 배너(`HomeRoute.detailSearch`, #201)와 일반 검색의 장르/키워드 "더보기" 헤더
+  (`NormalSearchRoute.detailSearchFilter`, #236 — 4탭 전부)에서 이 화면을 push한다**(조립은 App `SearchAssembly.
+  makeDetailSearchFilterView`로 공용화, 아래 "필터 화면 진입·복귀" 참고). 진입 탭은
+  `initialTab: DetailSearchFilterTab`(`SearchDomain`의 값 타입 — App↔Feature 계약이라 Domain 소유, 아래 주의사항)으로 호출자가 지정한다 —
+  장르 더보기 `.info`, 키워드 더보기 `.keyword`(V1 parity). "키워드" 탭은 `KeywordFeature`의
+  키워드 선택 화면을 **콘텐츠 주입(`KeywordTabContentBuilder`)으로 재사용**한다(아래 참고) — 이 모듈
+  안에 그 화면이 없다.
+
+소소픽·최근 검색어·키워드 검색(인기 키워드)·검색어 자동완성·검색 실행/결과·장르/키워드/상세탐색 필터 검색까지 전부 실제 UseCase로 연동 완료.
+
+- 식별자: `ModuleType.feature(.search)` / 의존: `BaseDomain`, `RecommendationDomain`, `SearchDomain`, `DesignSystem`, `WSSComponent`, `Logger`
+- 진입점: `SearchFeatureFactory.makeNormalSearchView(...)`(실제 앱 진입점) + `makeDetailSearchResultView(filter:searchNovelUseCase:logger:onRoute:)`(`DetailSearchResultView`, #196부터 App도 실사용하는 독립 진입점 — 아래 "화면 간 이동" 참고) + `makeDetailSearchFilterView(filter:initialTab:keywordTabContent:onSearch:)`(#185, `initialTab`은 #236 — #201부터 App(4탭 Root 공용 `SearchAssembly`)이 실사용). `NormalSearchResultView`(props-only 서브뷰)는 여전히 `NormalSearchView`가 내부에서 조립해서 별도 Factory 메서드가 없다. `keywordTabContent`는 `makeDetailSearchFilterView`에만 있다 — `makeNormalSearchView`/`makeDetailSearchResultView`는 더 이상 받지 않는다(아래 참고).
+  - **화면 전환은 화면별 Route enum + `onRoute` 하나로 나간다**(#253 — 낱개 클로저 3종에서 통합, 기본값 no-op도 함께 제거): `makeNormalSearchView`는 `onRoute: (NormalSearchRoute) -> Void`(`.novelDetail(NovelID)` — 일반 검색 결과·소소픽 작품 셀 / `.detailSearchResult(SearchFilter)` — 장르 탭·인기 키워드 칩(#196) / `.detailSearchFilter(DetailSearchFilterTab)` — 장르·키워드 "더보기" 헤더(#236, 장르 `.info`·키워드 `.keyword`)), `makeDetailSearchResultView`는 `onRoute: (DetailSearchResultRoute) -> Void`(`.novelDetail(NovelID)` 단일 케이스). **`NormalSearchView`는 `DetailSearchResultView`를 직접 push하지 않는다** — 호출자(App)가 `.detailSearchResult`를 받아 자기 `NavigationPath`에 `makeDetailSearchResultView`를 push해야 한다(이유는 아래 주의사항 "화면이 안 쌓이는 버그" 참고). `makeDetailSearchFilterView`의 `onSearch`는 화면 전환 "의도"가 아니라 확정 값 콜백이라 Route로 안 옮겼다(pop/push 판단이 호출부 책임인 것도 그대로).
+  - `initialQuery: String? = nil`(#197, `NovelDetailFeature`의 "작가 이름 탭" → 사전 검색된 결과로 진입하기
+    위해 추가) — 비어있지 않으면 화면이 뜨자마자 검색 결과부터 보여준다. 별도 UseCase 없이 기존 텍스트
+    검색(`searchByText`)을 그대로 재사용한다 — 이 검색은 애초에 제목/작가를 구분하지 않는 단일 텍스트
+    검색이라(검색바 placeholder도 "작품 제목, 작가를 검색하세요") 작가 이름을 그냥 검색어로 흘려보내면
+    된다. ⚠️ **`NormalSearchViewModel.init`은 검색어만 채우고, 실제 검색 실행은 `NormalSearchView`의
+    `onAppear`가 1회 가드로 한다**(#255 QA로 정정 — 한때 "init에서 1회성으로 처리"였으나, 그 근거였던
+    "init은 인스턴스 생애주기에서 정확히 한 번만 실행된다"가 `@State(initialValue:)` 인자로 쓰이는
+    타입엔 성립하지 않아 실제 버그로 이어졌다. 아래 주의사항 항목이 정본).
+
+**필터 화면 진입·복귀(#185)** — 확정 후 pop할지 push할지는 화면마다 다를 수 있어, `DetailSearchFilterView`는 그 판단을 스스로 하지 않는다:
+- ⚠️ **`DetailSearchFilterView`는 "작품 찾기" 확정 시 `onSearch` 콜백만 호출하고 자기 자신을 pop하지 않는다.** pop·push 여부는 **항상 호출부 책임**이다 — 새 호출부를 추가할 때 반드시 직접 결정할 것. 실사용처인 4탭 Root(#201 홈 배너 → #236부터 4탭 "더보기")는 확정 시 자기 `Destination.detailSearch(filter)`로 결과 화면을 **앞으로 push**한다(필터 화면은 스택에 그대로 남는다) — Demo의 `DetailSearchDemoFlow`도 같은 패턴.
+- **`DetailSearchResultView`의 필터 요약 pill은 Filter를 push하지 않는다 — 그냥 뒤로가기(`dismiss()`)다**(사용자 확정). 결과 화면 자체엔 필터 편집 기능이 없다 — 필터를 다시 조정하려면 뒤로 가서 이전 화면(장르/키워드 탭 진입이면 `NormalSearchView`, 상세탐색 진입 흐름이면 그 Filter 화면)에서 다시 시작해야 한다. 예전엔 pill이 `FilterEditorNavigation`으로 `DetailSearchFilterView`를 push해 같은 화면의 필터만 교체하는 방식이었으나(#185 초반) 걷어냈다.
+
+## 핵심 시나리오
+
+- `NormalSearchView` = 상단바(뒤로가기+검색바) + (브라우즈 섹션 | 자동완성 | 검색 결과) 중 하나, 세로 나열.
+- `onAppear` → `.loadSosoPick`/`.loadRecentSearchWords`/`.loadPopularKeywords` 세 액션을 함께 발동. 각각 1회만 로드(`hasLoaded*` 가드).
+- **콘텐츠 스왑 우선순위**(`NormalSearchViewModel.State`가 전부 소유): `isSearchExecuted` → 검색 결과 / `isFocused && !searchText.isEmpty` → 자동완성 / 그 외 → 브라우즈 섹션(최근 검색어·장르별 검색·키워드 검색·소소픽).
+- **최근 검색어**: `SearchDomain`의 `Load`/`Remove`/`Clear`RecentSearchWordsUseCase로 연동. 개별 삭제·전체 삭제 모두 낙관적 반영 후 서버 실패 시 롤백한다. 목록이 비면 섹션 전체를 숨긴다. 칩 탭(`onSelect`)은 검색 실행으로 이어진다.
+- **키워드 검색**: `BaseDomain.LoadPopularKeywordsUseCase`(실시간 인기 키워드)로 연동. `PopularKeywords.keywords`를 그대로 표시(순서=랭킹, 재정렬 금지 — BaseDomain 문서 참고). 칩 탭은 텍스트 검색(`searchByText`)이 아니라 **`DetailSearchResultView`로 push**되며 `SearchFilter(keywords: [keyword])`로 `searchByFilter`를 호출한다(아래 "화면 간 이동" 참고).
+- **검색어 자동완성**: `isFocused && !searchText.isEmpty`일 때 `NormalSearchAutoCompletionView`가 뜬다. `updateSearchText`가 입력마다 이전 `Task`를 취소하고 300ms debounce 후 `SearchAutoCompletionWordsUseCase`를 호출(타이핑 중 매 글자마다 서버를 치지 않기 위함). 일치 구간은 `wssPrimary100`로 하이라이트(대소문자 무시, 첫 일치 구간만). 제안어 탭 시 검색 실행으로 이어진다.
+- **검색 실행 & 결과**: `WSSSearchBar.onSearch`(검색 아이콘 탭/키보드 return), 최근 검색어 칩 탭, 자동완성 제안어 탭 — 이 세 지점이 전부 `.executeSearch(text)`를 호출한다(공통 진입점, `NormalSearchViewModel.executeSearch`). 자동완성 Task를 취소하고 `state.isSearchExecuted = true` + `SearchNovelUseCase.searchByText(text, page: 0, recordRecentSearch:)` 호출(값은 `executeSearch`/`executeInitialSearch` 중 어느 쪽이 불렀는지로 갈림, 아래 주의사항 참고). `NormalSearchResultView`는 **props만 받는 순수 표시 뷰**(자체 ViewModel 없음 — `NormalSearchAutoCompletionView`와 같은 패턴): `novels`/`resultCount`/`isLoading`/`hasLoadError`/`isLoadingMore`/`onLoadMore`/`onRetry`. 로딩=`LoadingView`, 실패=`NetworkErrorView(action: onRetry)`(재시도=같은 검색어로 `.executeSearch` 재호출), **빈 결과=`WSSComponent.WSSEmptyView(type: .novel, action:)`** 재사용(직접 빈 상태 뷰 만들지 말 것). 검색 후 다시 타이핑하면(`updateSearchText`) `isSearchExecuted`가 풀리며 자동완성으로 돌아간다.
+- **검색 결과 무한스크롤**: `SearchNovelUseCase.searchByText(_:page:recordRecentSearch:)`가 `page`를 받는다(0부터, 커서 아닌 페이지 번호 — 아래 주의사항 참고). `NormalSearchResultView`가 그리드/리스트 마지막 행 `onAppear`에서 `onLoadMore()`를 호출 → `NormalSearchViewModel.loadMoreSearchResults()`가 `nextSearchResultPage`를 들고 다음 페이지를 요청해 `state.searchResultNovels`에 append한다. `state.hasNextSearchResultPage`(서버 `Paginated.hasNext`)가 false면 더 요청하지 않는다. `DetailSearchResultView`도 같은 구조(`DetailSearchResultViewModel.loadMore()` + `searchByFilter(_:page:)`)로 동일하게 동작.
+
+- **화면 간 이동(`NormalSearchView` → `DetailSearchResultView`)은 App이 조립한다(#196부터)**: 장르 탭·인기 키워드 칩 탭이 각각 `SearchFilter(genres: [genre])`/`SearchFilter(keywords: [keyword])`를 만들어 `onRoute(.detailSearchResult(filter))`를 올림 → App(`HomeRootView`/`LibraryRootView` 등)이 자기 `Destination.detailSearch(SearchFilter)` 케이스로 `path.append`해 `SearchFeatureFactory.makeDetailSearchResultView`를 push한다. **예전엔 `NormalSearchView`가 로컬 `@State`(`DetailSearchNavigation`, UUID 기반 `Hashable` 래퍼) + `.navigationDestination(item:)`으로 직접 push했는데, App의 `NavigationPath`와 섞이면 화면이 안 쌓이는 버그가 있어(아래 주의사항) App으로 옮겼다.**
+- **`DetailSearchResultView`**: 상단 뒤로가기+필터 요약 pill(`filterSummaryText` — 적용된 필터 카테고리를 "장르, 키워드 적용"처럼 나열, View의 `Presentation` 확장이 `state.filter`로부터 계산) + "작품 N" 안내줄 + 2열 `LazyVGrid`(`GridItem(.flexible(), spacing: 9)` × 2, 좌우 `.padding(.horizontal, 20)`으로 아이템 폭이 화면 크기에 자동으로 맞춰짐 — 아이템 셀은 화면 전용 컴포넌트 없이 `WSSComponent`의 `WSSNovelGridCell`을 그대로 쓰고(#185, 옛 `DetailSearchResultItemRow`에서 교체), `Button`으로 감싸 탭 시 `onRoute(.novelDetail)`을 올린다(#196)). 로딩/에러는 `NormalSearchResultView`와 동일 패턴(`LoadingView`/`NetworkErrorView(action: { viewModel.handle(.load) })`), **빈 결과는 `WSSEmptyView`가 아니라 화면 전용 정적 안내 문구**(`WSSComponent`의 재사용형 대신 이 화면만의 "검색의 범위를 더 넓혀보세요" 카피를 쓰기 위함).
+- **"찾는 작품이 없다면?" 링크(두 결과 화면 공통) + 빈 결과 액션**은 `BaseDomain.AppURL.inquiryAddNovel`을 `@Environment(\.openURL)`로 연다 — 옵셔널이라 `if let`으로 언랩 후 호출(아래 주의사항 참고).
+- **`DetailSearchFilterView`(#185)**: State/Action만 있는 순수 입력 VM(`DetailSearchFilterViewModel`, UseCase 없음)이라 호출부(View)가 직접 생성한다(`LibraryFilterSheet` 패턴과 동일, 부모 VM 경유 불필요). 누가 이 화면을 push하고 확정 후 어떻게 되는지는 위 "필터 화면 진입·복귀" 참고.
+  - **정보 탭 4종**(장르·플랫폼·연재상태·별점)은 이 화면 자체가 소유. 장르 그리드 순서는 `WSSComponent.NovelGenre.myFeedFilter`(이 화면의 `searchGenre`와는 다른 목록, Figma 실측 확인).
+  - **"키워드" 탭은 `DetailSearchFilterView` 자체 `@State selectedTab`으로 전환되는 진짜 탭바**(`정보`/`키워드` 두 `Tab` 케이스, 선택된 쪽만 밑줄) — 하단 초기화/작품 찾기 CTA 버튼 자체는 탭과 무관하게 항상 보이지만, "초기화"는 **`selectedTab` 기준으로 그 탭의 데이터만** 지운다(`.clearInfoFilters`/`.clearKeywords`, 사용자 확정 — 예: 키워드 탭을 보며 초기화해도 정보 탭에 고른 장르·플랫폼 등은 그대로 남는다).
+  - **"키워드" 탭 콘텐츠는 `KeywordFeature`의 키워드 선택 화면을 재사용**하지만, `SearchFeature`는 `KeywordFeature`를 **import하지 않는다**(Feature 간 직접 의존 금지, 사용자 확정 — "화면 간 이동은 App/조정 계층에서" 원칙을 화면 전환이 아니라 콘텐츠 주입으로 적용). `KeywordTabContentBuilder`(`Sources/Navigation/KeywordTabContentBuilder.swift`, public 타입얼리어스 `(initialKeywords, onSelectionChanged) -> AnyView`)를 `DetailSearchFilterView`가 init으로 받아 "키워드" 탭 콘텐츠 자리에 그대로 렌더링한다. 실제 조립(`KeywordFeatureFactory.makeSearchKeywordView(..., onSelectionChanged:)`)은 **App(Demo에서는 Demo가 App 역할 대행)**이 한다 — 이 화면엔 애초에 자체 하단 액션바가 없어 별도 스위치가 필요 없다. `keywordTabContent`는 `SearchFeatureFactory.makeDetailSearchFilterView`에만 있다 — `NormalSearchView`/`DetailSearchResultView`는 더 이상 이 값을 들지 않는다(#185, 필터 pill이 걷혀서 그 경로로 흘려보낼 이유가 없어짐). `KeywordFeature`는 이 모듈이 아니라 `App`/`Demo`가 각자 의존한다(#201부터 App의 `Project.swift`도
+`.module(.feature(.keyword))`를 갖는다 — `SearchFeatureDemoApp.swift`의 `demoDependencies`와 동일 이유).
+    Demo의 `keywordTabContentBuilder(loadTotalKeywordsUseCase:searchKeywordsUseCase:)`는 어떤 UseCase를 쓸지 호출부가 정하게 열어둬서, "Mock으로 보기"는 인메모리 Mock을, "실서버로 보기"는 인기 키워드와 같은 `keywordRepository`(`BaseData.KeywordDataFactory`)로 만든 `DefaultLoadTotalKeywordsUseCase`/`DefaultSearchKeywordUseCase`를 쓴다 — 카테고리 카탈로그도 실서버로 붙는다. 단 "상세탐색 진입(실서버)"는 이 화면 자체에 Mock/실서버 개념이 없어 Mock 고정이다.
+    - 선택은 확정 버튼 없이 **실시간 반영**된다 — 콘텐츠 안에서 칩을 토글할 때마다 `onSelectionChanged`가 `DetailSearchFilterViewModel.handle(.setKeywords(_:))` → `SearchFilter.setKeywords(_:)`(일괄 교체, 최대 20개 클램프)를 호출한다. 탭 진입 시엔 반대로 현재 `filter.keywords`를 `initialKeywords`로 시딩한다.
+    - ⚠️ **"키워드" 탭을 보며 "초기화"를 누르면 `.clearKeywords` + `keywordContentResetToken`(`UUID`) 재발급을 함께 한다** — `filter.keywords`만 비우면 외부(KeywordFeature) 콘텐츠 쪽의 `SearchKeywordViewModel.state.selectedKeywords`는 별도 `@State`라 반영되지 않는다(뷰 정체성이 유지되는 한 `initialSelectedKeywords`는 최초 1회만 시딩되는 SwiftUI 함정, Feature CLAUDE.md "표시 상태 소유 구분" 참고). `.id()`로 정체성 자체를 바꿔야 강제로 다시 시딩된다. **"정보" 탭을 보며 초기화할 땐 이 토큰을 건드리지 않는다** — 키워드 탭 콘텐츠·`filter.keywords`가 그대로 보존돼야 하므로(탭별 독립 초기화, 사용자 확정).
+  - **탭 라벨 오른쪽 위 작은 점**(`LibraryFilterSheet`의 탭 활성 점과 동일한 4pt `Circle`, `HStack(alignment: .top, spacing: 3)`으로 라벨 옆에 배치)은 그 탭에 선택된 값이 있으면 뜬다 — "정보"는 `hasActiveInfoFilter`(장르·플랫폼·연재상태·별점 4종 중 하나라도), "키워드"는 `hasActiveKeywordFilter`(`SearchFilter.keywords`가 안 비었으면). **둘 다 `DetailSearchFilterViewModel`의 `Derived`**(View가 아니다) — 어떤 필드가 그 탭 소관인지는 단순 표시 포맷이 아니라 의미 판단이라, `LibraryFilterSheetViewModel.hasActiveFilter(in:)`과 같은 자리(VM)에 둔다. View의 `Presentation` 확장으로 되돌리지 말 것(PR 리뷰에서 실제로 지적된 이탈).
+  - **플랫폼(`SearchDomain.NovelPlatform`, 신규)** 5종(카카오페이지·네이버시리즈·리디북스·문피아·노벨피아)은 이 화면 전용 신규 도메인 타입 — `NovelDomain.NovelPlatform`(작품 상세 표시용, name+image+url)과 동명이지만 별개. **UI 라벨은 "리디"인데 서버 쿼리(`platformNames`)로는 "리디북스"를 보낸다**(표기 불일치, 사용자 확정) — 매핑은 `SearchData.SearchMapper.mapNovelPlatformString`. "플랫폼" 라벨 옆 `icToolTip` 아이콘은 **상시 노출 배지가 아니라 탭하면 뜨는 툴팁**("아직 개발 중인 베타 기능이에요", 다시 탭하면 닫힘, 사용자 확정) — 안내 문구와 달리 실제로 서버에 반영되는 진짜 필터다. 툴팁 배경은 `WSSImage.icPlatformTooltip`(왼쪽 포인터 포함 180×28 고정 SVG)을 그대로 쓴다 — 문구가 항상 고정 텍스트라 화면 크기와 무관하게 폭이 일정해서, 텍스트 길이에 맞춰 늘어나는 커스텀 `Shape`(초기에 시도했다가 폐기)는 불필요했다.
+  - **별점 범위(`SearchDomain.NovelRatingRange`, 신규)**는 min~max 슬라이더(`WSSComponent.WSSRangeSlider`, 0.0~5.0/0.5단위) — 이 화면의 유일한 별점 필터다(초기엔 단일 최소값 `ratingThreshold`와 공존했으나 #185 후반에 그 필드·타입(`BaseDomain.NovelRatingThreshold`)째로 제거됐다). 서버 쿼리 필드는 `novelRatingStart`/`novelRatingEnd`(사용자 확정 필드명).
+
+## 주의사항 (작업 중 발견 시 누적)
+
+- ⚠️ **`NormalSearchResultItemRow`는 `.contentShape(Rectangle())`이 반드시 있어야 한다**(#266에서 추가) —
+  표지(78×105 고정)와 텍스트(제목/작가) 사이 간격, 텍스트 오른쪽 남는 공간이 `HStack` 안의 투명
+  영역이라, 이게 없으면 `Button`으로 감싸도 그 빈 곳은 탭이 안 먹는다(Feature CLAUDE.md의 "커스텀
+  탭 영역은 `.contentShape(Rectangle())`" 규칙이 실제로 빠져 있던 사례). 지우지 말 것.
+- **`seek_info_platform`(상세탐색 필터 — 정보탭 플랫폼 선택)은 기획측 CSV엔 없는 V2 신규 이벤트다** — 장르
+  (`seek_info_genre`)·연재상태(`seek_info_state`)는 CSV에 있는데 플랫폼만 없어서, 같은 파일(정보탭 필터
+  4종 중 하나)이라는 이유로 그 둘과 동일한 명명 패턴(`seek_info_<필드>`)을 따라 새로 지었다. 트래킹
+  시점도 장르/연재상태와 동일(`togglePlatform`의 "선택" 분기에서만, 해제는 트래킹 안 함).
+- ⚠️ **`NormalSearchViewModel.init`에서 `initialQuery`(작가 이름 탭 등 "이미 검색된 결과로 진입") 처리는
+  검색어를 `state.searchText`에 채우기만 하고, 실제 검색(Task 스폰)은 절대 하지 않는다**(#255 QA 실측
+  버그 수정 — 원래는 init 안에서 바로 `executeSearch`를 불렀다). 이 `init`은
+  `NormalSearchView.init`의 `State(initialValue:)` 인자 표현식으로 쓰이는데, **그 표현식은 "저장값은
+  최초 1회만 반영"과 무관하게 App 탭 Root의 `.navigationDestination(for:)` 클로저가 재평가될 때마다
+  (그 Root의 아무 `@State`나 바뀌기만 해도) 매번 다시 실행된다** — 그렇게 만들어졌다 버려지는 "고아"
+  인스턴스가 `init` 안에서 네트워크 Task를 스폰해버리면, 화면을 그대로 두기만 해도 `/novels` 검색과
+  성공 시 뒤따르는 `/novels/recent-searches` 재조회가 반복적으로 나가는 것으로 실측됐다(화면에
+  실제로 붙은 `@State` 인스턴스의 `init`이 1회만 도는 건 맞지만, 그 인스턴스를 만들기 위해 먼저 지어졌다
+  버려지는 다른 인스턴스들도 각자 자기 `init`을 완주해 부수효과를 낸다는 게 함정이었다). 실제 검색
+  실행은 `NormalSearchView`의 `onAppear`가 `didRunInitialSearch`(같은 파일의 `didAutoFocus`와 동일
+  1회성 가드 패턴)로 딱 한 번만 한다 — `onAppear`는 실제로 마운트되는 그 하나의 View에서만 발화하므로
+  고아 인스턴스는 이 경로를 타지 않는다. **`@State(initialValue:)`로 쓰이는 타입의 `init`에 부수효과를
+  넣지 말 것**이 이 함정의 일반 교훈 — 값 계산은 몇 번이든 다시 실행될 수 있다는 전제로 짜야 한다.
+  ⚠️ **같은 QA 라운드에서 후속으로 두 가지를 더 정리했다**(초기 수정 직후 사용자가 실제 네트워크 로그를
+  대조하며 지적):
+  1. `initialQuery` 진입은 `onAppear`에서 `.loadSosoPick`/`.loadRecentSearchWords`/`.loadPopularKeywords`도
+     같이 부르고 있었다 — 이 경로는 브라우즈 섹션(소소픽·최근 검색어·인기 키워드) 자체가 안 보이므로
+     그 데이터가 필요 없다. 지금은 이 세 액션을 `!viewModel.state.isSearchExecuted`로 가드해, 검색이
+     이미 실행된 진입(=initialQuery)에서는 호출하지 않는다.
+  2. 작가 이름 탭으로 실행되는 검색은 사용자가 의도한 검색이 아니므로 최근 검색어로 남기면 안 된다 —
+     `executeSearch(String)`(사용자가 직접 실행 — 검색바 제출·최근 검색어 칩·자동완성 제안어 탭,
+     항상 `recordRecentSearch: true`)와 별개로 **`executeInitialSearch(String)`** 액션을 신설해
+     `recordRecentSearch: false`로 검색한다. `onAppear`는 `.executeInitialSearch`만 부른다.
+     실패 후 재시도(`onRetry`)는 새 검색이 아니라 "방금 그 검색을 다시"이므로, 어느 쪽이었는지
+     (`currentSearchRecordsRecentSearch`, 세션 동안 고정)를 그대로 유지하는 별도 **`retrySearch`**
+     액션으로 뺐다 — `onRetry`가 무조건 `executeSearch`(=항상 true)를 부르면 작가 이름 검색이 실패
+     후 재시도할 때 갑자기 기록 대상으로 바뀌는 모순이 생긴다.
+  3. `loadSearchResult`가 성공 후 `refreshRecentSearchWordsAfterSearch()`를 부르는 것도
+     `recordRecentSearch`가 `true`일 때만으로 좁혔다 — 기록 안 한 검색은 서버에 아무것도 새로
+     남지 않아, 그래도 목록을 다시 받으면 결과가 그대로인 `/novels/recent-searches` 호출만 낭비된다.
+- **`SearchNovelUseCase.searchByText`는 `recordRecentSearch: Bool` 필수 파라미터를 받는다**(#255 QA로
+  추가, 기본값 없음 — `SearchDomain/CLAUDE.md` 참고). 이 화면(`NormalSearchViewModel`)은 사용자가 검색을
+  **목적으로** 실행하는 유일한 화면이지만, 그 안에서도 "사용자가 직접 실행"(`executeSearch`)과 "작가
+  이름 탭으로 대신 실행됨"(`executeInitialSearch`)은 서로 다른 값을 넘긴다(위 항목 참고) — 다른
+  화면(작품 연결·컬렉션 작품 추가)은 항상 `false`. 이 화면에 새 검색 호출부를 추가할 땐 "사용자가
+  검색을 직접 의도했는가"부터 확인할 것.
+- ⚠️ **`SearchAnalyticsEvent`의 `seek_keyword_*`(5종)·`contact_keyword`는 이 모듈 안에서 실제로 발화되지
+  않는다**(#249) — 상세탐색 필터의 "키워드" 탭 콘텐츠는 App이 조립하는 `KeywordFeature`가 소유해 이
+  enum이 그 선택을 못 본다. 실제 트래킹은 App의 `SearchAssembly.makeDetailSearchFilterView`가 **같은
+  문자열을 직접 리터럴로** 들고 한다(arch-lint `feature-exclusivity`가 이 enum을 App에 노출 못 하게
+  막아서, `NovelReviewFeature`의 `rate_keyword_*`와 동일 이유) — rawValue를 바꾸면 그 App 파일의
+  문자열도 수동으로 같이 바꿔야 한다.
+- **진입 시 검색창 자동 포커스(#222 V1 parity)는 `Task { @MainActor in … isFocused = true }`로 건다** —
+  ⚠️ `@MainActor`를 빼면 안 걸린다. `onAppear` 클로저는 메인에서 돌지만 정적 `@MainActor`가 아니라, 그 안의
+  평범한 `Task {}`는 메인 액터를 상속하지 않고 글로벌 executor에서 실행돼 `@FocusState`(main-actor) 설정이
+  조용히 무시된다(시뮬레이터 실측 — 키보드 안 뜸). push 애니메이션이 포커스를 씹지 않게 350ms 지연 후 걸고,
+  `initialQuery`로 이미 검색이 실행된 경우(작가명 탭)엔 결과를 보여줘야 하므로 포커스하지 않는다. 최초 1회
+  가드(`didAutoFocus`)로 작품 상세 등에서 복귀 시 재발화 방지. **시뮬레이터에서 소프트 키보드가 안 보여도
+  포커스는 됐을 수 있다**(Mac HW 키보드 연결 시 iOS가 소프트 키보드를 숨김) — 탭 없이 HW 키를 보내 필드에
+  들어가는지로 확인.
+- **검색어는 30자 clamp**(#222 V1 parity, `NormalSearchViewModel.maxSearchTextCount`) — `WSSSearchBar`가
+  `TextField`에 바인딩을 직접 물려서, 로컬 `@State searchDraft` 버퍼 + `.onChange` 2단계(clamp → 초과면 로컬
+  재대입 / 아니면 `updateSearchText` 전달)로 처리한다(Binding.set에서 바로 clamp하면 네이티브 필드가 초과분을
+  들고 있는 함정 — Feature CLAUDE.md). VM이 검색어를 바꾸는 경로(executeSearch trim·최근 검색어/제안어 탭)는
+  `.onChange(of: state.searchText)`로 버퍼를 되맞춘다.
+
+- ⚠️ **`NavigationPath` 기반 push(App)와 로컬 `@State` + `.navigationDestination(item:)` 기반 push(Feature)를 섞으면, 그 로컬로 push된 화면이 나중에 통째로 사라진다.** `DetailSearchResultView`가 실제로 이 버그였다(#196) — `NormalSearchView`가 로컬 상태로 자신을 push했는데, 그 화면 안에서 작품 상세 라우트(`.novelDetail`)가 App의 `path.append(...)`를 호출하는 순간(작품 상세 진입), SwiftUI가 **App의 `path` 배열만을 기준으로 스택을 다시 계산**해 로컬로 얹혀 있던 `DetailSearchResultView`가 스택에서 빠졌다 — 증상은 "작품 상세에서 뒤로가기를 누르면 상세탐색 결과가 아니라 그 이전 화면(검색 브라우즈)으로 바로 튕김"으로 나타났다(겉보기엔 작품 상세로 정상 진입하는 것처럼 보여서 뒤로가기를 눌러봐야 드러난다). **고친 방법**: `DetailSearchResultView`의 push 자체를 Feature 로컬에서 App으로 옮겨(`.detailSearchResult` 라우트(#253 전엔 `onDetailSearchRequested` 콜백) + `SearchFeatureFactory.makeDetailSearchResultView` 독립 진입점), 그 화면에 이르는 전체 경로가 **하나의 `NavigationPath`만** 쓰도록 통일했다. **어떤 화면이 "그 안에서 또 다른(특히 다른 모듈) 화면으로 더 넘어가야 하는" 중간 화면이라면, 그 화면 자체의 push도 처음부터 App의 `NavigationPath`를 타야 한다** — Feature가 로컬로 직접 push해도 되는 건 그 화면이 스택의 "막다른 끝"일 때(더 이상 다른 모듈로 안 뻗어나갈 때)뿐이다.
+- **`WSSSearchBar.onSearch`가 키보드를 내릴 때 텍스트 바인딩을 한 번 더 커밋한다** — `dismissKeyboard()` 이후의 이 커밋이 비동기로(같은 런루프가 아니라 다음 사이클에) 들어와, `executeSearch`가 `isSearchExecuted = true`로 세운 직후 `updateSearchText`가 그걸 다시 `false`로 되돌리는 버그가 있었다(검색 버튼을 눌러도 결과 화면이 안 뜨고 브라우즈로 돌아감). **`updateSearchText`는 반드시 `text != state.searchText`일 때만 동작**하도록 가드해야 한다 — 이 가드를 지우면 같은 버그가 재발한다.
+- **키보드 return 키로 제출해도 `WSSSearchBar`는 스스로 키보드를 안 내린다**(검색 아이콘 버튼만 `dismissKeyboard()`를 호출). 그래서 `NormalSearchView`의 `onSearch` 클로저와 자동완성 `onSelect` 클로저 양쪽에서 **직접 `isFocused = false`를 먼저 설정**한 뒤 액션을 처리한다 — 검색 제출(아이콘 탭/키보드 return)과 제안어 선택 모두 키보드가 내려가야 하므로. 새 검색 실행 경로(최근 검색어 칩 등)를 추가할 때도 같은 패턴을 잊지 말 것.
+- **검색 3화면(`NormalSearchView`·`DetailSearchFilterView`·`DetailSearchResultView`)은 자체 상단바(뒤로가기+검색바/필터)를 그리므로 `.wssCustomNavigationBar()`를 건다**(#244) — 시스템 네비바를 숨기고(iOS 26 빈 글래스 바 제거) 스와이프 뒤로가기를 되살린다. ⚠️ **예전엔 `.navigationBarBackButtonHidden()`만 걸어** `hidesBackButton=true`가 되고 `.enableSwipeBack()`도 없어, 전역 pop 제스처 delegate가 이 화면들의 엣지 스와이프 pop을 거부했다(뒤로가기 버튼 탭만 됐다) — `.wssCustomNavigationBar()`로 교체해 고쳤다. `NormalSearchView`는 `.ignoresSafeArea(.keyboard, edges: .bottom)`도 함께 걸어 키보드가 올라와도 레이아웃이 안 밀린다. 뒤로가기 버튼 액션은 `@Environment(\.dismiss)`.
+  - ⚠️ **`ignoresSafeArea(.keyboard)`만으로는 부족했다** — 이 화면이 `NavigationStack`으로 push된 destination이라, `UINavigationController`가 자신의 bounds를 키보드에 맞춰 먼저 줄이고 그 결과만 SwiftUI로 내려보낸다. `ignoresSafeArea`는 "그 safe area를 패딩으로 반영하지 않겠다"는 로컬 옵트아웃일 뿐, 이미 줄어든 bounds 자체를 되돌리지 못한다. **`ZStack` + `.frame(maxWidth: .infinity, maxHeight: .infinity)` 조합도 불충분했다** — `maxWidth/maxHeight: .infinity`는 절대 크기 고정이 아니라 "부모가 준 만큼 채운다"는 뜻이라, 부모(NavigationStack)가 이미 줄여 내려준 크기를 그대로 따라간다. **최종 해결: `GeometryReader`로 감싸고, `.ignoresSafeArea(.keyboard)`를 `GeometryReader` 자신에게 걸어 `proxy.size`가 키보드와 무관한 크기를 보고하게 한 뒤, `VStack`을 `.frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)`로 그 값에 절대 고정**한다 — 이래야 상위에서 어떤 bounds가 내려오든 VStack의 실제 픽셀 크기가 흔들리지 않는다.
+  - 키보드가 떠 있을 때 화면 아무 곳이나 탭해도 내려가도록 `VStack`(위 `GeometryReader` 안)에 `.contentShape(Rectangle()).onTapGesture { isFocused = false }`를 걸었다. 내부의 `Button`들이 먼저 히트테스트를 가져가므로 기존 버튼 동작과 충돌하지 않는다. 단, 이 배경 탭 제스처는 `Button`이 아니라 자동화 도구(`snapshot_ui`/`tap`)에 별도 tap 타겟으로 잡히지 않는다 — 검증은 "기존 버튼들이 여전히 정상 동작하는지"로 간접 확인.
+  - ⚠️ **이 화면 최상위의 배경 탭 제스처는 자동완성 `ScrollView` 내부의 빈 공간까지는 안 먹는다** — `ScrollView`는 컨텐츠가 몇 줄뿐이라 실제로 스크롤할 게 없어도, `VStack` 레이아웃상 남는 세로 공간을 자기 프레임으로 그대로 차지해버려서 그 빈 영역을 탭하면 `ScrollView` 자신이 터치를 가져가고 상위 `onTapGesture`까지 안 올라간다(`.scrollDismissesKeyboard`도 실제 스크롤 오프셋 변화가 없으면 발동하지 않아 같이 무력화됨 — 시뮬레이터에서 스와이프해봐도 내용이 짧아 스크롤 자체가 안 일어남을 확인). 그래서 `NormalSearchAutoCompletionView`의 `ScrollView` 자신에 `.contentShape(Rectangle()).onTapGesture(perform: onDismissKeyboard)`를 **직접** 걸어 해결했다 — `onDismissKeyboard`는 부모가 `{ isFocused = false }`로 주입. 제안어가 많아 실제 스크롤이 생기는 경우를 위해 `.scrollDismissesKeyboard(.interactively)`는 보너스로 같이 둔다. 자동완성처럼 몇 줄짜리 `ScrollView`를 새로 넣을 때 배경 탭만 믿지 말 것.
+  - 자동완성 조회 중(디바운스+네트워크) 화면이 빈 채로 보이지 않도록 `NormalSearchViewModel.State.isLoadingAutoCompletion`을 추가해 `NormalSearchAutoCompletionView`가 `LoadingView()`를 보여준다 — `NormalSearchResultView`의 `isLoading` 패턴과 동일.
+- 작품 검색은 `SearchDomain.SearchNovelUseCase`, 키워드 검색은 `BaseDomain.LoadPopularKeywordsUseCase`, 소소픽은 `RecommendationDomain.LoadSosoPickUseCase`, 최근 검색어/자동완성은 `SearchDomain`이 담당한다 — 전용 `SearchDomain`이 생긴 뒤에도(#163) UseCase는 여전히 도메인별로 흩어져 있으니 새 섹션 추가 시 어느 도메인 것을 쓸지 확인할 것.
+- 장르별 검색 그리드는 `WSSComponent`의 `NovelGenre.searchGenre`(`myFeedFilter`와 순서가 다른 별개 목록, `DomainPresentation` 확장) 순서를 그대로 쓴다.
+- `WhiteRemovableKeywordChip(keyword:onSelect:onDelete:)`로 콜백이 분리됨 — X 버튼(`onDelete`)은 `Button`, 나머지 칩 영역(`onSelect`)은 바깥 `onTapGesture`(WSSComponent CLAUDE.md의 "Button이 onTapGesture보다 hit-test 우선" 패턴). X는 `Button`이라 접근성 트리에 잡혀 자동화 탭 가능하지만, `onSelect`(칩 전체 영역)는 `onTapGesture`라 `snapshot_ui`/`tap`으로 자동화 탭이 안 된다(좌표 탭 필요).
+- `NormalSearchAutoCompletionView`의 제안어 행은 액션이 하나뿐이라(`WhiteRemovableKeywordChip`처럼 X 버튼과 경합하는 두 번째 액션이 없음) `onTapGesture` 대신 **`Button`으로 감싼다** — 접근성 트리에 잡혀야 자동화 탭(`snapshot_ui`/`tap`)이 가능하고, 여러 액션이 공존하는 칩류가 아니라면 `Button`이 기본값.
+- `.tests` 타깃은 아직 없다. 화면 로직이 늘어나면 `Project.swift`의 `targets`에 `.tests`를 추가하고 `Tests/` 폴더를 만든다.
+- **`.scrollBounceBehavior(.basedOnSize)`의 `axes` 기본값은 `.vertical`** — 가로 `ScrollView`(이 화면의 최근 검색어/장르별 검색/소소픽 전부 가로)에 걸려면 `axes: .horizontal`을 반드시 명시해야 한다. 안 그러면 아무 효과 없이 무시된다(에러도 없이 조용히 무시돼 원인 찾기 어렵다). 지금은 최근 검색어 섹션만 적용, 나머지 가로 스크롤도 필요해지면 같은 함정 주의.
+- **최근 검색어 개별 삭제와 전체 삭제는 서로 배타적**(`removingRecentSearchWordIDs.isEmpty`/`isClearingRecentSearchWords` 상호 가드) — 처음엔 각자 낙관적 반영 시점의 배열 전체를 스냅샷해뒀다가 실패 시 그 스냅샷으로 복원하는 방식이었는데, 두 종류가 동시에 진행되면 나중에 실패한 쪽의 스냅샷 복원이 그 사이 반영된 다른 변경을 덮어써 서버-화면 상태가 어긋나는 버그가 있었다(PR 리뷰에서 발견). 그래서 **개별 삭제 롤백은 스냅샷 복원이 아니라 그 단어 하나만 재삽입**하도록 바꿨고, 두 액션은 서로 진행 중이면 무시하도록 가드했다. 이후 수정 시 "스냅샷 후 통째로 복원" 패턴으로 되돌리지 말 것 — 여러 항목이 동시에 지워질 수 있는 화면에서는 안전하지 않다(단일 엔티티만 다루는 `NovelDetailViewModel`의 관심 토글 롤백과는 성격이 다름).
+- **무한스크롤에 `onAppear`로 마지막 행을 감지하는 패턴은 반드시 `LazyVStack`/`LazyVGrid` 안에서만 의미가 있다** — `ScrollView { ForEach { ... } }`처럼 일반(non-lazy) 컨테이너에 직접 넣으면 스크롤 여부와 무관하게 전체 행이 렌더링 시점에 한꺼번에 나타나 `onAppear`가 즉시 연쇄 발동한다(첫 페이지 로드 직후 스크롤 없이 다음 페이지들이 순식간에 다 로드돼버림 — #165에서 `NormalSearchResultView`가 이 상태였다가 발견 후 `LazyVStack`으로 감쌈). `DetailSearchResultView`는 `LazyVGrid`라 원래 문제 없었다. 새 무한스크롤 리스트를 추가할 때 이 패턴을 잊지 말 것 — 페이지 크기가 화면 한 번에 다 안 채울 만큼 작으면(예: 5개) 화면을 꽉 채울 때까지 여러 페이지가 스크롤 없이 연달아 로드되는 것 자체는 정상 동작이다(마지막 행이 실제로 보이는 한).
+- **작품 검색 페이지네이션은 커서(`lastID`)가 아니라 정수 `page`(0부터)다** — `NovelDetailFeature`의 피드 무한스크롤(`lastFeedID` 커서, `FeedDomain/CLAUDE.md` 참고)과 방식이 다르니 그 패턴을 그대로 복사하지 말 것. `SearchNovelUseCase.searchByText(_:page:recordRecentSearch:)`/`searchByFilter(_:page:)` 둘 다 `page`가 필수 파라미터(기본값 없음) — 첫 페이지 호출도 명시적으로 `page: 0`을 넘겨야 한다. `NormalSearchViewModel`은 `nextSearchResultPage`, `DetailSearchResultViewModel`은 `nextPage`라는 `@ObservationIgnored` 프로퍼티로 다음 페이지 번호를 들고 있다가 성공 시 +1 한다.
+- ⚠️ **App↔Feature로 넘기는 값 계약 타입(진입 파라미터·`Destination` payload 등)은 이 모듈이 아니라 `SearchDomain`에 둔다.** `Sources/Navigation/`의 seam으로 여는 건 **계약 타입(typealias·protocol + `*Route` enum, #253)만** 허용이고 그 외 구체 enum/struct는 arch-lint `feature-exclusivity` 위반이다 — #236에서 `DetailSearchFilterTab`(진입 탭 enum)을 `Sources/Navigation/`에 뒀다가 CI에서 걸려 `SearchDomain`으로 옮겼다(`SearchFilter`가 App `Destination` 연관값이라 거기 있는 것과 같은 이유 — Route enum과 달리 **양방향 값 계약**이라 Domain 소유가 맞다). Navigation seam은 `KeywordTabContentBuilder`(typealias) + `NormalSearchRoute`/`DetailSearchResultRoute`(#253 화면 전환 의도 enum) 셋이다.

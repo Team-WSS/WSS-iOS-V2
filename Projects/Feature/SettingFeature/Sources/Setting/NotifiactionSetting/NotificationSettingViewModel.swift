@@ -1,0 +1,168 @@
+//
+//  NotificationSettingViewModel.swift
+//  SettingFeature
+//
+//  Created by Seoyeon Choi on 7/16/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import Observation
+
+import BaseDomain
+import NotificationDomain
+import Logger
+import Analytics
+
+/// ⚠️ 시스템 푸시 권한(denied) 확인·유도 알럿은 이 화면이 아니라 `SettingView`가 "알림 설정" 메뉴를
+/// 탭한 시점에 한다(#193) — `showWSSAlert`가 `.overlay` 기반이라 push 전환과 동시에 띄우면 화면 전환에
+/// 밀려 사라지므로, 전환 전에 출발 화면에서 먼저 보여준다. 여기서 다시 확인하면 방금 SettingView에서
+/// 본 알럿이 곧바로 한 번 더 뜬다 — `onAppear`에 재확인 로직을 되살리지 말 것(과거엔 있었다).
+@MainActor
+@Observable
+final class NotificationSettingViewModel {
+
+    // MARK: - State
+
+    struct State {
+        var isNotificationOn = false
+        var isLoading = false
+        /// 최초 로드 실패(에러 종류). 전체화면 `NetworkErrorView`에 넘겨 3분류 문구를 분기한다 — 토글 실패와 분리한다.
+        /// 하나로 합치면 토글 실패 시에도 화면 전체가 에러로 뒤덮여, 이미 로드된 목록으로 되돌아올 방법이 없어진다.
+        var loadError: RepositoryError?
+        /// 토글(저장) 실패(의미값). 토스트 표시용 — 화면은 그대로 두고 값만 이전으로 되돌린다.
+        var toastError: NotificationStatusError?
+        /// 인증 만료(세션 죽음) 감지 시 상위에 로그인 라우팅을 요청하는 신호(Feature 공통 계약).
+        var requiresAuthentication = false
+    }
+
+    /// 사용자에게 표시할 에러의 **의미값**. 카피·표현(토스트 타입)은 View가 결정한다.
+    enum NotificationStatusError: Equatable {
+        case unknown
+    }
+
+    // MARK: - Action
+
+    enum Action {
+        case load
+        case toggleNotificationOn(Bool)
+        case dismissToast
+    }
+
+    // MARK: - Output
+
+    private(set) var state = State()
+
+    // MARK: - Property
+
+    @ObservationIgnored private var hasLoaded = false
+
+    // MARK: - Dependency
+
+    private let logger: Logger?
+    private let analyticsTracker: AnalyticsTracker?
+
+    // NotificationDomain
+    private let loadPushPreferenceUseCase: LoadPushPreferenceUseCase
+    private let updatePushPreferenceUseCase: UpdatePushPreferenceUseCase
+
+    // MARK: - Init
+
+    init(
+        loadPushPreferenceUseCase: LoadPushPreferenceUseCase,
+        updatePushPreferenceUseCase: UpdatePushPreferenceUseCase,
+        logger: Logger? = nil,
+        analyticsTracker: AnalyticsTracker? = nil
+    ) {
+        self.loadPushPreferenceUseCase = loadPushPreferenceUseCase
+        self.updatePushPreferenceUseCase = updatePushPreferenceUseCase
+        self.logger = logger
+        self.analyticsTracker = analyticsTracker
+    }
+
+    // MARK: - Analytics
+
+    func track(_ event: SettingAnalyticsEvent, properties: [String: AnalyticsPropertyValue]? = nil) {
+        analyticsTracker?.track(event, properties: properties)
+    }
+
+    // MARK: - handle
+
+    func handle(_ action: Action) {
+        switch action {
+        case .load:
+            load()
+        case .toggleNotificationOn(let isOn):
+            toggle(isOn)
+        case .dismissToast:
+            state.toastError = nil
+        }
+    }
+}
+
+// MARK: - Action Handling
+
+private extension NotificationSettingViewModel {
+    func load() {
+        guard !hasLoaded else { return }
+        state.isLoading = true
+        state.loadError = nil
+        Task { await loadNotificationStatus() }
+    }
+
+    /// 토글은 즉시 반영(낙관적 업데이트)하고, 실패하면 이전 값으로 되돌린다.
+    func toggle(_ isOn: Bool) {
+        track(isOn ? .notificationOn : .notificationOff)
+        let previous = state.isNotificationOn
+        state.isNotificationOn = isOn
+        Task { await updateNotificationStatus(isOn: isOn, previous: previous) }
+    }
+}
+
+// MARK: - UseCase Handling
+
+private extension NotificationSettingViewModel {
+    func loadNotificationStatus() async {
+        defer { state.isLoading = false }
+
+        do {
+            let pushPreference = try await loadPushPreferenceUseCase.execute()
+            state.isNotificationOn = pushPreference.isEnabled
+            hasLoaded = true
+        } catch {
+            presentLoadError(error)
+        }
+    }
+
+    func updateNotificationStatus(isOn: Bool, previous: Bool) async {
+        do {
+            try await updatePushPreferenceUseCase.execute(pushPreference: PushPreference(isEnabled: isOn))
+        } catch {
+            state.isNotificationOn = previous
+            presentToastError(error)
+        }
+    }
+}
+
+// MARK: - Error Mapping
+
+private extension NotificationSettingViewModel {
+    func presentLoadError(_ error: Error) {
+        if routeToLoginIfAuthenticationRequired(error) { return }
+        logger?.error("NotificationSetting 로드 실패: \(String(describing: error))")
+        state.loadError = (error as? RepositoryError) ?? .unknown
+    }
+
+    func presentToastError(_ error: Error) {
+        if routeToLoginIfAuthenticationRequired(error) { return }
+        logger?.error("NotificationSetting 예기치 못한 에러: \(String(describing: error))")
+        state.toastError = .unknown
+    }
+
+    /// 인증 만료(`authenticationRequired`)면 로그인 라우팅 신호를 세우고 true 반환(Feature 공통 계약).
+    func routeToLoginIfAuthenticationRequired(_ error: Error) -> Bool {
+        guard (error as? RepositoryError) == .authenticationRequired else { return false }
+        state.requiresAuthentication = true
+        return true
+    }
+}

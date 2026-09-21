@@ -1,0 +1,673 @@
+//
+//  SosoFeedView.swift
+//  FeedFeature
+//
+//  Created by Seoyeon Choi on 6/19/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import FeedDomain
+import ProfileDomain
+import SocialDomain
+import DesignSystem
+import WSSComponent
+
+struct SosoFeedView: View {
+
+    /// 피드 셀 threedots 드롭다운 표시 컨텍스트 — 대상 피드(항목 분기)와 앵커(threedots 하단의 화면 y).
+    struct FeedMenuContext {
+        let feed: TotalFeed
+        let anchorY: CGFloat
+    }
+
+    @State private var viewModel: SosoFeedViewModel
+
+    @State private var showMyFeedFilterSheet: Bool = false
+
+    /// 피드 셀 threedots 드롭다운 — nil이 아니면 해당 피드의 메뉴가 떠 있다. VM 판단이 필요 없는 순수 표시 상태.
+    @State private var feedMenuContext: FeedMenuContext?
+    /// 각 셀 상단의 화면 y(루트 좌표공간 실측) — threedots 앵커 계산용. **탭별로 따로 둔다** —
+    /// 두 리스트가 상시 mount라 내 글처럼 같은 feedId가 양쪽에 있으면 숨은 리스트의 GeometryReader가
+    /// 보이는 쪽 앵커를 덮어써 드롭다운이 엉뚱한 y에 뜬다(한 딕셔너리로 합치면 안 되는 이유).
+    @State private var myFeedCellTopYs: [FeedID: CGFloat] = [:]
+    @State private var sosoFeedCellTopYs: [FeedID: CGFloat] = [:]
+    /// 드롭다운이 화면 밖으로 잘리지 않게 클램프하기 위한 화면 가용 높이.
+    @State private var containerHeight: CGFloat = 0
+
+    @Namespace private var tabAnimation
+
+    /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `SosoFeedRoute`(Navigation/)가 정본.
+    /// 실제 화면 조립·push는 호출자(App 조정 계층)가 수행한다(`.userProfile`은 `Author.userId`가
+    /// nil이면 호출하지 않는다).
+    private let onRoute: (SosoFeedRoute) -> Void
+    /// 피드 탭 연필 아이콘 작성 성공 복귀 신호(#256) — App 탭 Root 로컬 `@State`와 연결된 1회성 채널.
+    /// 작성 성공 pop 복귀의 `onAppear`가 true를 소비(false로 되돌림)하고 두 목록을 초기 로드처럼 다시 받는다
+    /// (새 글이 맨 위). 이 화면은 재진입에 목록을 다시 받지 않으므로(다녀온 셀만 동기화) 새 글은 이 신호로만
+    /// 들어온다 — 작품 상세 경유 작성·수정 완료는 이 신호를 켜지 않는다.
+    @Binding private var needsReloadForCreatedFeed: Bool
+
+    /// 피드 탭바의 **현재(피드) 탭 재탭** 신호(증가하는 카운터, App `MainTabView`→`FeedRootView`→Factory 경유).
+    /// 값이 바뀌면 지금 보이는 서브탭 리스트만 최상단으로 스크롤한다 — 시스템 자동 "탭 재탭→최상단"이 상시 mount된
+    /// 두 ScrollView 중 첫 번째(내 피드)에만 걸려 소소피드에선 안 먹는 문제를 명시적 스크롤로 우회한다.
+    private let scrollToTopSignal: Int
+
+    /// 셀 상단 → threedots 하단 거리 = 셀 상단 패딩(20) + 헤더 높이(32). 드롭다운이 이 바로 아래에 뜬다.
+    private let threeDotsBottomOffset: CGFloat = 52
+
+    private let feedMenuSpaceName = "sosoFeedRoot"
+
+    /// 각 리스트 `ScrollView` 최상단에 심는 0높이 앵커의 id — 재탭 신호 시 `scrollTo(_:anchor:.top)`의 목표.
+    /// 두 리스트는 각자의 `ScrollViewReader` 스코프라 같은 상수를 재사용해도 충돌하지 않는다.
+    private let scrollTopAnchorID = "FEED_LIST_TOP"
+
+    init(
+        viewModel: SosoFeedViewModel,
+        needsReloadForCreatedFeed: Binding<Bool> = .constant(false),
+        scrollToTopSignal: Int = 0,
+        onRoute: @escaping (SosoFeedRoute) -> Void
+    ) {
+        self._viewModel = State(initialValue: viewModel)
+        self._needsReloadForCreatedFeed = needsReloadForCreatedFeed
+        self.scrollToTopSignal = scrollToTopSignal
+        self.onRoute = onRoute
+    }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                
+                Spacer().frame(height: 8)
+                
+                FeedTabSection
+                    .padding(.horizontal, 20)
+                
+                Spacer().frame(height: 8)
+
+                FeedChipSection
+                    .transaction { $0.animation = nil }
+                    .padding(.horizontal, 20)
+
+                FeedListSection
+            }
+            .background(WSSColor.wssWhite.swiftUIColor)
+
+            if let feedMenuContext {
+                feedMenuOverlay(feedMenuContext)
+            }
+        }
+        .coordinateSpace(name: feedMenuSpaceName)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        containerHeight = height
+                    }
+            }
+        )
+        .sheet(isPresented: $showMyFeedFilterSheet) {
+            MyFeedFilterSheet(
+                viewModel: viewModel,
+                dismiss: { showMyFeedFilterSheet.toggle() }
+            )
+        }
+        .showWSSAlert(
+            isPresented: feedAlertBinding,
+            type: feedAlertType,
+            buttonActions: feedAlertActions
+        )
+        .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
+        .showWSSToast(isPresented: actionFailedToastBinding, type: .networkDelay)
+        .showWSSToast(isPresented: alreadyReportedToastBinding, type: .alreadyReportedFeed)
+        .onAppear {
+            if needsReloadForCreatedFeed {
+                needsReloadForCreatedFeed = false
+                viewModel.handle(.reloadForCreatedFeed)
+            } else {
+                viewModel.handle(.load)
+            }
+        }
+    }
+
+    //MARK: - 피드 탭
+
+    private var FeedTabSection: some View {
+        HStack(spacing: 16) {
+            tabButton(title: "내 피드",
+                      tab: .myFeed)
+
+            tabButton(title: "소소피드",
+                      tab: .sosoFeed)
+
+            Spacer()
+
+            Button(action: {
+                viewModel.track(.writeFloatingButtonTapped)
+                onRoute(.createFeed)
+            }) {
+                WSSImage.icPencilSm.swiftUIImage
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tabButton(title: String,
+                           tab: FeedTab) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .applyWSSFont(.headline1)
+                .foregroundStyle(
+                    viewModel.state.selectedTab == tab
+                    ? WSSColor.wssBlack.swiftUIColor
+                    : WSSColor.wssGray100.swiftUIColor
+                )
+
+            ZStack {
+                if viewModel.state.selectedTab == tab {
+                    Rectangle()
+                        .fill(WSSColor.wssBlack.swiftUIColor)
+                        .frame(height: 2)
+                        .matchedGeometryEffect(
+                            id: "FEED_TAB_INDICATOR",
+                            in: tabAnimation
+                        )
+                } else {
+                    Color.clear
+                        .frame(height: 2)
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.state.selectedTab)
+        // 커스텀 탭 영역 규칙(Feature CLAUDE.md) — 없으면 라벨·인디케이터 사이 spacing 구간이 죽은 영역이 된다.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.handle(.selectTab(tab))
+        }
+        .fixedSize()
+    }
+
+    // MARK: - 피드 칩
+
+    @ViewBuilder
+    private func sosoFeedChipButton(
+        title: String,
+        icon: Image? = nil,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 4) {
+                icon
+
+                Text(title)
+            }
+            .applyWSSFont(.body4)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 7)
+            .foregroundStyle(isSelected
+                             ? WSSColor.wssWhite.swiftUIColor
+                             : WSSColor.wssGray300.swiftUIColor)
+            .background(isSelected
+                        ? WSSColor.wssBlack.swiftUIColor
+                        : WSSColor.wssWhite.swiftUIColor)
+            .clipShape(Capsule())
+            .overlay {
+                if !isSelected {
+                    Capsule()
+                        .stroke(WSSColor.wssGray80.swiftUIColor, lineWidth: 1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var FeedChipSection: some View {
+        HStack(spacing: 0) {
+            switch viewModel.state.selectedTab {
+            case .myFeed:
+                Button {
+                    showMyFeedFilterSheet.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        // 서버 전체 개수(feedsCount) 우선, 로드 전(nil)엔 현재 배열 길이로 폴백.
+                        Text("\(viewModel.state.myFeedsTotalCount ?? viewModel.state.myFeeds.count)개의 기록")
+                            .applyWSSFont(.body4)
+                            .fixedSize()
+                            .foregroundStyle(WSSColor.wssWhite.swiftUIColor)
+
+                        WSSImage.icDropdownfill.swiftUIImage
+                    }
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 13)
+                    .background(WSSColor.wssBlack.swiftUIColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                WSSSortButton(sortType: viewModel.state.myFeedOption.sortType,
+                              action: {
+                    HapticManager.selection()
+                    viewModel.handle(.toggleMyFeedSort)
+                })
+
+            case .sosoFeed:
+                sosoFeedChipButton(
+                    title: "전체글",
+                    isSelected: viewModel.state.selectedSosoFeedOption == .all,
+                    action: { viewModel.handle(.selectSosoFeedOption(.all)) }
+                )
+
+                Spacer().frame(width: 6)
+
+                sosoFeedChipButton(
+                    title: "추천글",
+                    icon: WSSImage.icHot.swiftUIImage,
+                    isSelected: viewModel.state.selectedSosoFeedOption == .recommended,
+                    action: { viewModel.handle(.selectSosoFeedOption(.recommended)) }
+                )
+
+                Spacer()
+            }
+        }
+        .padding(.vertical, 12)
+    }
+
+    //MARK: - 피드 리스트
+
+    private func feeds(for tab: FeedTab) -> [TotalFeed] {
+        switch tab {
+        case .myFeed:   viewModel.state.myFeeds
+        case .sosoFeed: viewModel.state.sosoFeeds
+        }
+    }
+
+    /// 그 탭의 자기 축(내 피드=필터·정렬, 소소피드=옵션)이 바뀔 때마다 다른 값 — ScrollView의 `.id()`로
+    /// 걸어 SwiftUI가 새 인스턴스로 취급하게 해 스크롤 위치를 최상단으로 리셋시킨다. **탭 축은 없다** —
+    /// 탭 전환은 두 리스트 상시 mount로 스크롤을 보존하는 게 계약이다(2026-09-09 사용자 확정).
+    /// 재진입·당겨서 새로고침에선 어느 축도 안 바뀌어 스크롤이 유지된다. 작성 완료 재로드는 여기 안 낀다 —
+    /// 목록을 통째로 비워 로딩 분기로 갈아타므로 ScrollView 자체가 내려갔다 새로 서며 스크롤이 자연히
+    /// 리셋된다(`.reloadForCreatedFeed`).
+    private func scrollIdentity(for tab: FeedTab) -> String {
+        switch tab {
+        case .myFeed:
+            let option = viewModel.state.myFeedOption
+            let genresKey = option.genres.map { "\($0)" }.sorted().joined(separator: ",")
+            return "\(genresKey)_\(option.includesUncategorized)_\(option.visibilityType)_\(option.sortType.rawValue)"
+        case .sosoFeed:
+            return "\(viewModel.state.selectedSosoFeedOption.rawValue)"
+        }
+    }
+
+    /// 두 탭 리스트를 **둘 다 상시 mount**하고 보이는 쪽만 켠다(2026-09-09 사용자 확정) — if/else로
+    /// 갈아끼우면 branch를 떠나는 순간 UIScrollView가 파괴돼 탭을 오갈 때마다 스크롤이 최상단으로 리셋된다.
+    /// 숨은 쪽은 터치(당겨서 새로고침 포함)와 접근성에서 완전히 제외한다.
+    private var FeedListSection: some View {
+        ZStack {
+            // 시스템 자동 "탭 재탭→최상단"을 흡수하는 미끼(#261 후속, 실측 근거는 CLAUDE.md 주의사항).
+            // 자동 동작은 opacity 0인 숨은 리스트도 후보로 잡고 **첫 번째 ScrollView**를 최상단으로 올린다 —
+            // 이 빈 ScrollView를 맨 앞에 둬 자동 동작이 여기에 걸리게 하면, 뒤의 두 실제 리스트는 오직
+            // 명시적 `scrollToTopSignal`(보이는 탭만)로만 움직여 탭별 스크롤 깊이 보존 계약이 지켜진다.
+            // 없으면 자동 동작이 항상 첫 실제 리스트(내 피드)를 숨은 채로도 리셋한다(#261 실측).
+            automaticScrollToTopDecoy
+            tabList(for: .myFeed)
+            tabList(for: .sosoFeed)
+        }
+    }
+
+    /// 위 자동 스크롤 흡수용 미끼. 전체 크기·`opacity 0`·스크롤 가능한 콘텐츠(자동 동작의 유효 대상이 되도록)를
+    /// 갖되 터치·접근성에서 완전히 빠진다. 시각·레이아웃 영향 없음(ZStack 최하단, 투명).
+    private var automaticScrollToTopDecoy: some View {
+        ScrollView {
+            Color.clear.frame(height: 5000)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func tabList(for tab: FeedTab) -> some View {
+        let isSelected = viewModel.state.selectedTab == tab
+        tabListContent(for: tab)
+            .opacity(isSelected ? 1 : 0)
+            .allowsHitTesting(isSelected)
+            .accessibilityHidden(!isSelected)
+    }
+
+    /// 로딩 분기는 `loadingTab == tab`으로 가른다 — 로드는 언제나 특정 탭을 대상으로 돌고,
+    /// `selectTab`이 진행 중 로드를 취소하지 않아 A탭 로드가 도는 채로 B탭이 보일 수 있다.
+    /// `selectedTab`으로 가르면 그때 이미 로드가 끝난 B탭에 A탭 로드의 스피너가 잘못 뜬다(#256 리뷰).
+    @ViewBuilder
+    private func tabListContent(for tab: FeedTab) -> some View {
+        let tabFeeds = feeds(for: tab)
+        // 실패를 목록보다 먼저 판단한다(NovelDetailFeedTab과 같은 순서, #195) — 더보기 실패는 목록이
+        // 남아 있어 그대로 두면 실패를 알릴 자리가 없다. 재시도가 시작되면 reloadFromScratch가 에러를
+        // 되돌려 로딩 분기로 넘어가므로 실패 뷰와 로딩이 공존하지 않는다.
+        if let loadError = loadError(for: tab) {
+            NetworkErrorView(error: loadError) { viewModel.handle(.retryLoad(tab)) }
+        } else if viewModel.state.loadingTab == tab, tabFeeds.isEmpty {
+            LoadingView()
+        } else if tab == .myFeed, tabFeeds.isEmpty {
+            // 우상단 연필과 같은 작성 진입(V1 emptyView.writeFeedButton parity — V1_BEHAVIOR_CONTRACT 1.4).
+            WSSEmptyView(type: .myFeed,
+                         action: { onRoute(.createFeed) })
+        } else {
+            ScrollViewReader { scrollProxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // 재탭 신호 시 최상단으로 올릴 0높이 앵커(리스트 맨 위).
+                    Color.clear
+                        .frame(height: 0)
+                        .id(scrollTopAnchorID)
+                    ForEach(tabFeeds, id: \.feedId) { feed in
+                        feedRow(feed, in: tab)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .onChange(of: proxy.frame(in: .named(feedMenuSpaceName)).minY,
+                                                  initial: true) { _, newY in
+                                            setCellTopY(newY, for: feed.feedId, in: tab)
+                                        }
+                                }
+                            )
+                            .onAppear {
+                                if feed.feedId == tabFeeds.last?.feedId {
+                                    viewModel.handle(.loadMore(tab))
+                                }
+                            }
+                            // 프로필·좋아요(Button)·연결 작품 배너(Button)는 각자 실제 Button이라
+                            // 자기 hit-test 영역에서 이 onTapGesture보다 우선한다(WSSComponent/CLAUDE.md
+                            // "Button은 조상의 onTapGesture보다 우선") — 그 영역 밖만 여기로 떨어져
+                            // 피드 상세로 이동한다. 예전엔 이 우선순위가 없어 simultaneousGesture로
+                            // 걸었었는데, 그건 안쪽 제스처와 "공존"(동시 발화)이라 좋아요/프로필을
+                            // 눌러도 피드 상세로 함께 이동하는 버그가 있었다(#196).
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                // 돌아왔을 때 이 셀만 상세로 다시 맞추기 위해 떠나기 전에 기억시킨다.
+                                viewModel.handle(.feedVisited(feed.feedId))
+                                onRoute(.feedDetail(feed.feedId))
+                            }
+                        Rectangle()
+                            .frame(height: 1)
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(WSSColor.wssGray50.swiftUIColor)
+                    }
+                }
+            }
+            .id(scrollIdentity(for: tab))
+            .refreshable {
+                // `handle`은 동기 반환이라 그대로 두면 인디케이터가 즉시 사라진다 — 진행 중 로드의 종료를 기다린다.
+                viewModel.handle(.pullToRefresh)
+                await viewModel.awaitFeedsLoad()
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            // 탭바의 현재(피드) 탭 재탭 → 최상단으로. 두 리스트가 상시 mount라 숨은 쪽도 이 onChange를 받지만,
+            // **보이는 서브탭만** 올려 숨은 탭의 스크롤 깊이를 보존한다(상시 mount 계약). 로딩/빈/실패 분기엔
+            // ScrollView가 없어 이 핸들러 자체가 없다 — 올릴 스크롤 위치도 없으니 무해.
+            .onChange(of: scrollToTopSignal) { _, _ in
+                guard viewModel.state.selectedTab == tab else { return }
+                withAnimation { scrollProxy.scrollTo(scrollTopAnchorID, anchor: .top) }
+            }
+            }
+        }
+    }
+
+    private func loadError(for tab: FeedTab) -> RepositoryError? {
+        switch tab {
+        case .myFeed:   viewModel.state.myFeedsLoadError
+        case .sosoFeed: viewModel.state.sosoFeedsLoadError
+        }
+    }
+
+    private func cellTopY(for feedID: FeedID, in tab: FeedTab) -> CGFloat? {
+        switch tab {
+        case .myFeed:   myFeedCellTopYs[feedID]
+        case .sosoFeed: sosoFeedCellTopYs[feedID]
+        }
+    }
+
+    private func setCellTopY(_ y: CGFloat, for feedID: FeedID, in tab: FeedTab) {
+        switch tab {
+        case .myFeed:   myFeedCellTopYs[feedID] = y
+        case .sosoFeed: sosoFeedCellTopYs[feedID] = y
+        }
+    }
+
+    /// `tab`은 threedots 앵커를 그 탭 딕셔너리에서 찾기 위한 컨텍스트 — 같은 feedId(내 글)가 양쪽 리스트에
+    /// 있어도 자기 리스트에서 실측한 y를 쓴다.
+    @ViewBuilder
+    private func feedRow(_ feed: TotalFeed, in tab: FeedTab) -> some View {
+        WSSFeadView(
+            header: FeedHeader(
+                profileImageURL: feed.author.profileImage,
+                nickname: feed.author.nickname,
+                createdDate: feed.createdDate,
+                isEdited: feed.isModified
+            ),
+            profileImageTapped: {
+                // 탈퇴 유저(Author.accessibleUserId == nil)면 이동 대신 안내 토스트만 띄운다.
+                guard let userId = feed.author.accessibleUserId else {
+                    viewModel.handle(.userProfileUnavailableTapped)
+                    return
+                }
+                onRoute(.userProfile(userId))
+            },
+            // 내 글이면 내 프로필로 "이동"할 곳이 없다 — 탭 영역 자체를 없애 탭이 셀 나머지 영역과
+            // 동일하게 피드 상세 진입으로 흘러가게 한다(죽은 탭 영역을 만들지 않기 위함).
+            isProfileTappable: !feed.isMyFeed,
+            threeDotsButtonTapped: {
+                feedMenuContext = FeedMenuContext(
+                    feed: feed,
+                    anchorY: (cellTopY(for: feed.feedId, in: tab) ?? 0) + threeDotsBottomOffset
+                )
+            },
+            content: feed.content,
+            feedImage: feed.imageCount > 0
+                ? WSSFeedImage(
+                    thumbnailImageURL: feed.thumbnailImageURL,
+                    imageCount: feed.imageCount
+                )
+                : nil,
+            linkNovel: feed.connectedNovel.flatMap { novel in
+                novel.genre.map { genre in
+                    WSSLinkNovel(
+                        genreType: genre,
+                        novelTitle: novel.title,
+                        novelRating: novel.rating,
+                        linkNovelTapped: { onRoute(.novelDetail(novel.id)) }
+                    )
+                }
+            },
+            react: WSSFeedReact(
+                likeCount: feed.likeCount,
+                commentCount: feed.commentCount
+            ),
+            isLiked: feed.isLiked,
+            // V1 목록 좋아요의 light impact 햅틱 복원(정렬 토글의 HapticManager.selection()과 같은 결
+            // — VM이 아니라 탭 지점인 View에서 발화). 좋아요/해제 방향 무관하게 탭 자체의 촉각 피드백.
+            likeButtonTapped: {
+                HapticManager.impact(.light)
+                viewModel.handle(.toggleLike(feed.feedId))
+            },
+            isSpoiler: feed.isSpoiler,
+            isPrivate: !feed.isPublic
+        )
+    }
+
+    //MARK: - 피드 셀 threedots 드롭다운
+
+    /// 화면 하단 셀에서는 앵커를 그대로 쓰면 메뉴가 화면 밖으로 잘린다 →
+    /// 전부 보이는 위치까지만 내려가게 클램프한다(threedots에서 떨어져도 전부 보이는 쪽 우선).
+    /// 메뉴 높이 107 = WSSDropdownMenu 항목 고정 높이 53 × 2 + 구분선.
+    private func feedMenuOverlay(_ context: FeedMenuContext) -> some View {
+        let anchorY = containerHeight > 0
+            ? min(context.anchorY, containerHeight - 107 - 20)
+            : context.anchorY
+        return ZStack(alignment: .topTrailing) {
+            // 바깥 탭으로 닫기 위한 투명 레이어.
+            Color.wssBlack.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { feedMenuContext = nil }
+
+            WSSDropdownMenu(items: feedMenuItems(context.feed))
+                .frame(width: 190)
+                .padding(.top, anchorY)
+                .padding(.trailing, 20)
+        }
+    }
+
+    /// 피드 소유 여부 → 드롭다운 항목. 내 글 = 수정/삭제, 남의 글 = 신고 2종(빨강).
+    private func feedMenuItems(_ feed: TotalFeed) -> [WSSDropdownItem] {
+        if feed.isMyFeed {
+            [
+                WSSDropdownItem(title: "수정하기") {
+                    feedMenuContext = nil
+                    // 수정하고 돌아오면 이 셀만 상세로 다시 맞춘다(작성 완료 신호는 작성에만 붙는다).
+                    viewModel.handle(.feedVisited(feed.feedId))
+                    onRoute(.editFeed(feed.feedId))
+                },
+                WSSDropdownItem(title: "삭제하기") {
+                    feedMenuContext = nil
+                    viewModel.handle(.deleteFeedTapped(feed.feedId))
+                }
+            ]
+        } else {
+            [
+                WSSDropdownItem(
+                    title: "스포일러 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportSpoilerFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                ),
+                WSSDropdownItem(
+                    title: "부적절한 표현 신고",
+                    action: {
+                        feedMenuContext = nil
+                        viewModel.handle(.reportImproperFeedTapped(feed.feedId))
+                    },
+                    textColor: Color.wssSecondary100
+                )
+            ]
+        }
+    }
+
+    private var feedAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.presentedFeedAlert != nil },
+            set: { if !$0 { viewModel.handle(.dismissFeedAlert) } }
+        )
+    }
+
+    private var unavailableUserToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isUnavailableUserToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissUnavailableUserToast) } }
+        )
+    }
+
+    private var actionFailedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isActionFailedToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissActionFailedToast) } }
+        )
+    }
+
+    private var alreadyReportedToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isAlreadyReportedToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissAlreadyReportedToast) } }
+        )
+    }
+
+    /// 피드 알럿 의미값 → 컴포넌트 알럿 타입. nil일 땐 어떤 타입이든 상관없다(알럿이 숨겨져 있음).
+    private var feedAlertType: WSSAlertType {
+        switch viewModel.state.presentedFeedAlert {
+        case .deleteFeed, nil: .deleteMyFeed
+        case .reportSpoiler: .reportSpoilerContent
+        case .reportImproper: .reportImproperContent
+        case .reportSpoilerCompleted: .receivedReportSpoilerContent
+        case .reportImproperCompleted: .receivedReportImproperContent
+        }
+    }
+
+    /// 알럿 버튼 액션 — 인덱스가 버튼 순서와 일치해야 한다(확인 알럿 [취소, 실행] / 완료 알럿 [확인]).
+    private var feedAlertActions: [() -> Void] {
+        switch viewModel.state.presentedFeedAlert {
+        case .reportSpoilerCompleted, .reportImproperCompleted:
+            [{ viewModel.handle(.dismissFeedAlert) }]
+        default:
+            [
+                { viewModel.handle(.dismissFeedAlert) },
+                { viewModel.handle(.confirmFeedAlert) }
+            ]
+        }
+    }
+}
+
+#Preview {
+    SosoFeedView(
+        viewModel: SosoFeedViewModel(
+            loadMyFeedsUseCase: PreviewLoadMyFeedsUseCase(),
+            loadsosoFeedsUseCase: PreviewLoadSosoFeedsUseCase(),
+            loadFeedDetailUseCase: PreviewLoadFeedDetailUseCase(),
+            feedLikeUseCase: PreviewFeedLikeUseCase(),
+            loadProfileUseCase: PreviewLoadProfileUseCase(),
+            deleteFeedUseCase: PreviewDeleteFeedUseCase(),
+            reportSpoilerFeedUseCase: PreviewReportSpoilerFeedUseCase(),
+            reportImproperFeedUseCase: PreviewReportImproperFeedUseCase()
+        ),
+        onRoute: { print("화면 전환 요청: \($0)") }
+    )
+}
+
+private struct PreviewDeleteFeedUseCase: DeleteFeedUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportSpoilerFeedUseCase: ReportSpoilerFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewReportImproperFeedUseCase: ReportImproperFeedUseCase {
+    func execute(id: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewLoadMyFeedsUseCase: LoadMyFeedsUseCase {
+    func execute(option: MyFeedOption,
+                 lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+        Paginated(items: [], hasNext: false)
+    }
+}
+
+private struct PreviewLoadSosoFeedsUseCase: LoadSosoFeedsUseCase {
+    func execute(option: SosoFeedOption,
+                 lastFeedID: FeedID) async throws(RepositoryError) -> Paginated<TotalFeed> {
+        Paginated(items: [], hasNext: false)
+    }
+}
+
+private struct PreviewLoadFeedDetailUseCase: LoadFeedDetailUseCase {
+    func execute(feedID: FeedID) async throws(RepositoryError) -> FeedDetail {
+        throw .notFound
+    }
+}
+
+private struct PreviewFeedLikeUseCase: FeedLikeUseCase {
+    func like(feedID: FeedID) async throws(RepositoryError) { }
+    func unlike(feedID: FeedID) async throws(RepositoryError) { }
+}
+
+private struct PreviewLoadProfileUseCase: LoadProfileUseCase {
+    func execute(target: ProfileTarget) async throws(RepositoryError) -> Profile {
+        Profile(nickname: "미리보기", introduction: "", characterImage: nil, isPublic: true, genrePreferences: [])
+    }
+}

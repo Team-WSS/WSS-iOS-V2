@@ -68,3 +68,31 @@ Derived/
 
 ### Tuist managed dependencies ###
 Tuist/.build
+
+### xcconfig
+*.xcconfig
+
+### Claude Code (개인 설정 — 팀 공유 금지)
+.claude/settings.local.json
+
+# ArchLint(A2 아키텍처 검사기) 빌드 산출물 — Package.resolved는 핀 고정 위해 커밋한다.
+Tooling/ArchLint/.build
+Tooling/ArchLint/.swiftpm
+
+### fastlane (V1과 동일 관례 — 인증서·API 키 절대 커밋 금지)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+fastlane/FastlaneRunner
+fastlane/.env
+fastlane/*.p8
+
+# build_app(gym) 산출물 — 레포 루트에 생긴다(archive-debug/archive-release 스킬 실행 시 실측).
+*.ipa
+*.dSYM.zip
+
+### Firebase(FCM) 설정 — V1과 동일 관례로 커밋하지 않는다(#243). API 키가 들어있어 각자 로컬에 둔다.
+# 신규 팀원/CI는 이 파일이 없으면 Firebase 초기화가 안 되므로 별도 경로(팀 공유)에서 받아 배치할 것 → docs 안내.
+Projects/App/Resources/GoogleService-Info.plist
+Projects/App/Resources/GoogleService-Info-Debug.plist

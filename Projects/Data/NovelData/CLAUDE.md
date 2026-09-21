@@ -1,0 +1,48 @@
+<!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Data/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
+# NovelData
+
+`NovelDomain.NovelRepository`의 네트워크 구현. 구성요소는 `Sources/`를 직접 보면 된다.
+여기엔 **코드만 봐선 모르는 것**만 적는다.
+
+- 식별자: `ModuleType.data(.novel)` / 의존: `NovelDomain`, `BaseDomain`, `BaseData`, `Networking`, `Logger`
+- 진입점: `NovelDataFactory.makeNovelRepository(client:appStorage:logger:)` (상위는 이 Factory만 안다)
+- **작품 검색(텍스트/필터)은 이 모듈이 아니라 `SearchData`가 담당**한다 — 원래 여기 있었으나 `SearchDomain.SearchNovelRepository`와 함께 엔드포인트·DTO·매퍼 전부 `SearchData`로 이관했다(`SearchData/CLAUDE.md` 참고). `NovelRepository`/`NovelEndpoint`/`NovelMapper`에 검색 관련 코드가 없는 게 정상.
+
+## 핵심 시나리오
+
+- **상세 조회(`fetchNovel`)**: basic + detail **네트워크 2회** 호출 후 `NovelMapper.novelInformation(...)`로 합성.
+- **서재/통계**: "내" 버전(`fetchMyLibraryNovels`/`fetchRegisteredNovelStats`)은 `appStorage.get(.userID)`로 로그인 사용자 ID를 읽고, "유저" 버전(`fetchUserLibraryNovels(id:_:)`/`fetchUserRegisteredNovelStats(id:)`)은 인자로 받은 id를 그대로 쓴다 — 같은 `getUserLibraryNovels`/`getUserRegisteredNovelStats` 서비스 호출을 userID 출처만 바꿔 공유한다.
+
+## 주의사항 (작업 중 발견 시 누적)
+
+- **내 서재 필터·정렬 영속화(#221)**: `DefaultMyLibraryFilterRepository`(네트워크 없음 — `appStorage`만 의존,
+  `NovelDataFactory.makeMyLibraryFilterRepository(appStorage:logger:)`)가 `MyLibraryFilter`를 JSON 스냅샷으로
+  `UserDefaults`(`StorageKey.myLibraryFilter: StorageKey<Data>`)에 저장한다. ⚠️ **`MyLibraryFilterSnapshot`
+  코덱의 토큰은 서버 매퍼(`myLibraryV2Query`의 영문 장르·`created_desc` 정렬 등)와 *일부러 공유하지 않는다*** —
+  영속 포맷을 서버 스펙에 묶으면 서버 문자열이 바뀔 때 사용자 로컬 저장이 조용히 깨진다. 그래서 rawValue 없는
+  enum(`NovelGenre`·`AttractivePoint`·`LibrarySortType`)은 코덱이 자체 안정 토큰(case 이름)을 `switch`로 명시한다
+  (enum에 케이스를 추가하면 저장 방향 `switch`가 컴파일 에러로 강제 — 토큰 누락 방지). **복원은 관대하다**:
+  알 수 없는 토큰은 조용히 건너뛰고, 정렬을 못 읽으면 기본값(`.registeredNewest`)으로 떨어진다(디코딩 실패
+  전체는 `logUnknownError` 남기고 nil → 화면은 기본 필터). 라운드트립은 `MyLibraryFilterSnapshotTests`가 고정한다.
+- **내 서재·타유저 서재 둘 다 V2 엔드포인트(`/users/{id}/novels/v2`)를 쓴다**(#166). ⚠️ **두 조회의 유일한 차이는 경로에 넣는 userID뿐** — `fetchMyLibraryNovels`는 `appStorage.get(.userID)`로 내 ID를 채우고, `fetchUserLibraryNovels`는 인자로 받은 `UserID`를 넣는다. 쿼리·응답·매퍼(`libraryNovelsV2`)는 완전히 공유한다.
+  - ⚠️ **구 V1 경로(`/users/{id}/novels`)는 이제 아무 데서도 호출되지 않는다** — `getUserLibraryNovels`·`UserLibraryQuery`·`UserLibraryNovelsResponse`·`libraryNovels(from:)`가 통째로 미사용이다(#166에서 타유저 서재를 V2로 옮기며 마지막 호출자가 사라짐). V1은 `lastUserNovelId: 0` 하드코딩이라 애초에 첫 페이지 고정·필터 무시였다. 되살려 쓰지 말고, 정리는 별도로 다룰 것.
+  - V2 쿼리(`UserLibraryV2Query`) 함정 — 아래 4가지는 **양쪽 조회에 공통**이다:
+    - **미적용 필터는 nil로 보내 파라미터를 생략**한다. 예전엔 빈 배열이 `?genres=`(빈 값)로 직렬화돼 서버가 `[""]` 필터로 오해하는 함정이 있었으나 **#256부터 `QueryItemConvertible`이 빈 배열도 쿼리에서 생략**해 그 함정 자체는 사라졌다 — "미적용 = nil" 관례는 의도를 드러내는 표기라 유지한다.
+    - **`isInterest`는 true일 때만 전송** — false를 보내면 "비관심 작품만" 필터가 되어버린다(관심 토글 OFF ≠ 비관심 필터).
+    - **`genres`는 영문 라벨**(`mapNovelGenreString` — 서버 DB `genreName`이 영문), **`keywords`는 한글 `keywordName`** — 검색 API의 `keywordIds`(ID 배열)와 다르다.
+    - 정렬 문자열은 `created_desc/created_asc/title/read_date/rating_desc/rating_asc` (서버 `UserNovelSortType`). 타유저 서재도 같은 문자열을 쓴다(`userLibraryV2Query`가 정렬만 싣고 나머지는 nil).
+  - **`size` 상한은 100으로 보고 호출 전에 자른다**(`LibraryPageSizePolicy.maxSize` — NovelDomain). 근거 수준을 구분해 적어둔다 — **실측된 것**: dev 서버에 `size=101·150·500`을 보내도 **400이 아니라 200**이 온다(2026-08-18). **미확인**: 100을 넘겼을 때 서버가 잘라서 주는지 요청대로 다 주는지 — dev에 100건 넘는 서재를 가진 유저가 없어 두 경우가 구분되지 않는다. 어느 쪽이든 `nextCursor`가 실제 응답 기준이라 커서 정합성은 깨지지 않으므로, **클라가 먼저 자르는 것**으로 동작을 결정론적으로 만든 상태다.
+  - ⚠️ **`size`는 두 조회가 서로 다르다** — 내 서재는 **호출자(화면)가 넘긴 값을 그대로 싣고**, 타유저 서재만 상수(`userLibraryPageSize` 15)다. 내 서재는 재진입 갱신이 "보고 있던 개수만큼" 한 번에 받아야 해서 페이지 크기가 고정이 아니다(이유는 [NovelDomain](../../Domain/NovelDomain/CLAUDE.md)). **통일한다고 내 서재를 상수로 되돌리지 말 것** — 갱신 경로가 조용히 한 페이지로 잘린다.
+- 서재 커서는 서버 발급 opaque 문자열(`nextCursor`)을 그대로 왕복 — 클라에서 해석·조립하지 말 것.
+
+- **작품 상세 응답의 `novelGenres`는 배열이 아니라 `/`로 이은 한 문자열**(`"로맨스/로판"`)이다 — `author`가 콤마 문자열인 것과 **구분자가 다르다**. DTO를 `[String]`으로 두면 디코딩이 통째로 실패해 화면이 "네트워크 연결 실패"로 뜬다(실제 원인은 `.invalidData`라 원인 찾기 어렵다). Mapper가 `/`로 쪼개 `NovelGenre`로 매핑하고, UI는 반대로 `displayName`을 `/`로 이어 되돌린다.
+- **`novelImage`(표지)와 `novelGenreImage`(장르 아이콘 경로, 예 `/icGenre/BL`)는 다른 필드**다 — 상세 매핑이 표지에 `novelGenreImage`를 넣고 있었다(#154에서 수정). 서재 매퍼는 처음부터 `novelImage`를 쓴다.
+- **이미지 필드(표지 `novelImage`·`platformImage`)는 버킷 상대 경로로 올 수 있다** — `URL(string:)` 직조립 금지, `ImageURLResolver.resolve(from:)`(BaseData) 경유(full URL/경로 혼재를 흡수하고 경로엔 `@{scale}x.png`를 붙인다). 표지(서재·상세)와 `platformImage` 모두 경유 완료. ⚠️ 단 `platformUrl`(플랫폼 사이트 주소)은 **이미지가 아니라 외부 링크**라 resolver 대상이 아니다 — `URL(string:)` 유지(실패 시 `MappingError.invalidPlatformUrl` throw).
+- **`Novel.isInterested`는 nil = "비로그인" 의미** — 매퍼가 이 인자를 안 넘기면 기본값 nil이 되어 관심 버튼이 **에러·로그 없이 no-op**이 된다(엔티티 정책 + VM 가드가 조용히 스킵). `basicDTO.isUserNovelInterest` 매핑 필수(#154에서 수정).
+- **작품 상세 조회(`getNovelBasicInfo`/`getNovelDetailInfo`)의 토큰 정책은 `.usesTokenIfAvailable`** — 공개 화면이라 `.withoutToken`으로 두기 쉽지만, 응답에 유저별 필드(관심·읽기 상태·내 별점·시작/종료일)가 있어 토큰이 없으면 **항상 익명 값**이 온다(실서버에서 내 평가·관심이 안 뜨는 증상 — #154에서 수정).
+- **일반 검색(`getNormalSearchResult`)도 같은 이유로 `.usesTokenIfAvailable`**(#165에서 `.withoutToken` → 수정) — 비로그인도 검색은 되지만, 토큰이 없으면 서버가 요청을 익명으로 봐서 `SearchDomain`이 기대하는 "검색 실행 시 서버 자동 기록"(최근 검색어)이 로그인 유저에게 남지 않았다. `SearchNovelResponse`엔 애초에 `isInterested` 필드가 없어(토큰을 보내도) 검색 결과 카드의 관심 여부는 여전히 반영 안 됨 — 별개 갭, 필요해지면 서버 응답에 필드 추가 여부부터 확인.
+- **`userReview`의 매력포인트·키워드는 `[]`로 둔다** — 유저 본인 선택값이 이 응답에 없어서다. `detailDTO.attractivePoints`(독자 전체 집계값)를 채워 넣지 말 것 — 과거에 그렇게 돼 있었고(미소비 필드라 실동작 영향은 없었음) #154에서 `[]`로 정리했다. 본인 선택값이 필요해지면 유저별 API에서 받아야 한다.
+- `fetchNovel`은 2회 호출 → **하나라도 실패하면 전체 실패**.
+- userID 부재 시 `?? 0` fallback — 비로그인 흐름 동작 확인 필요.
+- **서비스 메서드(`getUserRegisteredNovelStats(userID:)` 등)는 이미 임의 userID를 받도록 돼 있었다** — 타 유저 조회가 막혀 있던 지점은 Repository/UseCase 시그니처(파라미터 없음)였지, 네트워크 계층이 아니었다. "유저" 버전 Repository 메서드를 새로 추가할 때 서비스 변경이 필요 없을 수 있으니 먼저 기존 서비스 메서드 시그니처부터 확인할 것.
+- 에러 변환은 레이어 고정 규칙을 따름 (`NetworkingError`→`toRepositoryError()`, `MappingError`→`.invalidData`, 그 외 `.unknown`, 전 분기 로깅).

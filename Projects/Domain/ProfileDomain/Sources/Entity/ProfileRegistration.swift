@@ -1,0 +1,28 @@
+//
+//  ProfileRegistration.swift
+//  ProfileDomain
+//
+//  Created by YunhakLee on 2/24/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import BaseDomain
+
+public struct ProfileRegistration: Equatable, Sendable {
+    public let nickname: String
+    public let gender: Gender
+    public let birthYear: BirthYear
+    public let genrePreferences: [NovelGenre]
+    
+    public init(
+        nickname: String,
+        gender: Gender,
+        birthYear: BirthYear,
+        genrePreferences: [NovelGenre]
+    ) {
+        self.nickname = nickname
+        self.gender = gender
+        self.birthYear = birthYear
+        self.genrePreferences = genrePreferences
+    }
+}

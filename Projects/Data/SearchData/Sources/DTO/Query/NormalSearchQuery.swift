@@ -1,0 +1,29 @@
+//
+//  NormalSearchQuery.swift
+//  SearchData
+//
+//  Created by Seoyeon Choi on 3/27/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import Networking
+
+struct NormalSearchQuery: QueryItemConvertible {
+    public let query: String
+    public let page: Int
+    public let size: Int
+    public let recordRecentSearch: Bool
+
+    public init(
+        query: String,
+        page: Int,
+        size: Int,
+        recordRecentSearch: Bool
+    ) {
+        self.query = query
+        self.page = page
+        self.size = size
+        self.recordRecentSearch = recordRecentSearch
+    }
+}

@@ -1,0 +1,30 @@
+<!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Domain/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
+# SearchDomain
+
+일반 검색 화면(`SearchFeature`) 전용 도메인 — 최근 검색어, 제목 기반 자동완성. 검색 기능이 커지면서(장르별 검색·자동완성·인기 키워드 등) 기존 `NovelDomain`/`BaseDomain`만으로는 부족해져 신설했다(#163).
+
+- 식별자: `ModuleType.domain(.search)` / 의존: `BaseDomain`
+
+## 핵심 시나리오
+
+- **최근 검색어**(`RecentSearchWord`): `RecentSearchRepository`는 **서버 호출**이다 — `SearchNovelUseCase.searchByText`가 검색을 실행하면 서버가 자동 기록하므로 클라이언트에 명시적 "add" UseCase는 없고 `Load`/`Remove`/`Clear`만 있다.
+  ⚠️ **기록 여부 자체는 `searchByText`의 `recordRecentSearch: Bool`(필수, 기본값 없음)로 호출부가 매번
+  결정한다**(#255 QA — "일반 검색 화면에서 검색했을 때만 기록되게 해달라"는 요구로 도입) — 사용자가
+  검색을 **목적으로** 실행한 화면(`SearchFeature.NormalSearchView`)만 `true`, 검색이 다른 작업의
+  부수 수단인 화면(`FeedFeature`의 "작품 연결", `CollectionFeature`의 "작품 추가")은 전부 `false`.
+  기본값을 두지 않은 이유는 새 호출부가 이 판단을 빠뜨리고 조용히 최근 검색어를 오염시키는 사고를
+  막기 위해서다.
+- **제목 자동완성**(`SearchAutoCompletionWord`): `SearchAutoCompletionWordsUseCase.execute(searchText:)`가 앞뒤 공백을 trim하고, 빈 문자열이면 서버 호출 없이 빈 배열을 즉시 반환한다(타이핑 중 불필요한 네트워크 호출 방지).
+- **작품 제목/필터 검색**(`SearchNovelUseCase`, `SearchFilter`, `SearchNovelRepository`): 원래 `NovelDomain` 소유였으나 이 모듈로 이동했다 — `Novel` 엔티티가 `NovelDomain`과 이 모듈 양쪽에서 필요해지면서 `BaseDomain`으로 공용화됐고(`BaseDomain/CLAUDE.md` 참고), 그 김에 작품 검색 계약 자체와 **구현(엔드포인트·매퍼)까지 전부 `SearchData`로 이관**했다 — `NovelData`는 더 이상 검색을 모른다.
+- 같은 이유로 **실시간 인기 키워드(`PopularKeywords`)는 `BaseDomain`**에 있다(키워드 카탈로그 소유가 `BaseDomain`이라서) — 이 모듈로 옮기지 않는다.
+
+## 주의사항 (작업 중 발견 시 누적)
+
+- **`SearchFilter`는 `Hashable`을 준수한다**(#196) — Domain 엔티티치곤 드문 이유로, App(`HomeRootView`/`LibraryRootView`)이 `Destination` enum(`NavigationPath` push용)의 연관값으로 이 값을 직접 담기 위해서다(상세탐색 결과 화면 push를 App으로 옮긴 것, `SearchFeature/CLAUDE.md`의 "화면이 안 쌓이는 버그" 참고). `genres`/`keywords` 등 저장 필드가 전부 이미 `Hashable`이라 컴파일러 자동 합성만으로 충분했다.
+- **`DetailSearchFilterTab`(정보/키워드)도 같은 이유로 이 모듈에 있다**(#236) — 상세탐색 필터 화면의 진입 탭을 App이 `Destination` 연관값으로 담아 `SearchFeature`에 되넘기므로 `Hashable`이 필요하다. 원래 `SearchFeature/Sources/Navigation/`에 뒀다가 arch-lint `feature-exclusivity`에 걸려 옮겼다 — Navigation seam은 계약 타입(typealias·protocol)만 허용이고 구체 enum/struct는 위반이다. **App↔Feature로 넘길 값 계약 타입은 Feature가 아니라 이 도메인이 소유**한다.
+- `RecentSearchWord.id`는 서버 발급 `SearchWordID`(`IDWrapper<Int>`, `BaseDomain.WSSIdentifiers`에 등록됨) — 클라이언트가 임의로 생성하지 않는다.
+- 구현체는 `SearchData`의 `DefaultSearchRepository` 하나가 `RecentSearchRepository`/`SearchAutoCompletionRepository`/`SearchNovelRepository` **세 프로토콜 전부**를 구현한다(`SearchDataFactory.makeRepository`가 세 타입의 교집합을 반환). 실서버 확인 완료 — 세부 응답 형태는 `SearchData/CLAUDE.md` 참고.
+- **`NovelPlatform`/`NovelRatingRange`(#185)는 이 모듈 전용 신규 타입**이다. `NovelPlatform`은 `NovelDomain.NovelPlatform`(name+image+url, 작품 상세용)과 동명이지만 별개 — 이쪽은 상세탐색 필터 선택지로 쓸 고정 5종 enum이다. `NovelRatingRange`(min~max)는 애초 `SearchFilter`가 함께 갖던 단일 최소값 필드(`ratingThreshold`, `BaseDomain.NovelRatingThreshold`)를 대체하며 그 필드·타입 자체를 없앴다(#185 후반) — 이제 별점 필터는 `ratingRange` 하나뿐이다.
+- **상세탐색 필터 화면(정보 탭)의 장르 그리드 순서는 `WSSComponent.NovelGenre.myFeedFilter`와 동일**(`searchGenre`가 아니다) — Figma 실측으로 확인됐다. 새 순서 목록을 만들지 말고 재사용할 것.
+- **`SearchFilter.setKeywords(_:)`는 `addKeyword(_:)`와 검증 정책이 다르다** — `addKeyword`는 20개 초과 시 `throw`하지만, `setKeywords`는 초과분을 조용히 잘라낸다(에러 없음). 개별 추가가 아니라 **키워드 탭 콘텐츠(SearchFeature가 주입받는 KeywordFeature 화면)의 선택 결과를 통째로 동기화**하는 용도라 이미 호출부 UI가 선택을 허용한 값이라는 전제 — 새 "일괄 반영" 계열 메서드를 추가할 때 이 비대칭을 인지할 것.
+- **`clearAll()`(전체 초기화)과 `clearInfoFilters()`(정보 탭 4종만)가 따로 있다**(#185) — `DetailSearchFilterView`가 "정보"/"키워드" 두 탭을 각자 독립적으로 초기화해야 해서 나뉘었다(사용자 확정). `clearInfoFilters()`는 장르·플랫폼·연재상태·별점범위만 지우고 `keywords`는 건드리지 않는다 — **"정보" 탭 개념으로 새 필드를 추가하면 `clearAll()`뿐 아니라 `clearInfoFilters()`에도 같이 넣어야** 탭별 초기화가 안 깨진다(둘 다 손으로 나열하는 방식이라 자동 동기화 안 됨).

@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "icThreedotsVertical.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

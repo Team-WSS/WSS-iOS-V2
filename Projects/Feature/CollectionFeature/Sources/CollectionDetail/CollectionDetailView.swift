@@ -1,0 +1,697 @@
+//
+//  CollectionDetailView.swift
+//  CollectionFeature
+//
+//  Created by Guryss on 8/22/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import SwiftUI
+
+import BaseDomain
+import CollectionDomain
+import DesignSystem
+import WSSComponent
+
+/// 컬렉션 상세 화면 — 대표 작품 표지를 배경으로 한 히어로(소유자·이름·설명·좋아요/공유) + 작품 그리드.
+/// `CollectionListView`의 카드 탭에서 진입한다(`CollectionFeatureFactory.makeCollectionDetailView`가
+/// 유일한 진입점). 화면 동작 계약은 `CollectionFeature/CLAUDE.md` 참고.
+struct CollectionDetailView: View {
+
+    @State private var viewModel: CollectionDetailViewModel
+    /// 히어로 섹션이 화면 밖으로 스크롤되면(닉네임/제목이 즉시 나타남, 페이드 아님) 네비바가 반응한다 —
+    /// `UserPageFeature.UserPageView`와 동일 패턴(같은 SDK 제약으로 `GeometryReader`+`onChange` 사용).
+    @State private var isScrolledFromTop = false
+    /// 스티키 정렬 바 — 커스텀 네비바 배경의 실측 높이(= 안전영역 top + 44). 스크롤되는 "원본" 정렬 바가
+    /// 이 y까지 올라오면 상단에 정렬 바를 고정한다(작품 상세 스티키 탭바와 같은 "오버레이 2벌" 방식 —
+    /// 몰입형이라 `LazyVStack(pinnedViews:)`는 못 쓴다, `NovelDetailFeature/CLAUDE.md` 참고).
+    @State private var navBarBottomY: CGFloat = 0
+    /// 스티키 정렬 바 — 스크롤 콘텐츠 안 "원본" 정렬 바의 상단 y(화면 좌상단 기준). 측정 전엔 안 뜨도록 무한대.
+    @State private var sortBarMinY: CGFloat = .greatestFiniteMagnitude
+    /// 이 화면의 유일한 자식은 "컬렉션 수정"(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상
+    /// "수정 화면에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다(`CollectionListView`의
+    /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
+    /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
+    @State private var hasAppearedOnce = false
+    /// 카카오 공유 카드 전송 실패 토스트 — 공유는 VM을 거치지 않는 순수 표현이라 View가 소유한다.
+    @State private var isShareErrorToastPresented = false
+    /// 공유 진행 중 가드 — 템플릿 서버 검증을 기다리는 동안 연타하면 카카오톡이 두 번 열린다(VM의 진행 중
+    /// Task 가드와 같은 역할을 View 로컬로).
+    @State private var isSharing = false
+    @Environment(\.dismiss) private var dismiss
+
+    /// 인증 만료 시 로그인 화면 진입 콜백.
+    private let onAuthenticationRequired: () -> Void
+    /// 화면 전환 의도 콜백(#253) — 계약은 `CollectionDetailRoute`(Navigation/)가 정본. `.novelDetail`은
+    /// Feature 모듈끼리 서로 import 못 해 이 화면이 직접 만들 수 없어 VM을 거치지 않고 View가 탭 즉시
+    /// 올리고, `.editCollection`은 수정 화면(`CreateCollectionView`)이 대상 컬렉션을 `id`로 스스로 다시
+    /// 불러오므로 payload가 없다 — 실제 화면 조립·push는 호출자(App)가 수행한다.
+    private let onRoute: (CollectionDetailRoute) -> Void
+    /// 공유 카드의 Kakao 콘솔 커스텀 템플릿 ID 3종(표지 1/2/3장 전용 — Kakao 커스텀 템플릿은 이미지
+    /// 슬롯 개수가 고정이라 작품 수마다 별도 템플릿이 필요하다). Feature가 `Data`를 못 읽어(레이어 규칙)
+    /// 호출자(App/Demo)가 `NetworkingConfig.kakaoCollectionShareTemplateID1/2/3`를 읽어 그대로 넘긴다 —
+    /// 자세한 배경은 `CollectionKakaoShare` 헤더 주석.
+    private let kakaoCollectionShareTemplateID1: Int64
+    private let kakaoCollectionShareTemplateID2: Int64
+    private let kakaoCollectionShareTemplateID3: Int64
+
+    init(
+        viewModel: CollectionDetailViewModel,
+        onAuthenticationRequired: @escaping () -> Void,
+        onRoute: @escaping (CollectionDetailRoute) -> Void,
+        kakaoCollectionShareTemplateID1: Int64,
+        kakaoCollectionShareTemplateID2: Int64,
+        kakaoCollectionShareTemplateID3: Int64
+    ) {
+        self._viewModel = State(initialValue: viewModel)
+        self.onAuthenticationRequired = onAuthenticationRequired
+        self.onRoute = onRoute
+        self.kakaoCollectionShareTemplateID1 = kakaoCollectionShareTemplateID1
+        self.kakaoCollectionShareTemplateID2 = kakaoCollectionShareTemplateID2
+        self.kakaoCollectionShareTemplateID3 = kakaoCollectionShareTemplateID3
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+        Group {
+            if let error = viewModel.state.hasLoadError {
+                NetworkErrorView(error: error) {
+                    viewModel.handle(.load)
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        heroSection
+
+                        if let detail = viewModel.state.detail {
+                            contentSection(detail)
+                        }
+                    }
+                }
+               
+                .coordinateSpace(name: scrollCoordinateSpace)
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .background(Color.wssWhite)
+                .overlay {
+                    // 정렬 변경 재조회는 이미 detail이 있는 상태라 전면 로딩으로 덮지 않는다 —
+                    // 덮으면 화면 전체가 깜빡이는 것처럼 보인다(사용자 리포트). 진짜 처음 로드일 때만
+                    // (detail == nil) 보여준다 — `SosoFeedView`의 `isLoading && currentFeeds.isEmpty`와
+                    // 동일 판단.
+                    if viewModel.state.isLoading, viewModel.state.detail == nil {
+                        LoadingView()
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+
+            // 커스텀 몰입형 상단 바 — 히어로 위엔 투명 바 + 흰 아이콘, 스크롤되면 흰 배경 + 검정
+            // 아이콘 + 컬렉션명 타이틀(Figma "스크롤 됐을때 헤더가 컬렉션 명으로 변경"). 커스텀
+            // 오버레이라 opacity/색 애니메이션이 정상 동작(시스템 .principal의 UIKit 브리지 함정 없음
+            // → 예전 즉시 전환 대신 부드러운 페이드).
+            //
+            // 네비바와 스티키 정렬 바를 한 VStack으로 묶는다 — 정렬 바가 네비바 "바로 아래"에 붙는 게
+            // 레이아웃으로 보장돼 스티키 y를 따로 계산할 필요가 없다(작품 상세 스티키 탭바와 동일).
+            VStack(spacing: 0) {
+                collectionDetailTopBar
+
+                if showStickySortBar, let detail = viewModel.state.detail {
+                    // 스크롤 원본이 네비바 하단까지 올라오면 이 복제본이 그 자리를 흰 배경으로 덮어 고정한다.
+                    sortBar(detail)
+                        .background(Color.wssWhite)
+                }
+            }
+
+            // ⚠️ 더보기 드롭다운은 반드시 이 ZStack의 **마지막 자식**(최상위 z-order)이어야 한다 —
+            // 예전엔 Group(ScrollView)의 `.overlay`로 걸려 있어, 스크롤해 스티키 정렬 바(위 VStack)가
+            // 붙으면 그 흰 배경이 나중에 그려지며 드롭다운의 위쪽을 가렸다(#255 QA). 스크롤 위치와
+            // 무관하게 항상 보이려면 네비바+스티키 바보다 뒤에(= 위에) 그려야 한다.
+            if viewModel.state.isMenuPresented {
+                menuOverlay
+            }
+        }
+        .wssCustomNavigationBar()
+        .showWSSAlert(
+            isPresented: deleteAlertBinding,
+            type: .deleteCollection,
+            buttonActions: [
+                { viewModel.handle(.dismissDeleteAlert) },
+                { viewModel.handle(.confirmDelete) }
+            ]
+        )
+        .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
+        .showWSSToast(isPresented: $isShareErrorToastPresented, type: .unknownError)
+        .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
+            if shouldDismiss { dismiss() }
+        }
+        // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다
+        // (`CollectionListView`와 동일 판단).
+        .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
+            if needsAuth { onAuthenticationRequired() }
+        }
+        .onAppear {
+            // 이 화면의 유일한 자식(컬렉션 수정)에서 복귀한 뒤의 재진입만 무조건 재로드한다 —
+            // `CreateCollectionView`가 성공 콜백 없는 자기완결 dismiss 계약이라 복귀했다는 사실만으로
+            // 판단한다(`CollectionListView`와 동일 이유).
+            if hasAppearedOnce {
+                viewModel.handle(.reloadAfterEdit)
+            } else {
+                hasAppearedOnce = true
+                viewModel.track(.detailViewed)
+                viewModel.handle(.load)
+            }
+        }
+    }
+}
+
+// MARK: - 상단 바 (커스텀 몰입형)
+
+private extension CollectionDetailView {
+    var collectionDetailTopBar: some View {
+        ZStack {
+            Text(viewModel.state.detail?.name ?? "")
+                .applyWSSFont(.title2)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(1)
+                .opacity(isScrolledFromTop ? 1 : 0)
+
+            HStack(spacing: 0) {
+                Button {
+                    // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
+                    // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
+                    // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
+                    viewModel.handle(.backTapped)
+                    dismiss()
+                } label: {
+                    WSSImage.icNavigateLeft.swiftUIImage
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundStyle(navIconColor)
+                        .frame(width: 24, height: 24)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+
+                Spacer()
+
+                // 더보기(수정/삭제)는 소유자에게만 노출된다.
+                if viewModel.state.detail?.isMine == true {
+                    Button {
+                        viewModel.handle(.menuTapped)
+                    } label: {
+                        WSSImage.icThreedotsVertical.swiftUIImage
+                            .resizable()
+                            .renderingMode(.template)
+                            .foregroundStyle(navIconColor)
+                            .frame(width: 18, height: 18)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .padding(.trailing, 20 - (44 - 18) / 2)
+                }
+            }
+            .padding(.leading, 6)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+            // 배경만 상태바까지 확장한다(버튼은 안전영역 안). clear일 땐 히어로가 그대로 비치고,
+            // 스크롤되면 wssWhite가 상태바까지 덮는다. ⚠️ 히트테스트는 isBarSolid와 묶는다 —
+            // 투명(히어로 위)일 땐 바 영역 드래그를 스크롤로 넘기고, 솔리드로 콘텐츠를 덮는
+            // 동안엔 배경이 터치를 소비한다(안 그러면 바에 가려 안 보이는 그리드 셀이 바 위
+            // 탭에 반응하는 탭 관통 — NovelDetail과 동일 함정).
+            // 스티키 정렬 바의 임계선(네비바 하단 y)도 여기서 얻는다 — 이 배경은 ignoresSafeArea로
+            // 이미 상태바까지 확장돼 있어 그 실측 높이가 곧 "안전영역 top + 네비바 높이"다.
+            // ⚠️ ignoresSafeArea는 GeometryReader 쪽에 걸어야 확장분이 proxy.size.height에 잡힌다.
+            GeometryReader { proxy in
+                (isBarSolid ? Color.wssWhite : Color.clear)
+                    // 감수한 손실: 솔리드 구간엔 바 영역에서 시작한 드래그로는 스크롤할 수 없다 —
+                    // 탭 관통을 막는 대가로 의도한 트레이드오프(NovelDetailView와 동일). false로 되돌리지 말 것.
+                    .allowsHitTesting(isBarSolid)
+                    .onChange(of: proxy.size.height, initial: true) { _, height in
+                        navBarBottomY = height
+                    }
+            }
+            .ignoresSafeArea(edges: .top)
+        )
+    }
+
+    /// 히어로가 바 뒤에 없을 때는 바를 솔리드로 둔다 — 안 그러면 흰 배경(LoadingView·NetworkErrorView)
+    /// 위에 흰 아이콘이 겹쳐 뒤로가기가 안 보인다(#244 회귀). 흰 배경이 깔리는 3케이스를 모두 덮는다:
+    /// 스크롤 다운 · 첫 로드/로딩(`detail == nil`) · 이미 detail이 있는 상태의 재조회 실패(`hasLoadError`,
+    /// 정렬 변경·수정 복귀 — detail은 남고 실패 뷰만 전면에 뜬다).
+    var isBarSolid: Bool {
+        isScrolledFromTop || viewModel.state.detail == nil || viewModel.state.hasLoadError != nil
+    }
+
+    var navIconColor: Color {
+        isBarSolid ? Color.wssBlack : Color.wssWhite
+    }
+
+    /// 스크롤되는 원본 정렬 바가 네비바 하단까지 올라왔는지 — 상단 스티키 정렬 바 표시 여부.
+    /// 두 좌표 모두 화면 좌상단(상태바 포함) 기준이라 그대로 비교한다. 임계선을 아직 못 쟀으면(0) 안 띄운다.
+    var showStickySortBar: Bool {
+        viewModel.state.detail != nil
+            && navBarBottomY > 0
+            && sortBarMinY <= navBarBottomY
+    }
+}
+
+// MARK: - Hero
+
+private extension CollectionDetailView {
+    var heroImageURL: URL? {
+        guard let detail = viewModel.state.detail else { return nil }
+        return detail.novels.first { $0.id == detail.representativeNovelID }?.thumbnailImage
+    }
+    
+    var heroSection: some View {
+        ZStack(alignment: .bottom) {
+            // 위치·크기는 GeometryReader가 정하고, 실제 콘텐츠(이미지+그라디언트)는
+            // heroImageWithGradient로 분리 — 스트레치(아래 주석) 계산과 표시 책임을 나눠 읽기 쉽게 한다.
+            // ⚠️ 그라디언트를 이 GeometryReader 밖(예: 형제 ZStack 레이어)에 따로 두면 이미지만
+            // 늘어나고 그라디언트는 제자리(heroBackgroundHeight 고정)에 남아, 오버스크롤 중
+            // 이미지 위쪽이 그라디언트 없이 그대로 드러나 보인다(실측 — "그라디언트가 잘려 보인다"는
+            // 사용자 피드백으로 발견). 이미지와 같은 변환(프레임·스케일·offset)을 함께 받도록
+            // 반드시 이 안에 넣을 것.
+            GeometryReader { proxy in
+                let minY = proxy.frame(in: .named(scrollCoordinateSpace)).minY
+                // 당겨서 새로고침(오버스크롤)으로 콘텐츠가 아래로 밀리면 minY가 양수가 된다 —
+                // hold 구간 없이 당기는 즉시 그 값에 비례해 확대된다(사용자 확정).
+                let stretch = max(0, minY)
+                let zoomScale = 1 + stretch / heroBackgroundHeight
+
+                heroImageWithGradient
+                    // ⚠️ 표지가 세로로 긴 작품 썸네일이라 `scaledToFill`이 정지 상태에서 이미 가로
+                    // 폭 기준으로 세로 방향을 넉넉히 넘치게 스케일해둔 상태다 — 프레임 높이만
+                    // 키우는 걸로는 확대되는 느낌이 안 나고(실측) 잘려나가 있던 여백만 드러난다.
+                    // 그래서 정지 상태 크롭을 먼저 고정한 뒤 그 결과물 자체를 `scaleEffect`로 키운다.
+                    .frame(width: proxy.size.width, height: heroBackgroundHeight, alignment: .top)
+                    .clipped()
+                    .scaleEffect(zoomScale, anchor: .top)
+                    // 확대된 만큼(stretch) 위로 끌어올려야 아래쪽(정보 영역과 맞닿는 경계)이
+                    // 밀리지 않고, 확대가 화면 위쪽으로만 번져 오버스크롤 빈틈을 메운다.
+                    .offset(y: -stretch)
+                    .onChange(of: minY, initial: true) { _, newY in
+                        isScrolledFromTop = newY < -1
+                    }
+            }
+            .frame(height: heroBackgroundHeight)
+
+            VStack(spacing: 0) {
+                if let detail = viewModel.state.detail {
+                    heroInfo(detail)
+                }
+
+                Spacer().frame(height: 14)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 오버스크롤 시 그라디언트가 이미지와 같이 늘어나도록 한 몸으로 묶어둔 레이어 — 위 heroSection
+    /// 주석 참고.
+    var heroImageWithGradient: some View {
+        ZStack {
+            heroImage
+
+            LinearGradient(colors: [.black.opacity(0.6), .black],
+                           startPoint: .top,
+                           endPoint: .bottom)
+        }
+    }
+
+    /// 그리드 셀(`novelCell`)과 **같은 `WSSNovelCoverImage`** → 같은 대표 작품 URL을 인메모리 캐시로
+    /// 공유한다(중복 다운로드 없음, 재진입·재렌더 시 배경 번쩍임 없음 — raw `AsyncImage`는 뷰가
+    /// 재생성될 때마다 `.empty`부터 다시 시작해 느리고 깜빡였다, #244). `placeholderStyle: .grid`는
+    /// 로딩 중 `wssGray50` 배경을 깔아 과거 `Color.wssGray50` 폴백과 같은 결(그 위 어두운 그라디언트).
+    var heroImage: some View {
+        WSSNovelCoverImage(url: heroImageURL, placeholderStyle: .grid)
+    }
+
+    /// 실측 아니라 고정값(336, Figma) — 안전영역이 다른 기기에서도 텍스트 위치는 콘텐츠 흐름을
+    /// 따르므로(고정 상단 인셋에 의존하지 않음) 배경 높이만 넉넉히 잡아둔다.
+    var heroBackgroundHeight: CGFloat { 320 }
+
+    func heroInfo(_ detail: CollectionDetail) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                WSSProfileImage(url: detail.owner.profileImage)
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Text(detail.owner.nickname)
+                    .applyWSSFont(.title4)
+                    .foregroundStyle(Color.wssWhite)
+            }
+
+            Spacer().frame(height: 8)
+
+            Text(detail.name)
+                .applyWSSFont(.title1)
+                .foregroundStyle(Color.wssWhite)
+                .lineLimit(2)
+
+            if let description = detail.description, !description.isEmpty {
+                Spacer().frame(height: 8)
+                
+                Text(description)
+                    .applyWSSFont(.body3)
+                    .foregroundStyle(Color.wssWhite)
+                    .lineLimit(2)
+            }
+
+            Spacer().frame(height: 16)
+
+            heroButtons(detail)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    func heroButtons(_ detail: CollectionDetail) -> some View {
+        HStack(spacing: 8) {
+            likeButton(detail)
+
+            if detail.isPrivate {
+                privateBadge
+            } else {
+                shareButton(detail)
+            }
+        }
+    }
+
+    func likeButton(_ detail: CollectionDetail) -> some View {
+        Button {
+            viewModel.handle(.toggleLike)
+        } label: {
+            HStack(spacing: 9) {
+                (detail.isLiked ? WSSImage.icThumbUpFill : WSSImage.icThumbUp).swiftUIImage
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(Color.wssPrimary100)
+
+                Text("좋아요 (\(detail.likeCount))")
+                    .applyWSSFont(.body4)
+                    .foregroundStyle(Color.wssPrimary100)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .background(detail.isLiked ? Color.wssPrimary50 : Color.wssWhite)
+            .overlay {
+                RoundedRectangle(cornerRadius: 15)
+                    .strokeBorder(Color.wssPrimary100)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 15))
+            // 아이콘 교체·배경색 전환의 기본 크로스페이드를 짧게 고정(미설정 시 느리게 번진다 —
+            // NovelDetailReviewSection.interestButton과 동일 처방, Feature/CLAUDE.md 공통 규칙).
+            .animation(.easeInOut(duration: 0.1), value: detail.isLiked)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 공유는 **카카오 공유 카드**(`CollectionKakaoShare`, 사용자 확정 2026-08-29, #228) 하나다 — 카카오톡이 있으면
+    /// 카카오톡, 없으면 카카오 웹 공유(Safari). 시스템 공유 시트는 쓰지 않는다(모듈 CLAUDE.md의 폐기 이력).
+    /// **카드는 작품 수별 커스텀 템플릿뿐이라 버튼 컴포넌트가 없다**(#241) — 대신 카드 자체를 탭하면
+    /// 앱으로 딥링크된다(콘솔 템플릿 설정, `CollectionKakaoShare` 헤더 주석 참고). 순수 표현이라 VM을 거치지 않는다
+    /// (`.novelDetail` 라우트와 같은 위상) — 카카오를 여는 것까지가 성공이고, 템플릿 검증·열기 실패는 사용자
+    /// 액션 실패라 토스트로 알린다.
+    func shareButton(_ detail: CollectionDetail) -> some View {
+        Button {
+            guard !isSharing else { return }
+            isSharing = true
+            Task {
+                defer { isSharing = false }
+                do {
+                    try await CollectionKakaoShare.share(
+                        detail,
+                        multiThumbnailTemplateID1: kakaoCollectionShareTemplateID1,
+                        multiThumbnailTemplateID2: kakaoCollectionShareTemplateID2,
+                        multiThumbnailTemplateID3: kakaoCollectionShareTemplateID3
+                    )
+                } catch {
+                    isShareErrorToastPresented = true
+                }
+            }
+        } label: {
+            shareButtonLabel
+        }
+        .buttonStyle(.plain)
+    }
+
+    var shareButtonLabel: some View {
+        HStack(spacing: 10) {
+            WSSImage.icShare.swiftUIImage
+                .renderingMode(.template)
+                .resizable()
+                .foregroundStyle(Color.wssWhite)
+                .frame(width: 24, height: 24)
+
+            Text("공유하기")
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssWhite)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .background(Color.wssPrimary100)
+        .clipShape(RoundedRectangle(cornerRadius: 15))
+    }
+
+    /// 나만 보는 컬렉션은 소유자만 볼 수 있어 항상 소유자 시점에서만 그려진다(사용자 확정 근거:
+    /// `CollectionDomain/CLAUDE.md` — 목록 API가 본인 목록에만 비공개 컬렉션을 내려준다).
+    var privateBadge: some View {
+        HStack(spacing: 9) {
+            WSSImage.icLock.swiftUIImage
+                .resizable()
+                .renderingMode(.template)
+                .foregroundStyle(Color.wssGray200)
+                .frame(width: 20, height: 20)
+
+            Text("나만 보는 컬렉션")
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssGray200)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .background(Color.wssGray80)
+        .overlay {
+            RoundedRectangle(cornerRadius: 15)
+                .strokeBorder(Color.wssGray200)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 15))
+    }
+}
+
+// MARK: - Content
+
+private extension CollectionDetailView {
+    func contentSection(_ detail: CollectionDetail) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer().frame(height: 10)
+
+            // 스크롤되는 "원본" 정렬 바 — 자리를 유지해 스티키 전환 시 콘텐츠가 점프하지 않는다.
+            // 네비바 하단에 닿는 순간부터 상단 오버레이의 스티키 정렬 바가 이 자리를 그대로 덮는다.
+            sortBar(detail)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.frame(in: .named(scrollCoordinateSpace)).minY,
+                                      initial: true) { _, newY in
+                                sortBarMinY = newY
+                            }
+                    }
+                )
+
+            Spacer().frame(height: 8)
+
+            novelGrid(detail.novels)
+                .padding(.horizontal, 16)
+
+            Spacer().frame(height: 60)
+        }
+    }
+
+    /// 작품 개수 + 정렬 버튼 행 — 스크롤 콘텐츠 안 원본과 상단 스티키 오버레이가 같은 렌더를 공유한다.
+    func sortBar(_ detail: CollectionDetail) -> some View {
+        HStack(spacing: 0) {
+            Text("\(detail.novelCount)개")
+                .applyWSSFont(.body3)
+                .foregroundStyle(Color.wssGray200)
+
+            Spacer()
+
+            WSSSortButton(sortType: viewModel.state.sortType) {
+                viewModel.handle(.changeSortType(viewModel.state.sortType == .recent ? .old : .recent))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 33)
+    }
+
+    func novelGrid(_ novels: [CollectionNovel]) -> some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
+            spacing: 16
+        ) {
+            ForEach(novels, id: \.id) { novel in
+                novelCell(novel)
+            }
+        }
+    }
+
+    /// 표지(독립 크기) + 정보 영역(제목 최대 2줄 + 작가, 고정 높이).
+    func novelCell(_ novel: CollectionNovel) -> some View {
+        Button {
+            onRoute(.novelDetail(novel.id))
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                WSSNovelCoverImage(url: novel.thumbnailImage, aspectRatio: novelCoverAspectRatio, placeholderStyle: .grid)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                Spacer().frame(height: 6)
+
+                novelCellInfo(novel)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// "제목(최대 2줄)+간격(2)+작가" 정보 영역 — 이 스택에만 고정 높이(`novelInfoHeight`)를 줘서
+    /// 그리드 행 전체 높이(≈216)를 통일한다. `WSSComponent.WSSNovelGridCell.Metric.infoHeight`와
+    /// 같은 원리로, **표지는 이 프레임 밖에 있어 영향을 받지 않는다** — 표지까지 같은
+    /// `.frame(height:)`로 묶으면 제목이 2줄일 때 표지 렌더 폭이 열 너비보다 좁아지는 버그가
+    /// 재현된다(`CollectionFeature/CLAUDE.md` 참고, 과거 실측으로 확인·폐기된 패턴).
+    /// 제목-작가 간격은 `Spacer(2)`로 고정이라 제목 줄 수와 무관하게 항상 2pt다(2026-08-25 확정
+    /// 사항 보존). 제목이 1줄이라 남는 공간은 `alignment: .top` + 끝의 `Spacer(minLength: 0)` 덕에
+    /// 항상 작가 아래(카드 하단)로 흐른다.
+    func novelCellInfo(_ novel: CollectionNovel) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(novel.title)
+                .applyWSSFont(.body4)
+                .foregroundStyle(Color.wssBlack)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer().frame(height: 2)
+
+            Text(novel.author)
+                .applyWSSFont(.label2)
+                .foregroundStyle(Color.wssGray200)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: novelInfoHeight, alignment: .top)
+    }
+
+    /// Figma 그리드 커버 비율(108×160에 근접) — `CreateCollectionView`의 새 셀들과 일부러 다른 비율을
+    /// 쓰지 않고 같은 108/156을 재사용해 두 화면의 커버 형태가 어긋나지 않게 한다.
+    var novelCoverAspectRatio: CGFloat { 108.0 / 156.0 }
+
+    /// 정보 영역(제목 2줄+간격 2+작가 1줄) 고정 높이 — 표지(aspectRatio 독립)와 별개로 이 값만
+    /// 고정해 카드 전체 높이를 셀마다 통일한다(Figma 기준 카드 전체 ≈216에 맞춘 값, 표지+간격(6)을
+    /// 뺀 나머지). 실측치가 Figma와 어긋나면 이 상수만 조정하면 된다.
+    var novelInfoHeight: CGFloat { 54 }
+}
+
+// MARK: - Menu
+
+private extension CollectionDetailView {
+    /// 네비바("..." 버튼) 바로 아래에 앉힌다(#255 QA — 예전엔 120pt로 떨어져 있어 헤더와 이상하게
+    /// 멀었다). 이 `ZStack`(과 그 안의 `WSSDropdownMenu`)은 `ignoresSafeArea()`가 안 걸려 있어
+    /// 안전영역을 존중한 채 배치되므로, `NovelDetailFeature.menuOverlay`와 동일하게 **네비바 높이
+    /// (44)만** 주면 안전영역 바로 아래(= 네비바 바로 아래)에 온다 — 안전영역을 더할 필요 없다
+    /// (형제인 dismiss용 `Color`가 `.ignoresSafeArea()`를 걸어도 이 좌표계엔 영향 없다, 같은 패턴이
+    /// `NovelDetailView.content`의 `Color.wssWhite.ignoresSafeArea()` 배경에서도 이미 검증됨).
+    var menuOverlay: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.wssBlack.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { viewModel.handle(.dismissMenu) }
+
+            WSSDropdownMenu(items: [
+                WSSDropdownItem(title: "컬렉션 수정") {
+                    viewModel.handle(.editTapped)
+                    onRoute(.editCollection)
+                },
+                WSSDropdownItem(title: "컬렉션 삭제") { viewModel.handle(.deleteTapped) }
+            ])
+            .frame(width: 122)
+            .padding(.top, 44)
+            .padding(.trailing, 20)
+        }
+    }
+}
+
+// MARK: - Scroll Offset
+
+private let scrollCoordinateSpace = "CollectionDetailScroll"
+
+// MARK: - Presentation
+
+private extension CollectionDetailView {
+    var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isDeleteAlertPresented },
+            set: { if !$0 { viewModel.handle(.dismissDeleteAlert) } }
+        )
+    }
+
+    var actionErrorToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.hasActionError },
+            set: { if !$0 { viewModel.handle(.dismissActionErrorToast) } }
+        )
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        CollectionDetailView(
+            viewModel: CollectionDetailViewModel(
+                id: CollectionID(1),
+                loadCollectionDetailUseCase: PreviewLoadCollectionDetailUseCase(),
+                collectionLikeUseCase: PreviewCollectionLikeUseCase(),
+                deleteCollectionUseCase: PreviewDeleteCollectionUseCase()
+            ),
+            onAuthenticationRequired: { print("인증 만료 → 로그인 진입") },
+            onRoute: { print("화면 전환 요청: \($0)") },
+            kakaoCollectionShareTemplateID1: 0,
+            kakaoCollectionShareTemplateID2: 0,
+            kakaoCollectionShareTemplateID3: 0
+        )
+    }
+}
+
+private struct PreviewLoadCollectionDetailUseCase: LoadCollectionDetailUseCase {
+    func execute(id: CollectionID, sortType: SortType) async throws(RepositoryError) -> CollectionDetail {
+        CollectionDetail(
+            id: id,
+            name: "당신의 이해를 돕기 위하여 모음",
+            description: "글을 한줄만 썼을 때는 요런 식.",
+            owner: Author(nickname: "판소덕", profileImage: nil),
+            isMine: true,
+            isPrivate: false,
+            representativeNovelID: NovelID(1),
+            novels: (1...9).map { index in
+                CollectionNovel(id: NovelID(index), title: "작품작품작품작품작작품작품작품작품작작품작품작품작품작 \(index)", author: "작가", thumbnailImage: URL(string: "https://i.pinimg.com/736x/be/10/85/be1085de2de865a00f5a9e74f4139439.jpg"))
+            },
+            likeCount: 100,
+            isLiked: false
+        )
+    }
+}
+
+private struct PreviewCollectionLikeUseCase: CollectionLikeUseCase {
+    func like(id: CollectionID) async throws(RepositoryError) {}
+    func unlike(id: CollectionID) async throws(RepositoryError) {}
+}
+
+private struct PreviewDeleteCollectionUseCase: DeleteCollectionUseCase {
+    func execute(id: CollectionID) async throws(RepositoryError) {}
+}
+

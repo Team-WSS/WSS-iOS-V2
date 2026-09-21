@@ -1,0 +1,87 @@
+<!-- 모듈 가이드. 이 모듈 작업 시 상위 Projects/Feature/CLAUDE.md(레이어 규칙)와 함께 자동 로드됨. -->
+# OnboardingFeature
+
+앱 첫 실행~가입 온보딩 플로우. 전체 플로우는 **인트로+소셜로그인 → 가입약관 동의 시트 → (닉네임 → 성별/출생년도 → 장르 선택 → 계약 완료, 한 컨테이너)**. **이슈 #176이 1단계(인트로+소셜로그인), #178이 나머지 5단계(약관 동의·닉네임·성별출생년도·장르선택·계약 완료)** 전부를 다룬다. 구성요소는 `Sources/`를 직접 보면 된다.
+
+- 식별자: `ModuleType.feature(.onboarding)` / 의존: `AuthDomain`(인트로 소셜로그인), `SettingDomain`(가입약관 동의), `ProfileDomain`(닉네임·성별/출생년도·장르 선택 — 전용 `OnboardingDomain`은 없다).
+- 진입점(전부 `OnboardingFeatureFactory`):
+  - `makeIntroView(socialLoginUseCase:logger:onLoginSucceeded:)` — 1단계.
+  - `makeTermsAgreementView(loadUseCase:saveUseCase:logger:onAgreed:onAuthenticationRequired:)` — 2단계(시트).
+  - `makeStepFlowView(validateNicknameUseCase:registerProfileUseCase:logger:onCompleted:onAuthenticationRequired:)` — 나머지 3단계(닉네임→성별/출생년도→장르선택)를 **하나의 컨테이너 화면**(`OnboardingStepFlowView`)으로 진행한다. 그래서 이 셋만 개별 `makeXxxView`가 없다 — 자세한 이유는 `OnboardingStepFlowView`의 타입 문서 참고(사용자 피드백으로 진행바·헤더 공유 + 슬라이드 전환을 위해 컨테이너로 통합).
+- **비로그인(게스트) 진입 경로는 없다** — 제품 결정으로 "회원가입 없이 둘러보기" 버튼과 `onContinueWithoutSignIn` 콜백을 제거했다(2026-08). 소셜 로그인(Apple/Kakao)만 남는다. 되살리지 말 것.
+
+## 화면 동작 계약
+
+### 나머지 3단계 컨테이너 (`OnboardingStepFlowView`, #178)
+
+- **닉네임·성별/출생년도·장르선택을 한 화면 안에서 진행한다** — 세 단계 각각 별도 `NavigationStack` 목적지였던 초기 구현을 사용자 피드백(진행바 애니메이션이 어색함 + 뒤로가기 필요)으로 컨테이너 구조로 바꿨다.
+- **뒤로가기 행 + 진행바는 컨테이너가 한 번만 그려서 단계 전환 내내 유지한다**(화면 맨 위부터 뒤로가기 행 → 진행바 → 콘텐츠 순서, 사용자 결정) — 각 단계 View(`NicknameView`/`GenderBirthYearView`/`GenreSelectionView`)는 이제 자기 헤더를 안 그리고 입력 필드+하단 CTA만 담당한다. 뒤로가기는 1단계(닉네임)에서 숨김, "건너뛰기"는 3단계(장르선택)에서만 뜨고 컨테이너가 `genreSelectionViewModel.handle(.skip)`을 직접 호출한다(자식에 콜백 안 뚫음 — 컨테이너가 그 VM을 이미 들고 있어서).
+- **콘텐츠 전환은 `switch`로 갈아치우지 않고 슬라이드 애니메이션**이다 — 세 단계 View를 `HStack`에 나란히 두고(`GeometryReader`로 각각 화면 폭만큼) `offset(x: -CGFloat(currentStep-1) * width)` + `.animation`으로 민다. `.clipped()` 필수(안 그러면 화면 밖 콘텐츠가 레이아웃상 계속 존재).
+- **뒤로가기는 `NavigationStack` pop이 아니라 컨테이너 내부 `currentStep`을 되돌리는 것**이다(`.enableSwipeBack()`은 의도적으로 안 걺 — 전체 이탈과 헷갈리면 안 됨). 그래서 **세 단계 ViewModel 모두 컨테이너가 소유·재사용**한다(단계 전환마다 재생성 ❌) — 슬라이드 HStack에 세 단계가 항상 동시에 살아있어, 뒤로 갔다 와도 입력값(닉네임 텍스트, 중복확인 상태, 성별/출생년도 선택, **선택한 장르**)이 그대로 보존된다(실측 확인).
+- **장르 선택 ViewModel도 항상 mount한다(#257)** — 예전엔 `nickname`/`gender`/`birthYear`를 생성자에서 받아 앞 두 단계 완료 전엔 못 만들고 성별/출생년도 확정 시 재생성했는데, 그 지연 mount가 "장르 전환이 슬라이드 아닌 opacity로 보이는" 증상과 `.id` 리시드 함정(아래 삭제된 항목)의 원인이었다. 이제 값을 생성자가 아니라 `GenreSelectionViewModel.handle(.setProfileContext(nickname:gender:birthYear:))`로 받아, 컨테이너 `init`에서 다른 두 VM처럼 미리 만들어 항상 mount하고 성별/출생년도 확정 시 컨테이너가 컨텍스트를 주입한다. 그래서 gender→genre 전환이 nickname→gender와 **동일한 순수 슬라이드**가 되고, 재확정해도 인스턴스가 그대로라 **장르 선택이 보존**된다(예전 재생성 방식의 초기화 트레이드오프 제거). 등록(`register`)은 컨텍스트가 아직 안 들어왔으면 guard로 no-op(정상 흐름에선 장르 단계 도달 전에 항상 주입됨).
+- **등록 성공(장르 선택의 "완료"/"건너뛰기" 둘 다) 시 컨테이너는 `onCompleted`를 곧장 호출하지 않는다** — `isRegistrationCompleted` 플래그를 세워 `body` 최상위를 "계약 완료" 화면(`OnboardingCompleteView`, Figma 노드 `28689-82739`, #178)으로 통째로 교체하고, 그 화면의 CTA를 눌러야 비로소 컨테이너의 진짜 `onCompleted`가 발화한다. `GenreSelectionViewModel`은 `.complete`/`.skip` 둘 다 성공 시 같은 `state.isCompleted`를 세워 `GenreSelectionView`가 구분 없이 같은 콜백을 호출하므로, 컨테이너 쪽도 별도 분기 없이 하나의 콜백 재배선만으로 두 경로 다 처리된다. 이 화면은 진행바·뒤로가기가 없어(Figma에도 없음) 슬라이드 단계(`slidingStepContent`)의 4번째 슬롯으로 넣지 않았다 — UseCase도 VM도 없는 순수 표시 화면(닉네임 문자열 + 콜백만).
+
+### 가입약관 동의 시트 (`TermsAgreementView`, #178)
+
+- **필수 온보딩 단계** — `.interactiveDismissDisabled()`로 스와이프/바깥 탭 닫기를 막는다. 사용자 확정(설계 질문 결과).
+- **"전체 동의" 행은 토글형**이다 — `TermsType.allCases`가 이미 전부(필수+선택) 동의 상태면 탭 시 전부 해제, 아니면 전부 동의로 설정(`TermsAgreementViewModel.toggleAgreeAll`). 도메인의 `agreeToAll()`은 단방향(전부 true)만 제공하므로 해제는 각 타입에 `setAgreed(false, for:)`를 개별 호출.
+- **"다음으로" 활성화 조건은 `TermsAgreementDraft.isSubmittable`**(필수 항목만 전부 동의) 그대로 — 마케팅(선택) 동의 여부는 무관. Figma의 Cta `default`/`activated` 2-variant가 이 값과 정확히 대응.
+- **밑줄 텍스트(서비스 이용약관·개인정보 항목)는 탭하면 `openURL`로 외부 Safari를 연다.** 마케팅(선택) 항목은 상세 약관이 없어 밑줄·탭 대상이 아니다(라벨만). `TermsType.detailURL`(View 로컬 확장)은 `BaseDomain.AppURL.serviceAgreement`/`.privacyPolicy`를 그대로 연결(노션 페이지).
+- **저장은 "다음으로" 탭 시 1회**(입력 폼 패턴, `NovelReviewFeature` 정본) — 개별 토글은 로컬 상태만 바꾸고 서버 호출 없음(낙관 업데이트 개념 없음).
+- **로드 실패 = 전면 `NetworkErrorView`+재시도**(`NovelReviewViewModel.loadDraft` 정본과 동일 분화). 저장 실패는 토스트(`.unknownError`).
+- 체크 아이콘 눌림 애니메이션은 `CreateFeedConnectNovelRow`(같은 `icSelectNovelDefault`/`icSelectNovelSelected` 아이콘 쌍)와 동일한 크로스페이드+스케일 스프링(`.spring(response: 0.32, dampingFraction: 0.6)`)으로 통일(사용자 요청).
+- 시트 높이는 Figma 실측대로 `.presentationDetents([.height(670)])` 고정, `.presentationDragIndicator(.hidden)`(어차피 닫기 막혀 있어 그래버 노출 의미 없음).
+
+### 닉네임 입력 (`NicknameView`, #178, 컨테이너 1번째 슬롯)
+
+- **필수 온보딩 단계** — Figma에 back chevron이 없다. 컨테이너가 1단계에서 뒤로가기 행 자체를 숨긴다(약관 동의와 동일한 "필수 단계" 취급).
+- **필드 UI는 `WSSComponent`의 `WSSNicknameField` 공용 컴포넌트를 쓴다**(2026-08, `MyPageEditView`와 함께 승격) — 처음엔 `MyPageEditView`의 닉네임 섹션(#147)을 손으로 맞춰 따라가다 여백·폰트·아이콘 로직이 미세하게 드리프트해서, 필드+지우기/성공/실패 아이콘+중복확인 버튼+캡션(+선택적 글자수 카운터)을 컴포넌트 하나로 통합했다. 도메인 검증 상태(`NicknameDraft.ValidationState`) → `isError`/`isSuccess`/캡션 판단은 여전히 이 화면(VM)이 하고, 컴포넌트엔 이미 계산된 값만 넘긴다(컴포넌트는 `ProfileDomain`을 모른다 — UI 레이어 규칙). **캡션 문구 자체(한글 카피)는 이 화면만의 워딩으로 갈렸다** — 온보딩 톤에 맞춰 별도 조정한 결과라 `MyPageEditView`와 1:1로 동기화할 필요 없음(구조·조건만 맞추면 됨). 트레일링 아이콘은 성공 `icNicknameSuccess`, 에러 `icNicknameFailed`, 그 외 기본 지우기 `icCancel` — **에러 판정(`isNicknameError`)은 서버 중복확인 결과뿐 아니라 공백·형식 위반 같은 실시간 검증도 포함**해서, 중복확인을 누르기 전 타이핑 중에도 `NicknameDraft.validationState`(순수 계산 프로퍼티)가 바뀌는 즉시 실패 아이콘이 뜬다.
+- **값이 비어있지 않으면 포커스가 풀려도 필드는 포커스 시 모양(흰 배경+gray70 폴백 테두리)을 유지한다**(#256, 사용자 요청) — `WSSNicknameField`의 `treatsFilledAsFocused: true` opt-in으로 처리하며, **이 화면만 켠다**(`MyPageEditView`는 기본값 꺼짐 — 이유는 `WSSComponent/CLAUDE.md`의 해당 항목). 빈 값+비포커스는 기존대로 gray50.
+- **"다음으로" 활성화 조건은 `validationState == .available`** — 로컬 검증만 통과시키고 저장 UseCase는 없다. 실제 서버 등록은 저장하지 않고 값(`String`)만 `onConfirmed`로 호출자에 넘긴다 — 최종 등록은 마지막 단계(장르 선택)에서 `RegisterProfileUseCase`로 한 번에 이뤄진다.
+- **중복확인은 수동 탭 1회성**(자동 디바운스 없음) — 텍스트가 바뀌면 `NicknameDraft.setText`가 내부적으로 확인 상태를 `.notYet`으로 되돌려 재확인을 요구한다(도메인 정책, Feature는 관여 안 함).
+- `validateNickname(_:)`의 `Bool` 반환 의미(`true`=사용 가능)는 `ProfileDomain/CLAUDE.md`에 명시해 둠 — 헷갈리기 쉬우니(도메인 테스트 변수명이 `isDuplicated`로 잘못 붙어 있어 더 헷갈린다) 그쪽을 먼저 볼 것.
+
+### 성별/출생년도 (`GenderBirthYearView`, #178, 컨테이너 2번째 슬롯)
+
+- **Figma 없이 구현** — `SettingFeature`의 성별/나이 변경 화면(`SettingChangeGenderOrAgeView`)과 입력 필드 구성(성별 칩 2개 + 출생연도 피커→시트)이 동일하다(그 화면을 참고해 재사용, 문구만 온보딩 톤). 단 Feature 모듈 간 직접 참조는 안 되므로 `WSSBirthYearWheel`(공용 UI 컴포넌트)만 재사용하고 피커 시트 자체는 이 화면 로컬로 다시 만들었다.
+- **저장 UseCase 없음** — 닉네임과 동일하게 로컬 확정만 하고 `onConfirmed(Gender, BirthYear)`로 값을 넘긴다. `GenderBirthYearViewModel`은 UseCase/로거 의존이 아예 없는 순수 입력 VM(Feature/CLAUDE.md의 "순수 입력" 패턴).
+- **출생연도도 성별과 마찬가지로 처음엔 미선택**(`state.birthYear: BirthYear?`, 사용자 결정) — 필드엔 "태어난 해를 입력하세요" 플레이스홀더(`wssGray200`)가 뜬다. **피커 시트를 열면 시작 위치만 2000년**이다(`viewModel.state.birthYear?.value ?? 2000`) — 시작 위치를 보여줬다고 곧바로 선택된 것으로 치지 않고, 시트에서 "완료"를 눌러야 비로소 값이 채워진다. **"다음으로" 활성화 조건은 성별·출생연도 둘 다 선택**(`gender != nil && birthYear != nil`)이다.
+- **뒤로가기는 있음**(닉네임/약관 동의와 다름, 사용자 결정 — 닉네임 오탈자를 돌아가 고칠 수 있어야 한다는 판단) — 단 이 화면 자체엔 헤더가 없다(컨테이너가 그림). "건너뛰기"는 없음 — 여전히 필수 입력이라 완료 자체를 생략할 순 없다.
+
+### 장르 선택 (`GenreSelectionView`, #178, 마지막 단계·컨테이너 3번째 슬롯)
+
+- **유일하게 필수가 아닌 단계** — 뒤로가기(이전 단계로)와 "건너뛰기"가 있다(둘 다 컨테이너 헤더가 그림, 실제 액션은 컨테이너가 `viewModel.handle(.skip)`/`.goBack`으로 위임·직접 호출). 이 화면 자체는 헤더를 안 그린다.
+- **다중 선택** — `Set<NovelGenre>` 토글. "완료"는 **하나 이상 선택했을 때만 활성화**, "건너뛰기"는 **현재 선택과 무관하게 항상 빈 장르 목록으로 등록**(선택된 걸 무시하고 "장르 없이 시작"으로 취급 — 선택하다 만 상태를 애매하게 반영하지 않기 위한 설계).
+- **이 화면이 곧 온보딩 완료 처리다** — "완료"/"건너뛰기" 둘 다 `ProfileRegistration(nickname:gender:birthYear:genrePreferences:)`을 구성해 `RegisterProfileUseCase.execute(_:)`를 호출한다. 성공 시 `onCompleted`(Home 진입은 App 책임).
+- **선택 배지는 아이콘을 통째로 체크마크로 교체**(오버레이 아님) — 미선택: `wssGray50` 배경 + `NovelGenre.iconImage`. 선택: `wssPrimary50` 배경 + `wssPrimary100` 2pt 테두리 + `WSSImage.icCheckMark`(장르 아이콘은 사라짐). Figma엔 이 체크 전용 에셋(`icOnboardingCheck`)이 있었지만 기존 `icCheckMark`(같은 `#6A5DFD` 스트로크 체크마크, `WSSBirthYearWheel`/`LibrarySortSheet` 등에서 이미 쓰는 자산)과 시각적으로 동일해 새 에셋을 추가하지 않고 재사용했다.
+- **그리드 순서는 `NovelGenre.onboardingGenre`**(WSSComponent `DomainPresentation`, 신규) — `myFeedFilter`/`searchGenre`와 다른 세 번째 순서(로맨스·로판·현판·판타지·무협·BL·라노벨·드라마·미스터리). 화면별 순서는 의도적으로 갈라져 있으니 다른 화면 순서에 맞추지 말 것.
+- **그리드 셀(원 배지)은 화면 폭에 따라 가변**(사용자 확정 스펙) — 좌우 여백 39·열 간격 24·행 간격 25 고정, 원 지름 = `(화면폭 − 39×2 − 24×2) / 3`(정사각이라 세로도 동일). 각 셀은 `.frame(maxWidth: .infinity)`로 3등분 열을 채우고, 일반 기기에선 원 지름 == 열 폭이라 원이 열을 꽉 채운다. **아이콘·체크마크는 원 지름에 비례 스케일**(83 기준 40/44 비율 유지), 라벨은 title3 고정. ⚠️ **SE(375×667)처럼 세로가 짧은 기기는 예외** — 폭 기반으로 키우면 세로로 넘쳐 완료 CTA를 가려서, 좌우 여백 39는 유지하되 원 지름을 **60 고정**한다(그래서 SE에선 원이 열 안에서 가운데 정렬돼 시각적 간격이 24보다 넓어 보임 — 의도된 트레이드오프). 판별은 **화면 높이**로만 한다(mini 375×812는 폭이 SE와 같아 폭으론 못 가른다) — 코드베이스 관례대로 `UIScreen.main.bounds`로 읽는다(온보딩은 세로 고정이라 컨테이너 슬롯 폭 == 화면 폭). SE·17 Pro·17 Pro Max 시뮬레이터로 실측 확인(#261).
+
+## 핵심 시나리오
+
+- **전용 Domain 모듈이 없다** — 인트로 화면의 소셜 로그인은 `AuthDomain`의 `SocialLoginUseCase(SocialLoginCredential)`를 그대로 재사용한다. 응답 `NeedOnboarding`이 `false`(기존 유저)면 나머지 온보딩 단계를 건너뛰고 바로 완료 콜백을 호출, `true`(신규 유저)면 다음 단계(가입약관 시트, 후속 이슈)로 진행한다.
+- **소셜 로그인 SDK는 `KakaoSDK`를 `Tuist/Package.swift`에 새 SPM 의존성으로 추가해 연동**했다(사용자 승인, 2026-08 — REST API 직접 연동 대신 SDK를 택함). Apple은 시스템 `AuthenticationServices`(`SignInWithAppleButton`)라 추가 의존성 없음. `KAKAO_APP_KEY`는 `Config/Config_Debug.xcconfig`/`Config_Release.xcconfig`가 각각 값을 갖는다(#241 후속 — Debug는 운영과 분리된 테스트 Kakao 앱, Release는 운영 앱 키. 원래 `Config_Shared.xcconfig` 하나였다가 나뉨) — `Info.plist`(App·`ModuleInfoPlist.featureDemo`)에 `KAKAO_APP_KEY`+`CFBundleURLTypes`(`kakao$(KAKAO_APP_KEY)`)로 노출, App 진입점(`WSSIOSV2App.swift`)에서 `KakaoSDK.initSDK(appKey:)` 호출. Demo 앱도 같은 Debug/Release 구성 체계를 타므로 `OnboardingFeatureDemo`/`CollectionFeatureDemo`를 Release로 빌드하면 테스트 앱이 아니라 운영 Kakao 앱으로 로그인/공유가 나간다 — 실기기 테스트 시 스킴 착각 주의.
+- **#176은 App의 인프라 배선(Kakao 초기화·entitlement·URL scheme)까지만이었고, `OnboardingFeatureFactory`를 실제로 호출해 화면을 붙이는 건 #196에서 끝났다** — `App/Sources/Onboarding/OnboardingRootView.swift`가 `makeIntroView`/`makeTermsAgreementView`/`makeStepFlowView` 3개 진입점을 전부 호출해 인트로→약관동의 시트→3단계 컨테이너까지 실제 화면 전환으로 연결돼 있다. 온보딩 완료·기존 유저 로그인 이후 갈 곳(Home)만 아직 `ContentView`의 placeholder로 남아있다(메인 탭 자체가 후속 이슈 범위).
+- **`OnboardingIntroViewModel`은 Apple/Kakao credential을 그대로 `SocialLoginUseCase`에 넘긴다** — Kakao는 `UserApi.shared.loginWithKakaoAccount(completion:)`(웹 기반 `ASWebAuthenticationSession`, KakaoTalk 앱 전환 아님 — 시뮬레이터에서도 동작). **SDK 실패는 "사용자 취소"와 "진짜 오류"를 구분한다(#257)** — `OnboardingIntroView.isUserCancellation`이 Apple `ASAuthorizationError.canceled` / Kakao `SdkError.ClientFailed(.Cancelled)`를 취소로 판별해 `.loginCancelled`(에러 토스트 없이 로딩만 해제)로, 그 외는 `.loginFailed`(`.unknownError` 토스트)로 보낸다(예전엔 취소도 오류로 뭉쳐 토스트를 띄웠다). `SdkError` 참조 때문에 `import KakaoSDKCommon` 필요.
+- **푸시 알림 권한 요청은 이 모듈 범위 밖** — 온보딩이 다 끝나고 Home 진입 시점에 별도로 뜬다(App/Home 쪽 책임).
+- **온보딩 완료·로그인 후 라우팅은 App 책임** — 이 Feature는 `Factory`가 콜백만 노출하고, 어느 화면으로 이동할지는 관여하지 않는다.
+
+## 주의사항 (작업 중 발견 시 누적)
+
+- **`OnboardingStepFlowView.genderBirthYearViewModel`은 더 이상 프로퍼티 기본값(`= GenderBirthYearViewModel()`)으로
+  만들지 않는다**(#249) — `analyticsTracker`를 컨테이너 `init`에서 받아 넘겨야 해서 `_genderBirthYearViewModel
+  = State(initialValue:)`로 `init` 안에서 조립한다(`nicknameViewModel`과 동일 패턴). 다른 단계 VM에 새
+  Dependency를 추가할 때도 이 자리(컨테이너 `init`)를 함께 고칠 것 — 프로퍼티 기본값으로 되돌리면 새
+  Dependency를 못 흘려보낸다.
+- **`KakaoSDK*`(와 전이 의존 `Alamofire`)는 반드시 `Tuist/Package.swift`의 `productTypes`에서 `.framework`(dynamic)로 강제해야 한다 — Tuist 기본값(`.staticFramework`)을 쓰면 실기기/시뮬레이터에서 크래시난다.** `OnboardingFeature.framework`(로그인 호출부)와 `OnboardingFeatureDemo`/App(초기화 호출부)이 각자 별도 정적 사본을 링크하게 되어, 한쪽에서 부른 `KakaoSDK.initSDK(appKey:)`가 다른 쪽 사본엔 반영 안 됨 → `UserApi.shared.loginWithKakaoAccount` 호출 시 `KakaoSDKCommon.SdkError.ClientFailed(.MustInitAppKey)` fatal error. 실측(2026-08, XcodeBuildMCP 시뮬레이터 테스트 중 재현) — 증상은 런타임 로그의 `objc[...]: Class ... is implemented in both ...` 중복 경고로 미리 알아챌 수 있다(경고가 보이면 무시하지 말 것).
+- **Apple 로그인 capability(entitlement)는 `Demo/OnboardingFeatureDemo.entitlements` + `Project.swift`의 `demoEntitlements:`로 등록돼 있다**(`com.apple.developer.applesignin: [Default]`). 같은 걸 App 타깃에도 `Support/WSS-iOS.entitlements`로 등록함. `createFeatureModule`에 `demoEntitlements: Entitlements?` 파라미터가 새로 생겼다(`Project+Templates.swift`) — 다른 Feature 모듈이 Demo에서 capability가 필요하면 이 파라미터를 쓰면 된다. entitlement가 없을 땐 버튼 탭이 즉시 실패했지만, 지금은 시스템이 정상적으로 "설정에서 Apple 계정에 로그인해야 합니다" 안내를 띄운다(시뮬레이터에 테스트용 Apple ID가 로그인 안 돼 있을 뿐 — 코드/설정 문제 아님, 실기기·Apple ID 로그인된 환경에서는 실제 인증까지 진행됨).
+- **`OnboardingIntroView.foregroundContent`의 배너↔`bottomSection` 사이 `Spacer()`(유연)는 지우면 안 된다** — 하단 요소(도트+소셜 버튼)를 화면 아래로 밀어붙이는 유일한 메커니즘이다(비로그인 버튼 제거 때 이걸 없애고 고정 `Spacer().frame(height:)`로만 대체했다가 리뷰에서 걸림).
+- ⚠️ **인트로 에러 토스트는 공용 `.showWSSToast`를 안 쓰고 body에 직접 배치한다(#257).** 공용 `WSSToastViewModifier`는 토스트를 content 크기 ZStack에 붙이는데, 인트로는 고정 배너(567)로 **작은 기기(SE)에서 content가 화면 아래로 넘쳐** 토스트가 그 넘친 바닥을 따라가 잘렸다(실측). 그래서 body를 `GeometryReader`로 감싸 ZStack을 세이프에어리어 프레임 크기로 클램프하고(전경 넘침이 ZStack 크기를 못 키우게), 토스트를 그 프레임 바닥 기준 `.padding(.bottom, 40)`으로 고정한다. 배경은 `backgroundLayer`(이미지+흰색)가 **자기만 `.ignoresSafeArea()`**로 full-bleed. 자동 닫힘 타이머(1.5초)도 `.task(id: hasLoginError)`로 이 화면에 내장했다(공용 모디파이어의 `.task(id: isPresented)`와 동일 패턴). 같은 full-bleed 오버플로 화면이 또 나오면 이 배치를 WSSComponent로 승격할지 검토(현재는 이 화면 전용 스코프).
+- ⚠️ **배너 캐러셀은 `TabView(.page)`가 아니라 순수 SwiftUI 페이저(`ScrollView` + `scrollTargetBehavior(.paging)` + `scrollPosition(id:)`)다 — TabView로 되돌리지 말 것.** #257 토스트 작업의 화면 전체 `.ignoresSafeArea()` 배선이 당시 TabView 캐러셀을 깨면서(시뮬레이터: 두 번째 페이지부터 상태바 높이만큼 솟구침 + 전환 멈춤) 시작된 회귀인데, 소거를 배경에만 한정해 레이아웃을 고쳐도 **실기기에선 `withAnimation` 프로그램적 `selection` 전환이 엉뚱한 이웃(선두 클론)으로 애니메이션된 뒤 내부 페이지와 `selection`이 어긋나는 별개 결함**이 남았다(인디케이터만 돌고 이미지는 안 넘어감 — 실기기 실측, 시뮬레이터에선 재현 안 됨). 그래서 페이저 자체를 교체했다. 클론 패딩·자동 전환·클론 되감기 로직은 페이저 교체와 무관하게 그대로다.
+- ⚠️ **`.scrollPosition(id:)`의 초기값은 첫 레이아웃 패스에서 적용되지 않는다(iOS 17 한계)** — `bannerCarousel`은 `selection`을 `1`(banner1)로 시작하지만, ScrollView가 이를 무시하고 맨 앞(패딩 인덱스 0 = banner4 복제본)에 주차된 채 뜬다. 바인딩이 실제 위치를 `selection`에 되쓰지도 않아(첫 프레임 `onChange` 0회, 실측) **인디케이터(selection=1 → 첫 도트)만 맞고 이미지는 banner4가 보이는 desync**가 앱 실행 직후에 나타났다(사용자 제보 "시작 이미지가 두 번째로 뜨고 인디케이터는 첫 번째" — 주차 위치는 기기·타이밍에 따라 갈리나 원인 동일). 첫 프로그램적 `selection` 변경(auto-advance 2초)이 일어나야 그제서야 재동기화됐다(제보의 "한 바퀴 돌면 괜찮아짐"). **수정: `ScrollViewReader`로 감싸 `onAppear` → `DispatchQueue.main.async`(레이아웃 확정 다음 런루프)에서 `proxy.scrollTo(selection ?? 1, anchor: .leading)`로 초기 위치를 강제**한다(각 배너에 `.id(index)` 필요). `async` 없이 `onAppear`에서 곧바로 부르면 아직 레이아웃 전이라 같은 이유로 안 먹는다. 시뮬레이터에서 재현·수정 확인했으나 이 캐러셀은 sim/device 증상이 갈릴 수 있어(위 TabView 항목) **최종 확인은 실기기**로 할 것.
+- **배너(`bannerCarousel`)는 디자인팀 확정 수치로 `.frame(height: 567)` 고정, `bottomSection` 뒤는 `.padding(.bottom, 24)` 대신 `Spacer().frame(height: 67)`을 쓴다**(2026-08). 위 유연 `Spacer()`는 남아있어 화면 밖으로 밀려나는 '깨짐'은 없음을 실기기 대신 SE(3rd gen)·iPhone 16·iPhone 17 Pro Max 시뮬레이터로 확인했다(2026-08-18) — 다만 배너가 고정 크기라 **화면이 커질수록 남는 여유 공간이 전부 버튼 아래 여백으로 쌓여 기기별 하단 여백 편차가 크다**(SE는 적당, 17 Pro Max는 훨씬 넓음). 디자인 검수에서 큰 기기 여백이 과하다고 나오면 이 고정값들부터 의심할 것.
+- ⚠️ **`nil→값` 전이로 `onChange`를 감지해 다음 단계로 진행시키는 확정 신호(`NicknameViewModel.confirmedNickname`, `GenderBirthYearViewModel.confirmedSelection`)는 소비 즉시 `nil`로 되돌려야 한다.** 컨테이너가 단계 ViewModel을 재사용해서(뒤로 가도 값이 안 날아감) 뒤로 갔다가 **같은 값으로** "다음으로"를 다시 누르면 `proceed()`가 신호를 이전과 동일한 값으로 재대입할 뿐이라 SwiftUI `onChange`가 "변화 없음"으로 보고 발동하지 않는다(버튼은 계속 활성 상태로 보여 헷갈린다, 실측). `.consumeConfirmation` 액션을 두어 View의 `onChange` 핸들러가 `onConfirmed` 호출 직후 곧바로 신호를 리셋한다(`presentedError`/`dismissError`와 같은 소진 패턴). **리셋 대상은 신호 프로퍼티 하나뿐**이고 실제 입력 데이터(`draft`/`gender`/`birthYear`)는 안 건드린다 — 컨테이너의 "단계 재사용" 설계와 안 부딪힘. 새 단계를 이 컨테이너에 추가할 때 같은 `nil→값` 신호 패턴을 쓴다면 이 소진 처리를 빠뜨리지 말 것.
+- **Demo의 `dataSource` 기본값은 `.live`(실서버)다**(2026-08, 사용자 요청 — 닉네임 중복확인이 실제로 서버와 붙어야 해서). `DefaultValidateNicknameUseCase`/`DefaultRegisterProfileUseCase` 등 실서버 조립 자체는 이미 다 갖춰져 있었고 기본값만 `.mock`이었던 것. ⚠️ **우상단 "디버그: 로그인 건너뛰기" 버튼은 `.live`에서도 여전히 실제 토큰을 발급하지 않는다** — 그 버튼으로 넘어가면 닉네임 중복확인 등 인증이 필요한 호출이 401로 막힌다. 실서버로 끝까지(닉네임 검증 포함) 확인하려면 **Kakao 로그인 버튼으로 실제 로그인**해야 한다(Kakao는 `ASWebAuthenticationSession` 기반이라 시뮬레이터에서도 실제 로그인 가능 — Apple 로그인은 시뮬레이터에 Apple ID가 로그인돼 있어야 함).
+- **(과거 함정 해소, #257)** 예전 `genreSelectionSlot`은 `if let genreSelectionViewModel { ... }.id(ObjectIdentifier(...))`로 VM을 지연 생성·재생성하며 뷰 정체성을 강제 리시드해야 했다(안 그러면 SwiftUI `@State`가 옛 인스턴스를 붙들어 재확정 값이 등록에 안 나감). 장르 VM을 **항상 mount + `setProfileContext` 주입**으로 바꾸면서(위 화면 동작 계약) 이 지연 mount 자체가 사라져 `.id` 리시드도 필요 없어졌다. **장르 슬롯을 다시 `if let`/재생성 방식으로 되돌리지 말 것** — 지연 mount는 전환 opacity 페이드 + 이 `@State` 트랩을 함께 부활시킨다.
+- ⚠️ **`OnboardingFeatureDemoApp.init()`의 Kakao 초기화는 `Bundle.main.infoDictionary` 직접 읽기 대신 `BaseData`의 `NetworkingConfig.kakaoAppKey`를 쓴다** — 값이 비어 있어도(plist 키 누락 등) 예전처럼 `assertionFailure`로 즉시 죽지 않고 조용히 빈 문자열로 `KakaoSDK.initSDK(appKey: "")`가 불린다. Demo 카카오 로그인이 원인 불명으로 안 될 때 이 초기화가 조용히 실패했을 가능성부터 `NetworkingConfig.kakaoAppKey`(→ Info.plist `KAKAO_APP_KEY`, `ModuleInfoPlist.featureDemo`가 주입)를 확인할 것 — 더 이상 런치 시점에 크래시로 알려주지 않는다.
+- ⚠️ **헤더의 뒤로가기/건너뛰기 버튼은 `genreSelectionViewModel?.state.isSubmitting`이 `true`인 동안 `.disabled`로 막는다.** 이 가드가 없으면 "완료" 탭 직후(`GenreSelectionViewModel.registerProfile`이 아직 `await` 중) 바로 뒤로가기를 눌러 이전 단계로 슬라이드해도 백그라운드 `Task`는 계속 돌고, 나중에 성공하면 `state.isCompleted`가 살아있는 `onChange`를 발화시켜 사용자가 값을 고치던 중 갑자기 "계약 완료" 화면으로 튕긴다(실패 시엔 이미 떠나온 화면에 안 보이는 토스트만 뜬다). 새 단계를 추가해 뒤로가기가 진행 중인 서버 호출과 겹칠 수 있는 지점을 만든다면 같은 가드를 빠뜨리지 말 것.

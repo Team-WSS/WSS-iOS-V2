@@ -1,0 +1,86 @@
+//
+//  FeedDetail.swift
+//  FeedDomain
+//
+//  Created by Seoyeon Choi on 1/29/26.
+//  Copyright © 2026 kr.websoso.app. All rights reserved.
+//
+
+import Foundation
+import BaseDomain
+
+public struct FeedDetail: Sendable {
+    
+    public let id: FeedID
+    public let author: Author
+    public let createdDate: String
+    
+    public private(set) var isModified: Bool
+    
+    public private(set) var feedContent: String
+    public private(set) var feedImageURLs: [URL?]
+    
+    public private(set) var connectedNovel: ConnectedNovelDetail?
+    
+    public private(set) var likeCount: Int
+    public private(set) var isLiked: Bool
+    public private(set) var commentCount: Int
+    
+    public let isSpoiler: Bool
+    public let isPublic: Bool
+    
+    public init(
+        id: FeedID,
+        author: Author,
+        createdDate: String,
+        isModified: Bool,
+        feedContent: String,
+        feedImageURLs: [URL?],
+        connectedNovel: ConnectedNovelDetail? = nil,
+        likeCount: Int,
+        isLiked: Bool,
+        commentCount: Int,
+        isSpoiler: Bool,
+        isPublic: Bool
+    ) {
+        self.id = id
+        self.author = author
+        self.createdDate = createdDate
+        self.isModified = isModified
+        self.feedContent = feedContent
+        self.feedImageURLs = feedImageURLs
+        self.connectedNovel = connectedNovel
+        self.likeCount = likeCount
+        self.isLiked = isLiked
+        self.commentCount = commentCount
+        self.isSpoiler = isSpoiler
+        self.isPublic = isPublic
+    }
+    
+    // MARK: - Policy
+    
+    public enum PolicyError: Error, Equatable {
+        case negativeLikeCount
+    }
+    
+    public mutating func toggleLike() throws {
+        if isLiked {
+            guard likeCount > 0 else {
+                throw PolicyError.negativeLikeCount
+            }
+            likeCount -= 1
+        } else {
+            likeCount += 1
+        }
+        isLiked.toggle()
+    }
+
+    public mutating func addCommentCount() {
+        commentCount += 1
+    }
+
+    public mutating func removeCommentCount() {
+        guard commentCount > 0 else { return }
+        commentCount -= 1
+    }
+}
