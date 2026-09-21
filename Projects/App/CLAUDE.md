@@ -238,7 +238,7 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   (아키텍처별 링커 최적화 차이), 링크 이슈라 **Debug·Release 배포 빌드 모두** 해당 — 그래서 `base`에 둔다. CocoaPods(V1)는
   이 플래그를 자동으로 넣어줘 안 겪던 것이라, SPM+Tuist static에선 명시가 필수. 실기기 실측으로 발견(2026-09-05).
 - **`aps-environment`는 `Project.swift`의 `CODE_SIGN_ENTITLEMENTS` 빌드 설정으로 Debug/Release가 분리돼 있다**
-  (`docs/TODO.md` 4-7번 완료) — Debug는 `Support/WSS-iOS.entitlements`(`development`), Release는
+  (컷오버 체크리스트에서 완료, 2026-09-15) — Debug는 `Support/WSS-iOS.entitlements`(`development`), Release는
   `Support/WSS-iOS-Release.entitlements`(`production`)를 가리킨다. App 타깃 자체는
   `entitlements: .variable("CODE_SIGN_ENTITLEMENTS")`만 선언하고 실제 파일 경로는 안 갖는다.
   ⚠️ **두 파일은 물리적으로 별개**라 `com.apple.developer.applesignin` 같은 aps-environment 이외의

@@ -71,7 +71,8 @@ metadata:
   UDID를 먼저 등록하고, 관리 권한 있는 사람이 `match`를 다시 돌려 프로파일을 그 기기 포함해서
   재생성해야 실기기 빌드가 된다 — 이건 스킬이 자동으로 처리할 수 없어 안내만 한다.
 - 배포 lane(`debug_beta`/`release_beta`/`release`)에 필요한 `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_PATH`는
-  `sync_dev_certificates`엔 필요 없다 — 배포까지 할 사람만 추가로 준비(자세한 내용은 `docs/TODO.md` 4번).
+  `sync_dev_certificates`엔 필요 없다 — 배포까지 할 사람만 추가로 준비(자세한 내용은
+  `docs/FASTLANE_ONBOARDING.md` 참고).
 
 ### 6. MCP 신뢰 승인 (안내 — 클릭은 사람)
 - Node/npx 재확인(1번에서 없었으면 먼저 설치).

@@ -16,9 +16,15 @@ metadata:
 
 > ⚠️ **`release_beta`(이 스킬)와 `release`(App Store 심사 제출) lane을 혼동하지 말 것.** 이름이
 > 비슷하지만 `release_beta`는 TestFlight 내부 배포일 뿐 심사 제출이 아니다. **`release` lane
-> (`deliver(submit_for_review: true)`)은 이 스킬 범위 밖** — 컷오버 전까지 절대 실행하면 안 된다
-> (`fastlane/Fastfile` 주석·`docs/TODO.md` 4번 참고). 사용자가 "App Store에 제출해줘"라고 요청해도
-> 이 스킬로 대신 처리하지 말고, 컷오버 시점이 맞는지부터 다시 확인시킨다.
+> (`deliver(submit_for_review: true)`)은 이 스킬 범위 밖**이다 — 사용자가 "App Store에 제출해줘"라고
+> 요청해도 이 스킬로 대신 처리하지 않는다. ⚠️ **컷오버가 완료돼(GitHub Actions repo variable
+> `CUTOVER_READY=true`, 2026-09-21) 이제 `main` push마다 `release.yml` CI가 `release` lane을 자동
+> 실행한다.** 로컬에서 직접 `bundle exec fastlane ios release`를 치는 경우엔 여전히 가드가 살아있다
+> — `Fastfile`의 가드는 그 repo variable이 아니라 **로컬 셸 환경변수** `ENV["CUTOVER_READY"]`를 보므로,
+> 직접 `export CUTOVER_READY=true`를 하지 않는 한 기본적으로 막힌다(`docs/WORKFLOW.md` "배포" 절 참고).
+> 사용자가 이 스킬 범위 밖의 실행(`release` lane)을 원하면 그 사실을 알리고 정말 의도한 게 맞는지
+> 재확인한다(여전히 이 스킬이 대신 실행하지 않는다 — `release`는 실제 App Store 제출이라 별개로
+> 신중히 다룰 것).
 >
 > ⚠️ **서명·업로드는 외부로 나가는 비가역 작업이다** — 빌드가 실제로 Apple 서버에 업로드되고 내부
 > 테스터에게 노출될 수 있다. **3단계 승인 전에는 실행하지 않는다.**
@@ -59,8 +65,8 @@ metadata:
   - `release_beta` lane, scheme `WSS-iOS-RELEASE`, app identifier(`.env`의 `APP_IDENTIFIER_RELEASE` 값).
   - "아카이브 후 TestFlight 내부 테스터용으로 업로드됨(`distribute_external: false`)"임을 명시하고,
     이는 App Store 심사 제출이 **아님**을 다시 확인시킨다.
-  - App Store Connect에 이 앱 레코드가 **운영 앱과 별개로도 아직 없을 수 있다**는 기존 미검증 상태
-    (`docs/TODO.md` 4번)를 다시 알려 — 업로드 단계에서 실패할 수 있음을 미리 안다.
+  - App Store Connect 레코드는 이미 확인·검증됐다(운영 레코드와 동일, 2026-09-21 실제 심사 승인까지
+    받음) — 더 이상 "레코드 자체가 없을 수 있다"는 리스크는 아니다.
     ⚠️ 이 식별자는 컷오버 후 운영 앱과 같아질 예정이라 특히 신중히 다룰 것.
 - 승인 없이 3단계로 넘어가지 않는다.
 
@@ -79,8 +85,6 @@ metadata:
 - **실패**: fastlane이 뱉은 에러를 그대로 보여준다(추측으로 "아마 이래서 그럴 거예요"라고 뭉개지 않는다).
   자주 겪을 수 있는 원인(모두 코드 수정이 아니라 계정/콘솔 쪽 확인이 먼저다):
   - `MATCH_PASSWORD`/Keychain 문제 → 위 1단계 경고 참고.
-  - App Store Connect에 앱 레코드 없음 → `docs/TODO.md` 4번의 컷오버 절차 참고, 지금은 정상적으로
-    막히는 상태일 수 있다.
   - 프로비저닝 프로파일에 서명 문제 → `sync_dev_certificates`가 아니라 `match(type: "appstore")`를
     쓰므로 development 기기 등록과는 무관하다 — Apple Developer 계정의 App Store 배포 인증서 자체를
     의심할 것.

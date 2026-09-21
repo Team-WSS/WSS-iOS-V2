@@ -3,7 +3,7 @@ name: Submit to App Store Review
 # main에 push(=릴리즈 PR merge)되면 실제 App Store 심사 제출(fastlane release lane)까지
 # 이어지는 워크플로우. 두 겹의 안전장치가 있다:
 #   1) vars.CUTOVER_READY != 'true'면 job의 `if:`에서 아예 skip — 승인 요청조차 뜨지 않는다.
-#      (컷오버 체크리스트 docs/TODO.md 4번 완료 전까지는 항상 false로 둘 것)
+#      (컷오버 체크리스트 완료로 2026-09-21부터 true — docs/WORKFLOW.md "배포" 절 참고)
 #   2) CUTOVER_READY가 true라도 `environment: app-store-release`에 걸린 Required reviewers가
 #      실제 실행 전 GitHub에서 수동 승인해야 한다.
 # 추가로 fastlane Fastfile의 release lane 자체에도 같은 CUTOVER_READY 가드가 있다(로컬 수동
@@ -128,3 +128,62 @@ jobs:
             ~/Library/Logs/gym
             fastlane/report.xml
           retention-days: 14
+
+  # App Store 제출(submit job)과 독립적으로 항상 실행 — CUTOVER_READY와 무관하게 main이 갱신될
+  # 때마다 GitHub Release/태그로 릴리즈 이력을 남긴다(실제 심사 제출 여부와는 별개의 기록용).
+  # ⚠️ 워크플로우 top-level concurrency(18-20행, group: release-main)를 그대로 상속하면 submit job과
+  # 같은 슬롯을 공유해 "항상 즉시 독립 실행"이 깨진다(연속 push 시 이전 실행의 submit이 끝날 때까지
+  # 최대 60분 대기) — 그래서 이 job만 커밋 단위로 별도 concurrency group을 준다.
+  tag_release:
+    name: GitHub Release 태그 생성
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: tag-release-${{ github.sha }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: 버전 추출
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -o '"MARKETING_VERSION": "[^"]*"' Projects/App/Project.swift | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "MARKETING_VERSION을 Projects/App/Project.swift에서 찾지 못했습니다" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # 릴리스 PR이 merge commit으로 들어오는 한 태그 중복은 정상 흐름에서 발생하지 않지만,
+      # GitHub Actions UI의 "Re-run jobs"·수동 재푸시 대비 gh release create가 기존 태그에
+      # 실패하지 않도록 먼저 존재 여부를 확인한다.
+      - name: 태그 중복 확인
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "v${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::v${{ steps.version.outputs.version }} 태그가 이미 존재해 GitHub Release 생성을 스킵합니다."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GitHub Release 생성
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --title "v${{ steps.version.outputs.version }}" \
+            --notes-file fastlane/metadata/ko/release_notes.txt \
+            --target "${{ github.sha }}"
