@@ -78,10 +78,25 @@
      status check `All Tests Passed`, force-push·삭제 금지).
      ~~App Store Connect 메타데이터·스크린샷 확인~~ ✅ 실제 심사 승인(2026-09-21, 사용자가 로컬에서
      제출해 승인받음)으로 메타데이터·스크린샷 완비도 함께 실측 확인됨.
-     **전환 전 아직 남은 것(2026-09-21 실측, 0개 등록)**: 아래 GitHub Actions secrets 전체 등록뿐 —
-     `gh secret list` + `app-store-release` environment secrets 모두 0건. 로컬 심사 제출은 macOS
-     Keychain의 match 캐시·로컬 `Config/*.xcconfig`로 됐던 것이라 CI(GitHub Actions 러너)는 이 값들이
-     전혀 없다. **이것만 등록되면 `CUTOVER_READY=true` 전환의 마지막 블로커다.**
+     **전환 전 아직 남은 것**: GitHub Actions secrets 17개를 `app-store-release` environment secrets로
+     등록(레포 시크릿이 아니라 **environment 시크릿** — 그 environment를 쓰는 job에서만 보이게 최소
+     권한 유지, `gh secret set NAME --env app-store-release`). 로컬 심사 제출은 macOS Keychain의 match
+     캐시·로컬 `Config/*.xcconfig`로 됐던 것이라 CI(GitHub Actions 러너, 매번 새로 뜨는 빈 macOS VM)는
+     이 값들이 전혀 없어서 매번 등록해줘야 한다.
+     - ✅ **15/17 등록 완료(2026-09-21)**: `ASC_KEY_ID`·`ASC_ISSUER_ID`·`ASC_KEY_P8_BASE64`·`TEAM_ID`·
+       `APP_IDENTIFIER_RELEASE`·`APP_IDENTIFIER_DEBUG`(`fastlane/.env` + `fastlane/*.p8`에서 추출) +
+       `CONFIG_BUCKET_URL`·`CONFIG_APPSTORE_ID`·`CONFIG_BASE_URL`·`CONFIG_AMPLITUDE_API_KEY`·
+       `CONFIG_CLARITY_PROJECT_ID`·`CONFIG_KAKAO_APP_KEY`·`CONFIG_KAKAO_COLLECTION_SHARE_TEMPLATE_ID_{1,2,3}`
+       (`Config/Config_Shared.xcconfig`·`Config_Release.xcconfig`에서 추출 — `BUCKET_URL`/`BASE_URL`은
+       xcconfig의 `://` 이스케이프(`:/$()/`)를 평문으로 되돌려 등록, 워크플로우가 다시 이스케이프함).
+     - ⬜ **남은 2개**: `MATCH_PASSWORD`(팀 채널/1Password에서 원래 값 받아와 등록) / `MATCH_GIT_DEPLOY_KEY`
+       (`WSS-iOS-Certificates` 레포 전용 신규 SSH 키쌍 생성 → 공개키는 그 레포 Settings → Deploy keys에
+       읽기전용으로, 개인키는 이 시크릿 값으로 — **한 번만 등록하면 되는 레포 전역 설정**이라 팀원 각자
+       만들 필요 없음).
+     - **팀원도 이 등록 작업을 할 수 있나**: ✅ 권한은 이미 충분하다(2026-09-21 확인) —
+       `WSS-iOS-V2`·`WSS-iOS-Certificates` 둘 다 Naknakk이 admin으로 이미 collaborator 등록돼 있어
+       GitHub 쪽 추가 초대·역할 변경 없이 바로 가능. 막히는 건 권한이 아니라 **시크릿 실제 값**
+       공유뿐 — `docs/FASTLANE_ONBOARDING.md`의 기존 관례(팀 채널/1Password로 전달)를 그대로 따르면 됨.
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
@@ -108,18 +123,11 @@
   (APNs)·Universal Link(`apple-app-site-association`) 등 Bundle ID에 종속된 다른 설정이 운영 앱에
   더 있다면 같은 시점에 함께 점검 대상.
 - **✅ `main` push → App Store 심사 자동 제출 CI 배선 완료(2026-09-13)**: `.github/workflows/release.yml`
-  신설 — `CUTOVER_READY` repo variable(기본 미설정/false, 위 8번) + `app-store-release` Environment의
+  신설 — `CUTOVER_READY` repo variable(기본 미설정/false) + `app-store-release` Environment의
   Required reviewers 승인, 두 겹으로 막아둔 채 실제로 켜는 건 컷오버 완료 후로 미뤘다. 릴리즈 노트는
-  `fastlane/metadata/ko/release_notes.txt`(git 버전관리, 릴리즈 PR마다 갱신). 아직 등록 안 된 것 —
-  GitHub Actions secrets: `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_P8_BASE64`/`TEAM_ID`/
-  `APP_IDENTIFIER_RELEASE`/`APP_IDENTIFIER_DEBUG`(release lane은 안 쓰지만 `fastlane/Appfile`이
-  로드 시점에 둘 다 `ENV.fetch`로 요구해 없으면 Fastfile 시작 전에 죽는다 — wss-pr-reviewer가
-  실측으로 잡은 Blocker, 2026-09-13 반영)/`MATCH_PASSWORD`/`MATCH_GIT_DEPLOY_KEY`(인증서 저장소
-  read-only deploy key)/`CONFIG_*`(로컬 `Config/Config_Release.xcconfig`·`Config_Shared.xcconfig`의
-  실제 값 — 파일 자체가 git에 없어 별도 전달 필요, `docs/FASTLANE_ONBOARDING.md`의 `.env` 전달
-  방식과 동일하게. `CONFIG_BASE_URL`/`CONFIG_BUCKET_URL`은 평범한 `https://` 형태로 등록해도
-  된다 — 워크플로우가 xcconfig의 `//` 주석 파싱을 피하는 이스케이프를 자동 적용한다).
-  자세한 배선은 [docs/WORKFLOW.md](WORKFLOW.md)의 "배포(App Store 심사 제출)" 절.
+  `fastlane/metadata/ko/release_notes.txt`(git 버전관리, 릴리즈 PR마다 갱신). GitHub Actions secrets
+  등록 현황은 위 8번 참고(중복 방지 — 그쪽이 최신 정본). 자세한 배선은
+  [docs/WORKFLOW.md](WORKFLOW.md)의 "배포(App Store 심사 제출)" 절.
 
 ### 5. 401과 "재발급까지 해봤지만 실패"가 Data 레이어에서 구분되지 않는다
 
