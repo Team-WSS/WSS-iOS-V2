@@ -63,16 +63,9 @@
      `Project.swift`의 `MARKETING_VERSION`(현재 `"1.9.4"`, appBaseSettings)은 컷오버 시점에 이
      `1.10.0`(또는 그 이상)에 맞춰 올려야 한다** — 실제 업로드·버전 반영은 `make-release-PR`/
      `archive-release` 스킬이 담당.
-  6. 컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
-     서버 응답으로 리허설 검증. **main 머지/릴리즈 작업 시점에 이어서 진행하기로 보류(2026-09-15,
-     사용자 확정)**. 그때 참고할 것:
-     - `bundle exec fastlane match appstore --readonly true`로 `kr.websoso`/`kr.websoso.debug2` AppStore
-       프로파일·인증서 로컬 동기화까지는 이미 실측 성공(2026-09-15, `fastlane/.env`의
-       `MATCH_PASSWORD` 없이도 macOS Keychain에 저장된 값으로 동작).
-     - ⚠️ **AppStore 배포 프로파일 서명 빌드는 USB/무선으로 실기기에 직접 설치할 수 없다**(대상 기기
-       UDID가 없는 프로파일이라 iOS가 로컬 설치 자체를 막음, Xcode Run·`devicectl install` 둘 다 불가) —
-       **TestFlight 경유가 유일한 경로**다. `release_beta` lane(이미 준비, 미실행)으로 업로드 →
-       기기의 TestFlight 앱에서 설치 → 로그인 테스트 순서로 진행할 것(`archive-release` 스킬).
+  6. ~~컷오버 직전, 실제 배포 서명으로 실기기에서 Apple/Kakao 로그인이 "기존 계정 인식"으로 뜨는지
+     리허설 검증~~ ✅ **완료(2026-09-21)** — 사용자가 로컬에서 직접 App Store 심사를 제출해 **승인까지
+     받음**으로써 실측 검증 끝. `main`의 `v1.10.0`(#271)이 실제 승인된 빌드다.
   7. ~~`aps-environment`를 배포용 `production`으로~~ ✅ 완료(2026-09-15) — `Project.swift`의
      `CODE_SIGN_ENTITLEMENTS`로 Debug(`Support/WSS-iOS.entitlements`=development)/Release
      (`Support/WSS-iOS-Release.entitlements`=production) 분리(`Projects/App/CLAUDE.md` 참고). 실기기
@@ -83,11 +76,12 @@
      **✅ 이미 끝난 것(2026-09-13)**: `app-store-release` Environment 생성 + Required reviewers(Guryss·
      Naknakk) 지정 + 배포 브랜치 `main` 제한, `main` 브랜치 보호를 `develop` 수준으로 강화(required
      status check `All Tests Passed`, force-push·삭제 금지).
-     **전환 전 아직 남은 것**: 아래 GitHub Actions secrets 전체 등록 + App Store Connect에 이미
-     설명·스크린샷 등 기본 메타데이터가 채워져 있는지 확인(`deliver` 호출이 릴리즈노트만 채우고
-     `skip_metadata`/`skip_screenshots` 가드가 없어, 정말 신규 앱 레코드라면 스크린샷 미비로 제출이
-     막힐 수 있다 — 5번 항목대로 "운영 앱과 동일 레코드"라 대부분 이미 채워져 있을 가능성이 높지만
-     확인 필요).
+     ~~App Store Connect 메타데이터·스크린샷 확인~~ ✅ 실제 심사 승인(2026-09-21, 사용자가 로컬에서
+     제출해 승인받음)으로 메타데이터·스크린샷 완비도 함께 실측 확인됨.
+     **전환 전 아직 남은 것(2026-09-21 실측, 0개 등록)**: 아래 GitHub Actions secrets 전체 등록뿐 —
+     `gh secret list` + `app-store-release` environment secrets 모두 0건. 로컬 심사 제출은 macOS
+     Keychain의 match 캐시·로컬 `Config/*.xcconfig`로 됐던 것이라 CI(GitHub Actions 러너)는 이 값들이
+     전혀 없다. **이것만 등록되면 `CUTOVER_READY=true` 전환의 마지막 블로커다.**
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
@@ -104,10 +98,11 @@
     아이콘 분리, `TARGETED_DEVICE_FAMILY`, `CFBundlePackageType`/`UISupportedInterfaceOrientations`,
     Apple Generic Versioning 설정까지). `release_beta`/`release` lane 자체는 아직 미실행(스킴만
     `WSS-iOS-RELEASE`로 다를 뿐 같은 경로라 성공 가능성 높음, 실측은 아직 안 함).
-  - **⚠️ 컷오버 전 확인 필요(2026-08-29 wss-pr-reviewer 지적)**: `AppIcon.appiconset`/`AppIcon-Debug.appiconset`의
-    1024×1024 PNG 둘 다 알파 채널을 포함한다(`sips`로 실측) — TestFlight 내부 업로드는 통과했지만
-    정식 App Store 심사(`release` lane)에서는 마케팅 아이콘의 투명도가 거부 사유가 될 수 있다.
-    컷오버 전 알파 제거된 PNG로 교체할 것.
+  - ~~**컷오버 전 확인 필요(2026-08-29 wss-pr-reviewer 지적)**: `AppIcon.appiconset`의 1024×1024 PNG가
+    알파 채널을 포함해 정식 심사에서 거부 사유가 될 수 있다~~ ✅ **문제없음으로 판명(2026-09-21)** —
+    알파 채널이 있는 채로(레포에 커밋된 파일 그대로, `sips -g hasAlpha` → `yes`) 실제 App Store
+    심사가 통과·승인됐다(사용자 확인). Apple이 업로드 시점에 알파를 자동 제거하는 것으로 보임 —
+    더 이상 컷오버 블로커 아님, PNG 교체 불필요.
 - **놓치기 쉬운 것**: Kakao 키해시는 서명 인증서 기준이라 같은 팀 인증서를 쓰면 대체로 그대로겠지만
   Xcode 프로젝트가 통째로 바뀌는 이관이라 **반드시 실측 검증**할 것 — 추측으로 넘어가지 말 것. Push
   (APNs)·Universal Link(`apple-app-site-association`) 등 Bundle ID에 종속된 다른 설정이 운영 앱에
