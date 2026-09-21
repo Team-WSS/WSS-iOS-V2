@@ -112,7 +112,7 @@ end
 # Debug → TestFlight (Internal)
 # =====================================
 # ✅ 2026-08-29 archive-debug 스킬로 아카이브→TestFlight 업로드까지 실제 성공 확인됨(App Store
-# Connect 앱 레코드가 이미 존재했다). 자세한 내용은 docs/TODO.md 4번.
+# Connect 앱 레코드가 이미 존재했다).
 desc "Debug 스킴 TestFlight 배포"
 lane :debug_beta do
   build_with(
@@ -150,16 +150,17 @@ end
 # =====================================
 # Release → App Store 제출
 # =====================================
-# ⚠️ 컷오버 전까지 절대 실행하지 말 것 — 운영 앱과 별개로 App Store 심사에 제출된다.
-# CUTOVER_READY 가드가 이걸 강제한다(아래) — main push → release.yml 자동 실행 경로와 로컬
-# 수동 실행 양쪽을 동시에 막는 방어선. 컷오버 체크리스트(docs/TODO.md 4번) 완료 전엔 절대
-# CUTOVER_READY=true로 우회하지 말 것.
+# ⚠️ 컷오버가 완료돼(2026-09-21) GitHub Actions repo variable `CUTOVER_READY=true`라 main push마다
+# release.yml CI가 이 lane을 자동 실행한다. 여기 `ENV["CUTOVER_READY"]`는 그 repo variable과 별개인
+# **로컬 셸 환경변수**라 기본값은 여전히 미설정 — 로컬에서 실수로 실제 App Store 제출이 나가는 사고를
+# 막는 방어선으로 남겨둔다. 로컬에서 정말 이 lane을 돌려야 하면 셸에 `CUTOVER_READY=true`를 직접
+# export할 것(가볍게 우회하지 말고 정말 의도한 실행인지 재확인).
 desc "Release 스킴 App Store 제출"
 lane :release do
   unless ENV["CUTOVER_READY"] == "true"
     UI.user_error!(
-      "⛔️ CUTOVER_READY가 true가 아닙니다 — 컷오버 체크리스트(docs/TODO.md 4번)를 완료하고 " \
-      "나서만 이 lane을 실행할 수 있습니다."
+      "⛔️ CUTOVER_READY가 true가 아닙니다 — 로컬에서 이 lane을 실행하려면 셸에 " \
+      "CUTOVER_READY=true를 직접 export하세요(CI에서는 release.yml이 자동으로 주입합니다)."
     )
   end
 

@@ -44,7 +44,7 @@
 - 워크플로: `.github/workflows/release.yml` (`Submit to App Store Review`).
 - 트리거: **`main`에 push**(= develop→main 릴리스 PR이 merge될 때). 내부적으로 fastlane `release` lane(`fastlane/Fastfile`)을 실행 — 빌드 → `deliver(submit_for_review: true)`로 실제 App Store 심사에 제출한다.
 - **두 겹의 안전장치**(컷오버 전 오발동 방지):
-  1. GitHub Actions repo variable **`CUTOVER_READY`**가 `true`가 아니면 job이 `if:`에서 그냥 **skip**된다 — 승인 요청조차 뜨지 않는다. 컷오버 체크리스트(`docs/TODO.md` 4번) 완료 전엔 항상 미설정/`false`로 둘 것.
+  1. GitHub Actions repo variable **`CUTOVER_READY`**가 `true`가 아니면 job이 `if:`에서 그냥 **skip**된다 — 승인 요청조차 뜨지 않는다. **2026-09-21부터 `true`로 전환됨**(컷오버 체크리스트 완료 — Bundle ID·서명·Kakao/Apple 로그인 확인·실제 심사 승인·GitHub Actions secrets 17개 전부 등록까지 끝남, 히스토리는 git log 참고) — 다음 `main` push부터 이 job이 실제로 실행된다.
   2. `CUTOVER_READY=true`라도 `environment: app-store-release`에 걸린 **Required reviewers**가 GitHub에서 수동 승인해야 실제로 실행된다.
   - `Fastfile`의 `release` lane 자체에도 같은 `CUTOVER_READY` 가드가 있다 — 로컬에서 `bundle exec fastlane ios release`를 직접 쳐도 동일하게 막힌다(defense-in-depth).
 - **릴리즈 노트**: `fastlane/metadata/ko/release_notes.txt`가 이번 제출의 "새로운 기능" 문구로 자동 업로드된다 — 릴리즈 준비 PR마다 이 파일을 갱신한다(git으로 버전 관리·리뷰 대상).

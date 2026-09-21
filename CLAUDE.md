@@ -26,7 +26,7 @@
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
    (예외: `fastlane`(`Gemfile`) — 앱 바이너리에 링크되는 게 아니라 서명·아카이브·배포를 자동화하는
    빌드 툴링(Ruby gem)이라 이 원칙이 겨냥하는 "앱 런타임 의존성"과 다른 범주. #231에서 의도적으로
-   도입, `docs/TODO.md` 4번 참고.)
+   도입, `docs/FASTLANE_ONBOARDING.md`·`docs/WORKFLOW.md`의 "배포" 절 참고.)
    - (예외: `FirebaseMessaging`(SPM) — fastlane과 달리 **앱 런타임 의존성**이지만, FCM 푸시 수신은
      Firebase SDK 없이는 불가하고 서버가 이미 FCM으로 발송한다(V1도 동일 SDK 사용). #243에서 사용자
      승인 하에 도입, **App 레이어에만 격리**(→ `Projects/App/CLAUDE.md` 푸시 배선). `FirebaseMessaging`

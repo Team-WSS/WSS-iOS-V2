@@ -1,7 +1,8 @@
 # fastlane 실기기 서명 온보딩
 
 신규 팀원이 실기기(Debug 스킴)를 빌드하기까지, 그리고 새 기기를 추가할 때 밟는 절차.
-전체 배경(왜 fastlane/match를 쓰는지)은 [docs/TODO.md](TODO.md) 4번 참고.
+전체 배경(왜 fastlane/match를 쓰는지, V1과 인증서 저장소를 공유하는 이유)은
+[`fastlane/Matchfile`](../fastlane/Matchfile) 상단 주석 참고.
 
 ## 최초 셋업 (신규 팀원)
 
