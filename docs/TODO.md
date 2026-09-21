@@ -97,7 +97,9 @@
      `WSS-iOS-Certificates` 둘 다 Naknakk이 admin으로 이미 collaborator 등록돼 있어 GitHub 쪽 추가
      초대·역할 변경 없이 바로 가능하다. 막히는 건 권한이 아니라 **시크릿 실제 값** 공유뿐 —
      `docs/FASTLANE_ONBOARDING.md`의 기존 관례(팀 채널/1Password로 전달)를 그대로 따르면 된다.
-     **⬜ 남은 건 `CUTOVER_READY` repo variable을 `true`로 전환하는 것 하나뿐이다.**
+     ✅ **`CUTOVER_READY` repo variable을 `true`로 전환 완료(2026-09-21)** — 다음 `main` push(다음
+     develop→main 릴리스 PR 머지)부터 `app-store-release` Environment의 Required reviewer 승인을
+     거치면 `release.yml`이 실제로 fastlane `release` lane을 실행해 App Store 심사에 자동 제출된다.
 - **✅ fastlane 도입 완료(2026-08-29)**: 저장소 루트에 `Gemfile` + `fastlane/`(`Appfile`/`Matchfile`/
   `Fastfile`)를 V1과 같은 구조로 가져왔다 — `Matchfile`은 V1과 **같은 인증서 저장소**
   (`git@github.com:Team-WSS/WSS-iOS-Certificates.git`)를 그대로 재사용한다(같은 Apple Developer
