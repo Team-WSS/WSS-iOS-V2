@@ -21,7 +21,7 @@ let appSigningConfigurations: [Configuration] = [
                "DEVELOPMENT_TEAM[sdk=iphoneos*]": .string(env.appleDeveloperTeamID),
                "PROVISIONING_PROFILE_SPECIFIER": "",
                "PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]": .string("match AppStore \(env.debugBundleId)"),
-               // aps-environment가 Debug=development여야 실기기 Xcode Run(개발 프로파일)에 맞다(#243, docs/TODO.md 4-7번).
+               // aps-environment가 Debug=development여야 실기기 Xcode Run(개발 프로파일)에 맞다(#243, 컷오버 체크리스트에서 확정).
                "CODE_SIGN_ENTITLEMENTS": "Support/WSS-iOS.entitlements",
                // Debug 빌드는 홈 화면에서 운영 앱과 구분되도록 별도 아이콘 세트를 쓴다
                // (Resources/Assets.xcassets/AppIcon-Debug.appiconset, 사용자가 실제 이미지 교체 예정).
@@ -41,7 +41,7 @@ let appSigningConfigurations: [Configuration] = [
                "DEVELOPMENT_TEAM[sdk=iphoneos*]": .string(env.appleDeveloperTeamID),
                "PROVISIONING_PROFILE_SPECIFIER": "",
                "PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]": .string("match AppStore \(env.releaseBundleId)"),
-               // aps-environment가 Release=production이어야 App Store/TestFlight 배포판에 푸시가 배달된다(#243, docs/TODO.md 4-7번).
+               // aps-environment가 Release=production이어야 App Store/TestFlight 배포판에 푸시가 배달된다(#243, 컷오버 체크리스트에서 확정).
                "CODE_SIGN_ENTITLEMENTS": "Support/WSS-iOS-Release.entitlements",
                // 운영 아이콘(V1과 동일, Resources/Assets.xcassets/AppIcon.appiconset).
                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
