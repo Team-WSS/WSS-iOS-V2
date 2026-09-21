@@ -50,6 +50,7 @@
 - **릴리즈 노트**: `fastlane/metadata/ko/release_notes.txt`가 이번 제출의 "새로운 기능" 문구로 자동 업로드된다 — 릴리즈 준비 PR마다 이 파일을 갱신한다(git으로 버전 관리·리뷰 대상).
 - `main` 브랜치 보호는 `develop`과 동일하게 강화되어 있다(필수 상태 체크 `All Tests Passed`/`Architecture Rules`, force-push·삭제 금지) — `develop→main` PR도 `test.yml`의 같은 검사를 받는다(위 CI 섹션의 트리거가 `main`도 포함).
 - TestFlight 내부 배포(`debug_beta`/`release_beta` lane)는 이 워크플로우와 무관 — 사람이 로컬에서 `archive-debug`/`archive-release` 스킬로 수동 실행한다.
+- **`tag_release` job**(같은 `release.yml`, #275)은 `submit` job과 별개로 **`CUTOVER_READY`와 무관하게 `main` push마다 항상 실행**된다 — `Projects/App/Project.swift`의 `MARKETING_VERSION`에서 버전을 추출해 `v{버전}` GitHub Release/태그를 만든다(`fastlane/metadata/ko/release_notes.txt`를 notes로, 동일 태그 있으면 스킵). 실제 App Store 제출 여부와 무관한 순수 릴리즈 이력 기록용이라 별도 `concurrency` group으로 `submit`과 슬롯을 분리해뒀다.
 
 ## 새 모듈 추가 절차
 
