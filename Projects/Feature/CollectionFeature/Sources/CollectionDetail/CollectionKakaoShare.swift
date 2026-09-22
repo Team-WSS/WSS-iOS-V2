@@ -202,9 +202,18 @@ enum CollectionKakaoShare {
 
     /// 표지 원본 URL을 카카오 CDN에 스크랩해 다중 이미지 컴포넌트에 넣을 수 있는 URL로 바꾼다
     /// (`multiThumbnailArgs` 참고 — 원본 URL을 그대로 쓰면 조용히 빠진다).
+    ///
+    /// ⚠️ **URL 프래그먼트(`#...`)는 스크랩 전에 제거한다** — 리디북스 CDN(`img.ridicdn.net`) 표지가
+    /// `...xxlarge?dpi=xxhdpi#1`처럼 `#1` 프래그먼트를 붙여 내려주는데, 이 프래그먼트를 그대로
+    /// `imageScrap`에 넘기면 카카오 서버가 `image_url` 파라미터 파싱에 실패해(`BadParameter`,
+    /// 2026-09-22 실기기 실측) 그 표지만 조용히 빠진다 — 프래그먼트는 서버로 전송되지 않는 순수
+    /// 클라이언트 힌트라 제거해도 가리키는 이미지는 동일하다.
     private static func scrapImage(_ url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
-            ShareApi.shared.imageScrap(imageUrl: url) { result, error in
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.fragment = nil
+        let sanitizedURL = components?.url ?? url
+        return try await withCheckedThrowingContinuation { continuation in
+            ShareApi.shared.imageScrap(imageUrl: sanitizedURL) { result, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else if let result {
