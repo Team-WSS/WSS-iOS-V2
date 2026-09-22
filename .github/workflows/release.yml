@@ -182,8 +182,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # --generate-notes: GitHub Release Notes API로 직전 릴리즈(태그) 대비 merge된 PR 목록을
+          # 자동 생성 — GitHub UI의 "Generate release notes" 버튼과 동일. --notes-file 내용 뒤에
+          # 이어 붙는다(gh 자체 동작 — 사람이 쓴 릴리즈노트 + 자동 커밋/PR 목록 둘 다 남긴다).
           gh release create "v${{ steps.version.outputs.version }}" \
             --repo "${{ github.repository }}" \
             --title "v${{ steps.version.outputs.version }}" \
             --notes-file fastlane/metadata/ko/release_notes.txt \
+            --generate-notes \
             --target "${{ github.sha }}"
