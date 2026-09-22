@@ -75,7 +75,7 @@ let settings: Settings =
 // TARGETED_DEVICE_FAMILY(iPhone 전용)는 V1과 동일 — App Store Connect 업로드 검증이 iPad용 아이콘·
 // 방향 키를 요구하는 걸 피한다(2026-08-29 실측, V1 project.pbxproj 대조로 확인: TARGETED_DEVICE_FAMILY = 1).
 let appBaseSettings: SettingsDictionary = env.baseSetting.merging([
-    "MARKETING_VERSION": "1.10.0",
+    "MARKETING_VERSION": "1.10.1",
     "CURRENT_PROJECT_VERSION": "1",
     "VERSIONING_SYSTEM": "apple-generic",
     "TARGETED_DEVICE_FAMILY": "1",
