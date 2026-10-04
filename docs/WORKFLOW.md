@@ -8,7 +8,7 @@
 - **브랜치**: `Type/#이슈번호` — 예: `Feat/#108`, `Fix/#88`, `Docs/#130`, `Chore/#98`, `Refactor/#96`, `Design/#123`.
 - **커밋 메시지**: `[Type] #이슈번호 - 한글 설명` — 예: `[Feat] #108 - 홈 화면 추천 섹션 구현`.
   - 양식은 `.githooks/commit-msg` 훅이 로컬 커밋 시 검증한다(Xcode/터미널 직접 커밋 포함). Type 어휘의 단일 진실 소스는 `.claude/skills/commit-types.md`. 훅 활성화는 클론 후 1회 `git config core.hooksPath .githooks`(`/setup`이 안내).
-- **base 브랜치**: `develop` (운영 릴리스는 `main` — 릴리스 파이프라인은 아래 "배포(App Store 심사 제출)" 참고).
+- **base 브랜치**: `develop` (운영 릴리스는 `main` — `develop → main` 단방향 승격만 한다. 아래 "배포(App Store 심사 제출)" 참고).
 - **머지는 반드시 PR 경유** — 브랜치 보호 규칙이 직접 push를 막는다.
 - 작업 시작: `develop` 최신화 → `Type/#이슈`로 분기.
 
@@ -41,13 +41,28 @@
 
 ## 배포 (App Store 심사 제출)
 
+### 릴리스 흐름 — develop → main 단방향 (2026-10-04, #284)
+
+```
+develop ──●──●──●(준비 PR: 버전·노트)──●──●──
+                 \
+main ─────────────●(승격 PR merge → tag vX.Y.Z)
+```
+
+1. **준비 PR (base=develop)**: `Setting/#N` 브랜치에서 `Projects/App/Project.swift`의 `MARKETING_VERSION`과 `fastlane/metadata/ko/release_notes.txt`를 갱신해 develop에 머지한다.
+2. **승격 PR (head=develop, base=main)**: develop 자체를 main으로 올린다. 머지 방식은 **"Create a merge commit"** — squash하면 main에 develop에 없는 커밋이 생긴다.
+- 두 단계 모두 `make-release-PR` 스킬이 진행한다(`.claude/skills/make-release-PR/SKILL.md`).
+- ⚠️ **main에만 들어가는 커밋을 만들지 않는다**(핫픽스 포함 — develop에서 고쳐 승격한다). 예전엔 버전·릴리즈노트 커밋을 릴리스 브랜치 → main에만 넣고 develop은 동기화하지 않아, 릴리스마다 `MARKETING_VERSION` 줄이 충돌하고 그래프가 양방향으로 꼬였다(PR #285에서 실측). `make-release-pr.sh preflight`의 `MAIN_ONLY_COMMITS`가 0이 아니면 이 규칙이 깨진 것 — 준비 PR에서 `origin/main`을 merge해 develop으로 흡수한 뒤 승격한다.
+
+### 자동 제출
+
 - 워크플로: `.github/workflows/release.yml` (`Submit to App Store Review`).
 - 트리거: **`main`에 push**(= develop→main 릴리스 PR이 merge될 때). 내부적으로 fastlane `release` lane(`fastlane/Fastfile`)을 실행 — 빌드 → `deliver(submit_for_review: true)`로 실제 App Store 심사에 제출한다.
 - **두 겹의 안전장치**(컷오버 전 오발동 방지):
   1. GitHub Actions repo variable **`CUTOVER_READY`**가 `true`가 아니면 job이 `if:`에서 그냥 **skip**된다 — 승인 요청조차 뜨지 않는다. **2026-09-21부터 `true`로 전환됨**(컷오버 체크리스트 완료 — Bundle ID·서명·Kakao/Apple 로그인 확인·실제 심사 승인·GitHub Actions secrets 17개 전부 등록까지 끝남, 히스토리는 git log 참고) — 다음 `main` push부터 이 job이 실제로 실행된다.
   2. `CUTOVER_READY=true`라도 `environment: app-store-release`에 걸린 **Required reviewers**가 GitHub에서 수동 승인해야 실제로 실행된다.
   - `Fastfile`의 `release` lane 자체에도 같은 `CUTOVER_READY` 가드가 있다 — 로컬에서 `bundle exec fastlane ios release`를 직접 쳐도 동일하게 막힌다(defense-in-depth).
-- **릴리즈 노트**: `fastlane/metadata/ko/release_notes.txt`가 이번 제출의 "새로운 기능" 문구로 자동 업로드된다 — 릴리즈 준비 PR마다 이 파일을 갱신한다(git으로 버전 관리·리뷰 대상).
+- **릴리즈 노트**: `fastlane/metadata/ko/release_notes.txt`가 이번 제출의 "새로운 기능" 문구로 자동 업로드된다 — 준비 PR(develop 대상)마다 이 파일을 갱신한다(git으로 버전 관리·리뷰 대상).
 - `main` 브랜치 보호는 `develop`과 동일하게 강화되어 있다(필수 상태 체크 `All Tests Passed`/`Architecture Rules`, force-push·삭제 금지) — `develop→main` PR도 `test.yml`의 같은 검사를 받는다(위 CI 섹션의 트리거가 `main`도 포함).
 - TestFlight 내부 배포(`debug_beta`/`release_beta` lane)는 이 워크플로우와 무관 — 사람이 로컬에서 `archive-debug`/`archive-release` 스킬로 수동 실행한다.
 - **`tag_release` job**(같은 `release.yml`, #275)은 `submit` job과 별개로 **`CUTOVER_READY`와 무관하게 `main` push마다 항상 실행**된다 — `Projects/App/Project.swift`의 `MARKETING_VERSION`에서 버전을 추출해 `v{버전}` GitHub Release/태그를 만든다(`fastlane/metadata/ko/release_notes.txt`를 notes로, 동일 태그 있으면 스킵). 실제 App Store 제출 여부와 무관한 순수 릴리즈 이력 기록용이라 별도 `concurrency` group으로 `submit`과 슬롯을 분리해뒀다.
