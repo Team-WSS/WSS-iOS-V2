@@ -3,9 +3,12 @@
 # 판단(버전·릴리즈노트 질문·PR 본문 작성·승인·보고)은 커맨드(LLM)가, 여기서는 안 한다.
 # ⚠️ 이슈·브랜치 생성은 이 스크립트가 하지 않는다 — 기존 new-issue 스킬(new-issue.sh)을 그대로 재사용한다.
 #
+# 릴리스 흐름(단방향): 버전·릴리즈노트는 develop에 먼저 반영(준비 PR, base=develop) →
+# develop을 그대로 main으로 승격(승격 PR, head=develop, base=main). main에만 들어가는 커밋은 만들지 않는다.
+#
 # 사용법:
 #   make-release-pr.sh preflight
-#   make-release-pr.sh pr-create --head <branch> --title <전체제목> --body-file <path>
+#   make-release-pr.sh pr-create --base <develop|main> --head <branch> --title <전체제목> --body-file <path>
 set -euo pipefail
 
 # repo 루트 고정 (커맨드가 어디서 호출하든 동일하게 동작)
@@ -50,7 +53,19 @@ cmd_preflight() {
     echo ""
   fi
 
-  # 4. main이 현재 들고 있는 MARKETING_VERSION (사용자가 새 버전을 정할 때 참고)
+  # 4. main에만 있는(develop에 없는) 비-merge 커밋 — 단방향 흐름이 깨졌다는 신호.
+  # develop→main 승격 PR이 만드는 merge 커밋은 내용이 develop과 같아 제외(--no-merges)한다.
+  # 0이 아니면 승격 PR이 충돌하거나 develop에 없는 변경이 main에 남으므로, 먼저 준비 PR에서
+  # origin/main을 merge해 develop으로 흡수해야 한다(1회성 back-merge).
+  local main_only
+  main_only="$(git rev-list --no-merges --count origin/develop..origin/main)"
+  echo "MAIN_ONLY_COMMITS=$main_only"
+  if [[ "$main_only" != "0" ]]; then
+    git log --no-merges origin/develop..origin/main --pretty=format:'- %h %s'
+    echo ""
+  fi
+
+  # 5. main이 현재 들고 있는 MARKETING_VERSION (사용자가 새 버전을 정할 때 참고)
   # ⚠️ main이 App 모듈 도입 이전 상태(컷오버 전 첫 릴리즈)면 이 파일/키 자체가 없을 수 있다 —
   # 그건 에러가 아니라 "아직 main에 버전이 없다"는 정상 케이스이므로 fail-loud 하지 않고
   # develop의 현재 값을 참고용으로 대신 보여준다.
@@ -72,7 +87,14 @@ cmd_preflight() {
     echo "NOTE=main에 아직 MARKETING_VERSION이 없습니다(첫 릴리즈 — App 모듈 자체가 main에 없던 시절 상태). develop의 현재 값을 참고만 하세요."
   fi
 
-  # 5. 워킹트리 상태
+  # 6. develop의 MARKETING_VERSION — main과 다르면 준비 PR이 이미 develop에 머지된 상태(승격 PR 단계).
+  local develop_current
+  develop_current="$(git show "origin/develop:$proj_swift" 2>/dev/null \
+    | grep -oE '"MARKETING_VERSION": *"[^"]+"' \
+    | grep -oE '[0-9][^"]*' || true)"
+  echo "CURRENT_DEVELOP_VERSION=${develop_current:-NONE}"
+
+  # 7. 워킹트리 상태
   if [[ -n "$(git status --porcelain)" ]]; then
     echo "WORKTREE=DIRTY"
   else
@@ -83,10 +105,11 @@ cmd_preflight() {
 
 # ── pr-create: 외부 비가역. 승인 후 호출 ────────────────────────────────────────────
 cmd_pr_create() {
-  local head="" title="" body_file=""
+  local base="" head="" title="" body_file=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --base)      base="${2:-}"; shift 2 ;;
       --head)      head="${2:-}"; shift 2 ;;
       --title)     title="${2:-}"; shift 2 ;;
       --body-file) body_file="${2:-}"; shift 2 ;;
@@ -94,13 +117,15 @@ cmd_pr_create() {
     esac
   done
 
+  [[ "$base" == "develop" || "$base" == "main" ]] || die "pr-create: --base 는 develop 또는 main 이어야 합니다."
   [[ -n "$head" ]] || die "pr-create: --head 가 필요합니다."
+  # 승격 PR은 develop 자체만 main으로 올린다 — 다른 브랜치를 main에 직접 넣으면 main에만 있는 커밋이 생긴다.
+  [[ "$base" != "main" || "$head" == "develop" ]] || die "pr-create: base=main 이면 head는 develop 이어야 합니다(단방향 흐름)."
   [[ -n "$title" ]] || die "pr-create: --title 이 필요합니다."
   [[ -n "$body_file" && -f "$body_file" ]] || die "pr-create: --body-file 경로가 없거나 존재하지 않습니다."
 
-  # base는 항상 main으로 고정 — 이 스크립트의 존재 이유(다른 곳엔 base=main PR 생성이 없다).
   local url
-  url="$(gh pr create --base main --head "$head" --title "$title" --body-file "$body_file" --assignee @me)" \
+  url="$(gh pr create --base "$base" --head "$head" --title "$title" --body-file "$body_file" --assignee @me)" \
     || die "gh pr create 실패. 출력을 확인하세요."
 
   echo "PR_URL=$url"
@@ -111,5 +136,5 @@ sub="${1:-}"; shift || true
 case "$sub" in
   preflight) cmd_preflight "$@" ;;
   pr-create) cmd_pr_create "$@" ;;
-  *)         die "사용법: make-release-pr.sh {preflight | pr-create --head <branch> --title <제목> --body-file <path>}" ;;
+  *)         die "사용법: make-release-pr.sh {preflight | pr-create --base <develop|main> --head <branch> --title <제목> --body-file <path>}" ;;
 esac
