@@ -156,20 +156,6 @@ final class PushNotificationCenter {
         Task { await markNotificationAsRead(id) }
     }
 
-    // MARK: - 부트스트랩 pull (SplashData의 deviceTokenProvider가 호출)
-
-    /// 부트스트랩(세션 있을 때)이 당겨가는 현재 디바이스 푸시 토큰. 알림 권한이 허용된 경우에만 FCM 토큰을
-    /// 만들어 돌려준다 — 미허용/실패면 nil을 주고, 런치 태스크는 등록을 조용히 건너뛴다.
-    func currentDevicePushToken() async -> DevicePushToken? {
-        guard isFirebaseConfigured else { return nil }
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard settings.authorizationStatus == .authorized else { return nil }
-        guard let token = try? await Messaging.messaging().token() else { return nil }
-
-        latestFCMToken = token
-        return DevicePushToken(token: token, deviceID: deviceIdentifier())
-    }
-
     // MARK: - 권한 요청 + 원격 알림 등록 (메인 탭 진입, V1 parity)
 
     /// 로그인 상태의 메인 진입 시 호출(V1은 홈 진입에서 수행). 권한이 미결정이면 요청하고, **결과와 무관하게**
