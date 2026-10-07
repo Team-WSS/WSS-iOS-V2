@@ -12,17 +12,14 @@ import Testing
 @testable import SplashData
 import BaseDomain
 import BaseDomainTesting
-import NotificationDomain
-import NotificationDomainTesting
 import ProfileDomain
 import ProfileDomainTesting
 import RecommendationDomain
 import RecommendationDomainTesting
 
-/// 부수 태스크 4종(users/me 동기화·FCM 토큰 등록·키워드 동기화·홈 프리페치)을
-/// **각 도메인 Repository에 어떻게 위임하는지** 명세. 여기 있는 분기는 둘뿐이다 —
-/// 토큰 소스가 없으면 FCM 등록을 조용히 건너뛰는 것, 프리페치 세 슬롯을 병렬로 채우되
-/// 실패한 쪽만 비워 두는 것. "언제 던지고 언제 기다리는지"는 `BootstrapAppUseCaseTests`가 명세한다.
+/// 부수 태스크 3종(users/me 동기화·키워드 동기화·홈 프리페치)을
+/// **각 도메인 Repository에 어떻게 위임하는지** 명세. 여기 있는 분기는 하나뿐이다 —
+/// 프리페치 세 슬롯을 병렬로 채우되 실패한 쪽만 비워 두는 것. "언제 던지고 언제 기다리는지"는 `BootstrapAppUseCaseTests`가 명세한다.
 @Suite
 struct DefaultLaunchTaskRepositoryTests {
 
@@ -46,30 +43,6 @@ struct DefaultLaunchTaskRepositoryTests {
         await sut.syncKeywords()
 
         #expect(keyword.syncKeywordsCallCount == 1)
-    }
-
-    // MARK: - 디바이스 토큰
-
-    @Test("디바이스 토큰이 있으면 그 토큰을 서버에 등록한다")
-    func registersDeviceTokenWhenAvailable() async throws {
-        let push = MockPushSettingRepository()
-        let token = DevicePushToken(token: "fcm-token", deviceID: "device-1")
-        let sut = makeSUT(pushSettingRepository: push, deviceToken: token)
-
-        try await sut.registerDeviceTokenIfNeeded()
-
-        #expect(push.registerCallCount == 1)
-        #expect(push.lastRegisteredToken == token)
-    }
-
-    @Test("디바이스 토큰 소스가 없으면 등록을 조용히 건너뛴다")
-    func skipsRegistrationWhenTokenUnavailable() async throws {
-        let push = MockPushSettingRepository()
-        let sut = makeSUT(pushSettingRepository: push, deviceToken: nil)
-
-        try await sut.registerDeviceTokenIfNeeded()
-
-        #expect(push.registerCallCount == 0)
     }
 
     // MARK: - 홈 프리페치
@@ -114,16 +87,12 @@ extension DefaultLaunchTaskRepositoryTests {
 
     private func makeSUT(
         profileRepository: MockProfileRepository = MockProfileRepository(),
-        pushSettingRepository: MockPushSettingRepository = MockPushSettingRepository(),
-        deviceToken: DevicePushToken? = nil,
         keywordRepository: MockKeywordRepository = MockKeywordRepository(),
         recommendationRepository: MockRecommendationRepository = MockRecommendationRepository(),
         prefetchStore: HomePrefetchStore = HomePrefetchStore()
     ) -> DefaultLaunchTaskRepository {
         DefaultLaunchTaskRepository(
             profileRepository: profileRepository,
-            pushSettingRepository: pushSettingRepository,
-            deviceTokenProvider: { deviceToken },
             keywordRepository: keywordRepository,
             recommendationRepository: recommendationRepository,
             prefetchStore: prefetchStore

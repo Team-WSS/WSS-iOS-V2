@@ -75,7 +75,7 @@ final class AppDependencies {
     /// 런치 부트스트랩 게이트(강제 업데이트→세션→약관) 판정 — `ContentView`의 스플래시가
     /// `DefaultBootstrapAppUseCase`로 감싸 호출한다(#236, #225 배선).
     let launchGateRepository: LaunchGateRepository
-    /// 런치 부수 태스크 4종(users/me·FCM·키워드·홈 프리페치) — 위와 같은 UseCase로 묶인다.
+    /// 런치 부수 태스크 3종(users/me·키워드·홈 프리페치) — 위와 같은 UseCase로 묶인다.
     let launchTaskRepository: LaunchTaskRepository
     /// 이벤트 트래킹(#249) — Release 스킴에서만 실제 Amplitude 인스턴스, Debug는 nil(모든 호출부가
     /// `analyticsTracker?.track(...)`라 자동 no-op). `Logger`와 동일한 옵셔널 주입 패턴.
@@ -237,12 +237,8 @@ final class AppDependencies {
         )
         // 프리페치를 실행하는 쪽 추천 레포는 store를 주입하지 않은 **별도 인스턴스**여야 한다
         // (위 prefetchStore 주석의 짝 — 같은 인스턴스를 넘기면 프리페치가 스스로를 무효화한다).
-        // deviceTokenProvider는 App 레이어 FCM 허브에서 현재 토큰을 당겨온다(#243) — 권한 허용 상태에서만
-        // 토큰을 만들어 주고, 미허용/실패면 nil을 돌려 부트스트랩이 등록을 조용히 건너뛴다(세션 있을 때만 호출됨).
         self.launchTaskRepository = SplashDataFactory.makeLaunchTaskRepository(
             profileRepository: profileRepository,
-            pushSettingRepository: pushSettingRepository,
-            deviceTokenProvider: { await PushNotificationCenter.shared.currentDevicePushToken() },
             keywordRepository: keywordRepository,
             recommendationRepository: RecommendationDataFactory.makeRepository(
                 network: client,
