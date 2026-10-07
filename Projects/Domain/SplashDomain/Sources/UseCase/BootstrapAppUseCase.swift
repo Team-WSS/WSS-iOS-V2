@@ -16,7 +16,7 @@ import BaseDomain
 /// 1. 강제 업데이트 게이트 — 조회 **실패는 통과**시킨다(서버 장애가 앱을 잠그면 안 된다).
 /// 2. 세션 게이트 — 저장된 세션이 없으면 인트로로, 부수 태스크는 시작하지 않는다.
 /// 2-1. 온보딩 게이트 — 세션은 있으나 온보딩(가입) 미완료면 인트로로(#257, 로컬 캐시가 없으면 완료로 간주).
-/// 3. 부수 태스크 4종(users/me·FCM·키워드·프리페치) — **던지고 진입**(완료를 기다리지 않고,
+/// 3. 부수 태스크 3종(users/me·키워드·프리페치) — **던지고 진입**(완료를 기다리지 않고,
 ///    실패·지연이 앱 진입을 막지 않는다).
 /// 4. 약관 게이트 — 조회 실패는 동의로 간주해 진입을 막지 않는다. 단 세션 소실만은 인트로로.
 ///
@@ -82,14 +82,13 @@ public final class DefaultBootstrapAppUseCase: BootstrapAppUseCase {
         //      부수 태스크·약관 게이트는 온보딩을 끝낸 세션에만 의미가 있어 이 게이트 뒤에 둔다.
         guard gateRepository.isOnboardingCompleted() else { return .intro }
 
-        // 3. 부수 태스크 4종 — 던지고 진입(실패·지연이 앱 진입을 막지 않는다).
+        // 3. 부수 태스크 3종 — 던지고 진입(실패·지연이 앱 진입을 막지 않는다).
         let taskRepository = taskRepository
         launchInBackground {
             async let userSync: Void? = try? taskRepository.syncUserBasicInfo()
-            async let deviceToken: Void? = try? taskRepository.registerDeviceTokenIfNeeded()
             async let keywords: Void = taskRepository.syncKeywords()
             async let prefetch: Void = taskRepository.prefetchHomeData()
-            _ = await (userSync, deviceToken, keywords, prefetch)
+            _ = await (userSync, keywords, prefetch)
         }
 
         // 4. 약관 게이트 — 조회 실패·예산 초과는 동의로 간주해 진입을 막지 않는다.
