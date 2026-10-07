@@ -35,13 +35,21 @@ final class PushNotificationCenter {
 
     private let deviceIdentifierStore: DeviceIdentifierStore
     /// `AppDependencies`가 조립 시 주입 — FCM 토큰을 서버에 등록하는 훅(`RegisterDeviceTokenUseCase` 래핑).
-    private var registerDeviceToken: (@Sendable (DevicePushToken) async -> Void)?
+    /// 성공 여부를 돌려준다 — 성공한 토큰만 `registeredToken`으로 기억해, 실패한 토큰은 다음 기회에 다시 보낸다.
+    private var registerDeviceToken: (@Sendable (DevicePushToken) async -> Bool)?
     /// `AppDependencies`가 조립 시 주입 — 현재 로그인(세션 보유) 여부.
     private var isLoggedIn: (@Sendable () -> Bool)?
     /// `AppDependencies`가 조립 시 주입 — 알림 읽음 처리 훅(`MarkNotificationAsReadUseCase` 래핑, 인자는 알림 id).
     private var markNotificationAsRead: (@Sendable (Int) async -> Void)?
     /// 마지막으로 받은 FCM 등록 토큰. 로그인 전에 도착하면 보관만 하고, 로그인/조립 시점에 등록에 쓴다.
     private var latestFCMToken: String?
+    /// 이번 세션에서 서버 등록에 성공한 토큰 / 지금 등록 요청 중인 토큰. 한 실행 안에서 여러 경로(시작 시 delegate,
+    /// 메인 탭 진입의 `token()` 조회)가 같은 토큰을 거듭 보내지 않게 거른다. `configure`(세션 시작·종료 시 재조립)가
+    /// 비우므로 로그아웃 → 재로그인하면 다시 등록된다 — 서버가 로그아웃 때 이 기기의 토큰 행을 지우기 때문에 필요하다.
+    private var registeredToken: String?
+    private var registeringToken: String?
+    /// `configure`마다 1씩 오른다. 이전 세션에서 시작된 등록 요청이 늦게 끝나 새 세션의 `registeredToken`을 채우지 않게 한다.
+    private var sessionGeneration = 0
 
     /// 알림 탭으로 만들어진 딥링크를 앱(`WSSIOSV2App`)의 `pendingDeepLink` 채널로 넘기는 통로. App이 등록한다.
     /// ⚠️ 콜드 스타트(알림 탭으로 앱이 실행)면 콜백 등록 전에 탭이 도착할 수 있어, 등록되는 순간 보관분을 flush한다.
@@ -60,21 +68,23 @@ final class PushNotificationCenter {
 
     // MARK: - Configuration (AppDependencies가 조립 시 호출)
 
-    /// 서버 등록 훅과 로그인 판정을 주입한다. 세션이 끝나 `AppDependencies`가 재조립되면 다시 불려
-    /// 새 UseCase/tokenStore로 갱신된다(idempotent). 이미 토큰을 들고 있고 로그인 상태면 여기서 한 번 등록을 시도한다
-    /// (부트스트랩이 지나간 뒤 로그인한 신규 사용자가 이 조립 시점에 걸리는 경로).
+    /// 서버 등록 훅과 로그인 판정을 주입한다. 앱 시작과 세션 종료(`resetToOnboarding`)로 `AppDependencies`가
+    /// 조립될 때마다 불려 새 UseCase/tokenStore로 갱신되고, 등록 기록도 비운다. 이미 토큰을 들고 있고 로그인 상태면
+    /// 여기서 한 번 등록을 시도한다.
     func configure(
-        registerDeviceToken: @escaping @Sendable (DevicePushToken) async -> Void,
+        registerDeviceToken: @escaping @Sendable (DevicePushToken) async -> Bool,
         isLoggedIn: @escaping @Sendable () -> Bool,
         markNotificationAsRead: @escaping @Sendable (Int) async -> Void
     ) {
         self.registerDeviceToken = registerDeviceToken
         self.isLoggedIn = isLoggedIn
         self.markNotificationAsRead = markNotificationAsRead
+        registeredToken = nil
+        registeringToken = nil
+        sessionGeneration += 1
 
-        guard let token = latestFCMToken, isLoggedIn() else { return }
-        let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
-        Task { await registerDeviceToken(devicePushToken) }
+        guard let latestFCMToken else { return }
+        registerIfLoggedIn(latestFCMToken)
     }
 
     // MARK: - AppDelegate가 전달하는 시스템 콜백
@@ -89,10 +99,24 @@ final class PushNotificationCenter {
     func setFCMRegistrationToken(_ token: String?) {
         guard let token else { return }
         latestFCMToken = token
+        registerIfLoggedIn(token)
+    }
 
+    /// 로그인 상태면 토큰을 서버에 등록한다. 이번 세션에서 이미 성공했거나 요청 중인 토큰이면 건너뛴다.
+    /// 로그인 전이면 아무것도 안 한다 — 토큰은 `latestFCMToken`에 남아 있고, 로그인 후 메인 탭 진입이 다시 등록을 부른다.
+    private func registerIfLoggedIn(_ token: String) {
         guard isLoggedIn?() == true, let registerDeviceToken else { return }
+        guard token != registeredToken, token != registeringToken else { return }
+
+        registeringToken = token
+        let generation = sessionGeneration
         let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
-        Task { await registerDeviceToken(devicePushToken) }
+        Task {
+            let succeeded = await registerDeviceToken(devicePushToken)
+            guard generation == sessionGeneration else { return }
+            if registeringToken == token { registeringToken = nil }
+            if succeeded { registeredToken = token }
+        }
     }
 
     /// 알림 탭(`AppDelegate.didReceive`)의 payload를 딥링크로 풀어 앱으로 넘긴다. `view`에 맞는 화면으로
