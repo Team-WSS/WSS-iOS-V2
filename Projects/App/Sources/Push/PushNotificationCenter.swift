@@ -30,7 +30,8 @@ import NotificationDomain
 /// 2. Firebase delegate(`setFCMRegistrationToken`) — 앱 시작 시 캐시 토큰으로 1회, 그리고 실행 중 토큰이 실제로
 ///    바뀔 때만 불린다. 같은 APNs 토큰을 다시 넣으면 Firebase는 아무것도 하지 않으므로 delegate만으로는
 ///    "실행 중 로그아웃 → 재로그인"이나 "로그아웃 상태로 켬 → 로그인"을 놓친다(#287 실측).
-/// 3. `configure` — 조립 시점에 이미 토큰을 들고 있고 로그인 상태일 때.
+/// 3. `configure` — 조립 시점에 이미 토큰을 들고 있고 로그인 상태일 때. 앱 시작 조립은 delegate보다 먼저라 보통
+///    토큰이 없어, 실제로는 거의 타지 않는 방어용 경로다.
 /// 4. 포그라운드 복귀(`MainTabView`) — 앞선 등록이 실패해 최신 토큰이 아직 미등록일 때 다시 보낸다.
 @MainActor
 final class PushNotificationCenter {
@@ -127,7 +128,8 @@ final class PushNotificationCenter {
     /// 로그인 전이면 아무것도 안 한다 — 토큰은 `latestFCMToken`에 남아 있고, 로그인 후 메인 탭 진입이 다시 등록을 부른다.
     /// ⚠️ **요청은 한 번에 하나만 보낸다** — 시작 시 delegate의 캐시 토큰 A와 `token()`이 새로 받은 B를 동시에 보내면
     /// 늦게 끝난 A가 서버의 이 기기 행을 죽은 토큰으로 덮을 수 있다. 진행 중이면 새로 보내지 않고, 끝난 뒤 그새
-    /// `latestFCMToken`이 바뀌었으면 최신 값으로 한 번 더 보낸다 → 서버에 마지막으로 남는 값이 항상 최신 토큰이다.
+    /// `latestFCMToken`이 바뀌었으면 최신 값으로 한 번 더 보낸다 → 같은 세션 안에서는 서버에 마지막으로 남는 값이 최신 토큰이다.
+    /// (`resetRegistrationRecord`는 진행 중 요청을 기다리지 않으므로 세션 경계를 넘는 순서까지는 보장하지 않는다.)
     func registerLatestTokenIfNeeded() {
         guard let token = latestFCMToken, token != registeredToken, registeringToken == nil,
               isLoggedIn?() == true, let registerDeviceToken
