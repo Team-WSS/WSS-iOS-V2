@@ -226,7 +226,7 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
 - ⚠️ **Messaging은 토큰 신선도를 `FIROptions.defaultOptions`(번들의 기본 이름 `GoogleService-Info.plist` = 운영)의
   앱 ID로 판정한다**(`FIRMessagingUtilities.m`) — Debug는 `GoogleService-Info-Debug.plist`로 configure하는데 두 plist가
   모두 번들에 들어가 있어, Debug에선 실행마다 "Firebase App IID change"로 캐시 토큰을 무효화하고 새로 받는다(#287 발견).
-  Release는 영향 없음. 구성별로 plist 하나만 번들에 넣으면 해소된다.
+  Release는 영향 없음. 구성별로 plist 하나만 번들에 넣으면 해소된다(#288에서 처리 예정).
 - **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — 판별자는 **`view` 문자열**이고 서버가
   `view`에 맞는 id만 채운다(나머진 빈 문자열 **또는 키 자체가 없음** — 실측: `view=notificationDetail` 공지 push는
   `novelId` 키가 아예 없고 `feedId`만 빈 문자열). id는 전부 문자열이라 `AppDelegate.stringPayload`(String만 통과)를
