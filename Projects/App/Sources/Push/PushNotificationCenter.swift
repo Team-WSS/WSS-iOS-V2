@@ -135,25 +135,16 @@ final class PushNotificationCenter {
 
     // MARK: - 권한 요청 + 원격 알림 등록 (메인 탭 진입, V1 parity)
 
-    /// 로그인 상태의 메인 진입 시 호출(V1은 홈 진입에서 수행). 권한이 미결정이면 요청하고, 허용 상태면 APNs
-    /// 등록을 시작한다. 등록이 끝나면 `didRegister…`(AppDelegate) → `setAPNSToken` → `MessagingDelegate` →
-    /// `setFCMRegistrationToken`으로 이어져 서버 등록까지 흐른다.
-    func requestAuthorizationAndRegisterIfGranted() async {
+    /// 로그인 상태의 메인 진입 시 호출(V1은 홈 진입에서 수행). 권한이 미결정이면 요청하고, **결과와 무관하게**
+    /// APNs 등록을 시작한다(#287) — 서버는 등록된 기기가 없으면 앱 내 알림도 만들지 않으므로, 권한을 거절한
+    /// 사용자도 기기 등록은 돼 있어야 한다(V1 parity). 배너 표시 여부는 iOS가 권한에 따라 알아서 거른다.
+    /// 등록이 끝나면 `didRegister…`(AppDelegate) → `setAPNSToken`으로 이어진다.
+    func requestAuthorizationAndRegisterForRemoteNotifications() async {
         let center = UNUserNotificationCenter.current()
-        let status = await center.notificationSettings().authorizationStatus
-
-        switch status {
-        case .notDetermined:
-            let granted = (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
-            guard granted else { return }
-            UIApplication.shared.registerForRemoteNotifications()
-        case .authorized, .provisional, .ephemeral:
-            UIApplication.shared.registerForRemoteNotifications()
-        case .denied:
-            break
-        @unknown default:
-            break
+        if await center.notificationSettings().authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .badge, .sound])
         }
+        UIApplication.shared.registerForRemoteNotifications()
     }
 
     /// Firebase 기본 앱이 실제로 구성됐는지. `GoogleService-Info` plist가 없으면(gitignore돼 로컬/CI에 미배치)
