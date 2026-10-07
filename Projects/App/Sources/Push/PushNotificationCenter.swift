@@ -23,11 +23,13 @@ import NotificationDomain
 /// 마땅한 통로가 없다. V1도 같은 이유로 `NotificationHelper.shared`를 썼다. Firebase(`Messaging`) import는
 /// 이 App 레이어 안(이 파일 + `AppDelegate`)에만 가둔다 — Domain/Data는 `DevicePushToken` 추상화로 이미 분리돼 있다.
 ///
-/// **등록이 일어나는 두 경로**(둘 다 필요):
-/// 1. 부트스트랩 pull — `currentDevicePushToken()`을 `SplashDomain`의 런치 태스크가 세션 있을 때 당겨간다
-///    (이미 권한을 허용한 재방문 사용자). 이 허브는 Firebase에서 현재 토큰을 만들어 돌려주기만 한다.
-/// 2. 반응 push — 권한을 새로 허용하거나 토큰이 갱신되면 `setFCMRegistrationToken`이 로그인 상태에서 서버로 등록한다
-///    (부트스트랩이 이미 지나간 뒤 로그인/허용하는 신규 사용자 — 이게 없으면 다음 실행까지 등록이 밀린다).
+/// **서버 등록이 일어나는 경로**(#287). 전부 `registerIfLoggedIn`으로 모이고, 같은 세션에서 같은 토큰은 한 번만 보낸다.
+/// 1. 메인 탭 진입 — `registerForRemoteNotifications` → `didRegister…` → `setAPNSToken`이 곧바로 `token()`을 조회해
+///    등록한다. 로그인·가입 직후에도 메인 탭을 지나므로 **실행 중 로그인한 사용자를 책임지는 경로는 이것**이다.
+/// 2. Firebase delegate(`setFCMRegistrationToken`) — 앱 시작 시 캐시 토큰으로 1회, 그리고 실행 중 토큰이 실제로
+///    바뀔 때만 불린다. 같은 APNs 토큰을 다시 넣으면 Firebase는 아무것도 하지 않으므로 delegate만으로는
+///    "실행 중 로그아웃 → 재로그인"이나 "로그아웃 상태로 켬 → 로그인"을 놓친다(#287 실측).
+/// 3. `configure` — 조립 시점에 이미 토큰을 들고 있고 로그인 상태일 때.
 @MainActor
 final class PushNotificationCenter {
 
@@ -89,10 +91,21 @@ final class PushNotificationCenter {
 
     // MARK: - AppDelegate가 전달하는 시스템 콜백
 
-    /// APNs device token 수신 → Firebase에 직접 대입(method swizzling off — `FirebaseAppDelegateProxyEnabled=NO`).
+    /// APNs device token 수신 → Firebase에 직접 대입(method swizzling off — `FirebaseAppDelegateProxyEnabled=NO`)한 뒤,
+    /// FCM 토큰을 직접 조회해 등록한다. iOS는 `registerForRemoteNotifications`를 부를 때마다 이 콜백을 다시 주므로
+    /// 메인 탭 진입마다 여기를 지난다.
     func setAPNSToken(_ deviceToken: Data) {
         guard isFirebaseConfigured else { return }
         Messaging.messaging().apnsToken = deviceToken
+        Task { await fetchFCMTokenAndRegister() }
+    }
+
+    /// `token()`은 APNs 토큰이 있어야 성공하므로 `setAPNSToken` 뒤에서만 부른다. 캐시 토큰이 낡았으면(설치 ID·앱 버전·
+    /// 앱 ID·APNs 변경) Firebase가 새로 발급한다 — 재설치 뒤 FCM 서버에서 지워진 캐시 토큰을 계속 보내는 일도 이걸로 막는다.
+    private func fetchFCMTokenAndRegister() async {
+        guard let token = try? await Messaging.messaging().token() else { return }
+        latestFCMToken = token
+        registerIfLoggedIn(token)
     }
 
     /// FCM 등록 토큰 수신/갱신 → 보관 + 로그인 상태면 서버 등록.
