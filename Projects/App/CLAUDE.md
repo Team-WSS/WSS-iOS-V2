@@ -184,16 +184,31 @@ FCM 수신·토큰 발급·서버 등록. **Firebase(`Messaging`) import는 App 
 `Sources/Push/PushNotificationCenter.swift`(런타임 허브)와 `Sources/Push/AppDelegate.swift`(시스템 콜백).
 Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain) 추상화로 이미 격리돼 Firebase를 모른다.
 
-- **등록 파이프라인은 새로 만든 게 아니라 이미 있던 슬롯을 채운 것** — `SplashDomain`의 부트스트랩
-  (`BootstrapAppUseCase`)이 세션 있을 때 `registerDeviceTokenIfNeeded()`를 fire-and-forget으로 돌리고, 그게
-  `AppDependencies`가 넘긴 `deviceTokenProvider`(async)를 당겨 토큰이 있으면 `pushSettingRepository.registerDeviceToken`으로
-  보낸다. #243 전엔 `deviceTokenProvider: { nil }`(등록 스킵)이었고, 지금은 `PushNotificationCenter.shared.currentDevicePushToken()`이다.
-- **등록 경로는 둘, 둘 다 필요**: ① **부트스트랩 pull**(`currentDevicePushToken`) — 세션 있는 재방문·이미 권한
-  허용 사용자. ② **반응 push**(`setFCMRegistrationToken`) — 부트스트랩이 지나간 뒤 로그인/권한허용하는 신규
-  사용자(이게 없으면 신규 유저 토큰 등록이 다음 실행까지 밀린다). 반응 경로는 `isLoggedIn` 게이트를 통과할 때만 서버로 보낸다.
+- **서버 등록(`POST /users/fcm-token`)의 주 경로는 "메인 탭 진입 → APNs 등록 → `token()` 직접 조회"다**(#287).
+  `MainTabView.task`가 `registerForRemoteNotifications()`를 부르면 iOS가 **매번** `didRegister…`를 다시 주고,
+  `setAPNSToken`이 곧바로 `Messaging.messaging().token()`을 조회해 `latestFCMToken`을 갱신하고 등록한다. 로그인·가입
+  직후에도 메인 탭을 지나므로 실행 중 로그인한 사용자는 이 경로가 책임진다. 보조 경로는 Firebase delegate
+  (`setFCMRegistrationToken`, 앱 시작 시·토큰 변경 시), `configure`(조립 시 보관 토큰), 포그라운드 복귀(`MainTabView`의
+  `scenePhase`, 실패분 재시도). 전부 `registerLatestTokenIfNeeded` 하나로 모이고, **같은 세션에서 성공한 토큰은 다시
+  보내지 않는다**(`registeredToken`).
+  - ⚠️ **등록 기록은 앱 시작·세션 종료(`configure`)와 로그인 완료(`ContentView.finishOnboarding`) 두 곳에서 비운다** —
+    로그인은 `AppDependencies`를 재조립하지 않아 `configure`가 안 불린다. 가입 미완료 세션으로 켜 인트로에 간 뒤
+    다른 계정으로 로그인하면, 이전 계정 몫으로 기록된 같은 토큰을 건너뛰어 새 계정이 미등록으로 남는다(#287 리뷰).
+  - ⚠️ **등록 요청은 한 번에 하나만** — 시작 시 delegate의 캐시 토큰 A와 `token()`의 새 토큰 B를 동시에 보내면 늦게 끝난
+    A가 서버의 이 기기 행을 죽은 토큰으로 덮을 수 있다. 진행 중이면 새로 안 보내고, 끝난 뒤 `latestFCMToken`이 바뀌었으면
+    최신 값으로 한 번 더 보낸다. 병렬 전송으로 되돌리지 말 것.
+  - ⚠️ **delegate에만 기대면 등록이 빠진다** — #287 전엔 그랬고, "실행 중 로그아웃 → 재로그인"·"로그아웃 상태로 켬 →
+    로그인"에서 다음 콜드 스타트까지 미등록이었다(실기기 실측). Firebase는 같은 APNs 토큰을 다시 넣거나 캐시 토큰에
+    묶인 APNs와 같은 값을 넣으면 **delegate를 부르지 않는다**(앱 시작 시 캐시 토큰으로 1회 + 실제 토큰 변경 때만).
+  - ⚠️ **런치(스플래시) 시점의 `token()`은 실기기에서 항상 실패한다** — APNs 토큰이 아직 없어 Firebase가
+    `No APNS token specified before fetching FCM Token`으로 거절한다. 그래서 #243의 부트스트랩 pull
+    (`SplashDomain`의 `registerDeviceTokenIfNeeded`)을 #287에서 제거했다. `token()`은 `setAPNSToken` 뒤에서만 부를 것.
+  - **로그아웃은 서버에서 이 기기의 토큰 행을 지운다**(`deviceIdentifier` 기준, #287 실측) — 그래서 재로그인 때
+    다시 등록해야 하고, `registeredToken`이 로그인할 때마다 비워져야 한다.
 - **왜 `PushNotificationCenter.shared`(싱글턴)인가**: UIKit `AppDelegate`(시스템 콜백 수신)와 SwiftUI DI
   (`AppDependencies` — UseCase 조립)는 생명주기가 달라 인스턴스 공유 통로가 없다. V1의 `NotificationHelper.shared`와 같은 이유.
-  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다(idempotent).
+  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다. 등록 기록을
+  비우고 보관 토큰으로 등록을 시도하는 부수효과가 있어 멱등이 아니다 — `AppDependencies()`를 조립 시점 외에 만들지 말 것.
 - **method swizzling은 끈다**(`Support/Info.plist`의 `FirebaseAppDelegateProxyEnabled=NO`) — SwiftUI
   `@UIApplicationDelegateAdaptor` 환경에서 Firebase 자동 프록시가 불안정해, APNs device token을 `AppDelegate`가
   받아 `Messaging.messaging().apnsToken`에 **직접** 대입한다(V1과 동일). 그래서 `willPresent`/`didReceive`에서
@@ -206,11 +221,20 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
   **실제 적용**한다 — V1은 옵션을 만들고 버린 뒤 인자 없는 `configure()`를 불러 항상 운영 plist만 쓰던 버그가 있었으니 복붙하지 말 것.
 - ⚠️ **`Messaging.messaging()`을 만지는 새 코드는 반드시 `isFirebaseConfigured`(`FirebaseApp.app() != nil`)로 가드**한다 —
   위 plist 미배치로 Firebase가 **미구성**이면 `Messaging.messaging()` 호출 자체가 "default app not configured"로 크래시한다
-  (Codex 리뷰 실측). `PushNotificationCenter.currentDevicePushToken()`/`setAPNSToken()`이 그렇게 가드돼 있다. 델리게이트
+  (Codex 리뷰 실측). `PushNotificationCenter.setAPNSToken()`(과 그 뒤의 `token()` 조회)이 그렇게 가드돼 있다. 델리게이트
   콜백(`willPresent`/`didReceive`)의 `appDidReceiveMessage`는 델리게이트가 **구성 성공 시에만** 설정돼 미구성 땐 도달하지 않는다.
 - **권한 요청·원격 알림 등록 시점은 `MainTabView.task`**(V1 parity, 사용자 확정) — `MainTabView`는 세션이 있어야만
-  뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한 요청, 허용 상태면 `registerForRemoteNotifications()`.
+  뜨므로 여기가 "로그인 상태의 메인 진입"이다. 미결정이면 권한을 요청하고, **권한 결과와 무관하게**
+  `registerForRemoteNotifications()`를 부른다(#287, 사용자 확정). ⚠️ **서버는 등록된 기기가 없으면 앱 내 알림도
+  만들지 않는다** — 권한 거절 사용자를 등록에서 빼면 앱 내 알림 목록까지 비게 된다. 배너는 iOS가 권한에 따라 거른다.
   (기존 홈 알림벨/설정의 화면별 권한 흐름은 그대로 — 이건 그 위에 추가된 진입 트리거다.)
+- ⚠️ **FCM 토큰 캐시는 키체인(`com.google.iid-tokens`)에 있어 앱을 지워도 남는다** — 재설치 시 Firebase는 FCM 서버의
+  이전 등록만 지우고 캐시는 둔다. 그래서 delegate가 시작 시 넘겨주는 토큰이 이미 죽은 토큰일 수 있다. 명시적 `token()`은
+  신선도(설치 ID·앱 버전·앱 ID·APNs)를 검사해 낡았으면 재발급하므로, 위 주 경로가 이 경우도 막는다.
+- ⚠️ **Messaging은 토큰 신선도를 `FIROptions.defaultOptions`(번들의 기본 이름 `GoogleService-Info.plist` = 운영)의
+  앱 ID로 판정한다**(`FIRMessagingUtilities.m`) — Debug는 `GoogleService-Info-Debug.plist`로 configure하는데 두 plist가
+  모두 번들에 들어가 있어, Debug에선 실행마다 "Firebase App IID change"로 캐시 토큰을 무효화하고 새로 받는다(#287 발견).
+  Release는 영향 없음. 구성별로 plist 하나만 번들에 넣으면 해소된다(#288에서 처리 예정).
 - **알림 탭 → 딥링크(화면 이동)는 서버 payload 스키마대로 연결됨**(#243) — 판별자는 **`view` 문자열**이고 서버가
   `view`에 맞는 id만 채운다(나머진 빈 문자열 **또는 키 자체가 없음** — 실측: `view=notificationDetail` 공지 push는
   `novelId` 키가 아예 없고 `feedId`만 빈 문자열). id는 전부 문자열이라 `AppDelegate.stringPayload`(String만 통과)를

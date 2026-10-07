@@ -49,6 +49,7 @@ struct MainTabView: View {
     /// 세션을 끝낸 것이라 되살리지 않는다. 어느 탭이 소비했는지도 같이 들어, 다른 탭의 딥링크 화면이 빠질 때
     /// 이 값이 지워지지 않게 한다(탭마다 스택이 따로라 홈의 링크 A와 피드의 링크 B가 동시에 살아 있을 수 있다).
     @State private var deliveredDeepLink: (tab: MainTab, link: DeepLink)?
+    @Environment(\.scenePhase) private var scenePhase
 
     /// `TabView(selection:)`을 감싼 프록시 — 이미 선택된 피드 탭을 다시 탭하면(newValue == 현재 == .feed)
     /// `feedReselectSignal`을 올린다. SwiftUI는 선택된 탭 아이템을 재탭할 때도 이 setter를 같은 값으로 호출한다
@@ -82,8 +83,14 @@ struct MainTabView: View {
         .task {
             // 푸시 권한 요청·원격 알림 등록(#243, V1 parity) — 메인 탭 진입 시 1회. `MainTabView`는 세션이
             // 있어야만(부트스트랩 통과) 뜨므로 여기가 "로그인 상태의 메인 진입"에 해당한다. 미결정이면 권한을
-            // 요청하고, 허용 상태면 APNs 등록을 시작해 FCM 토큰이 서버에 등록되도록 한다.
-            await PushNotificationCenter.shared.requestAuthorizationAndRegisterIfGranted()
+            // 요청하고, 권한 결과와 무관하게 APNs 등록을 시작해 FCM 토큰이 서버에 등록되도록 한다(#287 — 서버는
+            // 등록 기기가 없으면 앱 내 알림도 만들지 않는다). 로그인·가입 직후에도 여기를 지나 서버 등록까지 이어진다.
+            await PushNotificationCenter.shared.requestAuthorizationAndRegisterForRemoteNotifications()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // 위 등록이 망 오류 등으로 실패했으면 다음 포그라운드 복귀 때 다시 보낸다(#287). 이미 등록됐으면 아무것도 안 한다.
+            guard phase == .active else { return }
+            PushNotificationCenter.shared.registerLatestTokenIfNeeded()
         }
     }
 }
