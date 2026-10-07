@@ -209,7 +209,12 @@ final class AppDependencies {
         let markNotificationAsReadUseCase = DefaultMarkNotificationAsReadUseCase(repository: notificationRepository)
         PushNotificationCenter.shared.configure(
             registerDeviceToken: { devicePushToken in
-                try? await registerDeviceTokenUseCase.execute(devicePushToken: devicePushToken)
+                do {
+                    try await registerDeviceTokenUseCase.execute(devicePushToken: devicePushToken)
+                    return true
+                } catch {
+                    return false
+                }
             },
             isLoggedIn: { (try? tokenStore.accessToken()) != nil },
             markNotificationAsRead: { notificationID in
