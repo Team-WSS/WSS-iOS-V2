@@ -23,7 +23,8 @@ import NotificationDomain
 /// 마땅한 통로가 없다. V1도 같은 이유로 `NotificationHelper.shared`를 썼다. Firebase(`Messaging`) import는
 /// 이 App 레이어 안(이 파일 + `AppDelegate`)에만 가둔다 — Domain/Data는 `DevicePushToken` 추상화로 이미 분리돼 있다.
 ///
-/// **서버 등록이 일어나는 경로**(#287). 전부 `registerIfLoggedIn`으로 모이고, 같은 세션에서 같은 토큰은 한 번만 보낸다.
+/// **서버 등록이 일어나는 경로**(#287). 전부 `latestFCMToken`을 갱신한 뒤 `registerLatestTokenIfNeeded`로 모인다.
+/// 같은 세션에서 같은 토큰은 한 번만 보내고, 요청은 한 번에 하나씩 보낸다.
 /// 1. 메인 탭 진입 — `registerForRemoteNotifications` → `didRegister…` → `setAPNSToken`이 곧바로 `token()`을 조회해
 ///    등록한다. 로그인·가입 직후에도 메인 탭을 지나므로 **실행 중 로그인한 사용자를 책임지는 경로는 이것**이다.
 /// 2. Firebase delegate(`setFCMRegistrationToken`) — 앱 시작 시 캐시 토큰으로 1회, 그리고 실행 중 토큰이 실제로
@@ -43,7 +44,7 @@ final class PushNotificationCenter {
     private var isLoggedIn: (@Sendable () -> Bool)?
     /// `AppDependencies`가 조립 시 주입 — 알림 읽음 처리 훅(`MarkNotificationAsReadUseCase` 래핑, 인자는 알림 id).
     private var markNotificationAsRead: (@Sendable (Int) async -> Void)?
-    /// 마지막으로 받은 FCM 등록 토큰. 로그인 전에 도착하면 보관만 하고, 로그인/조립 시점에 등록에 쓴다.
+    /// 마지막으로 받은 FCM 등록 토큰. 서버에 보내는 값은 항상 이것이다 — 로그인 전에 도착하면 보관만 한다.
     private var latestFCMToken: String?
     /// 이번 세션에서 서버 등록에 성공한 토큰 / 지금 등록 요청 중인 토큰. 한 실행 안에서 여러 경로(시작 시 delegate,
     /// 메인 탭 진입의 `token()` 조회)가 같은 토큰을 거듭 보내지 않게 거른다. `configure`(세션 시작·종료 시 재조립)가
@@ -84,9 +85,7 @@ final class PushNotificationCenter {
         registeredToken = nil
         registeringToken = nil
         sessionGeneration += 1
-
-        guard let latestFCMToken else { return }
-        registerIfLoggedIn(latestFCMToken)
+        registerLatestTokenIfNeeded()
     }
 
     // MARK: - AppDelegate가 전달하는 시스템 콜백
@@ -105,21 +104,25 @@ final class PushNotificationCenter {
     private func fetchFCMTokenAndRegister() async {
         guard let token = try? await Messaging.messaging().token() else { return }
         latestFCMToken = token
-        registerIfLoggedIn(token)
+        registerLatestTokenIfNeeded()
     }
 
     /// FCM 등록 토큰 수신/갱신 → 보관 + 로그인 상태면 서버 등록.
     func setFCMRegistrationToken(_ token: String?) {
         guard let token else { return }
         latestFCMToken = token
-        registerIfLoggedIn(token)
+        registerLatestTokenIfNeeded()
     }
 
-    /// 로그인 상태면 토큰을 서버에 등록한다. 이번 세션에서 이미 성공했거나 요청 중인 토큰이면 건너뛴다.
+    /// 로그인 상태면 `latestFCMToken`을 서버에 등록한다. 이번 세션에서 이미 성공한 토큰이면 건너뛴다.
     /// 로그인 전이면 아무것도 안 한다 — 토큰은 `latestFCMToken`에 남아 있고, 로그인 후 메인 탭 진입이 다시 등록을 부른다.
-    private func registerIfLoggedIn(_ token: String) {
-        guard isLoggedIn?() == true, let registerDeviceToken else { return }
-        guard token != registeredToken, token != registeringToken else { return }
+    /// ⚠️ **요청은 한 번에 하나만 보낸다** — 시작 시 delegate의 캐시 토큰 A와 `token()`이 새로 받은 B를 동시에 보내면
+    /// 늦게 끝난 A가 서버의 이 기기 행을 죽은 토큰으로 덮을 수 있다. 진행 중이면 새로 보내지 않고, 끝난 뒤 그새
+    /// `latestFCMToken`이 바뀌었으면 최신 값으로 한 번 더 보낸다 → 서버에 마지막으로 남는 값이 항상 최신 토큰이다.
+    private func registerLatestTokenIfNeeded() {
+        guard let token = latestFCMToken, token != registeredToken, registeringToken == nil,
+              isLoggedIn?() == true, let registerDeviceToken
+        else { return }
 
         registeringToken = token
         let generation = sessionGeneration
@@ -127,8 +130,9 @@ final class PushNotificationCenter {
         Task {
             let succeeded = await registerDeviceToken(devicePushToken)
             guard generation == sessionGeneration else { return }
-            if registeringToken == token { registeringToken = nil }
+            registeringToken = nil
             if succeeded { registeredToken = token }
+            if latestFCMToken != token { registerLatestTokenIfNeeded() }
         }
     }
 
