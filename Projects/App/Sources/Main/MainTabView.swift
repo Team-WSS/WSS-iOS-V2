@@ -82,8 +82,9 @@ struct MainTabView: View {
         .task {
             // 푸시 권한 요청·원격 알림 등록(#243, V1 parity) — 메인 탭 진입 시 1회. `MainTabView`는 세션이
             // 있어야만(부트스트랩 통과) 뜨므로 여기가 "로그인 상태의 메인 진입"에 해당한다. 미결정이면 권한을
-            // 요청하고, 허용 상태면 APNs 등록을 시작해 FCM 토큰이 서버에 등록되도록 한다.
-            await PushNotificationCenter.shared.requestAuthorizationAndRegisterIfGranted()
+            // 요청하고, 권한 결과와 무관하게 APNs 등록을 시작해 FCM 토큰이 서버에 등록되도록 한다(#287 — 서버는
+            // 등록 기기가 없으면 앱 내 알림도 만들지 않는다). 로그인·가입 직후에도 여기를 지나므로 등록이 보장된다.
+            await PushNotificationCenter.shared.requestAuthorizationAndRegisterForRemoteNotifications()
         }
     }
 }
