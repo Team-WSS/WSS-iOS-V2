@@ -47,11 +47,12 @@ final class PushNotificationCenter {
     /// 마지막으로 받은 FCM 등록 토큰. 서버에 보내는 값은 항상 이것이다 — 로그인 전에 도착하면 보관만 한다.
     private var latestFCMToken: String?
     /// 이번 세션에서 서버 등록에 성공한 토큰 / 지금 등록 요청 중인 토큰. 한 실행 안에서 여러 경로(시작 시 delegate,
-    /// 메인 탭 진입의 `token()` 조회)가 같은 토큰을 거듭 보내지 않게 거른다. `configure`(세션 시작·종료 시 재조립)가
-    /// 비우므로 로그아웃 → 재로그인하면 다시 등록된다 — 서버가 로그아웃 때 이 기기의 토큰 행을 지우기 때문에 필요하다.
+    /// 메인 탭 진입의 `token()` 조회)가 같은 토큰을 거듭 보내지 않게 거른다. 앱 시작·세션 종료(`configure`)와
+    /// 로그인 완료(`resetRegistrationRecord`)에서 비운다 — 서버가 로그아웃 때 이 기기의 토큰 행을 지우고, 등록은
+    /// 계정마다 따로이기 때문에 새로 로그인한 계정에는 같은 토큰이라도 다시 보내야 한다.
     private var registeredToken: String?
     private var registeringToken: String?
-    /// `configure`마다 1씩 오른다. 이전 세션에서 시작된 등록 요청이 늦게 끝나 새 세션의 `registeredToken`을 채우지 않게 한다.
+    /// 등록 기록을 비울 때마다 1씩 오른다. 이전 세션에서 시작된 등록 요청이 늦게 끝나 새 세션의 기록을 채우지 않게 한다.
     private var sessionGeneration = 0
 
     /// 알림 탭으로 만들어진 딥링크를 앱(`WSSIOSV2App`)의 `pendingDeepLink` 채널로 넘기는 통로. App이 등록한다.
@@ -82,10 +83,17 @@ final class PushNotificationCenter {
         self.registerDeviceToken = registerDeviceToken
         self.isLoggedIn = isLoggedIn
         self.markNotificationAsRead = markNotificationAsRead
+        resetRegistrationRecord()
+        registerLatestTokenIfNeeded()
+    }
+
+    /// 등록 기록을 비워 다음 등록 경로가 토큰을 다시 보내게 한다. `configure` 외에 **로그인 완료 시**(`ContentView`)에도
+    /// 불린다 — 로그인 때는 `AppDependencies`를 재조립하지 않아 `configure`가 안 불리는데, 가입을 마치지 않은 세션으로
+    /// 켜서 인트로에 간 뒤 다른 계정으로 로그인하면 이전 계정 몫으로 기록된 토큰을 건너뛰어 새 계정이 미등록으로 남는다.
+    func resetRegistrationRecord() {
         registeredToken = nil
         registeringToken = nil
         sessionGeneration += 1
-        registerLatestTokenIfNeeded()
     }
 
     // MARK: - AppDelegate가 전달하는 시스템 콜백
