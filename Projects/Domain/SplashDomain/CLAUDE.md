@@ -4,7 +4,7 @@
 런치 부트스트랩 정책 — 앱 진입 시 게이트 판정(강제 업데이트→세션→약관)과 부수 태스크 실행 순서·실패 분기를 전담한다(#225). 구성요소는 `Sources/`를 직접 보면 된다.
 
 - 식별자: `ModuleType.domain(.splash)` / 의존: `BaseDomain`뿐
-- **포트 2개는 Splash의 언어로 새로 선언한 것** — `LaunchGateRepository`(판정 질문) / `LaunchTaskRepository`(부수 태스크). 실제 답은 다른 도메인들(Profile·Setting·Notification·Base·Recommendation)에 있지만, **도메인 간 직접 의존 금지 규칙 때문에 여기선 프로토콜만 선언**하고 구현은 `SplashData`가 그 도메인들의 repo에 위임한다(구조 확정: 사용자, 2026-08-31).
+- **포트 2개는 Splash의 언어로 새로 선언한 것** — `LaunchGateRepository`(판정 질문) / `LaunchTaskRepository`(부수 태스크). 실제 답은 다른 도메인들(Profile·Setting·Base·Recommendation)에 있지만, **도메인 간 직접 의존 금지 규칙 때문에 여기선 프로토콜만 선언**하고 구현은 `SplashData`가 그 도메인들의 repo에 위임한다(구조 확정: 사용자, 2026-08-31).
 
 ## 핵심 시나리오
 

@@ -186,10 +186,17 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
 
 - **서버 등록(`POST /users/fcm-token`)의 주 경로는 "메인 탭 진입 → APNs 등록 → `token()` 직접 조회"다**(#287).
   `MainTabView.task`가 `registerForRemoteNotifications()`를 부르면 iOS가 **매번** `didRegister…`를 다시 주고,
-  `setAPNSToken`이 곧바로 `Messaging.messaging().token()`을 조회해 `registerIfLoggedIn`으로 보낸다. 로그인·가입
+  `setAPNSToken`이 곧바로 `Messaging.messaging().token()`을 조회해 `latestFCMToken`을 갱신하고 등록한다. 로그인·가입
   직후에도 메인 탭을 지나므로 실행 중 로그인한 사용자는 이 경로가 책임진다. 보조 경로는 Firebase delegate
-  (`setFCMRegistrationToken`, 앱 시작 시·토큰 변경 시)와 `configure`(조립 시 보관 토큰). 셋 다 `registerIfLoggedIn`
-  하나로 모이고, **같은 세션에서 성공한 토큰은 다시 보내지 않는다**(`registeredToken`, `configure`마다 초기화).
+  (`setFCMRegistrationToken`, 앱 시작 시·토큰 변경 시), `configure`(조립 시 보관 토큰), 포그라운드 복귀(`MainTabView`의
+  `scenePhase`, 실패분 재시도). 전부 `registerLatestTokenIfNeeded` 하나로 모이고, **같은 세션에서 성공한 토큰은 다시
+  보내지 않는다**(`registeredToken`).
+  - ⚠️ **등록 기록은 앱 시작·세션 종료(`configure`)와 로그인 완료(`ContentView.finishOnboarding`) 두 곳에서 비운다** —
+    로그인은 `AppDependencies`를 재조립하지 않아 `configure`가 안 불린다. 가입 미완료 세션으로 켜 인트로에 간 뒤
+    다른 계정으로 로그인하면, 이전 계정 몫으로 기록된 같은 토큰을 건너뛰어 새 계정이 미등록으로 남는다(#287 리뷰).
+  - ⚠️ **등록 요청은 한 번에 하나만** — 시작 시 delegate의 캐시 토큰 A와 `token()`의 새 토큰 B를 동시에 보내면 늦게 끝난
+    A가 서버의 이 기기 행을 죽은 토큰으로 덮을 수 있다. 진행 중이면 새로 안 보내고, 끝난 뒤 `latestFCMToken`이 바뀌었으면
+    최신 값으로 한 번 더 보낸다. 병렬 전송으로 되돌리지 말 것.
   - ⚠️ **delegate에만 기대면 등록이 빠진다** — #287 전엔 그랬고, "실행 중 로그아웃 → 재로그인"·"로그아웃 상태로 켬 →
     로그인"에서 다음 콜드 스타트까지 미등록이었다(실기기 실측). Firebase는 같은 APNs 토큰을 다시 넣거나 캐시 토큰에
     묶인 APNs와 같은 값을 넣으면 **delegate를 부르지 않는다**(앱 시작 시 캐시 토큰으로 1회 + 실제 토큰 변경 때만).
@@ -197,10 +204,11 @@ Domain/Data는 `DevicePushToken`/`RegisterDeviceTokenUseCase`(NotificationDomain
     `No APNS token specified before fetching FCM Token`으로 거절한다. 그래서 #243의 부트스트랩 pull
     (`SplashDomain`의 `registerDeviceTokenIfNeeded`)을 #287에서 제거했다. `token()`은 `setAPNSToken` 뒤에서만 부를 것.
   - **로그아웃은 서버에서 이 기기의 토큰 행을 지운다**(`deviceIdentifier` 기준, #287 실측) — 그래서 재로그인 때
-    다시 등록해야 하고, `registeredToken`이 세션마다 비워져야 한다.
+    다시 등록해야 하고, `registeredToken`이 로그인할 때마다 비워져야 한다.
 - **왜 `PushNotificationCenter.shared`(싱글턴)인가**: UIKit `AppDelegate`(시스템 콜백 수신)와 SwiftUI DI
   (`AppDependencies` — UseCase 조립)는 생명주기가 달라 인스턴스 공유 통로가 없다. V1의 `NotificationHelper.shared`와 같은 이유.
-  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다(idempotent).
+  세션 종료로 `AppDependencies`가 재조립되면 `configure(...)`가 다시 불려 새 UseCase/tokenStore로 갱신된다. 등록 기록을
+  비우고 보관 토큰으로 등록을 시도하는 부수효과가 있어 멱등이 아니다 — `AppDependencies()`를 조립 시점 외에 만들지 말 것.
 - **method swizzling은 끈다**(`Support/Info.plist`의 `FirebaseAppDelegateProxyEnabled=NO`) — SwiftUI
   `@UIApplicationDelegateAdaptor` 환경에서 Firebase 자동 프록시가 불안정해, APNs device token을 `AppDelegate`가
   받아 `Messaging.messaging().apnsToken`에 **직접** 대입한다(V1과 동일). 그래서 `willPresent`/`didReceive`에서
