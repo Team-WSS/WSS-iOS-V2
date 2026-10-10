@@ -12,7 +12,7 @@ import Testing
 import AuthDomainTesting
 import BaseDomain
 
-@Suite("WithdrawUseCase")
+@Suite("회원 탈퇴")
 struct WithdrawUseCaseTests {
 
     @Test("회원 탈퇴 시 초안을 전달하여 탈퇴 요청을 수행한다")

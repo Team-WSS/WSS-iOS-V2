@@ -9,7 +9,7 @@
 import Testing
 @testable import AuthDomain
 
-@Suite("WithdrawalReasonDraft")
+@Suite("탈퇴 사유 초안")
 struct WithdrawalReasonDraftTests {
 
     // MARK: - Init
@@ -27,7 +27,7 @@ struct WithdrawalReasonDraftTests {
     // MARK: - setOption
     
     @Test("탈퇴 사유 옵션을 변경 가능하며, 직접 입력 옵션의 경우 이유를 작성할 수 있다")
-    func canChangeWithdrawalReasonOptionAndEditCustomReasonWhenSelected() {
+    func changesOptionAndAcceptsReasonForCustomOption() {
         var draft = WithdrawalReasonDraft()
         
         for option in WithdrawalReasonOption.allCases {
@@ -41,7 +41,7 @@ struct WithdrawalReasonDraftTests {
     }
     
     @Test("직접 입력이 아닌 옵션으로 바꾸면 입력 텍스트는 초기화된다")
-    func setOptionClearsCustomTextWhenSwitchingToNonCustom() {
+    func clearsCustomTextWhenSwitchingToNonCustomOption() {
         var draft = WithdrawalReasonDraft()
         let reason = "어떤 이유"
         
@@ -61,7 +61,7 @@ struct WithdrawalReasonDraftTests {
     }
 
     @Test("직접 입력이 아닌 옵션에서는 이유 작성 함수가 아무 일도 하지 않는다")
-    func setOtherTextIsNoOpWhenOptionDoesNotRequireText() {
+    func ignoresReasonTextForNonCustomOption() {
         var draft = WithdrawalReasonDraft()
         let reason = "저장되면 안 됨"
         
@@ -78,7 +78,7 @@ struct WithdrawalReasonDraftTests {
     }
 
     @Test("직접 입력 옵션의 입력 텍스트가 최대 80자로 잘린다")
-    func setOtherTextClipsToMaxLengthWhenCustom() {
+    func clipsCustomReasonToMaxLength() {
         var draft = WithdrawalReasonDraft()
         draft.setOption(.custom)
 
@@ -89,7 +89,7 @@ struct WithdrawalReasonDraftTests {
     }
 
     @Test("직접 입력 옵션에서는 80자 이하면 그대로 저장된다")
-    func setOtherTextStoresWhenWithinMaxLengthWhenCustom() {
+    func storesCustomReasonWithinMaxLength() {
         var draft = WithdrawalReasonDraft()
         draft.setOption(.custom)
 

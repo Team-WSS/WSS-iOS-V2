@@ -11,7 +11,7 @@ import Testing
 @testable import AuthDomain
 import AuthDomainTesting
 
-@Suite("SocialLoginUseCase")
+@Suite("소셜 로그인")
 struct SocialLoginUseCaseTests {
     
     @Test("소셜 로그인 성공 시 토큰을 저장하고 온보딩 필요 여부를 반환한다")

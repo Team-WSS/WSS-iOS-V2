@@ -12,7 +12,7 @@ import Testing
 import AuthDomainTesting
 import BaseDomain
 
-@Suite("SyncAppleCredentialUseCase")
+@Suite("애플 인증 정보 동기화")
 struct SyncAppleCredentialUseCaseTests {
 
     @Test("애플 인증 정보 동기화 요청을 수행한다")
