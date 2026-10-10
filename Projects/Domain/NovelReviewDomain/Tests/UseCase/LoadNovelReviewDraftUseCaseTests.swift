@@ -12,7 +12,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("LoadNovelReviewDraftUseCase")
+@Suite("리뷰 초안 조회")
 struct LoadNovelReviewDraftUseCaseTests {
     
     private func makeDraft(
