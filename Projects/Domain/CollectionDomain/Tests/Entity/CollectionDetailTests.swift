@@ -12,13 +12,13 @@ import Foundation
 @testable import CollectionDomain
 import BaseDomain
 
-@Suite("CollectionDetail")
+@Suite("컬렉션 상세")
 struct CollectionDetailTests {
 
     // MARK: - markAsLiked
 
     @Test("좋아요하지 않은 컬렉션을 좋아요하면 상태가 켜지고 좋아요 수가 늘어난다")
-    func markAsLiked() {
+    func turnsOnLikeAndIncrementsCount() {
         var detail = makeDetail(likeCount: 10, isLiked: false)
 
         detail.markAsLiked()
@@ -27,8 +27,8 @@ struct CollectionDetailTests {
         #expect(detail.likeCount == 11)
     }
 
-    @Test("이미 좋아요한 컬렉션에 markAsLiked를 호출하면 좋아요 수가 중복으로 늘지 않는다")
-    func markAsLikedTwice() {
+    @Test("이미 좋아요한 컬렉션을 다시 좋아요해도 좋아요 수가 늘지 않는다")
+    func doesNotIncrementCountWhenAlreadyLiked() {
         var detail = makeDetail(likeCount: 10, isLiked: true)
 
         detail.markAsLiked()
@@ -40,7 +40,7 @@ struct CollectionDetailTests {
     // MARK: - unmarkAsLiked
 
     @Test("좋아요한 컬렉션을 취소하면 상태가 꺼지고 좋아요 수가 줄어든다")
-    func unmarkAsLiked() {
+    func turnsOffLikeAndDecrementsCount() {
         var detail = makeDetail(likeCount: 10, isLiked: true)
 
         detail.unmarkAsLiked()
@@ -49,8 +49,8 @@ struct CollectionDetailTests {
         #expect(detail.likeCount == 9)
     }
 
-    @Test("좋아요하지 않은 컬렉션에 unmarkAsLiked를 호출하면 좋아요 수가 줄지 않는다")
-    func unmarkAsLikedWhenNotLiked() {
+    @Test("좋아요하지 않은 컬렉션의 좋아요를 취소해도 좋아요 수가 줄지 않는다")
+    func doesNotDecrementCountWhenNotLiked() {
         var detail = makeDetail(likeCount: 10, isLiked: false)
 
         detail.unmarkAsLiked()
@@ -60,7 +60,7 @@ struct CollectionDetailTests {
     }
 
     @Test("좋아요 수가 0인 상태에서 취소해도 좋아요 수가 음수로 내려가지 않는다")
-    func unmarkAsLikedAtZero() {
+    func keepsCountNonNegativeWhenUnlikingAtZero() {
         var detail = makeDetail(likeCount: 0, isLiked: true)
 
         detail.unmarkAsLiked()
@@ -71,7 +71,7 @@ struct CollectionDetailTests {
     // MARK: - toggleLike
 
     @Test("좋아요하지 않은 컬렉션을 토글하면 좋아요 상태가 된다")
-    func toggleLikeOn() {
+    func likesWhenTogglingUnlikedCollection() {
         var detail = makeDetail(likeCount: 3, isLiked: false)
 
         detail.toggleLike()
@@ -81,7 +81,7 @@ struct CollectionDetailTests {
     }
 
     @Test("좋아요한 컬렉션을 토글하면 좋아요가 취소된다")
-    func toggleLikeOff() {
+    func unlikesWhenTogglingLikedCollection() {
         var detail = makeDetail(likeCount: 3, isLiked: true)
 
         detail.toggleLike()
@@ -93,7 +93,7 @@ struct CollectionDetailTests {
     // MARK: - novelCount
 
     @Test("작품 수는 담긴 작품 목록의 길이와 같다")
-    func novelCountMatchesNovels() {
+    func reportsNovelCountAsNovelListLength() {
         let detail = makeDetail(novelCount: 3)
 
         #expect(detail.novelCount == 3)

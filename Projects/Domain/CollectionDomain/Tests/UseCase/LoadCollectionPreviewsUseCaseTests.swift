@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("LoadCollectionPreviewsUseCase")
+@Suite("마이페이지 컬렉션 미리보기 조회")
 struct LoadCollectionPreviewsUseCaseTests {
 
     @Test("마이페이지 미리보기와 전체 컬렉션 수를 함께 불러온다")
-    func loadSuccess() async throws {
+    func loadsPreviewsWithTotalCount() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionPreviewsResult = .success(([makePreview(), makePreview()], 7))
         let useCase = DefaultLoadCollectionPreviewsUseCase(collectionRepository: mock)
@@ -29,7 +29,7 @@ struct LoadCollectionPreviewsUseCaseTests {
     }
 
     @Test("전체 개수는 이번에 받아온 미리보기 개수와 별개다")
-    func totalCountIsIndependentFromPageSize() async throws {
+    func keepsTotalCountIndependentFromPreviewCount() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionPreviewsResult = .success(([makePreview(), makePreview(), makePreview()], 21))
         let useCase = DefaultLoadCollectionPreviewsUseCase(collectionRepository: mock)
@@ -54,7 +54,7 @@ struct LoadCollectionPreviewsUseCaseTests {
     }
 
     @Test("조회에 실패하면 에러를 그대로 전달한다")
-    func loadFailure() async {
+    func propagatesLoadError() async {
         let mock = MockCollectionRepository()
         mock.fetchCollectionPreviewsResult = .failure(.networkUnavailable)
         let useCase = DefaultLoadCollectionPreviewsUseCase(collectionRepository: mock)

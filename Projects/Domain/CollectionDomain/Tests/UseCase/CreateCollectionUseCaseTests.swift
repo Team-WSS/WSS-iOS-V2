@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("CreateCollectionUseCase")
+@Suite("컬렉션 생성")
 struct CreateCollectionUseCaseTests {
 
     @Test("컬렉션을 만들면 생성된 컬렉션 ID를 돌려준다")
-    func createSuccess() async throws {
+    func returnsCreatedCollectionID() async throws {
         let mock = MockCollectionRepository()
         mock.createCollectionResult = .success(CollectionID(12))
         let useCase = DefaultCreateCollectionUseCase(collectionRepository: mock)
@@ -51,7 +51,7 @@ struct CreateCollectionUseCaseTests {
     }
 
     @Test("생성에 실패하면 에러를 그대로 전달한다")
-    func createFailure() async {
+    func propagatesCreateError() async {
         let mock = MockCollectionRepository()
         mock.createCollectionResult = .failure(.invalidData)
         let useCase = DefaultCreateCollectionUseCase(collectionRepository: mock)

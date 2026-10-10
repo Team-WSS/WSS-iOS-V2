@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("LoadLikedCollectionsUseCase")
+@Suite("좋아요한 컬렉션 목록 조회")
 struct LoadLikedCollectionsUseCaseTests {
 
     @Test("좋아요한 컬렉션 목록과 전체 개수를 함께 불러온다")
-    func loadSuccess() async throws {
+    func loadsLikedCollectionsWithTotalCount() async throws {
         let mock = MockCollectionRepository()
         mock.fetchLikedCollectionsResult = .success((makePage(cardCount: 3), 3))
         let useCase = DefaultLoadLikedCollectionsUseCase(collectionRepository: mock)
@@ -41,7 +41,7 @@ struct LoadLikedCollectionsUseCaseTests {
     }
 
     @Test("조회에 실패하면 에러를 그대로 전달한다")
-    func loadFailure() async {
+    func propagatesLoadError() async {
         let mock = MockCollectionRepository()
         mock.fetchLikedCollectionsResult = .failure(.authenticationRequired)
         let useCase = DefaultLoadLikedCollectionsUseCase(collectionRepository: mock)
