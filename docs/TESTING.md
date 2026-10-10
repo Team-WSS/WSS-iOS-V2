@@ -21,7 +21,7 @@ struct NovelTests {
 ```
 원칙:
 1. **이름 = 명세 문장**: "〜하면 〜가 된다 / 〜하지 않는다" 형태. 동작과 기대 결과를 한 문장에 담는다. ("test1", "성공 케이스" 같은 이름 금지)
-   - **무엇이 어떻게 되는지**를 쓴다. "성공적으로 불러온다"는 무엇을 확인하는지 감춘다 → "작품 id로 저장소를 한 번 조회해 받은 정보를 그대로 돌려준다".
+   - **무엇이 어떻게 되는지**를 쓴다. "성공적으로 불러온다"는 무엇을 확인하는지 감춘다 → "작품 id로 저장소를 한 번 조회해 받은 작품을 돌려준다".
    - **구현 이름 대신 동작**을 쓴다. 메서드·프로퍼티 이름(`markAsInterested`·`isInterested`)은 이름에서 빼고 `// MARK:`로 둔다. 타입 이름(`RepositoryError`)은 도메인 용어라 괜찮다.
 2. **`@Suite("한국어 기능 단위 명사구")`**(`작품 관심` · `컬렉션 생성`)가 명세 대상, `// MARK: - 메서드명`으로 시나리오를 그룹핑.
 3. **한 테스트 = 하나의 규칙**. 한 테스트에서 여러 행동을 검증하지 않는다.
@@ -34,7 +34,7 @@ struct NovelTests {
 
 | 심각도 | 규칙 |
 |---|---|
-| error | `@Test`는 `@Suite` 타입 안 · `@Suite("한국어")` + 타입 이름 `…Tests` · `@Test("…다")` 보간 없는 한국어 문장(끝 괄호 보충·마침표 허용) · 표시 이름 `/` 금지 · 같은 Suite 안 표시 이름 중복 금지 |
+| error | `@Test`는 `@Suite` 타입 안 · `@Suite("한국어")` + 타입 이름 `…Tests` · `@Test("…다")` 보간 없는 한국어 문장(끝 괄호 보충·마침표 허용) · 표시 이름 `/` 금지 · 같은 파일의 같은 Suite 안 표시 이름 중복 금지 |
 | warning | 본문에 `#expect`/`#require` · 함수 이름 3인칭 동사 시작 · 모호어(성공적으로·정상적으로·올바르게·제대로) · Domain·Feature 표시 이름의 메서드·프로퍼티 이름 |
 
 - 적용 모듈은 warning도 0으로 유지한다. 새 모듈을 적용하려면 목록에 넣고 `swift run --package-path Tooling/ArchLint ArchLint .`로 드러난 위반을 모두 청소한 뒤 머지한다.
@@ -59,7 +59,7 @@ import BaseDomain
 
 ## 작성 규칙
 
-- 함수명: **`@Test("한글 설명") func englishName()`** — 한글은 설명에, 함수명은 표시 이름을 옮긴 영어 lowerCamelCase로 **3인칭 동사로 시작**한다(`rejects…` · `returns…` · `propagates…` · `doesNot…`). (CI 호환, backtick 한글 함수명 금지)
+- 함수명: **`@Test("…하면 …한다") func returns…()`** — 한글은 설명에, 함수명은 표시 이름을 옮긴 영어 lowerCamelCase로 **3인칭 동사로 시작**한다(`rejects…` · `returns…` · `propagates…` · `doesNot…`). (CI 호환, backtick 한글 함수명 금지)
 - helper는 `make~` prefix, 보통 `extension XxxTests`에 `private func`로 분리. 파라미터 기본값으로 변형 케이스를 만든다.
 - 에러 검증: `await #expect(throws: RepositoryError.unknown) { try await sut.execute(...) }`.
 - **커버리지 4종 필수 고려**: 정상 / 경계값 / 정책 위반 / 상태 변화.
@@ -70,18 +70,21 @@ import BaseDomain
 ### UseCase 테스트 (협력 검증)
 Mock Repository를 주입해 결과 + **호출 사실**을 함께 검증.
 ```swift
-@Test("작품 id로 저장소를 한 번 조회해 받은 정보를 그대로 돌려준다")
-func returnsNovelInformationFetchedOnceByID() async throws {
-    let mock = MockNovelRepository()              // Given
-    let expected = makeNovelInformation()
-    mock.fetchNovelResult = .success(expected)
-    let usecase = DefaultLoadNovelUseCase(novelRepository: mock)
+@Suite("작품 정보 조회")
+struct LoadNovelUseCaseTests {
+    @Test("작품 id로 저장소를 한 번 조회해 받은 작품을 돌려준다")
+    func returnsNovelFetchedOnceByID() async throws {
+        let mock = MockNovelRepository()              // Given
+        let expected = makeNovelInformation()
+        mock.fetchNovelResult = .success(expected)
+        let usecase = DefaultLoadNovelUseCase(novelRepository: mock)
 
-    let result = try await usecase.execute(id: NovelID(1))   // When
+        let result = try await usecase.execute(id: NovelID(1))   // When
 
-    #expect(result.novel.id == expected.novel.id)            // Then
-    #expect(mock.fetchedNovelIDs.last == NovelID(1))         // 협력(호출) 검증
-    #expect(mock.fetchedNovelIDs.count == 1)
+        #expect(result.novel.id == expected.novel.id)            // Then
+        #expect(mock.fetchedNovelIDs.last == NovelID(1))         // 협력(호출) 검증
+        #expect(mock.fetchedNovelIDs.count == 1)
+    }
 }
 ```
 

@@ -100,8 +100,8 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 
 빠른 요약:
 - **Swift Testing** (`@Test`/`#expect`/`@Suite`), XCTest 금지. Mock은 `Testing/`(`<Module>DomainTesting` 타깃).
-- `@Test("한글 명세 문장") func englishName()` — 이름이 곧 명세.
-- CI: PR에 `/domain-test` 댓글 → `Projects/Domain` 폴더 자동 스캔. ⚠️ 빈/잔재 폴더는 매트릭스를 깨뜨림.
+- `@Suite("기능 단위 명사구") struct XxxTests` 안에 `@Test("…하면 …한다") func returns…()` — 이름이 곧 명세. 적용 모듈은 ArchLint `test-spec`이 형식을 강제한다.
+- CI: `.tests` 타깃을 선언한 모듈은 PR마다 자동으로 테스트가 돈다(`Project.swift` 없는 유령 폴더는 제외).
 
 ## 주의사항 (작업 중 발견 시 누적)
 
