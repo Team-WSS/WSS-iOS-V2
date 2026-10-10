@@ -10,11 +10,11 @@ import SwiftSyntax
 ///
 /// 한 규칙이 하위 규칙 여러 개를 낸다(ruleID로 구분).
 /// - 구조(S1 ~ S5, error): 문법이 곧 위반이다.
-///   - `test-suite-required` S1: `@Test`는 `@Suite`를 붙인 타입 안에 둔다
+///   - `test-suite-required` S1: `@Test`는 `@Suite`를 붙인 타입 안에 둔다(extension은 같은 파일에 선언된 타입만 본다)
 ///   - `test-suite-name` S2: `@Suite("한국어 이름")` + 타입 이름은 `…Tests`
 ///   - `test-name-sentence` S3: `@Test("…다")` 보간 없는 한국어 문장(끝의 괄호 보충 · 마침표는 뗀다)
 ///   - `test-name-slash` S4: 표시 이름에 `/` 금지 — XcodeBuildMCP 리포터가 스위트 구분자로 읽는다
-///   - `test-name-duplicate` S5: 같은 Suite(extension 포함) 안에서 표시 이름이 겹치지 않는다
+///   - `test-name-duplicate` S5: 같은 파일의 같은 Suite(extension 포함) 안에서 표시 이름이 겹치지 않는다
 /// - 프록시(warning): 문법이 위반의 근사치일 뿐이라 막지 않는다. 그래도 적용 모듈에서는 0으로 유지한다.
 ///   - `test-assertion` S6: 본문에 `#expect`/`#require`가 있다(헬퍼 안에서 단언하면 오탐)
 ///   - `test-func-verb` W1: 함수 이름은 3인칭 동사로 시작하는 영어 lowerCamelCase(`rejects…` · `doesNot…`)
@@ -74,10 +74,14 @@ private final class TestSpecVisitor: SyntaxVisitor {
     private let converter: SourceLocationConverter
     private let structuralSeverity: Severity = .error
     private let checksIdentifiers: Bool
-    /// 감싼 타입 이름 스택(extension은 확장한 타입 이름). 비어 있으면 파일 최상위다.
+    /// 감싼 타입 이름 스택(extension은 확장한 타입 경로). 비어 있으면 파일 최상위다.
     private var typeNames: [String] = []
-    /// 타입 이름별로 본 표시 이름 — extension에 나눠 둔 테스트도 같은 Suite로 본다.
+    /// 타입 전체 경로(`OuterTests.InnerTests`)별로 본 표시 이름 — 같은 파일의 extension에 나눠 둔 테스트도 같은 Suite로 본다.
     private var seenNames: [String: Set<String>] = [:]
+    /// 이 파일에서 `@Suite` 없이 선언한 타입 경로 — 같은 파일 extension의 `@Test`를 S1로 잡는 데 쓴다.
+    private var plainTypePaths: Set<String> = []
+    /// `@Test`를 담은 extension(확장한 타입 경로, 위치). 파일을 다 본 뒤 `plainTypePaths`와 대조한다.
+    private var extensionsWithTests: [(path: String, node: TypeSyntax)] = []
 
     init(path: String, converter: SourceLocationConverter, checksIdentifiers: Bool) {
         self.path = path
@@ -97,22 +101,32 @@ private final class TestSpecVisitor: SyntaxVisitor {
     override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind { enterType(node) }
     override func visitPost(_ node: ActorDeclSyntax) { typeNames.removeLast() }
 
-    /// extension은 원래 타입의 `@Suite`를 볼 수 없어 Suite 검사는 하지 않고 이름만 쌓는다.
+    /// extension은 원래 타입의 `@Suite`를 직접 볼 수 없어 이름만 쌓고, 같은 파일의 선언과는 파일 끝에서 대조한다.
+    /// 다른 파일에 선언된 타입은 볼 수 없다(파일 단위 검사의 한계).
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
-        typeNames.append(node.extendedType.trimmedDescription)
+        let path = node.extendedType.trimmedDescription
+        typeNames.append(path)
+        if containsTests(node.memberBlock) {
+            extensionsWithTests.append((path, node.extendedType))
+        }
         return .visitChildren
     }
     override func visitPost(_ node: ExtensionDeclSyntax) { typeNames.removeLast() }
+
+    override func visitPost(_ node: SourceFileSyntax) {
+        for (path, node) in extensionsWithTests where plainTypePaths.contains(path) {
+            report(node, "test-suite-required", structuralSeverity,
+                   "\(path): @Test를 담은 extension의 원래 타입에 @Suite(\"한국어 이름\")를 붙인다")
+        }
+    }
 
     private func enterType(_ node: some DeclGroupSyntax & NamedDeclSyntax) -> SyntaxVisitorContinueKind {
         let name = node.name.text
         typeNames.append(name)
 
         guard let suite = attribute("Suite", in: node.attributes) else {
-            let hasTests = node.memberBlock.members.contains { member in
-                member.decl.as(FunctionDeclSyntax.self).map { attribute("Test", in: $0.attributes) != nil } ?? false
-            }
-            if hasTests {
+            plainTypePaths.insert(typeNames.joined(separator: "."))
+            if containsTests(node.memberBlock) {
                 report(node.name, "test-suite-required", structuralSeverity,
                        "\(name): @Test를 담은 타입에는 @Suite(\"한국어 이름\")를 붙인다")
             }
@@ -187,7 +201,9 @@ private final class TestSpecVisitor: SyntaxVisitor {
     }
 
     private func checkDuplicate(_ text: String, at node: some SyntaxProtocol) {
-        guard let typeName = typeNames.last else { return }
+        guard !typeNames.isEmpty else { return }
+        // 짧은 이름을 키로 쓰면 다른 Suite에 중첩된 동명 타입(`SuccessTests`)끼리 겹친다
+        let typeName = typeNames.joined(separator: ".")
         let (inserted, _) = seenNames[typeName, default: []].insert(text)
         if !inserted {
             report(node, "test-name-duplicate", structuralSeverity, "\(typeName): 같은 Suite에 같은 표시 이름이 있다: \"\(text)\"")
@@ -227,6 +243,12 @@ private final class TestSpecVisitor: SyntaxVisitor {
 
     // MARK: - 도움
 
+    private func containsTests(_ memberBlock: MemberBlockSyntax) -> Bool {
+        memberBlock.members.contains { member in
+            member.decl.as(FunctionDeclSyntax.self).map { attribute("Test", in: $0.attributes) != nil } ?? false
+        }
+    }
+
     private func attribute(_ name: String, in attributes: AttributeListSyntax) -> AttributeSyntax? {
         for element in attributes {
             if let attribute = element.as(AttributeSyntax.self),
@@ -251,15 +273,37 @@ private final class TestSpecVisitor: SyntaxVisitor {
         return .literal(text)
     }
 
+    /// 마침표 → 끝 괄호 보충 → 마침표 순으로 떼고 '다'를 본다(`다. (보충)` · `다(보충).` 둘 다 허용).
     private func endsAsSentence(_ text: String) -> Bool {
         var sentence = text.trimmingCharacters(in: .whitespaces)
-        if sentence.hasSuffix(")"), let open = sentence.lastIndex(of: "(") {
+        if sentence.hasSuffix(".") {
+            sentence.removeLast()
+        }
+        if let open = openingOfTrailingParenthesis(in: sentence) {
             sentence = sentence[..<open].trimmingCharacters(in: .whitespaces)
         }
         if sentence.hasSuffix(".") {
             sentence.removeLast()
         }
         return sentence.hasSuffix("다")
+    }
+
+    /// 끝의 `)`와 짝이 맞는 `(` 위치 — 보충 안에 괄호가 중첩돼도(`(a(b))`) 바깥 괄호를 찾는다.
+    private func openingOfTrailingParenthesis(in text: String) -> String.Index? {
+        guard text.hasSuffix(")") else { return nil }
+        var depth = 0
+        var index = text.endIndex
+        while index > text.startIndex {
+            index = text.index(before: index)
+            switch text[index] {
+            case ")": depth += 1
+            case "(":
+                depth -= 1
+                if depth == 0 { return index }
+            default: break
+            }
+        }
+        return nil
     }
 
     /// 첫 낱말(연속 소문자)이 s로 끝나는지 — rejects · returns · does(NotRetry) · is

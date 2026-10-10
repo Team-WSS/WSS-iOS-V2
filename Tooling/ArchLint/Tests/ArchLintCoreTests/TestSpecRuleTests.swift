@@ -79,6 +79,23 @@ struct TestSpecRuleTests {
         #expect(ruleIDs(lintTest(source)) == ["test-suite-required"])
     }
 
+    @Test("같은 파일에서 @Suite 없는 타입을 확장해 둔 @Test를 잡는다")
+    func catchesTestsInExtensionOfTypeWithoutSuite() {
+        let source = """
+        struct SampleTests {}
+
+        extension SampleTests {
+            @Test("별점을 저장한다")
+            func savesRating() { #expect(true) }
+        }
+        """
+
+        let violations = lintTest(source)
+
+        #expect(ruleIDs(violations) == ["test-suite-required"])
+        #expect(violations.map(\.line) == [3])
+    }
+
     // MARK: - S2 test-suite-name
 
     @Test("@Suite 표시 이름이 없거나 보간했거나 한국어가 아니면 잡는다", arguments: [
@@ -153,6 +170,8 @@ struct TestSpecRuleTests {
         "별점을 저장한다.",
         "별점을 저장한다 (0.5 단위)",
         "별점을 저장한다. (0.5 단위)",
+        "별점을 저장한다(0.5 단위).",
+        "별점을 저장한다 (반올림(0.25) 없음)",
     ])
     func acceptsSentenceWithTrailingSupplement(_ name: String) {
         let source = """
@@ -224,6 +243,55 @@ struct TestSpecRuleTests {
         """
 
         #expect(lintTest(source).isEmpty)
+    }
+
+    @Test("다른 Suite에 중첩된 같은 이름의 타입은 같은 Suite로 보지 않는다")
+    func distinguishesNestedTypesWithSameNameInDifferentSuites() {
+        let source = """
+        @Suite("작품 평가")
+        struct RatingTests {
+            @Suite("성공")
+            struct SuccessTests {
+                @Test("값을 돌려준다")
+                func returnsValue() { #expect(true) }
+            }
+        }
+
+        @Suite("읽은 기간")
+        struct ReadingPeriodTests {
+            @Suite("성공")
+            struct SuccessTests {
+                @Test("값을 돌려준다")
+                func returnsValue() { #expect(true) }
+            }
+        }
+        """
+
+        #expect(lintTest(source).isEmpty)
+    }
+
+    @Test("중첩 타입을 경로로 확장한 extension의 중복도 잡는다")
+    func catchesDuplicateInExtensionOfNestedType() {
+        let source = """
+        @Suite("작품 평가")
+        struct RatingTests {
+            @Suite("성공")
+            struct SuccessTests {
+                @Test("값을 돌려준다")
+                func returnsValue() { #expect(true) }
+            }
+        }
+
+        extension RatingTests.SuccessTests {
+            @Test("값을 돌려준다")
+            func returnsValueAgain() { #expect(true) }
+        }
+        """
+
+        let violations = lintTest(source)
+
+        #expect(ruleIDs(violations) == ["test-name-duplicate"])
+        #expect(violations.map(\.line) == [11])
     }
 
     // MARK: - S6 test-assertion

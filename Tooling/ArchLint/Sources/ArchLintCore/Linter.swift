@@ -23,7 +23,7 @@ let allRules: [Rule] = [
         requiredSuffix: "Repository"
     ),
     FeatureRouteCallbackRule(),
-    // 테스트 명세 형식을 error로 강제하는 모듈. 기존 위반을 청소하면 여기 추가한다(나머지 모듈은 warning).
+    // 테스트 명세 형식을 검사하는 모듈. 기존 위반을 warning까지 청소하면 여기 추가한다(나머지 모듈은 보고하지 않는다).
     TestSpecRule(enforcedModules: [
         "AuthDomain",
         "CollectionDomain",
