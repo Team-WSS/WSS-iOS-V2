@@ -66,6 +66,20 @@ private enum DisplayName {
     case literal(String)
 }
 
+/// 테스트를 감싼 타입 하나. `@Test`를 만나면 가장 안쪽 프레임에 표시하고, 타입을 나갈 때 S1을 판정한다 —
+/// 직접 멤버만 보면 `#if` 안의 `@Test`를 놓친다.
+private struct TypeFrame {
+    enum Kind {
+        case suite
+        case plain(TokenSyntax)
+        case `extension`(TypeSyntax)
+    }
+
+    let name: String
+    let kind: Kind
+    var hasTests = false
+}
+
 private final class TestSpecVisitor: SyntaxVisitor {
     private static let vagueWords = ["성공적으로", "정상적으로", "올바르게", "제대로"]
 
@@ -74,8 +88,8 @@ private final class TestSpecVisitor: SyntaxVisitor {
     private let converter: SourceLocationConverter
     private let structuralSeverity: Severity = .error
     private let checksIdentifiers: Bool
-    /// 감싼 타입 이름 스택(extension은 확장한 타입 경로). 비어 있으면 파일 최상위다.
-    private var typeNames: [String] = []
+    /// 감싼 타입 스택(extension은 확장한 타입 경로). 비어 있으면 파일 최상위다.
+    private var frames: [TypeFrame] = []
     /// 타입 전체 경로(`OuterTests.InnerTests`)별로 본 표시 이름 — 같은 파일의 extension에 나눠 둔 테스트도 같은 Suite로 본다.
     private var seenNames: [String: Set<String>] = [:]
     /// 이 파일에서 `@Suite` 없이 선언한 타입 경로 — 같은 파일 extension의 `@Test`를 S1로 잡는 데 쓴다.
@@ -93,25 +107,23 @@ private final class TestSpecVisitor: SyntaxVisitor {
     // MARK: - 타입
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind { enterType(node) }
-    override func visitPost(_ node: StructDeclSyntax) { typeNames.removeLast() }
+    override func visitPost(_ node: StructDeclSyntax) { leaveType() }
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind { enterType(node) }
-    override func visitPost(_ node: ClassDeclSyntax) { typeNames.removeLast() }
+    override func visitPost(_ node: ClassDeclSyntax) { leaveType() }
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind { enterType(node) }
-    override func visitPost(_ node: EnumDeclSyntax) { typeNames.removeLast() }
+    override func visitPost(_ node: EnumDeclSyntax) { leaveType() }
     override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind { enterType(node) }
-    override func visitPost(_ node: ActorDeclSyntax) { typeNames.removeLast() }
+    override func visitPost(_ node: ActorDeclSyntax) { leaveType() }
 
     /// extension은 원래 타입의 `@Suite`를 직접 볼 수 없어 이름만 쌓고, 같은 파일의 선언과는 파일 끝에서 대조한다.
     /// 다른 파일에 선언된 타입은 볼 수 없다(파일 단위 검사의 한계).
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
-        let path = node.extendedType.trimmedDescription
-        typeNames.append(path)
-        if containsTests(node.memberBlock) {
-            extensionsWithTests.append((path, node.extendedType))
-        }
+        // `ATests . InnerTests`처럼 띄어 써도 선언 경로(`ATests.InnerTests`)와 맞춘다
+        let name = node.extendedType.trimmedDescription.filter { !$0.isWhitespace }
+        frames.append(TypeFrame(name: name, kind: .extension(node.extendedType)))
         return .visitChildren
     }
-    override func visitPost(_ node: ExtensionDeclSyntax) { typeNames.removeLast() }
+    override func visitPost(_ node: ExtensionDeclSyntax) { leaveType() }
 
     override func visitPost(_ node: SourceFileSyntax) {
         for (path, node) in extensionsWithTests where plainTypePaths.contains(path) {
@@ -122,16 +134,13 @@ private final class TestSpecVisitor: SyntaxVisitor {
 
     private func enterType(_ node: some DeclGroupSyntax & NamedDeclSyntax) -> SyntaxVisitorContinueKind {
         let name = node.name.text
-        typeNames.append(name)
 
         guard let suite = attribute("Suite", in: node.attributes) else {
-            plainTypePaths.insert(typeNames.joined(separator: "."))
-            if containsTests(node.memberBlock) {
-                report(node.name, "test-suite-required", structuralSeverity,
-                       "\(name): @Test를 담은 타입에는 @Suite(\"한국어 이름\")를 붙인다")
-            }
+            frames.append(TypeFrame(name: name, kind: .plain(node.name)))
+            plainTypePaths.insert(typePath)
             return .visitChildren
         }
+        frames.append(TypeFrame(name: name, kind: .suite))
 
         if !name.hasSuffix("Tests") {
             report(node.name, "test-suite-name", structuralSeverity, "\(name): @Suite 타입 이름은 Tests로 끝낸다")
@@ -150,15 +159,36 @@ private final class TestSpecVisitor: SyntaxVisitor {
         return .visitChildren
     }
 
+    private func leaveType() {
+        let path = typePath
+        let frame = frames.removeLast()
+        guard frame.hasTests else { return }
+        switch frame.kind {
+        case .suite:
+            break
+        case .plain(let name):
+            report(name, "test-suite-required", structuralSeverity,
+                   "\(frame.name): @Test를 담은 타입에는 @Suite(\"한국어 이름\")를 붙인다")
+        case .extension(let type):
+            extensionsWithTests.append((path, type))
+        }
+    }
+
+    private var typePath: String {
+        frames.map(\.name).joined(separator: ".")
+    }
+
     // MARK: - 테스트
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         guard let test = attribute("Test", in: node.attributes) else { return .visitChildren }
         let name = node.name.text
 
-        if typeNames.isEmpty {
+        if frames.isEmpty {
             report(test, "test-suite-required", structuralSeverity,
                    "func \(name): @Test는 @Suite(\"한국어 이름\")를 붙인 타입 안에 둔다")
+        } else {
+            frames[frames.count - 1].hasTests = true
         }
 
         switch displayName(of: test) {
@@ -201,9 +231,9 @@ private final class TestSpecVisitor: SyntaxVisitor {
     }
 
     private func checkDuplicate(_ text: String, at node: some SyntaxProtocol) {
-        guard !typeNames.isEmpty else { return }
+        guard !frames.isEmpty else { return }
         // 짧은 이름을 키로 쓰면 다른 Suite에 중첩된 동명 타입(`SuccessTests`)끼리 겹친다
-        let typeName = typeNames.joined(separator: ".")
+        let typeName = typePath
         let (inserted, _) = seenNames[typeName, default: []].insert(text)
         if !inserted {
             report(node, "test-name-duplicate", structuralSeverity, "\(typeName): 같은 Suite에 같은 표시 이름이 있다: \"\(text)\"")
@@ -242,12 +272,6 @@ private final class TestSpecVisitor: SyntaxVisitor {
     }
 
     // MARK: - 도움
-
-    private func containsTests(_ memberBlock: MemberBlockSyntax) -> Bool {
-        memberBlock.members.contains { member in
-            member.decl.as(FunctionDeclSyntax.self).map { attribute("Test", in: $0.attributes) != nil } ?? false
-        }
-    }
 
     private func attribute(_ name: String, in attributes: AttributeListSyntax) -> AttributeSyntax? {
         for element in attributes {

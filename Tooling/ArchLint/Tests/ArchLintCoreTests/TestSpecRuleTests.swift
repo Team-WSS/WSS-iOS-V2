@@ -79,6 +79,23 @@ struct TestSpecRuleTests {
         #expect(ruleIDs(lintTest(source)) == ["test-suite-required"])
     }
 
+    @Test("@Suite 없는 타입의 #if 블록 안에 둔 @Test도 잡는다")
+    func catchesConditionallyCompiledTestInTypeWithoutSuite() {
+        let source = """
+        struct SampleTests {
+            #if DEBUG
+            @Test("별점을 저장한다")
+            func savesRating() { #expect(true) }
+            #endif
+        }
+        """
+
+        let violations = lintTest(source)
+
+        #expect(ruleIDs(violations) == ["test-suite-required"])
+        #expect(violations.map(\.line) == [1])
+    }
+
     @Test("같은 파일에서 @Suite 없는 타입을 확장해 둔 @Test를 잡는다")
     func catchesTestsInExtensionOfTypeWithoutSuite() {
         let source = """
