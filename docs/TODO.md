@@ -221,7 +221,8 @@ AI 검증 체계(기계 게이트·CI·테스트 체계 — 지도 이슈 **#205
 - **무엇**: A3(#215)에서 swift-format 게이트를 **"변경 파일만·report-only"** 로 착지시켰다. 레포 전체(886파일)를
   swift-format 스타일로 정렬한 적이 없어, 튜닝 설정(`.swift-format`)으로도 ~8,500 findings(대부분 **끌 수 없는
   레이아웃** — 줄끝공백·들여쓰기·spacing)이 남아 있다. 이걸 `swift format format -i`로 일괄 정렬해 **warning 0**으로
-  만들면 게이트를 **레포 전체 `--strict`** 로 격상하고 `Swift Format`을 required check로 걸 수 있다(더 강함).
+  만들면 게이트를 **레포 전체 `--strict`** 로 격상할 수 있다(더 강함). `Swift Format` 결과는 이미 필수 체크
+  `All Tests Passed`(gate)가 `needs`로 판정하므로(#290) `--strict`만 붙이면 위반이 머지를 막는다.
 - **규모(실측 2026-08-26)**: `format -i`가 **441/886 파일·~7,250줄**(3,967+/3,290−) 변경. 자동수정 후 **남는 수동
   경고는 14곳뿐**: `AlwaysUseLowerCamelCase` 10(식별자 개명은 자동 불가)·`NoBlockComments` 2·
   `ReplaceForEachWithForLoop` 1·`AvoidRetroactiveConformances` 1.
