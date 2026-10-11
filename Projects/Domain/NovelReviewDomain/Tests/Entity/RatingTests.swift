@@ -12,7 +12,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("평점")
+@Suite("Rating")
 struct RatingTests {
 
     @Test("평점은 0.5부터 5.0까지 0.5 단위로만 허용된다")
