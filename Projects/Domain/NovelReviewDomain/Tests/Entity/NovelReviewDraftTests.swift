@@ -13,7 +13,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("NovelReviewDraft")
+@Suite("리뷰 초안")
 struct NovelReviewDraftTests {
 
     // MARK: - Helpers
@@ -42,7 +42,7 @@ struct NovelReviewDraftTests {
     // MARK: - Init rules
 
     @Test("초기화 시 읽기 상태에 따라 기간이 정규화된다")
-    func initNormalizesPeriodByStatus() throws {
+    func normalizesPeriodByStatusOnInit() throws {
         let d = Date(timeIntervalSince1970: 1_700_000_000)
 
         // watched인데 end만 들어온 period → normalized가 start/end를 채우는 정책이라고 가정
@@ -63,7 +63,7 @@ struct NovelReviewDraftTests {
 
     
     @Test("기간이 nil일 때 상태를 변경해도 기간은 그대로 nil을 유지한다")
-    func changeStatusKeepsNilPeriodAcrossStatuses() {
+    func keepsNilPeriodWhenChangingStatus() {
         var draft = makeDraft(status: .watching, period: nil)
 
         draft.changeStatus(.watched)
@@ -80,7 +80,7 @@ struct NovelReviewDraftTests {
     }
 
     @Test("상태를 변경하면 기존 기간은 새로운 상태 기준으로 정규화된다")
-    func changeStatusNormalizesPeriodForAllTransitions() throws {
+    func normalizesPeriodWhenChangingStatus() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
 
@@ -139,8 +139,8 @@ struct NovelReviewDraftTests {
         }
     }
 
-    @Test("setPeriod는 현재 상태에 맞게 기간을 정규화하여 저장한다")
-    func setPeriodNormalizesForEachStatus() throws {
+    @Test("기간을 지정하면 현재 읽기 상태에 맞게 정규화해 저장한다")
+    func normalizesPeriodForCurrentStatusWhenSetting() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
 
@@ -182,7 +182,7 @@ struct NovelReviewDraftTests {
     // MARK: - Rating
 
     @Test("평점은 설정 및 nil 초기화가 가능하다")
-    func setRatingUpdates() throws {
+    func setsAndClearsRating() throws {
         var draft = makeDraft(rating: nil)
         let r = try Rating(4.5)
 
@@ -196,7 +196,7 @@ struct NovelReviewDraftTests {
     // MARK: - Attractive points editing rules
 
     @Test("이미 선택된 매력 포인트를 다시 추가해도 중복되지 않는다")
-    func addAttractivePointIgnoresDuplicates() throws {
+    func ignoresDuplicatedAttractivePoint() throws {
         var draft = makeDraft(attractivePoints: [.worldview])
 
         try draft.addAttractivePoint(.worldview) // duplicate
@@ -204,7 +204,7 @@ struct NovelReviewDraftTests {
     }
 
     @Test("매력 포인트가 3개를 초과하면 예외가 발생한다")
-    func addAttractivePointThrowsOnOverflow() throws {
+    func throwsWhenAttractivePointsOverflow() throws {
         var draft = makeDraft(attractivePoints: [.worldview, .material, .character])
 
         #expect(throws: NovelReviewDraft.ValidationError.tooManyAttractivePoints(max: NovelReviewDraft.maxAttractivePoints)) {
@@ -213,7 +213,7 @@ struct NovelReviewDraftTests {
     }
 
     @Test("매력 포인트 삭제는 여러 번 호출해도 안전하다")
-    func removeAttractivePointIsIdempotent() {
+    func removesAttractivePointIdempotently() {
         var draft = makeDraft(attractivePoints: [.vibe, .material])
 
         draft.removeAttractivePoint(.vibe)
@@ -227,7 +227,7 @@ struct NovelReviewDraftTests {
     // MARK: - Keywords editing rules
 
     @Test("키워드 설정은 중복된 키워드가 있는 값으로 설정하려는 경우 예외가 발생한다.")
-    func setKeywordsThrowsOnDuplicates() throws {
+    func throwsWhenSettingDuplicatedKeywords() throws {
         var draft = makeDraft()
         var input = (1...19).map(makeKeyword)
         input.append(makeKeyword(19))
@@ -237,7 +237,7 @@ struct NovelReviewDraftTests {
     }
     
     @Test("키워드 설정은 키워드가 20개를 초과한 값으로 설정하려는 경우 예외가 발생한다.")
-    func setKeywordsThrowsOnOverflow() throws {
+    func throwsWhenSettingKeywordsOverLimit() throws {
         var draft = makeDraft()
         let input = (1...21).map(makeKeyword)
         #expect(throws: NovelReviewDraft.ValidationError.tooManyKeywords(max: NovelReviewDraft.maxKeywords)) {
@@ -246,7 +246,7 @@ struct NovelReviewDraftTests {
     }
     
     @Test("키워드 설정은 중복되지 않고, 20개 이하이면 설정 가능하다.")
-    func setKeywordsUpdates() throws {
+    func setsUniqueKeywordsWithinLimit() throws {
         var draft = makeDraft()
         let input = (1...20).map(makeKeyword)
         try draft.setKeywords(input)
@@ -254,7 +254,7 @@ struct NovelReviewDraftTests {
     }
 
     @Test("키워드 삭제는 여러 번 호출해도 안전하다")
-    func removeKeywordIsIdempotent() {
+    func removesKeywordIdempotently() {
         let k1 = makeKeyword(1)
         let k2 = makeKeyword(2)
 

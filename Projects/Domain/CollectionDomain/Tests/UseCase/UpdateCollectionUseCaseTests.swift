@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("UpdateCollectionUseCase")
+@Suite("컬렉션 수정")
 struct UpdateCollectionUseCaseTests {
 
     @Test("수정하려는 컬렉션 ID와 초안이 함께 전달된다")
-    func updateSuccess() async throws {
+    func passesCollectionIDAndDraft() async throws {
         let mock = MockCollectionRepository()
         let useCase = DefaultUpdateCollectionUseCase(collectionRepository: mock)
 
@@ -42,7 +42,7 @@ struct UpdateCollectionUseCaseTests {
     }
 
     @Test("수정에 실패하면 에러를 그대로 전달한다")
-    func updateFailure() async {
+    func propagatesUpdateError() async {
         let mock = MockCollectionRepository()
         mock.updateCollectionResult = .failure(.forbidden)
         let useCase = DefaultUpdateCollectionUseCase(collectionRepository: mock)

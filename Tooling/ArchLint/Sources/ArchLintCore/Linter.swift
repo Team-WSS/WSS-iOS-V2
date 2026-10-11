@@ -22,7 +22,13 @@ let allRules: [Rule] = [
         folderName: "Repository",
         requiredSuffix: "Repository"
     ),
-    FeatureRouteCallbackRule()
+    FeatureRouteCallbackRule(),
+    // 테스트 명세 형식을 검사하는 모듈. 기존 위반을 warning까지 청소하면 여기 추가한다(나머지 모듈은 보고하지 않는다).
+    TestSpecRule(enforcedModules: [
+        "AuthDomain",
+        "CollectionDomain",
+        "NovelReviewDomain"
+    ])
 ]
 
 /// 등록된 모듈 단위 규칙 전체. 파일 하나가 아니라 모듈 전체를 봐야 하는 규칙(존재성 등)을 여기 둔다.

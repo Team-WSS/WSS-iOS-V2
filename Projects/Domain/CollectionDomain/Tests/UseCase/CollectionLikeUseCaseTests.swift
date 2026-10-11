@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("CollectionLikeUseCase")
+@Suite("컬렉션 좋아요")
 struct CollectionLikeUseCaseTests {
 
     @Test("좋아요를 누르면 해당 컬렉션 ID로 등록을 요청한다")
-    func likeSuccess() async throws {
+    func requestsLikeWithCollectionID() async throws {
         let mock = MockCollectionRepository()
         let useCase = DefaultCollectionLikeUseCase(collectionRepository: mock)
 
@@ -28,7 +28,7 @@ struct CollectionLikeUseCaseTests {
     }
 
     @Test("좋아요를 취소하면 해당 컬렉션 ID로 취소를 요청한다")
-    func unlikeSuccess() async throws {
+    func requestsUnlikeWithCollectionID() async throws {
         let mock = MockCollectionRepository()
         let useCase = DefaultCollectionLikeUseCase(collectionRepository: mock)
 
@@ -39,7 +39,7 @@ struct CollectionLikeUseCaseTests {
     }
 
     @Test("서버가 멱등이라 같은 좋아요를 두 번 보내도 그대로 두 번 요청한다")
-    func likeIsIdempotentOnServer() async throws {
+    func sendsEveryLikeRequestBecauseServerIsIdempotent() async throws {
         let mock = MockCollectionRepository()
         let useCase = DefaultCollectionLikeUseCase(collectionRepository: mock)
 
@@ -49,8 +49,8 @@ struct CollectionLikeUseCaseTests {
         #expect(mock.likedIDs == [CollectionID(31), CollectionID(31)])
     }
 
-    @Test("볼 수 없는 컬렉션에 좋아요를 누르면 forbidden을 전달한다")
-    func likeForbidden() async {
+    @Test("볼 수 없는 컬렉션에 좋아요를 누르면 접근할 수 없음 오류를 그대로 전달한다")
+    func propagatesForbiddenOnLikingHiddenCollection() async {
         let mock = MockCollectionRepository()
         mock.likeCollectionResult = .failure(.forbidden)
         let useCase = DefaultCollectionLikeUseCase(collectionRepository: mock)
@@ -61,7 +61,7 @@ struct CollectionLikeUseCaseTests {
     }
 
     @Test("좋아요 취소에 실패하면 에러를 그대로 전달한다")
-    func unlikeFailure() async {
+    func propagatesUnlikeError() async {
         let mock = MockCollectionRepository()
         mock.unlikeCollectionResult = .failure(.networkUnavailable)
         let useCase = DefaultCollectionLikeUseCase(collectionRepository: mock)

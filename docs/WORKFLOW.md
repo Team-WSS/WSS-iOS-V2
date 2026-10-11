@@ -36,8 +36,8 @@
 - `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔해 모듈별 병렬 테스트.
 - 유령 폴더(레지스트리에 없는 rename/브랜치 잔재)는 `Project.swift`가 없어 자동 제외된다 — 폴더 잔재가 매트릭스를 깨지 않는다.
 - **머지 게이트**: `All Tests Passed` job이 전체 통과를 판정한다. develop 브랜치 보호에서 이 체크를 필수 통과(required status check)로 지정하면 빨간 PR은 머지가 막힌다(GitHub → Settings → Branches → develop → Require status checks → `All Tests Passed`).
-- **아키텍처 검사**: `Architecture Rules` job이 자체 SwiftSyntax 검사기(`Tooling/ArchLint`)로 VM 계약(`ObservableObject` 계열 금지)을 **error**(막음), Service 분기를 **warning**(리포트만)으로 본다 — ubuntu + 공식 swift 컨테이너라 Xcode 불필요. 이 job(`Architecture Rules`)도 별도 필수 통과 체크로 걸 수 있다(develop이 초록인 걸 확인한 뒤). 규칙 추가·심각도 정책은 `Tooling/ArchLint/README.md`.
-- **스타일 검사**: `Swift Format` job이 Apple swift-format(툴체인 번들 — 별도 설치 없음)으로 스타일을 검사한다 — **변경된 `.swift` 파일만**(레거시 전체 아님), 지금은 **report-only**(위반 출력만, 안 막음). 규칙 allowlist는 루트 `.swift-format`, 게이트 로직·규칙 선정 근거는 `Tooling/SwiftFormat/README.md`. develop 초록 확인 후 `--strict` + 필수 통과 체크로 승격 예정(전체 리포맷은 `docs/TODO.md`(AI 검증 후속) 3번).
+- **아키텍처 검사**: `Architecture Rules` job이 자체 SwiftSyntax 검사기(`Tooling/ArchLint`)로 VM 계약(`ObservableObject` 계열 금지)을 **error**(막음), Service 분기를 **warning**(리포트만)으로 본다 — ubuntu + 공식 swift 컨테이너라 Xcode 불필요. 결과는 `All Tests Passed`(gate)가 `needs`로 받아 판정하므로 error면 머지가 막힌다. 규칙 추가·심각도 정책은 `Tooling/ArchLint/README.md`.
+- **스타일 검사**: `Swift Format` job이 Apple swift-format(툴체인 번들 — 별도 설치 없음)으로 스타일을 검사한다 — **변경된 `.swift` 파일만**(레거시 전체 아님), 지금은 **report-only**(위반 출력만, 안 막음). 규칙 allowlist는 루트 `.swift-format`, 게이트 로직·규칙 선정 근거는 `Tooling/SwiftFormat/README.md`. develop 초록 확인 후 `--strict`로 승격 예정(결과는 이미 `All Tests Passed`가 판정한다)(전체 리포맷은 `docs/TODO.md`(AI 검증 후속) 3번).
 
 ## 배포 (App Store 심사 제출)
 
@@ -63,7 +63,7 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
   2. `CUTOVER_READY=true`라도 `environment: app-store-release`에 걸린 **Required reviewers**가 GitHub에서 수동 승인해야 실제로 실행된다.
   - `Fastfile`의 `release` lane 자체에도 같은 `CUTOVER_READY` 가드가 있다 — 로컬에서 `bundle exec fastlane ios release`를 직접 쳐도 동일하게 막힌다(defense-in-depth).
 - **릴리즈 노트**: `fastlane/metadata/ko/release_notes.txt`가 이번 제출의 "새로운 기능" 문구로 자동 업로드된다 — 준비 PR(develop 대상)마다 이 파일을 갱신한다(git으로 버전 관리·리뷰 대상).
-- `main` 브랜치 보호는 `develop`과 동일하게 강화되어 있다(필수 상태 체크 `All Tests Passed`/`Architecture Rules`, force-push·삭제 금지) — `develop→main` PR도 `test.yml`의 같은 검사를 받는다(위 CI 섹션의 트리거가 `main`도 포함).
+- `main` 브랜치 보호는 `develop`과 동일하게 강화되어 있다(필수 상태 체크 `All Tests Passed` — ArchLint·swift-format 결과 포함, force-push·삭제 금지) — `develop→main` PR도 `test.yml`의 같은 검사를 받는다(위 CI 섹션의 트리거가 `main`도 포함).
 - TestFlight 내부 배포(`debug_beta`/`release_beta` lane)는 이 워크플로우와 무관 — 사람이 로컬에서 `archive-debug`/`archive-release` 스킬로 수동 실행한다.
 - **`tag_release` job**(같은 `release.yml`, #275)은 `submit` job과 별개로 **`CUTOVER_READY`와 무관하게 `main` push마다 항상 실행**된다 — `Projects/App/Project.swift`의 `MARKETING_VERSION`에서 버전을 추출해 `v{버전}` GitHub Release/태그를 만든다(`fastlane/metadata/ko/release_notes.txt`를 notes로, 동일 태그 있으면 스킵). 실제 App Store 제출 여부와 무관한 순수 릴리즈 이력 기록용이라 별도 `concurrency` group으로 `submit`과 슬롯을 분리해뒀다.
 

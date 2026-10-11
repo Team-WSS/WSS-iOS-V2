@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("DeleteCollectionUseCase")
+@Suite("컬렉션 삭제")
 struct DeleteCollectionUseCaseTests {
 
     @Test("삭제하려는 컬렉션 ID가 전달된다")
-    func deleteSuccess() async throws {
+    func passesCollectionIDToDelete() async throws {
         let mock = MockCollectionRepository()
         let useCase = DefaultDeleteCollectionUseCase(collectionRepository: mock)
 
@@ -27,7 +27,7 @@ struct DeleteCollectionUseCaseTests {
     }
 
     @Test("삭제에 실패하면 에러를 그대로 전달한다")
-    func deleteFailure() async {
+    func propagatesDeleteError() async {
         let mock = MockCollectionRepository()
         mock.deleteCollectionResult = .failure(.notFound)
         let useCase = DefaultDeleteCollectionUseCase(collectionRepository: mock)

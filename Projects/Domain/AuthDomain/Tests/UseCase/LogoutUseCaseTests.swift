@@ -12,7 +12,7 @@ import Testing
 import AuthDomainTesting
 import BaseDomain
 
-@Suite("LogoutUseCase")
+@Suite("로그아웃")
 struct LogoutUseCaseTests {
 
     @Test("로그아웃 성공 시 서버 로그아웃 요청 후 로컬 토큰과 사용자 데이터를 제거한다")

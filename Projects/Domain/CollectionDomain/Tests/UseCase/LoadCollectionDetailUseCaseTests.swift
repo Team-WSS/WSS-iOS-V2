@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("LoadCollectionDetailUseCase")
+@Suite("컬렉션 상세 조회")
 struct LoadCollectionDetailUseCaseTests {
 
     @Test("컬렉션 상세를 불러온다")
-    func loadSuccess() async throws {
+    func loadsCollectionDetail() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionDetailResult = .success(makeDetail(name: "취향 저격 로판"))
         let useCase = DefaultLoadCollectionDetailUseCase(collectionRepository: mock)
@@ -39,8 +39,8 @@ struct LoadCollectionDetailUseCaseTests {
         #expect(mock.fetchedDetailRequests.last?.id == CollectionID(31))
     }
 
-    @Test("없는 컬렉션을 조회하면 notFound를 전달한다")
-    func loadNotFound() async {
+    @Test("없는 컬렉션을 조회하면 찾을 수 없음 오류를 그대로 전달한다")
+    func propagatesNotFoundForMissingCollection() async {
         let mock = MockCollectionRepository()
         mock.fetchCollectionDetailResult = .failure(.notFound)
         let useCase = DefaultLoadCollectionDetailUseCase(collectionRepository: mock)
@@ -50,8 +50,8 @@ struct LoadCollectionDetailUseCaseTests {
         }
     }
 
-    @Test("남의 나만 보는 컬렉션을 조회하면 forbidden을 전달한다")
-    func loadForbidden() async {
+    @Test("남의 나만 보는 컬렉션을 조회하면 접근할 수 없음 오류를 그대로 전달한다")
+    func propagatesForbiddenForOthersPrivateCollection() async {
         let mock = MockCollectionRepository()
         mock.fetchCollectionDetailResult = .failure(.forbidden)
         let useCase = DefaultLoadCollectionDetailUseCase(collectionRepository: mock)

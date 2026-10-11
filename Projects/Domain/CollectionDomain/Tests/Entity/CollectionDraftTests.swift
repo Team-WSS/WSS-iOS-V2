@@ -12,41 +12,41 @@ import Foundation
 @testable import CollectionDomain
 import BaseDomain
 
-@Suite("CollectionDraft")
+@Suite("컬렉션 초안")
 struct CollectionDraftTests {
 
     // MARK: - isSubmittable
 
     @Test("이름이 있고 작품이 하나 이상이면 제출할 수 있다")
-    func submittableWithNameAndNovel() {
+    func allowsSubmitWithNameAndNovel() {
         let draft = makeDraft(name: "취향 저격 로판", novelIDs: [NovelID(1)])
 
         #expect(draft.isSubmittable)
     }
 
     @Test("설명은 선택 항목이라 비어 있어도 제출할 수 있다")
-    func submittableWithoutDescription() {
+    func allowsSubmitWithoutDescription() {
         let draft = makeDraft(name: "취향 저격 로판", description: "", novelIDs: [NovelID(1)])
 
         #expect(draft.isSubmittable)
     }
 
     @Test("이름이 비어 있으면 제출할 수 없다")
-    func notSubmittableWithoutName() {
+    func blocksSubmitWithoutName() {
         let draft = makeDraft(name: "", novelIDs: [NovelID(1)])
 
         #expect(draft.isSubmittable == false)
     }
 
     @Test("이름이 공백 문자뿐이면 제출할 수 없다")
-    func notSubmittableWithBlankName() {
+    func blocksSubmitWithBlankName() {
         let draft = makeDraft(name: "   ", novelIDs: [NovelID(1)])
 
         #expect(draft.isSubmittable == false)
     }
 
     @Test("작품이 하나도 없으면 제출할 수 없다")
-    func notSubmittableWithoutNovel() {
+    func blocksSubmitWithoutNovel() {
         let draft = makeDraft(name: "취향 저격 로판", novelIDs: [])
 
         #expect(draft.isSubmittable == false)
@@ -55,7 +55,7 @@ struct CollectionDraftTests {
     // MARK: - updateName
 
     @Test("이름을 20자까지는 입력할 수 있다")
-    func updateNameAtLimit() throws {
+    func acceptsNameUpToLimit() throws {
         var draft = makeDraft()
 
         try draft.updateName(String(repeating: "가", count: 20))
@@ -64,7 +64,7 @@ struct CollectionDraftTests {
     }
 
     @Test("이름이 20자를 넘으면 입력이 거부되고 이전 값이 남는다")
-    func updateNameOverLimit() {
+    func rejectsNameOverLimitAndKeepsPrevious() {
         var draft = makeDraft(name: "원래 이름")
 
         #expect(throws: CollectionDraft.ValidationError.nameOverLimit(max: 20)) {
@@ -85,7 +85,7 @@ struct CollectionDraftTests {
     // MARK: - updateDescription
 
     @Test("설명을 60자까지는 입력할 수 있다")
-    func updateDescriptionAtLimit() throws {
+    func acceptsDescriptionUpToLimit() throws {
         var draft = makeDraft()
 
         try draft.updateDescription(String(repeating: "가", count: 60))
@@ -94,7 +94,7 @@ struct CollectionDraftTests {
     }
 
     @Test("설명이 60자를 넘으면 입력이 거부된다")
-    func updateDescriptionOverLimit() {
+    func rejectsDescriptionOverLimit() {
         var draft = makeDraft()
 
         #expect(throws: CollectionDraft.ValidationError.descriptionOverLimit(max: 60)) {
@@ -105,14 +105,14 @@ struct CollectionDraftTests {
     // MARK: - init
 
     @Test("저장된 값으로 초안을 만들 때 제한을 넘는 이름은 잘려서 들어온다")
-    func initTruncatesOverLimitName() {
+    func truncatesOverLimitNameOnInit() {
         let draft = makeDraft(name: String(repeating: "가", count: 25))
 
         #expect(draft.name.count == 20)
     }
 
     @Test("수정하기 화면은 기존 컬렉션을 그대로 편집 가능한 초안으로 되돌린다")
-    func initFromDetail() {
+    func restoresDraftFromDetail() {
         let detail = makeDetail(
             name: "취향 저격 로판",
             description: "여주가 강한 로맨스 판타지",
@@ -131,7 +131,7 @@ struct CollectionDraftTests {
     }
 
     @Test("설명이 없던 컬렉션을 초안으로 되돌리면 설명은 빈 문자열이 된다")
-    func initFromDetailWithoutDescription() {
+    func restoresEmptyDescriptionFromDetailWithoutDescription() {
         let detail = makeDetail(description: nil)
 
         let draft = CollectionDraft(from: detail)
@@ -142,7 +142,7 @@ struct CollectionDraftTests {
     // MARK: - addNovel
 
     @Test("작품을 추가하면 표시 순서 끝에 붙는다")
-    func addNovelAppends() throws {
+    func appendsAddedNovelToEnd() throws {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
         try draft.addNovel(NovelID(2))
@@ -151,7 +151,7 @@ struct CollectionDraftTests {
     }
 
     @Test("이미 담긴 작품은 다시 추가할 수 없다")
-    func addDuplicatedNovel() {
+    func rejectsDuplicatedNovel() {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
         #expect(throws: CollectionDraft.ValidationError.duplicatedNovel) {
@@ -161,7 +161,7 @@ struct CollectionDraftTests {
     }
 
     @Test("작품이 100개면 더 추가할 수 없다")
-    func addNovelOverLimit() {
+    func rejectsNovelOverLimit() {
         var draft = makeDraft(novelIDs: (1...100).map { NovelID($0) })
 
         #expect(throws: CollectionDraft.ValidationError.novelOverLimit(max: 100)) {
@@ -172,7 +172,7 @@ struct CollectionDraftTests {
     // MARK: - removeNovel
 
     @Test("작품을 빼면 목록에서 사라진다")
-    func removeNovel() {
+    func removesNovelFromList() {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
 
         draft.removeNovel(NovelID(1))
@@ -181,7 +181,7 @@ struct CollectionDraftTests {
     }
 
     @Test("대표로 지정한 작품을 빼면 대표 지정도 함께 풀린다")
-    func removeRepresentativeNovel() throws {
+    func clearsRepresentativeWhenRemovingIt() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
         try draft.setRepresentativeNovel(NovelID(1))
 
@@ -191,7 +191,7 @@ struct CollectionDraftTests {
     }
 
     @Test("대표가 아닌 작품을 빼면 대표 지정은 그대로 남는다")
-    func removeNonRepresentativeNovel() throws {
+    func keepsRepresentativeWhenRemovingOtherNovel() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
         try draft.setRepresentativeNovel(NovelID(1))
 
@@ -203,7 +203,7 @@ struct CollectionDraftTests {
     // MARK: - setNovels
 
     @Test("작품 리스트 전체를 새 선택 결과로 교체한다")
-    func setNovelsReplacesAll() throws {
+    func replacesAllNovels() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
 
         try draft.setNovels([NovelID(3), NovelID(4), NovelID(5)])
@@ -212,7 +212,7 @@ struct CollectionDraftTests {
     }
 
     @Test("작품이 100개를 넘으면 교체할 수 없다")
-    func setNovelsOverLimit() {
+    func rejectsReplacingNovelsOverLimit() {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
         #expect(throws: CollectionDraft.ValidationError.novelOverLimit(max: 100)) {
@@ -222,7 +222,7 @@ struct CollectionDraftTests {
     }
 
     @Test("대표 작품이 새 목록에 없으면 대표 지정도 함께 풀린다")
-    func setNovelsDropsRepresentativeWhenExcluded() throws {
+    func clearsRepresentativeWhenExcludedFromNewNovels() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
         try draft.setRepresentativeNovel(NovelID(1))
 
@@ -232,7 +232,7 @@ struct CollectionDraftTests {
     }
 
     @Test("대표 작품이 새 목록에도 있으면 대표 지정이 유지된다")
-    func setNovelsKeepsRepresentativeWhenIncluded() throws {
+    func keepsRepresentativeWhenIncludedInNewNovels() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
         try draft.setRepresentativeNovel(NovelID(1))
 
@@ -244,7 +244,7 @@ struct CollectionDraftTests {
     // MARK: - setRepresentativeNovel
 
     @Test("담긴 작품 중 하나를 대표로 지정할 수 있다")
-    func setRepresentativeNovel() throws {
+    func setsRepresentativeAmongNovels() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
 
         try draft.setRepresentativeNovel(NovelID(2))
@@ -253,7 +253,7 @@ struct CollectionDraftTests {
     }
 
     @Test("담기지 않은 작품은 대표로 지정할 수 없다")
-    func setRepresentativeNovelNotIncluded() {
+    func rejectsRepresentativeNotIncluded() {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
         #expect(throws: CollectionDraft.ValidationError.representativeNovelNotIncluded) {
@@ -264,14 +264,14 @@ struct CollectionDraftTests {
     // MARK: - effectiveRepresentativeNovelID
 
     @Test("대표를 고르지 않았으면 표시 순서 첫 작품이 대표가 된다")
-    func effectiveRepresentativeFallsBackToFirst() {
+    func fallsBackToFirstNovelAsRepresentative() {
         let draft = makeDraft(novelIDs: [NovelID(7), NovelID(3)])
 
         #expect(draft.effectiveRepresentativeNovelID == NovelID(7))
     }
 
     @Test("대표를 골랐으면 첫 작품이 아니라 고른 작품이 대표가 된다")
-    func effectiveRepresentativeUsesChosen() throws {
+    func usesChosenNovelAsRepresentative() throws {
         var draft = makeDraft(novelIDs: [NovelID(7), NovelID(3)])
 
         try draft.setRepresentativeNovel(NovelID(3))
@@ -280,7 +280,7 @@ struct CollectionDraftTests {
     }
 
     @Test("작품이 하나도 없으면 대표도 없다")
-    func effectiveRepresentativeWithoutNovel() {
+    func hasNoRepresentativeWithoutNovel() {
         let draft = makeDraft(novelIDs: [])
 
         #expect(draft.effectiveRepresentativeNovelID == nil)
@@ -289,14 +289,14 @@ struct CollectionDraftTests {
     // MARK: - togglePrivate
 
     @Test("나만 보는 컬렉션은 기본적으로 꺼져 있다")
-    func privateIsOffByDefault() {
+    func startsWithPrivateOff() {
         let draft = CollectionDraft()
 
         #expect(draft.isPrivate == false)
     }
 
     @Test("나만 보기를 토글하면 상태가 뒤집힌다")
-    func togglePrivate() {
+    func flipsPrivateOnToggle() {
         var draft = makeDraft()
 
         draft.togglePrivate()

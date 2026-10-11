@@ -12,7 +12,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("Rating")
+@Suite("평점")
 struct RatingTests {
 
     @Test("평점은 0.5부터 5.0까지 0.5 단위로만 허용된다")
@@ -61,7 +61,7 @@ struct RatingTests {
     }
 
     @Test("같은 값의 평점은 서로 동등하다")
-    func equatableByValue() throws {
+    func equatesRatingsWithSameValue() throws {
         let a = try Rating(3.5)
         let b = try Rating(3.5)
         let c = try Rating(4.0)

@@ -2,9 +2,9 @@ name: Run Tests
 
 on:
   pull_request:
-    # develop→main 승격 PR(릴리즈 PR)도 같은 테스트/아키텍처 검사를 받는다 — main 브랜치
-    # 보호가 이 job들("All Tests Passed", "Architecture Rules")을 required status check로
-    # 요구한다(release.yml과 맞물림).
+    # develop→main 승격 PR(릴리즈 PR)도 같은 테스트/아키텍처 검사를 받는다 — develop·main
+    # 보호의 유일한 required status check인 "All Tests Passed"(gate job)가 테스트·ArchLint·
+    # swift-format 결과를 함께 판정한다(release.yml과 맞물림).
     branches: [ develop, main ]
   issue_comment:
     types: [ created ]
@@ -383,10 +383,12 @@ jobs:
 
   # 3) 자동 CI(PR)의 단일 통과 게이트 — 이 job 이름을 develop 브랜치 보호의 "필수 통과 체크"로 건다.
   #    matrix가 늘어도 required check는 이 job 하나만 유지하면 된다.
+  #    모듈 테스트뿐 아니라 arch-lint · format-lint 결과도 여기서 판정한다 — 필수 체크가 이 job 하나라
+  #    needs에 없는 job은 실패해도 머지를 막지 못한다(#290 전에는 ArchLint 실패가 머지를 막지 못했다).
   gate:
     name: All Tests Passed
     runs-on: ubuntu-latest
-    needs: [discover, test]
+    needs: [discover, test, arch-lint, format-lint]
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: Verify all module tests passed
@@ -405,12 +407,21 @@ jobs:
             *)        echo "::error::일부 모듈 테스트가 실패했습니다. 위 Test 매트릭스에서 빨간 job을 확인하세요."
                       exit 1 ;;
           esac
+          echo "arch-lint:   ${{ needs.arch-lint.result }}"
+          echo "format-lint: ${{ needs.format-lint.result }}"
+          if [ "${{ needs.arch-lint.result }}" != "success" ]; then
+            echo "::error::아키텍처 규칙(Architecture Rules)이 실패했습니다. ArchLint error를 확인하세요."
+            exit 1
+          fi
+          # format-lint는 아직 report-only라 위반으로는 실패하지 않는다. 실패면 도구 자체가 깨진 것이다.
+          if [ "${{ needs.format-lint.result }}" != "success" ]; then
+            echo "::error::스타일 검사(Swift Format) job이 실패했습니다."
+            exit 1
+          fi
 
   # 4) 아키텍처 규칙 검사(A2) — 자체 SwiftSyntax 검사기(Tooling/ArchLint).
   #    ubuntu + 공식 swift 컨테이너로 Xcode 없이 빠르게 돈다.
-  #    error(규칙① VM 계약)면 실패, warning(규칙⑤ Service 분기)은 리포트만.
-  #    이 job 이름("Architecture Rules")을 develop 보호의 필수 통과 체크로 건다
-  #    (단일 job이라 test 매트릭스의 gate 같은 래퍼가 필요 없다).
+  #    error면 실패, warning은 리포트만. 결과는 gate(All Tests Passed)가 판정해 머지를 막는다.
   arch-lint:
     name: Architecture Rules
     runs-on: ubuntu-latest
@@ -444,8 +455,8 @@ jobs:
   #    "변경된 .swift 파일만" 린트한다(레거시 백로그 제외) — 그 이유와 설정은
   #    Tooling/SwiftFormat/lint-changed.sh 주석 참고. 스타일 규칙은 루트 .swift-format.
   #    ⚠️ 아직 report-only(위반 출력만, 실패 안 시킴). develop 초록 확인 후 스크립트에
-  #    --strict를 붙여 하드 게이트로 승격하고, 이 job 이름("Swift Format")을 develop
-  #    보호의 필수 통과 체크로 건다(arch-lint와 동일한 승격 순서).
+  #    --strict를 붙여 하드 게이트로 승격한다 — gate(All Tests Passed)가 이미 이 job 결과를 보므로
+  #    별도 필수 체크 설정은 필요 없다.
   format-lint:
     name: Swift Format
     runs-on: ubuntu-latest

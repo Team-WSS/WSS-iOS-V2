@@ -12,7 +12,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("DeleteNovelReviewUseCase")
+@Suite("리뷰 삭제")
 struct DeleteNovelReviewUseCaseTests {
 
     @Test("주어진 작품 ID로 작품 평가를 삭제한다")
@@ -27,7 +27,7 @@ struct DeleteNovelReviewUseCaseTests {
     }
 
     @Test("삭제 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
-    func deletePropagatesError() async {
+    func propagatesDeleteError() async {
         let repo = MockNovelReviewRepository()
         repo.deleteResult = .failure(.networkUnavailable)
 

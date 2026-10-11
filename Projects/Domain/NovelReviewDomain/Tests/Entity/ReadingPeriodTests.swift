@@ -13,7 +13,7 @@ import Testing
 import NovelReviewDomainTesting
 import BaseDomain
 
-@Suite("ReadingPeriod")
+@Suite("읽은 기간")
 struct ReadingPeriodTests {
 
     @Test("시작일이 종료일보다 이전이면 기간 생성이 가능하다")
@@ -120,7 +120,7 @@ struct ReadingPeriodTests {
     }
 
     @Test("같은 시작일과 종료일을 가지면 동일한 기간으로 비교된다")
-    func equatableByDates() throws {
+    func equatesPeriodsWithSameDates() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end   = Date(timeIntervalSince1970: 1_700_000_100)
 

@@ -44,6 +44,6 @@ swift format format -i <파일>                     # 자동 수정
 
 ## 승격(required check) 순서
 
-report-only로 착지 → develop 초록 + 컨테이너에 swift-format 실재 확인 → `lint-changed.sh --strict` + `Swift Format`을
-develop 보호의 필수 통과 체크로 승격(**사람 액션**). A1(`All Tests Passed`)·A2(`Architecture Rules`)와 동일 순서 —
-새 기계 게이트는 "드러난 위반을 청소해 초록으로 만든 뒤" required로 올린다.
+report-only로 착지 → develop 초록 + 컨테이너에 swift-format 실재 확인 → `lint-changed.sh --strict`로 승격.
+`Swift Format` job 결과는 이미 필수 체크 `All Tests Passed`(gate)가 `needs`로 받아 판정하므로(#290) 별도 필수 체크 설정은
+필요 없다 — `--strict`만 붙이면 위반이 머지를 막는다. 새 기계 게이트는 "드러난 위반을 청소해 초록으로 만든 뒤" 올린다.

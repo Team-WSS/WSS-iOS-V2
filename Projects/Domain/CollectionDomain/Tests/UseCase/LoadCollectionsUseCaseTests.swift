@@ -13,11 +13,11 @@ import Foundation
 import CollectionDomainTesting
 import BaseDomain
 
-@Suite("LoadCollectionsUseCase")
+@Suite("컬렉션 목록 조회")
 struct LoadCollectionsUseCaseTests {
 
     @Test("컬렉션 목록과 전체 개수를 함께 불러온다")
-    func loadSuccess() async throws {
+    func loadsCollectionsWithTotalCount() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionsResult = .success((makePage(cardCount: 2, hasNext: true, nextCursor: "c1"), 12))
         let useCase = DefaultLoadCollectionsUseCase(collectionRepository: mock)
@@ -31,7 +31,7 @@ struct LoadCollectionsUseCaseTests {
     }
 
     @Test("첫 페이지는 커서 없이 요청한다")
-    func firstPageHasNoCursor() async throws {
+    func requestsFirstPageWithoutCursor() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionsResult = .success((makePage(), 0))
         let useCase = DefaultLoadCollectionsUseCase(collectionRepository: mock)
@@ -42,7 +42,7 @@ struct LoadCollectionsUseCaseTests {
     }
 
     @Test("다음 페이지는 직전 응답이 준 커서를 그대로 넘긴다")
-    func nextPagePassesCursorAsIs() async throws {
+    func passesPreviousCursorForNextPage() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionsResult = .success((makePage(), 0))
         let useCase = DefaultLoadCollectionsUseCase(collectionRepository: mock)
@@ -53,7 +53,7 @@ struct LoadCollectionsUseCaseTests {
     }
 
     @Test("마지막 페이지에는 다음 커서가 없다")
-    func lastPageHasNoNextCursor() async throws {
+    func returnsNoNextCursorOnLastPage() async throws {
         let mock = MockCollectionRepository()
         mock.fetchCollectionsResult = .success((makePage(hasNext: false, nextCursor: nil), 2))
         let useCase = DefaultLoadCollectionsUseCase(collectionRepository: mock)
@@ -65,7 +65,7 @@ struct LoadCollectionsUseCaseTests {
     }
 
     @Test("조회에 실패하면 에러를 그대로 전달한다")
-    func loadFailure() async {
+    func propagatesLoadError() async {
         let mock = MockCollectionRepository()
         mock.fetchCollectionsResult = .failure(.forbidden)
         let useCase = DefaultLoadCollectionsUseCase(collectionRepository: mock)
