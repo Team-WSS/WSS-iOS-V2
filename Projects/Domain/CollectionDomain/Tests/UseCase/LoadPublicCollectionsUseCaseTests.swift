@@ -64,6 +64,19 @@ struct LoadPublicCollectionsUseCaseTests {
         #expect(page.nextCursor == "next")
     }
 
+    @Test("공개 컬렉션이 하나도 없으면 빈 목록과 함께 다음 페이지가 없다고 전달한다")
+    func loadEmptyPage() async throws {
+        let mock = MockCollectionRepository()
+        mock.fetchPublicCollectionsResult = .success(makePage(cardCount: 0))
+        let useCase = DefaultLoadPublicCollectionsUseCase(collectionRepository: mock)
+
+        let page = try await useCase.execute(cursor: nil, size: 10)
+
+        #expect(page.items.isEmpty)
+        #expect(!page.hasNext)
+        #expect(page.nextCursor == nil)
+    }
+
     @Test("조회에 실패하면 에러를 그대로 전달한다")
     func loadFailure() async {
         let mock = MockCollectionRepository()
