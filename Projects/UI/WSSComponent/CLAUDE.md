@@ -24,7 +24,7 @@
   - ⚠️ **타이틀이 길어지면 양쪽 버튼 영역을 넘어서던 버그(2026-09-12)** — `Text(title)`에 `lineLimit`도, 버튼 영역을 피하는 여백도 없어 자연 폭 그대로 렌더돼 뒤로가기/우측 액션과 겹쳤다. `lineLimit(1)` + `truncationMode(.tail)` + 좌우 동일한 `sidePadding`(뒤로가기 쪽 고정폭 50과 `trailing` 실측 폭 중 큰 값, `PreferenceKey`로 갱신)을 타이틀에 걸어 해결 — SwiftUI `padding`은 자식에게 줄어든 proposed width를 내려보내므로 이 안에서 말줄임이 실제로 동작한다. 좌우를 동일한 값으로 줘야 `ZStack` 중앙 정렬이 깨지지 않는다.
   - **스크롤 반응형 네비 배경(히어로 이미지 위 투명→흰색 전환 등)을 쓰는 화면**(`UserPageView`·`MypageView`·`CollectionDetailView`)은 `WSSNavigationBar`(back+title 고정형)가 아니라 **`NovelDetailView`식 커스텀 오버레이 바**로 각자 만들었다(#244, 사용자 확정). 세 화면 다 시스템 툴바(+`.toolbarBackground`)를 걷어내고, 스크롤 측정(`isScrolledFromTop`)으로 **배경·타이틀·아이콘 색을 opacity/색 전환**하는 커스텀 바를 그렸다 — 커스텀 오버레이라 시스템 `.principal`의 UIKit 브리지 함정(아래 항목)이 없어 `.opacity`/색 전환이 그대로 반영된다(`if` 구조 토글이 필요 없다). ⚠️ **스크롤 전환 애니메이션은 사용자 선호로 전부 걷어내 즉시 전환한다**(#244 후속 — `isScrolledFromTop`/`showNavTitle`에 걸었던 `.animation(.easeInOut …)`을 이 세 화면 + `NovelDetailView`에서 제거, 되살리지 말 것). MypageView(흰 배경, 뒤로가기 없는 탭 루트)·UserPageView(primary20 히어로)는 `safeAreaInset`으로 바를 고정하고, CollectionDetailView(히어로 이미지 위 투명 바)만 `ZStack` 오버레이 + `.ignoresSafeArea(edges:.top)` 배경 확장 + 아이콘 색 흰↔검정 적응을 쓴다(진짜 몰입형). 배경 색이 항상 콘텐츠와 이어지므로 리퀴드 글래스가 애초에 안 뜬다.
 - **컬렉션 카드 조각(`Sources/Collection/`, #283)** — `WSSCollectionCoverStack(coverURLs:slotCount:)`(표지 겹침 스택,
-  `CollectionFeature` 목록 5칸·`HomeFeature` 홈 섹션 4칸).
+  `CollectionFeature` 목록 5칸·`HomeFeature` 홈 섹션 4칸)과 `WSSCollectionOwnerLabel`("{닉네임}님의 컬렉션").
   **카드 전체는 승격하지 않았다** — 홈 카드(폭 284·패딩 16·헤더↔표지 12)와 목록 카드(폭 가득·패딩 17/16·16)가
   수치부터 달라 한 컴포넌트로 묶으면 파라미터만 늘어난다. 스택은 도메인 타입 대신 URL만 받는다(이 모듈은 BaseDomain까지만 안다).
   슬롯 수와 무관하게 **스택 전체가 카드 폭을 꽉 채우도록 간격을 역산**한다(원래 `CollectionFeature`에서 실기기 리포트로 고친 동작).
