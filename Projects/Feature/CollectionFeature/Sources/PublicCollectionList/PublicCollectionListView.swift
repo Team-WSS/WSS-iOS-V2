@@ -19,7 +19,7 @@ struct PublicCollectionListView: View {
 
     @State private var viewModel: PublicCollectionListViewModel
     /// 이 화면의 자식은 컬렉션 상세(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 사실상 "상세에서 복귀"다
-    /// (상세에서 스와이프백을 하다 취소해도 다시 불리지만 동기화 1회가 더 나갈 뿐 무해하다). 목록엔 본인 공개
+    /// (탭 전환·스와이프백 취소로도 다시 불리지만 동기화 1회가 더 나갈 뿐 무해하다). 목록엔 본인 공개
     /// 컬렉션도 섞여 상세에서 수정·삭제·비공개 전환될 수 있어 그때 동기화한다(`CollectionListView`와 같은 이유).
     @State private var hasAppearedOnce = false
     @Environment(\.dismiss) private var dismiss

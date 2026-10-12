@@ -56,6 +56,10 @@ final class PublicCollectionListViewModel {
     @ObservationIgnored private var hasNext = true
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    /// 지금 `loadTask`가 복귀 동기화인지. 동기화는 목록 길이를 유지해 마지막 셀이 다시 나타나지 않으므로,
+    /// 그동안 막힌 더보기를 `pendingLoadMore`로 기억했다가 동기화가 끝나면 이어서 부른다(안 그러면 하단에서 멈춘다).
+    @ObservationIgnored private var isSyncing = false
+    @ObservationIgnored private var pendingLoadMore = false
 
     /// 서버 권장 페이지 크기가 따로 없어 화면이 정한다(`CollectionListViewModel`과 같은 값).
     private static let pageSize = 20
@@ -116,6 +120,8 @@ private extension PublicCollectionListViewModel {
     func reload(clearingItems: Bool) {
         generation += 1
         loadTask?.cancel()
+        isSyncing = false
+        pendingLoadMore = false
         nextCursor = nil
         hasNext = true
 
@@ -135,6 +141,9 @@ private extension PublicCollectionListViewModel {
     func syncLoadedItems() {
         generation += 1
         loadTask?.cancel()
+        // 진행 중이던 더보기를 취소하므로 동기화가 끝나면 다시 시도한다.
+        pendingLoadMore = pendingLoadMore || state.isLoadingMore
+        isSyncing = true
         state.isLoadingMore = false
 
         let size = min(max(Self.pageSize, state.items.count), Self.maxPageSize)
@@ -144,6 +153,10 @@ private extension PublicCollectionListViewModel {
 
     /// 다음 페이지. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
     func loadMore() {
+        if isSyncing {
+            pendingLoadMore = true
+            return
+        }
         guard hasNext, loadTask == nil, !state.isLoading, state.loadFailed == nil,
               let cursor = nextCursor else { return }
         state.isLoadingMore = true
@@ -186,6 +199,11 @@ private extension PublicCollectionListViewModel {
         defer {
             if self.generation == generation {
                 loadTask = nil
+                isSyncing = false
+                if pendingLoadMore {
+                    pendingLoadMore = false
+                    loadMore()
+                }
             }
         }
         do {
