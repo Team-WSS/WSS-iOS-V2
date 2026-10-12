@@ -378,7 +378,9 @@ private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
                         id: NovelID(index * 10 + novelIndex),
                         title: "작품 \(novelIndex)",
                         author: "작가",
-                        thumbnailImage: URL(string: "https://picsum.photos/seed/wsshome\(index)\(novelIndex)/148/216")
+                        // 실서버 표지는 비율이 제각각이라 세로로 긴·가로로 긴·칸과 같은 비율을 섞는다 —
+                        // 칸 비율(74:108)과 같은 표지만 쓰면 표지가 칸 밖으로 넘치는 회귀가 Mock에서 안 보인다(#283).
+                        thumbnailImage: URL(string: "https://picsum.photos/seed/wsshome\(index)\(novelIndex)/\(["148/300", "240/216", "148/216"][novelIndex % 3])")
                     )
                 },
                 owner: Author(userId: UserID(index + 1), nickname: "코띠", profileImage: nil)

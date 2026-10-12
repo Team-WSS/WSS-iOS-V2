@@ -45,11 +45,12 @@ public struct WSSCollectionCoverStack: View {
         }
     }
 
-    // 크기는 CoverStackLayout이 제안한 값을 그대로 받는다 — scaledToFill 표지가 넘치지 않도록
-    // 프레임으로 그 크기에 묶은 뒤 자른다.
+    // 크기는 CoverStackLayout이 제안한 값(표지 비율 그대로)을 받는다. ⚠️ `.frame(maxWidth:maxHeight: .infinity)`로
+    // 묶지 말 것 — min을 안 주면 자식 크기가 하한이 돼, 칸과 비율이 다른 표지(scaledToFill)가 그만큼 칸 밖으로
+    // 넘친다(세로로 긴 표지는 아래로 튀고, 가로로 긴 표지는 옆 칸을 덮었다 — #283 실기기). 컴포넌트의 `aspectRatio:`가
+    // 칸을 비율로 고정하고 넘친 그림을 그 안에서 자른다.
     private func cover(url: URL?) -> some View {
-        WSSNovelCoverImage(url: url)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        WSSNovelCoverImage(url: url, aspectRatio: CoverStackLayout.coverWidthToHeight)
             .clipShape(RoundedRectangle(cornerRadius: Metric.cornerRadius))
             .shadow(color: Color.black.opacity(0.1), radius: 7.5, x: 0, y: 2)
     }
@@ -63,8 +64,11 @@ public struct WSSCollectionCoverStack: View {
 /// 높이도 폭을 따라 바뀌어야 해서 `GeometryReader`(높이 고정 필요) 대신 `Layout`으로 크기를 보고한다.
 private struct CoverStackLayout: Layout {
 
+    /// 표지 폭 ÷ 높이(Figma 74×108). `WSSNovelCoverImage(aspectRatio:)`가 받는 방향이다.
+    static let coverWidthToHeight: CGFloat = 74.0 / 108.0
+
     private enum Metric {
-        static let coverAspectRatio: CGFloat = 108.0 / 74.0
+        static let coverAspectRatio: CGFloat = 1 / CoverStackLayout.coverWidthToHeight
         /// 다음 표지까지의 거리 ÷ 표지 폭(Figma 58/74). 1보다 작아야 겹친다.
         static let stepRatio: CGFloat = 58.0 / 74.0
         /// 폭 제안이 없거나 무한대일 때 쓰는 Figma 원본 표지 폭.

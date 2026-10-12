@@ -32,6 +32,10 @@
   양수가 돼 표지가 서로 떨어졌다(#283 실측). 지금은 Figma 겹침 비율(등차 58 ÷ 표지 74)을 고정하고 **표지 크기를 카드 폭에
   비례해 키우고 줄이는** `Layout`(`CoverStackLayout`)이다 — 높이도 폭을 따라 바뀌므로 호출부에서 높이를 고정하지 말 것.
   폭 제안이 nil·무한대면 Figma 원본 크기로 답한다(무한대 그대로 쓰면 높이까지 무한대가 된다).
+  ⚠️ **표지는 `WSSNovelCoverImage(aspectRatio:)`로 그린다 — `.frame(maxWidth: .infinity, maxHeight: .infinity)`로 감싸지 말 것.**
+  flexible frame은 min을 안 주면 **자식 크기를 하한**으로 삼아, 칸과 비율이 다른 표지(`scaledToFill`)가 그만큼 칸 밖으로 넘친다
+  — 세로로 긴 표지는 아래로 튀고 가로로 긴 표지는 옆 칸을 덮었다(#283 실기기, 표지 비율에 따라 "가끔"만 보여 놓치기 쉽다).
+  Demo Mock 표지가 칸과 같은 비율(148×216)뿐이면 재현이 안 되므로 HomeFeature Demo는 일부러 비율을 섞어 둔다.
 - **`WSSEmptyView`의 CTA는 선택이다** — `action`을 생략(nil)하거나 `type.buttonTitle`이 nil이면 **버튼과 그 위 간격(36)이 함께 사라진다**. 유도할 행동이 없는 빈 상태(`.notification` — 알림 목록)를 화면마다 다시 그리지 않으려고 #181에서 열었다. `action`에 기본값이 있어 기존 호출부는 그대로 동작한다.
   - ⚠️ **`LibraryFeature`의 `noMatchSection`(필터 0건)은 아직 이 컴포넌트로 옮기지 않았다** — 그쪽은 이미지를 39×48로 줄이고 상단 여백 120을 직접 잡는 등 **렌더가 달라서**, 옮기면 서재 화면 재검증이 필요하다. 옮길 거면 크기 파라미터를 열지 말고 **왜 두 빈 상태의 이미지 크기가 다른지부터** 디자인과 정할 것.
 - **`NetworkErrorView`는 로드 실패 전면 뷰(재시도 버튼 내장)다** — `init(error: RepositoryError = .unknown, action:)`(#244). 잡은 `RepositoryError`를 받아 title/description을 **3분류로 가른다**: `serverUnavailable`("서버에 문제가\n생겼어요" / "잠시 후 다시 시도해 주세요"), `networkUnavailable`("네트워크 연결에\n실패했어요" / "연결 상태를 확인한 후\n다시 시도해 보세요"), 그 외 `default`("일시적인 오류가\n발생했어요" / "다시 시도해 주세요"). 일러스트(`imgEmptyCatQuestionmark`)·"페이지 다시 불러오기" 버튼·레이아웃은 케이스 불문 **동일** — 문구만 분기.
