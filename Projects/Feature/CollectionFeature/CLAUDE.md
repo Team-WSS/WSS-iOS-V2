@@ -228,6 +228,17 @@
   - "공유" 아이콘(`icShare`, Figma `humbleicons:share`)은 이 작업에서 `DesignSystem`에 신규 추가한
     에셋이다(기존엔 없었음, 사용자 승인).
 
+### 전체 컬렉션뷰(`PublicCollectionListView`, #283 — 사용자 확정 2026-09-28)
+
+- 홈 "컬렉션 모음.zip" 섹션 제목 탭에서만 진입한다. 모든 사용자의 **공개** 컬렉션을 최신순(위가 최신)으로 20개씩 무한 스크롤.
+- 카드는 컬렉션 목록 카드와 같은 틀(`CollectionCardHeader` + 표지 5칸)에 비공개 태그 대신 **작성자 라벨**
+  (`WSSCollectionOwnerLabel`, 탭 없음)을 단다 — 표지와 라벨 사이 8(목록 카드의 비공개 태그는 16). 카드 탭 → 컬렉션 상세.
+- **당겨서 새로고침 + 햅틱(`HapticManager.impact(.light)`)** — 목록을 비우지 않고 첫 페이지로 교체한다.
+- **실패는 첫 페이지·더보기·새로고침 모두 `NetworkErrorView`로 목록을 대체한다**(Feature 로드 실패 표현 계약 —
+  같은 모듈 `CollectionListView`의 더보기 실패 토스트와 다르다, 그쪽이 계약 이전 코드다).
+- 상세에 다녀와도 재로드하지 않는다(이 목록엔 상세에서 바뀔 값이 없다). 0건 빈 상태는 명세에 없어 따로 그리지 않는다.
+- 이벤트 트래킹은 명세에 없어 걸지 않았다(이벤트 이름을 지어내지 않는다).
+
 ## 주의사항 (작업 중 발견 시 누적)
 
 - `CollectionAnalyticsEvent`(`collection_list`/`collection_write`/`collection_save`/`collection_detail`/
