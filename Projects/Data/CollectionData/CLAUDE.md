@@ -18,7 +18,7 @@
   어디서도 다시 뒤집지 말 것.
 - **에러는 상태 코드가 아니라 `code` 문자열로 분기할 여지가 크다(현재는 미구현 — 소비 화면 연결 시 도입 예정).**
   `400` 하나에 `BAD_REQUEST`·`COLLECTION-002`(작품 1~100개)·`COLLECTION-003`(중복 작품)·
-  `COLLECTION-004`(대표 작품이 목록에 없음)·`COLLECTION-007`(잘못된 커서)·`COLLECTION-008`(size 범위)이 공존하고,
+  `COLLECTION-004`(대표 작품이 목록에 없음)·`COLLECTION-007`(잘못된 커서 — 다른 목록의 커서 포함)·`COLLECTION-008`(size가 1~100 밖)이 공존하고,
   `401`도 `AUTH-000`/`AUTH-001`/`AUTH-003`으로 갈린다. 지금 `DefaultCollectionRepository`는 공용
   `NetworkingError.toRepositoryError()`만 쓴다 — Feature가 아직 없어 코드별 구분을 미뤄뒀다.
   화면에서만 의미가 다른 코드가 필요해지면 공용 변환에 섞지 말고 이 모듈의 리포지토리 메서드에서 변환할 것
@@ -36,6 +36,9 @@
 - 컬렉션 상세와 전체 공개 목록(`GET /collections`)만 `usesTokenIfAvailable`이다(비로그인도 조회 가능 — 공개 목록은 토큰이
   있으면 차단 관계 작성자를 빼므로 있으면 붙인다). 나머지는 `requireToken` —
   목록 API의 비로그인 허용 여부는 서버 명세에 명시가 없어 보수적으로 잡아뒀다. 비로그인 진입 경로가 생기면 그때 확인해 바꾼다.
+- **목록 `size` 상한은 서버 기준 100이다**(`GET /collections` 명세 "1개 이상 100개 이하") — 전체 컬렉션뷰의 상세 복귀 동기화가
+  받은 개수만큼 다시 받을 때 이 값으로 자른다(`PublicCollectionListViewModel.maxPageSize`). 서버 상한이 바뀌면 함께 고칠 것 —
+  넘기면 `COLLECTION-008`인데, 그 동기화는 실패해도 조용히 직전 목록을 유지하는 설계라 어긋나도 드러나지 않는다.
 - **전체 공개 목록은 `CollectionsResponse`를 재사용하지 않고 `PublicCollectionsResponse`를 따로 둔다** — 같은 `nextCursor`·`hasNext`
   구조지만 `collectionsCount`·`isPublic`·`representativeNovel`이 없고 `owner`가 있어, 공용 DTO에 optional을 늘리면 기존
   두 목록의 필수값 디코딩 검증이 약해진다. 커서는 목록마다 서버가 따로 발급한다(다른 목록 커서를 넣으면 `COLLECTION-007`).

@@ -34,7 +34,8 @@ Sources/
 │                                          # makeDetailSearchFilterView로 승격)까지(NovelDetailAssembly/
 │                                          # NovelReviewAssembly/FeedFeatureFactory/UserPageAssembly/
 │                                          # LibraryFactory.makeUserLibraryView(타유저 서재)/SearchAssembly/
-│                                          # MypageFeatureFactory) 실제 push.
+│                                          # MypageFeatureFactory) 실제 push. 홈 "컬렉션 모음.zip" 섹션의
+│                                          # 전체 컬렉션뷰·컬렉션 상세도 여기서 push(#283).
 ├── Feed/    └── FeedRootView.swift      # "피드" 탭. FeedFeatureFactory.makeSosoFeedView 조립 + 피드 상세·
 │                                          # 작품 상세·작품 평가·피드 작성·타유저 프로필·그 전체 피드 목록·
 │                                          # 그 프로필의 타유저 서재·작가 이름 검색(makeFeedDetailView/
@@ -84,9 +85,11 @@ Sources/
     │                                     # switch(#253 — 예전 onEditTapped 기본값 no-op은 #228 죽은
     │                                     # 버튼 사고를 만들어 제거). 타유저 컬렉션은 isMine==false라
     │                                     # 수정 버튼 자체가 안 뜨지만 매핑은 전 호출자가 명시한다.
-    └── CollectionListAssembly.swift    # 컬렉션 목록 조립 공용 헬퍼 — isOwnCollections 기본값 false
-                                          # (타유저 프로필 "컬렉션" 헤더 탭). 마이페이지의 "내 컬렉션"
-                                          # 목록만 true로 명시 호출.
+    ├── CollectionListAssembly.swift    # 컬렉션 목록 조립 공용 헬퍼 — isOwnCollections 기본값 false
+    │                                     # (타유저 프로필 "컬렉션" 헤더 탭). 마이페이지의 "내 컬렉션"
+    │                                     # 목록만 true로 명시 호출.
+    └── PublicCollectionListAssembly.swift # 전체 컬렉션뷰(모든 사용자의 공개 컬렉션) 조립 — 진입점은
+                                          # 홈 컬렉션 섹션 제목 하나뿐이라 HomeRootView만 쓴다(#283).
 ```
 
 4탭 콘텐츠 자체(각 Factory의 메인 화면)는 전부 실제 UseCase로 조립돼 있고, 그 안에서 열리는 2차
