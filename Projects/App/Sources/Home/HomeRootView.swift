@@ -44,8 +44,11 @@ struct HomeRootView: View {
         case userLibrary(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
-        /// 타유저 프로필의 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세(`CollectionDetailAssembly`).
+        /// 타유저 프로필의 컬렉션 미리보기 항목 탭·홈 "컬렉션 모음.zip" 카드 탭·전체 컬렉션뷰 카드 탭(#283)
+        /// → 그 컬렉션 상세(`CollectionDetailAssembly`).
         case collectionDetail(CollectionID)
+        /// 홈 "컬렉션 모음.zip" 섹션 제목 탭 → 전체 컬렉션뷰(#283, `PublicCollectionListAssembly`).
+        case publicCollectionList
         /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`,
         /// "내 컬렉션" 탭만 보이는 모드).
         case collectionList(UserID)
@@ -114,6 +117,9 @@ struct HomeRootView: View {
                 loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                     repository: dependencies.notificationRepository
                 ),
+                loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
+                    collectionRepository: dependencies.collectionRepository
+                ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
                 analyticsTracker: dependencies.analyticsTracker,
@@ -136,6 +142,10 @@ struct HomeRootView: View {
                         }
                     case .preferenceGenreSetting:
                         path.append(Destination.preferenceGenreSetting)
+                    case .publicCollectionList:
+                        path.append(Destination.publicCollectionList)
+                    case .collectionDetail(let id):
+                        path.append(Destination.collectionDetail(id))
                     }
                 },
                 onAuthenticationRequired: onAuthenticationRequired
@@ -215,6 +225,17 @@ struct HomeRootView: View {
                                 case .createCollection:
                                     // 타유저 컬렉션 목록(isOwnCollections=false)엔 "만들기" 버튼이 안 떠 도달 불가.
                                     break
+                                }
+                            }
+                        )
+                    case .publicCollectionList:
+                        PublicCollectionListAssembly.makeView(
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onRoute: { route in
+                                switch route {
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
                                 }
                             }
                         )
