@@ -59,3 +59,6 @@
   상한은 `addNovel`과 같은 `novelOverLimit` throw(선택 화면이 UI에서 이미 100개로 막아두므로 실사용
   경로는 아니지만, "사용자 입력은 거부"라는 `updateName` 방침과 일관되게 clamp 대신 throw를 골랐다).
   대표 작품이 새 목록에서 빠지면 `removeNovel`과 동일하게 대표 지정도 함께 풀린다.
+- **공개 컬렉션 목록(홈 섹션·전체 컬렉션뷰, #283)은 `PublicCollectionCard`를 따로 쓴다** — 작성자(`owner: Author`)가 필요한데
+  위 권고대로 `CollectionCard`에 얹지 않았다. 공개 목록만 오므로 `isPrivate`이 없고, 서버(`GET /collections`)가 전체 개수를
+  주지 않아 `fetchPublicCollections`는 다른 목록과 달리 `(페이지, 개수)` 튜플이 아니라 페이지만 돌려준다.
