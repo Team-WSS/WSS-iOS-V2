@@ -18,6 +18,10 @@ import WSSComponent
 struct PublicCollectionListView: View {
 
     @State private var viewModel: PublicCollectionListViewModel
+    /// 이 화면의 자식은 컬렉션 상세(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상 "상세에서 복귀"다.
+    /// 목록엔 본인 공개 컬렉션도 섞여 상세에서 수정·삭제·비공개 전환될 수 있어 그때 재조회한다
+    /// (`CollectionListView`의 `hasAppearedOnce`와 같은 이유).
+    @State private var hasAppearedOnce = false
     @Environment(\.dismiss) private var dismiss
 
     private let onAuthenticationRequired: () -> Void
@@ -48,8 +52,15 @@ struct PublicCollectionListView: View {
         }
         .background(Color.wssWhite)
         .wssCustomNavigationBar()
-        // 카드 탭으로 상세에 다녀와도 다시 부르지 않는다 — 이 목록에 상세에서 바뀔 값(좋아요 수 등)이 없다.
-        .onAppear { viewModel.handle(.load) }
+        .onAppear {
+            if hasAppearedOnce {
+                // 목록을 비우지 않고 첫 페이지로 교체한다 — 비우면 복귀 순간 로딩 뷰로 깜빡인다.
+                viewModel.handle(.refresh)
+            } else {
+                hasAppearedOnce = true
+                viewModel.handle(.load)
+            }
+        }
         // 인증 만료 신호 — 실제 로그인 화면 전환은 호출자(App)가 콜백 안에서 수행한다.
         .onChange(of: viewModel.state.requiresAuthentication) { _, needsAuth in
             if needsAuth { onAuthenticationRequired() }

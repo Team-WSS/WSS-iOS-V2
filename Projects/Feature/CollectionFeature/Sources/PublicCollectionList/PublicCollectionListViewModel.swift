@@ -36,7 +36,7 @@ final class PublicCollectionListViewModel {
     enum Action {
         case load
         case loadMore
-        /// 당겨서 새로고침 — 목록을 비우지 않고 첫 페이지로 교체한다(비우면 인디케이터 아래가 깜빡인다).
+        /// 당겨서 새로고침·상세에서 복귀 — 목록을 비우지 않고 첫 페이지로 교체한다(비우면 인디케이터 아래가 깜빡인다).
         case refresh
         /// 실패 뷰(`NetworkErrorView`)의 재시도 — 처음부터 다시 세운다.
         case retry
@@ -166,6 +166,8 @@ private extension PublicCollectionListViewModel {
     /// (Feature 레이어 "로드 실패 표현 계약": 토스트는 사라지면 재시도 수단이 없다).
     func presentLoadFailure(_ error: Error, cursor: String?) {
         // 인증 만료는 실패 뷰 대신 로그인 유도로 일원화 — 실패 플래그보다 먼저 거른다.
+        // push 화면이라 App 콜백이 루트를 교체해 이 VM째 사라지므로 1회성 신호로 충분하다
+        // (`CollectionListViewModel`과 동일 — `.consumeAuthenticationRequired` 같은 소진 처리가 필요 없다).
         guard (error as? RepositoryError) != .authenticationRequired else {
             state.requiresAuthentication = true
             return
