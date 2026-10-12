@@ -36,8 +36,11 @@ final class PublicCollectionListViewModel {
     enum Action {
         case load
         case loadMore
-        /// 당겨서 새로고침·상세에서 복귀 — 목록을 비우지 않고 첫 페이지로 교체한다(비우면 인디케이터 아래가 깜빡인다).
+        /// 당겨서 새로고침 — 목록을 비우지 않고 첫 페이지로 교체한다(비우면 인디케이터 아래가 깜빡인다).
         case refresh
+        /// 상세에서 복귀 — 본인 컬렉션의 수정·삭제·비공개 전환을 반영하려고 **지금까지 받은 개수만큼** 다시 받는다.
+        /// 사용자가 누른 게 아니라서 실패해도 실패 뷰로 덮지 않고 직전 목록을 유지한다(사용자 확정 2026-10-12).
+        case syncAfterReturn
         /// 실패 뷰(`NetworkErrorView`)의 재시도 — 처음부터 다시 세운다.
         case retry
     }
@@ -56,6 +59,8 @@ final class PublicCollectionListViewModel {
 
     /// 서버 권장 페이지 크기가 따로 없어 화면이 정한다(`CollectionListViewModel`과 같은 값).
     private static let pageSize = 20
+    /// 서버가 받는 `size` 상한(넘으면 `COLLECTION-008`). 복귀 동기화가 받은 개수만큼 다시 받을 때의 천장이다.
+    private static let maxPageSize = 100
 
     // MARK: - Dependency
 
@@ -87,6 +92,13 @@ final class PublicCollectionListViewModel {
             reload(clearingItems: false)
         case .retry:
             reload(clearingItems: true)
+        case .syncAfterReturn:
+            // 보여줄 목록이 없으면(첫 로드 실패·0건) 동기화할 대상이 없으니 처음부터 다시 세운다.
+            if state.items.isEmpty || state.loadFailed != nil {
+                reload(clearingItems: true)
+            } else {
+                syncLoadedItems()
+            }
         }
     }
 
@@ -116,6 +128,18 @@ private extension PublicCollectionListViewModel {
 
         let generation = generation
         loadTask = Task { await loadPage(cursor: nil, generation: generation) }
+    }
+
+    /// 받은 만큼을 첫 페이지부터 한 번에 다시 받는다 — 첫 페이지(20개)만 받으면 깊이 스크롤한 목록이
+    /// 잘려 보던 위치가 튄다. 상한(100)을 넘게 내려갔던 경우만 그만큼 잘린다.
+    func syncLoadedItems() {
+        generation += 1
+        loadTask?.cancel()
+        state.isLoadingMore = false
+
+        let size = min(max(Self.pageSize, state.items.count), Self.maxPageSize)
+        let generation = generation
+        loadTask = Task { await syncPage(size: size, generation: generation) }
     }
 
     /// 다음 페이지. 커서는 직전 응답의 `nextCursor`를 그대로 왕복한다.
@@ -154,6 +178,29 @@ private extension PublicCollectionListViewModel {
         } catch {
             guard self.generation == generation, !Task.isCancelled else { return }
             presentLoadFailure(error, cursor: cursor)
+        }
+    }
+
+    /// 성공하면 목록·커서를 응답으로 교체하고, 실패하면 아무것도 안 바꾼다(직전 목록·커서가 그대로 유효하다).
+    func syncPage(size: Int, generation: Int) async {
+        defer {
+            if self.generation == generation {
+                loadTask = nil
+            }
+        }
+        do {
+            let page = try await loadPublicCollectionsUseCase.execute(cursor: nil, size: size)
+            guard self.generation == generation, !Task.isCancelled else { return }
+            state.items = page.items
+            nextCursor = page.nextCursor
+            hasNext = page.hasNext
+        } catch {
+            guard self.generation == generation, !Task.isCancelled else { return }
+            if error == .authenticationRequired {
+                state.requiresAuthentication = true
+                return
+            }
+            logger?.error("PublicCollectionList 복귀 동기화 실패(직전 목록 유지): \(String(describing: error))")
         }
     }
 }
