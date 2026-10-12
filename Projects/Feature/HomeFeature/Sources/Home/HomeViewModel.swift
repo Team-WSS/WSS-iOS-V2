@@ -85,6 +85,9 @@ final class HomeViewModel {
     /// 튄다**(성공한 것처럼 보였다가 슬램). 그래서 로드 결과로만 오르내리는 플래그를 따로 둔다.
     @ObservationIgnored private var hasLoadedContent = false
 
+    /// 홈 섹션은 최대 10개(기획) — 가로 스크롤 첫 페이지만 쓰고 더 불러오지 않는다.
+    private static let publicCollectionCount = 10
+
     // MARK: - Dependency
 
     private let logger: Logger?
@@ -101,9 +104,6 @@ final class HomeViewModel {
 
     // PushAuthorization
     private let pushAuthorizationChecker: PushAuthorizationChecker
-
-    /// 홈 섹션은 최대 10개(기획) — 가로 스크롤 첫 페이지만 쓰고 더 불러오지 않는다.
-    private static let publicCollectionCount = 10
 
     // MARK: - Init
 
@@ -192,7 +192,7 @@ private extension HomeViewModel {
         state.loadFailed = nil
         defer { state.isLoading = false }
 
-        // 둘은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
+        // 셋은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
         // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
         async let homeData = loadHomeDataUseCase.execute()
         async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
@@ -221,7 +221,18 @@ private extension HomeViewModel {
             presentLoadFailure(.unknown)
         }
 
-        // 2) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
+        // 2) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **배지보다 먼저** 꺼낸다: 콘텐츠 사이에
+        //    끼어드는 섹션이라 늦을수록 아래 선호장르가 밀리는 점프가 커지는데, 배지 뒤에 두면 배지 왕복까지
+        //    기다리게 된다(배지는 헤더 점 하나라 늦어도 레이아웃이 안 움직인다).
+        do {
+            state.publicCollections = try await publicCollections.items
+        } catch let error as RepositoryError {
+            presentPublicCollectionsFailure(error)
+        } catch {
+            presentPublicCollectionsFailure(.unknown)
+        }
+
+        // 3) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
         //    await해야 하고, 콘텐츠가 실패했다고 배지 요청을 버릴 이유도 없다).
         do {
             let loadedNotificationStatus = try await notificationStatus
@@ -230,15 +241,6 @@ private extension HomeViewModel {
             presentBadgeFailure(error)
         } catch {
             presentBadgeFailure(.unknown)
-        }
-
-        // 3) 컬렉션 섹션 — 배지와 같은 이유로 콘텐츠 성패와 무관하게 수확한다.
-        do {
-            state.publicCollections = try await publicCollections.items
-        } catch let error as RepositoryError {
-            presentPublicCollectionsFailure(error)
-        } catch {
-            presentPublicCollectionsFailure(.unknown)
         }
     }
 }
