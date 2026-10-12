@@ -210,7 +210,7 @@ private extension CollectionListView {
                 cardSubtitle(card)
             }
 
-            CollectionCoverStackView(recentNovels: card.recentNovels)
+            WSSCollectionCoverStack(coverURLs: card.recentNovels.map(\.thumbnailImage), slotCount: 5)
 
             if card.isPrivate {
                 privateTag

@@ -88,7 +88,8 @@
   dismiss만) **이 화면은 복귀를 "성공/취소"로 구분하지 않고** `hasAppearedOnce` 플래그로 감지한다(이
   화면의 App 경로엔 자식이 이 화면 하나뿐이라, 최초 `onAppear` 이후의 재발화는 정의상 "그 자식에서
   돌아옴"이다) — 복귀 시 무조건 `.reloadAfterReturn(selectedTab)`으로 그 탭을 다시 로드한다. 카드
-  표지 스택은 `CollectionCoverStackView`(로컬) — 마이페이지 미리보기(`UserPageFeature.CollectionSection`,
+  표지 스택은 `WSSComponent.WSSCollectionCoverStack(slotCount: 5)`(#283에 이 모듈 로컬 `CollectionCoverStackView`에서
+  승격 — 홈 컬렉션 섹션이 4칸으로 함께 쓴다) — 마이페이지 미리보기(`UserPageFeature.CollectionSection`,
   대표 표지 1장)와는 시각 패턴이 달라 별개 컴포넌트다. **표지 슬롯은 실제 작품 수(1~5)와 무관하게 항상
   5칸**이다(사용자 확정, 2026-08-21) — `recentNovels`가 5개 미만이면 남는 슬롯을
   `WSSNovelCoverImage(url: nil)`의 기본 표지 폴백으로 채운다("몇 개 들었나"를 표지 개수로 세지 않게
