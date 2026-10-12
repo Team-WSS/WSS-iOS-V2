@@ -33,5 +33,9 @@
   Mapper만 갈린다(`collectionPreviews` / `collectionCards`). 엔드포인트를 추가하기 전에 Mapper로 해결되는지 먼저 볼 것.
 - **Demo 앱은 `TEST_API_KEY`(`Config_Debug.xcconfig`)로 인증한다.** 만료되면 모든 호출이 `AUTH-000`으로 실패한다 —
   Demo가 안 될 때 코드부터 의심하지 말고 토큰부터 확인할 것. 갱신 방법은 `/api-spec` 스킬 문서에 있다.
-- 컬렉션 상세만 `usesTokenIfAvailable`이다(공유 링크로 들어온 비로그인 조회자에게도 내려간다). 나머지는 `requireToken` —
+- 컬렉션 상세와 전체 공개 목록(`GET /collections`)만 `usesTokenIfAvailable`이다(비로그인도 조회 가능 — 공개 목록은 토큰이
+  있으면 차단 관계 작성자를 빼므로 있으면 붙인다). 나머지는 `requireToken` —
   목록 API의 비로그인 허용 여부는 서버 명세에 명시가 없어 보수적으로 잡아뒀다. 비로그인 진입 경로가 생기면 그때 확인해 바꾼다.
+- **전체 공개 목록은 `CollectionsResponse`를 재사용하지 않고 `PublicCollectionsResponse`를 따로 둔다** — 같은 `nextCursor`·`hasNext`
+  구조지만 `collectionsCount`·`isPublic`·`representativeNovel`이 없고 `owner`가 있어, 공용 DTO에 optional을 늘리면 기존
+  두 목록의 필수값 디코딩 검증이 약해진다. 커서는 목록마다 서버가 따로 발급한다(다른 목록 커서를 넣으면 `COLLECTION-007`).
