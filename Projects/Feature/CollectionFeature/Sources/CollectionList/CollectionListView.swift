@@ -191,24 +191,7 @@ private extension CollectionListView {
 
     func collectionCardContent(_ card: CollectionCard) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 0) {
-                    Text(card.name)
-                        .applyWSSFont(.title2, color: .wssGray300)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    WSSImage.icNavigateRight.swiftUIImage
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color.wssGray300)
-                        .frame(width: 24, height: 24)
-                }
-
-                cardSubtitle(card)
-            }
+            CollectionCardHeader(name: card.name, description: card.description, novelCount: card.novelCount)
 
             WSSCollectionCoverStack(coverURLs: card.recentNovels.map(\.thumbnailImage), slotCount: 5)
 
@@ -221,33 +204,6 @@ private extension CollectionListView {
         .background(Color.wssPrimary20)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .contentShape(Rectangle())
-    }
-
-    func cardSubtitle(_ card: CollectionCard) -> some View {
-        HStack(spacing: 0) {
-            if let description = card.description {
-                Text(description)
-                    .applyWSSFont(.label1, color: .wssGray300)
-                    .lineLimit(1)
-                
-                Spacer().frame(width: 4)
-                
-                Circle()
-                    .fill(Color.wssGray300)
-                    .frame(width: 2, height: 2)
-                
-                Spacer().frame(width: 4)
-            }
-
-            HStack(spacing: 0) {
-                Text("작품 ")
-                    .applyWSSFont(.label1, color: .wssGray300)
-                Text("\(card.novelCount)")
-                    .applyWSSFont(.label1, color: .wssPrimary100)
-            }
-            
-            Spacer().frame(width: 80)
-        }
     }
 
     var privateTag: some View {
