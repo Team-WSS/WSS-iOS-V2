@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import PushAuthorization
 import DesignSystem
 import WSSComponent
@@ -28,6 +29,9 @@ struct HomeView: View {
         static let searchToDiscovery: CGFloat = 24
         static let discoveryToTrending: CGFloat = 32
         static let trendingToPreference: CGFloat = 38
+        /// 컬렉션 섹션 위아래 간격(Figma 실측 — 추천글 섹션 끝 ↔ 컬렉션 섹션 ↔ 선호장르 섹션 모두 32).
+        static let trendingToCollection: CGFloat = 32
+        static let collectionToPreference: CGFloat = 32
         static let bottomInset: CGFloat = 40
 
         static let sectionTitleSpacing: CGFloat = 16
@@ -131,11 +135,26 @@ private extension HomeView {
                     )
                 }
 
+                // 컬렉션 섹션은 0건이거나 첫 로드에 실패하면 숨는다 — 그땐 추천글↔선호장르 간격이
+                // 원래 값(trendingToPreference) 그대로 남는다.
+                if !state.publicCollections.isEmpty {
+                    Spacer().frame(height: Metric.trendingToCollection)
+                    PublicCollectionSection(
+                        collections: state.publicCollections,
+                        onTitleTapped: { onRoute(.publicCollectionList) },
+                        onCollectionSelected: { onRoute(.collectionDetail($0)) }
+                    )
+                }
+
                 // 선호장르 섹션은 0건(설정했으나 추천 0건)이어도 숨기지 않고 설정 유도 카드를 띄운다
                 // (#222 V1 parity — 빈 자리보다 행동 유도가 낫다). 빈 그리드 vs 유도 카드 분기는
                 // PreferenceGenreSection이 상태로 판단한다. nil(로드 전)일 때만 섹션을 안 그린다.
                 if let preferenceGenreNovelState = state.preferenceGenreNovelState {
-                    Spacer().frame(height: Metric.trendingToPreference)
+                    Spacer().frame(
+                        height: state.publicCollections.isEmpty
+                            ? Metric.trendingToPreference
+                            : Metric.collectionToPreference
+                    )
                     PreferenceGenreSection(
                         state: preferenceGenreNovelState,
                         onNovelSelected: { novelID in
@@ -188,6 +207,7 @@ private extension HomeView {
         viewModel: HomeViewModel(
             loadHomeDataUseCase: PreviewLoadHomeDataUseCase(),
             loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase(),
+            loadPublicCollectionsUseCase: PreviewLoadPublicCollectionsUseCase(),
             pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         ),
         onRoute: { print("화면 전환 요청: \($0)") },
@@ -258,6 +278,22 @@ private struct PreviewLoadHomeDataUseCase: LoadHomeDataUseCase {
 private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase {
     func execute() async throws(RepositoryError) -> UnreadNotificationStatus {
         UnreadNotificationStatus(hasUnreadNotifications: true)
+    }
+}
+
+private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+        let cards = (0..<3).map { index in
+            PublicCollectionCard(
+                id: CollectionID(index),
+                name: "개존잼 소설 🤩",
+                description: "존잼 수준이 정도를 넘음",
+                novelCount: index + 1,
+                recentNovels: [],
+                owner: Author(userId: UserID(index), nickname: "코띠", profileImage: nil)
+            )
+        }
+        return CursorPaginated(items: cards, hasNext: false, nextCursor: nil)
     }
 }
 

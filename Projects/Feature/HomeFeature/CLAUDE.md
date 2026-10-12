@@ -6,19 +6,21 @@
 
 - 식별자: `ModuleType.feature(.home)` / 의존: `BaseDomain`, **`RecommendationDomain`**(홈의 Domain 코드가
   별도 `HomeDomain`이 아니라 여기 있음 — `LoadHomeDataUseCase`·`HomeData`·`TodayDiscovery`·`TrendingFeed`·
-  `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), `DesignSystem`, `WSSComponent`, `Logger`,
+  `PreferenceGenreNovelState`), **`NotificationDomain`**(알림 벨 배지), **`CollectionDomain`**(컬렉션 모음.zip 섹션, #283),
+  `DesignSystem`, `WSSComponent`, `Logger`,
   `PushAuthorization`(#193 — 알림 벨 탭 시 시스템 권한 확인용)
 - 진입점: `HomeFeatureFactory.makeView(loadHomeDataUseCase:loadUnreadNotificationStatusUseCase:
-  pushAuthorizationChecker:logger:onRoute:onAuthenticationRequired:)` —
+  loadPublicCollectionsUseCase:pushAuthorizationChecker:logger:onRoute:onAuthenticationRequired:)` —
   **탭 콘텐츠만** 반환(탭바·화면 전환은 App 몫). 화면 전환 의도는 `onRoute: (HomeRoute) -> Void` 하나
-  (#253 — `.novelDetail`/`.feedDetail`/`.search`/`.detailSearch`/`.notification`/`.preferenceGenreSetting`,
+  (#253 — `.novelDetail`/`.feedDetail`/`.search`/`.detailSearch`/`.notification`/`.preferenceGenreSetting`/
+  `.publicCollectionList`/`.collectionDetail`,
   정본 `Sources/Navigation/HomeRoute.swift`)
 
 ## 핵심 시나리오
 
-- **로드**: `onAppear`마다 `.load` → `LoadHomeDataUseCase`(추천 3종)와 `LoadUnreadNotificationStatusUseCase`
-  (알림 배지)를 **`async let`으로 동시에** 부른다.
-  추천 3종도 UseCase 안에서 동시 호출이라, 홈 진입 시 **총 4건이 한꺼번에 나간다**(순차로 펴지 말 것 →
+- **로드**: `onAppear`마다 `.load` → `LoadHomeDataUseCase`(추천 3종)·`LoadUnreadNotificationStatusUseCase`
+  (알림 배지)·`LoadPublicCollectionsUseCase`(컬렉션 섹션, #283)를 **`async let`으로 동시에** 부른다.
+  추천 3종도 UseCase 안에서 동시 호출이라, 홈 진입 시 **총 5건이 한꺼번에 나간다**(순차로 펴지 말 것 →
   [RecommendationDomain](../../Domain/RecommendationDomain/CLAUDE.md)에 퇴행 이력과 컴파일 함정이 있다).
   - **수확은 콘텐츠·배지 따로다(2026-08-31)** — 콘텐츠(추천 3종)는 성공 즉시 그리고, 배지는 도착하는 대로
     따로 반영한다. 한 do/catch로 묶으면 프리페치로 즉시 끝나는 콘텐츠가 배지 네트워크 왕복까지 기다렸다가
@@ -28,8 +30,8 @@
     일부러 안 쓴다: 배지는 실패해도 "보이는 고장"이 없어 멀쩡한 홈 위의 에러 토스트가 설명이 안 되고,
     탭 복귀 갱신마다 반복 노출만 된다(다음 탭 복귀가 자동 재시도 = self-healing). 인증 만료만은 배지
     경로에서도 로그인 라우팅을 태운다(idempotent 계약이라 안전).
-- **섹션 4개**: 검색바·상세검색 배너 / 오늘의 발견(가로 캐러셀) / {닉네임}님을 위한 추천글(2개씩 3페이지) /
-  이 웹소설은 어때요?(2열 그리드, 선호장르 미설정이면 설정 유도 CTA).
+- **섹션 5개**: 검색바·상세검색 배너 / 오늘의 발견(가로 캐러셀) / {닉네임}님을 위한 추천글(2개씩 3페이지) /
+  컬렉션 모음.zip(공개 컬렉션 가로 스크롤, #283) / 이 웹소설은 어때요?(2열 그리드, 선호장르 미설정이면 설정 유도 CTA).
 - 선택 결과는 전부 콜백으로 상위에 위임한다 — 이 화면은 스스로 화면을 전환하지 않는다.
 - **홈 진입마다 시스템 푸시 권한을 확인, notDetermined면 그 자리에서 시스템 프롬프트(#193)**:
   `onAppear`의 `.load`와 별도로 `.checkPushAuthorizationOnEntry`를 함께 보낸다. 회원가입 직후 첫 홈
@@ -80,6 +82,13 @@
   한 장은 `hidden="true"`이고, 모양이 아래 그리드 셀(거긴 `/novels/taste`가 실제로 내려줌)과 동일해
   **복사 잔재로 확인**했다. **시안에 있다는 이유로 되살리지 말 것.**
 - **오늘의 발견 카드 탭 → 작품 상세**(유저 한마디 카드도 마찬가지, 유저 프로필로 가지 않는다).
+- **"컬렉션 모음.zip" 섹션(#283, 사용자 확정 2026-09-28)** — 모든 사용자의 공개 컬렉션을 최신순(왼쪽이 최신)으로
+  최대 10개(`size=10` 첫 페이지만, 더보기 없음). 제목 줄(`>` 포함) 탭 → 전체 컬렉션뷰(`.publicCollectionList`),
+  카드 탭 → 컬렉션 상세(`.collectionDetail`), 작성자 라벨은 탭 없음. 카드는 표지 **4칸 고정**(모자라면 기본 표지).
+  - **부수 콘텐츠라 실패해도 홈을 실패 뷰로 덮지 않는다** — 배지와 같은 lane: 로그만, 토스트 없음, 직전 카드 유지,
+    첫 로드 실패면 빈 채라 섹션이 숨는다. 추천 3종과 같은 `async let` 묶음이지만 수확은 따로다.
+  - 섹션이 숨으면 추천글↔선호장르 간격은 원래 값(38)으로 돌아가고, 보이면 위아래 32(Figma 실측)를 쓴다.
+  - Figma 카드 헤더의 빈 24pt 프레임(`bookmark-outline`)은 에셋 없는 빈 자리라 그리지 않는다.
 
 ### 실서버가 주는 개수 (시안과 일치 — #179 실측)
 
@@ -102,7 +111,7 @@
   최초 1회로 좁혔다 — 이 둘을 같은 가드로 착각해 트래킹까지 매번 걸리게 되돌리지 말 것.
 - 홈 Domain을 찾을 때 `HomeDomain`을 만들지 말 것 — 정본은 `RecommendationDomain/Sources/`다
   (`LibraryFeature`↔`NovelDomain`과 같은 형태의 이름 불일치).
-- **홈은 앱에서 손꼽히는 "동시 요청 4건" 지점**이다 → access token이 만료된 채 진입하면 **401도 4건이 동시에**
+- **홈은 앱에서 손꼽히는 "동시 요청 5건" 지점**이다(#283 컬렉션 섹션으로 4→5) → access token이 만료된 채 진입하면 **401도 5건이 동시에**
   난다. 이걸 안전하게 만드는 건 `Networking`의 재발급 직렬화(`SessionRefreshCoordinator`)다 — 그게 없으면
   재발급이 4번 나가 refresh token 회전 때문에 3건이 실패하고 로그아웃된다(#184).
 - ⚠️ **`.load`에 "최초 1회" 가드를 넣지 말 것** — 홈은 밖(피드 작성·선호장르 설정·알림 확인)에서 바뀐 값을

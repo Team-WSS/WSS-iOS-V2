@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import Logger
 import PushAuthorization
 import Analytics
@@ -30,6 +31,8 @@ final class HomeViewModel {
         /// nil = 아직 로드 전. `.noGenreSettings`(미설정)와 구분해야 로딩 중 설정 유도 CTA가 번쩍이지 않는다.
         var preferenceGenreNovelState: PreferenceGenreNovelState?
         var hasUnreadNotifications = false
+        /// "컬렉션 모음.zip" 섹션. 비면 섹션을 제목까지 숨긴다(첫 로드 실패도 빈 채라 숨는다).
+        var publicCollections: [PublicCollectionCard] = []
 
         /// ⚠️ 초깃값 `true` — `onAppear`의 `.load`보다 첫 body 평가가 먼저라, false면 한 프레임 동안
         /// "검색바·배너만 있는 빈 홈"이 스친다(Library·NovelDetail과 같은 이유).
@@ -93,20 +96,28 @@ final class HomeViewModel {
     // NotificationDomain
     private let loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
 
+    // CollectionDomain
+    private let loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
+
     // PushAuthorization
     private let pushAuthorizationChecker: PushAuthorizationChecker
+
+    /// 홈 섹션은 최대 10개(기획) — 가로 스크롤 첫 페이지만 쓰고 더 불러오지 않는다.
+    private static let publicCollectionCount = 10
 
     // MARK: - Init
 
     init(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadHomeDataUseCase = loadHomeDataUseCase
         self.loadUnreadNotificationStatusUseCase = loadUnreadNotificationStatusUseCase
+        self.loadPublicCollectionsUseCase = loadPublicCollectionsUseCase
         self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.analyticsTracker = analyticsTracker
@@ -170,10 +181,10 @@ private extension HomeViewModel {
 
 private extension HomeViewModel {
 
-    /// 추천 3종(콘텐츠)과 알림 배지를 **따로** 수확한다 — 한 do/catch로 묶으면 프리페치로 즉시
+    /// 추천 3종(콘텐츠)·알림 배지·컬렉션 섹션을 **따로** 수확한다 — 한 do/catch로 묶으면 프리페치로 즉시
     /// 끝나는 콘텐츠가 배지 네트워크 왕복까지 기다렸다가 그려진다(첫 런치의 프리페치 이득이 죽는다).
-    /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지 실패는 조용히 무시(로그만 — 이유는 아래
-    /// `presentBadgeFailure` 주석).
+    /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지·컬렉션 실패는 조용히 무시(로그만 — 이유는 아래
+    /// `presentBadgeFailure`·`presentPublicCollectionsFailure` 주석).
     func loadHome() async {
         state.isLoading = true
         // 재시도·재진입 시작 시점에 함께 내린다 — 성공할 때만 내리면 "페이지 다시 불러오기"를 눌러도
@@ -185,6 +196,10 @@ private extension HomeViewModel {
         // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
         async let homeData = loadHomeDataUseCase.execute()
         async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
+        async let publicCollections = loadPublicCollectionsUseCase.execute(
+            cursor: nil,
+            size: Self.publicCollectionCount
+        )
 
         // 1) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
         do {
@@ -216,6 +231,15 @@ private extension HomeViewModel {
         } catch {
             presentBadgeFailure(.unknown)
         }
+
+        // 3) 컬렉션 섹션 — 배지와 같은 이유로 콘텐츠 성패와 무관하게 수확한다.
+        do {
+            state.publicCollections = try await publicCollections.items
+        } catch let error as RepositoryError {
+            presentPublicCollectionsFailure(error)
+        } catch {
+            presentPublicCollectionsFailure(.unknown)
+        }
     }
 }
 
@@ -245,6 +269,15 @@ private extension HomeViewModel {
         guard !routeToLoginIfAuthenticationRequired(error) else { return }
 
         logger?.error("알림 배지 로드 실패: \(error)")
+    }
+
+    /// 컬렉션 섹션도 부수 콘텐츠라 실패해도 홈을 실패 뷰로 덮지 않는다 — **직전에 그린 카드는 그대로 두고**
+    /// 로그만 남긴다(첫 로드 실패면 빈 채라 섹션이 숨는다). 배지와 같은 이유로 토스트도 안 띄운다: 탭 복귀
+    /// 갱신마다 반복 노출만 되고, 다음 탭 복귀가 자동 재시도한다.
+    func presentPublicCollectionsFailure(_ error: RepositoryError) {
+        guard !routeToLoginIfAuthenticationRequired(error) else { return }
+
+        logger?.error("컬렉션 섹션 로드 실패: \(error)")
     }
 
     func routeToLoginIfAuthenticationRequired(_ error: RepositoryError) -> Bool {

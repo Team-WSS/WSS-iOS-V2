@@ -7,6 +7,7 @@
 //
 
 import BaseDomain
+import CollectionDomain
 
 /// 홈(탭 콘텐츠) 화면이 밖(App 조정 계층)으로 요청하는 화면 전환의 전부 — #253.
 public enum HomeRoute {
@@ -22,4 +23,8 @@ public enum HomeRoute {
     case notification
     /// 선호장르 설정 — 미설정 유도 CTA 탭(전용 화면이 없어 App은 마이페이지 편집으로 보낸다, 사용자 확정).
     case preferenceGenreSetting
+    /// 전체 컬렉션뷰 — "컬렉션 모음.zip" 섹션 제목 탭(#283).
+    case publicCollectionList
+    /// 컬렉션 상세 — "컬렉션 모음.zip" 섹션 카드 탭(#283).
+    case collectionDetail(CollectionID)
 }

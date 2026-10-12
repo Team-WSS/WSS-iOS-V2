@@ -12,9 +12,11 @@ import HomeFeature
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import BaseData
 import RecommendationData
 import NotificationData
+import CollectionData
 import Logger
 import Networking
 import PushAuthorization
@@ -136,7 +138,8 @@ private struct DemoRootView: View {
         case .mock:
             makeHomeView(
                 loadHomeDataUseCase: DemoLoadHomeDataUseCase(scenario: scenario),
-                loadUnreadNotificationStatusUseCase: DemoLoadUnreadNotificationStatusUseCase(scenario: scenario)
+                loadUnreadNotificationStatusUseCase: DemoLoadUnreadNotificationStatusUseCase(scenario: scenario),
+                loadPublicCollectionsUseCase: DemoLoadPublicCollectionsUseCase(scenario: scenario)
             )
         case .live:
             makeLiveView()
@@ -148,11 +151,13 @@ private struct DemoRootView: View {
     @MainActor
     private func makeHomeView(
         loadHomeDataUseCase: LoadHomeDataUseCase,
-        loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
+        loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
     ) -> some View {
         HomeFeatureFactory.makeView(
             loadHomeDataUseCase: loadHomeDataUseCase,
             loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
+            loadPublicCollectionsUseCase: loadPublicCollectionsUseCase,
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
             onRoute: { route in
@@ -163,6 +168,8 @@ private struct DemoRootView: View {
                 case .detailSearch: consoleLogger.info("상세 검색 진입 요청")
                 case .notification: consoleLogger.info("알림 진입 요청")
                 case .preferenceGenreSetting: consoleLogger.info("선호장르 설정 진입 요청")
+                case .publicCollectionList: consoleLogger.info("전체 컬렉션뷰 진입 요청")
+                case .collectionDetail(let id): consoleLogger.info("컬렉션 상세 진입 요청: \(id)")
                 }
             },
             onAuthenticationRequired: { consoleLogger.info("인증 만료 → 로그인 진입 요청") }
@@ -190,6 +197,12 @@ private struct DemoRootView: View {
             loadHomeDataUseCase: DefaultLoadHomeDataUseCase(repository: recommendationRepository),
             loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                 repository: notificationRepository
+            ),
+            loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
+                collectionRepository: CollectionDataFactory.makeRepository(
+                    network: client,
+                    logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+                )
             )
         )
     }
@@ -341,5 +354,36 @@ private enum DemoHomeData {
             ratingCount: 2,
             rating: 4.0
         )
+    }
+}
+
+/// "컬렉션 모음.zip" 섹션 — 정상 시나리오는 10개(작품 수 0~7개로 빈 표지 슬롯 확인), 빈 데이터 시나리오는 0개로
+/// 섹션이 통째로 숨는 레이아웃을 본다. 나머지 실패 시나리오는 홈 전체가 실패 뷰라 무관하다.
+private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
+    let scenario: DemoHomeScenario
+
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+        guard scenario != .empty else {
+            return CursorPaginated(items: [], hasNext: false, nextCursor: nil)
+        }
+        let cards = (0..<size).map { index in
+            let novelCount = index % 8
+            return PublicCollectionCard(
+                id: CollectionID(index + 1),
+                name: index.isMultiple(of: 3) ? "일이삼사오육칠팔구십일이삼사오육칠팔구십" : "개존잼 소설 🤩",
+                description: index.isMultiple(of: 4) ? nil : "존잼 수준이 정도를 넘음",
+                novelCount: novelCount,
+                recentNovels: (0..<min(novelCount, 5)).map { novelIndex in
+                    CollectionNovel(
+                        id: NovelID(index * 10 + novelIndex),
+                        title: "작품 \(novelIndex)",
+                        author: "작가",
+                        thumbnailImage: URL(string: "https://picsum.photos/seed/wsshome\(index)\(novelIndex)/148/216")
+                    )
+                },
+                owner: Author(userId: UserID(index + 1), nickname: "코띠", profileImage: nil)
+            )
+        }
+        return CursorPaginated(items: cards, hasNext: true, nextCursor: "next")
     }
 }
