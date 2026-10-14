@@ -31,7 +31,7 @@ tools: Bash, Read, Grep, Glob
 - `docs/ARCHITECTURE.md` — 레이어·의존성 방향·데이터 흐름(cross-layer 판단의 정본)
 - `docs/CONVENTIONS.md` — 네이밍·import 순서·접근제어·비동기·에러 규약
 - 변경된 각 `Projects/<레이어>/CLAUDE.md` + `Projects/<레이어>/<모듈>/CLAUDE.md` — 레이어/모듈 규칙·함정
-- 변경에 따라: `docs/TESTING.md`(Domain 테스트·Mock·커버리지 4종), `docs/DEFINITION_OF_DONE.md`(완료 점검)
+- 변경에 따라: `docs/TESTING.md`(Domain 테스트 5원칙·Stub/Mock·사람이 판단할 곳), `docs/DEFINITION_OF_DONE.md`(완료 점검)
 - `Plugins/DependencyPlugin/ProjectDescriptionHelpers/ModuleType.swift` — 모듈 식별·등록 단일 진실 소스
 - **Feature 변경이 있으면**: `Projects/Feature/CLAUDE.md` + `Projects/Feature/Docs/VIEWMODEL_TEMPLATE.md`·`VIEW_TEMPLATE.md`
 - 정본 레퍼런스(패턴 비교용): Domain `Projects/Domain/{BaseDomain,NovelDomain}/`, Data `Projects/Data/{BaseData,NovelData}/`, Feature `Projects/Feature/NovelReviewFeature/`
@@ -58,7 +58,7 @@ tools: Bash, Read, Grep, Glob
 - **UI / Feature**: `@Observable`. `ObservableObject`/`@Published`/`@StateObject` ❌.
 
 ### D. 레이어별 핵심 계약 (변경된 레이어만)
-- **Domain**: 비즈니스 정책은 Entity/정책 타입에 위임(UseCase는 조합만). **새/변경 UseCase·Entity·정책에 테스트가 없으면 🔴** — 커버리지 4종(정상/경계값/정책위반/상태변화), "읽히는 명세"(`docs/TESTING.md`). 프로토콜 변경 시 Mock 동기화.
+- **Domain**: 비즈니스 정책은 Entity/정책 타입에 위임(UseCase는 조합만). **분기·검증·계산이 있는 새/변경 Entity·정책·UseCase에 테스트가 없으면 🔴**(넘기기만 하는 UseCase는 테스트가 없는 게 맞다). 테스트 이름이 말한 것을 본문이 실제로 확인하는지, 경계값("딱 그 값"·"하나 넘는 값")이 있는지 본다 — 형식은 ArchLint가 검사하니 의미를 본다(`docs/TESTING.md`). 프로토콜 변경 시 Mock 동기화.
 - **Data**: 네트워킹·디코딩·시스템 에러를 **`RepositoryError`로 변환**해 던지는가(원시 에러 누출 = 🔴, 정본 `docs/CONVENTIONS.md`·BaseData). Repository 구현은 internal + **Factory(public) 경유 노출**. DTO↔Entity는 Mapper에서(DTO 누출 금지).
 - **Feature**: View↔VM 계약(`@MainActor @Observable`, 단일 `private(set) var state`, View→VM 입력은 `handle(.action)`), `await` 이후 `state` 변경 전 취소/닫힘 재확인(경합), 생명주기 1회 가드, 강제 언래핑/폰트 등록 누락(SIGTRAP)·탭 트랩(`contentShape`)·디자인시스템 우회. ※ 화면 단위 미세 규칙을 끝까지 파야 하면 `wss-feature-reviewer`를 권고로 언급.
 - **Core / UI / App**: Core 인프라 재진입 함정(예: 토큰 갱신이 다시 토큰 갱신을 부르는 무한루프 가드), UI 디자인 토큰 단일 소스·도메인 의존 유입 금지, App은 레이어 규칙 지키며 Factory로 조립(여기서만 Data 조립 허용).
@@ -86,5 +86,5 @@ tools: Bash, Read, Grep, Glob
 ```
 
 - 위반이 없는 항목/카테고리는 통과로 명시한다("A. Cross-layer 정합성: 위반 없음").
-- 맨 끝에 **한 줄 총평**과, 필요하면 **검증 권고** 한 줄(예: "`/domain-test`로 새 UseCase 테스트 통과 확인, 시뮬레이터로 해당 화면 동작 확인 권장").
+- 맨 끝에 **한 줄 총평**과, 필요하면 **검증 권고** 한 줄(예: "`Mutate <모듈>`로 새 규칙의 테스트가 버그를 잡는지 확인, 시뮬레이터로 해당 화면 동작 확인 권장").
 - 코드를 수정하지 않는다. 수정은 사용자/메인 에이전트 몫이다.
