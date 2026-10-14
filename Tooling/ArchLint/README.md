@@ -11,7 +11,8 @@
 
 - `Sources/ArchLintCore/` — 아키텍처 규칙 12개 + 테스트 명세 규칙 13개(`Test*Rule`, #293) + 스캔/파싱 로직(라이브러리)
 - `Sources/ArchLint/` — 얇은 실행 파일(`main.swift` → `runArchLint(...)` 호출)
-- `Tests/ArchLintCoreTests/` — 규칙 자체 테스트
+- `Sources/MutationCore/` + `Sources/Mutate/` — 뮤테이션 도구(#293, 아래 "테스트 명세 규칙" 참고)
+- `Tests/ArchLintCoreTests/`·`Tests/MutationCoreTests/` — 규칙·도구 자체 테스트
 
 로직을 라이브러리로 뺀 이유: SwiftPM에서 **실행 타깃은 테스트가 import 못 하기** 때문(규칙을 테스트하려면 필수).
 
@@ -22,6 +23,7 @@ swift run  --package-path Tooling/ArchLint ArchLint .   # 검사 실행 (인자:
 swift test --package-path Tooling/ArchLint              # 규칙 자체 테스트 (회귀 그물)
 ARCHLINT_DEBUG=1 swift run ...                          # 스캔·매칭 진단을 stderr로
 swift run  --package-path Tooling/ArchLint ArchLint --write-test-specs .   # 테스트 목록 파일(TEST_SPEC.md) 갱신
+swift run  --package-path Tooling/ArchLint Mutate AuthDomain              # 뮤테이션(로컬·수동, tuist generate 후)
 ```
 
 `<root>/Projects` 아래 모든 `.swift`를 파싱해 규칙을 적용한다.
@@ -74,6 +76,10 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 
 - **예외**: 위반 줄이나 바로 윗줄에 `// archlint:allow <id> — 이유`. **이유가 없으면 무시**된다(사람이 리뷰할 근거).
   이 주석은 PR에서 사람이 확인할 목록이다.
+- **뮤테이션 도구(`Mutate`)**: 모듈 Sources에 버그를 하나씩 심어(연산자 뒤집기·`!` 삭제·true↔false·정수+1·문장 삭제)
+  그 모듈 테스트를 돌리고, **살아남은 버그**(테스트가 못 잡음)를 보고한다. 넘기기만 하는 UseCase는 뺀다.
+  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다(끊기면 `git checkout -- <모듈>/Sources`).
+  DerivedData를 Xcode와 나눠 임시 폴더(`$TMPDIR/wss-mutation-derived-data`)에 둔다 — 동시 빌드 충돌과 레포 안 빌드 폴더를 피한다. 로컬·수동 실행.
 
 ## 규칙 추가하기
 
