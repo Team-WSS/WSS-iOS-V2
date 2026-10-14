@@ -55,5 +55,5 @@ metadata:
 
 ### 8. 마무리 보고
 - 등록한 case, 생성 파일, **선택한 의존성과 근거**를 요약.
-- domain이면: "테스트 필수 — `docs/TESTING.md`, CI는 `/domain-test`로 폴더 자동 인식" 안내.
+- domain이면: "판단하는 코드는 테스트 필수 — `docs/TESTING.md`(목록 먼저 합의). 이 기준으로 테스트를 다 쓰면 `TestSpecScope.modules`(`Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`)에 모듈을 추가해 ArchLint 테스트 규칙을 켠다" 안내.
 - 커밋은 사용자가 지시할 때만. ([Type] #이슈 규약은 docs/WORKFLOW.md)

@@ -25,8 +25,8 @@
 
 ## 테스트 (필수)
 
-- 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
-- 철학·컨벤션·Mock 패턴은 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
+- 새 **Domain** 코드 중 판단하는 코드(분기·검증·계산이 있는 Entity·정책·UseCase)는 **테스트 없이 머지 금지**. 넘기기만 하는 UseCase는 테스트하지 않는다.
+- 작업 순서(목록 합의 → 작성 → ArchLint·`TEST_SPEC.md` → 뮤테이션)와 이유는 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
 - **테스트 없이 머지 금지 의무는 Domain 한정**. 단 Data·Feature에도 테스트가 있으면 CI가 함께 돌려 지킨다.
 
 ## CI
