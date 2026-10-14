@@ -22,14 +22,29 @@ let allRules: [Rule] = [
         folderName: "Repository",
         requiredSuffix: "Repository"
     ),
-    FeatureRouteCallbackRule()
+    FeatureRouteCallbackRule(),
+    // #293 테스트 = 기능 명세 (TestSpecScope.modules에 든 모듈만)
+    TestNamingRule(),
+    TestAssertionRule(),
+    TestStructureRule(),
+    TestActSizeRule(),
+    TestBodyLengthRule(),
+    TestArgumentsRule(),
+    TestDeterminismRule(),
+    TestResultOnlyRule(),
+    TestDoubleQueryRule()
 ]
 
 /// 등록된 모듈 단위 규칙 전체. 파일 하나가 아니라 모듈 전체를 봐야 하는 규칙(존재성 등)을 여기 둔다.
 let allModuleRules: [ModuleRule] = [
     FactoryExistenceRule(),
     FactoryExclusivityRule(),
-    FeatureExclusivityRule()
+    FeatureExclusivityRule(),
+    // #293 테스트 = 기능 명세 (TestSpecScope.modules에 든 모듈만)
+    TestPassThroughRule(),
+    TestRequiredRule(),
+    TestErrorCaseRule(),
+    TestSourceConstantRule()
 ]
 
 /// 소스 문자열 하나에 규칙을 적용해 위반을 반환한다(테스트 진입점).
@@ -41,7 +56,8 @@ func lint(source: String, path: String, rules: [Rule] = allRules) -> [Violation]
     for rule in rules where rule.applies(to: path) {
         result.append(contentsOf: rule.check(tree, path: path, converter: converter))
     }
-    return result
+    let lines = source.components(separatedBy: "\n")
+    return AllowComment.filter(result) { $0 == path ? lines : nil }
 }
 
 /// 모듈 단위 규칙 테스트 진입점 — 여러 소스 문자열을 한 모듈로 묶어 규칙을 돌린다.
@@ -50,7 +66,8 @@ func lintModule(sources: [(path: String, source: String)], moduleName: String, r
     let files: [ParsedFile] = sources
         .filter { rule.applies(to: $0.path) }
         .map { ParsedFile(path: $0.path, tree: Parser.parse(source: $0.source)) }
-    return rule.check(moduleName: moduleName, files: files)
+    let lines = Dictionary(sources.map { ($0.path, $0.source.components(separatedBy: "\n")) }) { first, _ in first }
+    return AllowComment.filter(rule.check(moduleName: moduleName, files: files)) { lines[$0] }
 }
 
 /// <repoRoot>/Projects 아래 모든 .swift 파일의 전체 경로.
@@ -78,7 +95,8 @@ func repoRelative(_ path: String, repoRoot: String) -> String {
 
 /// 전체 실행: <repoRoot>/Projects 스캔 → 규칙 적용 → 출력 → 종료코드(error>0 이면 1).
 /// GitHub Actions 환경이면 ::error/::warning 주석도 emit 한다.
-public func runArchLint(repoRoot: String, isGitHubActions: Bool, debug: Bool) -> Int32 {
+/// `writeTestSpecs`면 명세 모듈의 테스트 목록 파일을 새로 쓰고, 아니면 최신인지 검사한다.
+public func runArchLint(repoRoot: String, isGitHubActions: Bool, debug: Bool, writeTestSpecs: Bool = false) -> Int32 {
     func debugLog(_ message: String) {
         guard debug else { return }
         FileHandle.standardError.write(Data(("DEBUG " + message + "\n").utf8))
@@ -135,6 +153,34 @@ public func runArchLint(repoRoot: String, isGitHubActions: Bool, debug: Bool) ->
             }
         }
     }
+
+    // 3) 테스트 목록 파일(TEST_SPEC.md) — 명세 모듈마다 테스트 이름으로 만든 파일이 최신인지.
+    let specModuleDirs = scanned
+        .filter { $0.hasSuffix("/Project.swift") }
+        .map { String($0.dropLast("/Project.swift".count)) }
+        .filter { TestSpecScope.modules.contains(String($0.split(separator: "/").last ?? "")) }
+    for dir in specModuleDirs.sorted() {
+        let moduleName = String(dir.split(separator: "/").last ?? "")
+        let testFiles: [ParsedFile] = scanned
+            .filter { $0.hasPrefix(dir + "/Tests/") }
+            .compactMap { file in parse(file).map { ParsedFile(path: $0.relPath, tree: $0.tree) } }
+        let rendered = TestSpecDocument.render(module: moduleName, files: testFiles)
+        let specPath = dir + "/" + TestSpecDocument.fileName
+        if writeTestSpecs {
+            try? rendered.write(toFile: specPath, atomically: true, encoding: .utf8)
+            print("갱신: \(repoRelative(specPath, repoRoot: repoRoot))")
+        } else if (try? String(contentsOfFile: specPath, encoding: .utf8)) != rendered {
+            allViolations.append(Violation(
+                path: repoRelative(specPath, repoRoot: repoRoot), line: 1, ruleID: TestSpecDocument.ruleID,
+                message: "테스트 목록 파일이 테스트와 다르다 — `swift run --package-path Tooling/ArchLint ArchLint --write-test-specs .`로 갱신해 커밋한다",
+                severity: .error
+            ))
+        }
+    }
+
+    // `// archlint:allow <규칙> — 이유`로 사람이 승인한 예외를 뺀다.
+    let linesByPath = Dictionary(parseCache.values.map { ($0.relPath, $0.tree.description.components(separatedBy: "\n")) }) { first, _ in first }
+    allViolations = AllowComment.filter(allViolations) { linesByPath[$0] }
 
     allViolations.sort { ($0.path, $0.line) < ($1.path, $1.line) }
     for v in allViolations {
