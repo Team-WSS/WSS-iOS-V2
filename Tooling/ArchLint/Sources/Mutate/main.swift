@@ -9,7 +9,7 @@ import MutationCore
 //   swift run --package-path Tooling/ArchLint Mutate AuthDomain --list    # 심을 버그 목록만
 //
 // 소스 파일을 직접 고쳤다가 되돌리므로, 모듈 Sources에 커밋 안 한 변경이 있으면 시작하지 않는다.
-// 도중에 끊기면 `git checkout -- <모듈>/Sources`로 되돌린다.
+// 원본은 시작할 때 읽어 두고, Ctrl-C나 실행 실패로 끝나도 되돌린다. 그래도 남으면 `git checkout -- <모듈>/Sources`.
 
 struct Options {
     var module = ""
@@ -30,13 +30,33 @@ func parseOptions() -> Options {
     return options
 }
 
+/// 버그를 심기 전 소스 원본(경로 → 내용). 어떻게 끝나든 이것으로 되돌린다.
+nonisolated(unsafe) var originals: [String: String] = [:]
+/// 소스 쓰기를 한 번에 하나만 — Ctrl-C로 되돌린 뒤에 다음 버그가 심기지 않게 한다.
+let sourceLock = NSLock()
+
+func restoreSources() {
+    sourceLock.lock()
+    for (path, source) in originals {
+        try? source.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+}
+
+/// 파일로 보내도 버그 하나 끝날 때마다 바로 보이게 버퍼 없이 내보낸다.
+func say(_ message: String) {
+    FileHandle.standardOutput.write(Data((message + "\n").utf8))
+}
+
 func fail(_ message: String) -> Never {
+    restoreSources()
     FileHandle.standardError.write(Data((message + "\n").utf8))
     exit(2)
 }
 
 @discardableResult
-func run(_ launchPath: String, _ arguments: [String], in directory: String) -> (status: Int32, output: String) {
+func run(
+    _ launchPath: String, _ arguments: [String], in directory: String, timeout: TimeInterval? = nil
+) -> (status: Int32, output: String, timedOut: Bool) {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: launchPath)
     process.arguments = arguments
@@ -45,9 +65,14 @@ func run(_ launchPath: String, _ arguments: [String], in directory: String) -> (
     process.standardOutput = pipe
     process.standardError = pipe
     do { try process.run() } catch { fail("실행 실패: \(launchPath) \(error)") }
+    // 무한 루프가 생기는 버그도 있다 — 시간을 넘기면 끊는다.
+    let timer = DispatchWorkItem { if process.isRunning { process.terminate() } }
+    if let timeout { DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timer) }
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
-    return (process.terminationStatus, String(decoding: data, as: UTF8.self))
+    let timedOut = timeout != nil && !timer.isCancelled && process.terminationReason == .uncaughtSignal
+    timer.cancel()
+    return (process.terminationStatus, String(decoding: data, as: UTF8.self), timedOut)
 }
 
 /// `Projects/<레이어>/<모듈>` 경로.
@@ -86,12 +111,12 @@ func simulator() -> (id: String, isBooted: Bool) {
 }
 
 enum Outcome {
-    case killed, survived, notCompiled
+    case killed, timedOut, survived, notCompiled
 }
 
 let derivedDataPath = FileManager.default.temporaryDirectory.appendingPathComponent("wss-mutation-derived-data").path
 
-func runTests(scheme: String, root: String, simulator: String) -> Outcome {
+func runTests(scheme: String, root: String, simulator: String, timeout: TimeInterval? = nil) -> Outcome {
     let result = run("/usr/bin/xcodebuild", [
         "test",
         "-workspace", "WSS-iOS-V2.xcworkspace",
@@ -104,16 +129,14 @@ func runTests(scheme: String, root: String, simulator: String) -> Outcome {
         // 테스트가 실패하면(버그를 잡으면) xcodebuild가 시뮬레이터 진단을 모으느라 몇 분씩 멈춘다. 이 도구엔 필요 없다.
         "-collect-test-diagnostics", "never",
         "-quiet"
-    ], in: root)
+    ], in: root, timeout: timeout)
+    if result.timedOut { return .timedOut }
     if result.status == 0 { return .survived }
     let compileError = result.output.range(of: #"\.swift:\d+:\d+: error:"#, options: .regularExpression) != nil
     return compileError ? .notCompiled : .killed
 }
 
 // MARK: - 실행
-
-// 파일로 보내도 버그 하나 끝날 때마다 바로 보이게 줄 단위로 내보낸다.
-setvbuf(stdout, nil, _IOLBF, 0)
 
 let options = parseOptions()
 guard !options.module.isEmpty else { fail("사용법: Mutate <모듈 이름> [--list] [--root 레포루트]") }
@@ -123,6 +146,7 @@ let sourceFiles = swiftFiles(under: moduleDir + "/Sources")
 var mutants: [Mutant] = []
 for file in sourceFiles {
     guard let source = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
+    originals[file] = source
     mutants += MutantGenerator.mutants(in: source, path: file)
 }
 
@@ -131,8 +155,8 @@ func relative(_ path: String) -> String {
 }
 
 if options.listOnly {
-    for mutant in mutants { print("\(relative(mutant.path)):\(mutant.line) \(mutant.summary)") }
-    print("심을 버그 \(mutants.count)개")
+    for mutant in mutants { say("\(relative(mutant.path)):\(mutant.line) \(mutant.summary)") }
+    say("심을 버그 \(mutants.count)개")
     exit(0)
 }
 
@@ -150,7 +174,22 @@ if !wasBooted {
 func restoreSimulator() {
     if !wasBooted { run("/usr/bin/xcrun", ["simctl", "shutdown", simulatorID], in: ".") }
 }
-print("시작: \(options.module) — 버그 \(mutants.count)개. 끊기면 `git checkout -- \(relative(moduleDir))/Sources`로 되돌린다.")
+// Ctrl-C로 끊어도 심은 버그를 남기지 않는다.
+signal(SIGINT, SIG_IGN)
+let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
+let shutdownSimulatorOnInterrupt = !wasBooted
+let interruptedSimulatorID = simulatorID
+interrupt.setEventHandler { @Sendable in
+    restoreSources() // 잠금을 풀지 않고 끝낸다 — 그 뒤로는 아무도 소스를 쓰지 못한다.
+    if shutdownSimulatorOnInterrupt {
+        run("/usr/bin/xcrun", ["simctl", "shutdown", interruptedSimulatorID], in: ".")
+    }
+    FileHandle.standardError.write(Data("\n중단 — 소스를 되돌렸다\n".utf8))
+    exit(130)
+}
+interrupt.resume()
+
+say("시작: \(options.module) — 버그 \(mutants.count)개")
 
 guard runTests(scheme: options.module, root: options.root, simulator: simulatorID) == .survived else {
     restoreSimulator()
@@ -159,29 +198,48 @@ guard runTests(scheme: options.module, root: options.root, simulator: simulatorI
 
 var survivors: [Mutant] = []
 var notCompiled = 0
+// 버그 하나에 보통 몇 초다. 이보다 오래 걸리면 버그가 무한 루프를 만든 것으로 본다.
+let mutantTimeout: TimeInterval = 300
+
 for (index, mutant) in mutants.enumerated() {
-    guard let original = try? String(contentsOfFile: mutant.path, encoding: .utf8) else { continue }
-    try? mutant.apply(to: original).write(toFile: mutant.path, atomically: true, encoding: .utf8)
+    guard let original = originals[mutant.path] else { continue }
+    sourceLock.lock()
+    do {
+        try mutant.apply(to: original).write(toFile: mutant.path, atomically: true, encoding: .utf8)
+    } catch {
+        sourceLock.unlock()
+        fail("버그를 심지 못했다: \(relative(mutant.path)) \(error)")
+    }
+    sourceLock.unlock()
     let startedAt = Date()
-    let outcome = runTests(scheme: options.module, root: options.root, simulator: simulatorID)
-    try? original.write(toFile: mutant.path, atomically: true, encoding: .utf8)
+    let outcome = runTests(scheme: options.module, root: options.root, simulator: simulatorID, timeout: mutantTimeout)
+    sourceLock.lock()
+    do {
+        try original.write(toFile: mutant.path, atomically: true, encoding: .utf8)
+    } catch {
+        // 되돌리지 못한 채 다음 버그를 심으면 버그가 겹친다 — 여기서 멈춘다.
+        sourceLock.unlock()
+        fail("소스를 되돌리지 못했다: \(relative(mutant.path)) \(error)")
+    }
+    sourceLock.unlock()
 
     let label: String
     switch outcome {
     case .killed: label = "잡힘"
+    case .timedOut: label = "잡힘(시간 초과)"
     case .survived: label = "생존"; survivors.append(mutant)
     case .notCompiled: label = "컴파일 안 됨"; notCompiled += 1
     }
     let seconds = Int(Date().timeIntervalSince(startedAt))
-    print("[\(index + 1)/\(mutants.count)] \(label) (\(seconds)초) \(relative(mutant.path)):\(mutant.line) \(mutant.summary)")
+    say("[\(index + 1)/\(mutants.count)] \(label) (\(seconds)초) \(relative(mutant.path)):\(mutant.line) \(mutant.summary)")
 }
 
 restoreSimulator()
 
 let valid = mutants.count - notCompiled
-print("")
-print("결과: 버그 \(valid)개 중 \(valid - survivors.count)개를 테스트가 잡았다(컴파일 안 된 \(notCompiled)개 제외)")
+say("")
+say("결과: 버그 \(valid)개 중 \(valid - survivors.count)개를 테스트가 잡았다(컴파일 안 된 \(notCompiled)개 제외)")
 if !survivors.isEmpty {
-    print("살아남은 버그 — 테스트가 이 동작을 지키지 않는다. 테스트를 더할지, 의미 없는 변이인지 사람이 판단한다:")
-    for mutant in survivors { print("  \(relative(mutant.path)):\(mutant.line) \(mutant.summary)") }
+    say("살아남은 버그 — 테스트가 이 동작을 지키지 않는다. 테스트를 더할지, 의미 없는 변이인지 사람이 판단한다:")
+    for mutant in survivors { say("  \(relative(mutant.path)):\(mutant.line) \(mutant.summary)") }
 }

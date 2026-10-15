@@ -248,6 +248,15 @@ struct TestSpecRuleTests {
         #expect(lint(source: source, path: specTestPath, rules: [TestActSizeRule()]).count == 1)
     }
 
+    @Test("allow 주석은 아키텍처 규칙을 끄지 못한다")
+    func allowCommentCannotSilenceArchitectureRules() {
+        let line = "// archlint:allow dependency-direction — 이유가 있다"
+
+        let allowed = AllowComment.allows(line, ruleID: "dependency-direction")
+
+        #expect(allowed == false)
+    }
+
     @Test("본문이 15줄을 넘으면 warning이다")
     func bodyLengthWarnsOver15Lines() {
         let padding = String(repeating: "        draft.setText(text)\n", count: 15)
@@ -429,7 +438,7 @@ struct TestSpecRuleTests {
 
     // MARK: - 모듈 단위 규칙
 
-    @Test("넘기기만 하는 UseCase를 테스트하면 잡고, 로직이 있는 UseCase는 테스트해도 된다")
+    @Test("넘기기만 하는 UseCase를 테스트하면 잡고, 바꾸거나 거르는 UseCase는 테스트해도 된다")
     func passThroughCatchesForwardingUseCaseTests() {
         let sources = [
             (path: "/Projects/Domain/AuthDomain/Sources/UseCase/Forward.swift", source: """
@@ -439,22 +448,43 @@ struct TestSpecRuleTests {
                     return try await repository.fetch(id: id)
                 }
             }
+            public final class DefaultSelfForwardUseCase {
+                private let repository: Repo
+                public func execute(id: Int) async throws -> Int {
+                    try await self.repository.fetch(id: id)
+                }
+            }
             public final class DefaultLogicUseCase {
                 private let repository: Repo
                 public func execute(id: Int) async throws -> Int {
                     try await repository.fetch(id: id + 1)
                 }
             }
+            public final class DefaultFilterUseCase {
+                private let repository: Repo
+                public func execute() async throws -> [Int] {
+                    try await repository.fetch().filter { $0 > 0 }
+                }
+            }
+            public final class DefaultChainUseCase {
+                private let repository: Repo
+                public func execute(id: Int) async throws -> [Int] {
+                    try await repository.fetch(id: id).sorted()
+                }
+            }
             """),
             (path: "/Projects/Domain/AuthDomain/Tests/UseCase/ForwardTests.swift", source: """
             let a = DefaultForwardUseCase(repository: stub)
-            let b = DefaultLogicUseCase(repository: stub)
+            let b = DefaultSelfForwardUseCase(repository: stub)
+            let c = DefaultLogicUseCase(repository: stub)
+            let d = DefaultFilterUseCase(repository: stub)
+            let e = DefaultChainUseCase(repository: stub)
             """)
         ]
 
         let violations = lintModule(sources: sources, moduleName: "AuthDomain", rule: TestPassThroughRule())
 
-        #expect(violations.map(\.line) == [1])
+        #expect(violations.map(\.line).sorted() == [1, 2])
     }
 
     @Test("분기·throw가 있는 타입이 테스트에 한 번도 안 나오면 잡는다")
@@ -501,14 +531,31 @@ struct TestSpecRuleTests {
         ])
     }
 
-    @Test("Repository 폴더의 에러 enum은 검증 에러가 아니라 대상이 아니다")
+    @Test("ValidationError가 아닌 에러 enum(저장소 에러)은 대상이 아니다")
     func errorCaseSkipsRepositoryErrors() {
         let sources = [
             (path: "/Projects/Domain/AuthDomain/Sources/Repository/AuthError.swift",
-             source: "public enum AuthError: Error { case unknown }")
+             source: "public enum AuthError: Error { case unknown }"),
+            (path: "/Projects/Domain/AuthDomain/Sources/RepositoryError.swift",
+             source: "public enum RepositoryError: Error { case notFound }")
         ]
 
         #expect(lintModule(sources: sources, moduleName: "AuthDomain", rule: TestErrorCaseRule()).isEmpty)
+    }
+
+    @Test("Entity 폴더 밖에 있는 ValidationError도 검사한다")
+    func errorCaseChecksValidationErrorOutsideEntity() {
+        let sources = [
+            (path: "/Projects/Domain/AuthDomain/Sources/Rating.swift", source: """
+            public struct Rating {
+                public enum ValidationError: Error { case outOfRange }
+            }
+            """)
+        ]
+
+        let violations = lintModule(sources: sources, moduleName: "AuthDomain", rule: TestErrorCaseRule())
+
+        #expect(violations.count == 1)
     }
 
     @Test("테스트가 소스의 static let 상수를 쓰면 잡는다")

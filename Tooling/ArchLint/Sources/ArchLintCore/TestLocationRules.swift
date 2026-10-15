@@ -73,8 +73,10 @@ public enum PassThroughFinder {
     private static func isForwarding(_ function: FunctionDeclSyntax) -> Bool {
         guard let statements = function.body?.statements, statements.count == 1,
               let call = forwardedCall(Syntax(statements.first!.item)),
+              // `repository.fetch().filter { … }`처럼 클로저를 넘기거나 결과에 이어 부르면 거르고 바꾸는 코드다.
+              call.trailingClosure == nil, call.additionalTrailingClosures.isEmpty,
               let member = call.calledExpression.as(MemberAccessExprSyntax.self),
-              member.base != nil else { return false }
+              let base = member.base, isStoredReference(base) else { return false }
         let parameters = Set(function.signature.parameterClause.parameters.map {
             ($0.secondName ?? $0.firstName).text
         })
@@ -82,6 +84,14 @@ public enum PassThroughFinder {
             guard let reference = argument.expression.as(DeclReferenceExprSyntax.self) else { return false }
             return parameters.contains(reference.baseName.text)
         }
+    }
+
+    /// 부르는 대상이 저장 프로퍼티(`repository`·`self.repository`)인지 — 다른 호출의 결과면 넘기기가 아니다.
+    private static func isStoredReference(_ expression: ExprSyntax) -> Bool {
+        if expression.is(DeclReferenceExprSyntax.self) { return true }
+        guard let member = expression.as(MemberAccessExprSyntax.self),
+              let base = member.base?.as(DeclReferenceExprSyntax.self) else { return false }
+        return base.baseName.tokenKind == .keyword(.self)
     }
 
     private static func forwardedCall(_ node: Syntax) -> FunctionCallExprSyntax? {
@@ -167,7 +177,9 @@ private final class RuleBranchFinder: SyntaxVisitor {
 
 // MARK: - 검증 에러 case마다 #expect(throws:)
 
-/// `Sources/Entity/`에 있는 에러 enum(검증 에러)은 case마다 그 에러가 나는 상황을 테스트한다.
+/// 검증 에러(`ValidationError` enum)는 case마다 그 에러가 나는 상황을 테스트한다.
+/// 폴더로 고르지 않는다 — BaseDomain처럼 `Entity/` 없이 `Sources/`에 바로 두는 모듈도 있다.
+/// 저장소 에러(`RepositoryError`·`AuthError`)는 판단 코드가 내는 에러가 아니라 대상이 아니다.
 /// `#expect(throws: X.self)`처럼 타입만 보면 다른 case가 나도 통과하므로 case를 직접 적어야 한다.
 struct TestErrorCaseRule: ModuleRule {
     let id = "test-error-case"
@@ -186,7 +198,7 @@ struct TestErrorCaseRule: ModuleRule {
         }
 
         var violations: [Violation] = []
-        for file in module.sources where file.path.contains("/Sources/Entity/") {
+        for file in module.sources {
             let finder = ErrorEnumFinder()
             finder.walk(file.tree)
             let locations = converter(file)
@@ -208,8 +220,7 @@ private final class ErrorEnumFinder: SyntaxVisitor {
     init() { super.init(viewMode: .sourceAccurate) }
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
-        let inherited = node.inheritanceClause?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
-        guard inherited.contains(where: { $0 == "Error" || $0.hasSuffix(".Error") }) else { return .visitChildren }
+        guard node.name.text == "ValidationError" else { return .visitChildren }
         for member in node.memberBlock.members {
             guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else { continue }
             for element in caseDecl.elements { cases.append((node.name.text, element)) }

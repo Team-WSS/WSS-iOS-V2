@@ -84,7 +84,8 @@ private final class MutantVisitor: SyntaxVisitor {
     }
 
     override func visit(_ node: IntegerLiteralExprSyntax) -> SyntaxVisitorContinueKind {
-        if let value = Int(node.literal.text.replacingOccurrences(of: "_", with: "")) {
+        // Int.max에 1을 더하면 넘친다 — 그런 리터럴은 건너뛴다.
+        if let value = Int(node.literal.text.replacingOccurrences(of: "_", with: "")), value < Int.max {
             add(node, String(value + 1))
         }
         return .visitChildren
