@@ -22,7 +22,7 @@ Projects/Domain/<Module>Domain/
 │   ├── Entity/        # 도메인 모델 (struct, 정책 메서드 포함)
 │   ├── UseCase/       # 비즈니스 흐름 (프로토콜 + Default 구현)
 │   └── Repository/    # 데이터 접근 계약 (프로토콜만)
-├── TEST_SPEC.md       # 자동 생성 테스트 목록(ArchLint --write-test-specs, 손으로 고치지 않음)
+├── TEST_SPEC.md       # 자동 생성 테스트 목록(ArchLint --write-test-specs, 손으로 고치지 않음) — 테스트 규칙이 켜진 모듈만
 ├── Testing/           # Mock[Repository].swift — 가짜 객체가 필요한 모듈만
 └── Tests/
     ├── Entity/
@@ -102,6 +102,7 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 빠른 요약:
 - **Swift Testing** (`@Test`/`#expect`/`@Suite`), XCTest·`@testable import` 금지. 가짜 객체는 `Testing/`(`<Module>DomainTesting` 타깃) — 조회는 Stub, 명령은 Mock.
 - `@Suite("기능")` 안에 `@Test("~다")` — 이름이 곧 명세. 테스트 목록은 모듈 루트 `TEST_SPEC.md`로 PR에 보인다.
+- ArchLint 테스트 규칙과 `TEST_SPEC.md`는 아직 **일부 모듈에만** 켜져 있다(`TestSpecScope.modules`, TESTING.md "적용 범위"). 안 켜진 모듈도 새 테스트는 같은 기준으로 쓴다.
 - CI: develop 대상 PR마다 자동 실행(`Project.swift`에 `.tests` 선언한 정식 모듈만 — 유령 폴더는 자동 제외).
 
 ## 주의사항 (작업 중 발견 시 누적)
