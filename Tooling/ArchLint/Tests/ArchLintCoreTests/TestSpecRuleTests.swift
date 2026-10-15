@@ -391,7 +391,7 @@ struct TestSpecRuleTests {
 
     // MARK: - test-double-query
 
-    @Test("가짜 객체의 조회 메서드가 호출을 기록하면 잡고, 명령 메서드의 기록은 둔다")
+    @Test("가짜 객체의 조회 메서드가 호출을 기록하면 잡고, 명령 메서드의 기록과 지역 변수로 결과를 만드는 것은 둔다")
     func doubleQueryCatchesRecordingInQueriesOnly() {
         let source = """
         public final class MockSampleRepository {
@@ -410,6 +410,13 @@ struct TestSpecRuleTests {
 
             public func save(_ value: Int) {
                 saved.append(value)
+            }
+
+            public func searchSample(_ query: String) -> [Int] {
+                var results = [1]
+                results.append(2)
+                results += [3]
+                return results
             }
         }
         """
@@ -466,6 +473,12 @@ struct TestSpecRuleTests {
                     try await repository.fetch().filter { $0 > 0 }
                 }
             }
+            public final class DefaultObserveUseCase {
+                private let repository: Repo
+                public func execute(id: Int) -> Stream {
+                    repository.observe(id: id) { $0 * 2 }
+                }
+            }
             public final class DefaultChainUseCase {
                 private let repository: Repo
                 public func execute(id: Int) async throws -> [Int] {
@@ -479,6 +492,7 @@ struct TestSpecRuleTests {
             let c = DefaultLogicUseCase(repository: stub)
             let d = DefaultFilterUseCase(repository: stub)
             let e = DefaultChainUseCase(repository: stub)
+            let f = DefaultObserveUseCase(repository: stub)
             """)
         ]
 
@@ -531,7 +545,7 @@ struct TestSpecRuleTests {
         ])
     }
 
-    @Test("ValidationError가 아닌 에러 enum(저장소 에러)은 대상이 아니다")
+    @Test("저장소 에러(RepositoryError·Repository 폴더)는 대상이 아니다")
     func errorCaseSkipsRepositoryErrors() {
         let sources = [
             (path: "/Projects/Domain/AuthDomain/Sources/Repository/AuthError.swift",
@@ -543,19 +557,24 @@ struct TestSpecRuleTests {
         #expect(lintModule(sources: sources, moduleName: "AuthDomain", rule: TestErrorCaseRule()).isEmpty)
     }
 
-    @Test("Entity 폴더 밖에 있는 ValidationError도 검사한다")
-    func errorCaseChecksValidationErrorOutsideEntity() {
+    @Test("Entity 폴더 밖이나 다른 이름의 검증 에러도 검사한다")
+    func errorCaseChecksErrorsOutsideEntity() {
         let sources = [
             (path: "/Projects/Domain/AuthDomain/Sources/Rating.swift", source: """
             public struct Rating {
                 public enum ValidationError: Error { case outOfRange }
+            }
+            """),
+            (path: "/Projects/Domain/AuthDomain/Sources/Entity/Feed.swift", source: """
+            public struct Feed {
+                public enum PolicyError: Error { case notOwner }
             }
             """)
         ]
 
         let violations = lintModule(sources: sources, moduleName: "AuthDomain", rule: TestErrorCaseRule())
 
-        #expect(violations.count == 1)
+        #expect(violations.count == 2)
     }
 
     @Test("테스트가 소스의 static let 상수를 쓰면 잡는다")
