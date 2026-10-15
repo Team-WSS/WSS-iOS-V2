@@ -70,15 +70,15 @@ func swiftFiles(under directory: String) -> [String] {
     return files.sorted()
 }
 
-/// 사용 가능한 iPhone 시뮬레이터 하나(CI와 같은 방식).
-func simulatorID() -> String {
+/// 사용 가능한 iPhone 시뮬레이터 하나(CI와 같은 방식)와 지금 켜져 있는지.
+func simulator() -> (id: String, isBooted: Bool) {
     let result = run("/usr/bin/xcrun", ["simctl", "list", "devices", "available", "-j"], in: ".")
     guard let json = try? JSONSerialization.jsonObject(with: Data(result.output.utf8)) as? [String: Any],
           let devices = json["devices"] as? [String: [[String: Any]]] else { fail("시뮬레이터 목록을 읽지 못했다") }
     for runtime in devices.keys.sorted(by: >) where runtime.contains("iOS") {
         for device in devices[runtime] ?? [] {
             if let name = device["name"] as? String, name.contains("iPhone"), let id = device["udid"] as? String {
-                return id
+                return (id, device["state"] as? String == "Booted")
             }
         }
     }
@@ -101,6 +101,8 @@ func runTests(scheme: String, root: String, simulator: String) -> Outcome {
         // Xcode가 쓰는 DerivedData와 따로 둔다 — 같은 곳을 동시에 빌드하면 build.db가 깨진다.
         // 레포 안(.build)에 두지 않는다 — 레포 안 빌드 폴더가 rebase를 깬 적이 있다.
         "-derivedDataPath", derivedDataPath,
+        // 테스트가 실패하면(버그를 잡으면) xcodebuild가 시뮬레이터 진단을 모으느라 몇 분씩 멈춘다. 이 도구엔 필요 없다.
+        "-collect-test-diagnostics", "never",
         "-quiet"
     ], in: root)
     if result.status == 0 { return .survived }
@@ -109,6 +111,9 @@ func runTests(scheme: String, root: String, simulator: String) -> Outcome {
 }
 
 // MARK: - 실행
+
+// 파일로 보내도 버그 하나 끝날 때마다 바로 보이게 줄 단위로 내보낸다.
+setvbuf(stdout, nil, _IOLBF, 0)
 
 let options = parseOptions()
 guard !options.module.isEmpty else { fail("사용법: Mutate <모듈 이름> [--list] [--root 레포루트]") }
@@ -136,10 +141,19 @@ guard status.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else
     fail("\(relative(moduleDir))/Sources에 커밋 안 한 변경이 있다 — 소스를 고쳤다 되돌리는 도구라 먼저 정리한다")
 }
 
-let simulator = simulatorID()
+// 꺼진 시뮬레이터를 넘기면 xcodebuild가 실행마다 켰다 끈다(한 번에 30초 넘게 든다). 미리 켜 두고, 도구가 켰으면 끝날 때 끈다.
+let (simulatorID, wasBooted) = simulator()
+if !wasBooted {
+    run("/usr/bin/xcrun", ["simctl", "boot", simulatorID], in: ".")
+    run("/usr/bin/xcrun", ["simctl", "bootstatus", simulatorID], in: ".")
+}
+func restoreSimulator() {
+    if !wasBooted { run("/usr/bin/xcrun", ["simctl", "shutdown", simulatorID], in: ".") }
+}
 print("시작: \(options.module) — 버그 \(mutants.count)개. 끊기면 `git checkout -- \(relative(moduleDir))/Sources`로 되돌린다.")
 
-guard runTests(scheme: options.module, root: options.root, simulator: simulator) == .survived else {
+guard runTests(scheme: options.module, root: options.root, simulator: simulatorID) == .survived else {
+    restoreSimulator()
     fail("버그를 심기 전 테스트부터 실패한다 — 먼저 테스트를 통과시킨다")
 }
 
@@ -148,7 +162,8 @@ var notCompiled = 0
 for (index, mutant) in mutants.enumerated() {
     guard let original = try? String(contentsOfFile: mutant.path, encoding: .utf8) else { continue }
     try? mutant.apply(to: original).write(toFile: mutant.path, atomically: true, encoding: .utf8)
-    let outcome = runTests(scheme: options.module, root: options.root, simulator: simulator)
+    let startedAt = Date()
+    let outcome = runTests(scheme: options.module, root: options.root, simulator: simulatorID)
     try? original.write(toFile: mutant.path, atomically: true, encoding: .utf8)
 
     let label: String
@@ -157,8 +172,11 @@ for (index, mutant) in mutants.enumerated() {
     case .survived: label = "생존"; survivors.append(mutant)
     case .notCompiled: label = "컴파일 안 됨"; notCompiled += 1
     }
-    print("[\(index + 1)/\(mutants.count)] \(label) \(relative(mutant.path)):\(mutant.line) \(mutant.summary)")
+    let seconds = Int(Date().timeIntervalSince(startedAt))
+    print("[\(index + 1)/\(mutants.count)] \(label) (\(seconds)초) \(relative(mutant.path)):\(mutant.line) \(mutant.summary)")
 }
+
+restoreSimulator()
 
 let valid = mutants.count - notCompiled
 print("")
