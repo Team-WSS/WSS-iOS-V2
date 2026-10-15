@@ -93,6 +93,20 @@ final class SpecTestCollector: SyntaxVisitor {
 
 /// 구문 트리에서 테스트 관련 모양을 읽는 함수들.
 enum SpecSyntax {
+    /// `arguments:`의 배열 리터럴. `[…] as [(Date?, Date?)]`처럼 타입을 붙여도 배열을 꺼낸다
+    /// (`nil`이 섞인 튜플은 타입을 적어야 컴파일된다).
+    static func argumentArray(_ expression: ExprSyntax?) -> ArrayExprSyntax? {
+        guard let expression else { return nil }
+        if let array = expression.as(ArrayExprSyntax.self) { return array }
+        if let cast = expression.as(AsExprSyntax.self) { return cast.expression.as(ArrayExprSyntax.self) }
+        if let sequence = expression.as(SequenceExprSyntax.self),
+           let first = sequence.elements.first?.as(ArrayExprSyntax.self),
+           sequence.elements.dropFirst().first?.is(UnresolvedAsExprSyntax.self) == true {
+            return first
+        }
+        return nil
+    }
+
     static func attribute(named name: String, in list: AttributeListSyntax) -> AttributeSyntax? {
         for element in list {
             if case .attribute(let attribute) = element, attribute.attributeName.trimmedDescription == name {

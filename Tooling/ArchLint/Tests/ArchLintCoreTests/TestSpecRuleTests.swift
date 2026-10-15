@@ -284,6 +284,27 @@ struct TestSpecRuleTests {
         #expect(violations.map(\.line) == [3])
     }
 
+    @Test("타입을 붙인 arguments 배열도 항목마다 이유 주석을 본다")
+    func argumentsChecksTypedArray() {
+        let source = """
+        @Suite("샘플") struct S {
+            @Test("하나만 있어도 된다", arguments: [
+                (day, nil),  // 시작일만
+                (nil, day)
+            ] as [(Date?, Date?)])
+            func a(start: Date?, end: Date?) {
+                let result = check(start, end)
+
+                #expect(result == true)
+            }
+        }
+        """
+
+        let violations = lint(source: source, path: specTestPath, rules: [TestArgumentsRule()])
+
+        #expect(violations.map(\.line) == [4])
+    }
+
     // MARK: - test-determinism
 
     @Test(
@@ -478,5 +499,22 @@ struct TestSpecRuleTests {
         let violations = lintModule(sources: sources, moduleName: "AuthDomain", rule: TestSourceConstantRule())
 
         #expect(violations.map(\.line) == [1])
+    }
+
+    @Test("다른 타입의 같은 이름은 소스 상수로 보지 않는다")
+    func sourceConstantMatchesTypeAndName() {
+        let sources = [
+            (path: specSourcePath, source: """
+            public enum DeepLink {
+                case novelDetail(Int)
+                private enum View { static let novelDetail = "novelDetail" }
+            }
+            """),
+            (path: specTestPath, source: "let link = DeepLink.novelDetail(7)")
+        ]
+
+        let violations = lintModule(sources: sources, moduleName: "AuthDomain", rule: TestSourceConstantRule())
+
+        #expect(violations.isEmpty)
     }
 }

@@ -257,6 +257,8 @@ private final class MemberNameCollector: SyntaxVisitor {
 
 /// `WithdrawalReasonDraft.maxCustomReasonLength`처럼 소스의 `static let`을 테스트에 쓰면,
 /// 상수가 잘못 바뀌어도 테스트가 따라 바뀌어 통과한다. 명세의 값(80)을 직접 쓴다.
+/// 타입 이름과 멤버 이름을 함께 본다 — 다른 타입의 같은 이름(enum case `DeepLink.novelDetail`과
+/// 내부 상수 `NotificationView.novelDetail`)을 상수로 오인하지 않게.
 struct TestSourceConstantRule: ModuleRule {
     let id = "test-source-constant"
     let severity: Severity = .error
@@ -279,7 +281,7 @@ struct TestSourceConstantRule: ModuleRule {
             let finder = TypeMemberAccessFinder()
             finder.walk(file.tree)
             let locations = converter(file)
-            for node in finder.accesses where constants.contains(node.declName.baseName.text) {
+            for node in finder.accesses where constants.contains(TypeMemberAccessFinder.key(of: node)) {
                 violations.append(Violation(
                     path: file.path, line: SpecSyntax.line(of: node, locations), ruleID: id,
                     message: "소스 상수 \(node.trimmedDescription)를 쓴다 — 상수가 틀려도 테스트가 따라간다. 명세의 값을 직접 쓴다",
@@ -291,16 +293,36 @@ struct TestSourceConstantRule: ModuleRule {
     }
 }
 
+/// `static let`을 `타입.이름`으로 모은다(타입은 가장 안쪽 선언).
 private final class StaticConstantFinder: SyntaxVisitor {
     private(set) var names: Set<String> = []
+    private var typeNames: [String] = []
 
     init() { super.init(viewMode: .sourceAccurate) }
 
+    override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind { enter(node.name.text) }
+    override func visitPost(_ node: StructDeclSyntax) { typeNames.removeLast() }
+    override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind { enter(node.name.text) }
+    override func visitPost(_ node: EnumDeclSyntax) { typeNames.removeLast() }
+    override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind { enter(node.name.text) }
+    override func visitPost(_ node: ClassDeclSyntax) { typeNames.removeLast() }
+    override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
+        enter(node.extendedType.trimmedDescription.components(separatedBy: ".").last ?? "")
+    }
+    override func visitPost(_ node: ExtensionDeclSyntax) { typeNames.removeLast() }
+
+    private func enter(_ name: String) -> SyntaxVisitorContinueKind {
+        typeNames.append(name)
+        return .visitChildren
+    }
+
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         let isStatic = node.modifiers.contains { $0.name.text == "static" }
-        guard isStatic, node.bindingSpecifier.text == "let" else { return .skipChildren }
+        guard isStatic, node.bindingSpecifier.text == "let", let typeName = typeNames.last else { return .skipChildren }
         for binding in node.bindings {
-            if let pattern = binding.pattern.as(IdentifierPatternSyntax.self) { names.insert(pattern.identifier.text) }
+            if let pattern = binding.pattern.as(IdentifierPatternSyntax.self) {
+                names.insert("\(typeName).\(pattern.identifier.text)")
+            }
         }
         return .skipChildren
     }
@@ -311,6 +333,11 @@ private final class TypeMemberAccessFinder: SyntaxVisitor {
     private(set) var accesses: [MemberAccessExprSyntax] = []
 
     init() { super.init(viewMode: .sourceAccurate) }
+
+    /// `타입.이름` — `StaticConstantFinder`가 모은 이름과 맞춰 본다.
+    static func key(of node: MemberAccessExprSyntax) -> String {
+        "\(node.base?.trimmedDescription ?? "").\(node.declName.baseName.text)"
+    }
 
     override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
         if let base = node.base?.as(DeclReferenceExprSyntax.self), base.baseName.text.first?.isUppercase == true {

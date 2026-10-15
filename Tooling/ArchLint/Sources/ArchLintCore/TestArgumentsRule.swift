@@ -5,7 +5,7 @@ import SwiftSyntax
 /// - 항목마다 줄을 바꾼다 — 어떤 경우들을 확인하는지 목록으로 보인다.
 /// - 리터럴(문자열·숫자 등) 항목에는 왜 그 값인지 주석을 단다. `""`·`"   "`만으로는 의도가 안 보인다.
 ///   enum case처럼 이름이 곧 뜻인 항목은 주석이 없어도 된다.
-/// 배열 리터럴이 아닌 인자(`Option.allCases` 등)는 대상이 아니다.
+/// 배열 리터럴이 아닌 인자(`Option.allCases` 등)는 대상이 아니다. 타입을 붙인 배열(`[…] as [T]`)은 대상이다.
 struct TestArgumentsRule: Rule {
     let id = "test-arguments"
     let severity: Severity = .error
@@ -26,7 +26,7 @@ struct TestArgumentsRule: Rule {
         }
 
         for test in collector.tests {
-            guard let array = test.arguments?.as(ArrayExprSyntax.self) else { continue }
+            guard let array = SpecSyntax.argumentArray(test.arguments) else { continue }
             var previousLine = SpecSyntax.line(of: array.leftSquare, converter)
             var sharesLine = false
             for element in array.elements {
