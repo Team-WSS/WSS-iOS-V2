@@ -38,14 +38,14 @@ metadata:
 
 ### 4. Project.swift 생성
 `Projects/<directoryName>/<ModuleName>/Project.swift` 생성. **같은 레이어 기존 모듈을 복제**해 `create<Layer>Module(...)` 형태/`targets`/`internalDependencies`를 맞춘다.
-- targets 기본: domain `[.sources, .testing, .tests]`, data/core `[.sources, .demo, .testing, .tests]`, ui `[.sources, .demo]`, feature `[.sources, .demo, .tests]`.
+- targets 기본: domain `[.sources, .tests]`(가짜 객체가 필요해지면 `.testing` 추가 — 넘기기만 하는 UseCase는 테스트하지 않아 Stub/Mock이 필요 없을 수 있다), data/core `[.sources, .demo, .testing, .tests]`, ui `[.sources, .demo]`, feature `[.sources, .demo, .tests]`.
 
 ### 5. 소스 디렉토리
 - `Sources/` 생성. 레이어 표준 하위 폴더를 만든다(빈 폴더 대신 최소 placeholder 또는 첫 타입):
   - domain: `Entity/`, `UseCase/`, `Repository/`
   - data: `DTO/`, `Service/`, `Mapper/`, `Repository/`, `Factory/`, `Endpoint/`, `Logger/`
   - feature: `Factory/` + 화면별 폴더(`<Screen>/` — 타입별 분리 ❌), 별도로 `Demo/`(Demo 앱). 골격은 `new-feature` 스킬이 담당.
-- domain이면 `Testing/`, `Tests/{Entity,UseCase}/`도.
+- domain이면 `Tests/{Entity,UseCase}/`도(`Testing/`은 `.testing`을 넣을 때만).
 
 ### 6. 프로젝트 생성
 - `tuist generate` 실행. 실패하면 출력 그대로 보고 (에셋/Derived 문제면 안내).
@@ -55,5 +55,5 @@ metadata:
 
 ### 8. 마무리 보고
 - 등록한 case, 생성 파일, **선택한 의존성과 근거**를 요약.
-- domain이면: "판단하는 코드는 테스트 필수 — `docs/TESTING.md`(목록 먼저 합의). 이 기준으로 테스트를 다 쓰면 `TestSpecScope.modules`(`Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`)에 모듈을 추가해 ArchLint 테스트 규칙을 켠다" 안내.
+- domain이면: "판단하는 코드는 테스트 필수 — `docs/TESTING.md`(목록 먼저 합의). 이 기준으로 테스트를 다 쓰면 `TestSpecScope.modules`(`Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`)에 모듈을 추가해 ArchLint 테스트 규칙을 켜고, `--write-test-specs`로 `TEST_SPEC.md`를 만든다" 안내.
 - 커밋은 사용자가 지시할 때만. ([Type] #이슈 규약은 docs/WORKFLOW.md)

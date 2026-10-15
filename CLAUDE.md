@@ -22,7 +22,7 @@
    문서/디스크보다 이 파일이 우선. 새 모듈은 여기 먼저 등록한다.
    - **유령 폴더 주의**: 디스크엔 레지스트리에 없는 폴더(rename·브랜치 전환이 남긴 gitignore된 `.xcodeproj`/`Derived` 잔재)가 남을 수 있다. **레포에 없고 삭제해도 재발**하니 청소 대상이 아니다. **모듈 목록을 `ls`로 추론하지 말고 ModuleType.swift로만 판단**한다(정식은 `XxxDomain`/`XxxData` 형태만).
 4. **판단하는 코드는 테스트 필수**(현재 Domain 레이어 한정). 분기·검증·계산이 있는 Entity·정책·UseCase는 **테스트 없이 머지하지 않는다.** 저장소 호출을 넘기기만 하는 UseCase는 테스트하지 않는다.
-   테스트는 "읽히는 기능 명세"로 작성하고 ArchLint 테스트 규칙·뮤테이션 도구로 검증한다 → 작성 전 [docs/TESTING.md](docs/TESTING.md) 필독. 모듈이 `Project.swift`에 `.tests` 타깃을 선언하면(레이어 무관) develop 대상 PR마다 CI가 자동으로 그 모듈 테스트를 돌린다.
+   테스트는 "읽히는 기능 명세"로 작성하고 ArchLint 테스트 규칙(아직 일부 모듈만 — TESTING.md "적용 범위")·뮤테이션 도구로 검증한다 → 작성 전 [docs/TESTING.md](docs/TESTING.md) 필독. 모듈이 `Project.swift`에 `.tests` 타깃을 선언하면(레이어 무관) develop 대상 PR마다 CI가 자동으로 그 모듈 테스트를 돌린다.
 5. **외부 의존성 없음 원칙** — 서드파티 라이브러리를 함부로 추가하지 않는다.
    (예외: `fastlane`(`Gemfile`) — 앱 바이너리에 링크되는 게 아니라 서명·아카이브·배포를 자동화하는
    빌드 툴링(Ruby gem)이라 이 원칙이 겨냥하는 "앱 런타임 의존성"과 다른 범주. #231에서 의도적으로

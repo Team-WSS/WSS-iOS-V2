@@ -43,7 +43,7 @@
 1. **테스트 목록을 먼저 합의한다** — 스위트 이름, 테스트 이름, 넣지 않는 테스트와 그 이유. 사람이 승인한다.
 2. **테스트를 쓰고 통과시킨다** — 모듈 스킴으로 테스트 실행.
 3. **ArchLint를 통과시킨다** — `swift run --package-path Tooling/ArchLint ArchLint .`
-   테스트 이름을 바꿨으면 `--write-test-specs`로 모듈 루트의 `TEST_SPEC.md`(테스트 목록)를 갱신해 같이 커밋한다.
+   테스트를 더하거나 빼거나 이름·`arguments`를 바꿨으면 `--write-test-specs`로 모듈 루트의 `TEST_SPEC.md`(테스트 목록)를 갱신해 같이 커밋한다(아래 "적용 범위"의 모듈만).
 4. **뮤테이션 도구로 확인한다** — `swift run --package-path Tooling/ArchLint Mutate <모듈>`.
    소스에 버그를 하나씩 심어 테스트가 잡는지 본다. 살아남은 버그는 사람이 판단한다(아래).
 5. **PR에서 사람이 읽는다** — 아래 "사람이 보는 곳".
@@ -98,7 +98,7 @@ struct WithdrawalReasonDraftTests {
 - 여러 입력은 for/if 대신 `arguments:`로. 항목마다 줄을 바꾸고, 리터럴에는 왜 그 값인지 주석을 단다.
   튜플에 `nil`이 섞이면 컴파일러가 타입을 못 정해 "failed to produce diagnostic"으로 죽는다 — 배열 뒤에 `as [(Date?, Date?)]`처럼 타입을 붙인다(검사기·목록 파일은 그대로 읽는다).
 - 경계값은 "딱 그 값"과 "하나 넘는 값"을 둘 다 둔다. 위 예처럼 넘는 쪽은 어디가 잘렸는지까지 보이게 만든다.
-- 에러는 case를 적어 확인한다: `#expect(throws: Draft.ValidationError.tooLong(max: 20)) { … }` (타입만 적으면 다른 case도 통과).
+- 에러는 case를 적어 확인한다: `#expect(throws: CollectionDraft.ValidationError.nameOverLimit(max: 20)) { … }` (타입만 적으면 다른 case도 통과).
 - 공개 API로만 테스트한다(`@testable import` ❌) — internal에 기대면 리팩터링마다 깨진다.
 
 ## 가짜 객체: Stub과 Mock
@@ -129,6 +129,7 @@ Projects/Domain/<Module>Domain/
 
 - ArchLint 테스트 규칙은 **재작성을 마친 모듈에만** 켜져 있다 — `Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`의 `TestSpecScope.modules`.
   모듈을 이 기준으로 다시 쓰면 거기에 추가한다. 안 고친 모듈까지 켜면 옛 테스트가 전부 error로 떠 게이트가 막힌다.
+  `TEST_SPEC.md`도 이 모듈만 만들고 검사한다 — 추가할 때 `--write-test-specs`로 먼저 만든다(없으면 `test-spec-file` error).
 - 아직 안 켜진 Domain 모듈에도 **새로 쓰는 테스트는 이 기준**을 따른다. 옛 방식 테스트(예: `@testable`, 메서드별 `// MARK:`, 호출 횟수 확인)를 본뜨지 않는다.
 
 ## CI
@@ -148,4 +149,4 @@ Projects/Domain/<Module>Domain/
 - ⚠️ **`@Test("…")` 설명에 `/`를 넣지 말 것**(ArchLint `test-name`이 막는다) — XcodeBuildMCP `test_sim` 리포터가 `/`를 스위트 구분자로 읽어 이름을 쪼갠다
   (`"websoso://collections/{id}를 파싱하면…"` → 스위트 `websoso:/collections` + 테스트 `{id}를 파싱하면…`으로 보고됨, #228 실측).
   URL·경로가 들어가는 명세는 "websoso 스킴에 collections host와 id가 붙은 URL"처럼 말로 풀어 쓴다.
-- 뮤테이션 도구는 소스를 고쳤다가 되돌린다 — 모듈 `Sources`에 커밋 안 한 변경이 있으면 시작하지 않고, 도중에 끊기면 `git checkout -- <모듈>/Sources`로 되돌린다.
+- 뮤테이션 도구는 소스를 고쳤다가 되돌린다 — 모듈 `Sources`에 커밋 안 한 변경이 있으면 시작하지 않는다. Ctrl-C로 끊어도 원본으로 되돌리지만, 그래도 남으면 `git checkout -- <모듈>/Sources`.
