@@ -1,6 +1,6 @@
 //
 //  ReadingPeriodTests.swift
-//  NovelReviewDomain
+//  BaseDomain
 //
 //  Created by YunhakLee on 2/6/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
@@ -9,9 +9,7 @@
 import Foundation
 import Testing
 
-@testable import NovelReviewDomain
-import NovelReviewDomainTesting
-import BaseDomain
+@testable import BaseDomain
 
 @Suite("ReadingPeriod")
 struct ReadingPeriodTests {
