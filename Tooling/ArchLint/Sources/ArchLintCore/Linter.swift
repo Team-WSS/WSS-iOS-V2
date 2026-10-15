@@ -26,6 +26,7 @@ let allRules: [Rule] = [
     // #293 테스트 = 기능 명세 (TestSpecScope.modules에 든 모듈만)
     TestNamingRule(),
     TestAssertionRule(),
+    TestNameNumberRule(),
     TestStructureRule(),
     TestActSizeRule(),
     TestBodyLengthRule(),
