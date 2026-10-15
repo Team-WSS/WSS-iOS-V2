@@ -42,6 +42,41 @@ func restoreSources() {
     }
 }
 
+/// 지금 돌고 있는 자식 프로세스(xcodebuild 등). 신호로 끝낼 때 고아로 남기지 않게 먼저 멈추고,
+/// 시간 초과로 멈췄는지도 여기서 기록한다(다른 신호로 죽은 것과 가르기 위해).
+final class ChildProcess: @unchecked Sendable {
+    private let lock = NSLock()
+    private var process: Process?
+    private var timedOut = false
+
+    func start(_ newProcess: Process) {
+        lock.lock(); defer { lock.unlock() }
+        process = newProcess
+        timedOut = false
+    }
+
+    /// 끝난 프로세스를 내려놓고, 시간 초과로 멈췄는지 돌려준다.
+    func finish() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        process = nil
+        return timedOut
+    }
+
+    func timeOut(_ target: Process) {
+        lock.lock(); defer { lock.unlock() }
+        guard process === target, target.isRunning else { return }
+        timedOut = true
+        target.terminate()
+    }
+
+    func terminate() {
+        lock.lock(); defer { lock.unlock() }
+        process?.terminate()
+    }
+}
+
+let child = ChildProcess()
+
 /// 파일로 보내도 버그 하나 끝날 때마다 바로 보이게 버퍼 없이 내보낸다.
 func say(_ message: String) {
     FileHandle.standardOutput.write(Data((message + "\n").utf8))
@@ -65,13 +100,14 @@ func run(
     process.standardOutput = pipe
     process.standardError = pipe
     do { try process.run() } catch { fail("실행 실패: \(launchPath) \(error)") }
+    child.start(process)
     // 무한 루프가 생기는 버그도 있다 — 시간을 넘기면 끊는다.
-    let timer = DispatchWorkItem { if process.isRunning { process.terminate() } }
+    let timer = DispatchWorkItem { child.timeOut(process) }
     if let timeout { DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timer) }
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
-    let timedOut = timeout != nil && !timer.isCancelled && process.terminationReason == .uncaughtSignal
     timer.cancel()
+    let timedOut = child.finish()
     return (process.terminationStatus, String(decoding: data, as: UTF8.self), timedOut)
 }
 
@@ -174,20 +210,28 @@ if !wasBooted {
 func restoreSimulator() {
     if !wasBooted { run("/usr/bin/xcrun", ["simctl", "shutdown", simulatorID], in: ".") }
 }
-// Ctrl-C로 끊어도 심은 버그를 남기지 않는다.
-signal(SIGINT, SIG_IGN)
-let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
+// Ctrl-C·kill·터미널 닫기로 끊어도 심은 버그를 남기지 않는다.
 let shutdownSimulatorOnInterrupt = !wasBooted
 let interruptedSimulatorID = simulatorID
-interrupt.setEventHandler { @Sendable in
-    restoreSources() // 잠금을 풀지 않고 끝낸다 — 그 뒤로는 아무도 소스를 쓰지 못한다.
-    if shutdownSimulatorOnInterrupt {
-        run("/usr/bin/xcrun", ["simctl", "shutdown", interruptedSimulatorID], in: ".")
+let interrupts = [SIGINT, SIGTERM, SIGHUP].map { signalNumber in
+    signal(signalNumber, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .global())
+    source.setEventHandler { @Sendable in
+        child.terminate() // 돌던 xcodebuild를 고아로 남기지 않는다.
+        restoreSources() // 잠금을 풀지 않고 끝낸다 — 그 뒤로는 아무도 소스를 쓰지 못한다.
+        if shutdownSimulatorOnInterrupt {
+            // run()은 실패하면 fail() → restoreSources()로 같은 잠금을 다시 잡아 멈춘다. 여기선 직접 띄운다.
+            let shutdown = Process()
+            shutdown.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+            shutdown.arguments = ["simctl", "shutdown", interruptedSimulatorID]
+            if (try? shutdown.run()) != nil { shutdown.waitUntilExit() }
+        }
+        FileHandle.standardError.write(Data("\n중단 — 소스를 되돌렸다\n".utf8))
+        exit(128 + signalNumber)
     }
-    FileHandle.standardError.write(Data("\n중단 — 소스를 되돌렸다\n".utf8))
-    exit(130)
+    source.resume()
+    return source
 }
-interrupt.resume()
 
 say("시작: \(options.module) — 버그 \(mutants.count)개")
 
@@ -208,6 +252,7 @@ for (index, mutant) in mutants.enumerated() {
         try mutant.apply(to: original).write(toFile: mutant.path, atomically: true, encoding: .utf8)
     } catch {
         sourceLock.unlock()
+        restoreSimulator()
         fail("버그를 심지 못했다: \(relative(mutant.path)) \(error)")
     }
     sourceLock.unlock()
@@ -219,6 +264,7 @@ for (index, mutant) in mutants.enumerated() {
     } catch {
         // 되돌리지 못한 채 다음 버그를 심으면 버그가 겹친다 — 여기서 멈춘다.
         sourceLock.unlock()
+        restoreSimulator()
         fail("소스를 되돌리지 못했다: \(relative(mutant.path)) \(error)")
     }
     sourceLock.unlock()

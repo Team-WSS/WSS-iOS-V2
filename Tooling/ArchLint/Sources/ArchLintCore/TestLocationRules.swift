@@ -86,7 +86,7 @@ public enum PassThroughFinder {
         }
     }
 
-    /// 부르는 대상이 저장 프로퍼티(`repository`·`self.repository`)인지 — 다른 호출의 결과면 넘기기가 아니다.
+    /// 부르는 대상이 이름 하나(`repository`)나 `self.repository`인지 — 다른 호출의 결과면 넘기기가 아니다.
     private static func isStoredReference(_ expression: ExprSyntax) -> Bool {
         if expression.is(DeclReferenceExprSyntax.self) { return true }
         guard let member = expression.as(MemberAccessExprSyntax.self),
@@ -177,9 +177,9 @@ private final class RuleBranchFinder: SyntaxVisitor {
 
 // MARK: - 검증 에러 case마다 #expect(throws:)
 
-/// 검증 에러(`ValidationError` enum)는 case마다 그 에러가 나는 상황을 테스트한다.
-/// 폴더로 고르지 않는다 — BaseDomain처럼 `Entity/` 없이 `Sources/`에 바로 두는 모듈도 있다.
-/// 저장소 에러(`RepositoryError`·`AuthError`)는 판단 코드가 내는 에러가 아니라 대상이 아니다.
+/// 판단 코드가 내는 에러 enum(`ValidationError`·`PolicyError` 등)은 case마다 그 에러가 나는 상황을 테스트한다.
+/// 폴더나 이름으로 고르지 않는다 — BaseDomain처럼 `Entity/` 없이 `Sources/`에 바로 두는 모듈도 있다.
+/// 저장소 에러(`RepositoryError`, `Repository/` 폴더의 `AuthError` 등)는 저장소가 내는 에러라 대상이 아니다.
 /// `#expect(throws: X.self)`처럼 타입만 보면 다른 case가 나도 통과하므로 case를 직접 적어야 한다.
 struct TestErrorCaseRule: ModuleRule {
     let id = "test-error-case"
@@ -198,7 +198,7 @@ struct TestErrorCaseRule: ModuleRule {
         }
 
         var violations: [Violation] = []
-        for file in module.sources {
+        for file in module.sources where !file.path.contains("/Sources/Repository/") {
             let finder = ErrorEnumFinder()
             finder.walk(file.tree)
             let locations = converter(file)
@@ -220,7 +220,9 @@ private final class ErrorEnumFinder: SyntaxVisitor {
     init() { super.init(viewMode: .sourceAccurate) }
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard node.name.text == "ValidationError" else { return .visitChildren }
+        let inherited = node.inheritanceClause?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
+        guard inherited.contains(where: { $0 == "Error" || $0.hasSuffix(".Error") }),
+              node.name.text != "RepositoryError" else { return .visitChildren }
         for member in node.memberBlock.members {
             guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else { continue }
             for element in caseDecl.elements { cases.append((node.name.text, element)) }

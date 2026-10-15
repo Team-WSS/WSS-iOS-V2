@@ -71,7 +71,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | `test-double-query` | error | `Testing/` 가짜 객체의 조회 메서드(`fetch…`·`load…`·`search…`)가 호출을 기록하면 위반(조회는 Stub, 명령만 Mock) |
 | `test-passthrough` | error(모듈) | 저장소 호출을 넘기기만 하는 `Default…UseCase`를 테스트하면 위반. 결과를 거르거나 바꾸면(클로저·이어 부르기) 넘기기가 아니다 |
 | `test-required` | error(모듈) | 분기·throw가 있는 타입이 테스트에 한 번도 안 나오면 위반 |
-| `test-error-case` | error(모듈) | `ValidationError` enum의 case마다 `#expect(throws: …case)` 필요(타입만 적으면 안 셈). 폴더와 상관없이 찾고, 저장소 에러는 대상이 아니다 |
+| `test-error-case` | error(모듈) | 에러 enum의 case마다 `#expect(throws: …case)` 필요(타입만 적으면 안 셈). 폴더·이름과 상관없이 찾고, 저장소 에러(`RepositoryError`·`Sources/Repository/`)는 대상이 아니다 |
 | `test-source-constant` | error(모듈) | 테스트가 소스 `static let` 상수를 쓰면 위반 — 명세 값을 직접 쓴다 |
 | `test-spec-file` | error | 모듈 루트 `TEST_SPEC.md`가 테스트와 다르면 위반(`--write-test-specs`로 갱신) |
 
@@ -80,7 +80,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
   이 주석은 PR에서 사람이 확인할 목록이다.
 - **뮤테이션 도구(`Mutate`)**: 모듈 Sources에 버그를 하나씩 심어(연산자 뒤집기·`!` 삭제·true↔false·정수+1·문장 삭제)
   그 모듈 테스트를 돌리고, **살아남은 버그**(테스트가 못 잡음)를 보고한다. 넘기기만 하는 UseCase는 뺀다.
-  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C나 실행 실패로 끝나도 시작할 때 읽어 둔 원본으로 되돌린다.
+  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C·kill·터미널 닫기·실행 실패로 끝나도 돌던 xcodebuild를 멈추고 시작할 때 읽어 둔 원본으로 되돌린다.
   버그 하나가 5분을 넘기면(무한 루프) 끊고 "잡힘(시간 초과)"로 센다.
   DerivedData를 Xcode와 나눠 임시 폴더(`$TMPDIR/wss-mutation-derived-data`)에 둔다 — 동시 빌드 충돌과 레포 안 빌드 폴더를 피한다. 로컬·수동 실행.
 

@@ -43,32 +43,76 @@ private final class QueryRecordingVisitor: SyntaxVisitor {
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         guard TestDoubleQueryRule.isQueryName(node.name.text), let body = node.body else { return .skipChildren }
-        let finder = MutationFinder()
+        let locals = LocalNameCollector()
+        locals.walk(body)
+        let finder = MutationFinder(locals: locals.names)
         finder.walk(body)
         if finder.mutates { found.append(node) }
         return .skipChildren
     }
 }
 
-/// 대입·`+=`·`append`/`insert` 같은 상태 변경이 있는가.
-private final class MutationFinder: SyntaxVisitor {
-    private(set) var mutates = false
+/// 메서드 안에서 선언한 지역 변수 이름 — 이것을 바꾸는 건 결과를 만드는 일이지 호출 기록이 아니다.
+private final class LocalNameCollector: SyntaxVisitor {
+    private(set) var names: Set<String> = []
 
     init() { super.init(viewMode: .sourceAccurate) }
 
-    override func visit(_ node: AssignmentExprSyntax) -> SyntaxVisitorContinueKind {
-        mutates = true
+    override func visit(_ node: IdentifierPatternSyntax) -> SyntaxVisitorContinueKind {
+        names.insert(node.identifier.text)
         return .skipChildren
     }
+}
 
-    override func visit(_ node: BinaryOperatorExprSyntax) -> SyntaxVisitorContinueKind {
-        if ["+=", "-=", "*=", "/="].contains(node.operator.text) { mutates = true }
-        return .skipChildren
+/// 저장 프로퍼티에 대입·`+=`·`append`/`insert` 같은 상태 변경을 하는가. 지역 변수를 바꾸는 것은 세지 않는다.
+private final class MutationFinder: SyntaxVisitor {
+    private let locals: Set<String>
+    private(set) var mutates = false
+
+    init(locals: Set<String>) {
+        self.locals = locals
+        super.init(viewMode: .sourceAccurate)
+    }
+
+    override func visit(_ node: SequenceExprSyntax) -> SyntaxVisitorContinueKind {
+        let elements = Array(node.elements)
+        for (index, element) in elements.enumerated() where index > 0 && isMutatingOperator(element) {
+            if isStored(elements[index - 1]) { mutates = true }
+        }
+        return .visitChildren
+    }
+
+    override func visit(_ node: InfixOperatorExprSyntax) -> SyntaxVisitorContinueKind {
+        if isMutatingOperator(node.operator), isStored(node.leftOperand) { mutates = true }
+        return .visitChildren
     }
 
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
-        let name = node.calledExpression.as(MemberAccessExprSyntax.self)?.declName.baseName.text
-        if let name, ["append", "insert", "removeAll", "removeLast", "removeFirst"].contains(name) { mutates = true }
+        if let member = node.calledExpression.as(MemberAccessExprSyntax.self),
+           ["append", "insert", "removeAll", "removeLast", "removeFirst"].contains(member.declName.baseName.text),
+           let base = member.base, isStored(base) {
+            mutates = true
+        }
         return .visitChildren
+    }
+
+    private func isMutatingOperator(_ expression: ExprSyntax) -> Bool {
+        if expression.is(AssignmentExprSyntax.self) { return true }
+        guard let binary = expression.as(BinaryOperatorExprSyntax.self) else { return false }
+        return ["+=", "-=", "*=", "/="].contains(binary.operator.text)
+    }
+
+    /// 바꾸는 대상이 지역 변수가 아닌가(`self.x`, 또는 메서드 안에서 선언하지 않은 이름).
+    private func isStored(_ expression: ExprSyntax) -> Bool {
+        if let subscriptCall = expression.as(SubscriptCallExprSyntax.self) { return isStored(subscriptCall.calledExpression) }
+        if let member = expression.as(MemberAccessExprSyntax.self) {
+            guard let base = member.base else { return true }
+            if base.as(DeclReferenceExprSyntax.self)?.baseName.tokenKind == .keyword(.self) { return true }
+            return isStored(base)
+        }
+        if let reference = expression.as(DeclReferenceExprSyntax.self) {
+            return !locals.contains(reference.baseName.text)
+        }
+        return true
     }
 }
