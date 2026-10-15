@@ -62,7 +62,7 @@ struct DeepLinkTests {
     @Test(
         "주소가 화면 종류를, 경로의 숫자가 id를 정한다",
         arguments: [
-            ("websoso://collections/22", DeepLink.collectionDetail(CollectionID(22))),     // 컬렉션 상세
+            ("websoso://collections/1", DeepLink.collectionDetail(CollectionID(1))),       // 컬렉션 상세. 가장 작은 id도 읽는다
             ("websoso://novels/22", .novelDetail(NovelID(22))),                            // 작품 상세
             ("websoso://feeds/22", .feedDetail(FeedID(22))),                               // 피드 상세
             ("websoso://notifications/22", .notificationDetail(NotificationID(22)))        // 알림 상세
