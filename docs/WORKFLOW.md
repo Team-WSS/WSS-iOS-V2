@@ -23,6 +23,20 @@
 
 비-Feature 작업은 2번을 건너뛴다(`new-issue` → 작업 → `make-PR` → `ready-merge`).
 
+### 스킬 아카이브 · Discord 알림 · 위키 (#295)
+
+`.claude/skills/<name>/`가 develop에 머지되면 `.github/workflows/skill-archive.yml`(로직은 `.github/scripts/skill_archive.py`)이 스킬별로 기록한다. 아카이브는 GitHub로 통일하고, Discord는 공유·논의 창구로만 쓴다.
+
+- **정본 = GitHub 이슈** `[Skill] <name>`(라벨 `skill-archive`) — 설명·활용(frontmatter `description`), 추가 이유, SKILL.md·PR 링크. 변경 이력은 이슈 코멘트로 쌓인다.
+- **논의 = Discord 포럼 글** — 스킬 1개당 글 1개(스레드). 보완 아이디어는 그 스레드에서 논의한다.
+- **추가 이유** = 스킬을 도입한 PR 본문의 `💭 Summary` 절(`make-PR` 4단계 안내 참고). 백필하거나 아카이브 없는 스킬이 수정될 땐, 도입 커밋 제목을 대신 쓴다 — 초기 스킬은 기능 PR 스택에 섞여 머지돼서, PR 조회 결과가 엉뚱한 PR을 가리킨다.
+- **수정** → 같은 스레드와 이슈에 "🔧 업데이트"(PR·Summary·diff)를 이어 붙인다. **삭제** → "🗑 삭제됨"을 남기고 이슈를 닫는다. 다시 추가되면 이슈를 다시 열고 같은 스레드를 쓴다.
+- 이슈 본문의 `<!-- discord-thread-id: N -->`, `<!-- desc:start/end -->` 마커가 이슈와 스레드를 잇는다. **손으로 지우지 말 것** — 지우면 다음 수정 때 스레드가 새로 생긴다.
+- **최초 셋업(사람이)**: ① Discord 포럼 채널 생성 → 채널 설정 → 연동 → 웹훅 생성. 웹훅 글엔 태그를 못 붙이니 "태그 필수"는 끈다. ② repo Secrets에 `DISCORD_SKILL_WEBHOOK_URL` 등록(없으면 워크플로가 경고만 남기고 건너뜀). ③ 레포 Wiki 탭에서 첫 페이지(Home)를 한 번 만든다 — GitHub은 이 전엔 위키 저장소 자체를 만들지 않아 동기화가 건너뛰어진다. Home·사이드바에 `Claude-Skills`·`Claude-Agents` 링크를 걸어두면 좋다. ④ Actions → `Skill Archive` → Run workflow(`skills=all`)로 기존 스킬을 백필한다(위키도 이때 함께 채워진다).
+- **실패 시**: 해당 스킬명으로 Run workflow(`skills=<name>`)를 다시 돌린다. 이미 스레드가 있는 스킬은 건너뛰고, 이슈만 있고 스레드가 없으면 스레드부터 다시 만든다.
+- **위키 = 읽기용 문서** — 같은 워크플로의 `wiki` job(`.github/scripts/wiki_sync.py`)이 스킬 **과 서브 에이전트(`.claude/agents/`)** 전체를 `Claude-Skills`·`Claude-Agents` 목차와 `Skill-<name>`·`Agent-<name>` 페이지로 매번 다시 만든다. 원본에 없는 `Skill-*`·`Agent-*` 페이지는 지우고, 그 밖의 위키 페이지(Home 등)는 건드리지 않는다. 정본은 레포 파일이니 **위키에서 직접 고치지 말 것**(다음 동기화 때 덮어써진다). SKILL.md 안의 상대 링크는 레포 blob URL로 바꿔 싣는다.
+- **로컬 점검**: `BEFORE=<sha> AFTER=<sha> python3 .github/scripts/skill_archive.py --dry-run`(또는 `INPUT_SKILLS=all`) — gh 쓰기와 웹훅 호출 없이, 만들어질 이슈 본문과 payload만 출력한다. 위키는 `python3 .github/scripts/wiki_sync.py <빈 디렉터리>`로 생성 결과를 확인한다.
+
 ## 테스트 (필수)
 
 - 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
