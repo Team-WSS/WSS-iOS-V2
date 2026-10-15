@@ -11,6 +11,6 @@ import DependencyPlugin
 
 let project = Project.createDomainModule(
     name: ModuleType.domain(.collection).name,
-    targets: [.sources, .testing, .tests],
+    targets: [.sources, .tests],
     internalDependencies: [.module(.domain(.base))]
 )
