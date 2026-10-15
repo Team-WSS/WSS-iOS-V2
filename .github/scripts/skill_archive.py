@@ -176,7 +176,8 @@ def intro_info(repo, name):
 
 def existing_reason(body):
     """이미 기록된 '추가 이유'(재시도로 스레드를 다시 만들 때 원래 PR Summary를 보존하려고)."""
-    m = re.search(r"^### 추가 이유\n(.*?)\n\n### ", body or "", re.S | re.M)
+    body = (body or "").replace("\r\n", "\n")  # 웹에서 편집된 이슈 본문은 CRLF
+    m = re.search(r"^### 추가 이유\n(.*?)\n\n### 링크\n", body, re.S | re.M)
     return m.group(1).strip() if m else None
 
 
@@ -302,7 +303,7 @@ def thread_url(thread_id):
                 req = urllib.request.Request(WEBHOOK, headers={"User-Agent": "WSS-skill-archive (github-actions, 1.0)"})
                 with urllib.request.urlopen(req, timeout=30) as res:
                     guild = json.loads(res.read()).get("guild_id") or ""
-            except (urllib.error.URLError, json.JSONDecodeError) as e:
+            except Exception as e:  # 읽기 타임아웃(TimeoutError)·연결 끊김 등도 — 여기서 터지면 마커가 안 남는다
                 log(f"  ⚠️ 웹훅 guild 조회 실패 — 스레드 링크 생략: {e}")
                 guild = ""
         _GUILD.append(guild)
@@ -418,6 +419,8 @@ def process(repo, issues, name, action, pr, compare_url):
         reason = existing_reason(issue["body"])  # 이슈에 이미 적힌 원래 '추가 이유'(PR Summary)를 그대로 쓴다
         retry_intro = {**(intro or {"number": None, "title": "", "url": "", "author": ""}), **({"summary": reason} if reason else {})}
         log(f"  💬 Discord 스레드(재시도) {open_thread(repo, meta, retry_intro, issue)}")
+        if action != "backfill":  # 새 소개 글이 최신 내용이라 Discord엔 생략하지만, 이력은 이슈에 남긴다
+            comment_issue(repo, issue, change_text("readded" if readded else "modified", pr, compare_url))
         return
 
     if action == "backfill":
@@ -457,7 +460,7 @@ def main():
         except RuntimeError as e:  # force push 등으로 BEFORE가 클론에 없을 때
             print(f"::error::변경 스킬 계산 실패 — 해당 스킬을 workflow_dispatch(skills=…)로 처리하세요: {e}")
             return 1
-        pr = find_pr(repo, after)
+        pr = find_pr(repo, after) if targets else None
         pr_of = lambda _: pr
         compare_url = f"{SERVER}/{repo}/compare/{before}...{after}" if before and before != ZERO_SHA else None
 
