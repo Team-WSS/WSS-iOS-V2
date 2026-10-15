@@ -151,7 +151,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == (1...100).map { NovelID($0) })
     }
 
-    // MARK: - 작품
+    // MARK: - 작품 추가·빼기
 
     @Test("작품을 추가하면 목록 끝에 붙는다")
     func addingNovelAppends() throws {
@@ -192,25 +192,9 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == [NovelID(2)])
     }
 
-    @Test("대표로 고른 작품을 빼면 대표 선택도 풀린다")
-    func removingRepresentativeClearsIt() {
-        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
+    // MARK: - 작품 목록 바꾸기
 
-        draft.removeNovel(NovelID(1))
-
-        #expect(draft.representativeNovelID == nil)
-    }
-
-    @Test("대표가 아닌 작품을 빼면 대표는 그대로다")
-    func removingOtherNovelKeepsRepresentative() {
-        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
-
-        draft.removeNovel(NovelID(2))
-
-        #expect(draft.representativeNovelID == NovelID(1))
-    }
-
-    @Test("작품 목록을 통째로 바꿀 수 있다")
+    @Test("작품 목록을 새 목록으로 통째로 바꿀 수 있다")
     func settingNovelsReplacesAll() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)])
 
@@ -219,7 +203,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == [NovelID(3), NovelID(4), NovelID(5)])
     }
 
-    @Test("작품 목록은 100개까지 바꿀 수 있다")
+    @Test("새 목록이 100개여도 통째로 바꿀 수 있다")
     func settingNovelsAcceptsUpToHundred() throws {
         var draft = makeDraft(novelIDs: [NovelID(1)])
         let novelIDs = (1...100).map { NovelID($0) }
@@ -229,7 +213,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == novelIDs)
     }
 
-    @Test("작품이 100개를 넘으면 목록을 바꿀 수 없다")
+    @Test("새 목록이 100개를 넘으면 바꿀 수 없다")
     func settingOverHundredNovelsIsRejected() {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
@@ -239,7 +223,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == [NovelID(1)])
     }
 
-    @Test("같은 작품이 두 번 들어오면 목록을 바꿀 수 없다")
+    @Test("새 목록에 같은 작품이 두 번 있으면 바꿀 수 없다")
     func settingDuplicatedNovelsIsRejected() {
         var draft = makeDraft(novelIDs: [NovelID(1)])
 
@@ -247,24 +231,6 @@ struct CollectionDraftTests {
             try draft.setNovels([NovelID(2), NovelID(3), NovelID(2)])
         }
         #expect(draft.novelIDs == [NovelID(1)])
-    }
-
-    @Test("대표로 고른 작품이 새 목록에 없으면 대표 선택도 풀린다")
-    func settingNovelsWithoutRepresentativeClearsIt() throws {
-        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
-
-        try draft.setNovels([NovelID(2), NovelID(3)])
-
-        #expect(draft.representativeNovelID == nil)
-    }
-
-    @Test("대표로 고른 작품이 새 목록에도 있으면 대표 선택은 그대로다")
-    func settingNovelsWithRepresentativeKeepsIt() throws {
-        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
-
-        try draft.setNovels([NovelID(3), NovelID(1)])
-
-        #expect(draft.representativeNovelID == NovelID(1))
     }
 
     // MARK: - 대표 작품
@@ -313,6 +279,44 @@ struct CollectionDraftTests {
         let representative = draft.effectiveRepresentativeNovelID
 
         #expect(representative == nil)
+    }
+
+    // MARK: - 작품이 빠질 때 대표
+
+    @Test("대표로 고른 작품을 빼면 대표 선택도 풀린다")
+    func removingRepresentativeClearsIt() {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
+
+        draft.removeNovel(NovelID(1))
+
+        #expect(draft.representativeNovelID == nil)
+    }
+
+    @Test("대표로 고르지 않은 작품을 빼면 대표 선택은 그대로다")
+    func removingOtherNovelKeepsRepresentative() {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
+
+        draft.removeNovel(NovelID(2))
+
+        #expect(draft.representativeNovelID == NovelID(1))
+    }
+
+    @Test("대표로 고른 작품이 새 목록에 없으면 대표 선택도 풀린다")
+    func settingNovelsWithoutRepresentativeClearsIt() throws {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
+
+        try draft.setNovels([NovelID(2), NovelID(3)])
+
+        #expect(draft.representativeNovelID == nil)
+    }
+
+    @Test("대표로 고른 작품이 새 목록에도 있으면 대표 선택은 그대로다")
+    func settingNovelsWithRepresentativeKeepsIt() throws {
+        var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
+
+        try draft.setNovels([NovelID(3), NovelID(1)])
+
+        #expect(draft.representativeNovelID == NovelID(1))
     }
 
     // MARK: - 나만 보기
