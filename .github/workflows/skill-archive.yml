@@ -1,0 +1,90 @@
+name: Skill Archive
+
+# `.claude/skills/<name>/`가 develop에 머지되면 스킬별로
+#   1) GitHub 이슈(`skill-archive` 라벨) — 정본 아카이브(설명·추가 이유·변경 이력)
+#   2) Discord 포럼 글(스레드) — 팀 공유·보완 논의
+# 를 만들거나, 이미 있으면 같은 이슈/스레드에 변경을 이어 붙인다. 로직은 .github/scripts/skill_archive.py.
+# 추가 이유는 머지된 PR 본문의 `## 💭 Summary` 절을 그대로 쓴다.
+# 별도 job(wiki)이 스킬·서브 에이전트 전체를 GitHub 위키 페이지로 동기화한다(.github/scripts/wiki_sync.py).
+on:
+  push:
+    branches: [ develop ]
+    paths: [ '.claude/skills/**', '.claude/agents/**' ]
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: "백필·재시도할 스킬 (all 또는 쉼표 목록, 예: learn,make-PR) — 이미 스레드가 있는 스킬은 건너뜀"
+        required: true
+        default: all
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: skill-archive
+  cancel-in-progress: false # 도중 취소되면 이슈만 있고 스레드가 없는 반쪽 상태가 남는다(다음 실행이 복구는 함)
+
+jobs:
+  archive:
+    name: Archive Skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # BEFORE..AFTER diff와 스킬 도입 커밋(git log --diff-filter=A) 탐색에 전체 히스토리가 필요.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 웹훅 시크릿이 없으면 스크립트가 경고만 남기고 성공 종료한다(fail-soft).
+      - name: 스킬 아카이브 + Discord 알림
+        env:
+          DISCORD_SKILL_WEBHOOK_URL: ${{ secrets.DISCORD_SKILL_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          INPUT_SKILLS: ${{ github.event.inputs.skills }}
+        run: python3 .github/scripts/skill_archive.py
+
+  # 스킬·서브 에이전트를 위키 페이지로 전체 재생성(멱등) → diff가 있을 때만 커밋·push.
+  # 위키 저장소는 웹에서 첫 페이지를 한 번 만들어야 생긴다 — 없으면 경고만 남기고 건너뛴다(fail-soft).
+  wiki:
+    name: Sync Wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # 위키 저장소 push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 위키 클론
+        id: clone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::위키 저장소가 없어 동기화를 건너뜀 — 레포 Wiki 탭에서 첫 페이지(Home)를 한 번 만들어주세요"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 스킬·에이전트 페이지 생성
+        if: steps.clone.outputs.ready == 'true'
+        run: python3 .github/scripts/wiki_sync.py wiki
+
+      - name: 위키 push
+        if: steps.clone.outputs.ready == 'true'
+        working-directory: wiki
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "위키 변경 없음"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "스킬·서브 에이전트 문서 동기화 (${GITHUB_SHA::8})"
+          git push
