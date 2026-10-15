@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSyntax
 
-/// 가짜 객체의 조회 메서드(`fetch…`·`load…`)는 호출을 기록하지 않는다(#293 원칙 4) — error.
+/// 가짜 객체의 조회 메서드(`fetch…`·`load…`·`search…`)는 호출을 기록하지 않는다(#293 원칙 4) — error.
 /// 조회는 Stub: 정해 둔 값을 돌려줄 뿐이다. "몇 번 불렀나"를 기록하면 테스트가 그걸 확인하게 되고,
 /// 캐시를 넣거나 호출을 합치는 정상적인 리팩터링에도 테스트가 깨진다. 조회 입력이 맞는지는
 /// Stub이 입력마다 다른 값을 돌려주게 해서 결과로 확인한다.
@@ -28,7 +28,7 @@ struct TestDoubleQueryRule: Rule {
     }
 
     static func isQueryName(_ name: String) -> Bool {
-        for prefix in ["fetch", "load"] where name.hasPrefix(prefix) {
+        for prefix in ["fetch", "load", "search"] where name.hasPrefix(prefix) {
             guard let next = name.dropFirst(prefix.count).first else { return true }
             return next.isUppercase
         }
