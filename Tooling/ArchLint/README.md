@@ -9,7 +9,7 @@
 
 ## 구조
 
-- `Sources/ArchLintCore/` — 아키텍처 규칙 12개 + 테스트 명세 규칙 13개(`Test*Rule`, #293) + 스캔/파싱 로직(라이브러리)
+- `Sources/ArchLintCore/` — 아키텍처 규칙 12개 + 테스트 명세 규칙 14개(`Test*Rule`, #293) + 스캔/파싱 로직(라이브러리)
 - `Sources/ArchLint/` — 얇은 실행 파일(`main.swift` → `runArchLint(...)` 호출)
 - `Sources/MutationCore/` + `Sources/Mutate/` — 뮤테이션 도구(#293, 아래 "테스트 명세 규칙" 참고)
 - `Tests/ArchLintCoreTests/`·`Tests/MutationCoreTests/` — 규칙·도구 자체 테스트
@@ -60,7 +60,8 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | id | 심각도 | 내용 |
 |---|---|---|
 | `test-name` | error | `@Suite`(한국어 이름) 안의 `@Test("~다")` 한국어 문장. 코드 식별자·`/`·모호어(성공적으로 등)·중복 금지 |
-| `test-assert` | error | `#expect` 필수(`#require`만 ❌), `!= nil` 금지, 이름의 숫자가 본문·arguments에 있어야 함 |
+| `test-assert` | error | `#expect` 필수(`#require`만 ❌), `!= nil` 금지 |
+| `test-name-number` | error | 이름의 숫자가 본문·arguments에 있어야 함. 숫자가 넣는 값이 아니라 단위를 말하면("0.5점 단위") allow 주석으로 뺀다 |
 | `test-aaa` | error | 빈 줄로 준비/실행/확인 ≤3구역, 확인(`#expect`·`#require`)은 마지막 구역에만, `// Given` 라벨·for·if·switch·guard·삼항 금지 |
 | `test-aaa-act` | warning | 실행 구역이 2문장 이상 — 설계 점검을 사람에게 묻는다 |
 | `test-body-length` | warning | 본문 15줄 초과 |

@@ -104,11 +104,13 @@ struct TestSpecRuleTests {
         #expect(ids(lint(source: source, path: specTestPath, rules: [TestAssertionRule()])) == ["test-assert"])
     }
 
+    // MARK: - test-name-number
+
     @Test("이름의 숫자가 본문에 없으면 잡는다")
     func assertionCatchesMissingNumber() {
         let source = cleanSpec.replacingOccurrences(of: "count: 80", with: "count: 81")
 
-        #expect(ids(lint(source: source, path: specTestPath, rules: [TestAssertionRule()])) == ["test-assert"])
+        #expect(ids(lint(source: source, path: specTestPath, rules: [TestNameNumberRule()])) == ["test-name-number"])
     }
 
     @Test("이름의 숫자가 arguments 안에만 있어도 본문에 있는 것으로 본다")
@@ -126,7 +128,28 @@ struct TestSpecRuleTests {
         }
         """
 
-        #expect(lint(source: source, path: specTestPath, rules: [TestAssertionRule()]).isEmpty)
+        #expect(lint(source: source, path: specTestPath, rules: [TestNameNumberRule()]).isEmpty)
+    }
+
+    @Test("숫자가 단위를 말할 뿐이면 이유를 단 allow 주석으로 뺀다")
+    func nameNumberAllowsUnitWithReason() {
+        let source = """
+        @Suite("샘플") struct S {
+            // archlint:allow test-name-number — 0.5는 단위를 말한다(넣는 값이 아니다)
+            @Test("0.5점 단위가 아니면 평점이 아니다", arguments: [
+                4.7  // 단위에서 벗어났다
+            ])
+            func a(value: Double) {
+                #expect(throws: Rating.ValidationError.invalidStep) {
+                    try Rating(value)
+                }
+            }
+        }
+        """
+
+        let violations = lint(source: source, path: specTestPath, rules: [TestNameNumberRule()])
+
+        #expect(violations.isEmpty)
     }
 
     // MARK: - test-aaa

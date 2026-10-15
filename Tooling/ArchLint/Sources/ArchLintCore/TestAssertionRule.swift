@@ -4,7 +4,6 @@ import SwiftSyntax
 /// 테스트가 이름이 말한 것을 실제로 확인한다(#293 원칙 3 "버그면 실패") — error.
 /// - 본문에 `#expect`가 하나 이상 있다(`#require`만 있으면 값이 맞는지는 안 본다).
 /// - `!= nil`로 확인하지 않는다 — 값이 "있다"만 보고 무엇인지는 안 본다. 기대값을 `==`로 쓴다.
-/// - 이름에 나온 숫자가 본문(인자 포함)에 보인다 — "80자"라고 했으면 80을 실제로 넣어 본다.
 struct TestAssertionRule: Rule {
     let id = "test-assert"
     let severity: Severity = .error
@@ -38,15 +37,40 @@ struct TestAssertionRule: Rule {
             for node in nilChecks.found {
                 report(node, "`!= nil`은 값이 무엇인지 확인하지 않는다 — 기대값을 ==로 쓴다")
             }
+        }
+        return violations
+    }
+}
 
-            if let name = test.displayName {
-                // 이름 문자열 자체는 빼고, 본문과 arguments만 본다.
-                let literals = LiteralCollector()
-                literals.walk(body)
-                if let arguments = test.arguments { literals.walk(arguments) }
-                for number in Self.numbers(in: name) where !literals.contains(number) {
-                    report(test.function, "이름의 숫자 \(number)이(가) 본문에 없다 — 이름이 말한 값을 실제로 넣어 확인한다")
-                }
+/// 이름에 나온 숫자가 본문(arguments 포함)에 보인다(#293 원칙 3) — error.
+/// "80자"라고 했으면 80을 실제로 넣어 본다. "0.5점 단위"처럼 숫자가 넣는 값이 아니라 단위를 말할 때는
+/// `// archlint:allow test-name-number — 이유`로 뺀다. `test-assert`에서 떼어 낸 이유는, 예외를 줘도
+/// 같은 테스트의 `!= nil` 검사까지 꺼지지 않게 하려는 것이다.
+struct TestNameNumberRule: Rule {
+    let id = "test-name-number"
+    let severity: Severity = .error
+
+    func applies(to path: String) -> Bool {
+        TestSpecScope.contains(path, part: "Tests")
+    }
+
+    func check(_ tree: SourceFileSyntax, path: String, converter: SourceLocationConverter) -> [Violation] {
+        let collector = SpecTestCollector()
+        collector.walk(tree)
+        var violations: [Violation] = []
+        for test in collector.tests {
+            guard let body = test.function.body, let name = test.displayName else { continue }
+            // 이름 문자열 자체는 빼고, 본문과 arguments만 본다.
+            let literals = LiteralCollector()
+            literals.walk(body)
+            if let arguments = test.arguments { literals.walk(arguments) }
+            for number in Self.numbers(in: name) where !literals.contains(number) {
+                violations.append(Violation(
+                    path: path, line: SpecSyntax.line(of: test.function, converter),
+                    ruleID: id,
+                    message: "이름의 숫자 \(number)이(가) 본문에 없다 — 이름이 말한 값을 실제로 넣어 확인한다",
+                    severity: severity
+                ))
             }
         }
         return violations
