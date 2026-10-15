@@ -100,6 +100,16 @@ struct ReadingPeriodTests {
         #expect(normalized?.end == nil)
     }
 
+    @Test("읽는 중인데 종료일만 있으면 그 날을 시작일로 옮긴다")
+    func watchingMovesEndToStart() throws {
+        let period = try makePeriod(start: nil, end: Self.yesterday)
+
+        let normalized = period.normalized(for: .watching)
+
+        #expect(normalized?.start == Self.yesterday)
+        #expect(normalized?.end == nil)
+    }
+
     @Test("다 읽음이면 빈 쪽을 채운다")
     func watchedFillsMissingSide() throws {
         let period = try makePeriod(start: Self.threeDaysAgo, end: nil)
@@ -110,6 +120,16 @@ struct ReadingPeriodTests {
         #expect(normalized?.end == Self.threeDaysAgo)
     }
 
+    @Test("다 읽음인데 종료일만 있으면 그 날로 시작일을 채운다")
+    func watchedFillsStartFromEnd() throws {
+        let period = try makePeriod(start: nil, end: Self.yesterday)
+
+        let normalized = period.normalized(for: .watched)
+
+        #expect(normalized?.start == Self.yesterday)
+        #expect(normalized?.end == Self.yesterday)
+    }
+
     @Test("하차면 종료일만 남긴다")
     func quitKeepsOnlyEnd() throws {
         let period = try makePeriod(start: Self.threeDaysAgo, end: Self.yesterday)
@@ -118,6 +138,16 @@ struct ReadingPeriodTests {
 
         #expect(normalized?.start == nil)
         #expect(normalized?.end == Self.yesterday)
+    }
+
+    @Test("하차인데 시작일만 있으면 그 날을 종료일로 옮긴다")
+    func quitMovesStartToEnd() throws {
+        let period = try makePeriod(start: Self.threeDaysAgo, end: nil)
+
+        let normalized = period.normalized(for: .quit)
+
+        #expect(normalized?.start == nil)
+        #expect(normalized?.end == Self.threeDaysAgo)
     }
 
     // MARK: - Helpers

@@ -21,7 +21,7 @@ struct SearchKeywordsUseCaseTests {
     @Test("처음 검색에 성공하면 동기화하지 않는다")
     func firstSearchSucceedsWithoutSync() async throws {
         let repository = MockKeywordRepository()
-        repository.searchKeywordsResult = .success([KeywordGroup(category: .material, keywords: [regression])])
+        repository.searchKeywordsResults["회귀"] = .success([KeywordGroup(category: .material, keywords: [regression])])
 
         let keywords = try await DefaultSearchKeywordUseCase(keywordRepository: repository).execute(searchText: "회귀")
 
@@ -32,8 +32,8 @@ struct SearchKeywordsUseCaseTests {
     @Test("검색에 실패하면 동기화한 뒤 다시 검색한 결과를 준다")
     func failedSearchSyncsAndSearchesAgain() async throws {
         let repository = MockKeywordRepository()
-        repository.searchKeywordsResult = .failure(.notFound)
-        repository.searchKeywordsResultAfterSync = .success([KeywordGroup(category: .material, keywords: [regression])])
+        repository.searchKeywordsResults["회귀"] = .failure(.notFound)
+        repository.searchKeywordsResultsAfterSync["회귀"] = .success([KeywordGroup(category: .material, keywords: [regression])])
 
         let keywords = try await DefaultSearchKeywordUseCase(keywordRepository: repository).execute(searchText: "회귀")
 
@@ -43,8 +43,8 @@ struct SearchKeywordsUseCaseTests {
     @Test("동기화한 뒤에도 실패하면 그 에러를 전한다")
     func failedAfterSyncPassesError() async {
         let repository = MockKeywordRepository()
-        repository.searchKeywordsResult = .failure(.notFound)
-        repository.searchKeywordsResultAfterSync = .failure(.networkUnavailable)
+        repository.searchKeywordsResults["회귀"] = .failure(.notFound)
+        repository.searchKeywordsResultsAfterSync["회귀"] = .failure(.networkUnavailable)
         let useCase = DefaultSearchKeywordUseCase(keywordRepository: repository)
 
         await #expect(throws: RepositoryError.networkUnavailable) {
@@ -55,7 +55,7 @@ struct SearchKeywordsUseCaseTests {
     @Test("묶음별 검색 결과를 키워드 목록 하나로 펼친다")
     func flattensGroupsIntoOneList() async throws {
         let repository = MockKeywordRepository()
-        repository.searchKeywordsResult = .success([
+        repository.searchKeywordsResults["아"] = .success([
             KeywordGroup(category: .material, keywords: [regression]),
             KeywordGroup(category: .worldview, keywords: [academy])
         ])

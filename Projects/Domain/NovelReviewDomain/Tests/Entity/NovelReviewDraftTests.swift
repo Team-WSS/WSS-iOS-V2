@@ -55,6 +55,16 @@ struct NovelReviewDraftTests {
         #expect(draft.period?.end == nil)
     }
 
+    @Test("기간을 지우면 기간이 비어 있다")
+    func clearingPeriodEmptiesIt() throws {
+        let period = try ReadingPeriod(start: firstDay, end: lastDay, notAfter: today)
+        var draft = makeDraft(status: .watched, period: period)
+
+        draft.setPeriod(nil)
+
+        #expect(draft.period == nil)
+    }
+
     // MARK: - 평점
 
     @Test("저장된 평점으로 초안을 만들면 그 평점이 담겨 있다")
@@ -75,6 +85,15 @@ struct NovelReviewDraftTests {
         draft.setRating(newRating)
 
         #expect(draft.rating == newRating)
+    }
+
+    @Test("평점을 지우면 평점이 비어 있다")
+    func clearingRatingEmptiesIt() throws {
+        var draft = makeDraft(rating: try Rating(4.0))
+
+        draft.setRating(nil)
+
+        #expect(draft.rating == nil)
     }
 
     // MARK: - 매력 포인트
