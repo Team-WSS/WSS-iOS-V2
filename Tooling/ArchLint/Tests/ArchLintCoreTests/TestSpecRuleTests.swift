@@ -388,10 +388,12 @@ struct TestSpecRuleTests {
     }
 
     @Test(
-        "조회 메서드 이름을 fetch·load 접두로 가린다",
+        "조회 메서드 이름을 fetch·load·search 접두로 가린다",
         arguments: [
             ("fetchNovel", true),   // 조회
             ("load", true),         // 접두만
+            ("searchKeywords", true),  // 검색도 조회다
+            ("searcher", false),    // 다른 단어
             ("loader", false),      // 다른 단어
             ("save", false)         // 명령
         ]

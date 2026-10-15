@@ -67,7 +67,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | `test-arguments` | error | `arguments:` 배열은 항목마다 줄바꿈, 리터럴 항목엔 이유 주석(enum case는 면제) |
 | `test-determinism` | error | `Date()`·`Date.now`·`Calendar/TimeZone/Locale.current`·`UUID()`·`.random`·`static var` 금지 |
 | `test-result-only` | error | `@testable import` 금지, Entity 테스트(`Tests/Entity/`)에 Mock 금지 |
-| `test-double-query` | error | `Testing/` 가짜 객체의 조회 메서드(`fetch…`·`load…`)가 호출을 기록하면 위반(조회는 Stub, 명령만 Mock) |
+| `test-double-query` | error | `Testing/` 가짜 객체의 조회 메서드(`fetch…`·`load…`·`search…`)가 호출을 기록하면 위반(조회는 Stub, 명령만 Mock) |
 | `test-passthrough` | error(모듈) | 저장소 호출을 넘기기만 하는 `Default…UseCase`를 테스트하면 위반 |
 | `test-required` | error(모듈) | 분기·throw가 있는 타입이 테스트에 한 번도 안 나오면 위반 |
 | `test-error-case` | error(모듈) | `Sources/Entity/`의 에러 enum case마다 `#expect(throws: …case)` 필요(타입만 적으면 안 셈) |
