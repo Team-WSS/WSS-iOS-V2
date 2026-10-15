@@ -8,8 +8,8 @@ name: Skill Archive
 # 별도 job(wiki)이 스킬·서브 에이전트 전체를 GitHub 위키 페이지로 동기화한다(.github/scripts/wiki_sync.py).
 on:
   push:
-    branches: [ develop ]
-    paths: [ '.claude/skills/**', '.claude/agents/**' ]
+    branches: [ develop, 'Setting/#295' ] # TODO(#295): 머지 전 위키 push 검증용 임시 트리거 — 확인 후 revert
+    paths: [ '.claude/skills/**', '.claude/agents/**', '.github/workflows/skill-archive.yml' ]
   workflow_dispatch:
     inputs:
       skills:
