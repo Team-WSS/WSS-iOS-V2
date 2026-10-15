@@ -228,6 +228,8 @@ enum AllowComment {
     }
 
     static func allows(_ line: String, ruleID: String) -> Bool {
+        // 테스트 명세 규칙만 뺄 수 있다 — 의존 방향 같은 아키텍처 규칙을 주석 한 줄로 끄지 못하게.
+        guard ruleID.hasPrefix("test-") else { return false }
         let marker = "archlint:allow " + ruleID
         guard let range = line.range(of: marker) else { return false }
         let rest = line[range.upperBound...]

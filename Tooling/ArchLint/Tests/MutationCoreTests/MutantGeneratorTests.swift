@@ -33,6 +33,13 @@ struct MutantGeneratorTests {
         #expect(found == ["`!flag` → `flag`", "`true` → `false`", "`80` → `81`"])
     }
 
+    @Test("가장 큰 정수는 키우지 않는다(넘친다)")
+    func skipsLargestInteger() {
+        let found = summaries("let x = 9_223_372_036_854_775_807")
+
+        #expect(found.isEmpty)
+    }
+
     @Test("함수 본문의 대입·호출·guard·if 문장을 지우고, 선언과 return은 두지 않는다")
     func deletesStatementsButNotDeclarationsOrReturns() {
         let source = """
