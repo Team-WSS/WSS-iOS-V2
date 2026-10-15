@@ -419,7 +419,7 @@ def process(repo, issues, name, action, pr, compare_url):
         reason = existing_reason(issue["body"])  # 이슈에 이미 적힌 원래 '추가 이유'(PR Summary)를 그대로 쓴다
         retry_intro = {**(intro or {"number": None, "title": "", "url": "", "author": ""}), **({"summary": reason} if reason else {})}
         log(f"  💬 Discord 스레드(재시도) {open_thread(repo, meta, retry_intro, issue)}")
-        if action != "backfill":  # 새 소개 글이 최신 내용이라 Discord엔 생략하지만, 이력은 이슈에 남긴다
+        if action not in ("backfill", "added") or readded:  # 새 소개 글이 최신 내용이라 Discord엔 생략하지만, 이력은 이슈에 남긴다
             comment_issue(repo, issue, change_text("readded" if readded else "modified", pr, compare_url))
         return
 
