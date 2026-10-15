@@ -25,17 +25,19 @@
 
 ### 스킬 아카이브 · Discord 알림 · 위키 (#295)
 
-`.claude/skills/<name>/`가 develop에 머지되면 `.github/workflows/skill-archive.yml`(로직은 `.github/scripts/skill_archive.py`)이 스킬별로 기록한다. 아카이브는 GitHub로 통일하고, Discord는 공유·논의 창구로만 쓴다.
+`.claude/skills/<name>/`가 develop에 머지되면 `.github/workflows/skill-archive.yml`(로직은 `.github/scripts/skill_archive.py`)이 스킬별로 기록한다. 아카이브는 GitHub로 통일하고, Discord는 공유·논의 창구로만 쓴다. 두 job 모두 **develop에서만** 돈다(다른 브랜치를 골라 Run workflow 해도 skip — 미머지 스킬이 아카이브·위키에 섞이지 않게).
 
-- **정본 = GitHub 이슈** `[Skill] <name>`(라벨 `skill-archive`) — 설명·활용(frontmatter `description`), 추가 이유, SKILL.md·PR 링크. 변경 이력은 이슈 코멘트로 쌓인다.
-- **논의 = Discord 포럼 글** — 스킬 1개당 글 1개(스레드). 보완 아이디어는 그 스레드에서 논의한다.
-- **추가 이유** = 스킬을 도입한 PR 본문의 `💭 Summary` 절(`make-PR` 4단계 안내 참고). 백필하거나 아카이브 없는 스킬이 수정될 땐, 도입 커밋 제목을 대신 쓴다 — 초기 스킬은 기능 PR 스택에 섞여 머지돼서, PR 조회 결과가 엉뚱한 PR을 가리킨다.
-- **수정** → 같은 스레드와 이슈에 "🔧 업데이트"(PR·Summary·diff)를 이어 붙인다. **삭제** → "🗑 삭제됨"을 남기고 이슈를 닫는다. 다시 추가되면 이슈를 다시 열고 같은 스레드를 쓴다.
-- 이슈 본문의 `<!-- discord-thread-id: N -->`, `<!-- desc:start/end -->` 마커가 이슈와 스레드를 잇는다. **손으로 지우지 말 것** — 지우면 다음 수정 때 스레드가 새로 생긴다.
-- **최초 셋업(사람이)**: ① Discord 포럼 채널 생성 → 채널 설정 → 연동 → 웹훅 생성. 웹훅 글엔 태그를 못 붙이니 "태그 필수"는 끈다. ② repo Secrets에 `DISCORD_SKILL_WEBHOOK_URL` 등록(없으면 워크플로가 경고만 남기고 건너뜀). ③ 레포 Wiki 탭에서 첫 페이지(Home)를 한 번 만든다 — GitHub은 이 전엔 위키 저장소 자체를 만들지 않아 동기화가 건너뛰어진다. Home·사이드바에 `Claude-Skills`·`Claude-Agents` 링크를 걸어두면 좋다. ④ Actions → `Skill Archive` → Run workflow(`skills=all`)로 기존 스킬을 백필한다(위키도 이때 함께 채워진다).
-- **실패 시**: 해당 스킬명으로 Run workflow(`skills=<name>`)를 다시 돌린다. 이미 스레드가 있는 스킬은 건너뛰고, 이슈만 있고 스레드가 없으면 스레드부터 다시 만든다.
-- **위키 = 읽기용 문서** — 같은 워크플로의 `wiki` job(`.github/scripts/wiki_sync.py`)이 스킬 **과 서브 에이전트(`.claude/agents/`)** 전체를 `Claude-Skills`·`Claude-Agents` 목차와 `Skill-<name>`·`Agent-<name>` 페이지로 매번 다시 만든다. 원본에 없는 `Skill-*`·`Agent-*` 페이지는 지우고, 그 밖의 위키 페이지(Home 등)는 건드리지 않는다. GitHub 위키는 폴더를 지원하지 않는다 — 위키 저장소의 `Skills/`·`Agents/` 폴더는 클론해서 볼 때만 정리돼 보이고, 페이지 주소는 파일명만으로 정해진다(그래서 `Skill-`·`Agent-` 접두어로 이름 충돌을 막는다). 화면에서의 폴더링은 자동 생성되는 `_Sidebar.md`의 접이식 목록이 맡는다. 사이드바는 `<!-- auto:start -->`~`<!-- auto:end -->` 블록만 다시 만들어지니, 직접 쓸 내용은 블록 밖에 둔다. 정본은 레포 파일이니 **위키에서 직접 고치지 말 것**(다음 동기화 때 덮어써진다). SKILL.md 안의 상대 링크는 레포 blob URL로 바꿔 싣는다.
-- **로컬 점검**: `BEFORE=<sha> AFTER=<sha> python3 .github/scripts/skill_archive.py --dry-run`(또는 `INPUT_SKILLS=all`) — gh 쓰기와 웹훅 호출 없이, 만들어질 이슈 본문과 payload만 출력한다. 위키는 `python3 .github/scripts/wiki_sync.py <빈 디렉터리>`로 생성 결과를 확인한다.
+- **정본 = GitHub 이슈** `[Skill] <name>`(라벨 `skill-archive`) — 설명·활용(frontmatter `description`), 추가 이유, SKILL.md·위키·도입 PR·Discord 스레드 링크. 변경 이력은 이슈 코멘트로 쌓인다.
+- **논의 = Discord 포럼 글** — 스킬 1개당 글 1개(스레드). 보완 아이디어는 그 스레드에서 논의한다. PR 본문이 실려도 `@everyone` 등 멘션은 울리지 않게 막아뒀다.
+- **추가 이유** = 스킬을 도입한 PR 본문의 `💭 Summary` 절(`make-PR` 4단계 안내 참고). 아카이브 도입 전부터 있던 스킬(백필, 또는 아카이브 없이 수정된 스킬)은 도입 커밋 제목·링크를 대신 쓰고 PR 링크는 싣지 않는다 — 초기 스킬은 기능 PR 스택에 섞여 머지돼서, 커밋으로 찾은 PR이 엉뚱한 PR(예: #144)을 가리킨다.
+- **수정** → 같은 스레드와 이슈 코멘트에 "🔧 업데이트"(그 PR·Summary·diff)를 이어 붙인다 → 스킬을 건드리는 PR의 Summary는 전부 밖으로 나간다. **삭제** → "🗑 삭제됨"을 남기고 이슈를 닫는다. 다시 추가되면 이슈를 다시 열고 같은 스레드를 쓴다(손으로 닫은 이슈도 다음 수정 때 다시 열린다).
+- 이슈 본문 끝의 `<!-- discord-thread-id: N -->`가 이슈와 스레드를 잇는다 — **지우면 다음 처리 때 스레드가 새로 생긴다.** `<!-- desc:start -->`~`<!-- desc:end -->`는 설명 최신화 구간이라, 지우면 설명 갱신만 멈춘다.
+- **최초 셋업(사람이)**: ① Discord 포럼 채널 생성 → 채널 설정 → 연동 → 웹훅 생성. 이 스크립트는 포럼 태그를 보내지 않으니 "태그 필수"는 끈다. ② repo Secrets에 `DISCORD_SKILL_WEBHOOK_URL` 등록 — **없으면 Discord뿐 아니라 이슈 아카이브까지 통째로 건너뛰고 위키만 동기화된다**(경고만 남김). 시크릿 없이 머지된 수정·삭제 이력은 나중에 백필로 복구되지 않는다(백필은 "존재"만 다룸). ③ 레포 Wiki 탭에서 첫 페이지(Home)를 한 번 만든다 — GitHub은 이 전엔 위키 저장소 자체를 만들지 않아 동기화가 건너뛰어진다(목차 링크는 자동 사이드바가 넣는다). ④ Actions → `Skill Archive` → Run workflow(`skills=all`)로 기존 스킬을 백필한다(위키도 이때 함께 동기화된다).
+- **백필(`skills=…`) 동작**: 아카이브 없는 스킬은 이슈·스레드를 만든다. 이슈만 있고 스레드가 없으면 이슈에 적힌 원래 추가 이유로 스레드만 다시 만든다. 이미 스레드가 있으면 설명 블록 갱신(닫혀 있으면 재오픈)만 하고 새 글은 안 올린다. 디스크에서 사라졌는데 이슈가 열려 있는 스킬은 삭제로 처리한다(`all`엔 안 잡히니 이름을 직접 준다).
+- **실패 시**: 이슈·스레드 생성이나 삭제 처리 실패는 그 스킬명으로 Run workflow(`skills=<name>`)를 돌려 복구한다. **업데이트(수정) 기록 실패는 dispatch로 다시 안 올라가니** 스레드·이슈에 직접 남긴다. 실패한 run을 "Re-run"하면 같은 push의 성공한 스킬까지 업데이트가 중복 기록된다. 스레드는 생겼는데 이슈 마커 기록이 실패하면, 에러 메시지에 찍힌 스레드 ID로 마커를 이슈 본문 끝에 직접 넣는다(안 넣고 재시도하면 스레드가 중복된다).
+- **동시 머지**: archive job은 concurrency로 줄 세우지 않는다 — GitHub은 대기 실행을 1개만 남기고 취소해서, 연달아 머지되면 중간 push가 영구 유실되기 때문이다. 대신 같은 스킬을 수 초 간격으로 두 번 머지하면 이슈·스레드가 중복될 수 있다(드묾 — 생기면 하나를 닫는다).
+- **위키 = 읽기용 문서** — 같은 워크플로의 `wiki` job(`.github/scripts/wiki_sync.py`)이 스킬 **과 서브 에이전트(`.claude/agents/`)** 전체를 `Claude-Skills`·`Claude-Agents` 목차와 `Skill-<name>`·`Agent-<name>` 페이지로 다시 만든다(스킬·에이전트·두 스크립트가 바뀐 머지마다, 그리고 Run workflow 때). 원본에 없는 `Skill-*`·`Agent-*` 페이지는 지우고, 그 밖의 위키 페이지(Home 등)는 건드리지 않는다. GitHub 위키는 폴더를 지원하지 않는다 — 위키 저장소의 `Skills/`·`Agents/` 폴더는 클론해서 볼 때만 정리돼 보이고, 페이지 주소는 파일명만으로 정해진다(그래서 `Skill-`·`Agent-` 접두어로 이름 충돌을 막는다). 화면에서의 폴더링은 자동 생성되는 `_Sidebar.md`의 접이식 목록이 맡는다. 사이드바는 `<!-- auto:start …-->`~`<!-- auto:end -->` 블록만 다시 만들어지니(시작 마커는 안내 문구가 붙은 긴 주석 — 손으로 흉내 내지 말고 생성된 것을 그대로 둔다) 직접 쓸 내용은 블록 밖에 둔다. 정본은 레포 파일이니 **위키에서 직접 고치지 말 것**(다음 동기화 때 덮어써진다). SKILL.md 안의 상대 링크는 레포 blob URL로 바꿔 싣는다.
+- **로컬 점검**(레포 루트에서, gh 로그인 필요 — 읽기 호출은 한다): `BEFORE=<sha> AFTER=<sha> python3 .github/scripts/skill_archive.py --dry-run`(또는 `INPUT_SKILLS=all`) — gh 쓰기와 웹훅 호출 없이, 만들어질 이슈 본문과 payload만 출력한다. 위키는 `python3 .github/scripts/wiki_sync.py <빈 디렉터리>`로 생성 결과를 확인한다.
 
 ## 테스트 (필수)
 
@@ -45,7 +47,7 @@
 
 ## CI
 
-- 워크플로: `.github/workflows/test.yml` (`Run Tests`).
+- 워크플로: `.github/workflows/test.yml` (`Run Tests`). (스킬 아카이브·위키 동기화 `skill-archive.yml`은 위 "스킬 아카이브" 절)
 - 트리거: **develop 또는 main 대상 PR을 올리면 자동 실행**. `/domain-test` 댓글·수동 `workflow_dispatch`는 재실행용.
 - `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔해 모듈별 병렬 테스트.
 - 유령 폴더(레지스트리에 없는 rename/브랜치 잔재)는 `Project.swift`가 없어 자동 제외된다 — 폴더 잔재가 매트릭스를 깨지 않는다.
