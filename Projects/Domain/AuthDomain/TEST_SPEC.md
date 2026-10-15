@@ -7,6 +7,11 @@
 `Tests/Entity/WithdrawalReasonDraftTests.swift`
 
 - 처음에는 '자주 사용하지 않아서' 항목이 골라져 있고, 탈퇴 이유는 비어 있고, 정책에 동의하지 않은 상태다
+- 항목을 고르면 그 항목이 골라진다
+  - `WithdrawalReasonOption.inconvenientAndBuggy`
+  - `.wantToDeleteContent`
+  - `.noDesiredContent`
+  - `.custom`
 - '직접입력' 항목을 고르면 탈퇴 이유를 작성할 수 있다
 - '직접입력'이 아닌 항목에서는 탈퇴 이유를 작성해도 저장되지 않는다
   - `WithdrawalReasonOption.notFrequentlyUsed`

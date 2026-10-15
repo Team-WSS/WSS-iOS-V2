@@ -22,6 +22,23 @@ struct WithdrawalReasonDraftTests {
         #expect(draft.policyAgreed == false)
     }
 
+    @Test(
+        "항목을 고르면 그 항목이 골라진다",
+        arguments: [
+            WithdrawalReasonOption.inconvenientAndBuggy,
+            .wantToDeleteContent,
+            .noDesiredContent,
+            .custom
+        ]
+    )
+    func selectingOptionSelectsIt(option: WithdrawalReasonOption) {
+        var draft = WithdrawalReasonDraft()
+
+        draft.setOption(option)
+
+        #expect(draft.option == option)
+    }
+
     @Test("'직접입력' 항목을 고르면 탈퇴 이유를 작성할 수 있다")
     func customOptionAcceptsReason() {
         var draft = WithdrawalReasonDraft()
