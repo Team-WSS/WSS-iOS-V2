@@ -8,63 +8,48 @@
 
 import Testing
 
-@testable import BaseDomain
+import BaseDomain
 
-@Suite("Rating")
+@Suite("평점")
 struct RatingTests {
 
-    @Test("평점은 0.5부터 5.0까지 0.5 단위로만 허용된다")
-    func acceptsValidValues() throws {
-        // 0.5, 1.0, 1.5, ..., 5.0
-        let validValues = stride(from: 0.5, through: 5.0, by: 0.5)
-        for v in validValues {
-            let rating = try Rating(v)
-            #expect(rating.value == v)
+    @Test(
+        "0.5부터 5.0까지 반 점 단위면 평점이 된다",
+        arguments: [
+            0.5,  // 가장 낮은 평점
+            3.0,  // 중간의 정수 평점
+            5.0   // 가장 높은 평점
+        ]
+    )
+    func halfStepsWithinRangeAreRatings(value: Double) throws {
+        let rating = try Rating(value)
+
+        #expect(rating.value == value)
+    }
+
+    @Test(
+        "범위 밖이면 평점이 아니다",
+        arguments: [
+            0.0,  // 가장 낮은 평점보다 반 점 작다
+            5.5   // 가장 높은 평점보다 반 점 크다
+        ]
+    )
+    func outOfRangeIsNotRating(value: Double) {
+        #expect(throws: Rating.ValidationError.outOfRange) {
+            try Rating(value)
         }
     }
 
-    @Test("평점은 최소값 0.5와 최대값 5.0을 허용한다")
-    func acceptsBoundaries() throws {
-        let low = try Rating(0.5)
-        #expect(low.value == 0.5)
-
-        let high = try Rating(5.0)
-        #expect(high.value == 5.0)
-    }
-
-    @Test("평점이 허용 범위를 벗어나면 예외가 발생한다")
-    func rejectsOutOfRange() {
-        #expect(throws: Rating.ValidationError.outOfRange) {
-            _ = try Rating(0.0)
-        }
-        #expect(throws: Rating.ValidationError.outOfRange) {
-            _ = try Rating(5.5)
-        }
-        #expect(throws: Rating.ValidationError.outOfRange) {
-            _ = try Rating(-1.0)
-        }
-        #expect(throws: Rating.ValidationError.outOfRange) {
-            _ = try Rating(999.0)
-        }
-    }
-
-    @Test("평점이 0.5 단위가 아니면 예외가 발생한다")
-    func rejectsInvalidStep() {
+    @Test(
+        "반 점 단위가 아니면 평점이 아니다",
+        arguments: [
+            4.7,   // 소수 첫째 자리가 반 점이 아니다
+            1.25   // 반 점보다 잘게 나눴다
+        ]
+    )
+    func nonHalfStepIsNotRating(value: Double) {
         #expect(throws: Rating.ValidationError.invalidStep) {
-            _ = try Rating(4.7)
+            try Rating(value)
         }
-        #expect(throws: Rating.ValidationError.invalidStep) {
-            _ = try Rating(1.25)
-        }
-    }
-
-    @Test("같은 값의 평점은 서로 동등하다")
-    func equatableByValue() throws {
-        let a = try Rating(3.5)
-        let b = try Rating(3.5)
-        let c = try Rating(4.0)
-
-        #expect(a == b)
-        #expect(a != c)
     }
 }

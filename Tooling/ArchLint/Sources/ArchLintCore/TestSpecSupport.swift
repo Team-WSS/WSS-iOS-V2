@@ -7,7 +7,7 @@ import SwiftSyntax
 /// 명세 규칙이 적용되는 모듈. **재작성을 마친 모듈만** 넣는다 —
 /// 아직 안 고친 모듈까지 넣으면 옛 테스트가 전부 error로 떠서 게이트가 막힌다.
 enum TestSpecScope {
-    static let modules: Set<String> = ["AuthDomain", "NovelReviewDomain"]
+    static let modules: Set<String> = ["AuthDomain", "NovelReviewDomain", "BaseDomain"]
 
     /// 경로에서 `Projects/<레이어>/<모듈>/<구역>/…`의 모듈과 구역(Sources·Tests·Testing)을 뽑는다.
     static func locate(_ path: String) -> (module: String, part: String)? {
