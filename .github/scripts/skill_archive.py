@@ -126,14 +126,22 @@ def extract_summary(body):
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
-def find_pr(repo, sha):
-    """sha를 포함한 PR(머지 커밋이면 그 PR). 못 찾으면 None."""
-    try:
-        out = run(["gh", "api", f"repos/{repo}/commits/{sha}/pulls"])
-        prs = json.loads(out)
-    except (RuntimeError, json.JSONDecodeError) as e:
-        log(f"  ⚠️ PR 조회 실패({sha[:8]}): {e}")
-        return None
+def find_pr(repo, sha, attempts=3):
+    """sha를 포함한 PR(머지 커밋이면 그 PR). 못 찾으면 None.
+
+    머지 직후엔 커밋↔PR 연관 색인이 늦어 `[]`가 올 수 있어 짧게 재시도한다 — 여기서 놓치면 신규 스킬의
+    '추가 이유'가 영구히 비고, 이후 재시도는 도입 커밋 제목(intro_info)으로 가서 PR Summary를 못 되살린다.
+    """
+    prs = []
+    for i in range(attempts):
+        try:
+            prs = json.loads(run(["gh", "api", f"repos/{repo}/commits/{sha}/pulls"]))
+        except (RuntimeError, json.JSONDecodeError) as e:
+            log(f"  ⚠️ PR 조회 실패({sha[:8]}): {e}")
+        if prs or DRY_RUN:
+            break
+        if i < attempts - 1:
+            time.sleep(5)
     if not prs:
         return None
     merged = [p for p in prs if p.get("merged_at")] or prs
@@ -150,8 +158,8 @@ def find_pr(repo, sha):
 def intro_info(repo, name):
     """이번 머지가 '도입'이 아닌 스킬(백필, 아카이브 없이 수정된 스킬)의 소개용 정보.
 
-    초기 스킬들은 기능 PR 스택에 섞여 머지돼 `commits/{sha}/pulls`가 무관한 PR(예: #144 작품 평가)을
-    돌려준다 → 그 PR Summary를 '추가 이유'로 쓰면 오해를 부르니, 도입 커밋 제목을 이유로 쓴다.
+    초기 스킬들은 기능 PR 스택에 섞여 머지돼 `commits/{sha}/pulls`가 무관한 PR(예: #144 작품 평가)이나
+    이후의 릴리스 PR을 돌려준다 → 그 PR은 Summary도 링크도 쓰지 않고, 도입 커밋 제목·링크만 남긴다.
     """
     out = run(
         ["git", "log", "--diff-filter=A", "--format=%H%x00%s", "-1", "--", f"{SKILLS_DIR}/{name}/SKILL.md"],
@@ -160,9 +168,16 @@ def intro_info(repo, name):
     if not out:
         return None
     sha, subject = out.split("\x00", 1)
-    pr = find_pr(repo, sha) or {"number": None, "title": "", "url": "", "author": ""}
-    pr["summary"] = f"기존 스킬 백필 — 도입 커밋 `{subject}` ({SERVER}/{repo}/commit/{sha[:8]})"
-    return pr
+    return {
+        "number": None, "title": "", "url": "", "author": "",
+        "summary": f"아카이브 도입 전부터 있던 스킬이에요 — 도입 커밋 `{subject}` ({SERVER}/{repo}/commit/{sha[:8]})",
+    }
+
+
+def existing_reason(body):
+    """이미 기록된 '추가 이유'(재시도로 스레드를 다시 만들 때 원래 PR Summary를 보존하려고)."""
+    m = re.search(r"^### 추가 이유\n(.*?)\n\n### ", body or "", re.S | re.M)
+    return m.group(1).strip() if m else None
 
 
 # ── GitHub 이슈 (아카이브 정본) ───────────────────────────────────────────────
@@ -200,17 +215,16 @@ def desc_block(meta):
     return f"<!-- desc:start -->\n{short}{meta['description'] or '(description 없음)'}\n<!-- desc:end -->"
 
 
-def issue_body(repo, meta, pr, thread_id=None):
+def issue_body(repo, meta, pr):
     reason = (pr or {}).get("summary") or "(PR Summary 없음)"
-    pr_line = f"- 관련 PR: #{pr['number']} {pr['title']}" if pr and pr["number"] else "- 관련 PR: (찾지 못함)"
-    marker = f"\n<!-- discord-thread-id: {thread_id} -->" if thread_id else ""
+    pr_line = f"- 도입 PR: #{pr['number']} {pr['title']}\n" if pr and pr["number"] else ""
     return (
         f"## `/{meta['name']}`\n\n"
         f"### 설명 · 활용\n{desc_block(meta)}\n\n"
         f"### 추가 이유\n{reason}\n\n"
-        f"### 링크\n- SKILL.md: {skill_url(repo, meta['name'])}\n- 위키: {wiki_url(repo, meta['name'])}\n{pr_line}\n\n"
+        f"### 링크\n- SKILL.md: {skill_url(repo, meta['name'])}\n- 위키: {wiki_url(repo, meta['name'])}\n{pr_line}\n"
         f"> 🤖 `skill-archive` 워크플로가 관리하는 이슈예요. 보완 논의는 Discord 스레드에서, "
-        f"변경 이력은 이 이슈 코멘트에 쌓여요.{marker}\n"
+        f"변경 이력은 이 이슈 코멘트에 쌓여요.\n"
     )
 
 
@@ -252,7 +266,8 @@ def post_webhook(payload, thread_id=None):
             + json.dumps(payload, ensure_ascii=False, indent=2))
         return {"channel_id": "DRY_RUN_THREAD"}
     query = "?wait=true" + (f"&thread_id={thread_id}" if thread_id else "")
-    data = json.dumps(payload).encode()
+    # PR Summary 원문이 실리므로 @everyone·@here·역할 멘션이 서버 전체를 핑하지 않게 막는다
+    data = json.dumps({**payload, "allowed_mentions": {"parse": []}}).encode()
     for _ in range(5):
         req = urllib.request.Request(
             WEBHOOK + query, data=data, method="POST",
@@ -260,16 +275,38 @@ def post_webhook(payload, thread_id=None):
             headers={"Content-Type": "application/json", "User-Agent": "WSS-skill-archive (github-actions, 1.0)"},
         )
         try:
-            with urllib.request.urlopen(req) as res:
+            with urllib.request.urlopen(req, timeout=30) as res:
                 return json.loads(res.read() or b"{}")
         except urllib.error.HTTPError as e:
             if e.code == 429:
-                wait = float(json.loads(e.read() or b"{}").get("retry_after", 2))
+                try:
+                    wait = float(json.loads(e.read() or b"{}").get("retry_after", 2))
+                except (json.JSONDecodeError, ValueError):  # Cloudflare HTML 429 등
+                    wait = 5.0
                 log(f"  ⏳ Discord rate limit — {wait}s 대기")
                 time.sleep(wait + 0.5)
                 continue
             raise RuntimeError(f"Discord 웹훅 {e.code}: {e.read().decode(errors='replace')}")
     raise RuntimeError("Discord 웹훅 rate limit 재시도 초과")
+
+
+_GUILD = []
+
+
+def thread_url(thread_id):
+    """스레드 링크엔 서버(guild) ID가 필요한데 웹훅 메시지 응답엔 없어, 웹훅 정보(GET)에서 한 번 가져온다."""
+    if not _GUILD:
+        guild = "GUILD"
+        if WEBHOOK and not DRY_RUN:
+            try:
+                req = urllib.request.Request(WEBHOOK, headers={"User-Agent": "WSS-skill-archive (github-actions, 1.0)"})
+                with urllib.request.urlopen(req, timeout=30) as res:
+                    guild = json.loads(res.read()).get("guild_id") or ""
+            except (urllib.error.URLError, json.JSONDecodeError) as e:
+                log(f"  ⚠️ 웹훅 guild 조회 실패 — 스레드 링크 생략: {e}")
+                guild = ""
+        _GUILD.append(guild)
+    return f"https://discord.com/channels/{_GUILD[0]}/{thread_id}" if _GUILD[0] else None
 
 
 def intro_embed(repo, meta, pr, issue):
@@ -279,7 +316,7 @@ def intro_embed(repo, meta, pr, issue):
     ]
     links = [f"[SKILL.md]({skill_url(repo, meta['name'])})", f"[위키]({wiki_url(repo, meta['name'])})", f"[아카이브 이슈 #{issue['number']}]({issue['url']})"]
     if pr and pr["number"]:
-        links.insert(1, f"[관련 PR #{pr['number']}]({pr['url']})")
+        links.insert(1, f"[도입 PR #{pr['number']}]({pr['url']})")
     fields.append({"name": "링크", "value": " · ".join(links)})
     embed = {
         "title": f"🧩 /{meta['name']}",
@@ -310,19 +347,39 @@ def change_text(kind, pr, compare_url):
 
 
 def open_thread(repo, meta, pr, issue):
-    """포럼 글을 만들고 스레드 ID를 이슈 본문 마커에 기록. 실패 시 다음 실행에서 재시도된다(마커가 없으니까)."""
+    """포럼 글을 만들고 스레드 링크·ID 마커를 이슈 본문 끝에 덧붙인다(본문의 '추가 이유'는 건드리지 않는다).
+
+    웹훅이 실패하면 마커가 없으니 그 스킬을 다시 처리할 때 재시도된다. 반대로 글은 생겼는데 마커 기록이
+    실패하면 다음 처리 때 글이 하나 더 생기므로, 재시도해도 안 되면 스레드 ID를 에러로 크게 남긴다.
+    """
     payload = {"thread_name": truncate(f"/{meta['name']}", 100), "embeds": [intro_embed(repo, meta, pr, issue)]}
-    msg = post_webhook(payload)
-    thread_id = str(msg.get("channel_id", ""))
-    if thread_id:
-        edit_issue_body(repo, issue, issue_body(repo, meta, pr, thread_id))
-    return thread_id
+    thread_id = str(post_webhook(payload).get("channel_id", ""))
+    if not thread_id:
+        raise RuntimeError("Discord 응답에 스레드 ID가 없음")
+    url = thread_url(thread_id)
+    tail = (f"\n\n💬 Discord 스레드: {url}" if url else "") + f"\n<!-- discord-thread-id: {thread_id} -->\n"
+    for i in range(3):
+        try:
+            edit_issue_body(repo, issue, (issue["body"] or "").rstrip() + tail)
+            return thread_id
+        except RuntimeError as e:
+            if i == 2:
+                raise RuntimeError(
+                    f"스레드 {thread_id}는 만들어졌지만 이슈 #{issue['number']}에 마커 기록 실패 — 그대로 재시도하면 "
+                    f"스레드가 중복되니, 이슈 본문 끝에 `<!-- discord-thread-id: {thread_id} -->`를 직접 넣어주세요. ({e})"
+                )
+            time.sleep(3)
 
 
 def process(repo, issues, name, action, pr, compare_url):
     title = issue_title(name)
     issue = issues.get(title)
     thread_id = (THREAD_MARKER.search(issue["body"] or "") or [None, None])[1] if issue else None
+    meta = read_frontmatter(name, os.environ.get("AFTER") or "HEAD")
+
+    # 삭제 처리가 실패했던 스킬을 dispatch(skills=<이름>)로 다시 돌리면 삭제로 이어서 처리한다
+    if action == "backfill" and meta is None and issue and issue["state"] == "OPEN":
+        action = "deleted"
 
     if action == "deleted":
         if not issue:
@@ -336,7 +393,6 @@ def process(repo, issues, name, action, pr, compare_url):
             gh_write(["issue", "close", str(issue["number"]), "--repo", repo])
         return
 
-    meta = read_frontmatter(name, os.environ.get("AFTER") or "HEAD")
     if meta is None:
         log("  SKILL.md 없음 — 건너뜀")
         return
@@ -359,7 +415,9 @@ def process(repo, issues, name, action, pr, compare_url):
         edit_issue_body(repo, issue, new_body)
 
     if not thread_id:  # 이전 실행에서 Discord만 실패했던 경우 → 소개 글부터 다시(최신 내용이라 변경 글은 생략)
-        log(f"  💬 Discord 스레드(재시도) {open_thread(repo, meta, intro, issue)}")
+        reason = existing_reason(issue["body"])  # 이슈에 이미 적힌 원래 '추가 이유'(PR Summary)를 그대로 쓴다
+        retry_intro = {**(intro or {"number": None, "title": "", "url": "", "author": ""}), **({"summary": reason} if reason else {})}
+        log(f"  💬 Discord 스레드(재시도) {open_thread(repo, meta, retry_intro, issue)}")
         return
 
     if action == "backfill":
@@ -394,7 +452,11 @@ def main():
         pr_of = lambda _: None  # 백필은 process()가 intro_info()로 도입 커밋 기준 정보를 만든다
         compare_url = None
     else:
-        targets = collect_changes(before, after)
+        try:
+            targets = collect_changes(before, after)
+        except RuntimeError as e:  # force push 등으로 BEFORE가 클론에 없을 때
+            print(f"::error::변경 스킬 계산 실패 — 해당 스킬을 workflow_dispatch(skills=…)로 처리하세요: {e}")
+            return 1
         pr = find_pr(repo, after)
         pr_of = lambda _: pr
         compare_url = f"{SERVER}/{repo}/compare/{before}...{after}" if before and before != ZERO_SHA else None
@@ -419,7 +481,9 @@ def main():
         time.sleep(0 if DRY_RUN else 1)
 
     if failed:
-        print(f"::error::스킬 아카이브 실패: {', '.join(failed)} — workflow_dispatch(skills=…)로 재시도 가능")
+        print(f"::error::스킬 아카이브 실패: {', '.join(failed)} — 이슈·스레드 생성이나 삭제 실패는 "
+              "workflow_dispatch(skills=<이름>)로 복구돼요. 업데이트 기록 실패는 dispatch로 다시 안 올라가니 "
+              "직접 남겨주세요(Re-run은 성공한 스킬까지 중복 기록해요).")
         return 1
     return 0
 

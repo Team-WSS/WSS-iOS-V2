@@ -9,7 +9,7 @@ name: Skill Archive
 on:
   push:
     branches: [ develop ]
-    paths: [ '.claude/skills/**', '.claude/agents/**' ]
+    paths: [ '.claude/skills/**', '.claude/agents/**', '.github/scripts/skill_archive.py', '.github/scripts/wiki_sync.py' ]
   workflow_dispatch:
     inputs:
       skills:
@@ -22,13 +22,14 @@ permissions:
   issues: write
   pull-requests: read
 
-concurrency:
-  group: skill-archive
-  cancel-in-progress: false # 도중 취소되면 이슈만 있고 스레드가 없는 반쪽 상태가 남는다(다음 실행이 복구는 함)
-
 jobs:
+  # push마다 BEFORE..AFTER 구간만 보므로 concurrency로 줄 세우지 않는다 — GitHub은 그룹당 대기 실행을 1개만
+  # 남기고 나머지를 취소해, 연달아 머지되면 중간 push의 스킬 변경이 영구 유실된다. 대신 같은 스킬을 수 초 간격으로
+  # 두 번 머지하면 이슈가 중복될 수 있다(드묾 — 생기면 하나를 닫는다).
+  # develop 외 브랜치에서 Run workflow를 고르면 미머지 스킬이 아카이브되니 develop에서만 돈다.
   archive:
     name: Archive Skills
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -50,10 +51,15 @@ jobs:
 
   # 스킬·서브 에이전트를 위키 페이지로 전체 재생성(멱등) → diff가 있을 때만 커밋·push.
   # 위키 저장소는 웹에서 첫 페이지를 한 번 만들어야 생긴다 — 없으면 경고만 남기고 건너뛴다(fail-soft).
+  # 위키는 매번 develop 전체로 다시 만드니, 대기 실행이 최신 것으로 대체돼도 잃는 게 없다.
   wiki:
     name: Sync Wiki
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    concurrency:
+      group: skill-archive-wiki
+      cancel-in-progress: false
     permissions:
       contents: write # 위키 저장소 push
     steps:
@@ -68,7 +74,7 @@ jobs:
           if git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::위키 저장소가 없어 동기화를 건너뜀 — 레포 Wiki 탭에서 첫 페이지(Home)를 한 번 만들어주세요"
+            echo "::warning::위키 클론 실패로 동기화를 건너뜀 — 위키 저장소가 없으면 Wiki 탭에서 첫 페이지(Home)를 만들고, 아니면 위 git 에러(인증·네트워크)를 확인하세요"
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
