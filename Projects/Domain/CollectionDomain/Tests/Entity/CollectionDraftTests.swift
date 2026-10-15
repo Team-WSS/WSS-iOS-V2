@@ -321,8 +321,8 @@ struct CollectionDraftTests {
 
     // MARK: - 나만 보기
 
-    @Test("새 컬렉션은 모두에게 보인다")
-    func newCollectionIsPublic() {
+    @Test("컬렉션을 새로 만들 때 나만 보기는 꺼져 있다")
+    func privateIsOffForNewCollection() {
         let draft = CollectionDraft()
 
         #expect(draft.isPrivate == false)
