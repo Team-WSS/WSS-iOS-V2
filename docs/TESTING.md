@@ -96,6 +96,7 @@ struct WithdrawalReasonDraftTests {
 
 - `@Suite`는 **기능 단위**(타입·메서드 단위가 아님). 함수 이름은 영어, 설명은 `@Test("…")`에.
 - 여러 입력은 for/if 대신 `arguments:`로. 항목마다 줄을 바꾸고, 리터럴에는 왜 그 값인지 주석을 단다.
+  튜플에 `nil`이 섞이면 컴파일러가 타입을 못 정해 "failed to produce diagnostic"으로 죽는다 — 배열 뒤에 `as [(Date?, Date?)]`처럼 타입을 붙인다(검사기·목록 파일은 그대로 읽는다).
 - 경계값은 "딱 그 값"과 "하나 넘는 값"을 둘 다 둔다. 위 예처럼 넘는 쪽은 어디가 잘렸는지까지 보이게 만든다.
 - 에러는 case를 적어 확인한다: `#expect(throws: Draft.ValidationError.tooLong(max: 20)) { … }` (타입만 적으면 다른 case도 통과).
 - 공개 API로만 테스트한다(`@testable import` ❌) — internal에 기대면 리팩터링마다 깨진다.

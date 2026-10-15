@@ -35,7 +35,7 @@ public enum TestSpecDocument {
     /// `arguments:` 항목을 하위 목록으로. 배열이 아니면(`X.allCases`) 식을 그대로 적는다.
     private static func argumentLines(_ arguments: ExprSyntax?) -> [String] {
         guard let arguments else { return [] }
-        guard let array = arguments.as(ArrayExprSyntax.self) else {
+        guard let array = SpecSyntax.argumentArray(arguments) else {
             return ["  - `\(arguments.trimmedDescription)`"]
         }
         return array.elements.map { element in
