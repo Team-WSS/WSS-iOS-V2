@@ -38,7 +38,12 @@ let sourceLock = NSLock()
 func restoreSources() {
     sourceLock.lock()
     for (path, source) in originals {
-        try? source.write(toFile: path, atomically: true, encoding: .utf8)
+        do {
+            try source.write(toFile: path, atomically: true, encoding: .utf8)
+        } catch {
+            // 되돌리지 못한 파일은 숨기지 않고 알린다 — 버그가 심긴 채 남아 있다.
+            FileHandle.standardError.write(Data("되돌리지 못했다: \(path) \(error) — `git checkout -- \(path)`\n".utf8))
+        }
     }
 }
 
@@ -48,9 +53,12 @@ final class ChildProcess: @unchecked Sendable {
     private let lock = NSLock()
     private var process: Process?
     private var timedOut = false
+    private var stopped = false
 
     func start(_ newProcess: Process) {
         lock.lock(); defer { lock.unlock() }
+        // 신호로 멈추기로 한 뒤에 뜬 프로세스도 바로 멈춘다(고아 방지).
+        if stopped { newProcess.terminate() }
         process = newProcess
         timedOut = false
     }
@@ -71,6 +79,7 @@ final class ChildProcess: @unchecked Sendable {
 
     func terminate() {
         lock.lock(); defer { lock.unlock() }
+        stopped = true
         process?.terminate()
     }
 }
@@ -166,8 +175,8 @@ func runTests(scheme: String, root: String, simulator: String, timeout: TimeInte
         "-collect-test-diagnostics", "never",
         "-quiet"
     ], in: root, timeout: timeout)
-    if result.timedOut { return .timedOut }
     if result.status == 0 { return .survived }
+    if result.timedOut { return .timedOut }
     let compileError = result.output.range(of: #"\.swift:\d+:\d+: error:"#, options: .regularExpression) != nil
     return compileError ? .notCompiled : .killed
 }

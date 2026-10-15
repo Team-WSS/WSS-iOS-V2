@@ -221,7 +221,8 @@ private final class ErrorEnumFinder: SyntaxVisitor {
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
         let inherited = node.inheritanceClause?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
-        guard inherited.contains(where: { $0 == "Error" || $0.hasSuffix(".Error") }),
+        // `Error`·`LocalizedError`·`Error & Sendable`처럼 Error가 들어간 채택이면 에러 enum으로 본다.
+        guard inherited.contains(where: { $0.contains("Error") }),
               node.name.text != "RepositoryError" else { return .visitChildren }
         for member in node.memberBlock.members {
             guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else { continue }

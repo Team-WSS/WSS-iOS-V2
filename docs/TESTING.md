@@ -149,4 +149,4 @@ Projects/Domain/<Module>Domain/
 - ⚠️ **`@Test("…")` 설명에 `/`를 넣지 말 것**(ArchLint `test-name`이 막는다) — XcodeBuildMCP `test_sim` 리포터가 `/`를 스위트 구분자로 읽어 이름을 쪼갠다
   (`"websoso://collections/{id}를 파싱하면…"` → 스위트 `websoso:/collections` + 테스트 `{id}를 파싱하면…`으로 보고됨, #228 실측).
   URL·경로가 들어가는 명세는 "websoso 스킴에 collections host와 id가 붙은 URL"처럼 말로 풀어 쓴다.
-- 뮤테이션 도구는 소스를 고쳤다가 되돌린다 — 모듈 `Sources`에 커밋 안 한 변경이 있으면 시작하지 않는다. Ctrl-C나 kill로 끊어도 원본으로 되돌리지만, 그래도 남으면 `git checkout -- <모듈>/Sources`.
+- 뮤테이션 도구는 소스를 고쳤다가 되돌린다 — 모듈 `Sources`에 커밋 안 한 변경이 있으면 시작하지 않는다. Ctrl-C나 kill(-9 제외)로 끊어도 원본으로 되돌리지만, 그래도 남으면 `git checkout -- <모듈>/Sources`.

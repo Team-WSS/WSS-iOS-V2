@@ -416,7 +416,13 @@ struct TestSpecRuleTests {
                 var results = [1]
                 results.append(2)
                 results += [3]
+                _ = query
                 return results
+            }
+
+            public func loadAll(_ groups: [[Int]]) -> [Int] {
+                let flat = groups.reduce(into: []) { result, group in result.append(contentsOf: group) }
+                return groups.reduce(into: flat) { $0.append($1.count) }
             }
         }
         """
@@ -567,7 +573,7 @@ struct TestSpecRuleTests {
             """),
             (path: "/Projects/Domain/AuthDomain/Sources/Entity/Feed.swift", source: """
             public struct Feed {
-                public enum PolicyError: Error { case notOwner }
+                public enum PolicyError: LocalizedError { case notOwner }
             }
             """)
         ]

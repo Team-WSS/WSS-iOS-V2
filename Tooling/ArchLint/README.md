@@ -80,7 +80,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
   이 주석은 PR에서 사람이 확인할 목록이다.
 - **뮤테이션 도구(`Mutate`)**: 모듈 Sources에 버그를 하나씩 심어(연산자 뒤집기·`!` 삭제·true↔false·정수+1·문장 삭제)
   그 모듈 테스트를 돌리고, **살아남은 버그**(테스트가 못 잡음)를 보고한다. 넘기기만 하는 UseCase는 뺀다.
-  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C·kill·터미널 닫기·실행 실패로 끝나도 돌던 xcodebuild를 멈추고 시작할 때 읽어 둔 원본으로 되돌린다.
+  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C·kill(-9 제외)·터미널 닫기·실행 실패로 끝나도 돌던 xcodebuild를 멈추고 시작할 때 읽어 둔 원본으로 되돌린다.
   버그 하나가 5분을 넘기면(무한 루프) 끊고 "잡힘(시간 초과)"로 센다.
   DerivedData를 Xcode와 나눠 임시 폴더(`$TMPDIR/wss-mutation-derived-data`)에 둔다 — 동시 빌드 충돌과 레포 안 빌드 폴더를 피한다. 로컬·수동 실행.
 
