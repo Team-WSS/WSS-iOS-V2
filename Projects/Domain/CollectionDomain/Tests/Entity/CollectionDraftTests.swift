@@ -12,7 +12,7 @@ import Testing
 import BaseDomain
 import CollectionDomain
 
-@Suite("컬렉션 초안 작성")
+@Suite("컬렉션 만들기·수정하기")
 struct CollectionDraftTests {
 
     // MARK: - 제출
@@ -105,24 +105,10 @@ struct CollectionDraftTests {
         #expect(remains == 60 - 5)
     }
 
-    // MARK: - 저장된 값에서 만들기
+    // MARK: - 수정하기 열기
 
-    @Test("저장된 값으로 만들 때 제한을 넘는 부분은 잘라 낸다")
-    func initCutsOverLimitValues() {
-        // 넘치는 마지막 글자만 다르게 둬서, 잘려 나간 쪽이 뒤인지 확인한다.
-        let name = String(repeating: "가", count: 20) + "나"
-        let description = String(repeating: "가", count: 60) + "나"
-        let novelIDs = (1...101).map { NovelID($0) }
-
-        let draft = CollectionDraft(name: name, description: description, novelIDs: novelIDs)
-
-        #expect(draft.name == String(repeating: "가", count: 20))
-        #expect(draft.description == String(repeating: "가", count: 60))
-        #expect(draft.novelIDs == (1...100).map { NovelID($0) })
-    }
-
-    @Test("수정할 컬렉션을 그대로 초안으로 되돌린다")
-    func initFromDetail() {
+    @Test("수정하기를 열면 저장된 컬렉션 내용이 그대로 채워진다")
+    func editingFillsSavedCollection() {
         let detail = makeDetail(
             name: "취향 저격 로판",
             description: "여주가 강한 로맨스 판타지",
@@ -140,13 +126,29 @@ struct CollectionDraftTests {
         #expect(draft.representativeNovelID == NovelID(5))
     }
 
-    @Test("설명이 없던 컬렉션은 빈 설명으로 되돌린다")
-    func initFromDetailWithoutDescription() {
+    @Test("설명이 없던 컬렉션은 수정하기를 열면 설명이 비어 있다")
+    func editingCollectionWithoutDescription() {
         let detail = makeDetail(description: nil)
 
         let draft = CollectionDraft(from: detail)
 
         #expect(draft.description == "")
+    }
+
+    @Test("저장된 컬렉션이 제한을 넘으면 넘는 부분을 잘라 채운다")
+    func editingCutsOverLimitValues() {
+        // 넘치는 마지막 글자만 다르게 둬서, 잘려 나간 쪽이 뒤인지 확인한다.
+        let detail = makeDetail(
+            name: String(repeating: "가", count: 20) + "나",
+            description: String(repeating: "가", count: 60) + "나",
+            novelIDs: (1...101).map { NovelID($0) }
+        )
+
+        let draft = CollectionDraft(from: detail)
+
+        #expect(draft.name == String(repeating: "가", count: 20))
+        #expect(draft.description == String(repeating: "가", count: 60))
+        #expect(draft.novelIDs == (1...100).map { NovelID($0) })
     }
 
     // MARK: - 작품
@@ -190,7 +192,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == [NovelID(2)])
     }
 
-    @Test("대표 작품을 빼면 대표 지정도 풀린다")
+    @Test("대표로 고른 작품을 빼면 대표 선택도 풀린다")
     func removingRepresentativeClearsIt() {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
 
@@ -247,7 +249,7 @@ struct CollectionDraftTests {
         #expect(draft.novelIDs == [NovelID(1)])
     }
 
-    @Test("대표 작품이 새 목록에 없으면 대표 지정이 풀린다")
+    @Test("대표로 고른 작품이 새 목록에 없으면 대표 선택도 풀린다")
     func settingNovelsWithoutRepresentativeClearsIt() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
 
@@ -256,7 +258,7 @@ struct CollectionDraftTests {
         #expect(draft.representativeNovelID == nil)
     }
 
-    @Test("대표 작품이 새 목록에도 있으면 대표는 그대로다")
+    @Test("대표로 고른 작품이 새 목록에도 있으면 대표 선택은 그대로다")
     func settingNovelsWithRepresentativeKeepsIt() throws {
         var draft = makeDraft(novelIDs: [NovelID(1), NovelID(2)], representativeNovelID: NovelID(1))
 
@@ -322,8 +324,8 @@ struct CollectionDraftTests {
         #expect(draft.isPrivate == false)
     }
 
-    @Test("나만 보기를 바꾸면 반대가 된다")
-    func togglingPrivateFlipsIt() {
+    @Test("꺼진 나만 보기를 누르면 켜진다")
+    func togglingPrivateTurnsItOn() {
         var draft = makeDraft(isPrivate: false)
 
         draft.togglePrivate()
