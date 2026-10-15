@@ -62,6 +62,17 @@ private final class LocalNameCollector: SyntaxVisitor {
         names.insert(node.identifier.text)
         return .skipChildren
     }
+
+    // 클로저 매개변수(`{ result, item in … }`)도 그 클로저의 지역 값이다.
+    override func visit(_ node: ClosureShorthandParameterSyntax) -> SyntaxVisitorContinueKind {
+        names.insert(node.name.text)
+        return .skipChildren
+    }
+
+    override func visit(_ node: ClosureParameterSyntax) -> SyntaxVisitorContinueKind {
+        names.insert((node.secondName ?? node.firstName).text)
+        return .skipChildren
+    }
 }
 
 /// 저장 프로퍼티에 대입·`+=`·`append`/`insert` 같은 상태 변경을 하는가. 지역 변수를 바꾸는 것은 세지 않는다.
@@ -111,8 +122,12 @@ private final class MutationFinder: SyntaxVisitor {
             return isStored(base)
         }
         if let reference = expression.as(DeclReferenceExprSyntax.self) {
+            // `$0`·`$1`은 클로저 매개변수다.
+            if case .dollarIdentifier = reference.baseName.tokenKind { return false }
             return !locals.contains(reference.baseName.text)
         }
+        // `_ = value`는 버리는 것이지 기록이 아니다.
+        if expression.is(DiscardAssignmentExprSyntax.self) { return false }
         return true
     }
 }
