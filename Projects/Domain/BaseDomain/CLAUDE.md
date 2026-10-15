@@ -69,5 +69,5 @@
   UseCase만 재시도 없이 조용히 빈 값으로 폴백한다 — 앱 첫 설치 직후처럼 `syncKeywords()`(fire-and-forget,
   `App/CLAUDE.md`)가 아직 안 끝난 시점에 실제로 겪은 증상).
 - **테스트가 일부러 없는 UseCase**(#293): `LoadPopularKeywordsUseCase`·`OnboardingHintUseCase`는 저장소에 넘기기만 해서 지킬 규칙이 없다 — 다시 넣으면 ArchLint `test-passthrough`가 막는다. 그 테스트만 쓰던 `MockOnboardingHintRepository`도 지웠다.
-- **`MockKeywordRepository`는 "동기화했는지"로 답을 바꾼다**(#293) — 조회(`fetchKeywords`·`searchKeywords`)는 호출을 기록하지 않고, 동기화 전엔 `…Result`, 동기화 뒤엔 `…ResultAfterSync`를 돌려준다. "캐시 실패 → 동기화 → 다시 조회"는 몇 번 불렀는지가 아니라 **동기화 뒤 값을 받았는지**로 확인한다. 조회 호출 횟수를 다시 세게 만들지 말 것(`test-double-query`). 동기화는 명령이라 `syncKeywordsCallCount`를 센다(SplashData 테스트가 쓴다).
+- **`MockKeywordRepository`는 "동기화했는지"로 답을 바꾼다**(#293) — 조회(`fetchKeywords`·`searchKeywords`)는 호출을 기록하지 않고, 동기화 전엔 `…Result`, 동기화 뒤엔 `…ResultAfterSync`를 돌려준다. 검색은 **검색어마다** 답을 정해 두고(`searchKeywordsResults["회귀"]`), 정해 두지 않은 검색어엔 빈 목록을 준다 — 검색어를 저장소에 제대로 넘기는지가 결과로 드러난다. "캐시 실패 → 동기화 → 다시 조회"는 몇 번 불렀는지가 아니라 **동기화 뒤 값을 받았는지**로 확인한다. 조회 호출 횟수를 다시 세게 만들지 말 것(`test-double-query`). 동기화는 명령이라 `syncKeywordsCallCount`를 센다(BaseDomain·NovelDomain·SplashData 테스트가 쓴다).
 - **`ReadingPeriod.init`의 `calendar`**(#293)는 테스트용이다 — 미래 날짜 판정이 일 단위라 기기 시간대에 따라 결과가 갈린다. 앱 코드는 기본값(`.current`)을 쓰고, 테스트는 서울 달력을 넘긴다.
