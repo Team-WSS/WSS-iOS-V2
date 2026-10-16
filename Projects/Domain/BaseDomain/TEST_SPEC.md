@@ -20,6 +20,8 @@
 
 `Tests/Entity/DeepLinkTests.swift`
 
+### 링크 만들기
+
 - 컬렉션 상세 링크는 websoso 스킴, collections 주소, id 하나로 만든다
 - 작품·피드·알림 상세는 링크를 만들지 않는다
   - `DeepLink.novelDetail(NovelID(7))` — 푸시로 받기만 한다
@@ -30,6 +32,9 @@
   - `DeepLink.novelDetail(NovelID(7))` — 푸시로 받기만 한다
   - `.feedDetail(FeedID(7))` — 푸시로 받기만 한다
   - `.notificationDetail(NotificationID(7))` — 푸시로 받기만 한다
+
+### 링크 읽기
+
 - 주소가 화면 종류를, 경로의 숫자가 id를 정한다
   - `("websoso://collections/1", DeepLink.collectionDetail(CollectionID(1)))` — 컬렉션 상세. 가장 작은 id도 읽는다
   - `("websoso://novels/22", .novelDetail(NovelID(22)))` — 작품 상세
@@ -47,6 +52,9 @@
 - id가 없거나 경로가 더 붙어 있으면 읽지 않는다
   - `"websoso://collections"` — id가 없다
   - `"websoso://collections/22/extra"` — id 뒤에 경로가 더 있다
+
+### 카카오톡 링크 읽기
+
 - 카카오톡 링크의 컬렉션 id를 읽어 컬렉션 상세로 간다
 - 카카오톡 링크는 스킴이 무엇이든 읽는다
 - 카카오톡 링크에 컬렉션 id가 없거나 양의 정수가 아니면 읽지 않는다
@@ -54,6 +62,9 @@
   - `"kakao1234abcd://kakaolink?collectionId=abc"` — 숫자가 아니다
   - `"kakao1234abcd://kakaolink?collectionId=0"` — 서버가 주는 id는 1부터다
   - `"kakao1234abcd://kakaolink?collectionId=-1"` — 음수다
+
+### 푸시 알림 읽기
+
 - 푸시의 화면 종류에 맞는 id로 상세를 연다
   - `(["view": "novelDetail", "novelId": "12345", "feedId": ""], DeepLink.novelDetail(NovelID(12345)))` — 작품 상세. 서버는 다른 id를 빈 값으로 함께 보내기도 한다.
   - `(["view": "feedDetail", "feedId": "42", "novelId": ""], .feedDetail(FeedID(42)))` — 피드 상세
