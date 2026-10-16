@@ -19,17 +19,32 @@ public enum TestSpecDocument {
             let collector = SpecTestCollector()
             collector.walk(file.tree)
             let fileName = file.path.components(separatedBy: "/Tests/").last ?? file.path
-            for suite in collector.suites {
-                let tests = collector.tests.filter { $0.suiteID == suite.node.id }
-                guard !tests.isEmpty else { continue }
-                lines += ["", "## \(suite.displayName ?? "(이름 없음)")", "", "`Tests/\(fileName)`", ""]
-                for test in tests {
-                    lines.append("- \(test.displayName ?? test.function.name.text)")
-                    lines += argumentLines(test.arguments)
-                }
+            for suite in collector.suites where suite.parentID == nil {
+                lines += suiteLines(suite, depth: 0, fileName: fileName, collector: collector)
             }
         }
         return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// 스위트 하나와 그 안의 하위 스위트. 하위 스위트는 제목을 한 단계씩 내려 부모 아래에 둔다.
+    /// 파일 경로는 맨 위 스위트에만 적고, 테스트가 하나도 없는 스위트는 뺀다.
+    private static func suiteLines(_ suite: SpecSuite, depth: Int, fileName: String, collector: SpecTestCollector) -> [String] {
+        let tests = collector.tests.filter { $0.suiteID == suite.node.id }
+        let children = collector.suites
+            .filter { $0.parentID == suite.node.id }
+            .flatMap { suiteLines($0, depth: depth + 1, fileName: fileName, collector: collector) }
+        guard !tests.isEmpty || !children.isEmpty else { return [] }
+
+        let heading = String(repeating: "#", count: min(depth + 2, 6))
+        var lines = ["", "\(heading) \(suite.displayName ?? "(이름 없음)")", ""]
+        if depth == 0 { lines += ["`Tests/\(fileName)`", ""] }
+        // 직접 붙은 테스트가 없으면 하위 스위트의 앞 빈 줄과 겹치지 않게 뺀다.
+        if tests.isEmpty { lines.removeLast() }
+        for test in tests {
+            lines.append("- \(test.displayName ?? test.function.name.text)")
+            lines += argumentLines(test.arguments)
+        }
+        return lines + children
     }
 
     /// `arguments:` 항목을 하위 목록으로. 배열이 아니면(`X.allCases`) 식을 그대로 적는다.
