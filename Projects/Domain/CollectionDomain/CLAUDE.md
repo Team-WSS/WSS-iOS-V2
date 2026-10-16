@@ -58,4 +58,8 @@
   반영할 땐 편도 append 여러 번이 아니라 한 번에 전체를 새 목록으로 바꾸는 게 계약에 맞는다. count
   상한은 `addNovel`과 같은 `novelOverLimit` throw(선택 화면이 UI에서 이미 100개로 막아두므로 실사용
   경로는 아니지만, "사용자 입력은 거부"라는 `updateName` 방침과 일관되게 clamp 대신 throw를 골랐다).
-  대표 작품이 새 목록에서 빠지면 `removeNovel`과 동일하게 대표 지정도 함께 풀린다.
+  대표 작품이 새 목록에서 빠지면 `removeNovel`과 동일하게 대표 지정도 함께 풀린다. 같은 작품이 두 번 들어오면
+  `addNovel`과 같은 `duplicatedNovel`로 거부한다(#293 — 전엔 통째 교체만 중복을 통과시켜 들어오는 길마다 규칙이 갈렸다).
+- UseCase 8개(조회 4·생성·수정·삭제·좋아요)는 **일부러 테스트가 없다**(#293). 저장소에 넘기기만 해서 이 모듈에서 지킬 규칙이 없다 —
+  다시 넣으면 ArchLint `test-passthrough`가 막는다. 그래서 `.testing` 타깃(`MockCollectionRepository`)도 없앴다.
+  UseCase에 분기나 조합이 생기면 그때 테스트와 Stub/Mock을 만든다.

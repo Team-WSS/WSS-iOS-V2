@@ -25,6 +25,24 @@ let package = Package(
         .testTarget(
             name: "ArchLintCoreTests",
             dependencies: ["ArchLintCore"]
+        ),
+        // 뮤테이션 도구(#293) — 소스에 버그를 하나씩 심어 테스트가 잡는지 본다.
+        // 넘기기만 하는 UseCase 판정을 ArchLintCore와 공유한다.
+        .target(
+            name: "MutationCore",
+            dependencies: [
+                "ArchLintCore",
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax")
+            ]
+        ),
+        .executableTarget(
+            name: "Mutate",
+            dependencies: ["MutationCore"]
+        ),
+        .testTarget(
+            name: "MutationCoreTests",
+            dependencies: ["MutationCore"]
         )
     ]
 )

@@ -22,10 +22,11 @@ Projects/Domain/<Module>Domain/
 │   ├── Entity/        # 도메인 모델 (struct, 정책 메서드 포함)
 │   ├── UseCase/       # 비즈니스 흐름 (프로토콜 + Default 구현)
 │   └── Repository/    # 데이터 접근 계약 (프로토콜만)
-├── Testing/           # Mock[Repository].swift
+├── TEST_SPEC.md       # 자동 생성 테스트 목록(ArchLint --write-test-specs, 손으로 고치지 않음) — 테스트 규칙이 켜진 모듈만
+├── Testing/           # Mock[Repository].swift — 가짜 객체가 필요한 모듈만
 └── Tests/
     ├── Entity/
-    └── Usecase/
+    └── UseCase/
 ```
 
 ## 코드 규칙
@@ -93,15 +94,16 @@ public final class DefaultLoadNovelUseCase: LoadNovelUseCase {
 
 ## 테스트 (필수 — 이 레이어 한정)
 
-새 UseCase·Entity·정책 메서드는 **테스트 없이 머지 금지**.
+분기·검증·계산이 있는 Entity·정책·UseCase는 **테스트 없이 머지 금지**. 저장소 호출을 넘기기만 하는 UseCase는 테스트하지 않는다.
 
 > 📖 **테스트를 작성/수정하기 전에 [docs/TESTING.md](../../docs/TESTING.md)를 먼저 읽어라.**
-> (철학 "테스트=읽히는 명세", 명세형 네이밍, Mock 패턴, 예시 전부 거기에 있음)
+> (5원칙과 그 이유, 작업 순서, 사람이 판단할 곳, Stub/Mock, 예시가 거기 있음. 검사 규칙 목록은 `Tooling/ArchLint/README.md`)
 
 빠른 요약:
-- **Swift Testing** (`@Test`/`#expect`/`@Suite`), XCTest 금지. Mock은 `Testing/`(`<Module>DomainTesting` 타깃).
-- `@Test("한글 명세 문장") func englishName()` — 이름이 곧 명세.
-- CI: PR에 `/domain-test` 댓글 → `Projects/Domain` 폴더 자동 스캔. ⚠️ 빈/잔재 폴더는 매트릭스를 깨뜨림.
+- **Swift Testing** (`@Test`/`#expect`/`@Suite`), XCTest·`@testable import` 금지. 가짜 객체는 `Testing/`(`<Module>DomainTesting` 타깃) — 조회는 Stub, 명령은 Mock.
+- `@Suite("기능")` 안에 `@Test("~다")` — 이름이 곧 명세. 테스트 목록은 모듈 루트 `TEST_SPEC.md`로 PR에 보인다.
+- ArchLint 테스트 규칙과 `TEST_SPEC.md`는 아직 **일부 모듈에만** 켜져 있다(`TestSpecScope.modules`, TESTING.md "적용 범위"). 안 켜진 모듈도 새 테스트는 같은 기준으로 쓴다.
+- CI: develop 대상 PR마다 자동 실행(`Project.swift`에 `.tests` 선언한 정식 모듈만 — 유령 폴더는 자동 제외).
 
 ## 주의사항 (작업 중 발견 시 누적)
 

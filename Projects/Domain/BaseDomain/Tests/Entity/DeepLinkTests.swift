@@ -8,242 +8,217 @@
 import Foundation
 import Testing
 
-@testable import BaseDomain
+import BaseDomain
 
-@Suite
+@Suite("딥링크")
 struct DeepLinkTests {
 
-    // MARK: - url
+    @Suite("링크 만들기")
+    struct MakingLink {
 
-    // ⚠️ 설명에 `://`·`/`를 넣지 않는다 — 테스트 리포터가 `/`를 스위트 구분자로 오인해 이름이 쪼개진다(실측).
-    @Test("컬렉션 상세 딥링크의 url은 websoso 스킴, collections host, 그 뒤 id 하나로 이뤄진다")
-    func collectionDetailURLFormat() {
-        let deepLink = DeepLink.collectionDetail(CollectionID(31))
+        @Test("컬렉션 상세 링크는 websoso 스킴, collections 주소, id 하나로 만든다")
+        func collectionDetailMakesURL() {
+            let link = DeepLink.collectionDetail(CollectionID(22))
 
-        #expect(deepLink.url?.absoluteString == "websoso://collections/31")
+            #expect(link.url == URL(string: "websoso://collections/22"))
+        }
+
+        @Test(
+            "작품·피드·알림 상세는 링크를 만들지 않는다",
+            arguments: [
+                DeepLink.novelDetail(NovelID(7)),               // 푸시로 받기만 한다
+                .feedDetail(FeedID(7)),                         // 푸시로 받기만 한다
+                .notificationDetail(NotificationID(7))          // 푸시로 받기만 한다
+            ]
+        )
+        func pushOnlyLinksMakeNoURL(link: DeepLink) {
+            let url = link.url
+
+            #expect(url == nil)
+        }
+
+        @Test("컬렉션 상세의 카카오 공유 값에는 컬렉션 id 하나만 담는다")
+        func collectionDetailMakesKakaoParameters() {
+            let link = DeepLink.collectionDetail(CollectionID(22))
+
+            #expect(link.kakaoExecutionParameters == ["collectionId": "22"])
+        }
+
+        @Test(
+            "작품·피드·알림 상세는 카카오 공유 값이 비어 있다",
+            arguments: [
+                DeepLink.novelDetail(NovelID(7)),               // 푸시로 받기만 한다
+                .feedDetail(FeedID(7)),                         // 푸시로 받기만 한다
+                .notificationDetail(NotificationID(7))          // 푸시로 받기만 한다
+            ]
+        )
+        func pushOnlyLinksMakeNoKakaoParameters(link: DeepLink) {
+            let parameters = link.kakaoExecutionParameters
+
+            #expect(parameters.isEmpty)
+        }
     }
 
-    // MARK: - init(url:)
+    @Suite("링크 읽기")
+    struct ReadingURL {
 
-    @Test("websoso 스킴에 collections host와 정수 id가 붙은 URL을 파싱하면 그 id의 컬렉션 상세 딥링크가 된다")
-    func parseCollectionDetail() {
-        let url = makeURL("websoso://collections/31")
+        @Test(
+            "주소가 화면 종류를, 경로의 숫자가 id를 정한다",
+            arguments: [
+                ("websoso://collections/1", DeepLink.collectionDetail(CollectionID(1))),       // 컬렉션 상세. 가장 작은 id도 읽는다
+                ("websoso://novels/22", .novelDetail(NovelID(22))),                            // 작품 상세
+                ("websoso://feeds/22", .feedDetail(FeedID(22))),                               // 피드 상세
+                ("websoso://notifications/22", .notificationDetail(NotificationID(22)))        // 알림 상세
+            ]
+        )
+        func hostAndPathDecideLink(rawURL: String, expected: DeepLink) {
+            let link = DeepLink(url: makeURL(rawURL))
 
-        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
+            #expect(link == expected)
+        }
+
+        @Test("스킴과 주소는 대소문자를 가리지 않는다")
+        func schemeAndHostIgnoreCase() {
+            let link = DeepLink(url: makeURL("WEBSOSO://Collections/22"))
+
+            #expect(link == .collectionDetail(CollectionID(22)))
+        }
+
+        @Test("websoso가 아닌 스킴은 읽지 않는다")
+        func otherSchemeIsIgnored() {
+            let link = DeepLink(url: makeURL("https://collections/22"))
+
+            #expect(link == nil)
+        }
+
+        @Test(
+            "모르는 주소나 주소가 없는 링크는 읽지 않는다",
+            arguments: [
+                "websoso://comments/22",  // 모르는 주소
+                "websoso:///22"           // 주소가 없다
+            ]
+        )
+        func unknownOrMissingHostIsIgnored(rawURL: String) {
+            let link = DeepLink(url: makeURL(rawURL))
+
+            #expect(link == nil)
+        }
+
+        @Test(
+            "id가 양의 정수가 아니면 읽지 않는다",
+            arguments: [
+                "abc",  // 숫자가 아니다
+                "0",    // 서버가 주는 id는 1부터다
+                "-1"    // 음수다
+            ]
+        )
+        func nonPositiveIDIsIgnored(rawID: String) {
+            let link = DeepLink(url: makeURL("websoso://collections/\(rawID)"))
+
+            #expect(link == nil)
+        }
+
+        @Test(
+            "id가 없거나 경로가 더 붙어 있으면 읽지 않는다",
+            arguments: [
+                "websoso://collections",           // id가 없다
+                "websoso://collections/22/extra"   // id 뒤에 경로가 더 있다
+            ]
+        )
+        func missingIDOrExtraPathIsIgnored(rawURL: String) {
+            let link = DeepLink(url: makeURL(rawURL))
+
+            #expect(link == nil)
+        }
     }
 
-    @Test("딥링크가 만든 url을 다시 파싱하면 원래 딥링크와 같다")
-    func roundTrip() throws {
-        let original = DeepLink.collectionDetail(CollectionID(7))
+    @Suite("카카오톡 링크 읽기")
+    struct ReadingKakaoLink {
 
-        let url = try #require(original.url)
+        @Test("카카오톡 링크의 컬렉션 id를 읽어 컬렉션 상세로 간다")
+        func kakaoLinkOpensCollection() {
+            let link = DeepLink(url: makeURL("kakao1234abcd://kakaolink?collectionId=22"))
 
-        #expect(DeepLink(url: url) == original)
+            #expect(link == .collectionDetail(CollectionID(22)))
+        }
+
+        @Test("카카오톡 링크는 스킴이 무엇이든 읽는다")
+        func kakaoLinkIgnoresScheme() {
+            // 스킴의 앱 키는 앱 설정에만 있어 이 모듈은 모른다. 등록된 스킴만 앱에 오므로 검사하지 않는다.
+            let link = DeepLink(url: makeURL("anything://kakaolink?collectionId=22"))
+
+            #expect(link == .collectionDetail(CollectionID(22)))
+        }
+
+        @Test(
+            "카카오톡 링크에 컬렉션 id가 없거나 양의 정수가 아니면 읽지 않는다",
+            arguments: [
+                "kakao1234abcd://kakaolink",                     // 컬렉션 id가 없다
+                "kakao1234abcd://kakaolink?collectionId=abc",    // 숫자가 아니다
+                "kakao1234abcd://kakaolink?collectionId=0",      // 서버가 주는 id는 1부터다
+                "kakao1234abcd://kakaolink?collectionId=-1"      // 음수다
+            ]
+        )
+        func kakaoLinkWithoutValidIDIsIgnored(rawURL: String) {
+            let link = DeepLink(url: makeURL(rawURL))
+
+            #expect(link == nil)
+        }
     }
 
-    @Test("스킴과 host는 대소문자를 가리지 않는다")
-    func parseIsCaseInsensitive() {
-        let url = makeURL("WEBSOSO://Collections/31")
+    @Suite("푸시 알림 읽기")
+    struct ReadingPush {
 
-        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
-    }
+        @Test(
+            "푸시의 화면 종류에 맞는 id로 상세를 연다",
+            arguments: [
+                // 작품 상세. 서버는 다른 id를 빈 값으로 함께 보내기도 한다.
+                (["view": "novelDetail", "novelId": "12345", "feedId": ""], DeepLink.novelDetail(NovelID(12345))),
+                // 피드 상세
+                (["view": "feedDetail", "feedId": "42", "novelId": ""], .feedDetail(FeedID(42))),
+                // 알림 상세(공지). 실제 공지 푸시는 알림 id만 있고 작품 id 키는 없다(#243).
+                (["view": "notificationDetail", "notificationId": "3853"], .notificationDetail(NotificationID(3853)))
+            ]
+        )
+        func pushOpensDetailForView(payload: [String: String], expected: DeepLink) {
+            let link = DeepLink.fromNotificationPayload(payload)
 
-    @Test("websoso 스킴이 아니면 nil이다")
-    func nilWhenSchemeDiffers() {
-        let url = makeURL("https://collections/31")
+            #expect(link == expected)
+        }
 
-        #expect(DeepLink(url: url) == nil)
-    }
+        @Test(
+            "모르는 화면 종류이거나 화면 종류가 없으면 읽지 않는다",
+            arguments: [
+                ["view": "commentDetail", "novelId": "7"],  // 모르는 화면 종류
+                ["novelId": "7"]                            // 화면 종류가 없다
+            ]
+        )
+        func unknownOrMissingViewIsIgnored(payload: [String: String]) {
+            let link = DeepLink.fromNotificationPayload(payload)
 
-    @Test("모르는 host면 nil이다")
-    func nilWhenHostUnknown() {
-        let url = makeURL("websoso://comments/31")
+            #expect(link == nil)
+        }
 
-        #expect(DeepLink(url: url) == nil)
-    }
+        @Test(
+            "화면 종류에 맞는 id가 없거나 양의 정수가 아니면 읽지 않는다",
+            arguments: [
+                ["view": "notificationDetail", "novelId": "7"],  // 화면 종류와 다른 id만 있다
+                ["view": "novelDetail", "novelId": ""],           // id가 비었다
+                ["view": "novelDetail", "novelId": "abc"],        // 숫자가 아니다
+                ["view": "novelDetail", "novelId": "0"],          // 서버가 주는 id는 1부터다
+                ["view": "novelDetail", "novelId": "-1"]          // 음수다
+            ]
+        )
+        func pushWithoutValidIDIsIgnored(payload: [String: String]) {
+            let link = DeepLink.fromNotificationPayload(payload)
 
-    @Test("id가 정수가 아니면 nil이다")
-    func nilWhenIDNotInteger() {
-        let url = makeURL("websoso://collections/abc")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("id가 없으면 nil이다")
-    func nilWhenIDMissing() {
-        let url = makeURL("websoso://collections")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("id 뒤에 경로가 더 붙어 있으면 nil이다")
-    func nilWhenExtraPath() {
-        let url = makeURL("websoso://collections/31/extra")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("id가 0이거나 음수면 nil이다 — 서버 발급 ID는 양수뿐이다", arguments: ["0", "-1"])
-    func nilWhenIDNotPositive(rawID: String) {
-        let url = makeURL("websoso://collections/\(rawID)")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("host가 없으면 nil이다")
-    func nilWhenHostEmpty() {
-        let url = makeURL("websoso:///31")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    // MARK: - kakaoExecutionParameters (카카오톡 공유 카드)
-
-    @Test("컬렉션 상세 딥링크의 카카오 execution params는 collectionId 키에 id 문자열 하나다")
-    func kakaoExecutionParametersFormat() {
-        let deepLink = DeepLink.collectionDetail(CollectionID(31))
-
-        #expect(deepLink.kakaoExecutionParameters == ["collectionId": "31"])
-    }
-
-    @Test("카카오톡이 여는 kakaolink host URL의 collectionId 쿼리를 파싱하면 그 id의 컬렉션 상세 딥링크가 된다")
-    func parseKakaoLink() {
-        let url = makeURL("kakaoabc123://kakaolink?collectionId=31")
-
-        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
-    }
-
-    @Test("카카오 execution params를 kakaolink URL 쿼리로 되돌려 파싱하면 원래 딥링크와 같다")
-    func kakaoRoundTrip() throws {
-        let original = DeepLink.collectionDetail(CollectionID(7))
-        var components = try #require(URLComponents(string: "kakaoabc123://kakaolink"))
-        components.queryItems = original.kakaoExecutionParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
-
-        let url = try #require(components.url)
-
-        #expect(DeepLink(url: url) == original)
-    }
-
-    @Test("kakaolink host는 스킴이 무엇이든 파싱한다")
-    func parseKakaoLinkIgnoresScheme() {
-        let url = makeURL("KAKAOXYZ://KakaoLink?collectionId=31")
-
-        #expect(DeepLink(url: url) == .collectionDetail(CollectionID(31)))
-    }
-
-    @Test("kakaolink host인데 collectionId 쿼리가 없으면 nil이다")
-    func nilWhenKakaoLinkMissingCollectionID() {
-        let url = makeURL("kakaoabc123://kakaolink?novelId=31")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("kakaolink host의 collectionId가 정수가 아니면 nil이다")
-    func nilWhenKakaoLinkCollectionIDNotInteger() {
-        let url = makeURL("kakaoabc123://kakaolink?collectionId=abc")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("kakaolink host의 collectionId가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
-    func nilWhenKakaoLinkCollectionIDNotPositive(rawID: String) {
-        let url = makeURL("kakaoabc123://kakaolink?collectionId=\(rawID)")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    // MARK: - 작품·피드 상세 딥링크 init(url:) (#243)
-
-    @Test("websoso 스킴에 novels host와 정수 id가 붙은 URL을 파싱하면 그 id의 작품 상세 딥링크가 된다")
-    func parseNovelDetail() {
-        let url = makeURL("websoso://novels/12345")
-
-        #expect(DeepLink(url: url) == .novelDetail(NovelID(12345)))
-    }
-
-    @Test("websoso 스킴에 feeds host와 정수 id가 붙은 URL을 파싱하면 그 id의 피드 상세 딥링크가 된다")
-    func parseFeedDetail() {
-        let url = makeURL("websoso://feeds/67890")
-
-        #expect(DeepLink(url: url) == .feedDetail(FeedID(67890)))
-    }
-
-    @Test("novels host의 id가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
-    func nilWhenNovelIDNotPositive(rawID: String) {
-        let url = makeURL("websoso://novels/\(rawID)")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("websoso 스킴에 notifications host와 정수 id가 붙은 URL을 파싱하면 그 id의 알림 상세 딥링크가 된다")
-    func parseNotificationDetail() {
-        let url = makeURL("websoso://notifications/3853")
-
-        #expect(DeepLink(url: url) == .notificationDetail(NotificationID(3853)))
-    }
-
-    @Test("notifications host의 id가 0이거나 음수면 nil이다", arguments: ["0", "-1"])
-    func nilWhenNotificationIDNotPositive(rawID: String) {
-        let url = makeURL("websoso://notifications/\(rawID)")
-
-        #expect(DeepLink(url: url) == nil)
-    }
-
-    @Test("작품·피드·알림 상세 딥링크는 outbound url을 만들지 않는다 — 푸시로 받기만 한다")
-    func novelAndFeedHaveNoOutboundURL() {
-        #expect(DeepLink.novelDetail(NovelID(1)).url == nil)
-        #expect(DeepLink.feedDetail(FeedID(1)).url == nil)
-        #expect(DeepLink.notificationDetail(NotificationID(1)).url == nil)
-    }
-
-    // MARK: - 푸시 payload 파싱 fromNotificationPayload (#243)
-
-    @Test("view가 novelDetail이고 novelId가 있으면 그 작품 상세 딥링크가 된다")
-    func parsePayloadNovelDetail() {
-        let payload = ["view": "novelDetail", "novelId": "12345", "feedId": "", "notificationId": "67890"]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == .novelDetail(NovelID(12345)))
-    }
-
-    @Test("view가 feedDetail이고 feedId가 있으면 그 피드 상세 딥링크가 된다")
-    func parsePayloadFeedDetail() {
-        let payload = ["view": "feedDetail", "feedId": "42", "novelId": ""]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == .feedDetail(FeedID(42)))
-    }
-
-    // 공지 push 실측 형태(#243): view=notificationDetail + notificationId만 채워지고 novelId 키는 없다.
-    @Test("view가 notificationDetail이고 notificationId가 있으면 그 알림 상세 딥링크가 된다")
-    func parsePayloadNotificationDetail() {
-        let payload = ["view": "notificationDetail", "notificationId": "3853", "feedId": ""]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == .notificationDetail(NotificationID(3853)))
-    }
-
-    @Test("모르는 view면 nil이다")
-    func nilWhenPayloadViewUnknown() {
-        let payload = ["view": "commentDetail", "notificationId": "1"]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == nil)
-    }
-
-    @Test("view는 맞지만 해당 id가 비었거나 정수가 아니면 nil이다", arguments: ["", "abc", "0", "-1"])
-    func nilWhenPayloadIDInvalid(rawID: String) {
-        let payload = ["view": "novelDetail", "novelId": rawID]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == nil)
-    }
-
-    @Test("view 키가 없으면 nil이다")
-    func nilWhenPayloadViewMissing() {
-        let payload = ["novelId": "12345"]
-
-        #expect(DeepLink.fromNotificationPayload(payload) == nil)
+            #expect(link == nil)
+        }
     }
 }
 
-private extension DeepLinkTests {
-    func makeURL(_ string: String) -> URL {
-        URL(string: string)!
-    }
+// MARK: - Helpers
+
+private func makeURL(_ raw: String) -> URL {
+    URL(string: raw)!
 }

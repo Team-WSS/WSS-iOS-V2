@@ -10,54 +10,31 @@ import Foundation
 
 import BaseDomain
 
+/// 키워드 저장소 가짜 객체.
+/// 조회(`fetchKeywords`·`searchKeywords`·`fetchPopularKeywords`)는 정해 둔 값만 돌려주고 호출을 기록하지 않는다(Stub).
+/// 검색은 **검색어마다** 답을 정해 둔다 — 정해 두지 않은 검색어엔 빈 목록을 준다. 그래서 검색어를 잘못 넘기면 결과가 달라진다.
+/// 실제 저장소처럼 **동기화했는지에 따라** 답이 바뀐다 — 동기화 전엔 `…Result`, 동기화 뒤엔 `…ResultAfterSync`(없으면 `…Result`).
+/// 동기화(`syncKeywords`)는 명령이라 호출 횟수를 기록한다(Mock).
 public final class MockKeywordRepository: KeywordRepository {
     public var fetchKeywordsResult: Result<[KeywordGroup], RepositoryError> = .success([])
-    /// 설정하면 `fetchKeywords()` 호출마다 순서대로 하나씩 소비한다(마지막 값은 이후 호출에 계속 반환).
-    /// 캐시 미스 → 동기화 → 재조회처럼 호출마다 결과가 달라야 하는 시나리오 검증용. 미설정 시 `fetchKeywordsResult`를 매번 사용.
-    public var fetchKeywordsResults: [Result<[KeywordGroup], RepositoryError>]?
-    public var searchKeywordsResult: Result<[KeywordGroup], RepositoryError> = .success([])
-    /// 설정하면 `searchKeywords(_:)` 호출마다 순서대로 하나씩 소비한다(마지막 값은 이후 호출에 계속 반환).
-    /// 캐시 미스 → 동기화 → 재조회처럼 호출마다 결과가 달라야 하는 시나리오 검증용. 미설정 시 `searchKeywordsResult`를 매번 사용.
-    public var searchKeywordsResults: [Result<[KeywordGroup], RepositoryError>]?
+    public var fetchKeywordsResultAfterSync: Result<[KeywordGroup], RepositoryError>?
+    public var searchKeywordsResults: [String: Result<[KeywordGroup], RepositoryError>] = [:]
+    public var searchKeywordsResultsAfterSync: [String: Result<[KeywordGroup], RepositoryError>] = [:]
     public var fetchPopularKeywordsResult: Result<PopularKeywords, RepositoryError> = .success(PopularKeywords(keywords: []))
 
-    public private(set) var fetchKeywordsCallCount = 0
     public private(set) var syncKeywordsCallCount = 0
-    public private(set) var searchKeywordsCallCount = 0
-    public private(set) var searchedQueries: [String] = []
-    public private(set) var fetchPopularKeywordsCallCount = 0
 
     public init() {}
 
     public func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] {
-        fetchKeywordsCallCount += 1
-        let result: Result<[KeywordGroup], RepositoryError>
-        if let sequence = fetchKeywordsResults, !sequence.isEmpty {
-            let index = min(fetchKeywordsCallCount, sequence.count) - 1
-            result = sequence[index]
-        } else {
-            result = fetchKeywordsResult
-        }
-        switch result {
-        case .success(let value): return value
-        case .failure(let error): throw error
-        }
+        try Self.value(of: currentResult(before: fetchKeywordsResult, after: fetchKeywordsResultAfterSync))
     }
 
     public func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] {
-        searchedQueries.append(query)
-        searchKeywordsCallCount += 1
-        let result: Result<[KeywordGroup], RepositoryError>
-        if let sequence = searchKeywordsResults, !sequence.isEmpty {
-            let index = min(searchKeywordsCallCount, sequence.count) - 1
-            result = sequence[index]
-        } else {
-            result = searchKeywordsResult
-        }
-        switch result {
-        case .success(let value): return value
-        case .failure(let error): throw error
-        }
+        try Self.value(of: currentResult(
+            before: searchKeywordsResults[query] ?? .success([]),
+            after: searchKeywordsResultsAfterSync[query]
+        ))
     }
 
     public func syncKeywords() async {
@@ -65,8 +42,19 @@ public final class MockKeywordRepository: KeywordRepository {
     }
 
     public func fetchPopularKeywords() async throws(RepositoryError) -> PopularKeywords {
-        fetchPopularKeywordsCallCount += 1
-        switch fetchPopularKeywordsResult {
+        try Self.value(of: fetchPopularKeywordsResult)
+    }
+
+    private func currentResult<Value>(
+        before: Result<Value, RepositoryError>,
+        after: Result<Value, RepositoryError>?
+    ) -> Result<Value, RepositoryError> {
+        guard syncKeywordsCallCount > 0, let after else { return before }
+        return after
+    }
+
+    private static func value<Value>(of result: Result<Value, RepositoryError>) throws(RepositoryError) -> Value {
+        switch result {
         case .success(let value): return value
         case .failure(let error): throw error
         }

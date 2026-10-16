@@ -20,8 +20,13 @@ public struct ReadingPeriod: Equatable, Sendable {
     /// - 적어도 한쪽은 존재.
     ///
     /// `notAfter` 비교는 **일(day) 단위**다. 순간 단위로 비교하면 자정 근처에서 같은 날 날짜가 미래로 오판된다.
-    public init(start: Date?, end: Date?, notAfter limit: Date = Date()) throws {
-        let calendar = Calendar.current
+    /// 날짜를 가르는 기준은 `calendar`(기본 기기 달력)다. 테스트는 시간대를 고정한 달력을 넘긴다.
+    public init(
+        start: Date?,
+        end: Date?,
+        notAfter limit: Date = Date(),
+        calendar: Calendar = .current
+    ) throws {
         func isAfterLimit(_ date: Date) -> Bool {
             calendar.compare(date, to: limit, toGranularity: .day) == .orderedDescending
         }

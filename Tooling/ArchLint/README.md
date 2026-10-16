@@ -9,9 +9,10 @@
 
 ## 구조
 
-- `Sources/ArchLintCore/` — 규칙 12개(파일 단위 9 + 모듈 단위 3) + 스캔/파싱 로직(라이브러리)
+- `Sources/ArchLintCore/` — 아키텍처 규칙 12개 + 테스트 명세 규칙 14개(`Test*Rule`, #293) + 스캔/파싱 로직(라이브러리)
 - `Sources/ArchLint/` — 얇은 실행 파일(`main.swift` → `runArchLint(...)` 호출)
-- `Tests/ArchLintCoreTests/` — 규칙 자체 테스트
+- `Sources/MutationCore/` + `Sources/Mutate/` — 뮤테이션 도구(#293, 아래 "테스트 명세 규칙" 참고)
+- `Tests/ArchLintCoreTests/`·`Tests/MutationCoreTests/` — 규칙·도구 자체 테스트
 
 로직을 라이브러리로 뺀 이유: SwiftPM에서 **실행 타깃은 테스트가 import 못 하기** 때문(규칙을 테스트하려면 필수).
 
@@ -21,6 +22,8 @@
 swift run  --package-path Tooling/ArchLint ArchLint .   # 검사 실행 (인자: 레포 루트, 기본 ".")
 swift test --package-path Tooling/ArchLint              # 규칙 자체 테스트 (회귀 그물)
 ARCHLINT_DEBUG=1 swift run ...                          # 스캔·매칭 진단을 stderr로
+swift run  --package-path Tooling/ArchLint ArchLint --write-test-specs .   # 테스트 목록 파일(TEST_SPEC.md) 갱신
+swift run  --package-path Tooling/ArchLint Mutate AuthDomain              # 뮤테이션(로컬·수동, tuist generate 후)
 ```
 
 `<root>/Projects` 아래 모든 `.swift`를 파싱해 규칙을 적용한다.
@@ -47,6 +50,39 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | ⑫ Factory 배타성 | `factory-exclusivity` | **error** | `Projects/Data/<Module>` (모듈 단위) | ⑪의 짝 — Data 모듈의 top-level public은 `*DataFactory` **하나뿐**이어야 한다(Repository·Service·Mapper·DTO·Logger 등 나머지는 internal). "상위 레이어는 Factory만 안다"를 조인다. 타입 내부 멤버 public은 바깥이 internal이면 무해라 top-level만 본다. BaseData 제외. |
 | ⑬ Feature Factory 배타성 | `feature-exclusivity` | **error** | `Projects/Feature/<Module>` (모듈 단위) | ⑫를 Feature로 옮김 — Feature 모듈의 top-level public은 `*FeatureFactory`만(⑫의 `*DataFactory`와 대칭 · View·VM·상태는 internal, Factory는 `some View` 반환). Data와 달리 **조립 seam 예외**: `Sources/Navigation/`의 **계약 타입(typealias·protocol + `*Route` enum, #253)만** 허용(App이 Feature 간 직접 의존 없이 콘텐츠 주입/화면 전환 의도 수신 — 같은 폴더라도 구체 View/VM·Route 아닌 enum은 위반). 판정 로직은 ⑫와 `publicTopLevelOffense` 공유(접미사만 `Factory`). `extension`은 외부 public 타입에 public 멤버를 붙일 때만 노출로 본다(로컬 internal 타입 확장은 제외). |
 | ⑭ Feature 라우트 콜백 | `feature-route-callback` | warning | `Projects/{Feature}/**/Sources` | Feature **public 함수**(사실상 Factory 진입점 — ⑬이 그 외 public을 막음)의 `on…Tapped:`/`on…Selected:` 클로저 파라미터 금지 — 화면 전환 의도는 모듈 `*Route` enum + `onRoute:` 하나로(#253, 정본 `NovelDetailFeature/Sources/Navigation/NovelDetailRoute.swift`). 네이밍 관행 기반 프록시라 warning(비-라우팅 콜백 `onSubmitted`/`onSaved` 등 과거형 네이밍은 정상적으로 안 걸림). internal 서브뷰의 로컬 콜백은 대상 아님. |
+
+## 테스트 명세 규칙 (#293)
+
+"AI가 코드를 쓰고, 사람은 테스트를 보고 믿는다"를 위한 규칙. 사람이 테스트 이름(목록)과 본문만 읽고
+믿을 수 있도록, 테스트가 **읽히고 · 규칙이 사는 곳을 직접 시험하고 · 버그면 실패하고 · 리팩터링엔 안 깨지고 ·
+늘 같은지**를 검사한다. **`TestSpecScope.modules`에 든 모듈에만** 적용한다 — 재작성을 마친 모듈만 넣는다.
+
+| id | 심각도 | 내용 |
+|---|---|---|
+| `test-name` | error | `@Suite`(한국어 이름) 안의 `@Test("~다")` 한국어 문장. 코드 식별자·`/`·모호어(성공적으로 등)·중복 금지 |
+| `test-assert` | error | `#expect` 필수(`#require`만 ❌), `!= nil` 금지 |
+| `test-name-number` | error | 이름의 숫자가 본문·arguments에 있어야 함. 숫자가 넣는 값이 아니라 단위를 말하면("0.5점 단위") allow 주석으로 뺀다 |
+| `test-aaa` | error | 빈 줄로 준비/실행/확인 ≤3구역, 확인(`#expect`·`#require`)은 마지막 구역에만, `// Given` 라벨·for·if·switch·guard·삼항 금지 |
+| `test-aaa-act` | warning | 실행 구역이 2문장 이상 — 설계 점검을 사람에게 묻는다 |
+| `test-body-length` | warning | 본문 15줄 초과 |
+| `test-arguments` | error | `arguments:` 배열은 항목마다 줄바꿈, 리터럴 항목엔 이유 주석(enum case는 면제) |
+| `test-determinism` | error | `Date()`·`Date.now`·`Calendar/TimeZone/Locale.current`·`UUID()`·`.random`·`static var` 금지 |
+| `test-result-only` | error | `@testable import` 금지, Entity 테스트(`Tests/Entity/`)에 Mock 금지 |
+| `test-double-query` | error | `Testing/` 가짜 객체의 조회 메서드(`fetch…`·`load…`·`search…`)가 호출을 기록하면 위반(조회는 Stub, 명령만 Mock) |
+| `test-passthrough` | error(모듈) | 저장소 호출을 넘기기만 하는 `Default…UseCase`를 테스트하면 위반. 결과를 거르거나 바꾸면(클로저·이어 부르기) 넘기기가 아니다 |
+| `test-required` | error(모듈) | 분기·throw가 있는 타입이 테스트에 한 번도 안 나오면 위반 |
+| `test-error-case` | error(모듈) | 에러 enum의 case마다 `#expect(throws: …case)` 필요(타입만 적으면 안 셈). 폴더·이름과 상관없이 찾고, 저장소 에러(`RepositoryError`·`Sources/Repository/`)는 대상이 아니다 |
+| `test-source-constant` | error(모듈) | 테스트가 소스 `static let` 상수를 쓰면 위반 — 명세 값을 직접 쓴다 |
+| `test-spec-file` | error | 모듈 루트 `TEST_SPEC.md`가 테스트와 다르면 위반(`--write-test-specs`로 갱신). 하위 `@Suite`는 부모 아래 한 단계 내린 제목으로 적는다 |
+
+- **예외**: 위반 줄이나 바로 윗줄에 `// archlint:allow <id> — 이유`. **이유가 없으면 무시**된다(사람이 리뷰할 근거).
+  `test-`로 시작하는 테스트 명세 규칙에만 통한다 — 위 아키텍처 규칙은 주석으로 끄지 못한다.
+  이 주석은 PR에서 사람이 확인할 목록이다.
+- **뮤테이션 도구(`Mutate`)**: 모듈 Sources에 버그를 하나씩 심어(연산자 뒤집기·`!` 삭제·true↔false·정수+1·문장 삭제)
+  그 모듈 테스트를 돌리고, **살아남은 버그**(테스트가 못 잡음)를 보고한다. 넘기기만 하는 UseCase는 뺀다.
+  소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C·kill(-9 제외)·터미널 닫기·실행 실패로 끝나도 돌던 xcodebuild를 멈추고 시작할 때 읽어 둔 원본으로 되돌린다.
+  버그 하나가 5분을 넘기면(무한 루프) 끊고 "잡힘(시간 초과)"로 센다.
+  DerivedData를 Xcode와 나눠 임시 폴더(`$TMPDIR/wss-mutation-derived-data`)에 둔다 — 동시 빌드 충돌과 레포 안 빌드 폴더를 피한다. 로컬·수동 실행.
 
 ## 규칙 추가하기
 

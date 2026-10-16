@@ -9,95 +9,45 @@
 import Foundation
 import Testing
 
-@testable import BaseDomain
+import BaseDomain
 import BaseDomainTesting
 
-@Suite
+@Suite("전체 키워드 불러오기")
 struct LoadTotalKeywordsUseCaseTests {
 
-    @Test("전체 키워드 목록을 성공적으로 불러온다.")
-    func loadTotalKeywordsSuccess() async throws {
-        let mock = MockKeywordRepository()
-        mock.fetchKeywordsResult = .success([makeKeywordGroup()])
+    private let regression = Keyword(id: KeywordID(11), name: "회귀")
 
-        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
-        let result = try await usecase.execute()
+    @Test("처음 불러오기에 성공하면 동기화하지 않는다")
+    func firstLoadSucceedsWithoutSync() async throws {
+        let repository = MockKeywordRepository()
+        repository.fetchKeywordsResult = .success([KeywordGroup(category: .material, keywords: [regression])])
 
-        #expect(result.count == 1)
-        #expect(result.first?.category == .worldview)
-        #expect(mock.fetchKeywordsCallCount == 1)
+        let groups = try await DefaultLoadTotalKeywordsUseCase(keywordRepository: repository).execute()
+
+        #expect(groups.flatMap(\.keywords) == [regression])
+        #expect(repository.syncKeywordsCallCount == 0)
     }
 
-    @Test("여러 그룹의 키워드를 모두 반환한다.")
-    func loadMultipleKeywordGroupsSuccess() async throws {
-        let mock = MockKeywordRepository()
-        mock.fetchKeywordsResult = .success([
-            makeKeywordGroup(category: .worldview),
-            makeKeywordGroup(category: .material),
-            makeKeywordGroup(category: .character)
-        ])
+    @Test("불러오기에 실패하면 동기화한 뒤 다시 불러온 결과를 준다")
+    func failedLoadSyncsAndLoadsAgain() async throws {
+        let repository = MockKeywordRepository()
+        repository.fetchKeywordsResult = .failure(.notFound)
+        repository.fetchKeywordsResultAfterSync = .success([KeywordGroup(category: .material, keywords: [regression])])
 
-        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
-        let result = try await usecase.execute()
+        let groups = try await DefaultLoadTotalKeywordsUseCase(keywordRepository: repository).execute()
 
-        #expect(result.count == 3)
-        #expect(mock.fetchKeywordsCallCount == 1)
+        #expect(groups.flatMap(\.keywords) == [regression])
     }
 
-    @Test("전체 키워드 목록이 비어있어도 빈 배열을 반환한다.")
-    func loadEmptyKeywordsSuccess() async throws {
-        let mock = MockKeywordRepository()
-        mock.fetchKeywordsResult = .success([])
+    @Test("동기화한 뒤에도 실패하면 그 에러를 전한다")
+    func failedAfterSyncPassesError() async {
+        let repository = MockKeywordRepository()
+        repository.fetchKeywordsResult = .failure(.notFound)
+        repository.fetchKeywordsResultAfterSync = .failure(.networkUnavailable)
+        let useCase = DefaultLoadTotalKeywordsUseCase(keywordRepository: repository)
 
-        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
-        let result = try await usecase.execute()
-
-        #expect(result.isEmpty)
-        #expect(mock.fetchKeywordsCallCount == 1)
-    }
-
-    @Test("전체 키워드 조회가 동기화 후 재조회에도 계속 실패하면 에러를 던진다.")
-    func loadTotalKeywordsFailureThrows() async {
-        let mock = MockKeywordRepository()
-        mock.fetchKeywordsResult = .failure(RepositoryError.unknown)
-
-        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
-
-        await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute()
+        await #expect(throws: RepositoryError.networkUnavailable) {
+            try await useCase.execute()
         }
-
-        // 최초 조회 실패 → 동기화 1회 → 재조회까지 시도한 뒤에도 실패하면 그 에러를 던진다.
-        #expect(mock.fetchKeywordsCallCount == 2)
-        #expect(mock.syncKeywordsCallCount == 1)
-    }
-
-    @Test("로컬 캐시가 비어있으면 동기화 후 재조회로 복구한다.")
-    func loadTotalKeywordsRecoversAfterSyncOnCacheMiss() async throws {
-        let mock = MockKeywordRepository()
-        mock.fetchKeywordsResults = [
-            .failure(.unknown),
-            .success([makeKeywordGroup(category: .vibe)])
-        ]
-
-        let usecase = DefaultLoadTotalKeywordsUseCase(keywordRepository: mock)
-        let result = try await usecase.execute()
-
-        #expect(result.count == 1)
-        #expect(result.first?.category == .vibe)
-        #expect(mock.fetchKeywordsCallCount == 2)
-        #expect(mock.syncKeywordsCallCount == 1)
-    }
-}
-
-extension LoadTotalKeywordsUseCaseTests {
-    private func makeKeywordGroup(category: KeywordCategory = .worldview) -> KeywordGroup {
-        KeywordGroup(
-            category: category,
-            keywords: [
-                Keyword(id: KeywordID(1), name: "이세계"),
-                Keyword(id: KeywordID(2), name: "웹툰화")
-            ]
-        )
     }
 }

@@ -25,8 +25,8 @@
 
 ## 테스트 (필수)
 
-- 새 **Domain** 코드(UseCase/Entity/정책)는 **테스트 없이 머지 금지**.
-- 철학·컨벤션·Mock 패턴은 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
+- 새 **Domain** 코드 중 판단하는 코드(분기·검증·계산이 있는 Entity·정책·UseCase)는 **테스트 없이 머지 금지**. 넘기기만 하는 UseCase는 테스트하지 않는다.
+- 작업 순서(목록 합의 → 작성 → ArchLint·`TEST_SPEC.md` → 뮤테이션)와 이유는 [docs/TESTING.md](TESTING.md) (테스트=읽히는 명세).
 - **테스트 없이 머지 금지 의무는 Domain 한정**. 단 Data·Feature에도 테스트가 있으면 CI가 함께 돌려 지킨다.
 
 ## CI
@@ -36,7 +36,7 @@
 - `Project.swift`가 `.tests` 타깃을 선언한 **정식 모듈(Domain·Data·Feature)** 을 자동 스캔해 모듈별 병렬 테스트.
 - 유령 폴더(레지스트리에 없는 rename/브랜치 잔재)는 `Project.swift`가 없어 자동 제외된다 — 폴더 잔재가 매트릭스를 깨지 않는다.
 - **머지 게이트**: `All Tests Passed` job이 전체 통과를 판정한다. develop 브랜치 보호에서 이 체크를 필수 통과(required status check)로 지정하면 빨간 PR은 머지가 막힌다(GitHub → Settings → Branches → develop → Require status checks → `All Tests Passed`).
-- **아키텍처 검사**: `Architecture Rules` job이 자체 SwiftSyntax 검사기(`Tooling/ArchLint`)로 VM 계약(`ObservableObject` 계열 금지)을 **error**(막음), Service 분기를 **warning**(리포트만)으로 본다 — ubuntu + 공식 swift 컨테이너라 Xcode 불필요. 이 job(`Architecture Rules`)도 별도 필수 통과 체크로 걸 수 있다(develop이 초록인 걸 확인한 뒤). 규칙 추가·심각도 정책은 `Tooling/ArchLint/README.md`.
+- **아키텍처 검사**: `Architecture Rules` job이 자체 SwiftSyntax 검사기(`Tooling/ArchLint`)로 VM 계약(`ObservableObject` 계열 금지)을 **error**(막음), Service 분기를 **warning**(리포트만)으로 본다. Domain 테스트 명세 규칙과 `TEST_SPEC.md` 최신 여부도 여기서 error로 본다(`docs/TESTING.md`) — ubuntu + 공식 swift 컨테이너라 Xcode 불필요. 이 job(`Architecture Rules`)도 별도 필수 통과 체크로 걸 수 있다(develop이 초록인 걸 확인한 뒤). 규칙 추가·심각도 정책은 `Tooling/ArchLint/README.md`.
 - **스타일 검사**: `Swift Format` job이 Apple swift-format(툴체인 번들 — 별도 설치 없음)으로 스타일을 검사한다 — **변경된 `.swift` 파일만**(레거시 전체 아님), 지금은 **report-only**(위반 출력만, 안 막음). 규칙 allowlist는 루트 `.swift-format`, 게이트 로직·규칙 선정 근거는 `Tooling/SwiftFormat/README.md`. develop 초록 확인 후 `--strict` + 필수 통과 체크로 승격 예정(전체 리포맷은 `docs/TODO.md`(AI 검증 후속) 3번).
 
 ## 배포 (App Store 심사 제출)
