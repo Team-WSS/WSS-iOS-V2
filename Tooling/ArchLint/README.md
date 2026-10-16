@@ -73,7 +73,7 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
 | `test-required` | error(모듈) | 분기·throw가 있는 타입이 테스트에 한 번도 안 나오면 위반 |
 | `test-error-case` | error(모듈) | 에러 enum의 case마다 `#expect(throws: …case)` 필요(타입만 적으면 안 셈). 폴더·이름과 상관없이 찾고, 저장소 에러(`RepositoryError`·`Sources/Repository/`)는 대상이 아니다 |
 | `test-source-constant` | error(모듈) | 테스트가 소스 `static let` 상수를 쓰면 위반 — 명세 값을 직접 쓴다 |
-| `test-spec-file` | error | 모듈 루트 `TEST_SPEC.md`가 테스트와 다르면 위반(`--write-test-specs`로 갱신) |
+| `test-spec-file` | error | 모듈 루트 `TEST_SPEC.md`가 테스트와 다르면 위반(`--write-test-specs`로 갱신). 하위 `@Suite`는 부모 아래 한 단계 내린 제목으로 적는다 |
 
 - **예외**: 위반 줄이나 바로 윗줄에 `// archlint:allow <id> — 이유`. **이유가 없으면 무시**된다(사람이 리뷰할 근거).
   `test-`로 시작하는 테스트 명세 규칙에만 통한다 — 위 아키텍처 규칙은 주석으로 끄지 못한다.

@@ -39,6 +39,8 @@ struct SpecTest {
 struct SpecSuite {
     let node: Syntax
     let displayName: String?
+    /// 감싼 `@Suite` 타입의 구문 id. 맨 위 스위트면 nil.
+    let parentID: SyntaxIdentifier?
 }
 
 /// 파일에서 `@Suite` 타입과 `@Test` 함수를 모은다.
@@ -72,11 +74,15 @@ final class SpecTestCollector: SyntaxVisitor {
 
     private func recordSuite(_ node: Syntax, _ attributes: AttributeListSyntax) {
         guard let attribute = SpecSyntax.attribute(named: "Suite", in: attributes) else { return }
-        suites.append(SpecSuite(node: node, displayName: SpecSyntax.displayName(of: attribute)))
+        suites.append(SpecSuite(
+            node: node,
+            displayName: SpecSyntax.displayName(of: attribute),
+            parentID: enclosingSuiteID(of: node)
+        ))
     }
 
-    /// 함수를 감싼 가장 가까운 타입이 `@Suite`면 그 id.
-    private func enclosingSuiteID(of node: FunctionDeclSyntax) -> SyntaxIdentifier? {
+    /// 노드를 감싼 가장 가까운 타입이 `@Suite`면 그 id.
+    private func enclosingSuiteID(of node: some SyntaxProtocol) -> SyntaxIdentifier? {
         var current = node.parent
         while let parent = current {
             if let decl = parent.as(StructDeclSyntax.self) {

@@ -449,6 +449,73 @@ struct TestSpecRuleTests {
         #expect(result == isQuery)
     }
 
+    // MARK: - test-spec-file
+
+    @Test("하위 스위트는 부모 스위트 아래에 한 단계 내린 제목으로 나온다")
+    func specFileNestsChildSuites() {
+        let source = """
+        @Suite("샘플 작성")
+        struct SampleTests {
+            @Test("빈 샘플은 제출할 수 없다") func a() {}
+
+            @Suite("이름") struct Name {
+                @Test("이름은 20자까지 입력할 수 있다") func b() {}
+            }
+
+            @Suite("설명") struct Description {
+                @Test("설명은 60자까지 입력할 수 있다") func c() {}
+            }
+        }
+        """
+
+        let rendered = renderTestSpec(sources: [(specTestPath, source)], moduleName: "AuthDomain")
+
+        #expect(rendered.hasSuffix("""
+
+        ## 샘플 작성
+
+        `Tests/Entity/SampleTests.swift`
+
+        - 빈 샘플은 제출할 수 없다
+
+        ### 이름
+
+        - 이름은 20자까지 입력할 수 있다
+
+        ### 설명
+
+        - 설명은 60자까지 입력할 수 있다
+
+        """))
+    }
+
+    @Test("하위 스위트에만 테스트가 있어도 부모 제목과 파일 경로가 나온다")
+    func specFileKeepsParentWithoutOwnTests() {
+        let source = """
+        @Suite("샘플 작성")
+        struct SampleTests {
+            @Suite("이름") struct Name {
+                @Test("이름은 20자까지 입력할 수 있다") func b() {}
+            }
+            @Suite("비어 있음") struct Empty {}
+        }
+        """
+
+        let rendered = renderTestSpec(sources: [(specTestPath, source)], moduleName: "AuthDomain")
+
+        #expect(rendered.hasSuffix("""
+
+        ## 샘플 작성
+
+        `Tests/Entity/SampleTests.swift`
+
+        ### 이름
+
+        - 이름은 20자까지 입력할 수 있다
+
+        """))
+    }
+
     // MARK: - 모듈 단위 규칙
 
     @Test("넘기기만 하는 UseCase를 테스트하면 잡고, 바꾸거나 거르는 UseCase는 테스트해도 된다")

@@ -71,6 +71,12 @@ func lintModule(sources: [(path: String, source: String)], moduleName: String, r
     return AllowComment.filter(rule.check(moduleName: moduleName, files: files)) { lines[$0] }
 }
 
+/// 테스트 목록 파일 테스트 진입점 — 소스 문자열들을 한 모듈의 테스트 파일로 보고 목록을 만든다.
+func renderTestSpec(sources: [(path: String, source: String)], moduleName: String) -> String {
+    let files = sources.map { ParsedFile(path: $0.path, tree: Parser.parse(source: $0.source)) }
+    return TestSpecDocument.render(module: moduleName, files: files)
+}
+
 /// <repoRoot>/Projects 아래 모든 .swift 파일의 전체 경로.
 func swiftFiles(under repoRoot: String) -> [String] {
     let projectsRoot = repoRoot + "/Projects"
