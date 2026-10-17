@@ -84,6 +84,8 @@ struct HomeRootView: View {
     let onDeepLinkDestinationDismissed: () -> Void
     /// 홈의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다(`HomeFeature/CLAUDE.md`).
     let onAuthenticationRequired: () -> Void
+    /// "나만의 컬렉션을 만들어보세요" 툴팁 노출 여부(#283) — 판정은 `MainTabView`, 이 Root는 루트 화면에 그리기만 한다.
+    let showsCollectionTooltip: Bool
 
     @State private var path = NavigationPath()
     /// 딥링크 화면이 놓인 스택 깊이 — `path.count`가 이보다 작아지면 그 화면이 빠진 것(아래 `.onChange(of: path.count)`).
@@ -151,6 +153,7 @@ struct HomeRootView: View {
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .toolbar(.hidden, for: .navigationBar)
+            .collectionTooltip(isPresented: showsCollectionTooltip)
             .navigationDestination(for: Destination.self) { destination in
                 Group {
                     switch destination {

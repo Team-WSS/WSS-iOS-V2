@@ -477,6 +477,12 @@ Core/Analytics는 `AnalyticsTracker` 프로토콜만 알고 이 SDK들을 모른
     지금 보이는 서브탭을 최상단으로 스크롤한다. **`$selectedTab`로 되돌리면 피드 재탭-최상단이 조용히 깨진다**
     — 나머지 탭 전환·딥링크 로직은 `selectedTab`을 그대로 갱신해 영향 없다. 전체 계약(자동 스크롤 흡수 미끼
     ScrollView 포함)은 `FeedFeature/CLAUDE.md`가 정본.
+- **"나만의 컬렉션을 만들어보세요" 툴팁(#283)은 `MainTabView`가 노출·확인을 판정하고, 홈·피드·서재 Root가
+  각자 NavigationStack **루트 콘텐츠**에 `.collectionTooltip(isPresented:)`(`Sources/Main/CollectionTooltip.swift`)로 그린다.**
+  루트 콘텐츠의 하단 safe area가 곧 탭바 상단이라 탭바 위에 붙고, push 화면(탭바 숨김)에선 덮여서 자연히 안 보인다 —
+  `MainTabView` 전체에 overlay로 걸면 push 화면에서도 허공을 가리키며 떠 있게 되니 옮기지 말 것. 확인 처리는
+  `tabSelection` setter에서 **툴팁이 떠 있을 때 My를 고른 경우에만** 한다(플래그는 `OnboardingHint.myPageCollectionTooltip`,
+  초기값은 `MainTabView.init`에서 1회 판정 → 확인 안 하고 앱을 끄면 다음 실행에 다시 뜬다).
 - **서재의 "알림 관리"는 설정 목록 전체가 아니라 `SettingFactory.makeNotificationSettingView`로
   바로 진입한다**(사용자 확정, #196) — 서재 맥락에서 필요한 건 알림 설정뿐이라 `SettingFactory.makeView`
   (설정 메인 목록)를 거치지 않고 그 하위 화면으로 직행한다. `AppDependencies.pushSettingRepository`

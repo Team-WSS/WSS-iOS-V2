@@ -84,6 +84,8 @@ struct FeedRootView: View {
     let onDeepLinkDestinationDismissed: () -> Void
     /// 이 화면이 push하는 작품 상세의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다.
     let onAuthenticationRequired: () -> Void
+    /// "나만의 컬렉션을 만들어보세요" 툴팁 노출 여부(#283) — 판정은 `MainTabView`, 이 Root는 루트 화면에 그리기만 한다.
+    let showsCollectionTooltip: Bool
     /// 피드 탭바의 **현재(피드) 탭 재탭** 신호(`MainTabView`가 커스텀 selection Binding으로 감지해 증가시키는
     /// 카운터). `makeSosoFeedView`로 그대로 흘려보내면 지금 보이는 서브탭 목록이 최상단으로 스크롤된다
     /// (시스템 자동 "탭 재탭→최상단"이 상시 mount된 두 ScrollView 중 첫 번째=내 피드에만 걸리는 문제 우회).
@@ -147,6 +149,7 @@ struct FeedRootView: View {
                     }
                 }
             )
+            .collectionTooltip(isPresented: showsCollectionTooltip)
             .navigationDestination(for: Destination.self) { destination in
                 Group {
                     switch destination {
