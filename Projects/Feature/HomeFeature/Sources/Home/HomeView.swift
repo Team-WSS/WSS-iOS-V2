@@ -26,12 +26,11 @@ struct HomeView: View {
     private let onAuthenticationRequired: () -> Void
 
     private enum Metric {
+        static let searchToCollection: CGFloat = 24
+        static let collectionToDiscovery: CGFloat = 32
         static let searchToDiscovery: CGFloat = 24
         static let discoveryToTrending: CGFloat = 32
         static let trendingToPreference: CGFloat = 38
-        /// 컬렉션 섹션 위아래 간격(Figma 실측 — 추천글 섹션 끝 ↔ 컬렉션 섹션 ↔ 선호장르 섹션 모두 32).
-        static let trendingToCollection: CGFloat = 32
-        static let collectionToPreference: CGFloat = 32
         static let bottomInset: CGFloat = 40
 
         static let sectionTitleSpacing: CGFloat = 16
@@ -118,8 +117,22 @@ private extension HomeView {
                 )
 
                 // 섹션은 값이 없으면 제목까지 통째로 사라진다 — 아래 섹션이 그만큼 올라붙는다.
+                // 컬렉션 섹션은 0건이거나 첫 로드에 실패하면 숨는다 — 그땐 오늘의 발견이 검색 영역에 바로 붙는다.
+                if !state.publicCollections.isEmpty {
+                    Spacer().frame(height: Metric.searchToCollection)
+                    PublicCollectionSection(
+                        collections: state.publicCollections,
+                        onTitleTapped: { onRoute(.publicCollectionList) },
+                        onCollectionSelected: { onRoute(.collectionDetail($0)) }
+                    )
+                }
+
                 if !state.todayDiscoveries.isEmpty {
-                    Spacer().frame(height: Metric.searchToDiscovery)
+                    Spacer().frame(
+                        height: state.publicCollections.isEmpty
+                            ? Metric.searchToDiscovery
+                            : Metric.collectionToDiscovery
+                    )
                     todayDiscoverySection(state.todayDiscoveries)
                 }
 
@@ -135,26 +148,11 @@ private extension HomeView {
                     )
                 }
 
-                // 컬렉션 섹션은 0건이거나 첫 로드에 실패하면 숨는다 — 그땐 추천글↔선호장르 간격이
-                // 원래 값(trendingToPreference) 그대로 남는다.
-                if !state.publicCollections.isEmpty {
-                    Spacer().frame(height: Metric.trendingToCollection)
-                    PublicCollectionSection(
-                        collections: state.publicCollections,
-                        onTitleTapped: { onRoute(.publicCollectionList) },
-                        onCollectionSelected: { onRoute(.collectionDetail($0)) }
-                    )
-                }
-
                 // 선호장르 섹션은 0건(설정했으나 추천 0건)이어도 숨기지 않고 설정 유도 카드를 띄운다
                 // (#222 V1 parity — 빈 자리보다 행동 유도가 낫다). 빈 그리드 vs 유도 카드 분기는
                 // PreferenceGenreSection이 상태로 판단한다. nil(로드 전)일 때만 섹션을 안 그린다.
                 if let preferenceGenreNovelState = state.preferenceGenreNovelState {
-                    Spacer().frame(
-                        height: state.publicCollections.isEmpty
-                            ? Metric.trendingToPreference
-                            : Metric.collectionToPreference
-                    )
+                    Spacer().frame(height: Metric.trendingToPreference)
                     PreferenceGenreSection(
                         state: preferenceGenreNovelState,
                         onNovelSelected: { novelID in

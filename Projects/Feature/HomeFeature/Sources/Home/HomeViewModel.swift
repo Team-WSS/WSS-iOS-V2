@@ -201,7 +201,19 @@ private extension HomeViewModel {
             size: Self.publicCollectionCount
         )
 
-        // 1) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
+        // 1) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **콘텐츠보다 먼저** 꺼낸다: 홈 최상단(검색 영역 바로
+        //    아래) 섹션이라 콘텐츠 뒤에 들어오면 그 아래 섹션 전부가 밀리는 점프가 생긴다. 먼저 state에 넣어도
+        //    `hasLoadedContent`가 아직 false라 로딩 뷰가 덮고 있다가 콘텐츠와 같은 프레임에 함께 그려진다.
+        //    둘은 동시에 요청했으니 총 대기시간은 max(콘텐츠, 컬렉션) 그대로다.
+        do {
+            state.publicCollections = try await publicCollections.items
+        } catch let error as RepositoryError {
+            presentPublicCollectionsFailure(error)
+        } catch {
+            presentPublicCollectionsFailure(.unknown)
+        }
+
+        // 2) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
         do {
             let loadedHomeData = try await homeData
 
@@ -219,17 +231,6 @@ private extension HomeViewModel {
             // ⚠️ `async let`이 UseCase의 타입 지정 throw를 `any Error`로 지워서 분기가 필요하다.
             // 두 UseCase 모두 RepositoryError만 던지므로 여기는 실제로는 도달하지 않는다.
             presentLoadFailure(.unknown)
-        }
-
-        // 2) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **배지보다 먼저** 꺼낸다: 콘텐츠 사이에
-        //    끼어드는 섹션이라 늦을수록 아래 선호장르가 밀리는 점프가 커지는데, 배지 뒤에 두면 배지 왕복까지
-        //    기다리게 된다(배지는 헤더 점 하나라 늦어도 레이아웃이 안 움직인다).
-        do {
-            state.publicCollections = try await publicCollections.items
-        } catch let error as RepositoryError {
-            presentPublicCollectionsFailure(error)
-        } catch {
-            presentPublicCollectionsFailure(.unknown)
         }
 
         // 3) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
