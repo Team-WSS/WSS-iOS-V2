@@ -41,4 +41,15 @@ struct OnboardingHintUseCaseTests {
         #expect(mock.markSeenCalls == [.novelDetailReview])
         #expect(usecase.hasSeen(.novelDetailReview) == true)
     }
+
+    @Test("한 힌트를 봤음 처리해도 다른 힌트는 여전히 안 본 상태다.")
+    func markSeenDoesNotAffectOtherHints() {
+        let mock = MockOnboardingHintRepository()
+        let usecase = DefaultOnboardingHintUseCase(repository: mock)
+
+        usecase.markSeen(.myPageCollectionTooltip)
+
+        #expect(usecase.hasSeen(.myPageCollectionTooltip) == true)
+        #expect(usecase.hasSeen(.novelDetailReview) == false)
+    }
 }
