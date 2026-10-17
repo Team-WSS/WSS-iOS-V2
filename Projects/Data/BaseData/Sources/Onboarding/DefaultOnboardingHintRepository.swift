@@ -33,6 +33,12 @@ public struct DefaultOnboardingHintRepository: OnboardingHintRepository {
         appStorage.set(key(for: hint), true)
     }
 
+    /// 모든 힌트의 "봤음" 플래그를 지운다 — 회원 탈퇴 시 `DefaultAuthRepository`가 부른다(#283).
+    /// 탈퇴 후 재가입은 새 유저라 힌트를 다시 보여준다. 로그아웃은 같은 사람의 재로그인일 가능성이 높아 지우지 않는다.
+    public func resetAll() {
+        OnboardingHint.allCases.forEach { appStorage.remove(key(for: $0)) }
+    }
+
     /// 힌트별 저장 키. ⚠️ `Value`가 `Bool`이라 저장/조회 값도 항상 `Bool`이어야 한다
     /// (`UserDefaultsStorage`가 `as? V`라 타입이 어긋나면 조용히 nil — `StorageKey` 주의사항 참고).
     private func key(for hint: OnboardingHint) -> StorageKey<Bool> {
