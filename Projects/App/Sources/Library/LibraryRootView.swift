@@ -76,6 +76,8 @@ struct LibraryRootView: View {
     /// 딥링크로 push한 화면이 스택에서 빠지면 발화(`HomeRootView`와 동일 규칙).
     let onDeepLinkDestinationDismissed: () -> Void
     let onAuthenticationRequired: () -> Void
+    /// "나만의 컬렉션을 만들어보세요" 툴팁 노출 여부(#283) — 판정은 `MainTabView`, 이 Root는 루트 화면에 그리기만 한다.
+    let showsCollectionTooltip: Bool
 
     @State private var path = NavigationPath()
     @State private var deepLinkDestinationDepth: Int?
@@ -129,6 +131,7 @@ struct LibraryRootView: View {
                 },
                 onAuthenticationRequired: onAuthenticationRequired
             )
+            .collectionTooltip(isPresented: showsCollectionTooltip)
             .navigationDestination(for: Destination.self) { destination in
                 Group {
                     switch destination {

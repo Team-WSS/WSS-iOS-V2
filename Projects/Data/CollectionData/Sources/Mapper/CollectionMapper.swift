@@ -52,6 +52,26 @@ enum CollectionMapper {
         )
     }
 
+    /// 홈 컬렉션 섹션·전체 컬렉션뷰용.
+    public static func publicCollectionCards(
+        from dto: PublicCollectionsResponse
+    ) -> CursorPaginated<PublicCollectionCard> {
+        CursorPaginated(
+            items: dto.collections.map {
+                PublicCollectionCard(
+                    id: CollectionID($0.collectionId),
+                    name: $0.collectionName,
+                    description: $0.collectionDescription,
+                    novelCount: $0.novelCount,
+                    recentNovels: $0.recentNovels.map(collectionNovel(from:)),
+                    owner: author(from: $0.owner)
+                )
+            },
+            hasNext: dto.hasNext,
+            nextCursor: dto.nextCursor
+        )
+    }
+
     // MARK: - 상세
 
     public static func collectionDetail(from dto: CollectionDetailResponse) -> CollectionDetail {
@@ -59,11 +79,7 @@ enum CollectionMapper {
             id: CollectionID(dto.collectionId),
             name: dto.collectionName,
             description: dto.collectionDescription,
-            owner: Author(
-                userId: UserID(dto.owner.userId),
-                nickname: dto.owner.nickname,
-                profileImage: dto.owner.avatarImage.flatMap { ImageURLResolver.resolve(from: $0) }
-            ),
+            owner: author(from: dto.owner),
             isMine: dto.isMyCollection,
             isPrivate: dto.isPublic == false,
             representativeNovelID: NovelID(dto.representativeNovelId),
@@ -96,6 +112,14 @@ enum CollectionMapper {
     }
 
     // MARK: - 공통
+
+    private static func author(from dto: CollectionOwnerResponse) -> Author {
+        Author(
+            userId: UserID(dto.userId),
+            nickname: dto.nickname,
+            profileImage: dto.avatarImage.flatMap { ImageURLResolver.resolve(from: $0) }
+        )
+    }
 
     private static func collectionNovel(from dto: CollectionNovelResponse) -> CollectionNovel {
         CollectionNovel(

@@ -42,3 +42,9 @@ public enum CollectionDetailRoute {
     /// 더보기 "컬렉션 수정" 탭 — 수정 화면이 `id`로 대상을 스스로 다시 불러오므로 payload가 없다.
     case editCollection
 }
+
+/// 전체 컬렉션뷰(`PublicCollectionListView`, #283).
+public enum PublicCollectionListRoute {
+    /// 카드 탭 → 컬렉션 상세. 작성자 프로필은 탭 동작이 없다(사용자 확정 2026-09-28).
+    case collectionDetail(CollectionID)
+}

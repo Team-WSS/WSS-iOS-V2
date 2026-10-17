@@ -23,6 +23,19 @@
   - 여기 모인 함정 3개를 화면마다 다시 만들지 말 것: ① `icNavigateLeft`는 원색이 연회색(#C7C7D0)이라 `renderingMode(.template)` + `wssBlack`으로 색을 입혀야 하고, ② 아이콘 24를 44 히트 영역 가운데 두며, ③ 타이틀은 `ZStack` 중앙에 둔다(`HStack`에 넣으면 뒤로가기 폭만큼 오른쪽으로 밀린다).
   - ⚠️ **타이틀이 길어지면 양쪽 버튼 영역을 넘어서던 버그(2026-09-12)** — `Text(title)`에 `lineLimit`도, 버튼 영역을 피하는 여백도 없어 자연 폭 그대로 렌더돼 뒤로가기/우측 액션과 겹쳤다. `lineLimit(1)` + `truncationMode(.tail)` + 좌우 동일한 `sidePadding`(뒤로가기 쪽 고정폭 50과 `trailing` 실측 폭 중 큰 값, `PreferenceKey`로 갱신)을 타이틀에 걸어 해결 — SwiftUI `padding`은 자식에게 줄어든 proposed width를 내려보내므로 이 안에서 말줄임이 실제로 동작한다. 좌우를 동일한 값으로 줘야 `ZStack` 중앙 정렬이 깨지지 않는다.
   - **스크롤 반응형 네비 배경(히어로 이미지 위 투명→흰색 전환 등)을 쓰는 화면**(`UserPageView`·`MypageView`·`CollectionDetailView`)은 `WSSNavigationBar`(back+title 고정형)가 아니라 **`NovelDetailView`식 커스텀 오버레이 바**로 각자 만들었다(#244, 사용자 확정). 세 화면 다 시스템 툴바(+`.toolbarBackground`)를 걷어내고, 스크롤 측정(`isScrolledFromTop`)으로 **배경·타이틀·아이콘 색을 opacity/색 전환**하는 커스텀 바를 그렸다 — 커스텀 오버레이라 시스템 `.principal`의 UIKit 브리지 함정(아래 항목)이 없어 `.opacity`/색 전환이 그대로 반영된다(`if` 구조 토글이 필요 없다). ⚠️ **스크롤 전환 애니메이션은 사용자 선호로 전부 걷어내 즉시 전환한다**(#244 후속 — `isScrolledFromTop`/`showNavTitle`에 걸었던 `.animation(.easeInOut …)`을 이 세 화면 + `NovelDetailView`에서 제거, 되살리지 말 것). MypageView(흰 배경, 뒤로가기 없는 탭 루트)·UserPageView(primary20 히어로)는 `safeAreaInset`으로 바를 고정하고, CollectionDetailView(히어로 이미지 위 투명 바)만 `ZStack` 오버레이 + `.ignoresSafeArea(edges:.top)` 배경 확장 + 아이콘 색 흰↔검정 적응을 쓴다(진짜 몰입형). 배경 색이 항상 콘텐츠와 이어지므로 리퀴드 글래스가 애초에 안 뜬다.
+- **컬렉션 카드 조각(`Sources/Collection/`, #283)** — `WSSCollectionCoverStack(coverURLs:slotCount:)`(표지 겹침 스택,
+  `CollectionFeature` 목록 5칸·`HomeFeature` 홈 섹션 4칸)과 `WSSCollectionOwnerLabel`("{닉네임}님의 컬렉션").
+  **카드 전체는 승격하지 않았다** — 홈 카드(폭 284·패딩 16·헤더↔표지 12)와 목록 카드(폭 가득·패딩 17/16·16)가
+  수치부터 달라 한 컴포넌트로 묶으면 파라미터만 늘어난다. 스택은 도메인 타입 대신 URL만 받는다(이 모듈은 BaseDomain까지만 안다).
+  슬롯 수와 무관하게 **스택 전체가 카드 폭을 꽉 채운다**(원래 `CollectionFeature`에서 실기기 리포트로 고친 동작).
+  ⚠️ **표지 크기를 고정(74×108)한 채 간격만 역산하지 말 것** — 카드가 넓은 기기(17 Pro Max의 5칸 목록 카드)에서 간격이
+  양수가 돼 표지가 서로 떨어졌다(#283 실측). 지금은 Figma 겹침 비율(등차 58 ÷ 표지 74)을 고정하고 **표지 크기를 카드 폭에
+  비례해 키우고 줄이는** `Layout`(`CoverStackLayout`)이다 — 높이도 폭을 따라 바뀌므로 호출부에서 높이를 고정하지 말 것.
+  폭 제안이 nil·무한대면 Figma 원본 크기로 답한다(무한대 그대로 쓰면 높이까지 무한대가 된다).
+  ⚠️ **표지는 `WSSNovelCoverImage(aspectRatio:)`로 그린다 — `.frame(maxWidth: .infinity, maxHeight: .infinity)`로 감싸지 말 것.**
+  flexible frame은 min을 안 주면 **자식 크기를 하한**으로 삼아, 칸과 비율이 다른 표지(`scaledToFill`)가 그만큼 칸 밖으로 넘친다
+  — 세로로 긴 표지는 아래로 튀고 가로로 긴 표지는 옆 칸을 덮었다(#283 실기기, 표지 비율에 따라 "가끔"만 보여 놓치기 쉽다).
+  Demo Mock 표지가 칸과 같은 비율(148×216)뿐이면 재현이 안 되므로 HomeFeature Demo는 일부러 비율을 섞어 둔다.
 - **`WSSEmptyView`의 CTA는 선택이다** — `action`을 생략(nil)하거나 `type.buttonTitle`이 nil이면 **버튼과 그 위 간격(36)이 함께 사라진다**. 유도할 행동이 없는 빈 상태(`.notification` — 알림 목록)를 화면마다 다시 그리지 않으려고 #181에서 열었다. `action`에 기본값이 있어 기존 호출부는 그대로 동작한다.
   - ⚠️ **`LibraryFeature`의 `noMatchSection`(필터 0건)은 아직 이 컴포넌트로 옮기지 않았다** — 그쪽은 이미지를 39×48로 줄이고 상단 여백 120을 직접 잡는 등 **렌더가 달라서**, 옮기면 서재 화면 재검증이 필요하다. 옮길 거면 크기 파라미터를 열지 말고 **왜 두 빈 상태의 이미지 크기가 다른지부터** 디자인과 정할 것.
 - **`NetworkErrorView`는 로드 실패 전면 뷰(재시도 버튼 내장)다** — `init(error: RepositoryError = .unknown, action:)`(#244). 잡은 `RepositoryError`를 받아 title/description을 **3분류로 가른다**: `serverUnavailable`("서버에 문제가\n생겼어요" / "잠시 후 다시 시도해 주세요"), `networkUnavailable`("네트워크 연결에\n실패했어요" / "연결 상태를 확인한 후\n다시 시도해 보세요"), 그 외 `default`("일시적인 오류가\n발생했어요" / "다시 시도해 주세요"). 일러스트(`imgEmptyCatQuestionmark`)·"페이지 다시 불러오기" 버튼·레이아웃은 케이스 불문 **동일** — 문구만 분기.

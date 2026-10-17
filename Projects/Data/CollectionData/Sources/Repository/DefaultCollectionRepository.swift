@@ -106,6 +106,31 @@ struct DefaultCollectionRepository: CollectionRepository {
         }
     }
 
+    public func fetchPublicCollections(
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+        let action = CollectionAction.fetchPublicCollections
+
+        do {
+            let response = try await service.getPublicCollections(
+                query: CollectionsQuery(cursor: cursor, size: size)
+            )
+            let result = CollectionMapper.publicCollectionCards(from: response)
+            logger?.logSuccess(action: action.name)
+            return result
+        } catch let error as NetworkingError {
+            logger?.logNetworkError(action: action.name, error: error)
+            throw error.toRepositoryError()
+        } catch let error as MappingError {
+            logger?.logMappingError(action: action.name, error: error)
+            throw .invalidData
+        } catch {
+            logger?.logUnknownError(action: action.name, error: error)
+            throw .unknown
+        }
+    }
+
     // MARK: - 상세
 
     public func fetchCollectionDetail(

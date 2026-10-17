@@ -12,6 +12,7 @@ import Observation
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import Logger
 import PushAuthorization
 import Analytics
@@ -30,6 +31,8 @@ final class HomeViewModel {
         /// nil = 아직 로드 전. `.noGenreSettings`(미설정)와 구분해야 로딩 중 설정 유도 CTA가 번쩍이지 않는다.
         var preferenceGenreNovelState: PreferenceGenreNovelState?
         var hasUnreadNotifications = false
+        /// "컬렉션 모음.zip" 섹션. 비면 섹션을 제목까지 숨긴다(첫 로드 실패도 빈 채라 숨는다).
+        var publicCollections: [PublicCollectionCard] = []
 
         /// ⚠️ 초깃값 `true` — `onAppear`의 `.load`보다 첫 body 평가가 먼저라, false면 한 프레임 동안
         /// "검색바·배너만 있는 빈 홈"이 스친다(Library·NovelDetail과 같은 이유).
@@ -82,6 +85,9 @@ final class HomeViewModel {
     /// 튄다**(성공한 것처럼 보였다가 슬램). 그래서 로드 결과로만 오르내리는 플래그를 따로 둔다.
     @ObservationIgnored private var hasLoadedContent = false
 
+    /// 홈 섹션은 최대 10개(기획) — 가로 스크롤 첫 페이지만 쓰고 더 불러오지 않는다.
+    private static let publicCollectionCount = 10
+
     // MARK: - Dependency
 
     private let logger: Logger?
@@ -93,6 +99,9 @@ final class HomeViewModel {
     // NotificationDomain
     private let loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
 
+    // CollectionDomain
+    private let loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
+
     // PushAuthorization
     private let pushAuthorizationChecker: PushAuthorizationChecker
 
@@ -101,12 +110,14 @@ final class HomeViewModel {
     init(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadHomeDataUseCase = loadHomeDataUseCase
         self.loadUnreadNotificationStatusUseCase = loadUnreadNotificationStatusUseCase
+        self.loadPublicCollectionsUseCase = loadPublicCollectionsUseCase
         self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.analyticsTracker = analyticsTracker
@@ -170,10 +181,10 @@ private extension HomeViewModel {
 
 private extension HomeViewModel {
 
-    /// 추천 3종(콘텐츠)과 알림 배지를 **따로** 수확한다 — 한 do/catch로 묶으면 프리페치로 즉시
+    /// 추천 3종(콘텐츠)·알림 배지·컬렉션 섹션을 **따로** 수확한다 — 한 do/catch로 묶으면 프리페치로 즉시
     /// 끝나는 콘텐츠가 배지 네트워크 왕복까지 기다렸다가 그려진다(첫 런치의 프리페치 이득이 죽는다).
-    /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지 실패는 조용히 무시(로그만 — 이유는 아래
-    /// `presentBadgeFailure` 주석).
+    /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지·컬렉션 실패는 조용히 무시(로그만 — 이유는 아래
+    /// `presentBadgeFailure`·`presentPublicCollectionsFailure` 주석).
     func loadHome() async {
         state.isLoading = true
         // 재시도·재진입 시작 시점에 함께 내린다 — 성공할 때만 내리면 "페이지 다시 불러오기"를 눌러도
@@ -181,12 +192,28 @@ private extension HomeViewModel {
         state.loadFailed = nil
         defer { state.isLoading = false }
 
-        // 둘은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
+        // 셋은 서로 독립이라 동시에 시작한다 — 순차로 펴면 왕복 지연이 그대로 더해지는데,
         // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
         async let homeData = loadHomeDataUseCase.execute()
         async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
+        async let publicCollections = loadPublicCollectionsUseCase.execute(
+            cursor: nil,
+            size: Self.publicCollectionCount
+        )
 
-        // 1) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
+        // 1) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **콘텐츠보다 먼저** 꺼낸다: 홈 최상단(검색 영역 바로
+        //    아래) 섹션이라 콘텐츠 뒤에 들어오면 그 아래 섹션 전부가 밀리는 점프가 생긴다. 먼저 state에 넣어도
+        //    `hasLoadedContent`가 아직 false라 로딩 뷰가 덮고 있다가 콘텐츠와 같은 프레임에 함께 그려진다.
+        //    둘은 동시에 요청했으니 총 대기시간은 max(콘텐츠, 컬렉션) 그대로다.
+        do {
+            state.publicCollections = try await publicCollections.items
+        } catch let error as RepositoryError {
+            presentPublicCollectionsFailure(error)
+        } catch {
+            presentPublicCollectionsFailure(.unknown)
+        }
+
+        // 2) 콘텐츠 — 성공하는 즉시 그린다(배지를 기다리지 않는다).
         do {
             let loadedHomeData = try await homeData
 
@@ -206,7 +233,7 @@ private extension HomeViewModel {
             presentLoadFailure(.unknown)
         }
 
-        // 2) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
+        // 3) 배지 — 콘텐츠 성패와 무관하게 반드시 수확한다(`async let`은 스코프를 나가기 전에
         //    await해야 하고, 콘텐츠가 실패했다고 배지 요청을 버릴 이유도 없다).
         do {
             let loadedNotificationStatus = try await notificationStatus
@@ -245,6 +272,15 @@ private extension HomeViewModel {
         guard !routeToLoginIfAuthenticationRequired(error) else { return }
 
         logger?.error("알림 배지 로드 실패: \(error)")
+    }
+
+    /// 컬렉션 섹션도 부수 콘텐츠라 실패해도 홈을 실패 뷰로 덮지 않는다 — **직전에 그린 카드는 그대로 두고**
+    /// 로그만 남긴다(첫 로드 실패면 빈 채라 섹션이 숨는다). 배지와 같은 이유로 토스트도 안 띄운다: 탭 복귀
+    /// 갱신마다 반복 노출만 되고, 다음 탭 복귀가 자동 재시도한다.
+    func presentPublicCollectionsFailure(_ error: RepositoryError) {
+        guard !routeToLoginIfAuthenticationRequired(error) else { return }
+
+        logger?.error("컬렉션 섹션 로드 실패: \(error)")
     }
 
     func routeToLoginIfAuthenticationRequired(_ error: RepositoryError) -> Bool {

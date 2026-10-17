@@ -115,6 +115,7 @@ struct DefaultAuthRepository: AuthRepository {
             try await service.postWithdraw(request)
             try tokenStore.clearTokens()
             clearUserScopedCache()
+            DefaultOnboardingHintRepository(appStorage: appStorage).resetAll()
             logger?.logSuccess(action: action.name)
         } catch let error as NetworkingError {
             logger?.logNetworkError(action: action.name, error: error)

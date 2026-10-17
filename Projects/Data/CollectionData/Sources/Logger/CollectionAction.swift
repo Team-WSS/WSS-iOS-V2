@@ -14,6 +14,7 @@ enum CollectionAction {
     case fetchCollectionPreviews(userID: Int)
     case fetchCollections(userID: Int)
     case fetchLikedCollections
+    case fetchPublicCollections
     case fetchCollectionDetail(collectionID: Int)
     case createCollection
     case updateCollection(collectionID: Int)
@@ -26,6 +27,7 @@ enum CollectionAction {
         case .fetchCollectionPreviews(let userID):      "마이페이지 컬렉션 미리보기 조회: \(userID)"
         case .fetchCollections(let userID):             "컬렉션 목록 조회: \(userID)"
         case .fetchLikedCollections:                    "좋아요한 컬렉션 목록 조회"
+        case .fetchPublicCollections:                   "전체 공개 컬렉션 목록 조회"
         case .fetchCollectionDetail(let collectionID):  "컬렉션 상세 조회: \(collectionID)"
         case .createCollection:                         "컬렉션 생성"
         case .updateCollection(let collectionID):       "컬렉션 수정: \(collectionID)"

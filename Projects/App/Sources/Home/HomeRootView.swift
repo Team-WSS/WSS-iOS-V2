@@ -44,8 +44,11 @@ struct HomeRootView: View {
         case userLibrary(UserID)
         /// 타유저 프로필의 "활동기록 더보기" → 전체 피드 목록(#201, `UserPageAssembly.makeFeedListView`).
         case userFeedList(userID: UserID, nickname: String, profileImage: URL?)
-        /// 타유저 프로필의 컬렉션 미리보기 항목 탭 → 그 컬렉션 상세(`CollectionDetailAssembly`).
+        /// 타유저 프로필의 컬렉션 미리보기 항목 탭·홈 "컬렉션 모음.zip" 카드 탭·전체 컬렉션뷰 카드 탭(#283)
+        /// → 그 컬렉션 상세(`CollectionDetailAssembly`).
         case collectionDetail(CollectionID)
+        /// 홈 "컬렉션 모음.zip" 섹션 제목 탭 → 전체 컬렉션뷰(#283, `PublicCollectionListAssembly`).
+        case publicCollectionList
         /// 타유저 프로필의 컬렉션 섹션 헤더 탭 → 그 유저의 컬렉션 목록(`CollectionListAssembly`,
         /// "내 컬렉션" 탭만 보이는 모드).
         case collectionList(UserID)
@@ -81,6 +84,8 @@ struct HomeRootView: View {
     let onDeepLinkDestinationDismissed: () -> Void
     /// 홈의 API 호출이 401(갱신 실패 포함)로 막히면 발화 — idempotent해야 한다(`HomeFeature/CLAUDE.md`).
     let onAuthenticationRequired: () -> Void
+    /// "나만의 컬렉션을 만들어보세요" 툴팁 노출 여부(#283) — 판정은 `MainTabView`, 이 Root는 루트 화면에 그리기만 한다.
+    let showsCollectionTooltip: Bool
 
     @State private var path = NavigationPath()
     /// 딥링크 화면이 놓인 스택 깊이 — `path.count`가 이보다 작아지면 그 화면이 빠진 것(아래 `.onChange(of: path.count)`).
@@ -114,6 +119,9 @@ struct HomeRootView: View {
                 loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                     repository: dependencies.notificationRepository
                 ),
+                loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
+                    collectionRepository: dependencies.collectionRepository
+                ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),
                 logger: dependencies.logger,
                 analyticsTracker: dependencies.analyticsTracker,
@@ -136,11 +144,16 @@ struct HomeRootView: View {
                         }
                     case .preferenceGenreSetting:
                         path.append(Destination.preferenceGenreSetting)
+                    case .publicCollectionList:
+                        path.append(Destination.publicCollectionList)
+                    case .collectionDetail(let id):
+                        path.append(Destination.collectionDetail(id))
                     }
                 },
                 onAuthenticationRequired: onAuthenticationRequired
             )
             .toolbar(.hidden, for: .navigationBar)
+            .collectionTooltip(isPresented: showsCollectionTooltip)
             .navigationDestination(for: Destination.self) { destination in
                 Group {
                     switch destination {
@@ -215,6 +228,17 @@ struct HomeRootView: View {
                                 case .createCollection:
                                     // 타유저 컬렉션 목록(isOwnCollections=false)엔 "만들기" 버튼이 안 떠 도달 불가.
                                     break
+                                }
+                            }
+                        )
+                    case .publicCollectionList:
+                        PublicCollectionListAssembly.makeView(
+                            dependencies: dependencies,
+                            onAuthenticationRequired: onAuthenticationRequired,
+                            onRoute: { route in
+                                switch route {
+                                case .collectionDetail(let collectionID):
+                                    path.append(Destination.collectionDetail(collectionID))
                                 }
                             }
                         )

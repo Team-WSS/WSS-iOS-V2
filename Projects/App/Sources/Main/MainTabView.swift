@@ -49,6 +49,24 @@ struct MainTabView: View {
     /// 세션을 끝낸 것이라 되살리지 않는다. 어느 탭이 소비했는지도 같이 들어, 다른 탭의 딥링크 화면이 빠질 때
     /// 이 값이 지워지지 않게 한다(탭마다 스택이 따로라 홈의 링크 A와 피드의 링크 B가 동시에 살아 있을 수 있다).
     @State private var deliveredDeepLink: (tab: MainTab, link: DeepLink)?
+    /// "나만의 컬렉션을 만들어보세요" 툴팁(#283) — 메인 진입 시(이 뷰가 새로 만들어질 때) 미확인이면 띄운다.
+    /// 홈·피드·서재 탭을 오가도 유지되고, **떠 있는 동안** My 탭을 눌러야만 확인 처리된다(`tabSelection`).
+    /// 확인 안 하고 앱을 끄면 다음 실행에 다시 뜬다.
+    @State private var isCollectionTooltipPresented: Bool
+
+    init(
+        dependencies: AppDependencies,
+        pendingDeepLink: Binding<DeepLink?>,
+        onAuthenticationRequired: @escaping () -> Void
+    ) {
+        self.dependencies = dependencies
+        self._pendingDeepLink = pendingDeepLink
+        self.onAuthenticationRequired = onAuthenticationRequired
+        self._isCollectionTooltipPresented = State(
+            initialValue: !DefaultOnboardingHintUseCase(repository: dependencies.onboardingHintRepository)
+                .hasSeen(.myPageCollectionTooltip)
+        )
+    }
 
     /// `TabView(selection:)`을 감싼 프록시 — 이미 선택된 피드 탭을 다시 탭하면(newValue == 현재 == .feed)
     /// `feedReselectSignal`을 올린다. SwiftUI는 선택된 탭 아이템을 재탭할 때도 이 setter를 같은 값으로 호출한다
@@ -60,6 +78,13 @@ struct MainTabView: View {
             set: { newValue in
                 if newValue == .feed && selectedTab == .feed {
                     feedReselectSignal += 1
+                }
+                if newValue == .my && isCollectionTooltipPresented {
+                    DefaultOnboardingHintUseCase(repository: dependencies.onboardingHintRepository)
+                        .markSeen(.myPageCollectionTooltip)
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        isCollectionTooltipPresented = false
+                    }
                 }
                 selectedTab = newValue
             }
@@ -163,7 +188,8 @@ private extension MainTabView {
             deepLink: deepLink(for: .home),
             onDeepLinkConsumed: consumeDeepLink,
             onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .home) },
-            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
+            showsCollectionTooltip: isCollectionTooltipPresented
         )
     }
 
@@ -174,6 +200,7 @@ private extension MainTabView {
             onDeepLinkConsumed: consumeDeepLink,
             onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .feed) },
             onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
+            showsCollectionTooltip: isCollectionTooltipPresented,
             scrollToTopSignal: feedReselectSignal
         )
     }
@@ -184,7 +211,8 @@ private extension MainTabView {
             deepLink: deepLink(for: .library),
             onDeepLinkConsumed: consumeDeepLink,
             onDeepLinkDestinationDismissed: { clearDeliveredDeepLink(for: .library) },
-            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication
+            onAuthenticationRequired: restoreDeepLinkAndRequireAuthentication,
+            showsCollectionTooltip: isCollectionTooltipPresented
         )
     }
 

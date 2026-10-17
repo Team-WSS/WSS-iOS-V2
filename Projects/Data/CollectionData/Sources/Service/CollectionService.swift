@@ -11,6 +11,7 @@ import Foundation
 protocol CollectionService: Sendable {
     func getUserCollections(userID: Int, query: CollectionsQuery) async throws -> CollectionsResponse
     func getLikedCollections(query: CollectionsQuery) async throws -> CollectionsResponse
+    func getPublicCollections(query: CollectionsQuery) async throws -> PublicCollectionsResponse
     func getCollectionDetail(collectionID: Int, query: CollectionDetailQuery) async throws -> CollectionDetailResponse
     func postCollection(request: SubmitCollectionRequest) async throws -> CreateCollectionResponse
     func putCollection(collectionID: Int, request: SubmitCollectionRequest) async throws
