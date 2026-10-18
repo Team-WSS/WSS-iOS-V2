@@ -29,8 +29,8 @@ struct PublicCollectionSection: View {
         static let cardWidth: CGFloat = 284
         static let cardPadding: CGFloat = 16
         static let cardCornerRadius: CGFloat = 14
-        static let headerToCovers: CGFloat = 12
-        static let coversToOwner: CGFloat = 8
+        static let headerToCovers: CGFloat = 16
+        static let coversToOwner: CGFloat = 16
         static let subtitleSpacing: CGFloat = 4
         static let coverSlotCount = 4
     }
