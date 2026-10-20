@@ -189,6 +189,7 @@ jobs:
     name: Test ${{ matrix.module }}
     runs-on: macos-15
     needs: discover
+    if: needs.discover.outputs.modules_json != '[]'
     timeout-minutes: 30
 
     strategy:
