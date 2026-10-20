@@ -16,4 +16,7 @@ import Foundation
 public enum OnboardingHint: String, Sendable, CaseIterable {
     /// 작품 상세 첫 진입 시 평가 상태바를 가리키는 안내 오버레이(#221, V1 parity 복원).
     case novelDetailReview
+    /// 메인 탭 하단에서 My 탭을 가리키는 "나만의 컬렉션을 만들어보세요" 툴팁(#283).
+    /// 툴팁이 떠 있는 동안 My 탭을 눌러야만 봤음 처리된다(안 누르고 앱을 끄면 다음 실행에 다시 뜬다).
+    case myPageCollectionTooltip
 }

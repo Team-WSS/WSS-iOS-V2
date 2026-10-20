@@ -332,6 +332,36 @@ struct DefaultAuthRepositoryTests {
         #expect(appStorage.get(.isRegistered) == nil)
     }
 
+    @Test("회원 탈퇴 성공 시 온보딩 힌트 확인 기록을 모두 지워 재가입하면 다시 보이게 한다(#283)")
+    func withdrawResetsOnboardingHints() async throws {
+        let appStorage = MockAppStorage()
+        let hintRepository = DefaultOnboardingHintRepository(appStorage: appStorage)
+        OnboardingHint.allCases.forEach { hintRepository.markSeen($0) }
+        let sut = makeRepository(appStorage: appStorage)
+
+        try await sut.withdraw(draft: WithdrawalReasonDraft())
+
+        #expect(OnboardingHint.allCases.allSatisfy { !hintRepository.hasSeen($0) })
+    }
+
+    @Test("로그아웃 성공 시 온보딩 힌트 확인 기록은 남긴다(#283)")
+    func logoutKeepsOnboardingHints() async throws {
+        let appStorage = MockAppStorage()
+        let hintRepository = DefaultOnboardingHintRepository(appStorage: appStorage)
+        OnboardingHint.allCases.forEach { hintRepository.markSeen($0) }
+        let tokenStore = MockTokenStore()
+        try tokenStore.saveRefreshToken("refresh")
+        let sut = makeRepository(
+            tokenStore: tokenStore,
+            deviceIdentifierStore: MockDeviceIdentifierStore(deviceIdentifier: "device"),
+            appStorage: appStorage
+        )
+
+        try await sut.logout()
+
+        #expect(OnboardingHint.allCases.allSatisfy { hintRepository.hasSeen($0) })
+    }
+
     // MARK: - syncAppleCredential
 
     @Test("Apple 계정 연동 성공 시 성공 로그를 남긴다")

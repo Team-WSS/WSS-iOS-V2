@@ -159,6 +159,7 @@ final class AppDependencies {
         )
         self.collectionRepository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: logger)
         )
         self.feedRepository = FeedDataFactory.makeFeedRepository(

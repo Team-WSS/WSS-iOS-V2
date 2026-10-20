@@ -20,6 +20,7 @@ enum CollectionEndpoint: Endpoint {
     case deleteCollectionLike(collectionID: Int)
     case getUserCollections(userID: Int, CollectionsQuery)
     case getLikedCollections(CollectionsQuery)
+    case getPublicCollections(CollectionsQuery)
 
     var baseURL: URL {
         URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
@@ -27,7 +28,7 @@ enum CollectionEndpoint: Endpoint {
 
     var path: String {
         switch self {
-        case .postCollection:
+        case .postCollection, .getPublicCollections:
             return "/collections"
         case .getCollectionDetail(let collectionID, _),
              .putCollection(let collectionID, _),
@@ -47,7 +48,7 @@ enum CollectionEndpoint: Endpoint {
         switch self {
         case .postCollection:
             return .post
-        case .getCollectionDetail, .getUserCollections, .getLikedCollections:
+        case .getCollectionDetail, .getUserCollections, .getLikedCollections, .getPublicCollections:
             return .get
         case .putCollection, .putCollectionLike:
             return .put
@@ -62,7 +63,8 @@ enum CollectionEndpoint: Endpoint {
             return .convertible(query)
         case .getUserCollections(_, let query):
             return .convertible(query)
-        case .getLikedCollections(let query):
+        case .getLikedCollections(let query),
+             .getPublicCollections(let query):
             return .convertible(query)
         default:
             return .none
@@ -84,6 +86,9 @@ enum CollectionEndpoint: Endpoint {
         // 공유 링크로 들어온 비로그인 조회자에게도 내려간다(소유자 정보 포함).
         // 토큰이 있으면 isMyCollection·isLiked가 채워지므로 있으면 붙인다.
         case .getCollectionDetail:
+            return .usesTokenIfAvailable
+        // 비로그인도 조회할 수 있고, 토큰이 있으면 차단 관계 작성자의 컬렉션이 빠진다.
+        case .getPublicCollections:
             return .usesTokenIfAvailable
         default:
             return .requireToken

@@ -11,7 +11,7 @@
 - **한 응답을 두 Entity로 나눠 매핑한다.** 목록 API(`/users/{userId}/collections`)는 `representativeNovel`(대표 작품 하나)과
   `recentNovels`(표시 순서 앞 5개)를 **항상 둘 다** 내려주고, 서버가 "무엇을 쓸지는 화면이 정하라"고 명시적으로 위임한다.
   그 선택을 화면마다 반복하지 않도록 매핑 시점에 고정했다 → 마이페이지 섹션은 `CollectionPreview`(대표 작품만),
-  컬렉션 리스트·좋아요 목록은 `CollectionCard`(미리보기 5개).
+  컬렉션 리스트·좋아요 목록·공개 목록은 `CollectionCard`(미리보기 5개).
 - **마이페이지 컬렉션 섹션에는 전용 API가 없다.** 같은 목록 API를 `size=3`으로 호출해 구성한다(서버 명세가 지시).
   size는 상수로 박지 말고 화면이 정해 내려보낸다 — 서재에서 같은 이유로 이미 관통시킨 선례가 있다(#184).
 - **목록 반환은 `(CursorPaginated<T>, Int)` 튜플.** 두 번째 값은 응답 최상위의 `collectionsCount`(조회자가 볼 수 있는
@@ -26,7 +26,6 @@
   "대표는 미리보기에 없다"고 가정한 코드를 짜지 말 것. 걸러낼지는 화면이 정한다(서버가 걸러주지 않는다).
 - **`novelCount`는 컬렉션의 전체 작품 수**다. `recentNovels.count`(최대 5)가 아니다 — 서버 명세가 못박아 둘 만큼 흔한 혼동이다.
 - 좋아요한 컬렉션 목록 응답에는 카드마다 `likeCount`가 딸려 오지만 그 화면이 좋아요 수를 쓰지 않아 **의도적으로 매핑하지 않는다**.
-  필요해지면 `CollectionCard`에 옵셔널로 얹지 말고 그 화면 전용 타입을 두는 편이 낫다(두 목록이 같은 카드를 공유하는 구조가 깨진다).
 - 작품을 다루지만 `BaseDomain.Novel`을 쓰지 않는다 — 컬렉션 화면은 평점·관심수·장르를 쓰지 않고 서버도 주지 않아서,
   `Novel`을 쓰면 없는 값을 0으로 채우게 된다. 경량 `CollectionNovel`을 쓴다(`LibraryNovel`·`SosoPick`과 같은 패턴).
 - **UseCase는 초안을 검증하지 않는다.** 제출 가능 여부(`CollectionDraft.isSubmittable`)는 완료 버튼을 잠그는 화면 몫이고,
@@ -59,3 +58,17 @@
   상한은 `addNovel`과 같은 `novelOverLimit` throw(선택 화면이 UI에서 이미 100개로 막아두므로 실사용
   경로는 아니지만, "사용자 입력은 거부"라는 `updateName` 방침과 일관되게 clamp 대신 throw를 골랐다).
   대표 작품이 새 목록에서 빠지면 `removeNovel`과 동일하게 대표 지정도 함께 풀린다.
+- **목록 카드는 `CollectionCard` 하나다**(#283 회의 결정) — 사용자별·좋아요·공개 목록이 이름·설명·작품 수·미리보기·공개 여부·소유자를
+  겹쳐 다뤄, 한때 따로 뒀던 공개 목록용 `PublicCollectionCard`를 합쳤다. 목록마다 서버가 주는 값이 달라 아래처럼 채운다
+  (판정은 `CollectionMapper` 한 곳, 로그인 사용자 ID는 Repository가 `AppStorage .userID`로 읽는다):
+  | 목록 | `owner` | `isMine` | `isPrivate` |
+  |---|---|---|---|
+  | 사용자별 | nil(서버 미제공) | 요청한 `userID` == 로그인 ID | 서버 값 그대로 |
+  | 좋아요 | nil(서버 미제공) | **항상 false**(소유자 미상) | 서버 값 그대로 |
+  | 공개(`GET /collections`) | 서버 `owner` | `owner.userId` == 로그인 ID | 항상 false |
+  - ⚠️ **owner가 없다고 로그인 계정으로 채우지 말 것** — 사용자별 목록은 타유저 프로필에서도 쓰이고 좋아요 목록은 대부분 남의
+    컬렉션이라 틀린 값이 된다. 그래서 `owner`는 옵셔널이고 작성자 라벨은 owner가 있을 때만 그린다.
+  - ⚠️ **좋아요 목록의 `isMine`은 믿을 수 없다**(내가 내 컬렉션에 좋아요를 눌렀어도 false). 지금은 쓰는 화면이 없다 — 필요해지면
+    서버에 owner를 요청할 것. `owner` 옵셔널도 같은 응답 빈틈 때문에 둔 임시 형태라 서버가 owner를 주면 함께 리팩터링한다.
+  - `isPrivate`은 세 목록 모두 서버 값을 그대로 쓴다 — 남의 나만 보는 컬렉션은 서버가 애초에 내려주지 않는다.
+  - `fetchPublicCollections`는 서버(`GET /collections`)가 전체 개수를 주지 않아 다른 목록과 달리 `(페이지, 개수)` 튜플이 아니라 페이지만 돌려준다.

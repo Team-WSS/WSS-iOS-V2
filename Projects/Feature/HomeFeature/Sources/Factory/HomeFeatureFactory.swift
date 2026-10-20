@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import Logger
 import PushAuthorization
 import Analytics
@@ -25,6 +26,7 @@ public enum HomeFeatureFactory {
     public static func makeView(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
+        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         analyticsTracker: AnalyticsTracker? = nil,
@@ -35,6 +37,7 @@ public enum HomeFeatureFactory {
             viewModel: HomeViewModel(
                 loadHomeDataUseCase: loadHomeDataUseCase,
                 loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
+                loadPublicCollectionsUseCase: loadPublicCollectionsUseCase,
                 pushAuthorizationChecker: pushAuthorizationChecker,
                 logger: logger,
                 analyticsTracker: analyticsTracker
