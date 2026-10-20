@@ -16,6 +16,10 @@ enum HomeAnalyticsEvent: String, AnalyticsEvent {
     case searchBarTapped = "general_search"
     /// "내 취향에 맞는 웹소설 찾기" 배너 클릭(상세탐색 진입)
     case detailSearchBannerTapped = "seek"
+    /// 컬렉션 모음.zip 섹션 제목 클릭(전체 컬렉션뷰 진입). 원본 리스트에 없어 #283에서 홈 이벤트 패턴으로 지었다.
+    case publicCollectionTitleTapped = "home_collection_all"
+    /// 컬렉션 모음.zip 카드 클릭. 원본 리스트에 없어 #283에서 홈 이벤트 패턴으로 지었다.
+    case publicCollectionSelected = "home_collectionlist"
     /// 오늘의 발견 카드 클릭
     case todayDiscoverySelected = "home_today_ranking"
     /// 추천글(지금 뜨는 수다글) 카드 클릭

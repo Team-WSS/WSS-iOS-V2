@@ -122,8 +122,14 @@ private extension HomeView {
                     Spacer().frame(height: Metric.searchToCollection)
                     PublicCollectionSection(
                         collections: state.publicCollections,
-                        onTitleTapped: { onRoute(.publicCollectionList) },
-                        onCollectionSelected: { onRoute(.collectionDetail($0)) }
+                        onTitleTapped: {
+                            viewModel.track(.publicCollectionTitleTapped)
+                            onRoute(.publicCollectionList)
+                        },
+                        onCollectionSelected: { collectionID in
+                            viewModel.track(.publicCollectionSelected)
+                            onRoute(.collectionDetail(collectionID))
+                        }
                     )
                 }
 
