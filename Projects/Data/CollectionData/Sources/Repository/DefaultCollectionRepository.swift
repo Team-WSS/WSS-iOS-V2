@@ -16,14 +16,22 @@ import BaseData
 struct DefaultCollectionRepository: CollectionRepository {
 
     private let service: CollectionService
+    private let appStorage: AppStorage
     private let logger: DataLogger?
 
     init(
         service: CollectionService,
+        appStorage: AppStorage,
         logger: DataLogger?
     ) {
         self.service = service
+        self.appStorage = appStorage
         self.logger = logger
+    }
+
+    /// 로그인 사용자. 로그인 직후 `syncUserBasicInfo()`가 채워두는 로컬 캐시다.
+    private var myID: UserID? {
+        appStorage.get(.userID).map(UserID.init)
     }
 
     // MARK: - 목록
@@ -66,7 +74,7 @@ struct DefaultCollectionRepository: CollectionRepository {
                 userID: userID.value,
                 query: CollectionsQuery(cursor: cursor, size: size)
             )
-            let result = CollectionMapper.collectionCards(from: response)
+            let result = CollectionMapper.collectionCards(from: response, ownerID: userID, myID: myID)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
@@ -91,7 +99,7 @@ struct DefaultCollectionRepository: CollectionRepository {
             let response = try await service.getLikedCollections(
                 query: CollectionsQuery(cursor: cursor, size: size)
             )
-            let result = CollectionMapper.collectionCards(from: response)
+            let result = CollectionMapper.collectionCards(from: response, ownerID: nil, myID: myID)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {
@@ -109,14 +117,14 @@ struct DefaultCollectionRepository: CollectionRepository {
     public func fetchPublicCollections(
         cursor: String?,
         size: Int
-    ) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    ) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         let action = CollectionAction.fetchPublicCollections
 
         do {
             let response = try await service.getPublicCollections(
                 query: CollectionsQuery(cursor: cursor, size: size)
             )
-            let result = CollectionMapper.publicCollectionCards(from: response)
+            let result = CollectionMapper.publicCollectionCards(from: response, myID: myID)
             logger?.logSuccess(action: action.name)
             return result
         } catch let error as NetworkingError {

@@ -25,7 +25,7 @@ struct LoadPublicCollectionsUseCaseTests {
         let page = try await useCase.execute(cursor: nil, size: 10)
 
         #expect(page.items.count == 3)
-        #expect(page.items.first?.owner.nickname == "작성자")
+        #expect(page.items.first?.owner?.nickname == "작성자")
     }
 
     @Test("서버가 준 순서를 바꾸지 않고 그대로 돌려준다")
@@ -94,14 +94,15 @@ private extension LoadPublicCollectionsUseCaseTests {
         cardCount: Int = 1,
         hasNext: Bool = false,
         nextCursor: String? = nil
-    ) -> CursorPaginated<PublicCollectionCard> {
+    ) -> CursorPaginated<CollectionCard> {
         CursorPaginated(
             items: (0..<cardCount).map { index in
-                PublicCollectionCard(
+                CollectionCard(
                     id: CollectionID(index),
                     name: "컬렉션",
                     description: nil,
                     novelCount: 5,
+                    isPrivate: false,
                     recentNovels: [],
                     owner: Author(userId: UserID(index), nickname: "작성자", profileImage: nil)
                 )

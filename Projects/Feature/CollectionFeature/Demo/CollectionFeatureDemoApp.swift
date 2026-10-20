@@ -240,6 +240,7 @@ private struct DemoRootView: View {
             DefaultLoadPublicCollectionsUseCase(
                 collectionRepository: CollectionDataFactory.makeRepository(
                     network: makeLiveClient(),
+                    appStorage: UserDefaultsStorage(),
                     logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
                 )
             )
@@ -389,6 +390,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeCreateCollectionView(
@@ -409,6 +411,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeEditCollectionView(
@@ -431,6 +434,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeCollectionListView(
@@ -725,18 +729,19 @@ private enum DemoCollectionCardPage {
 
 /// 전체 컬렉션뷰 데모 — 25개를 20개씩 끊어 무한 스크롤까지 확인한다. 작품 수를 0~7개로 돌려 빈 표지 슬롯도 함께 본다.
 private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         try? await Task.sleep(nanoseconds: 300_000_000)
         let total = 25
         let start = cursor.flatMap(Int.init) ?? 0
         let end = min(start + size, total)
         let cards = (start..<end).map { index in
             let novelCount = index % 8
-            return PublicCollectionCard(
+            return CollectionCard(
                 id: CollectionID(index + 1),
                 name: index.isMultiple(of: 3) ? "일이삼사오육칠팔구십일이삼사오육칠팔구십 \(index)" : "공개 컬렉션 \(index)",
                 description: index.isMultiple(of: 4) ? nil : "존잼 수준이 정도를 넘음",
                 novelCount: novelCount,
+                isPrivate: false,
                 recentNovels: (0..<min(novelCount, 5)).map { novelIndex in
                     CollectionNovel(
                         id: NovelID(index * 10 + novelIndex),

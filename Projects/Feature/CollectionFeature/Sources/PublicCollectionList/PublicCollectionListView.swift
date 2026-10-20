@@ -114,7 +114,7 @@ private extension PublicCollectionListView {
         .scrollIndicators(.hidden)
     }
 
-    func collectionCard(_ card: PublicCollectionCard) -> some View {
+    func collectionCard(_ card: CollectionCard) -> some View {
         Button {
             onRoute(.collectionDetail(card.id))
         } label: {
@@ -128,9 +128,11 @@ private extension PublicCollectionListView {
                     slotCount: Metric.coverSlotCount
                 )
 
-                Spacer().frame(height: 8)
+                if let owner = card.owner {
+                    Spacer().frame(height: 8)
 
-                WSSCollectionOwnerLabel(nickname: card.owner.nickname, profileImage: card.owner.profileImage)
+                    WSSCollectionOwnerLabel(nickname: owner.nickname, profileImage: owner.profileImage)
+                }
             }
             .padding(.horizontal, 17)
             .padding(.vertical, 16)
@@ -157,13 +159,14 @@ private extension PublicCollectionListView {
 }
 
 private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         let cards = (0..<5).map { index in
-            PublicCollectionCard(
+            CollectionCard(
                 id: CollectionID(index),
                 name: "일이삼사오육칠팔구십일이삼사오육칠팔구십",
                 description: "존잼 수준이 정도를 넘음",
                 novelCount: index + 1,
+                isPrivate: false,
                 recentNovels: [],
                 owner: Author(userId: UserID(index), nickname: "코띠", profileImage: nil)
             )

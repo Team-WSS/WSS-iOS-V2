@@ -16,11 +16,13 @@ import BaseData
 public enum CollectionDataFactory {
     public static func makeRepository(
         network: NetworkingRequestable,
+        appStorage: AppStorage,
         logger: DataLogger? = nil
     ) -> any CollectionRepository {
         let service = DefaultCollectionService(network: network)
         return DefaultCollectionRepository(
             service: service,
+            appStorage: appStorage,
             logger: logger
         )
     }

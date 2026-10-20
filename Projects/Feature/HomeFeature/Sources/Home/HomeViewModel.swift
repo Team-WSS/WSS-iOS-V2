@@ -32,7 +32,7 @@ final class HomeViewModel {
         var preferenceGenreNovelState: PreferenceGenreNovelState?
         var hasUnreadNotifications = false
         /// "컬렉션 모음.zip" 섹션. 비면 섹션을 제목까지 숨긴다(첫 로드 실패도 빈 채라 숨는다).
-        var publicCollections: [PublicCollectionCard] = []
+        var publicCollections: [CollectionCard] = []
 
         /// ⚠️ 초깃값 `true` — `onAppear`의 `.load`보다 첫 body 평가가 먼저라, false면 한 프레임 동안
         /// "검색바·배너만 있는 빈 홈"이 스친다(Library·NovelDetail과 같은 이유).

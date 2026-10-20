@@ -280,13 +280,14 @@ private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificatio
 }
 
 private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         let cards = (0..<3).map { index in
-            PublicCollectionCard(
+            CollectionCard(
                 id: CollectionID(index),
                 name: "개존잼 소설 🤩",
                 description: "존잼 수준이 정도를 넘음",
                 novelCount: index + 1,
+                isPrivate: false,
                 recentNovels: [],
                 owner: Author(userId: UserID(index), nickname: "코띠", profileImage: nil)
             )

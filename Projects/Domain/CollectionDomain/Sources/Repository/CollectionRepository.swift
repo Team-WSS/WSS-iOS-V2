@@ -49,7 +49,7 @@ public protocol CollectionRepository: Sendable {
     func fetchPublicCollections(
         cursor: String?,
         size: Int
-    ) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard>
+    ) async throws(RepositoryError) -> CursorPaginated<CollectionCard>
 
     /// 컬렉션 상세. 작품은 페이지네이션 없이 전부 내려온다.
     /// - Parameter sortType: 작품 정렬. `.recent`는 저장된 표시 순서 그대로, `.old`는 그 역순.

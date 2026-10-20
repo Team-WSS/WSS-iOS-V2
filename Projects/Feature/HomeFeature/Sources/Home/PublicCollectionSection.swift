@@ -17,7 +17,7 @@ import WSSComponent
 /// 제목 줄 탭은 전체 컬렉션뷰, 카드 탭은 컬렉션 상세로 간다.
 struct PublicCollectionSection: View {
 
-    let collections: [PublicCollectionCard]
+    let collections: [CollectionCard]
     let onTitleTapped: () -> Void
     let onCollectionSelected: (CollectionID) -> Void
 
@@ -81,7 +81,7 @@ private extension PublicCollectionSection {
         }
     }
 
-    func card(_ collection: PublicCollectionCard) -> some View {
+    func card(_ collection: CollectionCard) -> some View {
         Button {
             onCollectionSelected(collection.id)
         } label: {
@@ -101,12 +101,14 @@ private extension PublicCollectionSection {
                     slotCount: Metric.coverSlotCount
                 )
 
-                Spacer().frame(height: Metric.coversToOwner)
+                if let owner = collection.owner {
+                    Spacer().frame(height: Metric.coversToOwner)
 
-                WSSCollectionOwnerLabel(
-                    nickname: collection.owner.nickname,
-                    profileImage: collection.owner.profileImage
-                )
+                    WSSCollectionOwnerLabel(
+                        nickname: owner.nickname,
+                        profileImage: owner.profileImage
+                    )
+                }
             }
             .padding(Metric.cardPadding)
             .frame(width: Metric.cardWidth, alignment: .leading)
@@ -118,7 +120,7 @@ private extension PublicCollectionSection {
     }
 
     /// "설명 · 작품 N". 설명이 없으면 "작품 N"만 남는다. 설명이 길면 설명만 말줄임되고 작품 수는 지킨다.
-    func subtitle(_ collection: PublicCollectionCard) -> some View {
+    func subtitle(_ collection: CollectionCard) -> some View {
         HStack(spacing: 0) {
             if let description = collection.description {
                 Text(description)

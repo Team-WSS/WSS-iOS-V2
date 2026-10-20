@@ -18,7 +18,7 @@ public final class MockCollectionRepository: CollectionRepository {
     public var fetchCollectionPreviewsResult: Result<([CollectionPreview], Int), RepositoryError>!
     public var fetchCollectionsResult: Result<(CursorPaginated<CollectionCard>, Int), RepositoryError>!
     public var fetchLikedCollectionsResult: Result<(CursorPaginated<CollectionCard>, Int), RepositoryError>!
-    public var fetchPublicCollectionsResult: Result<CursorPaginated<PublicCollectionCard>, RepositoryError>!
+    public var fetchPublicCollectionsResult: Result<CursorPaginated<CollectionCard>, RepositoryError>!
     public var fetchCollectionDetailResult: Result<CollectionDetail, RepositoryError>!
     public var createCollectionResult: Result<CollectionID, RepositoryError>!
     public var updateCollectionResult: Result<Void, RepositoryError> = .success(())
@@ -71,7 +71,7 @@ public final class MockCollectionRepository: CollectionRepository {
     public func fetchPublicCollections(
         cursor: String?,
         size: Int
-    ) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    ) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         fetchedPublicRequests.append((cursor, size))
         return try fetchPublicCollectionsResult.get()
     }

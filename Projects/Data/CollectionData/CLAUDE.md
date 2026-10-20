@@ -31,6 +31,9 @@
   → `CollectionDetailQuery`가 `uppercased()`로 맞춘다. 도메인 enum을 서버 표기에 맞추려 고치지 말 것(다른 도메인도 쓴다).
 - **목록 API 하나가 Repository 메서드 셋을 떠받친다.** 미리보기·컬렉션 목록이 같은 `getUserCollections`를 호출하고
   Mapper만 갈린다(`collectionPreviews` / `collectionCards`). 엔드포인트를 추가하기 전에 Mapper로 해결되는지 먼저 볼 것.
+- **목록 카드의 `isMine`·`isPrivate` 판정에 로그인 사용자 ID가 필요해 Repository가 `AppStorage`를 받는다**(#283, `DefaultNovelRepository`와
+  같은 `.userID` 캐시). 판정 규칙 표는 `CollectionDomain/CLAUDE.md`. 사용자별·좋아요 목록은 같은 `collectionCards`를 쓰고
+  `ownerID`로만 갈린다(사용자별 = 요청한 userID, 좋아요 = nil — 소유자를 몰라 `isMine`이 false가 된다).
 - **Demo 앱은 `TEST_API_KEY`(`Config_Debug.xcconfig`)로 인증한다.** 만료되면 모든 호출이 `AUTH-000`으로 실패한다 —
   Demo가 안 될 때 코드부터 의심하지 말고 토큰부터 확인할 것. 갱신 방법은 `/api-spec` 스킬 문서에 있다.
 - 컬렉션 상세와 전체 공개 목록(`GET /collections`)만 `usesTokenIfAvailable`이다(비로그인도 조회 가능 — 공개 목록은 토큰이

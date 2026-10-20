@@ -29,42 +29,57 @@ enum CollectionMapper {
         return (previews, dto.collectionsCount)
     }
 
-    /// 컬렉션 리스트·좋아요한 목록용. 같은 응답에서 미리보기 썸네일 줄을 쓴다.
+    /// 사용자별·좋아요한 컬렉션 목록용. 서버가 소유자를 주지 않아 `owner`는 nil이다.
+    /// - Parameters:
+    ///   - ownerID: 목록 전체의 소유자. 사용자별 목록은 요청한 사용자, 좋아요 목록은 알 수 없어 nil.
+    ///   - myID: 로그인 사용자. 비로그인이면 nil.
     /// - Returns: (커서 페이지, 전체 컬렉션 수)
-    public static func collectionCards(from dto: CollectionsResponse) -> (CursorPaginated<CollectionCard>, Int) {
+    public static func collectionCards(
+        from dto: CollectionsResponse,
+        ownerID: UserID?,
+        myID: UserID?
+    ) -> (CursorPaginated<CollectionCard>, Int) {
+        // 소유자를 모르면(좋아요 목록) 내 컬렉션이어도 false가 된다.
+        let isMine = ownerID != nil && ownerID == myID
         let page = CursorPaginated(
-            items: dto.collections.map(collectionCard(from:)),
+            items: dto.collections.map {
+                CollectionCard(
+                    id: CollectionID($0.collectionId),
+                    name: $0.collectionName,
+                    description: $0.collectionDescription,
+                    novelCount: $0.novelCount,
+                    // 서버는 "공개인가"를, 도메인·화면은 "나만 보는가"를 말한다. 뒤집기는 여기서만 일어난다.
+                    // 남의 나만 보는 컬렉션은 서버가 내려주지 않아 소유자 여부와 상관없이 그대로 따른다.
+                    isPrivate: $0.isPublic == false,
+                    recentNovels: $0.recentNovels.map(collectionNovel(from:)),
+                    owner: nil,
+                    isMine: isMine
+                )
+            },
             hasNext: dto.hasNext,
             nextCursor: dto.nextCursor
         )
         return (page, dto.collectionsCount)
     }
 
-    private static func collectionCard(from dto: CollectionCardResponse) -> CollectionCard {
-        CollectionCard(
-            id: CollectionID(dto.collectionId),
-            name: dto.collectionName,
-            description: dto.collectionDescription,
-            novelCount: dto.novelCount,
-            // 서버는 "공개인가"를, 도메인·화면은 "나만 보는가"를 말한다. 뒤집기는 여기 한 곳뿐이다.
-            isPrivate: dto.isPublic == false,
-            recentNovels: dto.recentNovels.map(collectionNovel(from:))
-        )
-    }
-
-    /// 홈 컬렉션 섹션·전체 컬렉션뷰용.
+    /// 홈 컬렉션 섹션·전체 컬렉션뷰용. 공개 컬렉션만 내려오므로 `isPrivate`은 항상 false다.
+    /// - Parameter myID: 로그인 사용자. 비로그인이면 nil.
     public static func publicCollectionCards(
-        from dto: PublicCollectionsResponse
-    ) -> CursorPaginated<PublicCollectionCard> {
+        from dto: PublicCollectionsResponse,
+        myID: UserID?
+    ) -> CursorPaginated<CollectionCard> {
         CursorPaginated(
             items: dto.collections.map {
-                PublicCollectionCard(
+                let owner = author(from: $0.owner)
+                return CollectionCard(
                     id: CollectionID($0.collectionId),
                     name: $0.collectionName,
                     description: $0.collectionDescription,
                     novelCount: $0.novelCount,
+                    isPrivate: false,
                     recentNovels: $0.recentNovels.map(collectionNovel(from:)),
-                    owner: author(from: $0.owner)
+                    owner: owner,
+                    isMine: myID != nil && owner.userId == myID
                 )
             },
             hasNext: dto.hasNext,

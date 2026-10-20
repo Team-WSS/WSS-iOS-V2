@@ -22,7 +22,7 @@ final class PublicCollectionListViewModel {
     // MARK: - State
 
     struct State {
-        var items: [PublicCollectionCard] = []
+        var items: [CollectionCard] = []
         /// 초기값 true — onAppear의 `.load`보다 첫 body 평가가 먼저라, false로 시작하면 로드 시작 전
         /// 한 프레임 빈 상태가 스친다(`CollectionListViewModel`과 동일 이유).
         var isLoading = true

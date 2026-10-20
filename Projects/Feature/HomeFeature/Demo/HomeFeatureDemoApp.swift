@@ -201,6 +201,7 @@ private struct DemoRootView: View {
             loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
                 collectionRepository: CollectionDataFactory.makeRepository(
                     network: client,
+                    appStorage: UserDefaultsStorage(),
                     logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
                 )
             )
@@ -362,17 +363,18 @@ private enum DemoHomeData {
 private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
     let scenario: DemoHomeScenario
 
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<PublicCollectionCard> {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
         guard scenario != .empty else {
             return CursorPaginated(items: [], hasNext: false, nextCursor: nil)
         }
         let cards = (0..<size).map { index in
             let novelCount = index % 8
-            return PublicCollectionCard(
+            return CollectionCard(
                 id: CollectionID(index + 1),
                 name: index.isMultiple(of: 3) ? "일이삼사오육칠팔구십일이삼사오육칠팔구십" : "개존잼 소설 🤩",
                 description: index.isMultiple(of: 4) ? nil : "존잼 수준이 정도를 넘음",
                 novelCount: novelCount,
+                isPrivate: false,
                 recentNovels: (0..<min(novelCount, 5)).map { novelIndex in
                     CollectionNovel(
                         id: NovelID(index * 10 + novelIndex),
