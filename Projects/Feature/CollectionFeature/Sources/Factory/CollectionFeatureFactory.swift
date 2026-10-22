@@ -183,6 +183,27 @@ public enum CollectionFeatureFactory {
         )
     }
 
+    /// 전체 컬렉션뷰("컬렉션 모음.zip", #283) — 홈 컬렉션 섹션 제목 탭에서 진입한다.
+    /// - Parameters:
+    ///   - onAuthenticationRequired: 인증 만료 신호. 화면(또는 루트) 교체는 호출자가 한다.
+    ///   - onRoute: 화면 전환 의도 콜백(`PublicCollectionListRoute`).
+    @MainActor
+    public static func makePublicCollectionListView(
+        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase,
+        logger: Logger? = nil,
+        onAuthenticationRequired: @escaping () -> Void,
+        onRoute: @escaping (PublicCollectionListRoute) -> Void
+    ) -> some View {
+        PublicCollectionListView(
+            viewModel: PublicCollectionListViewModel(
+                loadPublicCollectionsUseCase: loadPublicCollectionsUseCase,
+                logger: logger
+            ),
+            onAuthenticationRequired: onAuthenticationRequired,
+            onRoute: onRoute
+        )
+    }
+
     /// - Parameters:
     ///   - id: 조회할 컬렉션. `CollectionListView`의 카드 탭에서 넘어온다.
     ///   - deleteCollectionUseCase: 우상단 더보기(소유자에게만 노출)의 "컬렉션 삭제".

@@ -18,6 +18,7 @@ public final class MockCollectionRepository: CollectionRepository {
     public var fetchCollectionPreviewsResult: Result<([CollectionPreview], Int), RepositoryError>!
     public var fetchCollectionsResult: Result<(CursorPaginated<CollectionCard>, Int), RepositoryError>!
     public var fetchLikedCollectionsResult: Result<(CursorPaginated<CollectionCard>, Int), RepositoryError>!
+    public var fetchPublicCollectionsResult: Result<CursorPaginated<CollectionCard>, RepositoryError>!
     public var fetchCollectionDetailResult: Result<CollectionDetail, RepositoryError>!
     public var createCollectionResult: Result<CollectionID, RepositoryError>!
     public var updateCollectionResult: Result<Void, RepositoryError> = .success(())
@@ -30,6 +31,7 @@ public final class MockCollectionRepository: CollectionRepository {
     public private(set) var fetchedPreviewRequests: [(userID: UserID, size: Int)] = []
     public private(set) var fetchedCollectionRequests: [(userID: UserID, cursor: String?, size: Int)] = []
     public private(set) var fetchedLikedRequests: [(cursor: String?, size: Int)] = []
+    public private(set) var fetchedPublicRequests: [(cursor: String?, size: Int)] = []
     public private(set) var fetchedDetailRequests: [(id: CollectionID, sortType: SortType)] = []
     public private(set) var createdDrafts: [CollectionDraft] = []
     public private(set) var updatedRequests: [(id: CollectionID, draft: CollectionDraft)] = []
@@ -64,6 +66,14 @@ public final class MockCollectionRepository: CollectionRepository {
     ) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int) {
         fetchedLikedRequests.append((cursor, size))
         return try fetchLikedCollectionsResult.get()
+    }
+
+    public func fetchPublicCollections(
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
+        fetchedPublicRequests.append((cursor, size))
+        return try fetchPublicCollectionsResult.get()
     }
 
     public func fetchCollectionDetail(

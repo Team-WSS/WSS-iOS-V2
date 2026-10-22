@@ -60,6 +60,7 @@ private struct DemoRootView: View {
         case create
         case edit(CollectionID)
         case list(isEmpty: Bool)
+        case publicList
         case detail(CollectionID)
         /// 진입 시점의 선택 스냅샷을 path payload로 직접 태운다 — 별도 `@State` 스크래치 변수에 먼저
         /// 써두고 그 값을 읽어 destination을 만드는 방식은 **레이스가 있다**(실측, 2026-08-28): 같은
@@ -101,6 +102,11 @@ private struct DemoRootView: View {
 
                 Button("컬렉션 목록 화면 열기") {
                     path.append(Destination.list(isEmpty: false))
+                }
+                .buttonStyle(.bordered)
+
+                Button("전체 컬렉션뷰 열기") {
+                    path.append(Destination.publicList)
                 }
                 .buttonStyle(.bordered)
 
@@ -148,6 +154,8 @@ private struct DemoRootView: View {
                     editView(id: id)
                 case .list(let isEmpty):
                     listView(isEmpty: isEmpty)
+                case .publicList:
+                    publicListView
                 case .detail(let id):
                     detailView(id: id)
                 case .searchNovel(let initialSelection):
@@ -221,6 +229,32 @@ private struct DemoRootView: View {
         case .live:
             makeLiveListView()
         }
+    }
+
+    @ViewBuilder
+    private var publicListView: some View {
+        let useCase: LoadPublicCollectionsUseCase = switch dataSource {
+        case .mock:
+            DemoLoadPublicCollectionsUseCase()
+        case .live:
+            DefaultLoadPublicCollectionsUseCase(
+                collectionRepository: CollectionDataFactory.makeRepository(
+                    network: makeLiveClient(),
+                    appStorage: UserDefaultsStorage(),
+                    logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
+                )
+            )
+        }
+        CollectionFeatureFactory.makePublicCollectionListView(
+            loadPublicCollectionsUseCase: useCase,
+            logger: consoleLogger,
+            onAuthenticationRequired: handleAuthenticationRequired,
+            onRoute: { route in
+                switch route {
+                case .collectionDetail(let id): path.append(Destination.detail(id))
+                }
+            }
+        )
     }
 
     /// Mock 전용(실서버는 목록 화면에서 카드를 탭해 진입하는 경로만 유효 — 위 바로가기 주석 참고).
@@ -356,6 +390,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeCreateCollectionView(
@@ -376,6 +411,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeEditCollectionView(
@@ -398,6 +434,7 @@ private struct DemoRootView: View {
         let client = makeLiveClient()
         let repository = CollectionDataFactory.makeRepository(
             network: client,
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return CollectionFeatureFactory.makeCollectionListView(
@@ -687,5 +724,35 @@ private enum DemoCollectionCardPage {
             CursorPaginated(items: cards, hasNext: hasNext, nextCursor: hasNext ? String(pageIndex + 1) : nil),
             pageSize * demoPageCount
         )
+    }
+}
+
+/// 전체 컬렉션뷰 데모 — 25개를 20개씩 끊어 무한 스크롤까지 확인한다. 작품 수를 0~7개로 돌려 빈 표지 슬롯도 함께 본다.
+private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let total = 25
+        let start = cursor.flatMap(Int.init) ?? 0
+        let end = min(start + size, total)
+        let cards = (start..<end).map { index in
+            let novelCount = index % 8
+            return CollectionCard(
+                id: CollectionID(index + 1),
+                name: index.isMultiple(of: 3) ? "일이삼사오육칠팔구십일이삼사오육칠팔구십 \(index)" : "공개 컬렉션 \(index)",
+                description: index.isMultiple(of: 4) ? nil : "존잼 수준이 정도를 넘음",
+                novelCount: novelCount,
+                isPrivate: false,
+                recentNovels: (0..<min(novelCount, 5)).map { novelIndex in
+                    CollectionNovel(
+                        id: NovelID(index * 10 + novelIndex),
+                        title: "작품 \(novelIndex)",
+                        author: "작가",
+                        thumbnailImage: URL(string: "https://picsum.photos/seed/wsscollection\(index)\(novelIndex)/148/216")
+                    )
+                },
+                owner: Author(userId: UserID(index + 1), nickname: "코띠\(index)", profileImage: nil)
+            )
+        }
+        return CursorPaginated(items: cards, hasNext: end < total, nextCursor: end < total ? String(end) : nil)
     }
 }

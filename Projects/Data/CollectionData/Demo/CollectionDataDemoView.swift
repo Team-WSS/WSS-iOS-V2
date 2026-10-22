@@ -30,7 +30,7 @@ struct CollectionDataDemoView: View {
     init() {
         let client = NetworkingClient(tokenStore: DemoSessionTokenStore())
         let logger = DataLogger(moduleName: "CollectionData", underlying: OSLogger.collection)
-        self.repository = CollectionDataFactory.makeRepository(network: client, logger: logger)
+        self.repository = CollectionDataFactory.makeRepository(network: client, appStorage: UserDefaultsStorage(), logger: logger)
     }
 
     var body: some View {

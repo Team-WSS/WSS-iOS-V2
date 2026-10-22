@@ -11,6 +11,7 @@ import SwiftUI
 import BaseDomain
 import RecommendationDomain
 import NotificationDomain
+import CollectionDomain
 import PushAuthorization
 import DesignSystem
 import WSSComponent
@@ -25,6 +26,8 @@ struct HomeView: View {
     private let onAuthenticationRequired: () -> Void
 
     private enum Metric {
+        static let searchToCollection: CGFloat = 24
+        static let collectionToDiscovery: CGFloat = 32
         static let searchToDiscovery: CGFloat = 24
         static let discoveryToTrending: CGFloat = 32
         static let trendingToPreference: CGFloat = 38
@@ -114,8 +117,28 @@ private extension HomeView {
                 )
 
                 // 섹션은 값이 없으면 제목까지 통째로 사라진다 — 아래 섹션이 그만큼 올라붙는다.
+                // 컬렉션 섹션은 0건이거나 첫 로드에 실패하면 숨는다 — 그땐 오늘의 발견이 검색 영역에 바로 붙는다.
+                if !state.publicCollections.isEmpty {
+                    Spacer().frame(height: Metric.searchToCollection)
+                    PublicCollectionSection(
+                        collections: state.publicCollections,
+                        onTitleTapped: {
+                            viewModel.track(.publicCollectionTitleTapped)
+                            onRoute(.publicCollectionList)
+                        },
+                        onCollectionSelected: { collectionID in
+                            viewModel.track(.publicCollectionSelected)
+                            onRoute(.collectionDetail(collectionID))
+                        }
+                    )
+                }
+
                 if !state.todayDiscoveries.isEmpty {
-                    Spacer().frame(height: Metric.searchToDiscovery)
+                    Spacer().frame(
+                        height: state.publicCollections.isEmpty
+                            ? Metric.searchToDiscovery
+                            : Metric.collectionToDiscovery
+                    )
                     todayDiscoverySection(state.todayDiscoveries)
                 }
 
@@ -188,6 +211,7 @@ private extension HomeView {
         viewModel: HomeViewModel(
             loadHomeDataUseCase: PreviewLoadHomeDataUseCase(),
             loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase(),
+            loadPublicCollectionsUseCase: PreviewLoadPublicCollectionsUseCase(),
             pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         ),
         onRoute: { print("화면 전환 요청: \($0)") },
@@ -258,6 +282,23 @@ private struct PreviewLoadHomeDataUseCase: LoadHomeDataUseCase {
 private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase {
     func execute() async throws(RepositoryError) -> UnreadNotificationStatus {
         UnreadNotificationStatus(hasUnreadNotifications: true)
+    }
+}
+
+private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
+    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
+        let cards = (0..<3).map { index in
+            CollectionCard(
+                id: CollectionID(index),
+                name: "개존잼 소설 🤩",
+                description: "존잼 수준이 정도를 넘음",
+                novelCount: index + 1,
+                isPrivate: false,
+                recentNovels: [],
+                owner: Author(userId: UserID(index), nickname: "코띠", profileImage: nil)
+            )
+        }
+        return CursorPaginated(items: cards, hasNext: false, nextCursor: nil)
     }
 }
 

@@ -288,6 +288,7 @@ private enum DemoFactory {
                 logger: DefaultNetworkLogger(base: consoleLogger),
                 tokenStore: DemoSessionTokenStore()
             ),
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return MypageFeatureFactory.makeView(
@@ -319,6 +320,7 @@ private enum DemoFactory {
                 logger: DefaultNetworkLogger(base: consoleLogger),
                 tokenStore: DemoSessionTokenStore()
             ),
+            appStorage: UserDefaultsStorage(),
             logger: DataLogger(moduleName: "CollectionData", underlying: consoleLogger)
         )
         return UserPageFeatureFactory.makeView(

@@ -41,6 +41,16 @@ public protocol CollectionRepository: Sendable {
         size: Int
     ) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int)
 
+    /// 모든 사용자의 공개 컬렉션 목록. 최초 생성 시점 최신순(수정·좋아요로 순서가 바뀌지 않는다).
+    ///
+    /// 조회자 본인의 비공개 컬렉션은 오지 않고, 로그인 상태면 차단 관계 작성자의 컬렉션이 빠진다.
+    /// 서버가 전체 개수를 주지 않아 다른 목록과 달리 커서 페이지만 돌려준다.
+    /// - Parameter cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
+    func fetchPublicCollections(
+        cursor: String?,
+        size: Int
+    ) async throws(RepositoryError) -> CursorPaginated<CollectionCard>
+
     /// 컬렉션 상세. 작품은 페이지네이션 없이 전부 내려온다.
     /// - Parameter sortType: 작품 정렬. `.recent`는 저장된 표시 순서 그대로, `.old`는 그 역순.
     func fetchCollectionDetail(
