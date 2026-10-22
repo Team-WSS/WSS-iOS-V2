@@ -29,7 +29,7 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
   develop으로 1회 흡수하고 이 흐름으로 바꿨다.
 
 > ⚠️ **이 스킬은 App Store 제출을 실행하지 않는다.** main에 push되면 `.github/workflows/release.yml`이
-> `CUTOVER_READY` repo variable + `app-store-release` Environment 승인 게이트를 거쳐 별도로 처리한다
+> `CUTOVER_READY`·`AUTO_SUBMIT_ENABLED` repo variable + `app-store-release` Environment 승인 게이트를 거쳐 별도로 처리한다
 > (`docs/WORKFLOW.md`의 "배포" 절). 이 스킬은 그 트리거가 되는 **PR을 올리는 데까지만** 한다.
 >
 > ⚠️ **리뷰 범위**: 이 PR들에 담기는 코드는 develop에 들어가기 전 각 feature PR에서 이미 검증됐다 —
@@ -112,8 +112,8 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
   - `💭 Summary` → "vX.Y.Z 릴리즈 — develop 작업을 main으로 승격해요."
   - `🔑 Key Changes` → 1단계 커밋 롤업(압축된 경우 `COMPARE_URL` 포함) + 버전 `<main>→<새 버전>` 한 줄.
   - `📱 Simulation` → "해당 없음".
-  - `🧑‍🧒‍🧒 To Reviewer` → "merge되면 `CUTOVER_READY`가 `true`일 때만 `app-store-release` 승인 요청이
-    뜬다"는 안내(`docs/WORKFLOW.md`의 "배포" 절 링크). **머지 방식은 "Create a merge commit"**(squash ❌ —
+  - `🧑‍🧒‍🧒 To Reviewer` → "merge되면 `CUTOVER_READY`·`AUTO_SUBMIT_ENABLED`가 모두 `true`일 때만
+    `app-store-release` 승인 요청이 뜬다(지금은 자동 제출 꺼짐 — App Store Connect에서 수동 제출)"는 안내(`docs/WORKFLOW.md`의 "배포" 절 링크). **머지 방식은 "Create a merge commit"**(squash ❌ —
     squash하면 main에 develop에 없는 커밋이 생겨 단방향이 깨진다).
 - **제목**: `[Setting] #<N> - vX.Y.Z 릴리즈`(N은 준비 PR의 이슈 번호).
 - 보여주고 **검토 게이트** → 승인 시:
@@ -124,8 +124,8 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
   (스크립트가 `base=main`이면 `head=develop`만 허용한다.)
 
 ### 7. 마무리 보고
-- PR URL을 보고하고, **"merge되면 `CUTOVER_READY` 상태에 따라 자동 제출 워크플로우가 대기하거나
-  skip돼요"** 라고 안내한다.
+- PR URL을 보고하고, **"merge되면 `CUTOVER_READY`·`AUTO_SUBMIT_ENABLED` 상태에 따라 자동 제출
+  워크플로우가 대기하거나 skip돼요"** 라고 안내한다(자동 제출이 꺼져 있으면 App Store Connect 수동 제출 필요).
 
 ## 원칙
 - **단방향**: develop → main만. main 전용 커밋 ❌, 릴리스 브랜치를 main에 직접 ❌, 승격 PR squash ❌.

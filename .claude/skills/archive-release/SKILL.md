@@ -18,8 +18,9 @@ metadata:
 > 비슷하지만 `release_beta`는 TestFlight 내부 배포일 뿐 심사 제출이 아니다. **`release` lane
 > (`deliver(submit_for_review: true)`)은 이 스킬 범위 밖**이다 — 사용자가 "App Store에 제출해줘"라고
 > 요청해도 이 스킬로 대신 처리하지 않는다. ⚠️ **컷오버가 완료돼(GitHub Actions repo variable
-> `CUTOVER_READY=true`, 2026-09-21) 이제 `main` push마다 `release.yml` CI가 `release` lane을 자동
-> 실행한다.** 로컬에서 직접 `bundle exec fastlane ios release`를 치는 경우엔 여전히 가드가 살아있다
+> `CUTOVER_READY=true`, 2026-09-21) `main` push마다 `release.yml` CI가 `release` lane을 자동
+> 실행할 수 있다** — 단 2026-10-21부터 `AUTO_SUBMIT_ENABLED` repo variable로 자동 제출을 꺼둔 상태다
+> (App Store Connect 수동 제출). 로컬에서 직접 `bundle exec fastlane ios release`를 치는 경우엔 여전히 가드가 살아있다
 > — `Fastfile`의 가드는 그 repo variable이 아니라 **로컬 셸 환경변수** `ENV["CUTOVER_READY"]`를 보므로,
 > 직접 `export CUTOVER_READY=true`를 하지 않는 한 기본적으로 막힌다(`docs/WORKFLOW.md` "배포" 절 참고).
 > 사용자가 이 스킬 범위 밖의 실행(`release` lane)을 원하면 그 사실을 알리고 정말 의도한 게 맞는지

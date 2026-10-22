@@ -1,10 +1,12 @@
 name: Submit to App Store Review
 
 # main에 push(=릴리즈 PR merge)되면 실제 App Store 심사 제출(fastlane release lane)까지
-# 이어지는 워크플로우. 두 겹의 안전장치가 있다:
+# 이어지는 워크플로우. 세 겹의 안전장치가 있다:
 #   1) vars.CUTOVER_READY != 'true'면 job의 `if:`에서 아예 skip — 승인 요청조차 뜨지 않는다.
 #      (컷오버 체크리스트 완료로 2026-09-21부터 true — docs/WORKFLOW.md "배포" 절 참고)
-#   2) CUTOVER_READY가 true라도 `environment: app-store-release`에 걸린 Required reviewers가
+#   2) vars.AUTO_SUBMIT_ENABLED != 'true'여도 skip — 자동 제출 on/off 스위치(2026-10-21부터 꺼둠,
+#      App Store Connect에서 수동 제출 중). 다시 켜려면 repo variable을 'true'로 만들면 된다.
+#   3) 위 둘이 true라도 `environment: app-store-release`에 걸린 Required reviewers가
 #      실제 실행 전 GitHub에서 수동 승인해야 한다.
 # 추가로 fastlane Fastfile의 release lane 자체에도 같은 CUTOVER_READY 가드가 있다(로컬 수동
 # 실행 방어선) — 이 워크플로우가 우회돼도 거기서 한 번 더 막힌다.
@@ -24,7 +26,7 @@ jobs:
     name: Build & Submit for Review
     runs-on: macos-15
     timeout-minutes: 60
-    if: vars.CUTOVER_READY == 'true'
+    if: vars.CUTOVER_READY == 'true' && vars.AUTO_SUBMIT_ENABLED == 'true'
     environment: app-store-release
     steps:
       - name: Checkout
@@ -129,7 +131,7 @@ jobs:
             fastlane/report.xml
           retention-days: 14
 
-  # App Store 제출(submit job)과 독립적으로 항상 실행 — CUTOVER_READY와 무관하게 main이 갱신될
+  # App Store 제출(submit job)과 독립적으로 항상 실행 — CUTOVER_READY·AUTO_SUBMIT_ENABLED와 무관하게 main이 갱신될
   # 때마다 GitHub Release/태그로 릴리즈 이력을 남긴다(실제 심사 제출 여부와는 별개의 기록용).
   # ⚠️ 워크플로우 top-level concurrency(18-20행, group: release-main)를 그대로 상속하면 submit job과
   # 같은 슬롯을 공유해 "항상 즉시 독립 실행"이 깨진다(연속 push 시 이전 실행의 submit이 끝날 때까지
