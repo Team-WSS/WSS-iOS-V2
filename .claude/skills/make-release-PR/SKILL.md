@@ -1,6 +1,6 @@
 ---
 name: make-release-PR
-description: WSS-iOS-V2에서, develop의 최신 작업을 main으로 승격하는 릴리스를 진행할 때 사용한다. 흐름은 단방향 두 단계다 — ① 준비 PR: 새 버전 번호·릴리즈 노트를 물어 `Project.swift`의 `MARKETING_VERSION`과 `fastlane/metadata/ko/release_notes.txt`를 반영한 `Setting/#N` 브랜치로 `base=develop` PR을 올리고, ② 승격 PR: 그게 develop에 머지되면 `head=develop`, `base=main` PR을 올린다. main에만 들어가는 커밋은 만들지 않는다. "릴리스 PR 올리자", "main에 배포 PR 만들어줘", "이번 버전 릴리즈하자", 또는 "/make-release-PR" 같은 요청에 트리거. ⚠️ 이슈 생성·push·PR 생성은 외부로 나가는 비가역 작업 → 승인 후에만 실행한다. (`main` push 이후 실제 App Store 심사 제출은 `.github/workflows/release.yml`의 몫 — 이 스킬은 그 트리거가 되는 PR을 올리는 데까지만 한다.)
+description: WSS-iOS-V2에서, develop의 최신 작업을 main으로 승격하는 릴리스를 진행할 때 사용한다. 흐름은 단방향 두 단계다 — ① 준비 PR: 새 버전 번호·릴리즈 노트를 물어 `Project.swift`의 `MARKETING_VERSION`과 `fastlane/metadata/ko/release_notes.txt`를 반영한 `Setting/#N` 브랜치로 `base=develop` PR을 올리고, ② 승격 PR: 그게 develop에 머지되면 `head=develop`, `base=main` PR을 올린다. main에만 들어가는 커밋은 만들지 않는다. "릴리스 PR 올리자", "main에 배포 PR 만들어줘", "이번 버전 릴리즈하자", 또는 "/make-release-PR" 같은 요청에 트리거. ⚠️ 이슈 생성·push·PR 생성은 외부로 나가는 비가역 작업 → 승인 후에만 실행한다. (`main` push 이후 실제 App Store 심사 제출은 `AUTO_SUBMIT_ENABLED`가 켜져 있을 때 `.github/workflows/release.yml`의 몫, 꺼져 있으면 사람이 App Store Connect에서 수동 제출 — 이 스킬은 그 트리거가 되는 PR을 올리는 데까지만 한다.)
 metadata:
   short-description: develop→main 릴리스 — 버전·릴리즈노트를 develop에 반영(준비 PR) 후 develop→main 승격 PR
 ---
@@ -113,7 +113,8 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
   - `🔑 Key Changes` → 1단계 커밋 롤업(압축된 경우 `COMPARE_URL` 포함) + 버전 `<main>→<새 버전>` 한 줄.
   - `📱 Simulation` → "해당 없음".
   - `🧑‍🧒‍🧒 To Reviewer` → "merge되면 `CUTOVER_READY`·`AUTO_SUBMIT_ENABLED`가 모두 `true`일 때만
-    `app-store-release` 승인 요청이 뜬다(지금은 자동 제출 꺼짐 — App Store Connect에서 수동 제출)"는 안내(`docs/WORKFLOW.md`의 "배포" 절 링크). **머지 방식은 "Create a merge commit"**(squash ❌ —
+    `app-store-release` 승인 요청이 뜬다(꺼져 있으면 App Store Connect 수동 제출 + `release_notes.txt` 직접
+    입력 필요)"는 안내(`docs/WORKFLOW.md`의 "배포" 절 링크). **머지 방식은 "Create a merge commit"**(squash ❌ —
     squash하면 main에 develop에 없는 커밋이 생겨 단방향이 깨진다).
 - **제목**: `[Setting] #<N> - vX.Y.Z 릴리즈`(N은 준비 PR의 이슈 번호).
 - 보여주고 **검토 게이트** → 승인 시:
@@ -125,7 +126,8 @@ main ─────────────●(승격 PR merge → tag vX.Y.Z)
 
 ### 7. 마무리 보고
 - PR URL을 보고하고, **"merge되면 `CUTOVER_READY`·`AUTO_SUBMIT_ENABLED` 상태에 따라 자동 제출
-  워크플로우가 대기하거나 skip돼요"** 라고 안내한다(자동 제출이 꺼져 있으면 App Store Connect 수동 제출 필요).
+  워크플로우가 대기하거나 skip돼요"** 라고 안내한다. 자동 제출이 꺼져 있으면 App Store Connect 수동 제출이
+  필요하고, `release_notes.txt` 내용도 ASC에 직접 붙여 넣어야 한다고 함께 알린다.
 
 ## 원칙
 - **단방향**: develop → main만. main 전용 커밋 ❌, 릴리스 브랜치를 main에 직접 ❌, 승격 PR squash ❌.

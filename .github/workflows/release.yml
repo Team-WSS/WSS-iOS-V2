@@ -133,7 +133,7 @@ jobs:
 
   # App Store 제출(submit job)과 독립적으로 항상 실행 — CUTOVER_READY·AUTO_SUBMIT_ENABLED와 무관하게 main이 갱신될
   # 때마다 GitHub Release/태그로 릴리즈 이력을 남긴다(실제 심사 제출 여부와는 별개의 기록용).
-  # ⚠️ 워크플로우 top-level concurrency(18-20행, group: release-main)를 그대로 상속하면 submit job과
+  # ⚠️ 워크플로우 top-level concurrency(group: release-main)를 그대로 상속하면 submit job과
   # 같은 슬롯을 공유해 "항상 즉시 독립 실행"이 깨진다(연속 push 시 이전 실행의 submit이 끝날 때까지
   # 최대 60분 대기) — 그래서 이 job만 커밋 단위로 별도 concurrency group을 준다.
   tag_release:

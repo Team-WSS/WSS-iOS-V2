@@ -151,8 +151,8 @@ end
 # Release → App Store 제출
 # =====================================
 # ⚠️ 컷오버가 완료돼(2026-09-21) GitHub Actions repo variable `CUTOVER_READY=true`라 main push마다
-# release.yml CI가 이 lane을 자동 실행한다(단 repo variable `AUTO_SUBMIT_ENABLED`가 true일 때만 —
-# 2026-10-21부터 꺼둠). 여기 `ENV["CUTOVER_READY"]`는 그 repo variable과 별개인
+# release.yml CI가 이 lane을 자동 실행할 수 있다 — 단 repo variable `AUTO_SUBMIT_ENABLED`가 true일
+# 때만이고, 2026-10-21부터 꺼둠. 여기 `ENV["CUTOVER_READY"]`는 그 repo variable과 별개인
 # **로컬 셸 환경변수**라 기본값은 여전히 미설정 — 로컬에서 실수로 실제 App Store 제출이 나가는 사고를
 # 막는 방어선으로 남겨둔다. 로컬에서 정말 이 lane을 돌려야 하면 셸에 `CUTOVER_READY=true`를 직접
 # export할 것(가볍게 우회하지 말고 정말 의도한 실행인지 재확인).
