@@ -7,6 +7,10 @@ import MutationCore
 // 사용법(레포 루트에서, tuist generate 후):
 //   swift run --package-path Tooling/ArchLint Mutate AuthDomain           # 전체 실행
 //   swift run --package-path Tooling/ArchLint Mutate AuthDomain --list    # 심을 버그 목록만
+//   swift run --package-path Tooling/ArchLint Mutate AuthDomain --changed-since          # origin/develop 이후 바뀐 소스에만
+//   swift run --package-path Tooling/ArchLint Mutate AuthDomain --changed-since=HEAD~3   # 다른 기준(`=`로 붙여 쓴다)
+// `--changed-since`는 모듈의 테스트(`Tests/`)나 가짜 객체(`Testing/`)가 바뀌었으면 모듈 전체에 심는다 —
+// 테스트가 약해지면 손대지 않은 소스의 버그도 새로 살아남기 때문이다.
 //
 // 소스 파일을 직접 고쳤다가 되돌리므로, 모듈 Sources에 커밋 안 한 변경이 있으면 시작하지 않는다.
 // 원본은 시작할 때 읽어 두고, Ctrl-C나 실행 실패로 끝나도 되돌린다. 그래도 남으면 `git checkout -- <모듈>/Sources`.
@@ -15,6 +19,8 @@ struct Options {
     var module = ""
     var root = "."
     var listOnly = false
+    /// `--changed-since`의 기준 ref. nil이면 모듈 전체.
+    var changedSince: String?
 }
 
 func parseOptions() -> Options {
@@ -24,6 +30,11 @@ func parseOptions() -> Options {
         switch argument {
         case "--list": options.listOnly = true
         case "--root": options.root = arguments.next() ?? "."
+        case "--changed-since": options.changedSince = "origin/develop"
+        case let flag where flag.hasPrefix("--changed-since="):
+            let ref = String(flag.dropFirst("--changed-since=".count))
+            guard !ref.isEmpty else { fail("--changed-since= 뒤에 기준을 적는다(예: --changed-since=HEAD~3)") }
+            options.changedSince = ref
         default: options.module = argument
         }
     }
@@ -184,19 +195,60 @@ func runTests(scheme: String, root: String, simulator: String, timeout: TimeInte
 // MARK: - 실행
 
 let options = parseOptions()
-guard !options.module.isEmpty else { fail("사용법: Mutate <모듈 이름> [--list] [--root 레포루트]") }
+guard !options.module.isEmpty else {
+    fail("사용법: Mutate <모듈 이름> [--list] [--changed-since[=기준, 기본 origin/develop]] [--root 레포루트]")
+}
+
+func relative(_ path: String) -> String {
+    path.replacingOccurrences(of: options.root + "/", with: "")
+}
 
 let moduleDir = moduleDirectory(options.module, root: options.root)
-let sourceFiles = swiftFiles(under: moduleDir + "/Sources")
+var sourceFiles = swiftFiles(under: moduleDir + "/Sources")
+
+/// 기준 ref와 갈라진 지점 이후 바뀐 파일(레포 루트 기준 상대 경로).
+/// 작업 폴더까지 비교하고 추적 안 된 새 파일도 넣는다 — 커밋 전 테스트 수정도 범위에 반영되게.
+func changedPaths(since ref: String) -> [String] {
+    // 한글 등 ASCII 밖 경로를 따옴표로 감싸지 않게 한다(그러면 소스 경로와 안 맞는다).
+    let git = ["-c", "core.quotePath=false"]
+    let base = run("/usr/bin/git", git + ["merge-base", ref, "HEAD"], in: options.root)
+    let mergeBase = base.output.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard base.status == 0, !mergeBase.isEmpty else {
+        fail("기준 \(ref)과 갈라진 지점을 찾지 못했다(git merge-base \(ref) HEAD): \(base.output.trimmingCharacters(in: .whitespacesAndNewlines))")
+    }
+    let diff = run("/usr/bin/git", git + ["diff", "--name-only", "--relative", mergeBase], in: options.root)
+    guard diff.status == 0 else { fail("git diff 실패: \(diff.output)") }
+    let untracked = run("/usr/bin/git", git + ["ls-files", "--others", "--exclude-standard"], in: options.root)
+    guard untracked.status == 0 else { fail("git ls-files 실패: \(untracked.output)") }
+    return ChangedScope.paths(fromGitOutput: diff.output) + ChangedScope.paths(fromGitOutput: untracked.output)
+}
+
+if let ref = options.changedSince {
+    // decide는 레포 루트 기준 상대 경로로 비교한다 — 실제 경로(`./Projects/…`)와 오가는 표를 둔다.
+    let actualPath = Dictionary(uniqueKeysWithValues: sourceFiles.map { (relative($0), $0) })
+    let decision = ChangedScope.decide(
+        sourceFiles: sourceFiles.map(relative),
+        changedPaths: changedPaths(since: ref),
+        moduleDirectory: relative(moduleDir)
+    )
+    switch decision {
+    case .wholeModule:
+        say("\(ref) 이후 테스트나 가짜 객체가 바뀌어 모듈 전체에 심는다")
+    case .onlyChanged(let files) where files.isEmpty:
+        say("\(ref) 이후 바뀐 소스가 없어 심을 버그가 없다")
+        exit(0)
+    case .onlyChanged(let files):
+        sourceFiles = files.compactMap { actualPath[$0] }
+        say("\(ref) 이후 바뀐 소스 \(files.count)개에만 심는다:")
+        for file in files { say("  \(file)") }
+    }
+}
+
 var mutants: [Mutant] = []
 for file in sourceFiles {
     guard let source = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
     originals[file] = source
     mutants += MutantGenerator.mutants(in: source, path: file)
-}
-
-func relative(_ path: String) -> String {
-    path.replacingOccurrences(of: options.root + "/", with: "")
 }
 
 if options.listOnly {
