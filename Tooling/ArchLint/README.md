@@ -24,6 +24,7 @@ swift test --package-path Tooling/ArchLint              # 규칙 자체 테스�
 ARCHLINT_DEBUG=1 swift run ...                          # 스캔·매칭 진단을 stderr로
 swift run  --package-path Tooling/ArchLint ArchLint --write-test-specs .   # 테스트 목록 파일(TEST_SPEC.md) 갱신
 swift run  --package-path Tooling/ArchLint Mutate AuthDomain              # 뮤테이션(로컬·수동, tuist generate 후)
+swift run  --package-path Tooling/ArchLint Mutate AuthDomain --changed-since   # origin/develop 이후 바뀐 소스에만(기준은 --changed-since=<ref>)
 ```
 
 `<root>/Projects` 아래 모든 `.swift`를 파싱해 규칙을 적용한다.
@@ -83,6 +84,8 @@ CI(`GITHUB_ACTIONS=true`)에서는 `::error`/`::warning` 주석도 emit 해 위�
   소스를 직접 고쳤다 되돌리므로 Sources가 깨끗할 때만 시작한다. Ctrl-C·kill(-9 제외)·터미널 닫기·실행 실패로 끝나도 돌던 xcodebuild를 멈추고 시작할 때 읽어 둔 원본으로 되돌린다.
   버그 하나가 5분을 넘기면(무한 루프) 끊고 "잡힘(시간 초과)"로 센다.
   DerivedData를 Xcode와 나눠 임시 폴더(`$TMPDIR/wss-mutation-derived-data`)에 둔다 — 동시 빌드 충돌과 레포 안 빌드 폴더를 피한다. 로컬·수동 실행.
+  `--changed-since[=<ref>]`(기본 `origin/develop`)는 갈라진 지점 이후 바뀐 소스(작업 폴더·추적 안 된 파일 포함)에만 심어 시간을 줄인다.
+  모듈의 `Tests/`·`Testing/`이 바뀌었으면 모듈 전체에 심는다 — 테스트가 약해지면 손대지 않은 소스의 버그도 새로 살아남기 때문(`ChangedScope`).
 
 ## 규칙 추가하기
 
