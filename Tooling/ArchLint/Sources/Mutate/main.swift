@@ -262,6 +262,11 @@ guard status.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else
     fail("\(relative(moduleDir))/Sources에 커밋 안 한 변경이 있다 — 소스를 고쳤다 되돌리는 도구라 먼저 정리한다")
 }
 
+// 테스트가 없으면 아래 시작 확인이 "테스트부터 실패한다"로 끝나 원인이 가려진다. 판단 코드가 없어 테스트를 다 뺀 모듈이 이 경우다.
+guard !swiftFiles(under: moduleDir + "/Tests").isEmpty else {
+    fail("\(relative(moduleDir))/Tests에 테스트가 없다 — 잡을 테스트가 없어 뮤테이션을 돌릴 수 없다(판단 코드가 없는 모듈이면 건너뛴다)")
+}
+
 // 꺼진 시뮬레이터를 넘기면 xcodebuild가 실행마다 켰다 끈다(한 번에 30초 넘게 든다). 미리 켜 두고, 도구가 켰으면 끝날 때 끈다.
 let (simulatorID, wasBooted) = simulator()
 if !wasBooted {
