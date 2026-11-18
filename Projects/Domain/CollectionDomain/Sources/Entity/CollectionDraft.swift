@@ -121,7 +121,9 @@ public struct CollectionDraft: Equatable, Sendable {
     /// count 상한은 `addNovel`과 동일하게 throw — 선택 화면이 UI에서 이미 100개로 막아두므로 실사용에서는
     /// 도달하지 않지만, "사용자 입력 검증은 거부"(clamp 아님) 방침을 `updateName`과 동일하게 지킨다.
     /// 대표 작품이 새 목록에 더 이상 없으면 대표 지정도 함께 풀린다(`removeNovel`과 같은 이유).
+    /// 중복은 `addNovel`과 같은 `duplicatedNovel`로 막는다 — 들어오는 길에 따라 규칙이 갈리지 않게.
     public mutating func setNovels(_ ids: [NovelID]) throws(ValidationError) {
+        guard Set(ids).count == ids.count else { throw .duplicatedNovel }
         guard ids.count <= Self.maxNovelCount else {
             throw .novelOverLimit(max: Self.maxNovelCount)
         }

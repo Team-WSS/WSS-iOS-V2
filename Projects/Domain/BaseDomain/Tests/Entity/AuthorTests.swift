@@ -5,39 +5,39 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
-@testable import BaseDomain
+import BaseDomain
 
-@Suite
+@Suite("작성자 프로필 이동")
 struct AuthorTests {
 
-    // MARK: - accessibleUserId
+    @Test("작성자를 알면 그 작성자의 프로필로 이동할 수 있다")
+    func knownAuthorIsReachable() {
+        let author = makeAuthor(userId: UserID(1003))
 
-    @Test("userId가 정상 값이면 accessibleUserId가 그 값을 그대로 반환한다")
-    func accessibleUserIdReturnsValue() {
-        let author = makeAuthor(userId: UserID(42))
-
-        #expect(author.accessibleUserId == UserID(42))
+        #expect(author.accessibleUserId == UserID(1003))
     }
 
-    @Test("userId가 탈퇴 유저 센티널(-1)이면 accessibleUserId가 nil이다")
-    func accessibleUserIdNilWhenWithdrawn() {
+    @Test("탈퇴한 작성자의 프로필로는 이동할 수 없다")
+    func withdrawnAuthorIsNotReachable() {
+        // 서버는 탈퇴한 작성자를 -1로 보낸다.
         let author = makeAuthor(userId: UserID(-1))
 
         #expect(author.accessibleUserId == nil)
     }
 
-    @Test("userId가 nil이면 accessibleUserId가 nil이다")
-    func accessibleUserIdNilWhenMissing() {
+    @Test("작성자를 모르면 프로필로 이동할 수 없다")
+    func unknownAuthorIsNotReachable() {
         let author = makeAuthor(userId: nil)
 
         #expect(author.accessibleUserId == nil)
     }
-}
 
-private extension AuthorTests {
-    func makeAuthor(userId: UserID?) -> Author {
-        Author(userId: userId, nickname: "닉네임", profileImage: nil)
+    // MARK: - Helpers
+
+    private func makeAuthor(userId: UserID?) -> Author {
+        Author(userId: userId, nickname: "소소", profileImage: nil)
     }
 }

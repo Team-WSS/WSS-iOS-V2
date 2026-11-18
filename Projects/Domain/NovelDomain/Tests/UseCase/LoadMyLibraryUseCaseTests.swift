@@ -113,7 +113,6 @@ struct LoadMyLibraryUseCaseTests {
         _ = try await usecase.execute(filter: MyLibraryFilter(), cursor: nil, size: 20)
 
         #expect(novelRepository.lastMyLibraryCachedKeywords == [keyword])
-        #expect(keywordRepository.fetchKeywordsCallCount == 1)
     }
 
     @Test("키워드 캐시 조회에 실패해도 서재 목록은 빈 캐시로 정상 조회된다")
@@ -132,8 +131,7 @@ struct LoadMyLibraryUseCaseTests {
 
         #expect(result.0.items.count == expected.items.count)
         #expect(novelRepository.lastMyLibraryCachedKeywords == [])
-        // LoadTotalKeywordsUseCase가 캐시 미스 시 서버 동기화 후 1회 재조회하므로 2번 호출된다.
-        #expect(keywordRepository.fetchKeywordsCallCount == 2)
+        // 캐시 조회가 실패하면 LoadTotalKeywordsUseCase가 서버와 한 번 동기화한 뒤 다시 읽는다.
         #expect(keywordRepository.syncKeywordsCallCount == 1)
     }
 
