@@ -8,87 +8,89 @@
 
 import Testing
 
-@testable import SettingDomain
-import SettingDomainTesting
-import BaseDomain
+import SettingDomain
 
-@Suite("AppVersion")
+@Suite("앱 버전")
 struct AppVersionTests {
 
-    @Test("버전 문자열이 한 자리일 경우 1.0.0 형태로 해석된다")
-    func parsesSingleComponentVersion() throws {
-        let v = try AppVersion("1")
-        #expect(v.major == 1)
-        #expect(v.minor == 0)
-        #expect(v.patch == 0)
-        #expect(v.description == "1.0.0")
-    }
+    @Suite("문자열 읽기")
+    struct Parsing {
 
-    @Test("버전 문자열이 두 자리일 경우 patch는 0으로 보정된다")
-    func parsesTwoComponentVersion() throws {
-        let v = try AppVersion("1.2")
-        #expect(v.major == 1)
-        #expect(v.minor == 2)
-        #expect(v.patch == 0)
-        #expect(v.description == "1.2.0")
-    }
+        @Test(
+            "숫자가 하나나 둘이면 비어 있는 자리를 0으로 채운다",
+            arguments: [
+                ("1", AppVersion(major: 1, minor: 0, patch: 0)),    // minor·patch가 빔
+                ("1.2", AppVersion(major: 1, minor: 2, patch: 0))   // patch만 빔
+            ]
+        )
+        func fillsMissingComponentsWithZero(text: String, expected: AppVersion) throws {
+            let version = try AppVersion(text)
 
-    @Test("버전 문자열이 세 자리일 경우 그대로 해석된다")
-    func parsesThreeComponentVersion() throws {
-        let v = try AppVersion("1.2.3")
-        #expect(v.major == 1)
-        #expect(v.minor == 2)
-        #expect(v.patch == 3)
-        #expect(v.description == "1.2.3")
-    }
-
-    @Test("버전 문자열 앞뒤 공백은 무시된다")
-    func trimsWhitespace() throws {
-        let v = try AppVersion("  2.0.1  ")
-        #expect(v == AppVersion(major: 2, minor: 0, patch: 1))
-    }
-
-    @Test("유효하지 않은 버전 문자열이면 파싱에 실패한다")
-    func throwsOnInvalidFormat() async {
-        #expect(throws: AppVersion.ParseError.invalidFormat("1.2.3.4")) {
-            _ = try AppVersion("1.2.3.4")
+            #expect(version == expected)
         }
 
-        #expect(throws: AppVersion.ParseError.invalidFormat("a.b.c")) {
-            _ = try AppVersion("a.b.c")
+        @Test("숫자가 셋이면 그대로 읽는다")
+        func readsThreeComponents() throws {
+            let version = try AppVersion("1.2.3")
+
+            #expect(version == AppVersion(major: 1, minor: 2, patch: 3))
         }
 
-        #expect(throws: AppVersion.ParseError.invalidFormat("")) {
-            _ = try AppVersion("")
+        @Test("앞뒤 공백은 무시하고 읽는다")
+        func ignoresSurroundingWhitespace() throws {
+            let version = try AppVersion("  2.0.1\n")
+
+            #expect(version == AppVersion(major: 2, minor: 0, patch: 1))
+        }
+
+        @Test(
+            "버전 모양이 아니면 오류로 처리한다",
+            arguments: [
+                "",          // 아무것도 없음
+                "   ",       // 공백뿐
+                "1.2.3.4",   // 숫자가 넷
+                "a.b.c",     // 숫자가 아님
+                "1.-2.3",    // 음수
+                "v1.2.3",    // 앞에 글자가 붙음
+                "1..2",      // 가운데 자리가 빔
+                "1.",        // 끝 자리가 빔
+                ".1"         // 첫 자리가 빔
+            ]
+        )
+        func rejectsMalformedText(text: String) {
+            #expect(throws: AppVersion.ParseError.invalidFormat(text)) {
+                try AppVersion(text)
+            }
         }
     }
 
-    @Test("patch 버전이 다르면 patch 값을 기준으로 비교한다")
-    func comparesPatchVersion() {
-        let a = AppVersion(major: 1, minor: 2, patch: 3)
-        let b = AppVersion(major: 1, minor: 2, patch: 4)
-        #expect(a < b)
-        #expect(b > a)
-    }
+    @Suite("비교")
+    struct Comparison {
 
-    @Test("minor 버전이 다르면 minor 값을 기준으로 비교한다")
-    func comparesMinorVersion() {
-        let a = AppVersion(major: 1, minor: 2, patch: 9)
-        let b = AppVersion(major: 1, minor: 3, patch: 0)
-        #expect(a < b)
-    }
+        @Test(
+            "앞자리부터 차례로 비교해 처음 다른 자리로 크기를 정한다",
+            arguments: [
+                // major가 작으면 minor·patch가 커도 작다
+                (AppVersion(major: 1, minor: 9, patch: 9), AppVersion(major: 2, minor: 0, patch: 0)),
+                // major가 같으면 minor가 작은 쪽이 작다(patch가 커도)
+                (AppVersion(major: 1, minor: 2, patch: 9), AppVersion(major: 1, minor: 3, patch: 0)),
+                // major·minor가 같으면 patch로 정한다
+                (AppVersion(major: 1, minor: 2, patch: 3), AppVersion(major: 1, minor: 2, patch: 4))
+            ]
+        )
+        func higherComponentDecidesOrder(smaller: AppVersion, larger: AppVersion) {
+            let sorted = [larger, smaller].sorted()
 
-    @Test("major 버전이 다르면 major 값을 기준으로 비교한다")
-    func comparesMajorVersion() {
-        let a = AppVersion(major: 1, minor: 9, patch: 9)
-        let b = AppVersion(major: 2, minor: 0, patch: 0)
-        #expect(a < b)
-    }
+            #expect(sorted == [smaller, larger])
+        }
 
-    @Test("1.2와 1.2.0은 같은 버전으로 취급된다")
-    func treatsNormalizedVersionsAsEqual() throws {
-        let a = try AppVersion("1.2")
-        let b = try AppVersion("1.2.0")
-        #expect(a == b)
+        @Test("세 자리가 모두 같으면 크기가 같다")
+        func sameComponentsAreNotSmaller() {
+            let version = AppVersion(major: 1, minor: 2, patch: 3)
+
+            let isSmaller = version < AppVersion(major: 1, minor: 2, patch: 3)
+
+            #expect(isSmaller == false)
+        }
     }
 }

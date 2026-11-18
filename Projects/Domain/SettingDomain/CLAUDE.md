@@ -14,3 +14,4 @@
 
 - **Repository 2개** (`AppUpdateRepository`, `TermsAgreementRepository`) — 영역이 다르다.
 - `AppVersionProviding`는 현재 버전을 주입받는 프로토콜 (Bundle 등 외부 의존을 도메인 밖으로 뺀 것). 테스트 시 여기에 가짜 버전 주입.
+- **`Testing/Mock` 3개는 이 모듈 테스트가 아니라 `SplashData` 테스트(`DefaultLaunchGateRepositoryTests`)가 쓴다**(#308에서 넘기기 UseCase 테스트를 지운 뒤). 모듈 테스트에 안 보인다고 지우면 SplashData가 깨진다.

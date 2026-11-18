@@ -6,46 +6,37 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
-import Foundation
 import Testing
 
-@testable import SettingDomain
-import SettingDomainTesting
-import BaseDomain
+import SettingDomain
 
-@Suite("AppUpdatePolicy")
+@Suite("강제 업데이트 판단")
 struct AppUpdatePolicyTests {
 
-    @Test("현재 버전이 최소 버전보다 낮으면 강제 업데이트가 필요하다")
-    func requiresForceUpdateWhenCurrentIsLower() {
-        let policy = AppUpdatePolicy(
-            minimumVersion: AppVersion(major: 1, minor: 0, patch: 0),
-            updateDate: nil
-        )
+    private let policy = AppUpdatePolicy(
+        minimumVersion: AppVersion(major: 1, minor: 0, patch: 0),
+        updateDate: nil
+    )
 
+    @Test("앱 버전이 최소 버전보다 낮으면 강제 업데이트가 필요하다")
+    func requiresUpdateBelowMinimum() {
         let current = AppVersion(major: 0, minor: 9, patch: 9)
-        #expect(policy.requiresForceUpdate(current: current) == true)
+
+        let requiresUpdate = policy.requiresForceUpdate(current: current)
+
+        #expect(requiresUpdate == true)
     }
 
-    @Test("현재 버전이 최소 버전과 같으면 강제 업데이트가 필요하지 않다")
-    func doesNotRequireForceUpdateWhenCurrentEqualsMinimum() {
-        let policy = AppUpdatePolicy(
-            minimumVersion: AppVersion(major: 1, minor: 0, patch: 0),
-            updateDate: nil
-        )
+    @Test(
+        "앱 버전이 최소 버전과 같거나 높으면 강제 업데이트가 필요 없다",
+        arguments: [
+            AppVersion(major: 1, minor: 0, patch: 0),   // 최소 버전과 딱 같음
+            AppVersion(major: 1, minor: 0, patch: 1)    // patch 하나 위
+        ]
+    )
+    func doesNotRequireUpdateAtOrAboveMinimum(current: AppVersion) {
+        let requiresUpdate = policy.requiresForceUpdate(current: current)
 
-        let current = AppVersion(major: 1, minor: 0, patch: 0)
-        #expect(policy.requiresForceUpdate(current: current) == false)
-    }
-
-    @Test("현재 버전이 최소 버전보다 높으면 강제 업데이트가 필요하지 않다")
-    func doesNotRequireForceUpdateWhenCurrentIsGreater() {
-        let policy = AppUpdatePolicy(
-            minimumVersion: AppVersion(major: 1, minor: 0, patch: 0),
-            updateDate: nil
-        )
-
-        let current = AppVersion(major: 1, minor: 0, patch: 1)
-        #expect(policy.requiresForceUpdate(current: current) == false)
+        #expect(requiresUpdate == false)
     }
 }
