@@ -19,17 +19,18 @@ public struct AppVersion: Equatable, Comparable, Hashable, CustomStringConvertib
     public var description: String { "\(major).\(minor).\(patch)" }
 
     public init(major: Int, minor: Int, patch: Int) {
-        self.major = max(0, major)
-        self.minor = max(0, minor)
-        self.patch = max(0, patch)
+        self.major = major
+        self.minor = minor
+        self.patch = patch
     }
 
     /// "1", "1.2", "1.2.3" 모두 허용. 그 외는 throw.
+    /// 빈 자리("1..2", "1.", ".1")도 throw — 빈 자리를 버리고 나누면 "1..2"가 1.2.0으로 조용히 읽힌다.
     public init(_ string: String) throws {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw ParseError.invalidFormat(string) }
 
-        let parts = trimmed.split(separator: ".").map { String($0) }
+        let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false).map { String($0) }
         guard (1...3).contains(parts.count) else { throw ParseError.invalidFormat(string) }
 
         func parse(_ idx: Int) throws -> Int {
