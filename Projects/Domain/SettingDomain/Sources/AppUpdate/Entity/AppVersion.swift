@@ -14,8 +14,6 @@ public struct AppVersion: Equatable, Comparable, Hashable, CustomStringConvertib
     public let minor: Int
     public let patch: Int
 
-    public static let zero = AppVersion(major: 0, minor: 0, patch: 0)
-
     public var description: String { "\(major).\(minor).\(patch)" }
 
     public init(major: Int, minor: Int, patch: Int) {
@@ -26,10 +24,9 @@ public struct AppVersion: Equatable, Comparable, Hashable, CustomStringConvertib
 
     /// "1", "1.2", "1.2.3" 모두 허용. 그 외는 throw.
     /// 빈 자리("1..2", "1.", ".1")도 throw — 빈 자리를 버리고 나누면 "1..2"가 1.2.0으로 조용히 읽힌다.
+    /// 빈 문자열은 `[""]`로 나뉘어 숫자 변환에서 throw되므로 따로 검사하지 않는다.
     public init(_ string: String) throws {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw ParseError.invalidFormat(string) }
-
         let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false).map { String($0) }
         guard (1...3).contains(parts.count) else { throw ParseError.invalidFormat(string) }
 
