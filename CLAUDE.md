@@ -58,6 +58,7 @@
 - `new-feature`는 **Feature 작업에만** 끼운다. 비-Feature 작업은 `new-issue` → (작업) → `make-PR` → `ready-merge`.
 - 이미 그 단계가 끝났거나 사용자가 명시적으로 다른 길을 택했으면 다시 제안하지 않는다.
 - 각 스킬의 절차·책임 경계는 해당 `.claude/skills/<name>/SKILL.md`가 단일 진실 소스다(여기 복제 ❌).
+  GitHub 위키(`Skill-*`·`Agent-*`)와 `skill-archive` 라벨 이슈는 머지 시 자동 생성되는 **사본**이라 거기서 고치면 덮어써진다 — 수정은 원본 파일에서 PR로(→ `docs/WORKFLOW.md` "스킬 아카이브" 절).
 
 ---
 
@@ -84,7 +85,7 @@ Projects/<Layer>/<Module>/CLAUDE.md    ← 그 모듈 작업 시 자동 (모듈 
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | 제품 용어 ↔ 코드 타입 (작업 시작 시 권장) |
 | [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | 네이밍·import 순서·주석·접근제어·비동기·에러 규약 |
 | [docs/TESTING.md](docs/TESTING.md) | 테스트 작성/수정 전 (필수) |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 브랜치·커밋·PR·새 모듈 추가·CI·스킬 아카이브(Discord·위키) |
 | [docs/FASTLANE_ONBOARDING.md](docs/FASTLANE_ONBOARDING.md) | 신규 팀원 실기기 서명 셋업·새 기기 추가 |
 | [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md) | 작업 완료 직전 자가 점검 |
 | [docs/TODO.md](docs/TODO.md) | **범위 밖이라 미룬 것**을 적거나 꺼낼 때 (그 PR에서 못 고친 결함·부활 대기 코드) |
