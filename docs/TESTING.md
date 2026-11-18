@@ -134,6 +134,9 @@ Projects/Domain/<Module>Domain/
 - ArchLint 테스트 규칙은 **재작성을 마친 모듈에만** 켜져 있다 — `Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`의 `TestSpecScope.modules`.
   모듈을 이 기준으로 다시 쓰면 거기에 추가한다. 다시 쓰는 순서는 `rewrite-domain-tests` 스킬(`.claude/skills/rewrite-domain-tests/SKILL.md`)이 따라간다. 안 고친 모듈까지 켜면 옛 테스트가 전부 error로 떠 게이트가 막힌다.
   `TEST_SPEC.md`도 이 모듈만 만들고 검사한다 — 추가할 때 `--write-test-specs`로 먼저 만든다(없으면 `test-spec-file` error).
+- **판단 코드가 하나도 없는 모듈**은 테스트 0개로 두고 `.tests`·`.testing` 타깃을 뺀다(빈 타깃은 CI가 돌려도 확인하는 게 없다).
+  그래도 적용 범위엔 **넣는다** — `test-required`는 `Tests`가 없어도 소스를 보고, 나중에 분기·throw가 생기면 테스트 없이는 막는다.
+  `TEST_SPEC.md`는 제목만 있는 파일이 된다. 뮤테이션은 잡을 테스트가 없어 건너뛴다.
 - 아직 안 켜진 Domain 모듈에도 **새로 쓰는 테스트는 이 기준**을 따른다. 옛 방식 테스트(예: `@testable`, 메서드별 `// MARK:`, 호출 횟수 확인)를 본뜨지 않는다.
 
 ## CI
