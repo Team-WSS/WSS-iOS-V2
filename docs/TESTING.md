@@ -132,7 +132,7 @@ Projects/Domain/<Module>Domain/
 ## 적용 범위 (#293 진행 중)
 
 - ArchLint 테스트 규칙은 **재작성을 마친 모듈에만** 켜져 있다 — `Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`의 `TestSpecScope.modules`.
-  모듈을 이 기준으로 다시 쓰면 거기에 추가한다. 안 고친 모듈까지 켜면 옛 테스트가 전부 error로 떠 게이트가 막힌다.
+  모듈을 이 기준으로 다시 쓰면 거기에 추가한다. 다시 쓰는 순서는 `rewrite-domain-tests` 스킬(`.claude/skills/rewrite-domain-tests/SKILL.md`)이 따라간다. 안 고친 모듈까지 켜면 옛 테스트가 전부 error로 떠 게이트가 막힌다.
   `TEST_SPEC.md`도 이 모듈만 만들고 검사한다 — 추가할 때 `--write-test-specs`로 먼저 만든다(없으면 `test-spec-file` error).
 - 아직 안 켜진 Domain 모듈에도 **새로 쓰는 테스트는 이 기준**을 따른다. 옛 방식 테스트(예: `@testable`, 메서드별 `// MARK:`, 호출 횟수 확인)를 본뜨지 않는다.
 
