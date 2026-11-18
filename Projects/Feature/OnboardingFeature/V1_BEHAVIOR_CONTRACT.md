@@ -46,7 +46,7 @@
 3. **v1.4.0 재로그인 확인 액션시트** — V1 로그인 화면은 `didEnterLoginV140` 플래그가 없고 이미 로그인된 상태면 "로그인 확인이 필요합니다" 액션시트를 띄운다(업데이트 후 1회). V2엔 없다. 위와 같은 마이그레이션 성격. → [1.5](#15-v140-마이그레이션-워크어라운드)
    - **🗑 확정(2026-08-28): 의도된 제거(마이그레이션 잔재).** #2와 동일 — v1.4.0 업데이트 후 1회 재로그인 유도, V2엔 불필요.
 4. **로그인 성공 시 FCM 토큰 발급** — V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.fetchFCMToken()`을 부른다. V2 인트로 흐름엔 안 보인다(푸시 권한은 "Home 진입 시점 별도"라고 문서화 — FCM 등록 시점이 어디로 옮겨졌는지 확인). → [1.6](#16-로그인-성공-라우팅)
-   - **✅ 확정(2026-08-28, 조사): 인프라 존재·App 배선 대기(삭제 아님).** FCM 등록이 V1의 인라인 로그인 부수효과 → V2는 `NotificationDomain.RegisterDeviceTokenUseCase`(+`DefaultPushRepository`·엔드포인트 `/users/fcm-token`)로 분리됨. **호출부는 아직 미배선**(Feature·App grep 0) = App 부트스트랩 몫.
+   - **✅ 유지 — 배선 완료(#287, 2026-10-08).** FCM 등록이 V1의 인라인 로그인 부수효과 → V2는 `NotificationDomain.RegisterDeviceTokenUseCase`(+`DefaultPushRepository`·엔드포인트 `/users/fcm-token`)로 분리됐고, 호출은 App의 푸시 허브가 맡는다: 로그인·가입 완료 → 메인 탭 진입 → APNs 등록 → `token()` 조회 → 서버 등록(알림 권한과 무관). 온보딩 Feature는 관여하지 않는다. #243의 부트스트랩 경로는 런치 시점에 APNs 토큰이 없어 항상 실패해 #287에서 제거했다. 정본: `App/CLAUDE.md` 푸시 알림(FCM/APNs) 배선 절.
 5. **온보딩 진입 분석 이벤트** — V1은 "둘러보기" 탭 시 `AmplitudeManager.track(...nonLogin)`을 남긴다. V2는 Amplitude 의존이 없고(외부 의존성 없음 원칙) 게스트 경로 자체가 없어 이벤트도 사라졌다. 분석 계측을 어디서 이어받는지 별개 확인. → [1.2](#12-둘러보기비로그인)
    - **➡️ 확정(2026-08-28): Amplitude 횡단 재도입으로 흡수.** 화면별 계약이 아니라 앱 전반 애널리틱스 부재 사안 → `docs/TODO.md` 12절(Amplitude 횡단 재도입, 별도 이슈 승격)로 이관.
 
@@ -120,9 +120,9 @@ V2: `Sources/Intro/OnboardingIntroView.swift`, `.../OnboardingIntroViewModel.swi
 - ✅ **Keep** — 토큰 영속화(accessToken·refreshToken·isRegister). V1은 VM이 직접 `UserDefaults`에 쓴다.
   - V2: **저장 책임이 Data/UseCase 레이어로** 내려감(Feature는 `NeedOnboarding`만 받음). 관찰 동작(로그인 후 세션 유지) 동일.
   - 근거: V1 `LoginViewModel.swift:186-191` · V2 `OnboardingIntroViewModel.swift:102`(UseCase 경유), `AuthDomain`
-- ✅ **Keep 확정** (2026-08-28: 인프라 존재·App 배선 대기 — 삭제 아님) — **FCM 토큰 발급**. V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.shared.fetchFCMToken()`을 호출한다. V2 인트로 흐름엔 안 보인다.
-  - V2: 푸시 권한 요청은 "Home 진입 시점 별도"라 문서화(`CLAUDE.md:64`) — FCM **등록** 시점이 어디로 이동했는지 확인 필요.
-  - 근거: V1 `LoginViewModel.swift:192`(`fetchFCMToken`) · V2 `CLAUDE.md`(푸시 권한은 모듈 범위 밖)
+- ✅ **Keep 확정** (2026-10-08: 배선 완료, #287) — **FCM 토큰 발급**. V1 `loginSuccess`는 토큰 저장 직후 `NotificationHelper.shared.fetchFCMToken()`을 호출한다. V2 인트로 흐름엔 없다.
+  - V2: 등록은 로그인 부수효과가 아니라 **메인 탭 진입**에서 한다 — 로그인·가입 완료 → 메인 탭 → APNs 등록 → `token()` 조회 → 서버 등록(알림 권한과 무관). 로그인 완료 시 등록 기록을 비워 같은 토큰이라도 새 계정으로 다시 보낸다. 관찰 동작(로그인한 기기가 서버에 등록됨) 동일.
+  - 근거: V1 `LoginViewModel.swift:192`(`fetchFCMToken`) · V2 `App/Sources/Push/PushNotificationCenter.swift`, `App/Sources/Main/MainTabView.swift`, `App/CLAUDE.md`(푸시 알림(FCM/APNs) 배선 절)
 
 ### 1.7 로그인 재진입 가드
 

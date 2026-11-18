@@ -23,11 +23,16 @@ import NotificationDomain
 /// 마땅한 통로가 없다. V1도 같은 이유로 `NotificationHelper.shared`를 썼다. Firebase(`Messaging`) import는
 /// 이 App 레이어 안(이 파일 + `AppDelegate`)에만 가둔다 — Domain/Data는 `DevicePushToken` 추상화로 이미 분리돼 있다.
 ///
-/// **등록이 일어나는 두 경로**(둘 다 필요):
-/// 1. 부트스트랩 pull — `currentDevicePushToken()`을 `SplashDomain`의 런치 태스크가 세션 있을 때 당겨간다
-///    (이미 권한을 허용한 재방문 사용자). 이 허브는 Firebase에서 현재 토큰을 만들어 돌려주기만 한다.
-/// 2. 반응 push — 권한을 새로 허용하거나 토큰이 갱신되면 `setFCMRegistrationToken`이 로그인 상태에서 서버로 등록한다
-///    (부트스트랩이 이미 지나간 뒤 로그인/허용하는 신규 사용자 — 이게 없으면 다음 실행까지 등록이 밀린다).
+/// **서버 등록이 일어나는 경로**(#287). 전부 `latestFCMToken`을 갱신한 뒤 `registerLatestTokenIfNeeded`로 모인다.
+/// 같은 세션에서 같은 토큰은 한 번만 보내고, 요청은 한 번에 하나씩 보낸다.
+/// 1. 메인 탭 진입 — `registerForRemoteNotifications` → `didRegister…` → `setAPNSToken`이 곧바로 `token()`을 조회해
+///    등록한다. 로그인·가입 직후에도 메인 탭을 지나므로 **실행 중 로그인한 사용자를 책임지는 경로는 이것**이다.
+/// 2. Firebase delegate(`setFCMRegistrationToken`) — 앱 시작 시 캐시 토큰으로 1회, 그리고 실행 중 토큰이 실제로
+///    바뀔 때만 불린다. 같은 APNs 토큰을 다시 넣으면 Firebase는 아무것도 하지 않으므로 delegate만으로는
+///    "실행 중 로그아웃 → 재로그인"이나 "로그아웃 상태로 켬 → 로그인"을 놓친다(#287 실측).
+/// 3. `configure` — 조립 시점에 이미 토큰을 들고 있고 로그인 상태일 때. 앱 시작 조립은 delegate보다 먼저라 보통
+///    토큰이 없어, 실제로는 거의 타지 않는 방어용 경로다.
+/// 4. 포그라운드 복귀(`MainTabView`) — 앞선 등록이 실패해 최신 토큰이 아직 미등록일 때 다시 보낸다.
 @MainActor
 final class PushNotificationCenter {
 
@@ -35,13 +40,22 @@ final class PushNotificationCenter {
 
     private let deviceIdentifierStore: DeviceIdentifierStore
     /// `AppDependencies`가 조립 시 주입 — FCM 토큰을 서버에 등록하는 훅(`RegisterDeviceTokenUseCase` 래핑).
-    private var registerDeviceToken: (@Sendable (DevicePushToken) async -> Void)?
+    /// 성공 여부를 돌려준다 — 성공한 토큰만 `registeredToken`으로 기억해, 실패하면 포그라운드 복귀 때 다시 보낸다.
+    private var registerDeviceToken: (@Sendable (DevicePushToken) async -> Bool)?
     /// `AppDependencies`가 조립 시 주입 — 현재 로그인(세션 보유) 여부.
     private var isLoggedIn: (@Sendable () -> Bool)?
     /// `AppDependencies`가 조립 시 주입 — 알림 읽음 처리 훅(`MarkNotificationAsReadUseCase` 래핑, 인자는 알림 id).
     private var markNotificationAsRead: (@Sendable (Int) async -> Void)?
-    /// 마지막으로 받은 FCM 등록 토큰. 로그인 전에 도착하면 보관만 하고, 로그인/조립 시점에 등록에 쓴다.
+    /// 마지막으로 받은 FCM 등록 토큰. 서버에 보내는 값은 항상 이것이다 — 로그인 전에 도착하면 보관만 한다.
     private var latestFCMToken: String?
+    /// 이번 세션에서 서버 등록에 성공한 토큰 / 지금 등록 요청 중인 토큰. 한 실행 안에서 여러 경로(시작 시 delegate,
+    /// 메인 탭 진입의 `token()` 조회)가 같은 토큰을 거듭 보내지 않게 거른다. 앱 시작·세션 종료(`configure`)와
+    /// 로그인 완료(`resetRegistrationRecord`)에서 비운다 — 서버가 로그아웃 때 이 기기의 토큰 행을 지우고, 등록은
+    /// 계정마다 따로이기 때문에 새로 로그인한 계정에는 같은 토큰이라도 다시 보내야 한다.
+    private var registeredToken: String?
+    private var registeringToken: String?
+    /// 등록 기록을 비울 때마다 1씩 오른다. 이전 세션에서 시작된 등록 요청이 늦게 끝나 새 세션의 기록을 채우지 않게 한다.
+    private var sessionGeneration = 0
 
     /// 알림 탭으로 만들어진 딥링크를 앱(`WSSIOSV2App`)의 `pendingDeepLink` 채널로 넘기는 통로. App이 등록한다.
     /// ⚠️ 콜드 스타트(알림 탭으로 앱이 실행)면 콜백 등록 전에 탭이 도착할 수 있어, 등록되는 순간 보관분을 flush한다.
@@ -60,39 +74,77 @@ final class PushNotificationCenter {
 
     // MARK: - Configuration (AppDependencies가 조립 시 호출)
 
-    /// 서버 등록 훅과 로그인 판정을 주입한다. 세션이 끝나 `AppDependencies`가 재조립되면 다시 불려
-    /// 새 UseCase/tokenStore로 갱신된다(idempotent). 이미 토큰을 들고 있고 로그인 상태면 여기서 한 번 등록을 시도한다
-    /// (부트스트랩이 지나간 뒤 로그인한 신규 사용자가 이 조립 시점에 걸리는 경로).
+    /// 서버 등록 훅과 로그인 판정을 주입한다. 앱 시작과 세션 종료(`resetToOnboarding`)로 `AppDependencies`가
+    /// 조립될 때마다 불려 새 UseCase/tokenStore로 갱신되고, 등록 기록도 비운다. 이미 토큰을 들고 있고 로그인 상태면
+    /// 여기서 한 번 등록을 시도한다.
     func configure(
-        registerDeviceToken: @escaping @Sendable (DevicePushToken) async -> Void,
+        registerDeviceToken: @escaping @Sendable (DevicePushToken) async -> Bool,
         isLoggedIn: @escaping @Sendable () -> Bool,
         markNotificationAsRead: @escaping @Sendable (Int) async -> Void
     ) {
         self.registerDeviceToken = registerDeviceToken
         self.isLoggedIn = isLoggedIn
         self.markNotificationAsRead = markNotificationAsRead
+        resetRegistrationRecord()
+        registerLatestTokenIfNeeded()
+    }
 
-        guard let token = latestFCMToken, isLoggedIn() else { return }
-        let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
-        Task { await registerDeviceToken(devicePushToken) }
+    /// 등록 기록을 비워 다음 등록 경로가 토큰을 다시 보내게 한다. `configure` 외에 **로그인 완료 시**(`ContentView`)에도
+    /// 불린다 — 로그인 때는 `AppDependencies`를 재조립하지 않아 `configure`가 안 불리는데, 가입을 마치지 않은 세션으로
+    /// 켜서 인트로에 간 뒤 다른 계정으로 로그인하면 이전 계정 몫으로 기록된 토큰을 건너뛰어 새 계정이 미등록으로 남는다.
+    func resetRegistrationRecord() {
+        registeredToken = nil
+        registeringToken = nil
+        sessionGeneration += 1
     }
 
     // MARK: - AppDelegate가 전달하는 시스템 콜백
 
-    /// APNs device token 수신 → Firebase에 직접 대입(method swizzling off — `FirebaseAppDelegateProxyEnabled=NO`).
+    /// APNs device token 수신 → Firebase에 직접 대입(method swizzling off — `FirebaseAppDelegateProxyEnabled=NO`)한 뒤,
+    /// FCM 토큰을 직접 조회해 등록한다. iOS는 `registerForRemoteNotifications`를 부를 때마다 이 콜백을 다시 주므로
+    /// 메인 탭 진입마다 여기를 지난다.
     func setAPNSToken(_ deviceToken: Data) {
         guard isFirebaseConfigured else { return }
         Messaging.messaging().apnsToken = deviceToken
+        Task { await fetchFCMTokenAndRegister() }
+    }
+
+    /// `token()`은 APNs 토큰이 있어야 성공하므로 `setAPNSToken` 뒤에서만 부른다. 캐시 토큰이 낡았으면(설치 ID·앱 버전·
+    /// 앱 ID·APNs 변경) Firebase가 새로 발급한다 — 재설치 뒤 FCM 서버에서 지워진 캐시 토큰을 계속 보내는 일도 이걸로 막는다.
+    private func fetchFCMTokenAndRegister() async {
+        guard let token = try? await Messaging.messaging().token() else { return }
+        latestFCMToken = token
+        registerLatestTokenIfNeeded()
     }
 
     /// FCM 등록 토큰 수신/갱신 → 보관 + 로그인 상태면 서버 등록.
     func setFCMRegistrationToken(_ token: String?) {
         guard let token else { return }
         latestFCMToken = token
+        registerLatestTokenIfNeeded()
+    }
 
-        guard isLoggedIn?() == true, let registerDeviceToken else { return }
+    /// 로그인 상태면 `latestFCMToken`을 서버에 등록한다. 이번 세션에서 이미 성공한 토큰이면 건너뛴다.
+    /// 로그인 전이면 아무것도 안 한다 — 토큰은 `latestFCMToken`에 남아 있고, 로그인 후 메인 탭 진입이 다시 등록을 부른다.
+    /// ⚠️ **요청은 한 번에 하나만 보낸다** — 시작 시 delegate의 캐시 토큰 A와 `token()`이 새로 받은 B를 동시에 보내면
+    /// 늦게 끝난 A가 서버의 이 기기 행을 죽은 토큰으로 덮을 수 있다. 진행 중이면 새로 보내지 않고, 끝난 뒤 그새
+    /// `latestFCMToken`이 바뀌었으면 최신 값으로 한 번 더 보낸다 → 같은 세션 안에서는 서버에 마지막으로 남는 값이 최신 토큰이다.
+    /// (`resetRegistrationRecord`는 진행 중 요청을 기다리지 않으므로 세션 경계를 넘는 순서까지는 보장하지 않는다.)
+    func registerLatestTokenIfNeeded() {
+        guard let token = latestFCMToken, token != registeredToken, registeringToken == nil,
+              isLoggedIn?() == true, let registerDeviceToken
+        else { return }
+
+        registeringToken = token
+        let generation = sessionGeneration
         let devicePushToken = DevicePushToken(token: token, deviceID: deviceIdentifier())
-        Task { await registerDeviceToken(devicePushToken) }
+        Task {
+            let succeeded = await registerDeviceToken(devicePushToken)
+            guard generation == sessionGeneration else { return }
+            registeringToken = nil
+            if succeeded { registeredToken = token }
+            if latestFCMToken != token { registerLatestTokenIfNeeded() }
+        }
     }
 
     /// 알림 탭(`AppDelegate.didReceive`)의 payload를 딥링크로 풀어 앱으로 넘긴다. `view`에 맞는 화면으로
@@ -119,41 +171,18 @@ final class PushNotificationCenter {
         Task { await markNotificationAsRead(id) }
     }
 
-    // MARK: - 부트스트랩 pull (SplashData의 deviceTokenProvider가 호출)
-
-    /// 부트스트랩(세션 있을 때)이 당겨가는 현재 디바이스 푸시 토큰. 알림 권한이 허용된 경우에만 FCM 토큰을
-    /// 만들어 돌려준다 — 미허용/실패면 nil을 주고, 런치 태스크는 등록을 조용히 건너뛴다.
-    func currentDevicePushToken() async -> DevicePushToken? {
-        guard isFirebaseConfigured else { return nil }
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard settings.authorizationStatus == .authorized else { return nil }
-        guard let token = try? await Messaging.messaging().token() else { return nil }
-
-        latestFCMToken = token
-        return DevicePushToken(token: token, deviceID: deviceIdentifier())
-    }
-
     // MARK: - 권한 요청 + 원격 알림 등록 (메인 탭 진입, V1 parity)
 
-    /// 로그인 상태의 메인 진입 시 호출(V1은 홈 진입에서 수행). 권한이 미결정이면 요청하고, 허용 상태면 APNs
-    /// 등록을 시작한다. 등록이 끝나면 `didRegister…`(AppDelegate) → `setAPNSToken` → `MessagingDelegate` →
-    /// `setFCMRegistrationToken`으로 이어져 서버 등록까지 흐른다.
-    func requestAuthorizationAndRegisterIfGranted() async {
+    /// 로그인 상태의 메인 진입 시 호출(V1은 홈 진입에서 수행). 권한이 미결정이면 요청하고, **결과와 무관하게**
+    /// APNs 등록을 시작한다(#287) — 서버는 등록된 기기가 없으면 앱 내 알림도 만들지 않으므로, 권한을 거절한
+    /// 사용자도 기기 등록은 돼 있어야 한다(V1 parity). 배너 표시 여부는 iOS가 권한에 따라 알아서 거른다.
+    /// 등록이 끝나면 `didRegister…`(AppDelegate) → `setAPNSToken`으로 이어진다.
+    func requestAuthorizationAndRegisterForRemoteNotifications() async {
         let center = UNUserNotificationCenter.current()
-        let status = await center.notificationSettings().authorizationStatus
-
-        switch status {
-        case .notDetermined:
-            let granted = (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
-            guard granted else { return }
-            UIApplication.shared.registerForRemoteNotifications()
-        case .authorized, .provisional, .ephemeral:
-            UIApplication.shared.registerForRemoteNotifications()
-        case .denied:
-            break
-        @unknown default:
-            break
+        if await center.notificationSettings().authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .badge, .sound])
         }
+        UIApplication.shared.registerForRemoteNotifications()
     }
 
     /// Firebase 기본 앱이 실제로 구성됐는지. `GoogleService-Info` plist가 없으면(gitignore돼 로컬/CI에 미배치)

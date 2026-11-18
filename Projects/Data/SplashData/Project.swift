@@ -24,7 +24,6 @@ let project = Project.createDataModule(
         .module(.domain(.splash)),            // 구현 대상 포트
         .module(.domain(.profile)),           // ProfileRepository(users/me)
         .module(.domain(.setting)),           // AppUpdate·TermsAgreement
-        .module(.domain(.notification)),      // PushSettingRepository(디바이스 토큰)
         .module(.domain(.recommendation))     // RecommendationRepository·HomePrefetchStore
     ],
     // 위임 검증 테스트가 각 도메인의 기존 Mock을 재사용한다.
@@ -32,7 +31,6 @@ let project = Project.createDataModule(
         .module(.domain(.base), type: .testing),
         .module(.domain(.profile), type: .testing),
         .module(.domain(.setting), type: .testing),
-        .module(.domain(.notification), type: .testing),
         .module(.domain(.recommendation), type: .testing)
     ]
 )
