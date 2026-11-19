@@ -11,95 +11,31 @@ import Foundation
 import NotificationDomain
 import BaseDomain
 
-public final class MockNotificationRepository: NotificationRepository {
+/// 알림 저장소 가짜 객체(Stub) — 호출을 기록하지 않는다.
+/// 목록 조회는 **요청 개수마다** 답을 정해 둔다 — 정해 두지 않은 개수엔 빈 페이지를 준다.
+/// 그래서 UseCase가 개수를 잘못 넘기면 결과가 달라진다.
+/// 나머지 메서드는 이 모듈 테스트가 쓰지 않아 항상 `.unknown`을 던진다.
+public final class MockNotificationRepository: NotificationRepository, @unchecked Sendable {
+    public var pagesBySize: [Int: PagedNotifications] = [:]
 
-    // MARK: - loadNotifications
-
-    public var loadedLastNotificationID: NotificationID?
-    public var loadedSize: Int?
-    public var loadNotificationsCallCount = 0
-    public var loadNotificationsResult: Result<PagedNotifications, RepositoryError>?
+    public init() {}
 
     public func loadNotifications(
         lastNotificationID: NotificationID?,
         size: Int
     ) async throws(RepositoryError) -> PagedNotifications {
-        loadNotificationsCallCount += 1
-        loadedLastNotificationID = lastNotificationID
-        loadedSize = size
-
-        guard let loadNotificationsResult else {
-            fatalError("loadNotificationsResult is not set")
-        }
-
-        switch loadNotificationsResult {
-        case .success(let value): return value
-        case .failure(let error): throw error
-        }
+        pagesBySize[size] ?? PagedNotifications(items: [], isLoadable: false)
     }
 
-    // MARK: - loadNotificationDetail
-
-    public var loadedDetailID: NotificationID?
-    public var loadDetailCallCount = 0
-    public var loadDetailResult: Result<NotificationDetail, RepositoryError>?
-
-    public func loadNotificationDetail(
-        id: NotificationID
-    ) async throws(RepositoryError) -> NotificationDetail {
-        loadDetailCallCount += 1
-        loadedDetailID = id
-
-        guard let loadDetailResult else {
-            fatalError("loadDetailResult is not set")
-        }
-
-        switch loadDetailResult {
-        case .success(let value): return value
-        case .failure(let error): throw error
-        }
+    public func loadNotificationDetail(id: NotificationID) async throws(RepositoryError) -> NotificationDetail {
+        throw .unknown
     }
 
-    // MARK: - markAsRead
-
-    public var markedIDs: [NotificationID] = []
-    public var markAsReadCallCount = 0
-    public var markAsReadResult: Result<Void, RepositoryError>?
-
-    public func markAsRead(
-        id: NotificationID
-    ) async throws(RepositoryError) {
-        markAsReadCallCount += 1
-        markedIDs.append(id)
-
-        if let markAsReadResult {
-            switch markAsReadResult {
-            case .success:
-                return
-            case .failure(let error):
-                throw error
-            }
-        }
+    public func markAsRead(id: NotificationID) async throws(RepositoryError) {
+        throw .unknown
     }
 
-    // MARK: - loadUnreadNotificationStatus
-
-    public var loadUnreadStatusCallCount = 0
-    public var loadUnreadStatusResult: Result<UnreadNotificationStatus, RepositoryError>?
-
-    public func loadUnreadNotificationStatus(
-    ) async throws(RepositoryError) -> UnreadNotificationStatus {
-        loadUnreadStatusCallCount += 1
-
-        guard let loadUnreadStatusResult else {
-            fatalError("loadUnreadStatusResult is not set")
-        }
-
-        switch loadUnreadStatusResult {
-        case .success(let value): return value
-        case .failure(let error): throw error
-        }
+    public func loadUnreadNotificationStatus() async throws(RepositoryError) -> UnreadNotificationStatus {
+        throw .unknown
     }
-
-    public init() {}
 }

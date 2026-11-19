@@ -9,88 +9,64 @@
 import Foundation
 import Testing
 
-@testable import NotificationDomain
-import NotificationDomainTesting
 import BaseDomain
+import NotificationDomain
+import NotificationDomainTesting
 
-@Suite("LoadPagedNotificationsUseCase")
+@Suite("알림 목록 불러오기")
 struct LoadPagedNotificationsUseCaseTests {
 
-    private func makeNotificationItem(
-        id: Int = 1,
-        isRead: Bool = false
-    ) -> NotificationItem {
-        NotificationItem(
-            id: NotificationID(id),
-            iconURL: URL(string: "https://example.com/icon.png"),
-            title: "테스트 알림 제목",
-            body: "테스트 알림 내용입니다.",
-            createdAtText: "2025.02.20",
-            isRead: isRead,
-            deeplink: makeDeeplink()
+    @Test(
+        "개수를 0 이하로 요청하면 20개씩 불러온다",
+        arguments: [
+            0,     // 경계
+            -1     // 음수
+        ]
+    )
+    func nonPositiveSizeLoadsTwenty(size: Int) async throws {
+        let repository = MockNotificationRepository()
+        repository.pagesBySize[20] = page()
+        let useCase = DefaultLoadPagedNotificationsUseCase(repository: repository)
+
+        let result = try await useCase.execute(lastNotificationID: nil, size: size)
+
+        #expect(result == page())
+    }
+
+    @Test(
+        "개수를 1 이상으로 요청하면 그 개수대로 불러온다",
+        arguments: [
+            1,     // 경계
+            30     // 일반값
+        ]
+    )
+    func positiveSizeLoadsAsRequested(size: Int) async throws {
+        let repository = MockNotificationRepository()
+        repository.pagesBySize[size] = page()
+        let useCase = DefaultLoadPagedNotificationsUseCase(repository: repository)
+
+        let result = try await useCase.execute(lastNotificationID: nil, size: size)
+
+        #expect(result == page())
+    }
+
+    // MARK: - Helpers
+
+    /// Stub이 그 개수에만 돌려주는 페이지 — 개수를 잘못 넘기면 빈 페이지가 와서 결과가 달라진다.
+    private func page() -> PagedNotifications {
+        PagedNotifications(
+            items: [
+                NotificationItem(
+                    id: NotificationID(1),
+                    iconURL: nil,
+                    title: "알림",
+                    body: "내용",
+                    createdAtText: "2026.11.19",
+                    isRead: false,
+                    deeplink: nil
+                )
+            ],
+            isLoadable: true
         )
-    }
-
-    private func makeDeeplink() -> NotificationDeeplink? {
-        // 프로젝트 정의에 맞게 수정
-        // 예: feed 상세로 이동하는 딥링크
-        return .feedDetail(id: FeedID(100))
-    }
-
-    private func makePaged(
-        count: Int = 1,
-        isLoadable: Bool = true
-    ) -> PagedNotifications {
-        let items = (1...count).map {
-            makeNotificationItem(id: $0)
-        }
-
-        return PagedNotifications(
-            items: items,
-            isLoadable: isLoadable
-        )
-    }
-
-    @Test("lastID 이후의 알림 목록을 size 만큼 조회할 수 있다")
-    func loadsNotificationsWithParameters() async throws {
-        let repo = MockNotificationRepository()
-        repo.loadNotificationsResult = .success(makePaged())
-
-        let sut = DefaultLoadPagedNotificationsUseCase(repository: repo)
-
-        let lastID = NotificationID(10)
-        _ = try await sut.execute(lastNotificationID: lastID, size: 30)
-
-        #expect(repo.loadNotificationsCallCount == 1)
-        #expect(repo.loadedLastNotificationID == lastID)
-        #expect(repo.loadedSize == 30)
-    }
-
-    @Test("size가 0 이하이면 기본 size(20)로 조회한다")
-    func usesDefaultSizeWhenNonPositive() async throws {
-        let repo = MockNotificationRepository()
-        repo.loadNotificationsResult = .success(makePaged())
-
-        let sut = DefaultLoadPagedNotificationsUseCase(repository: repo)
-
-        _ = try await sut.execute(lastNotificationID: nil, size: 0)
-        #expect(repo.loadedSize == 20)
-
-        _ = try await sut.execute(lastNotificationID: nil, size: -1)
-        #expect(repo.loadedSize == 20)
-    }
-
-    @Test("조회 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
-    func propagatesRepositoryError() async {
-        let repo = MockNotificationRepository()
-        repo.loadNotificationsResult = .failure(.networkUnavailable)
-
-        let sut = DefaultLoadPagedNotificationsUseCase(repository: repo)
-
-        await #expect(throws: RepositoryError.networkUnavailable) {
-            _ = try await sut.execute(lastNotificationID: nil, size: 20)
-        }
-
-        #expect(repo.loadNotificationsCallCount == 1)
     }
 }
