@@ -9,140 +9,136 @@
 import Foundation
 import Testing
 
-@testable import RecommendationDomain
 import BaseDomain
+import RecommendationDomain
 
-/// 런치 프리페치 저장소의 **저장·소비 규칙** 명세 — 부트스트랩(SplashData)이 채우고
-/// 홈 레포(`DefaultRecommendationRepositoryTests`)가 소비하는 사이의 계약이다.
-/// 핵심 두 규칙: **single-shot**(소비는 1회, TTL 캐시 아님 — 홈의 "탭 복귀마다 갱신" 계약 보호)과
-/// **소비 창**(첫 consume 시도에 창이 닫혀, 늦게 착지한 프리페치가 나중 갱신을 stale로 덮지 못한다).
-@Suite
+/// 런치스크린에서 미리 받아 둔 홈 데이터를 홈 첫 로드가 한 번 꺼내 쓰는 저장고(#225).
+/// 채우는 쪽은 SplashData, 꺼내는 쪽은 RecommendationData다.
+@Suite("런치스크린에서 미리 받아 둔 홈 데이터")
 struct HomePrefetchStoreTests {
 
-    // MARK: - single-shot 소비
+    /// 홈은 탭 복귀마다 새로 불러온다 — 한 번 꺼낸 값이 남아 있으면 복귀 때 런치 시점 데이터가 다시 뜬다.
+    @Suite("홈 첫 로드에서 한 번만 쓴다")
+    struct ConsumeOnce {
 
-    @Test("채운 슬롯을 consume하면 그 값을 돌려주고 슬롯을 비운다")
-    func consumeReturnsFilledValueAndEmptiesSlot() async {
-        let store = HomePrefetchStore()
-        let discoveries = [makeTodayDiscovery()]
-        await store.fillTodayDiscoveries(discoveries)
+        @Test("홈 첫 로드는 미리 받아 둔 세 가지를 그대로 받는다")
+        func consumesFilledValueFromEachSlot() async {
+            let store = HomePrefetchStore()
+            // 슬롯마다 id를 다르게 둬서, 값이 다른 슬롯으로 새지 않았는지 보이게 한다.
+            await store.fillTodayDiscoveries([makeTodayDiscovery(id: 1)])
+            await store.fillTrendingFeeds([makeTrendingFeed(id: 2)])
+            await store.fillPreferenceGenreNovels(.novels([makePreferenceGenreNovel(id: 3)]))
 
-        let first = await store.consumeTodayDiscoveries()
-        let second = await store.consumeTodayDiscoveries()
+            let consumed = (
+                await store.consumeTodayDiscoveries(),
+                await store.consumeTrendingFeeds(),
+                await store.consumePreferenceGenreNovels()
+            )
 
-        #expect(first?.map(\.novelID) == discoveries.map(\.novelID))
-        #expect(second == nil)
+            #expect(consumed.0?.map(\.novelID) == [NovelID(1)])
+            #expect(consumed.1?.map(\.feedID) == [FeedID(2)])
+            #expect(consumed.2.flatMap(novelIDs(in:)) == [NovelID(3)])
+        }
+
+        @Test("홈 첫 로드가 쓰고 나면 탭 복귀 때는 미리 받아 둔 값이 없다")
+        func consumedSlotIsEmpty() async {
+            let store = HomePrefetchStore()
+            await store.fillTodayDiscoveries([makeTodayDiscovery(id: 1)])
+            _ = await store.consumeTodayDiscoveries()
+
+            let second = await store.consumeTodayDiscoveries()
+
+            #expect(second == nil)
+        }
+
+        @Test("미리 받아 둔 게 없으면 홈 첫 로드도 받을 값이 없다")
+        func unfilledSlotIsEmpty() async {
+            let store = HomePrefetchStore()
+
+            let consumed = (
+                await store.consumeTodayDiscoveries(),
+                await store.consumeTrendingFeeds(),
+                await store.consumePreferenceGenreNovels()
+            )
+
+            #expect(consumed.0 == nil)
+            #expect(consumed.1 == nil)
+            #expect(consumed.2 == nil)
+        }
     }
 
-    @Test("선호장르 슬롯도 같은 규칙이다 — consume은 값을 돌려주고 슬롯을 비운다")
-    func preferenceGenreSlotIsAlsoSingleShot() async {
-        let store = HomePrefetchStore()
-        await store.fillPreferenceGenreNovels(.noGenreSettings)
+    /// 프리페치는 기다리지 않고 던져 두는 요청이라 홈 첫 로드보다 늦게 도착할 수 있다.
+    /// 그 값을 받아 두면 다음 탭 복귀 갱신에서 꺼내져 런치 시점 데이터가 뒤늦게 뜬다(#225 리뷰).
+    @Suite("홈 첫 로드가 지난 뒤 도착한 값은 쓰지 않는다")
+    struct DiscardLateFill {
 
-        let first = await store.consumePreferenceGenreNovels()
-        let second = await store.consumePreferenceGenreNovels()
+        @Test("홈 첫 로드가 쓴 뒤 다시 받아 온 값은 탭 복귀 때 쓰지 않는다")
+        func fillAfterConsumeIsDiscarded() async {
+            let store = HomePrefetchStore()
+            await store.fillTrendingFeeds([makeTrendingFeed(id: 1)])
+            _ = await store.consumeTrendingFeeds()
+            await store.fillTrendingFeeds([makeTrendingFeed(id: 2)])
 
-        #expect(first != nil)
-        if case .noGenreSettings = first {} else { Issue.record("채운 상태 그대로 돌아와야 한다") }
-        #expect(second == nil)
-    }
+            let second = await store.consumeTrendingFeeds()
 
-    @Test("채우지 않은 슬롯을 consume하면 nil을 돌려준다")
-    func consumeEmptySlotReturnsNil() async {
-        let store = HomePrefetchStore()
+            #expect(second == nil)
+        }
 
-        let discoveries = await store.consumeTodayDiscoveries()
-        let feeds = await store.consumeTrendingFeeds()
-        let preference = await store.consumePreferenceGenreNovels()
+        @Test("홈 첫 로드보다 늦게 도착한 값은 탭 복귀 때 쓰지 않는다")
+        func lateFillAfterEmptyConsumeIsDiscarded() async {
+            let store = HomePrefetchStore()
+            _ = await store.consumeTodayDiscoveries()   // 홈 첫 로드 — 아직 비어 있어 서버로 간다
+            await store.fillTodayDiscoveries([makeTodayDiscovery(id: 1)])   // 늦게 도착한 프리페치
 
-        #expect(discoveries == nil)
-        #expect(feeds == nil)
-        #expect(preference == nil)
-    }
+            let second = await store.consumeTodayDiscoveries()   // 탭 복귀 갱신
 
-    // MARK: - 소비 창(window)
-
-    @Test("소비한 뒤 도착한 fill은 폐기한다")
-    func refillAfterConsumeIsDiscarded() async {
-        let store = HomePrefetchStore()
-        let feeds = [makeTrendingFeed()]
-        await store.fillTrendingFeeds(feeds)
-        _ = await store.consumeTrendingFeeds()
-
-        await store.fillTrendingFeeds(feeds)
-        let second = await store.consumeTrendingFeeds()
-
-        #expect(second == nil)
-    }
-
-    // 프리페치가 홈 첫 로드보다 늦게 착지하는 상황 — 창을 닫지 않으면 이 값이
-    // 다음 탭 복귀 갱신에서 소비돼 런치 시점 데이터가 뒤늦게 뜬다.
-    @Test("빈 슬롯을 소비하려 한 뒤 늦게 도착한 fill도 폐기한다")
-    func lateFillAfterEmptyConsumeIsDiscarded() async {
-        let store = HomePrefetchStore()
-
-        let first = await store.consumeTodayDiscoveries()   // 홈 첫 로드 → 슬롯이 아직 비어 있어 네트워크로 감
-        await store.fillTodayDiscoveries([makeTodayDiscovery()])  // 늦게 착지한 프리페치
-        let second = await store.consumeTodayDiscoveries()   // 탭 복귀 갱신
-
-        #expect(first == nil)
-        #expect(second == nil)
-    }
-
-    // MARK: - 슬롯 독립성
-
-    @Test("한 슬롯만 채우면 다른 슬롯은 여전히 nil이다")
-    func slotsAreIndependent() async {
-        let store = HomePrefetchStore()
-        await store.fillTodayDiscoveries([makeTodayDiscovery()])
-
-        let feeds = await store.consumeTrendingFeeds()
-
-        #expect(feeds == nil)
-    }
-
-    @Test("한 슬롯의 소비가 다른 슬롯을 비우지 않는다")
-    func consumingOneSlotKeepsTheOther() async {
-        let store = HomePrefetchStore()
-        let feeds = [makeTrendingFeed()]
-        await store.fillTodayDiscoveries([makeTodayDiscovery()])
-        await store.fillTrendingFeeds(feeds)
-
-        _ = await store.consumeTodayDiscoveries()
-        let remaining = await store.consumeTrendingFeeds()
-
-        #expect(remaining?.map(\.feedID) == feeds.map(\.feedID))
+            #expect(second == nil)
+        }
     }
 }
 
 // MARK: - Helper
 
-extension HomePrefetchStoreTests {
+private func novelIDs(in state: PreferenceGenreNovelState) -> [NovelID]? {
+    guard case .novels(let novels) = state else { return nil }
+    return novels.map(\.novelID)
+}
 
-    private func makeTodayDiscovery() -> TodayDiscovery {
-        TodayDiscovery(
-            novelID: NovelID(1),
-            novelTitle: "오늘의 발견",
-            novelThumbnailImage: nil,
-            novelAuthor: "테스트작가",
-            novelGenre: .romance,
-            publicationStatus: .onGoing,
-            keywords: ["빙의"],
-            content: .novel,
-            contentDescription: "소설 설명"
-        )
-    }
+private func makeTodayDiscovery(id: Int) -> TodayDiscovery {
+    TodayDiscovery(
+        novelID: NovelID(id),
+        novelTitle: "오늘의 발견",
+        novelThumbnailImage: nil,
+        novelAuthor: "작가",
+        novelGenre: .romance,
+        publicationStatus: .onGoing,
+        keywords: [],
+        content: .novel,
+        contentDescription: "작품 소개"
+    )
+}
 
-    private func makeTrendingFeed() -> TrendingFeed {
-        TrendingFeed(
-            feedID: FeedID(1),
-            novelTitle: "테스트 작품",
-            novelThumbnailImage: nil,
-            novelGenre: .romance,
-            description: "뜨는 글 내용",
-            isSpoiler: false,
-            likeCount: 10,
-            commentCount: 3
-        )
-    }
+private func makeTrendingFeed(id: Int) -> TrendingFeed {
+    TrendingFeed(
+        feedID: FeedID(id),
+        novelTitle: "작품",
+        novelThumbnailImage: nil,
+        novelGenre: .romance,
+        description: "지금 뜨는 글",
+        isSpoiler: false,
+        likeCount: 0,
+        commentCount: 0
+    )
+}
+
+private func makePreferenceGenreNovel(id: Int) -> PreferenceGenreNovel {
+    PreferenceGenreNovel(
+        novelID: NovelID(id),
+        novelTitle: "선호 장르 작품",
+        novelThumbnailImage: nil,
+        novelAuthors: [],
+        interestCount: 0,
+        ratingCount: 0,
+        rating: 0
+    )
 }
