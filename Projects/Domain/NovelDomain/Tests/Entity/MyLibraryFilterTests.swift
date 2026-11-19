@@ -20,6 +20,13 @@ struct MyLibraryFilterTests {
     @Suite("관심")
     struct Interest {
 
+        @Test("내 서재의 관심 필터는 처음에 꺼져 있다")
+        func startsWithInterestOff() {
+            let filter = MyLibraryFilter()
+
+            #expect(!filter.isInterest)
+        }
+
         @Test(
             "관심은 누를 때마다 켜지고 꺼진다",
             arguments: [

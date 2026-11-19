@@ -53,11 +53,17 @@ struct LibraryPageSizePolicyTests {
     @Suite("그사이 늘어난 만큼 더 받기")
     struct FollowUp {
 
-        @Test("비운 사이 늘어난 만큼만 이어서 요청한다")
-        func requestsOnlyIncrease() {
-            let size = LibraryPageSizePolicy.followUpSize(previousTotalCount: 25, newTotalCount: 27, hasNext: true)
+        @Test(
+            "비운 사이 늘어난 만큼만 이어서 요청한다",
+            arguments: [
+                (26, 1),  // 1개 늘어남(이어 받는 가장 작은 경우)
+                (27, 2)   // 2개 늘어남
+            ]
+        )
+        func requestsOnlyIncrease(newTotalCount: Int, expected: Int) {
+            let size = LibraryPageSizePolicy.followUpSize(previousTotalCount: 25, newTotalCount: newTotalCount, hasNext: true)
 
-            #expect(size == 2)
+            #expect(size == expected)
         }
 
         @Test(

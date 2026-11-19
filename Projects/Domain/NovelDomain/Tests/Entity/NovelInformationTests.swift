@@ -39,6 +39,16 @@ struct NovelInformationTests {
         #expect(dominant?.count == 6)
     }
 
+    @Test("한 명만 골랐어도 그 독서 상태가 대표가 된다")
+    func singleReaderStatusIsDominant() {
+        let information = makeNovelInformation(readingStatusCount: [.watching: 1, .watched: 0, .quit: 0])
+
+        let dominant = information.dominantReadStatus
+
+        #expect(dominant?.status == .watching)
+        #expect(dominant?.count == 1)
+    }
+
     @Test(
         "수가 같으면 보는 중, 봤음, 하차 순으로 대표를 정한다",
         arguments: [
