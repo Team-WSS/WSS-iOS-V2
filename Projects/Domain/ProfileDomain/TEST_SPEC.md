@@ -2,6 +2,13 @@
 
 <!-- 자동 생성 파일 — 손으로 고치지 않는다. 갱신: swift run --package-path Tooling/ArchLint ArchLint --write-test-specs . -->
 
+## 계정 정보 수정
+
+`Tests/Entity/AccountInfoDraftTests.swift`
+
+- 성별을 바꾸면 담긴다
+- 생년을 바꾸면 담긴다
+
 ## 생년
 
 `Tests/Entity/BirthYearTests.swift`
