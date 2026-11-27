@@ -103,6 +103,9 @@ struct WithdrawalReasonDraftTests {
 - 여러 입력은 for/if 대신 `arguments:`로. 항목마다 줄을 바꾸고, 리터럴에는 왜 그 값인지 주석을 단다.
   튜플에 `nil`이 섞이면 컴파일러가 타입을 못 정해 "failed to produce diagnostic"으로 죽는다 — 배열 뒤에 `as [(Date?, Date?)]`처럼 타입을 붙인다(검사기·목록 파일은 그대로 읽는다).
 - 경계값은 "딱 그 값"과 "하나 넘는 값"을 둘 다 둔다. 위 예처럼 넘는 쪽은 어디가 잘렸는지까지 보이게 만든다.
+- 켜기/끄기처럼 **양쪽으로 바뀌는 동작은 양쪽 다** 테스트한다(꺼짐→켜짐, 켜짐→꺼짐). 한쪽만 보면 `isPrivate.toggle()`이
+  `isPrivate = true`로 바뀌어도 통과한다. 뮤테이션 도구는 동작을 고정값으로 바꾸는 버그를 심지 않아 이 구멍은
+  "다 잡힘"이 떠도 남는다 — 목록 단계에서 사람이 본다(#308, `CollectionDraft` 나만 보기에서 실제로 빠졌다).
 - 에러는 case를 적어 확인한다: `#expect(throws: CollectionDraft.ValidationError.nameOverLimit(max: 20)) { … }` (타입만 적으면 다른 case도 통과).
 - 공개 API로만 테스트한다(`@testable import` ❌) — internal에 기대면 리팩터링마다 깨진다.
 
