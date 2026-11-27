@@ -226,8 +226,14 @@
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onRoute(.editCollection)`으로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
     감지한다 — 최초 이후 재발화는 자식 화면(수정·작품 상세·작성자 프로필)에서의 복귀이고, 어디서 왔는지
-    구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(수정 외 복귀의 재로드는 무해한 갱신. 이미
-    `state.detail`이 있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    구분 없이 무조건 `.reloadAfterReturn`(구 `reloadAfterEdit`)으로 다시 불러온다(이미 `state.detail`이
+    있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    - ⚠️ **이미 보던 상세를 다시 불러왔는데 `.forbidden`/`.notFound`면 실패 뷰 대신 화면을 닫는다**(#311, 사용자
+      확정 2026-11-27 — `closeIfNoLongerViewable`). 작성자 프로필에서 그 유저를 **차단하고 돌아오면 서버가 403
+      `BLOCK-007`**("차단 관계인 사용자에게 접근할 수 없습니다")을 준다(dev 실측 2026-11-27, 공개 목록에서도 그
+      작성자의 컬렉션이 빠진다). 실패 뷰로 덮으면 재시도해도 같은 403이라 갇히고 "일시적 오류" 문구도 틀린다.
+      삭제 성공과 같은 exit(`close()` + `shouldDismiss`)이고, "차단했어요" 토스트는 App 컨테이너 오버레이라
+      직전 화면 위에 그대로 남는다. 첫 로드(`detail == nil`)는 대상이 아니다(보여준 적 없는 화면을 말없이 닫지 않음).
   - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
     Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
     `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수
@@ -320,7 +326,7 @@
   그대로 유효하다 — `MypageRootView`가 같은 `NavigationPath`에 "컬렉션 수정"을 push하면, 그 push가
   App 소유든 예전처럼 Feature 로컬 소유든 상관없이 **push되는 순간 이전 화면(`CollectionDetailView`)의
   `.onDisappear`가 SwiftUI 표준 동작으로 함께 발화한다.** 그 시점에 `isClosing`이 `true`로 굳고
-  되돌리는 코드가 없으면, 수정 화면에서 복귀한 뒤 재조회(`.reloadAfterEdit`)는 물론 정렬 변경·좋아요·
+  되돌리는 코드가 없으면, 수정 화면에서 복귀한 뒤 재조회(`.reloadAfterReturn`)는 물론 정렬 변경·좋아요·
   삭제까지 전부 조용히 무반응이 된다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장").
   `onDisappear` 기반 변형은 **같은 `NavigationPath`에서 자기 위로 뭔가 push될 일이 없는 리프 화면
   (시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택 위에 다른 화면이 push되면(App이 하든 Feature가

@@ -153,11 +153,11 @@ struct CollectionDetailView: View {
             if needsAuth { onAuthenticationRequired() }
         }
         .onAppear {
-            // 이 화면의 유일한 자식(컬렉션 수정)에서 복귀한 뒤의 재진입만 무조건 재로드한다 —
-            // `CreateCollectionView`가 성공 콜백 없는 자기완결 dismiss 계약이라 복귀했다는 사실만으로
-            // 판단한다(`CollectionListView`와 동일 이유).
+            // 자식 화면(수정·작품 상세·작성자 프로필)에서 복귀한 뒤의 재진입은 무조건 재로드한다 —
+            // 자식들이 성공 콜백 없는 자기완결 dismiss 계약이라 복귀했다는 사실만으로 판단한다
+            // (`CollectionListView`와 동일 이유). 차단 등으로 더는 볼 수 없게 됐으면 VM이 화면을 닫는다.
             if hasAppearedOnce {
-                viewModel.handle(.reloadAfterEdit)
+                viewModel.handle(.reloadAfterReturn)
             } else {
                 hasAppearedOnce = true
                 viewModel.track(.detailViewed)

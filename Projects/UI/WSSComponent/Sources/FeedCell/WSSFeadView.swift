@@ -37,6 +37,7 @@ public struct WSSFeadView: View {
     let isSpoiler: Bool
     /// 내 글이면 `true` — 스포일러 글이어도 본문·이미지를 가리지 않고, 리액션 줄 오른쪽에 작은
     /// "스포일러가 포함된 글" 표시만 붙인다. `false`(남의 글)면 본문 대신 "스포일러가 포함된 글 보기"로 가린다.
+    /// `isLiked`처럼 기본값 없는 필수 인자다 — 기본값을 두면 새 호출부가 빠뜨려도 내 글이 조용히 가려진다.
     let revealsSpoiler: Bool
     let isPrivate: Bool
 
@@ -57,7 +58,7 @@ public struct WSSFeadView: View {
         isLiked: Bool,
         likeButtonTapped: @escaping () -> Void,
         isSpoiler: Bool,
-        revealsSpoiler: Bool = false,
+        revealsSpoiler: Bool,
         isPrivate: Bool
     ) {
         self.header = header
@@ -147,6 +148,8 @@ public struct WSSFeadView: View {
                     Text("스포일러가 포함된 글")
                         .applyWSSFont(.label1)
                         .foregroundStyle(Color.wssSecondary100)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             }
             .padding(.horizontal, 20)
@@ -199,6 +202,7 @@ public struct WSSFeadView: View {
             isLiked: true,
             likeButtonTapped: { print("좋아요 클릭!") },
             isSpoiler: true,
+            revealsSpoiler: false,
             isPrivate: true
         )
     }

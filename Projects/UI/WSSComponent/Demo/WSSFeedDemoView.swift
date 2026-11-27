@@ -92,6 +92,7 @@ struct WSSFeedDemoView: View {
                     isLiked: true,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: false,
+                    revealsSpoiler: false,
                     isPrivate: false
                 )
 
@@ -120,6 +121,7 @@ struct WSSFeedDemoView: View {
                     isLiked: false,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: true,
+                    revealsSpoiler: false,
                     isPrivate: false
                 )
                 
@@ -150,6 +152,7 @@ struct WSSFeedDemoView: View {
                     isLiked: true,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: false,
+                    revealsSpoiler: false,
                     isPrivate: true
                 )
                 
@@ -174,6 +177,7 @@ struct WSSFeedDemoView: View {
                     isLiked: false,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: true,
+                    revealsSpoiler: false,
                     isPrivate: true
                 )
             }

@@ -51,10 +51,10 @@ final class CollectionDetailViewModel {
         case menuTapped
         case dismissMenu
         case editTapped
-        /// 수정 화면(로컬 push, `CollectionDetailView`가 소유)에서 돌아왔을 때 — 성공 콜백 없는
-        /// 자기완결 dismiss 계약이라 성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의
-        /// `reloadAfterDetail`과 동일 판단).
-        case reloadAfterEdit
+        /// 자식 화면(수정·작품 상세·작성자 프로필 — App이 같은 스택에 push)에서 돌아왔을 때 — 어디서
+        /// 왔는지·성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의 `reloadAfterReturn`과
+        /// 동일 판단).
+        case reloadAfterReturn
         case deleteTapped
         case dismissDeleteAlert
         case confirmDelete
@@ -136,8 +136,8 @@ final class CollectionDetailViewModel {
             // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
             track(.editTapped)
             state.isMenuPresented = false
-        case .reloadAfterEdit:
-            reloadAfterEdit()
+        case .reloadAfterReturn:
+            reloadAfterReturn()
         case .deleteTapped:
             state.isMenuPresented = false
             state.isDeleteAlertPresented = true
@@ -177,10 +177,10 @@ private extension CollectionDetailViewModel {
         loadTask = Task { await loadDetail() }
     }
 
-    /// 수정 화면 복귀 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시 불러온다. 이미
+    /// 자식 화면 복귀 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시 불러온다. 이미
     /// `state.detail`이 있는 상태라 View의 `isLoading && detail == nil` 오버레이 조건상 전면 로딩으로
     /// 덮이지 않는다(정렬 변경과 동일 UX, `CollectionDetailView`의 그 조건 그대로 재사용).
-    func reloadAfterEdit() {
+    func reloadAfterReturn() {
         guard loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.hasLoadError = nil
@@ -236,6 +236,7 @@ private extension CollectionDetailViewModel {
             guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 상세 로드 실패: \(String(describing: error))")
+            if closeIfNoLongerViewable(error) { return }
             state.hasLoadError = (error as? RepositoryError) ?? .unknown
         }
     }
@@ -285,5 +286,23 @@ private extension CollectionDetailViewModel {
         guard (error as? RepositoryError) == .authenticationRequired else { return false }
         state.requiresAuthentication = true
         return true
+    }
+
+    /// 이미 보고 있던 컬렉션을 다시 불러왔더니 더는 볼 수 없게 됐으면(`.forbidden`/`.notFound`) 실패 뷰 대신
+    /// 화면을 닫는다(#311) — 작성자 프로필에서 그 유저를 차단하고 돌아오면 서버가 403 `BLOCK-007`을 준다
+    /// (dev 실측 2026-11-27). 실패 뷰로 덮으면 재시도해도 같은 403이라 탈출구가 안 되고, "일시적 오류"
+    /// 문구도 틀린다. 삭제 성공과 같은 exit(`close()` + `shouldDismiss`)이고, "차단했어요" 토스트는 App의
+    /// 컨테이너 오버레이라 이 화면이 닫혀도 직전 화면 위에 남는다. 첫 로드(`detail == nil`)는 대상이 아니다 —
+    /// 보여준 적 없는 화면을 말없이 닫으면 무슨 일인지 알 수 없어 기존대로 실패 뷰를 띄운다.
+    func closeIfNoLongerViewable(_ error: Error) -> Bool {
+        guard state.detail != nil else { return false }
+        switch error as? RepositoryError {
+        case .forbidden, .notFound:
+            close()
+            state.shouldDismiss = true
+            return true
+        default:
+            return false
+        }
     }
 }
