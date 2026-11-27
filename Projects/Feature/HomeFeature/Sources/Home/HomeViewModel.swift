@@ -100,7 +100,7 @@ final class HomeViewModel {
     private let loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase
 
     // CollectionDomain
-    private let loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
+    private let loadRandomPublicCollectionsUseCase: LoadRandomPublicCollectionsUseCase
 
     // PushAuthorization
     private let pushAuthorizationChecker: PushAuthorizationChecker
@@ -110,14 +110,14 @@ final class HomeViewModel {
     init(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
-        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase,
+        loadRandomPublicCollectionsUseCase: LoadRandomPublicCollectionsUseCase,
         pushAuthorizationChecker: PushAuthorizationChecker,
         logger: Logger? = nil,
         analyticsTracker: AnalyticsTracker? = nil
     ) {
         self.loadHomeDataUseCase = loadHomeDataUseCase
         self.loadUnreadNotificationStatusUseCase = loadUnreadNotificationStatusUseCase
-        self.loadPublicCollectionsUseCase = loadPublicCollectionsUseCase
+        self.loadRandomPublicCollectionsUseCase = loadRandomPublicCollectionsUseCase
         self.pushAuthorizationChecker = pushAuthorizationChecker
         self.logger = logger
         self.analyticsTracker = analyticsTracker
@@ -196,17 +196,14 @@ private extension HomeViewModel {
         // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
         async let homeData = loadHomeDataUseCase.execute()
         async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
-        async let publicCollections = loadPublicCollectionsUseCase.execute(
-            cursor: nil,
-            size: Self.publicCollectionCount
-        )
+        async let publicCollections = loadRandomPublicCollectionsUseCase.execute(size: Self.publicCollectionCount)
 
         // 1) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **콘텐츠보다 먼저** 꺼낸다: 홈 최상단(검색 영역 바로
         //    아래) 섹션이라 콘텐츠 뒤에 들어오면 그 아래 섹션 전부가 밀리는 점프가 생긴다. 먼저 state에 넣어도
         //    `hasLoadedContent`가 아직 false라 로딩 뷰가 덮고 있다가 콘텐츠와 같은 프레임에 함께 그려진다.
         //    둘은 동시에 요청했으니 총 대기시간은 max(콘텐츠, 컬렉션) 그대로다.
         do {
-            state.publicCollections = try await publicCollections.items
+            state.publicCollections = try await publicCollections
         } catch let error as RepositoryError {
             presentPublicCollectionsFailure(error)
         } catch {

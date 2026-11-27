@@ -26,6 +26,6 @@ public final class DefaultLoadPublicCollectionsUseCase: LoadPublicCollectionsUse
     }
 
     public func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
-        try await collectionRepository.fetchPublicCollections(cursor: cursor, size: size)
+        try await collectionRepository.fetchPublicCollections(sort: .latest, cursor: cursor, size: size)
     }
 }

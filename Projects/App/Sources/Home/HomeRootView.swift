@@ -119,7 +119,7 @@ struct HomeRootView: View {
                 loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                     repository: dependencies.notificationRepository
                 ),
-                loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
+                loadRandomPublicCollectionsUseCase: DefaultLoadRandomPublicCollectionsUseCase(
                     collectionRepository: dependencies.collectionRepository
                 ),
                 pushAuthorizationChecker: DefaultPushAuthorizationChecker(),

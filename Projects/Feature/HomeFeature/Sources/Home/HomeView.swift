@@ -211,7 +211,7 @@ private extension HomeView {
         viewModel: HomeViewModel(
             loadHomeDataUseCase: PreviewLoadHomeDataUseCase(),
             loadUnreadNotificationStatusUseCase: PreviewLoadUnreadNotificationStatusUseCase(),
-            loadPublicCollectionsUseCase: PreviewLoadPublicCollectionsUseCase(),
+            loadRandomPublicCollectionsUseCase: PreviewLoadRandomPublicCollectionsUseCase(),
             pushAuthorizationChecker: PreviewPushAuthorizationChecker()
         ),
         onRoute: { print("화면 전환 요청: \($0)") },
@@ -285,8 +285,8 @@ private struct PreviewLoadUnreadNotificationStatusUseCase: LoadUnreadNotificatio
     }
 }
 
-private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
+private struct PreviewLoadRandomPublicCollectionsUseCase: LoadRandomPublicCollectionsUseCase {
+    func execute(size: Int) async throws(RepositoryError) -> [CollectionCard] {
         let cards = (0..<3).map { index in
             CollectionCard(
                 id: CollectionID(index),
@@ -298,7 +298,7 @@ private struct PreviewLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
                 owner: Author(userId: UserID(index), nickname: "코띠", profileImage: nil)
             )
         }
-        return CursorPaginated(items: cards, hasNext: false, nextCursor: nil)
+        return cards
     }
 }
 
