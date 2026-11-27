@@ -31,8 +31,8 @@
 - **내 서재 필터·정렬 로컬 영속화(#221)는 `NovelRepository`가 아니라 별도 계약 `MyLibraryFilterRepository`**
   (`Load/SaveMyLibraryFilterUseCase`가 감싼다)에 있다. **분리한 이유**: ① 순수 로컬 저장이라 서버·userID와
   무관해 `NovelRepository`(네트워크)와 관심사가 다르고, ② 큰 `NovelRepository`에 얹으면 그걸 목킹하는 6곳
-  (Testing Mock·Demo 4곳·App)이 전부 새 메서드를 구현해야 한다 — 별 계약이면 새 목 하나(`MockMyLibraryFilterRepository`)만
-  추가된다. ⚠️ **이 두 UseCase/Repository는 `async throws`가 아니라 동기·비-throwing이다** — 복원을
+  (Testing Mock·Demo 4곳·App)이 전부 새 메서드를 구현해야 한다 — 별 계약이면 그 구현만 따로 두면 된다
+  (넘기기만 하는 두 UseCase라 테스트가 없어 #308에서 `MockMyLibraryFilterRepository`는 지웠다). ⚠️ **이 두 UseCase/Repository는 `async throws`가 아니라 동기·비-throwing이다** — 복원을
   ViewModel `init`에서 동기로 해야 첫 로드가 복원된 필터로 나가서다(이유 정본은 [LibraryFeature](../../Feature/LibraryFeature/CLAUDE.md)).
   Sendable 프로토콜이라 `Default*UseCase`는 `final class`(다른 UseCase와 동일 규칙). 구현·저장 포맷은 `NovelData`.
 - `fetchMyLibraryNovels`/`fetchRegisteredNovelStats`는 **로그인 사용자 기준** (구현체가 저장된 userID 사용). 타 사용자 조회는 `fetchUserLibraryNovels(id:_:)` / `fetchUserRegisteredNovelStats(id:)` 별도 — Repository에 "내" 버전과 "유저" 버전이 쌍으로 존재하는 게 이 모듈의 고정 패턴이니, 서재 관련 조회를 새로 추가할 땐 이 쌍을 먼저 따라간다.
@@ -54,3 +54,4 @@
 - **`MyLibraryFilter.clearAll()`(시트 "초기화")은 시트 필터 6종만 리셋** — 관심(isInterest)·정렬(sortType)은 시트 소속이 아니라 유지된다.
 - **연재상태(`publicationStatus`)가 단일 선택인 건 의도된 설계** — 서버 쿼리가 `isCompleted: Bool?` **하나뿐**이라 애초에 "연재중+완결작"을 표현할 수단이 없다. 구 WSSiOS는 이걸 배열로 들고 UI에서 둘 다 켤 수 있게 해뒀지만, Repository가 `count == 1`일 때만 파라미터를 실어서 **둘 다 고르면 필터가 통째로 무시**됐다(칩은 2개인데 결과는 전체). V1이 다중이라는 이유로 배열로 되돌리지 말 것.
 - 서재 정렬은 공용 `SortType`(2종)이 아니라 **서재 전용 `LibrarySortType`(6종)** — 내 서재·타유저 서재 **둘 다** 이걸 쓴다(같은 V2 엔드포인트라 서버가 받는 정렬 문자열이 같다). 공용 `SortType`을 쓰던 구 `LibraryFilter`는 #166에서 `LibrarySortType`으로 전환했다.
+- **`MockNovelRepository`는 "넘겨받은 키워드 캐시마다" 답을 정해 둔다**(#308) — 작품 상세·서재 조회는 `Set<Keyword>`를 키로 답을 찾고, 없으면 `.notFound`를 던진다. 그래서 "모든 그룹의 키워드를 넘긴다"·"키워드를 못 불러오면 빈 키워드로"를 호출 기록 없이 결과로 확인한다. 키워드 쪽은 BaseDomain의 `MockLoadTotalKeywordsUseCase`를 쓴다(동기화·재조회는 그 UseCase의 일이라 여기서 다시 보지 않는다).

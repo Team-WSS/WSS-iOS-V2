@@ -355,6 +355,15 @@ struct CollectionDraftTests {
 
             #expect(draft.isPrivate == true)
         }
+
+        @Test("켜진 나만 보기를 누르면 꺼진다")
+        func togglingPrivateTurnsItOff() {
+            var draft = makeDraft(isPrivate: true)
+
+            draft.togglePrivate()
+
+            #expect(draft.isPrivate == false)
+        }
     }
 }
 

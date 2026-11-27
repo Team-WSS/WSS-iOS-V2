@@ -2,72 +2,63 @@
 //  LoadNovelPreferencesUseCaseTests.swift
 //  ProfileDomain
 //
-//  Created by Seoyeon Choi on 2/25/26.
+//  Created by YunhakLee on 11/23/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
 import Testing
 
-@testable import ProfileDomain
-import ProfileDomainTesting
 import BaseDomain
+import BaseDomainTesting
+import ProfileDomain
+import ProfileDomainTesting
 
-@Suite("LoadNovelPreferencesUseCase")
+// 서버는 선호 키워드를 이름으로만 준다. 앱은 전체 키워드 목록에서 같은 이름을 찾아 키워드로 바꾸므로,
+// 불러오는 UseCase는 모든 카테고리의 키워드를 넘겨야 한다.
+// 카테고리를 둘로 나눠 둬서, 한 카테고리의 키워드만 넘기면 저장소가 답을 찾지 못한다.
+private let keywordGroups = [
+    KeywordGroup(category: .material, keywords: [
+        Keyword(id: KeywordID(11), name: "회귀")
+    ]),
+    KeywordGroup(category: .character, keywords: [
+        Keyword(id: KeywordID(21), name: "먼치킨"),
+        Keyword(id: KeywordID(22), name: "사이다")
+    ])
+]
+private let allKeywords = Set(keywordGroups.flatMap(\.keywords))
+
+@Suite("선호 작품 불러오기")
 struct LoadNovelPreferencesUseCaseTests {
 
-    @Test("작품 취향을 반환한다")
-    func returnsNovelPreferences() async throws {
-        let repo = MockProfileRepository()
-        let expected = makeNovelPreference(attractivePoints: [.worldview, .character])
-        repo.fetchNovelPreferencesResult = .success(expected)
-
-        let sut = DefaultLoadNovelPreferencesUseCase(
-            profileRepository: repo,
-            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: StubKeywordRepository())
+    @Test("선호 작품을 불러올 때 모든 카테고리의 키워드를 넘긴다")
+    func passesKeywordsOfAllCategories() async throws {
+        let profileRepository = MockProfileRepository()
+        profileRepository.novelPreferencesByCachedKeywords = [
+            allKeywords: NovelPreference(attractivePoints: [.vibe], keywords: [])
+        ]
+        let useCase = DefaultLoadNovelPreferencesUseCase(
+            profileRepository: profileRepository,
+            loadTotalKeywordsUseCase: MockLoadTotalKeywordsUseCase(result: .success(keywordGroups))
         )
 
-        let result = try await sut.execute(.me)
+        let preference = try await useCase.execute(.me)
 
-        #expect(repo.fetchNovelPreferencesCallCount == 1)
-        guard case .me = repo.fetchedNovelPreferenceTargets.first else {
-            Issue.record(".me 타겟이 전달되어야 한다")
-            return
-        }
-        #expect(result.attractivePoints == expected.attractivePoints)
-        #expect(result.keywords == expected.keywords)
+        #expect(preference.attractivePoints == [.vibe])
     }
 
-    @Test("레포지토리에서 에러가 발생하면 그대로 전달한다")
-    func propagatesRepositoryError() async {
-        let repo = MockProfileRepository()
-        repo.fetchNovelPreferencesResult = .failure(.serverUnavailable)
-
-        let sut = DefaultLoadNovelPreferencesUseCase(
-            profileRepository: repo,
-            loadTotalKeywordsUseCase: DefaultLoadTotalKeywordsUseCase(keywordRepository: StubKeywordRepository())
+    @Test("전체 키워드를 못 불러와도 선호 작품은 불러온다")
+    func loadsWithoutKeywords() async throws {
+        let profileRepository = MockProfileRepository()
+        profileRepository.novelPreferencesByCachedKeywords = [
+            []: NovelPreference(attractivePoints: [.vibe], keywords: [])
+        ]
+        let useCase = DefaultLoadNovelPreferencesUseCase(
+            profileRepository: profileRepository,
+            loadTotalKeywordsUseCase: MockLoadTotalKeywordsUseCase(result: .failure(.networkUnavailable))
         )
 
-        await #expect(throws: RepositoryError.serverUnavailable) {
-            _ = try await sut.execute(.me)
-        }
+        let preference = try await useCase.execute(.me)
 
-        #expect(repo.fetchNovelPreferencesCallCount == 1)
-    }
-}
-
-private final class StubKeywordRepository: KeywordRepository {
-    func fetchKeywords() async throws(RepositoryError) -> [KeywordGroup] { [] }
-    func searchKeywords(_ query: String) async throws(RepositoryError) -> [KeywordGroup] { [] }
-    func syncKeywords() async {}
-    func fetchPopularKeywords() async throws(RepositoryError) -> PopularKeywords { PopularKeywords(keywords: []) }
-}
-
-extension LoadNovelPreferencesUseCaseTests {
-
-    private func makeNovelPreference(
-        attractivePoints: [AttractivePoint] = [],
-        keywords: [KeywordPreference] = []
-    ) -> NovelPreference {
-        NovelPreference(attractivePoints: attractivePoints, keywords: keywords)
+        #expect(preference.attractivePoints == [.vibe])
     }
 }

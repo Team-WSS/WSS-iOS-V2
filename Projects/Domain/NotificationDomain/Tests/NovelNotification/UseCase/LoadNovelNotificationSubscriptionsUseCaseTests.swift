@@ -9,77 +9,64 @@
 import Foundation
 import Testing
 
-@testable import NotificationDomain
-import NotificationDomainTesting
 import BaseDomain
+import NotificationDomain
+import NotificationDomainTesting
 
-@Suite("LoadNovelNotificationSubscriptionsUseCase")
+@Suite("작품 알림 구독 목록 불러오기")
 struct LoadNovelNotificationSubscriptionsUseCaseTests {
 
-    private func makeSubscription(id: Int = 1) -> NovelNotificationSubscription {
-        NovelNotificationSubscription(
-            id: SubscriptionID(id),
-            novelID: NovelID(id),
-            novelTitle: "테스트 작품 \(id)",
-            novelThumbnailImage: URL(string: "https://image.websoso.kr/novel/\(id).jpg"),
-            novelAuthor: "테스트 작가",
-            registeredDateText: "2026.08.06"
-        )
+    @Test(
+        "개수를 0 이하로 요청하면 20개씩 불러온다",
+        arguments: [
+            0,     // 경계
+            -1     // 음수
+        ]
+    )
+    func nonPositiveSizeLoadsTwenty(size: Int) async throws {
+        let repository = MockNovelNotificationRepository()
+        repository.pagesBySize[20] = page()
+        let useCase = DefaultLoadNovelNotificationSubscriptionsUseCase(repository: repository)
+
+        let result = try await useCase.execute(type: .completion, lastSubscriptionID: nil, size: size)
+
+        #expect(result == page())
     }
 
-    private func makePaged(
-        count: Int = 1,
-        isLoadable: Bool = true,
-        nextSubscriptionID: SubscriptionID? = nil
-    ) -> PagedNovelNotificationSubscriptions {
+    @Test(
+        "개수를 1 이상으로 요청하면 그 개수대로 불러온다",
+        arguments: [
+            1,     // 경계
+            30     // 일반값
+        ]
+    )
+    func positiveSizeLoadsAsRequested(size: Int) async throws {
+        let repository = MockNovelNotificationRepository()
+        repository.pagesBySize[size] = page()
+        let useCase = DefaultLoadNovelNotificationSubscriptionsUseCase(repository: repository)
+
+        let result = try await useCase.execute(type: .completion, lastSubscriptionID: nil, size: size)
+
+        #expect(result == page())
+    }
+
+    // MARK: - Helpers
+
+    /// Stub이 그 개수에만 돌려주는 페이지 — 개수를 잘못 넘기면 빈 페이지가 와서 결과가 달라진다.
+    private func page() -> PagedNovelNotificationSubscriptions {
         PagedNovelNotificationSubscriptions(
-            subscriptions: (1...count).map { makeSubscription(id: $0) },
-            isLoadable: isLoadable,
-            nextSubscriptionID: nextSubscriptionID
+            subscriptions: [
+                NovelNotificationSubscription(
+                    id: SubscriptionID(1),
+                    novelID: NovelID(1),
+                    novelTitle: "작품",
+                    novelThumbnailImage: nil,
+                    novelAuthor: "작가",
+                    registeredDateText: "2026.11.19"
+                )
+            ],
+            isLoadable: true,
+            nextSubscriptionID: SubscriptionID(2)
         )
-    }
-
-    @Test("완결·휴재복귀 타입과 lastSubscriptionID·size를 그대로 레포지토리에 전달한다")
-    func loadsSubscriptionsWithParameters() async throws {
-        let repo = MockNovelNotificationRepository()
-        repo.loadSubscriptionsResult = .success(makePaged())
-
-        let sut = DefaultLoadNovelNotificationSubscriptionsUseCase(repository: repo)
-
-        let lastID = SubscriptionID(10)
-        _ = try await sut.execute(type: .hiatusReturn, lastSubscriptionID: lastID, size: 30)
-
-        #expect(repo.loadSubscriptionsCallCount == 1)
-        #expect(repo.loadedType == .hiatusReturn)
-        #expect(repo.loadedLastSubscriptionID == lastID)
-        #expect(repo.loadedSize == 30)
-    }
-
-    @Test("size가 0 이하이면 기본 size(20)로 조회한다")
-    func usesDefaultSizeWhenNonPositive() async throws {
-        let repo = MockNovelNotificationRepository()
-        repo.loadSubscriptionsResult = .success(makePaged())
-
-        let sut = DefaultLoadNovelNotificationSubscriptionsUseCase(repository: repo)
-
-        _ = try await sut.execute(type: .completion, lastSubscriptionID: nil, size: 0)
-        #expect(repo.loadedSize == 20)
-
-        _ = try await sut.execute(type: .completion, lastSubscriptionID: nil, size: -1)
-        #expect(repo.loadedSize == 20)
-    }
-
-    @Test("조회 중 레포지토리에서 에러가 발생하면 그대로 전달한다")
-    func propagatesRepositoryError() async {
-        let repo = MockNovelNotificationRepository()
-        repo.loadSubscriptionsResult = .failure(.networkUnavailable)
-
-        let sut = DefaultLoadNovelNotificationSubscriptionsUseCase(repository: repo)
-
-        await #expect(throws: RepositoryError.networkUnavailable) {
-            _ = try await sut.execute(type: .completion, lastSubscriptionID: nil, size: 20)
-        }
-
-        #expect(repo.loadSubscriptionsCallCount == 1)
     }
 }

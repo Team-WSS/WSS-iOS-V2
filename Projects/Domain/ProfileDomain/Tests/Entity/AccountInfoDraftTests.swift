@@ -2,60 +2,33 @@
 //  AccountInfoDraftTests.swift
 //  ProfileDomain
 //
-//  Created by YunhakLee on 2/25/26.
+//  Created by YunhakLee on 11/24/26.
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
 import Testing
 
-@testable import ProfileDomain
+import ProfileDomain
 
-@Suite("AccountInfoDraft")
+// 규칙은 없지만 설정 화면은 이 메서드로만 값을 바꾼다 — 안 담기면 고른 값 대신 옛 값이 저장된다(#308 뮤테이션).
+@Suite("계정 정보 수정")
 struct AccountInfoDraftTests {
-    private func makeBirthYear(_ year: Int) -> BirthYear {
-        try! BirthYear(year)
-    }
-    
-    private func makeDraft(
-        email: String? = "test@email.com",
-        gender: Gender = .male,
-        birth: BirthYear = try! BirthYear(2002)
-    ) -> AccountInfoDraft {
-        AccountInfoDraft(
-            email: email,
-            gender: gender,
-            birth: birth
-        )
-    }
 
-    @Test("초기화 시 전달한 값으로 생성된다")
-    func initializesWithGivenValues() {
-        let draft = makeDraft(
-            email: "hello@test.com",
-            gender: .female,
-            birth: makeBirthYear(1999)
-        )
-
-        #expect(draft.email == "hello@test.com")
-        #expect(draft.gender == .female)
-        #expect(draft.birth == makeBirthYear(1999))
-    }
-
-    @Test("성별을 변경할 수 있다")
-    func changesGender() {
-        var draft = makeDraft(gender: .male)
+    @Test("성별을 바꾸면 담긴다")
+    func setsGender() throws {
+        var draft = AccountInfoDraft(email: nil, gender: .male, birth: try BirthYear(2000))
 
         draft.setGender(.female)
 
         #expect(draft.gender == .female)
     }
 
-    @Test("출생년도를 변경할 수 있다")
-    func changesBirthYear() {
-        var draft = makeDraft(birth: makeBirthYear(2000))
+    @Test("생년을 바꾸면 담긴다")
+    func setsBirth() throws {
+        var draft = AccountInfoDraft(email: nil, gender: .male, birth: try BirthYear(2000))
 
-        draft.setBirth(makeBirthYear(1995))
+        draft.setBirth(try BirthYear(1999))
 
-        #expect(draft.birth == makeBirthYear(1995))
+        #expect(draft.birth == (try BirthYear(1999)))
     }
 }

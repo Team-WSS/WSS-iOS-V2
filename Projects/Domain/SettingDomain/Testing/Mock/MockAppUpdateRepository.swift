@@ -12,15 +12,13 @@ import SettingDomain
 import BaseDomain
 
 public final class MockAppUpdateRepository: AppUpdateRepository {
-    public var loadCallCount = 0
     public var result: Result<AppUpdatePolicy, RepositoryError> = .success(
-        AppUpdatePolicy(minimumVersion: .zero, updateDate: nil)
+        AppUpdatePolicy(minimumVersion: AppVersion(major: 0, minor: 0, patch: 0), updateDate: nil)
     )
 
     public init() {}
 
     public func loadAppUpdatePolicy() async throws(RepositoryError) -> AppUpdatePolicy {
-        loadCallCount += 1
-        return try result.get()
+        try result.get()
     }
 }

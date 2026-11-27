@@ -8,111 +8,103 @@
 
 import Testing
 
-@testable import SettingDomain
-import SettingDomainTesting
-import BaseDomain
+import SettingDomain
 
-@Suite("TermsAgreementDraft")
+@Suite("약관 동의")
 struct TermsAgreementDraftTests {
 
-    @Test("초기화 시 모든 약관 항목은 기본값 false로 채워진다")
-    func initFillsAllCasesWithFalseByDefault() throws {
-        let draft = TermsAgreementDraft()
+    @Suite("처음 상태")
+    struct Initial {
 
-        for t in TermsType.allCases {
-            #expect(draft.isAgreed(t) == false)
+        @Test("아무 값 없이 만들면 모든 약관이 미동의다")
+        func startsWithEverythingDisagreed() {
+            let draft = TermsAgreementDraft()
+
+            #expect(draft.agreements == [
+                .serviceAgreement: false,
+                .privacyPolicy: false,
+                .marketingConsent: false
+            ])
+        }
+
+        @Test("값을 주지 않은 약관은 미동의로 채운다")
+        func fillsUnspecifiedTermsAsDisagreed() {
+            let draft = TermsAgreementDraft(initial: [.marketingConsent: true])
+
+            #expect(draft.agreements == [
+                .serviceAgreement: false,
+                .privacyPolicy: false,
+                .marketingConsent: true
+            ])
         }
     }
 
-    @Test("초기값으로 전달한 항목은 반영되고, 나머지는 false로 채워진다")
-    func initAppliesInitialAndDefaultsTheRestToFalse() throws {
-        let some = TermsType.allCases.first!
-        let draft = TermsAgreementDraft(initial: [some: true])
+    @Suite("동의 여부 편집")
+    struct Changing {
 
-        #expect(draft.isAgreed(some) == true)
+        @Test(
+            "약관 하나에 동의하거나 철회하면 그 약관만 바뀐다",
+            arguments: [
+                true,   // 전부 미동의인 상태에서 하나만 동의
+                false   // 전부 동의한 상태에서 하나만 철회
+            ]
+        )
+        func changesOnlyThatTerm(isAgreed: Bool) {
+            var draft = TermsAgreementDraft(initial: [
+                .serviceAgreement: !isAgreed,
+                .privacyPolicy: !isAgreed,
+                .marketingConsent: !isAgreed
+            ])
 
-        for t in TermsType.allCases where t != some {
-            #expect(draft.isAgreed(t) == false)
+            draft.setAgreed(isAgreed, for: .privacyPolicy)
+
+            #expect(draft.agreements == [
+                .serviceAgreement: !isAgreed,
+                .privacyPolicy: isAgreed,
+                .marketingConsent: !isAgreed
+            ])
+        }
+
+        @Test("모두 동의하면 선택 약관까지 전부 동의가 된다")
+        func agreeToAllIncludesOptionalTerms() {
+            var draft = TermsAgreementDraft()
+
+            draft.agreeToAll()
+
+            #expect(draft.agreements == [
+                .serviceAgreement: true,
+                .privacyPolicy: true,
+                .marketingConsent: true
+            ])
         }
     }
 
-    @Test("특정 약관 동의 여부를 조회할 수 있다")
-    func isAgreedReadsCurrentState() {
-        var draft = TermsAgreementDraft()
-        let t = TermsType.allCases[0]
+    @Suite("제출")
+    struct Submission {
 
-        #expect(draft.isAgreed(t) == false)
+        @Test(
+            "필수 약관 중 하나라도 동의하지 않으면 제출할 수 없다",
+            // 선택 약관(마케팅)까지 동의해도 필수 하나가 빠지면 소용없다.
+            arguments: [
+                [.serviceAgreement: false, .privacyPolicy: true, .marketingConsent: true],   // 서비스 이용약관만 빠짐
+                [.serviceAgreement: true, .privacyPolicy: false, .marketingConsent: true]    // 개인정보 처리방침만 빠짐
+            ] as [[TermsType: Bool]]
+        )
+        func notSubmittableWithoutARequiredTerm(agreements: [TermsType: Bool]) {
+            let draft = TermsAgreementDraft(initial: agreements)
 
-        draft.setAgreed(true, for: t)
-        #expect(draft.isAgreed(t) == true)
-    }
-
-    @Test("특정 약관 동의 여부를 설정할 수 있다")
-    func setAgreedUpdatesAgreementState() {
-        var draft = TermsAgreementDraft()
-        let t = TermsType.allCases[0]
-
-        draft.setAgreed(true, for: t)
-        #expect(draft.isAgreed(t) == true)
-
-        draft.setAgreed(false, for: t)
-        #expect(draft.isAgreed(t) == false)
-    }
-
-    @Test("모두 동의 기능을 실행하면 모든 약관이 true가 된다")
-    func agreeToAllSetsAllToTrue() {
-        var draft = TermsAgreementDraft()
-        draft.agreeToAll()
-
-        for t in TermsType.allCases {
-            #expect(draft.isAgreed(t) == true)
-        }
-    }
-
-    @Test("필수 약관이 모두 동의되면 제출 가능 상태가 된다")
-    func isSubmittableTrueWhenAllRequiredAreAgreed() {
-        var draft = TermsAgreementDraft()
-
-        // 필수만 true로
-        for t in TermsType.allCases where t.isRequired {
-            draft.setAgreed(true, for: t)
+            #expect(draft.isSubmittable == false)
         }
 
-        #expect(draft.isSubmittable == true)
-    }
+        @Test("선택 약관인 마케팅 수신에 동의하지 않아도 제출할 수 있다")
+        func submittableWithoutOptionalTerm() {
+            let draft = TermsAgreementDraft(initial: [
+                .serviceAgreement: true,
+                .privacyPolicy: true,
+                .marketingConsent: false
+            ])
 
-    @Test("필수 약관 중 하나라도 미동의면 제출 불가 상태가 된다")
-    func isSubmittableFalseWhenAnyRequiredIsNotAgreed() {
-        var draft = TermsAgreementDraft()
-
-        // 필수 중 하나만 false로 유지 (나머지 필수는 true)
-        let required = TermsType.allCases.filter { $0.isRequired }
-        let firstRequired = required.first
-
-        for t in required {
-            draft.setAgreed(true, for: t)
+            #expect(draft.isSubmittable == true)
         }
-        if let firstRequired {
-            draft.setAgreed(false, for: firstRequired)
-        }
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    @Test("선택 약관은 미동의여도 제출 가능 여부에 영향을 주지 않는다")
-    func optionalTermsDoNotAffectSubmittable() {
-        var draft = TermsAgreementDraft()
-
-        // 필수는 전부 true
-        for t in TermsType.allCases where t.isRequired {
-            draft.setAgreed(true, for: t)
-        }
-
-        // 선택은 전부 false로 유지해도 제출 가능
-        for t in TermsType.allCases where !t.isRequired {
-            #expect(draft.isAgreed(t) == false)
-        }
-
-        #expect(draft.isSubmittable == true)
     }
 }
