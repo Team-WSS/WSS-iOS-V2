@@ -180,8 +180,8 @@ private extension CollectionDetailView {
 
             HStack(spacing: 0) {
                 Button {
-                    // 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하므로 `.onDisappear`로 닫힘을
-                    // 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
+                    // App이 같은 스택에 자식 화면(수정·작품 상세·작성자 프로필)을 push하므로 `.onDisappear`로
+                    // 닫힘을 감지하면 그 push에도 함께 발화해버린다(`CollectionFeature/CLAUDE.md` 참고) —
                     // 그래서 진짜 뒤로가기인 여기서 명시적으로 알린다.
                     viewModel.handle(.backTapped)
                     dismiss()

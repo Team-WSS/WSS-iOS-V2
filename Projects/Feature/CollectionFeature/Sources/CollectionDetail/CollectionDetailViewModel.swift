@@ -46,6 +46,7 @@ final class CollectionDetailViewModel {
     // MARK: - Action
 
     enum Action {
+        /// 진입 시 첫 `onAppear` 1회 전용 — `hasLoaded` 가드가 있어 재시도·복귀 재조회엔 쓰지 않는다(`.retry`/`.reloadAfterReturn`).
         case load
         case changeSortType(SortType)
         case toggleLike
@@ -67,7 +68,7 @@ final class CollectionDetailViewModel {
         case userProfileUnavailableTapped
         case dismissUnavailableUserToast
         /// 뒤로가기 버튼 탭 — `dismiss()` 직전에 View가 함께 호출한다. `.onDisappear`로는 못 쓴다
-        /// — 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하는데, push되는 순간 부모도
+        /// — App이 같은 `NavigationPath`에 자식 화면(수정·작품 상세·작성자 프로필)을 push하는 순간 부모도
         /// `.onDisappear`가 발화해(SwiftUI 표준 동작) `isClosing`이 영구히 굳어버린다(실측 확인,
         /// 수정 복귀 후 재조회·정렬·좋아요·삭제 전부 무반응이 되는 회귀였다) — 그래서
         /// `NovelDetailViewModel.close()`처럼 **명시적 사용자 액션**으로만 세운다.
@@ -136,8 +137,8 @@ final class CollectionDetailViewModel {
         case .dismissMenu:
             state.isMenuPresented = false
         case .editTapped:
-            // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환(isEditPresented)은 View가 로컬 상태로
-            // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
+            // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환은 View가 `onRoute(.editCollection)`으로
+            // App에 알리고 App이 push한다(#201부터, `CollectionFeature/CLAUDE.md` 참고).
             track(.editTapped)
             state.isMenuPresented = false
         case .reloadAfterReturn, .retry:
