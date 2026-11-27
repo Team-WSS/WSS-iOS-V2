@@ -35,7 +35,15 @@ public struct WSSFeadView: View {
     let likeButtonTapped: () -> Void
 
     let isSpoiler: Bool
+    /// 내 글이면 `true` — 스포일러 글이어도 본문·이미지를 가리지 않고, 리액션 줄 오른쪽에 작은
+    /// "스포일러가 포함된 글" 표시만 붙인다. `false`(남의 글)면 본문 대신 "스포일러가 포함된 글 보기"로 가린다.
+    let revealsSpoiler: Bool
     let isPrivate: Bool
+
+    /// 스포일러 본문을 가려야 하는가 — 남의 스포일러 글일 때만.
+    private var hidesSpoilerContent: Bool { isSpoiler && !revealsSpoiler }
+    /// 리액션 줄 오른쪽 작은 스포일러 표시 — 내 스포일러 글일 때만.
+    private var showsSpoilerBadge: Bool { isSpoiler && revealsSpoiler }
 
     public init(
         header: FeedHeader,
@@ -49,6 +57,7 @@ public struct WSSFeadView: View {
         isLiked: Bool,
         likeButtonTapped: @escaping () -> Void,
         isSpoiler: Bool,
+        revealsSpoiler: Bool = false,
         isPrivate: Bool
     ) {
         self.header = header
@@ -62,6 +71,7 @@ public struct WSSFeadView: View {
         self.isLiked = isLiked
         self.likeButtonTapped = likeButtonTapped
         self.isSpoiler = isSpoiler
+        self.revealsSpoiler = revealsSpoiler
         self.isPrivate = isPrivate
     }
     
@@ -81,7 +91,7 @@ public struct WSSFeadView: View {
             
             // 피드 글
             HStack(spacing: 0) {
-                if isSpoiler {
+                if hidesSpoilerContent {
                      Text("스포일러가 포함된 글 보기")
                         .applyWSSFont(.body2)
                         .foregroundStyle(Color.wssSecondary100)
@@ -100,7 +110,7 @@ public struct WSSFeadView: View {
             Spacer().frame(height: 20)
             
             // 피드 첨부 이미지
-            if let feedImage, !isSpoiler {
+            if let feedImage, !hidesSpoilerContent {
                 WSSFeedImageView(feedImage: feedImage)
                     .padding(.horizontal, 12.5)
                 
@@ -120,18 +130,26 @@ public struct WSSFeadView: View {
                 Spacer().frame(height: 10)
             }
             
-            // 피드 리액션
-            if isPrivate {
-                privateSection
-                    .padding(.horizontal, 20)
-            } else {
-                WSSFeedReactView(
-                    react: react,
-                    isLiked: isLiked,
-                    likeButtonTapped: likeButtonTapped
-                )
-                .padding(.horizontal, 20)
+            // 피드 리액션 (+ 내 스포일러 글이면 오른쪽 끝에 작은 표시)
+            // 두 리액션 뷰 모두 끝에 Spacer가 있어 표시가 오른쪽 끝으로 밀린다.
+            HStack(spacing: 0) {
+                if isPrivate {
+                    privateSection
+                } else {
+                    WSSFeedReactView(
+                        react: react,
+                        isLiked: isLiked,
+                        likeButtonTapped: likeButtonTapped
+                    )
+                }
+
+                if showsSpoilerBadge {
+                    Text("스포일러가 포함된 글")
+                        .applyWSSFont(.label1)
+                        .foregroundStyle(Color.wssSecondary100)
+                }
             }
+            .padding(.horizontal, 20)
         }
         .padding(.top, 20)
         .padding(.bottom, 10)
