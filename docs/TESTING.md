@@ -133,7 +133,7 @@ Projects/Domain/<Module>Domain/
 
 - **Swift Testing**(`@Test`·`#expect`·`@Suite`). XCTest ❌.
 
-## 적용 범위 (#293 진행 중)
+## 적용 범위 (일부 모듈만 — 재작성 진행 중)
 
 - ArchLint 테스트 규칙은 **재작성을 마친 모듈에만** 켜져 있다 — `Tooling/ArchLint/Sources/ArchLintCore/TestSpecSupport.swift`의 `TestSpecScope.modules`.
   모듈을 이 기준으로 다시 쓰면 거기에 추가한다. 다시 쓰는 순서는 `rewrite-domain-tests` 스킬(`.claude/skills/rewrite-domain-tests/SKILL.md`)이 따라간다. 안 고친 모듈까지 켜면 옛 테스트가 전부 error로 떠 게이트가 막힌다.
