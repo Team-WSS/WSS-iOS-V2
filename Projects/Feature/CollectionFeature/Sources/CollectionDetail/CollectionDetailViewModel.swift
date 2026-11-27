@@ -30,8 +30,9 @@ final class CollectionDetailViewModel {
         var isMenuPresented = false
         var isDeleteAlertPresented = false
         var isDeleting = false
-        /// 삭제 성공 신호. View가 `onChange`로 소비해 dismiss한다(`UserPageFeature`의 차단 성공과 동일 패턴)
-        /// — 삭제된 컬렉션은 더 볼 수 없어 화면에 남아있을 이유가 없다.
+        /// 화면 닫기 신호 — 삭제 성공, 또는 보던 컬렉션을 다시 불러왔더니 더는 볼 수 없게 됐을 때(403/404,
+        /// `closeIfNoLongerViewable`). View가 `onChange`로 소비해 dismiss한다(`UserPageFeature`의 차단 성공과
+        /// 동일 패턴) — 볼 수 없는 컬렉션은 화면에 남아있을 이유가 없다.
         var shouldDismiss = false
 
         /// 좋아요·삭제 실패 공통 에러 토스트 — 둘 다 같은 카피(`WSSToastType.unknownError`)라 하나로 묶는다.
@@ -55,6 +56,9 @@ final class CollectionDetailViewModel {
         /// 왔는지·성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의 `reloadAfterReturn`과
         /// 동일 판단).
         case reloadAfterReturn
+        /// 실패 뷰의 "페이지 다시 불러오기" — 진입 1회 가드(`hasLoaded`)를 우회해 항상 다시 부른다.
+        /// `.load`로 보내면 한 번이라도 성공한 뒤의 재조회 실패(정렬 변경·복귀)에서 가드에 막혀 무반응이 된다.
+        case retry
         case deleteTapped
         case dismissDeleteAlert
         case confirmDelete
@@ -79,7 +83,7 @@ final class CollectionDetailViewModel {
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var likeTask: Task<Void, Never>?
-    /// 화면이 닫히는 중 — 뒤로가기(`.backTapped`)나 삭제 성공이 세운다(아래 `close()`).
+    /// 화면이 닫히는 중 — 뒤로가기(`.backTapped`)·삭제 성공·재조회 403/404가 세운다(아래 `close()`).
     @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
@@ -136,8 +140,8 @@ final class CollectionDetailViewModel {
             // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
             track(.editTapped)
             state.isMenuPresented = false
-        case .reloadAfterReturn:
-            reloadAfterReturn()
+        case .reloadAfterReturn, .retry:
+            reload()
         case .deleteTapped:
             state.isMenuPresented = false
             state.isDeleteAlertPresented = true
@@ -177,10 +181,10 @@ private extension CollectionDetailViewModel {
         loadTask = Task { await loadDetail() }
     }
 
-    /// 자식 화면 복귀 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시 불러온다. 이미
-    /// `state.detail`이 있는 상태라 View의 `isLoading && detail == nil` 오버레이 조건상 전면 로딩으로
-    /// 덮이지 않는다(정렬 변경과 동일 UX, `CollectionDetailView`의 그 조건 그대로 재사용).
-    func reloadAfterReturn() {
+    /// 자식 화면 복귀·실패 뷰 재시도 공용 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시
+    /// 불러온다. 이미 `state.detail`이 있으면 View의 `isLoading && detail == nil` 오버레이 조건상 전면
+    /// 로딩으로 덮이지 않고(정렬 변경과 동일 UX), 첫 로드 실패 후 재시도(`detail == nil`)면 전면 로딩이 뜬다.
+    func reload() {
         guard loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.hasLoadError = nil

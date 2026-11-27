@@ -99,8 +99,8 @@
   `onRoute(.collectionDetail(CollectionID))`로 App에 알리면 App이 push한다(#201부터 로컬
   `.navigationDestination(item:)`이 아니라 App의 `NavigationPath`). 히어로 배경은 `representativeNovelID`로
   `novels` 배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼
-  블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시
-  재로드 안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다.
+  블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 진입 시 1회 로드하고(자식 화면에서
+  돌아오면 `.reloadAfterReturn`으로 다시 부른다 — 아래 화면 동작 계약의 "컬렉션 수정" 항목), 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다.
   좋아요는 `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일
   패턴). 복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(위 `hasAppearedOnce`/`reloadAfterReturn`
   경로 — 좋아요·삭제로 카드가 바뀌었을 수 있어서, `CreateCollectionView` 복귀와 동일 판단).
@@ -545,7 +545,11 @@
   아무것도 없는 첫 로드"일 때만** 전면 로딩을 보여줄 것 — `FeedFeature.SosoFeedView`의
   `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
   전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
-  다룸 — 이건 의도한 동작이라 건드리지 않았다).
+  다룸 — 이건 의도한 동작이라 건드리지 않았다). 단 `.forbidden`/`.notFound`면 실패 뷰 대신 화면을 닫는다(#311,
+  위 "컬렉션 수정" 항목의 차단 복귀).
+  ⚠️ **실패 뷰의 재시도는 `.load`가 아니라 `.retry`다**(#311) — `.load`는 진입 1회 가드(`hasLoaded`)가 있어,
+  한 번이라도 성공한 뒤의 재조회 실패(정렬 변경·복귀)에서 재시도를 눌러도 가드에 막혀 무반응이었다(리뷰에서 발견).
+  `.retry`는 `.reloadAfterReturn`과 같은 강제 재조회(`reload()`)를 탄다 — 첫 로드 실패의 재시도도 이걸로 충분하다.
 - **`CollectionListView`의 `isOwnCollections: Bool`(기본 `true`, #201 후속·2026-08-28)은 타유저
   프로필(`UserPageFeature`)의 "컬렉션" 헤더 탭이 이 화면을 재사용할 수 있게 연 스위치다** — "좋아요한
   컬렉션" 탭이 세션 토큰=로그인 사용자 자신 기준이라, 애초에 이 화면 전체가 "로그인 사용자 자신

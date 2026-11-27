@@ -29,8 +29,8 @@ struct CollectionDetailView: View {
     /// 스티키 정렬 바 — 스크롤 콘텐츠 안 "원본" 정렬 바의 상단 y(화면 좌상단 기준). 측정 전엔 안 뜨도록 무한대.
     @State private var sortBarMinY: CGFloat = .greatestFiniteMagnitude
     /// 두 번째 이후의 `onAppear`는 자식 화면(컬렉션 수정·작품 상세·작성자 프로필, 모두 App이 push)에서의
-    /// 복귀다 — 어디서 돌아왔는지 구분하지 않고 무조건 재로드한다(수정 외 복귀의 재로드는 무해한 갱신.
-    /// `CollectionListView`의
+    /// 복귀다 — 어디서 돌아왔는지 구분하지 않고 무조건 재로드한다(작성자를 차단하고 돌아와 403이면 VM이
+    /// 화면을 닫는다 — `closeIfNoLongerViewable`. `CollectionListView`의
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
@@ -77,7 +77,7 @@ struct CollectionDetailView: View {
         Group {
             if let error = viewModel.state.hasLoadError {
                 NetworkErrorView(error: error) {
-                    viewModel.handle(.load)
+                    viewModel.handle(.retry)
                 }
             } else {
                 ScrollView {
