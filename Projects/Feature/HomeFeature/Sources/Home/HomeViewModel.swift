@@ -60,8 +60,12 @@ final class HomeViewModel {
     // MARK: - Action
 
     enum Action {
-        /// 진입·탭 복귀마다 발화한다(홈은 밖에서 바뀐 값을 다시 비춰야 해서 1회 가드를 두지 않는다).
+        /// 진입·탭 복귀·재시도마다 발화한다(홈은 밖에서 바뀐 값을 다시 비춰야 해서 1회 가드를 두지 않는다).
+        /// 컬렉션 섹션도 새로 섞는다.
         case load
+        /// push한 화면에서 pop으로 돌아왔을 때 — `.load`와 같되 **컬렉션 카드는 다시 받지 않는다**(랜덤이라 받으면
+        /// 방금 본 카드가 사라진다, 사용자 확정 2026-11-28). 단 섹션이 비어 있으면(첫 로드 실패) 받아서 채운다.
+        case reloadAfterPop
         case consumeAuthenticationRequired
         case notificationBellTapped
         case consumeNotificationNavigation
@@ -136,7 +140,8 @@ final class HomeViewModel {
 
     func handle(_ action: Action) {
         switch action {
-        case .load:                          load()
+        case .load:                          load(reshufflesCollections: true)
+        case .reloadAfterPop:                load(reshufflesCollections: false)
         case .consumeAuthenticationRequired: state.requiresAuthentication = false
         case .notificationBellTapped:        state.shouldNavigateToNotifications = true
         case .consumeNotificationNavigation: state.shouldNavigateToNotifications = false
@@ -149,7 +154,7 @@ final class HomeViewModel {
 
 private extension HomeViewModel {
 
-    func load() {
+    func load(reshufflesCollections: Bool) {
         guard loadTask == nil else { return }
         // 재조회 자체엔 최초 1회 가드를 두지 않지만(탭 복귀마다 갱신), 화면 진입 트래킹만은 최초 1회로 좁힌다.
         if !hasLoadedContent {
@@ -157,7 +162,7 @@ private extension HomeViewModel {
         }
 
         loadTask = Task { [weak self] in
-            await self?.loadHome()
+            await self?.loadHome(reshufflesCollections: reshufflesCollections)
             self?.loadTask = nil
         }
     }
@@ -185,7 +190,7 @@ private extension HomeViewModel {
     /// 끝나는 콘텐츠가 배지 네트워크 왕복까지 기다렸다가 그려진다(첫 런치의 프리페치 이득이 죽는다).
     /// 실패도 분리다: 콘텐츠 실패만 전면 실패 뷰, 배지·컬렉션 실패는 조용히 무시(로그만 — 이유는 아래
     /// `presentBadgeFailure`·`presentPublicCollectionsFailure` 주석).
-    func loadHome() async {
+    func loadHome(reshufflesCollections: Bool) async {
         state.isLoading = true
         // 재시도·재진입 시작 시점에 함께 내린다 — 성공할 때만 내리면 "페이지 다시 불러오기"를 눌러도
         // 로드가 끝날 때까지 실패 뷰가 그대로라 아무 반응이 없어 보인다.
@@ -196,14 +201,18 @@ private extension HomeViewModel {
         // 홈은 탭 복귀마다 갱신하는 화면이라 그 비용을 매번 낸다.
         async let homeData = loadHomeDataUseCase.execute()
         async let notificationStatus = loadUnreadNotificationStatusUseCase.execute()
-        async let publicCollections = loadRandomPublicCollectionsUseCase.execute(size: Self.publicCollectionCount)
+        // 조건은 미리 계산한다 — `async let` 초기식은 MainActor 밖이라 `state`를 직접 못 읽는다.
+        let shouldLoadCollections = reshufflesCollections || state.publicCollections.isEmpty
+        async let publicCollections = loadPublicCollections(when: shouldLoadCollections)
 
         // 1) 컬렉션 섹션 — 콘텐츠 성패와 무관하게 수확한다. **콘텐츠보다 먼저** 꺼낸다: 홈 최상단(검색 영역 바로
         //    아래) 섹션이라 콘텐츠 뒤에 들어오면 그 아래 섹션 전부가 밀리는 점프가 생긴다. 먼저 state에 넣어도
         //    `hasLoadedContent`가 아직 false라 로딩 뷰가 덮고 있다가 콘텐츠와 같은 프레임에 함께 그려진다.
         //    둘은 동시에 요청했으니 총 대기시간은 max(콘텐츠, 컬렉션) 그대로다.
         do {
-            state.publicCollections = try await publicCollections
+            if let loadedCollections = try await publicCollections {
+                state.publicCollections = loadedCollections
+            }
         } catch let error as RepositoryError {
             presentPublicCollectionsFailure(error)
         } catch {
@@ -240,6 +249,12 @@ private extension HomeViewModel {
         } catch {
             presentBadgeFailure(.unknown)
         }
+    }
+
+    /// nil = 이번엔 받지 않는다(직전 카드 유지). `async let` 초기식엔 조건부 `try await`를 못 써서 함수로 뺐다.
+    func loadPublicCollections(when shouldLoad: Bool) async throws(RepositoryError) -> [CollectionCard]? {
+        guard shouldLoad else { return nil }
+        return try await loadRandomPublicCollectionsUseCase.execute(size: Self.publicCollectionCount)
     }
 }
 

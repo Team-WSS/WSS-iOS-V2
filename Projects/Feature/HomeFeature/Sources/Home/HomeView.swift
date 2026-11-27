@@ -24,6 +24,9 @@ struct HomeView: View {
     /// 화면 전환 의도 콜백(#253) — 목적지·payload 계약은 `HomeRoute`(Navigation/)가 정본.
     private let onRoute: (HomeRoute) -> Void
     private let onAuthenticationRequired: () -> Void
+    /// 홈의 `onRoute`는 전부 push라, 발화했으면 다음 `onAppear`는 pop 복귀다 — 그땐 컬렉션 카드를 다시 섞지 않는다
+    /// (방금 본 카드가 돌아왔을 때 그 자리에 있어야 한다, 사용자 확정 2026-11-28). 탭 복귀·첫 진입은 false라 새로 섞인다.
+    @State private var isReturningFromPush = false
 
     private enum Metric {
         static let searchToCollection: CGFloat = 24
@@ -51,7 +54,8 @@ struct HomeView: View {
     var body: some View {
         content
             .onAppear {
-                viewModel.handle(.load)
+                viewModel.handle(isReturningFromPush ? .reloadAfterPop : .load)
+                isReturningFromPush = false
                 viewModel.handle(.checkPushAuthorizationOnEntry)
             }
             .onChange(of: viewModel.state.requiresAuthentication) { _, requiresAuthentication in
@@ -63,8 +67,14 @@ struct HomeView: View {
             .onChange(of: viewModel.state.shouldNavigateToNotifications) { _, shouldNavigate in
                 guard shouldNavigate else { return }
                 viewModel.handle(.consumeNotificationNavigation)
-                onRoute(.notification)
+                route(.notification)
             }
+    }
+
+    /// 모든 화면 전환은 여기를 거친다 — `onRoute`를 직접 부르면 pop 복귀 표시가 빠져 카드가 다시 섞인다.
+    private func route(_ route: HomeRoute) {
+        isReturningFromPush = true
+        onRoute(route)
     }
 
     /// 헤더만 고정이고 그 아래가 통째로 스크롤/로딩/실패로 갈린다(구 WSSiOS와 같은 경계).
@@ -108,11 +118,11 @@ private extension HomeView {
                 HomeSearchSection(
                     onSearchTapped: {
                         viewModel.track(.searchBarTapped)
-                        onRoute(.search)
+                        route(.search)
                     },
                     onDetailSearchTapped: {
                         viewModel.track(.detailSearchBannerTapped)
-                        onRoute(.detailSearch)
+                        route(.detailSearch)
                     }
                 )
 
@@ -124,11 +134,11 @@ private extension HomeView {
                         collections: state.publicCollections,
                         onTitleTapped: {
                             viewModel.track(.publicCollectionTitleTapped)
-                            onRoute(.publicCollectionList)
+                            route(.publicCollectionList)
                         },
                         onCollectionSelected: { collectionID in
                             viewModel.track(.publicCollectionSelected)
-                            onRoute(.collectionDetail(collectionID))
+                            route(.collectionDetail(collectionID))
                         }
                     )
                 }
@@ -149,7 +159,7 @@ private extension HomeView {
                         feeds: state.trendingFeeds,
                         onFeedSelected: { feedID in
                             viewModel.track(.trendingFeedSelected)
-                            onRoute(.feedDetail(feedID))
+                            route(.feedDetail(feedID))
                         }
                     )
                 }
@@ -163,11 +173,11 @@ private extension HomeView {
                         state: preferenceGenreNovelState,
                         onNovelSelected: { novelID in
                             viewModel.track(.preferenceGenreNovelSelected)
-                            onRoute(.novelDetail(novelID))
+                            route(.novelDetail(novelID))
                         },
                         onSettingTapped: {
                             viewModel.track(.preferenceGenreSettingTapped)
-                            onRoute(.preferenceGenreSetting)
+                            route(.preferenceGenreSetting)
                         }
                     )
                 }
@@ -193,7 +203,7 @@ private extension HomeView {
                     ForEach(discoveries, id: \.novelID) { discovery in
                         TodayDiscoveryCard(discovery: discovery) {
                             viewModel.track(.todayDiscoverySelected)
-                            onRoute(.novelDetail(discovery.novelID))
+                            route(.novelDetail(discovery.novelID))
                         }
                     }
                 }

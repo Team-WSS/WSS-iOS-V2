@@ -18,7 +18,7 @@
 
 ## 핵심 시나리오
 
-- **로드**: `onAppear`마다 `.load` → `LoadHomeDataUseCase`(추천 3종)·`LoadUnreadNotificationStatusUseCase`
+- **로드**: `onAppear`마다 `.load`(push 화면에서 pop 복귀면 컬렉션만 건너뛰는 `.reloadAfterPop` — 아래 컬렉션 섹션) → `LoadHomeDataUseCase`(추천 3종)·`LoadUnreadNotificationStatusUseCase`
   (알림 배지)·`LoadRandomPublicCollectionsUseCase`(컬렉션 섹션, #283)를 **`async let`으로 동시에** 부른다.
   추천 3종도 UseCase 안에서 동시 호출이라, 홈 진입 시 **총 5건이 한꺼번에 나간다**(순차로 펴지 말 것 →
   [RecommendationDomain](../../Domain/RecommendationDomain/CLAUDE.md)에 퇴행 이력과 컴파일 함정이 있다).
@@ -85,10 +85,14 @@
 - **"컬렉션 모음.zip" 섹션(#283, 사용자 확정 2026-09-28)** — 모든 사용자의 공개 컬렉션을 **무작위로**
   최대 10개(`sort=random&size=10`, 더보기 없음 — #311에서 최신순 → 랜덤, 서버 명세가 홈은 random으로 부르라고 지정).
   전체 컬렉션뷰는 그대로 최신순이라 둘은 다른 UseCase다(랜덤은 페이지네이션이 없어 cursor를 받지 않는다).
-  탭 복귀뿐 아니라 **push한 화면(컬렉션 상세 등)에서 pop해도** `onAppear`→`.load`가 다시 부르므로 **돌아올 때마다
-  카드 10장이 통째로 바뀐다**(서버가 요청마다 새로 고름 — 방금 본 카드가 사라지고, 가로 스크롤 위치는 남아 그 자리에
-  다른 카드가 보인다). **의도된 동작으로 사용자 확정(2026-11-27, #311 리뷰)** — 복귀 시 직전 카드를 유지하도록
-  "고치지" 말 것. 제목 줄(`>` 포함) 탭 → 전체 컬렉션뷰(`.publicCollectionList`),
+  **첫 진입·탭 복귀·재시도에만 새로 섞고, push한 화면(컬렉션 상세 등)에서 pop하면 직전 카드를 유지한다**(사용자 확정
+  2026-11-28, #311 — 처음엔 pop마다 섞였는데 방금 본 카드가 사라져 바꿨다). 둘 다 `onAppear`라 VM은 구분 못 한다 →
+  View가 `route(_:)`에서 `isReturningFromPush`를 세우고 다음 `onAppear`가 `.reloadAfterPop`을 보낸다(추천 3종·배지는
+  그대로 갱신, 컬렉션만 건너뜀 — 섹션이 비어 있으면 받는다). ⚠️ **화면 전환은 `onRoute`를 직접 부르지 말고 `route(_:)`로** —
+  빠뜨리면 그 경로만 pop 복귀에 카드가 다시 섞인다. 홈의 Route는 전부 push라 성립하는 설계다(sheet·무시하는 Route가 생기면
+  표시가 남아 다음 탭 복귀가 안 섞인다 — 그때 다시 볼 것).
+  대가: 상세에서 그 컬렉션을 삭제하거나 작성자를 차단하고 돌아와도 **탭 복귀 전까지 카드가 남는다**(누르면 403/404 →
+  상세가 스스로 닫힘, `CollectionFeature` 참고). 사용자가 알고 수용했다. 제목 줄(`>` 포함) 탭 → 전체 컬렉션뷰(`.publicCollectionList`),
   카드 탭 → 컬렉션 상세(`.collectionDetail`), 작성자 라벨은 탭 없음. 카드는 표지 **4칸 고정**(모자라면 기본 표지).
   카드는 공용 `CollectionCard`라 `owner`가 옵셔널이다 — owner가 없으면 작성자 라벨과 그 위 간격을 함께 생략한다(공개 목록은 항상 온다).
   - **부수 콘텐츠라 실패해도 홈을 실패 뷰로 덮지 않는다** — 배지와 같은 lane: 로그만, 토스트 없음, 직전 카드 유지,
