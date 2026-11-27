@@ -7,7 +7,8 @@ import Testing
 private let specTestPath = "/Projects/Domain/AuthDomain/Tests/Entity/SampleTests.swift"
 private let specTestingPath = "/Projects/Domain/AuthDomain/Testing/Mock/MockSampleRepository.swift"
 private let specSourcePath = "/Projects/Domain/AuthDomain/Sources/Entity/Sample.swift"
-private let outOfScopeTestPath = "/Projects/Domain/NovelDomain/Tests/Entity/SampleTests.swift"
+// 실제 모듈 이름을 쓰면 그 모듈을 적용 범위에 넣는 순간 이 테스트가 깨진다(#308에서 NovelDomain으로 실제 발생) — 없는 모듈로 둔다.
+private let outOfScopeTestPath = "/Projects/Domain/OutOfScopeSampleDomain/Tests/Entity/SampleTests.swift"
 
 /// 규칙에 걸리지 않는 기준 테스트. 각 테스트는 여기서 한 군데만 망가뜨려 본다.
 private let cleanSpec = """
@@ -46,7 +47,7 @@ struct TestSpecRuleTests {
 
     @Test("명세 모듈이 아닌 곳의 테스트는 검사하지 않는다")
     func outOfScopeModuleIsSkipped() {
-        let source = "@testable import NovelDomain\n@Test func a() { for _ in 0..<1 {} }"
+        let source = "@testable import OutOfScopeSampleDomain\n@Test func a() { for _ in 0..<1 {} }"
         #expect(lint(source: source, path: outOfScopeTestPath).isEmpty)
     }
 
