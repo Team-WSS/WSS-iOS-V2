@@ -166,6 +166,13 @@
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201에서 해소된
     옛 TODO 항목) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
+  - **히어로의 작성자(프로필 사진·닉네임)를 탭하면 그 유저의 프로필로 간다**(#311) — 피드 상세 작성자 탭과
+    같은 계약: `onRoute(.userProfile(UserID))`를 올리면 4탭 Root가 내 ID 가드 후 `Destination.userPage`를
+    push한다. **내 컬렉션(`isMine`)이면 `Button`을 아예 안 그린다**(이동할 곳이 없는 죽은 탭 영역 방지),
+    **탈퇴 유저(`owner.accessibleUserId == nil`)면 이동 대신 `.unknownUser` 토스트**. 서버 명세엔 "알 수 없는
+    사용자 프로필로 내려간다"고만 있고 값이 안 적혀 있지만, dev 서버 실측(2026-11-27, 컬렉션 63·49)으로 상세·공개
+    목록 둘 다 피드와 같은 `userId: -1`, 닉네임 `"(알 수 없음)"`, 기본 아바타로 오는 걸 확인했다 — 그래서
+    `Author.accessibleUserId`의 `-1` 센티널 판정을 그대로 쓴다.
   - **"공유하기"는 카카오 공유 카드 하나다 — 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari).
     시스템 공유 시트는 쓰지 않는다**(#228, 사용자 확정 2026-08-29). 목표가 "받은 사람이 카톡에서 탭해 앱의 이
     화면으로 들어오는 것"인데, 커스텀 스킴(`websoso://…`)을 텍스트로 보내면 **카카오톡이 링크로 인식하지 않아**
@@ -218,9 +225,9 @@
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onRoute(.editCollection)`으로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
-    감지한다(App 경로의 자식이 수정 화면 하나뿐이라 최초 이후 재발화는 곧 "수정에서 돌아옴") —
-    성공/취소 구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(이미 `state.detail`이 있어 전면
-    로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    감지한다 — 최초 이후 재발화는 자식 화면(수정·작품 상세·작성자 프로필)에서의 복귀이고, 어디서 왔는지
+    구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(수정 외 복귀의 재로드는 무해한 갱신. 이미
+    `state.detail`이 있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
   - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
     Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
     `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수

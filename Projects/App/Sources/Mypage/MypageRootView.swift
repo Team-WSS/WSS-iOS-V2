@@ -578,6 +578,10 @@ private extension MypageRootView {
                     path.append(Destination.novel(novelID))
                 case .editCollection:
                     path.append(Destination.editCollection(id))
+                case .userProfile(let userID):
+                    // 다른 탭의 프로필 탭 이중 가드(#196)와 동일 — 내 프로필로는 절대 안 간다.
+                    guard userID.value != currentUserID else { return }
+                    path.append(Destination.userPage(userID))
                 }
             }
         )

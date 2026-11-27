@@ -41,6 +41,9 @@ public enum CollectionDetailRoute {
     case novelDetail(NovelID)
     /// 더보기 "컬렉션 수정" 탭 — 수정 화면이 `id`로 대상을 스스로 다시 불러오므로 payload가 없다.
     case editCollection
+    /// 히어로의 작성자(프로필 사진·닉네임) 탭 → 그 유저의 프로필(#311). 내 컬렉션이면 탭 자체가 없고,
+    /// 탈퇴 유저면 이 라우트 대신 안내 토스트를 띄운다(피드 상세 작성자 탭과 동일 계약).
+    case userProfile(UserID)
 }
 
 /// 전체 컬렉션뷰(`PublicCollectionListView`, #283).

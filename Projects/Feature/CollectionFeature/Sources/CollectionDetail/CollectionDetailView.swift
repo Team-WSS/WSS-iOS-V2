@@ -28,8 +28,9 @@ struct CollectionDetailView: View {
     @State private var navBarBottomY: CGFloat = 0
     /// 스티키 정렬 바 — 스크롤 콘텐츠 안 "원본" 정렬 바의 상단 y(화면 좌상단 기준). 측정 전엔 안 뜨도록 무한대.
     @State private var sortBarMinY: CGFloat = .greatestFiniteMagnitude
-    /// 이 화면의 유일한 자식은 "컬렉션 수정"(App이 push)뿐이라, 두 번째 이후의 `onAppear`는 항상
-    /// "수정 화면에서 복귀"를 뜻한다 — 그때만 무조건 재로드한다(`CollectionListView`의
+    /// 두 번째 이후의 `onAppear`는 자식 화면(컬렉션 수정·작품 상세·작성자 프로필, 모두 App이 push)에서의
+    /// 복귀다 — 어디서 돌아왔는지 구분하지 않고 무조건 재로드한다(수정 외 복귀의 재로드는 무해한 갱신.
+    /// `CollectionListView`의
     /// `hasAppearedOnce` 패턴과 동일 이유, App이 소유한 `NavigationPath`로 옮기며 로컬
     /// `isEditPresented`/`onChange` 대신 이 방식으로 바뀌었다).
     @State private var hasAppearedOnce = false
@@ -142,6 +143,7 @@ struct CollectionDetailView: View {
         )
         .showWSSToast(isPresented: actionErrorToastBinding, type: .unknownError)
         .showWSSToast(isPresented: $isShareErrorToastPresented, type: .unknownError)
+        .showWSSToast(isPresented: unavailableUserToastBinding, type: .unknownUser)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
@@ -336,15 +338,7 @@ private extension CollectionDetailView {
 
     func heroInfo(_ detail: CollectionDetail) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                WSSProfileImage(url: detail.owner.profileImage)
-                    .frame(width: 32, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                Text(detail.owner.nickname)
-                    .applyWSSFont(.title4)
-                    .foregroundStyle(Color.wssWhite)
-            }
+            ownerProfile(detail)
 
             Spacer().frame(height: 8)
 
@@ -367,6 +361,42 @@ private extension CollectionDetailView {
             heroButtons(detail)
         }
         .padding(.horizontal, 16)
+    }
+
+    /// 작성자(프로필 사진·닉네임) — 탭하면 그 유저의 프로필로 간다(#311, 피드 상세 작성자 탭과 동일 계약).
+    /// 내 컬렉션이면 내 프로필로 "이동"할 곳이 없어 `Button`을 아예 안 그린다(죽은 탭 영역을 만들지 않음
+    /// — `WSSFeadHeaderView.isProfileTappable`과 같은 판단). 탈퇴 유저(`accessibleUserId == nil`)면 이동
+    /// 대신 안내 토스트만 띄운다.
+    @ViewBuilder
+    func ownerProfile(_ detail: CollectionDetail) -> some View {
+        if detail.isMine {
+            ownerProfileLabel(detail.owner)
+        } else {
+            Button {
+                guard let userID = detail.owner.accessibleUserId else {
+                    viewModel.handle(.userProfileUnavailableTapped)
+                    return
+                }
+                onRoute(.userProfile(userID))
+            } label: {
+                ownerProfileLabel(detail.owner)
+                    .contentShape(Rectangle())
+            }
+            // 라벨의 프로필 이미지·닉네임이 accent 색으로 물들지 않게(`WSSFeadHeaderView`와 동일).
+            .buttonStyle(.plain)
+        }
+    }
+
+    func ownerProfileLabel(_ owner: Author) -> some View {
+        HStack(spacing: 10) {
+            WSSProfileImage(url: owner.profileImage)
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Text(owner.nickname)
+                .applyWSSFont(.title4)
+                .foregroundStyle(Color.wssWhite)
+        }
     }
 
     func heroButtons(_ detail: CollectionDetail) -> some View {
@@ -643,6 +673,13 @@ private extension CollectionDetailView {
         Binding(
             get: { viewModel.state.hasActionError },
             set: { if !$0 { viewModel.handle(.dismissActionErrorToast) } }
+        )
+    }
+
+    var unavailableUserToastBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.state.isUnavailableUserToastPresented },
+            set: { if !$0 { viewModel.handle(.dismissUnavailableUserToast) } }
         )
     }
 }

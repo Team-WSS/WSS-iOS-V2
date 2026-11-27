@@ -36,6 +36,8 @@ final class CollectionDetailViewModel {
 
         /// 좋아요·삭제 실패 공통 에러 토스트 — 둘 다 같은 카피(`WSSToastType.unknownError`)라 하나로 묶는다.
         var hasActionError = false
+        /// 탈퇴 유저의 작성자 영역을 탭했을 때 "알 수 없는 유저" 안내 토스트(피드 상세와 동일 계약, #311).
+        var isUnavailableUserToastPresented = false
 
         var requiresAuthentication = false
     }
@@ -57,6 +59,9 @@ final class CollectionDetailViewModel {
         case dismissDeleteAlert
         case confirmDelete
         case dismissActionErrorToast
+        /// 작성자가 탈퇴 유저라 프로필로 갈 수 없을 때 — 이동 대신 안내 토스트만 띄운다(#311).
+        case userProfileUnavailableTapped
+        case dismissUnavailableUserToast
         /// 뒤로가기 버튼 탭 — `dismiss()` 직전에 View가 함께 호출한다. `.onDisappear`로는 못 쓴다
         /// — 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하는데, push되는 순간 부모도
         /// `.onDisappear`가 발화해(SwiftUI 표준 동작) `isClosing`이 영구히 굳어버린다(실측 확인,
@@ -142,6 +147,10 @@ final class CollectionDetailViewModel {
             confirmDelete()
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .userProfileUnavailableTapped:
+            state.isUnavailableUserToastPresented = true
+        case .dismissUnavailableUserToast:
+            state.isUnavailableUserToastPresented = false
         case .backTapped:
             close()
         }
