@@ -190,8 +190,10 @@ struct ProfileDraftTests {
         )
         func clipsToMaxLength(inputCount: Int, savedCount: Int) {
             var draft = makeDraft()
+            // 50자를 넘는 글자만 "나"로 둬서, 잘려 나간 쪽이 뒤인지 확인한다.
+            let introduction = String(repeating: "가", count: 50) + String(repeating: "나", count: inputCount - 50)
 
-            draft.updateIntroduction(String(repeating: "가", count: inputCount))
+            draft.updateIntroduction(introduction)
 
             #expect(draft.introduction == String(repeating: "가", count: savedCount))
         }
