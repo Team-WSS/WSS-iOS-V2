@@ -84,7 +84,7 @@ struct AppVersionTests {
             #expect(sorted == [smaller, larger])
         }
 
-        @Test("세 자리가 모두 같으면 크기가 같다")
+        @Test("세 자리가 모두 같으면 더 작다고 보지 않는다")
         func sameComponentsAreNotSmaller() {
             let version = AppVersion(major: 1, minor: 2, patch: 3)
 

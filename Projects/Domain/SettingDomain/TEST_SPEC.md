@@ -39,7 +39,7 @@
   - `(AppVersion(major: 1, minor: 9, patch: 9), AppVersion(major: 2, minor: 0, patch: 0))` — major가 작으면 minor·patch가 커도 작다
   - `(AppVersion(major: 1, minor: 2, patch: 9), AppVersion(major: 1, minor: 3, patch: 0))` — major가 같으면 minor가 작은 쪽이 작다(patch가 커도)
   - `(AppVersion(major: 1, minor: 2, patch: 3), AppVersion(major: 1, minor: 2, patch: 4))` — major·minor가 같으면 patch로 정한다
-- 세 자리가 모두 같으면 크기가 같다
+- 세 자리가 모두 같으면 더 작다고 보지 않는다
 
 ## 약관 동의
 
