@@ -270,6 +270,8 @@ private struct DemoRootView: View {
                 switch route {
                 case .novelDetail(let novelID): handleNovelTapped(novelID)
                 case .editCollection: path.append(Destination.edit(id))
+                // 타유저 프로필은 UserPageFeature 화면이라 이 Demo에선 조립할 수 없다 — 요청만 찍는다.
+                case .userProfile(let userID): print("유저 프로필 이동 요청: \(userID)")
                 }
             },
             kakaoCollectionShareTemplateID1: NetworkingConfig.kakaoCollectionShareTemplateID1,
@@ -656,7 +658,12 @@ private struct DemoLoadCollectionDetailUseCase: LoadCollectionDetailUseCase {
             id: id,
             name: "컬렉션 \(id.value)",
             description: id.value.isMultiple(of: 3) ? nil : "존잼 수준이 정도를 넘음",
-            owner: Author(nickname: "판소덕", profileImage: nil),
+            // 작성자 탭(#311) 시연 — 3의 배수 id는 탈퇴 유저(-1, 안내 토스트), 그 외 타인 컬렉션은 프로필 이동 요청.
+            owner: Author(
+                userId: UserID(id.value.isMultiple(of: 3) ? -1 : 1000 + id.value),
+                nickname: "판소덕",
+                profileImage: nil
+            ),
             isMine: isMine,
             isPrivate: isPrivate,
             representativeNovelID: novels[0].id,

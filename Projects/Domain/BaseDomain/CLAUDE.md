@@ -35,12 +35,12 @@
 - **`Author.accessibleUserId`(#197 후속, 2026-08-28)** — 서버는 탈퇴한 유저를 `userId: -1`로 내려준다(피드
   관련 응답 `TotalFeedResponse`/`FeedDetailResponse`/`NovelFeedResponse`가 전부 `userId: Int` non-optional이라
   항상 채워진다 — `Author.userId`가 옵셔널인 건 다른 매퍼가 애초에 안 채우는 경우 대비일 뿐, 이 -1과는
-  무관). 이 센티널 판정을 `Author` 밖으로 새지 않게 캡슐화한 게 `accessibleUserId: UserID?`(nil이면
+  무관). 컬렉션 응답의 `owner`(상세·공개 목록)도 탈퇴 유저면 같은 `-1`이다(dev 서버 실측, 2026-11-27, #311). 이 센티널 판정을 `Author` 밖으로 새지 않게 캡슐화한 게 `accessibleUserId: UserID?`(nil이면
   "이동할 프로필이 없다" — userId 미제공과 탈퇴 유저 둘 다 같은 의미로 묶는다). ⚠️ **`UserID` 자체
   (`IDWrapper<Int>` typealias)를 확장해 `.withdrawn`을 두지 않았다** — `FeedID`/`NovelID` 등 다른 ID도
   전부 같은 `IDWrapper<Int>`라 그렇게 하면 의미 없는 `FeedID.withdrawn`까지 새어버린다. 센티널은
   `Author.swift` 안 `private` 상수로만 존재한다 — 다른 곳에서 `-1` 리터럴로 재판정하지 말고 이 프로퍼티를
-  재사용할 것(Feature 3곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab` — 이 이미 이걸 쓴다).
+  재사용할 것(Feature 4곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab`/`CollectionDetailView`(#311) — 이 이미 이걸 쓴다).
 - `NovelGenre.myFeedFilter`(피드 필터용, 구 `filterGenre`)·`.searchGenre`(검색 화면 장르 그리드용)·`.onboardingGenre`(온보딩 3x3 배지 그리드용, #178)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다.
   - ⚠️ **매력포인트 표시 순서는 `AttractivePoint.allCases`(enum 선언 순서)가 정본이다** — enum 선언 순서 자체를 디자인 정본(**필력이 3번째**)에 맞춰뒀다(2026-09-09, 과거엔 WSSComponent의 `displayOrder` 별도 배열이 이 역할을 했으나 enum 순서를 정본으로 승격하며 제거). 감상평 작성·서재 필터·서재 리스트 셀(사용자 평가 매력포인트 정렬)이 전부 이 단일 순서를 공유한다(NovelGenre가 화면별로 여러 순서를 갖는 것과 달리 매력포인트는 하나). **케이스 선언 순서를 바꾸면 화면 표시 순서가 통째로 바뀌므로** 함부로 재정렬하지 말 것. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.

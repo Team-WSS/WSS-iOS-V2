@@ -16,7 +16,8 @@ public struct Author: Sendable {
 
     /// 서버가 탈퇴한 유저를 가리킬 때 `userId` 자리에 내려주는 센티널 값(피드 관련 응답 실측 —
     /// `TotalFeedResponse`/`FeedDetailResponse`/`NovelFeedResponse` 전부 `userId: Int`가 non-optional
-    /// 이라 서버가 항상 값을 채우는데, 탈퇴 유저는 이 값이 -1로 온다). `UserID`(`IDWrapper<Int>`)를
+    /// 이라 서버가 항상 값을 채우는데, 탈퇴 유저는 이 값이 -1로 온다). 컬렉션 응답의 `owner`(상세·공개
+    /// 목록)도 탈퇴 유저면 똑같이 -1이다(dev 서버 실측, 2026-11-27). `UserID`(`IDWrapper<Int>`)를
     /// 직접 확장하지 않는 이유: `FeedID`/`NovelID` 등 다른 ID 래퍼도 전부 같은 `IDWrapper<Int>`
     /// typealias라 그쪽까지 `.withdrawn`이 새어버린다 — `Author` 전용으로 가둔다.
     private static let withdrawnUserID = UserID(-1)

@@ -73,6 +73,11 @@
     서버에 owner를 요청할 것. `owner` 옵셔널도 같은 응답 빈틈 때문에 둔 임시 형태라 서버가 owner를 주면 함께 리팩터링한다.
   - `isPrivate`은 세 목록 모두 서버 값을 그대로 쓴다 — 남의 나만 보는 컬렉션은 서버가 애초에 내려주지 않는다.
   - `fetchPublicCollections`는 서버(`GET /collections`)가 전체 개수를 주지 않아 다른 목록과 달리 `(페이지, 개수)` 튜플이 아니라 페이지만 돌려준다.
-- UseCase 9개(조회 5·생성·수정·삭제·좋아요)는 **일부러 테스트가 없다**(#293). 저장소에 넘기기만 해서 이 모듈에서 지킬 규칙이 없다 —
+- **공개 목록의 정렬(`PublicCollectionSort`)은 UseCase가 정하고 Repository는 받기만 한다**(#311). 전체 컬렉션뷰는
+  `LoadPublicCollectionsUseCase`(`.latest`, 커서로 이어 받음), 홈 섹션은 `LoadRandomPublicCollectionsUseCase`(`.random`).
+  랜덤을 Repository 메서드 이름에 숨기지 않은 건 "홈은 랜덤"이라는 제품 결정을 Data가 품지 않게 하려서다.
+  ⚠️ **`.random`은 한 페이지뿐이라 cursor를 같이 보내면 서버가 400(`COLLECTION-007`)으로 거부한다**(빈 값이어도) —
+  그래서 랜덤 UseCase는 cursor를 받지 않고 배열만 돌려준다. 랜덤에 "더 불러오기"를 붙이려 하지 말 것.
+- UseCase 10개(조회 6·생성·수정·삭제·좋아요)는 **일부러 테스트가 없다**(#293). 저장소에 넘기기만 해서 이 모듈에서 지킬 규칙이 없다 —
   다시 넣으면 ArchLint `test-passthrough`가 막는다. 그래서 `.testing` 타깃(`MockCollectionRepository`)도 없앴다.
   UseCase에 분기나 조합이 생기면 그때 테스트와 Stub/Mock을 만든다.

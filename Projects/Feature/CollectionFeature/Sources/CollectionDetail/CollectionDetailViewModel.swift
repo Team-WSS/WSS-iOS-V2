@@ -30,12 +30,15 @@ final class CollectionDetailViewModel {
         var isMenuPresented = false
         var isDeleteAlertPresented = false
         var isDeleting = false
-        /// 삭제 성공 신호. View가 `onChange`로 소비해 dismiss한다(`UserPageFeature`의 차단 성공과 동일 패턴)
-        /// — 삭제된 컬렉션은 더 볼 수 없어 화면에 남아있을 이유가 없다.
+        /// 화면 닫기 신호 — 삭제 성공, 또는 보던 컬렉션을 다시 불러왔더니 더는 볼 수 없게 됐을 때(403/404,
+        /// `closeIfNoLongerViewable`). View가 `onChange`로 소비해 dismiss한다(`UserPageFeature`의 차단 성공과
+        /// 동일 패턴) — 볼 수 없는 컬렉션은 화면에 남아있을 이유가 없다.
         var shouldDismiss = false
 
         /// 좋아요·삭제 실패 공통 에러 토스트 — 둘 다 같은 카피(`WSSToastType.unknownError`)라 하나로 묶는다.
         var hasActionError = false
+        /// 탈퇴 유저의 작성자 영역을 탭했을 때 "알 수 없는 유저" 안내 토스트(피드 상세와 동일 계약, #311).
+        var isUnavailableUserToastPresented = false
 
         var requiresAuthentication = false
     }
@@ -43,22 +46,29 @@ final class CollectionDetailViewModel {
     // MARK: - Action
 
     enum Action {
+        /// 진입 시 첫 `onAppear` 1회 전용 — `hasLoaded` 가드가 있어 재시도·복귀 재조회엔 쓰지 않는다(`.retry`/`.reloadAfterReturn`).
         case load
         case changeSortType(SortType)
         case toggleLike
         case menuTapped
         case dismissMenu
         case editTapped
-        /// 수정 화면(로컬 push, `CollectionDetailView`가 소유)에서 돌아왔을 때 — 성공 콜백 없는
-        /// 자기완결 dismiss 계약이라 성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의
-        /// `reloadAfterDetail`과 동일 판단).
-        case reloadAfterEdit
+        /// 자식 화면(수정·작품 상세·작성자 프로필 — App이 같은 스택에 push)에서 돌아왔을 때 — 어디서
+        /// 왔는지·성공/취소 구분 없이 무조건 다시 로드한다(`CollectionListView`의 `reloadAfterReturn`과
+        /// 동일 판단).
+        case reloadAfterReturn
+        /// 실패 뷰의 "페이지 다시 불러오기" — 진입 1회 가드(`hasLoaded`)를 우회해 항상 다시 부른다.
+        /// `.load`로 보내면 한 번이라도 성공한 뒤의 재조회 실패(정렬 변경·복귀)에서 가드에 막혀 무반응이 된다.
+        case retry
         case deleteTapped
         case dismissDeleteAlert
         case confirmDelete
         case dismissActionErrorToast
+        /// 작성자가 탈퇴 유저라 프로필로 갈 수 없을 때 — 이동 대신 안내 토스트만 띄운다(#311).
+        case userProfileUnavailableTapped
+        case dismissUnavailableUserToast
         /// 뒤로가기 버튼 탭 — `dismiss()` 직전에 View가 함께 호출한다. `.onDisappear`로는 못 쓴다
-        /// — 이 화면은 "컬렉션 수정"을 같은 스택에 로컬 push하는데, push되는 순간 부모도
+        /// — App이 같은 `NavigationPath`에 자식 화면(수정·작품 상세·작성자 프로필)을 push하는 순간 부모도
         /// `.onDisappear`가 발화해(SwiftUI 표준 동작) `isClosing`이 영구히 굳어버린다(실측 확인,
         /// 수정 복귀 후 재조회·정렬·좋아요·삭제 전부 무반응이 되는 회귀였다) — 그래서
         /// `NovelDetailViewModel.close()`처럼 **명시적 사용자 액션**으로만 세운다.
@@ -74,7 +84,7 @@ final class CollectionDetailViewModel {
     @ObservationIgnored private var hasLoaded = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var likeTask: Task<Void, Never>?
-    /// 화면이 닫히는 중 — 뒤로가기(`.backTapped`)나 삭제 성공이 세운다(아래 `close()`).
+    /// 화면이 닫히는 중 — 뒤로가기(`.backTapped`)·삭제 성공·재조회 403/404가 세운다(아래 `close()`).
     @ObservationIgnored private var isClosing = false
 
     // MARK: - Dependency
@@ -127,12 +137,12 @@ final class CollectionDetailViewModel {
         case .dismissMenu:
             state.isMenuPresented = false
         case .editTapped:
-            // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환(isEditPresented)은 View가 로컬 상태로
-            // 소유한다("작품 추가"/"서재에서 추가"와 같은 위상, `CollectionFeature/CLAUDE.md` 참고).
+            // 메뉴만 닫는다(delete와 대칭) — 실제 화면 전환은 View가 `onRoute(.editCollection)`으로
+            // App에 알리고 App이 push한다(#201부터, `CollectionFeature/CLAUDE.md` 참고).
             track(.editTapped)
             state.isMenuPresented = false
-        case .reloadAfterEdit:
-            reloadAfterEdit()
+        case .reloadAfterReturn, .retry:
+            reload()
         case .deleteTapped:
             state.isMenuPresented = false
             state.isDeleteAlertPresented = true
@@ -142,6 +152,10 @@ final class CollectionDetailViewModel {
             confirmDelete()
         case .dismissActionErrorToast:
             state.hasActionError = false
+        case .userProfileUnavailableTapped:
+            state.isUnavailableUserToastPresented = true
+        case .dismissUnavailableUserToast:
+            state.isUnavailableUserToastPresented = false
         case .backTapped:
             close()
         }
@@ -168,10 +182,10 @@ private extension CollectionDetailViewModel {
         loadTask = Task { await loadDetail() }
     }
 
-    /// 수정 화면 복귀 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시 불러온다. 이미
-    /// `state.detail`이 있는 상태라 View의 `isLoading && detail == nil` 오버레이 조건상 전면 로딩으로
-    /// 덮이지 않는다(정렬 변경과 동일 UX, `CollectionDetailView`의 그 조건 그대로 재사용).
-    func reloadAfterEdit() {
+    /// 자식 화면 복귀·실패 뷰 재시도 공용 재조회 — 진입 1회 가드(`hasLoaded`)를 우회해 강제로 다시
+    /// 불러온다. 이미 `state.detail`이 있으면 View의 `isLoading && detail == nil` 오버레이 조건상 전면
+    /// 로딩으로 덮이지 않고(정렬 변경과 동일 UX), 첫 로드 실패 후 재시도(`detail == nil`)면 전면 로딩이 뜬다.
+    func reload() {
         guard loadTask == nil, !isClosing else { return }
         state.isLoading = true
         state.hasLoadError = nil
@@ -227,6 +241,7 @@ private extension CollectionDetailViewModel {
             guard !isClosing, !Task.isCancelled else { return }
             if routeToLoginIfAuthenticationRequired(error) { return }
             logger?.error("컬렉션 상세 로드 실패: \(String(describing: error))")
+            if closeIfNoLongerViewable(error) { return }
             state.hasLoadError = (error as? RepositoryError) ?? .unknown
         }
     }
@@ -276,5 +291,23 @@ private extension CollectionDetailViewModel {
         guard (error as? RepositoryError) == .authenticationRequired else { return false }
         state.requiresAuthentication = true
         return true
+    }
+
+    /// 이미 보고 있던 컬렉션을 다시 불러왔더니 더는 볼 수 없게 됐으면(`.forbidden`/`.notFound`) 실패 뷰 대신
+    /// 화면을 닫는다(#311) — 작성자 프로필에서 그 유저를 차단하고 돌아오면 서버가 403 `BLOCK-007`을 준다
+    /// (dev 실측 2026-11-27). 실패 뷰로 덮으면 재시도해도 같은 403이라 탈출구가 안 되고, "일시적 오류"
+    /// 문구도 틀린다. 삭제 성공과 같은 exit(`close()` + `shouldDismiss`)이고, "차단했어요" 토스트는 App의
+    /// 컨테이너 오버레이라 이 화면이 닫혀도 직전 화면 위에 남는다. 첫 로드(`detail == nil`)는 대상이 아니다 —
+    /// 보여준 적 없는 화면을 말없이 닫으면 무슨 일인지 알 수 없어 기존대로 실패 뷰를 띄운다.
+    func closeIfNoLongerViewable(_ error: Error) -> Bool {
+        guard state.detail != nil else { return false }
+        switch error as? RepositoryError {
+        case .forbidden, .notFound:
+            close()
+            state.shouldDismiss = true
+            return true
+        default:
+            return false
+        }
     }
 }

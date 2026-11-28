@@ -13,6 +13,56 @@ struct WSSFeedDemoView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // 내 스포일러 글 — 본문·이미지를 펼치고 리액션 줄 오른쪽에 작은 표시
+                SectionHeader("내 스포일러 글 (revealsSpoiler)")
+                WSSFeadView(
+                    header: FeedHeader(
+                        profileImageURL: nil,
+                        nickname: "판소덕",
+                        createdDate: "3월 21일",
+                        isEdited: true
+                    ),
+                    profileImageTapped: {},
+                    isProfileTappable: false,
+                    threeDotsButtonTapped: {},
+                    content: "대학원생이 환생에서 대학원생이 됨. 주인공 완전 갓갓! 일단 작가가 세계관이나 마법에 대해서 진지하게 생각해보고 설정을 짠게 느껴져서 좋아요.",
+                    feedImage: WSSFeedImage(
+                        thumbnailImageURL: URL(string: "https://i.pinimg.com/736x/66/0a/11/660a1122583033a20cf90ce9dccbe2c2.jpg"),
+                        imageCount: 2
+                    ),
+                    react: WSSFeedReact(likeCount: 23, commentCount: 7),
+                    isLiked: false,
+                    likeButtonTapped: {},
+                    isSpoiler: true,
+                    revealsSpoiler: true,
+                    isPrivate: false
+                )
+
+                Divider()
+
+                // 내 비공개 스포일러 글 — "나만 보는 기록이에요." 줄 오른쪽에 작은 표시
+                SectionHeader("내 비공개 스포일러 글")
+                WSSFeadView(
+                    header: FeedHeader(
+                        profileImageURL: nil,
+                        nickname: "판소덕",
+                        createdDate: "3월 21일",
+                        isEdited: false
+                    ),
+                    profileImageTapped: {},
+                    isProfileTappable: false,
+                    threeDotsButtonTapped: {},
+                    content: "나만 보려고 남기는 스포일러 기록.",
+                    react: WSSFeedReact(likeCount: 0, commentCount: 0),
+                    isLiked: false,
+                    likeButtonTapped: {},
+                    isSpoiler: true,
+                    revealsSpoiler: true,
+                    isPrivate: true
+                )
+
+                Divider()
+
                 // 이미지 + 연결 작품 모두 있는 경우
                 SectionHeader("이미지 + 연결 작품")
                 WSSFeadView(
@@ -42,6 +92,7 @@ struct WSSFeedDemoView: View {
                     isLiked: true,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: false,
+                    revealsSpoiler: false,
                     isPrivate: false
                 )
 
@@ -70,6 +121,7 @@ struct WSSFeedDemoView: View {
                     isLiked: false,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: true,
+                    revealsSpoiler: false,
                     isPrivate: false
                 )
                 
@@ -100,6 +152,7 @@ struct WSSFeedDemoView: View {
                     isLiked: true,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: false,
+                    revealsSpoiler: false,
                     isPrivate: true
                 )
                 
@@ -124,6 +177,7 @@ struct WSSFeedDemoView: View {
                     isLiked: false,
                     likeButtonTapped: { print("좋아요 버튼 탭!") },
                     isSpoiler: true,
+                    revealsSpoiler: false,
                     isPrivate: true
                 )
             }
