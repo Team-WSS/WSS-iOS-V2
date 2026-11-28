@@ -20,7 +20,7 @@ enum CollectionEndpoint: Endpoint {
     case deleteCollectionLike(collectionID: Int)
     case getUserCollections(userID: Int, CollectionsQuery)
     case getLikedCollections(CollectionsQuery)
-    case getPublicCollections(CollectionsQuery)
+    case getPublicCollections(PublicCollectionsQuery)
 
     var baseURL: URL {
         URL(string: NetworkingConfig.baseURL) ?? URL(string: "")!
@@ -63,8 +63,9 @@ enum CollectionEndpoint: Endpoint {
             return .convertible(query)
         case .getUserCollections(_, let query):
             return .convertible(query)
-        case .getLikedCollections(let query),
-             .getPublicCollections(let query):
+        case .getLikedCollections(let query):
+            return .convertible(query)
+        case .getPublicCollections(let query):
             return .convertible(query)
         default:
             return .none

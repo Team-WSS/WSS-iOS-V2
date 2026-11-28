@@ -99,8 +99,8 @@
   `onRoute(.collectionDetail(CollectionID))`로 App에 알리면 App이 push한다(#201부터 로컬
   `.navigationDestination(item:)`이 아니라 App의 `NavigationPath`). 히어로 배경은 `representativeNovelID`로
   `novels` 배열에서 찾은 표지 위에 다크 그라데이션(상단 투명→하단 36% 블랙, `NovelDetailFeature`처럼
-  블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 1회 로드(push 화면 — 재진입 시
-  재로드 안 함)하고, 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다.
+  블러는 없음). `LoadCollectionDetailUseCase.execute(id:sortType:)`로 진입 시 1회 로드하고(자식 화면에서
+  돌아오면 `.reloadAfterReturn`으로 다시 부른다 — 아래 화면 동작 계약의 "컬렉션 수정" 항목), 정렬 토글(`WSSSortButton`, "최신순"↔"오래된순")은 가드 없이 매번 새로 조회한다.
   좋아요는 `CollectionDetail.toggleLike()` 낙관 반영 + 실패 롤백(`UserPageFeature` 피드 좋아요와 동일
   패턴). 복귀 시 `CollectionListView`는 무조건 그 탭을 재로드한다(위 `hasAppearedOnce`/`reloadAfterReturn`
   경로 — 좋아요·삭제로 카드가 바뀌었을 수 있어서, `CreateCollectionView` 복귀와 동일 판단).
@@ -166,6 +166,13 @@
     **`MypageRootView`가 이 콜백을 받아 `NovelDetailAssembly`로 push한다**(#201에서 해소된
     옛 TODO 항목) — 다른 탭(`LibraryRootView` 등)과 동일하게 작품 상세가 다시 여는 리뷰·피드 작성·피드 상세·
     유저 프로필·일반 검색까지 그 서브트리 전체를 `MypageRootView`도 갖는다.
+  - **히어로의 작성자(프로필 사진·닉네임)를 탭하면 그 유저의 프로필로 간다**(#311) — 피드 상세 작성자 탭과
+    같은 계약: `onRoute(.userProfile(UserID))`를 올리면 4탭 Root가 내 ID 가드 후 `Destination.userPage`를
+    push한다. **내 컬렉션(`isMine`)이면 `Button`을 아예 안 그린다**(이동할 곳이 없는 죽은 탭 영역 방지),
+    **탈퇴 유저(`owner.accessibleUserId == nil`)면 이동 대신 `.unknownUser` 토스트**. 서버 명세엔 "알 수 없는
+    사용자 프로필로 내려간다"고만 있고 값이 안 적혀 있지만, dev 서버 실측(2026-11-27, 컬렉션 63·49)으로 상세·공개
+    목록 둘 다 피드와 같은 `userId: -1`, 닉네임 `"(알 수 없음)"`, 기본 아바타로 오는 걸 확인했다 — 그래서
+    `Author.accessibleUserId`의 `-1` 센티널 판정을 그대로 쓴다.
   - **"공유하기"는 카카오 공유 카드 하나다 — 카카오톡이 있으면 카카오톡 앱, 없으면 카카오 웹 공유(Safari).
     시스템 공유 시트는 쓰지 않는다**(#228, 사용자 확정 2026-08-29). 목표가 "받은 사람이 카톡에서 탭해 앱의 이
     화면으로 들어오는 것"인데, 커스텀 스킴(`websoso://…`)을 텍스트로 보내면 **카카오톡이 링크로 인식하지 않아**
@@ -218,9 +225,15 @@
   - **"컬렉션 수정"은 `CreateCollectionView`를 수정 모드로 재사용하는 별도 Factory 진입점
     (`makeEditCollectionView`)이다** — 더보기 메뉴 탭 → `onRoute(.editCollection)`으로 App에 알리면 App이 push한다
     (#201부터, 로컬 push 아님). 이 화면도 `CollectionListView`와 같은 `hasAppearedOnce` 플래그로 복귀를
-    감지한다(App 경로의 자식이 수정 화면 하나뿐이라 최초 이후 재발화는 곧 "수정에서 돌아옴") —
-    성공/취소 구분 없이 무조건 `.reloadAfterEdit`로 다시 불러온다(이미 `state.detail`이 있어 전면
-    로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    감지한다 — 최초 이후 재발화는 자식 화면(수정·작품 상세·작성자 프로필)에서의 복귀이고, 어디서 왔는지
+    구분 없이 무조건 `.reloadAfterReturn`(구 `reloadAfterEdit`)으로 다시 불러온다(이미 `state.detail`이
+    있어 전면 로딩으로 안 덮인다, 정렬 변경과 동일 UX).
+    - ⚠️ **이미 보던 상세를 다시 불러왔는데 `.forbidden`/`.notFound`면 실패 뷰 대신 화면을 닫는다**(#311, 사용자
+      확정 2026-11-27 — `closeIfNoLongerViewable`). 작성자 프로필에서 그 유저를 **차단하고 돌아오면 서버가 403
+      `BLOCK-007`**("차단 관계인 사용자에게 접근할 수 없습니다")을 준다(dev 실측 2026-11-27, 공개 목록에서도 그
+      작성자의 컬렉션이 빠진다). 실패 뷰로 덮으면 재시도해도 같은 403이라 갇히고 "일시적 오류" 문구도 틀린다.
+      삭제 성공과 같은 exit(`close()` + `shouldDismiss`)이고, "차단했어요" 토스트는 App 컨테이너 오버레이라
+      직전 화면 위에 그대로 남는다. 첫 로드(`detail == nil`)는 대상이 아니다(보여준 적 없는 화면을 말없이 닫지 않음).
   - 삭제는 확인 알럿(`WSSAlertType.deleteCollection`, "삭제한 컬렉션은 되돌릴 수 없어요") 필수 —
     Figma엔 알럿이 없지만 파괴적 액션은 항상 확인을 거치는 프로젝트 관례를 따른다(`deleteMyFeed`/
     `deleteMyComment`와 동일 패턴). 성공 시 `shouldDismiss`로 화면을 닫는다(삭제된 컬렉션은 더 볼 수
@@ -313,7 +326,7 @@
   그대로 유효하다 — `MypageRootView`가 같은 `NavigationPath`에 "컬렉션 수정"을 push하면, 그 push가
   App 소유든 예전처럼 Feature 로컬 소유든 상관없이 **push되는 순간 이전 화면(`CollectionDetailView`)의
   `.onDisappear`가 SwiftUI 표준 동작으로 함께 발화한다.** 그 시점에 `isClosing`이 `true`로 굳고
-  되돌리는 코드가 없으면, 수정 화면에서 복귀한 뒤 재조회(`.reloadAfterEdit`)는 물론 정렬 변경·좋아요·
+  되돌리는 코드가 없으면, 수정 화면에서 복귀한 뒤 재조회(`.reloadAfterReturn`)는 물론 정렬 변경·좋아요·
   삭제까지 전부 조용히 무반응이 된다(alert도 안 닫힘, 콘솔 로그도 안 찍힘 — 겉보기엔 화면이 "고장").
   `onDisappear` 기반 변형은 **같은 `NavigationPath`에서 자기 위로 뭔가 push될 일이 없는 리프 화면
   (시트 등)에서만** 안전하다 — 이 화면처럼 같은 스택 위에 다른 화면이 push되면(App이 하든 Feature가
@@ -532,7 +545,11 @@
   아무것도 없는 첫 로드"일 때만** 전면 로딩을 보여줄 것 — `FeedFeature.SosoFeedView`의
   `isLoading && currentFeeds.isEmpty` 판단과 동일 패턴이다. 재조회 실패는 여전히 `hasLoadError`로
   전면 실패 뷰가 뜬다(`Feature/CLAUDE.md`의 "로드 실패 표현 계약"대로 갱신 실패도 첫 로드와 동일하게
-  다룸 — 이건 의도한 동작이라 건드리지 않았다).
+  다룸 — 이건 의도한 동작이라 건드리지 않았다). 단 `.forbidden`/`.notFound`면 실패 뷰 대신 화면을 닫는다(#311,
+  위 "컬렉션 수정" 항목의 차단 복귀).
+  ⚠️ **실패 뷰의 재시도는 `.load`가 아니라 `.retry`다**(#311) — `.load`는 진입 1회 가드(`hasLoaded`)가 있어,
+  한 번이라도 성공한 뒤의 재조회 실패(정렬 변경·복귀)에서 재시도를 눌러도 가드에 막혀 무반응이었다(리뷰에서 발견).
+  `.retry`는 `.reloadAfterReturn`과 같은 강제 재조회(`reload()`)를 탄다 — 첫 로드 실패의 재시도도 이걸로 충분하다.
 - **`CollectionListView`의 `isOwnCollections: Bool`(기본 `true`, #201 후속·2026-08-28)은 타유저
   프로필(`UserPageFeature`)의 "컬렉션" 헤더 탭이 이 화면을 재사용할 수 있게 연 스위치다** — "좋아요한
   컬렉션" 탭이 세션 토큰=로그인 사용자 자신 기준이라, 애초에 이 화면 전체가 "로그인 사용자 자신

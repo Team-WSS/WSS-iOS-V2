@@ -42,7 +42,7 @@ public struct ContentView: View {
             case .splash:
                 splashView
             case .onboarding:
-                OnboardingRootView(dependencies: dependencies, onFinished: { route = .main })
+                OnboardingRootView(dependencies: dependencies, onFinished: finishOnboarding)
             case .main:
                 MainTabView(
                     dependencies: dependencies,
@@ -125,6 +125,17 @@ private extension ContentView {
             onAgreed: { isTermsAgreementSheetPresented = false },
             onAuthenticationRequired: resetToOnboarding
         )
+    }
+}
+
+// MARK: - 로그인 완료
+
+private extension ContentView {
+    /// 로그인·가입을 마치고 메인으로 넘어간다. 로그인은 `AppDependencies`를 재조립하지 않으므로 FCM 등록 기록을
+    /// 여기서 직접 비운다 — 안 비우면 이전 계정 몫으로 기록된 같은 토큰을 메인 진입 때 건너뛴다(#287).
+    func finishOnboarding() {
+        PushNotificationCenter.shared.resetRegistrationRecord()
+        route = .main
     }
 }
 

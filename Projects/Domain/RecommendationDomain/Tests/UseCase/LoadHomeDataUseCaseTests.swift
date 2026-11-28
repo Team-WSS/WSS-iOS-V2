@@ -8,190 +8,163 @@
 
 import Foundation
 import Testing
-@testable import RecommendationDomain
-@testable import BaseDomain
-@testable import RecommendationDomainTesting
 
-@Suite
+import BaseDomain
+import RecommendationDomain
+import RecommendationDomainTesting
+
+@Suite("홈 데이터 불러오기")
 struct LoadHomeDataUseCaseTests {
 
-    // MARK: - 동시성
+    @Test("추천 세 가지(오늘의 발견·지금 뜨는 글·선호 장르 작품)를 하나로 모아 돌려준다")
+    func combinesThreeRecommendations() async throws {
+        let repository = MockRecommendationRepository()
+        // 세 목록의 id를 서로 다르게 둬서, 각 목록이 제자리에 담겼는지 보이게 한다.
+        repository.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery(id: 1)])
+        repository.fetchTrendingFeedsResult = .success([makeTrendingFeed(id: 2)])
+        repository.fetchRecommendedNovelsResult = .success(.novels([makePreferenceGenreNovel(id: 3)]))
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
-    /// ⚠️ 이 테스트가 이 UseCase의 **퇴행 방지선**이다.
-    /// 과거 `async let`이 순차 `try await`로 펴진 적이 있고(c1e19ed0), 그때 아무 테스트도 깨지지 않아
-    /// 홈 로딩이 조용히 2~3배 느려졌다. 같은 시각에 겹쳐 있는 호출 수를 세서 병렬임을 못 박는다.
-    @Test("세 호출이 동시에 나간다 — 순차로 펴면 이 테스트가 깨진다")
-    func issuesThreeCallsConcurrently() async throws {
-        let probe = ConcurrencyProbeRepository()
+        let homeData = try await useCase.execute()
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: probe)
-        _ = try await usecase.execute()
-
-        // 순차라면 항상 1이다.
-        #expect(probe.peakConcurrentCalls == 3)
+        #expect(homeData.todayDiscoveries.map(\.novelID) == [NovelID(1)])
+        #expect(homeData.trendingFeeds.map(\.feedID) == [FeedID(2)])
+        #expect(novelIDs(in: homeData.preferenceGenreNovelState) == [NovelID(3)])
     }
 
-    // MARK: - 협력
-
-    @Test("홈 화면이 그리는 세 가지 API를 모두 호출한다")
-    func callsAllThreeApis() async {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .success([])
-        mock.fetchTrendingFeedsResult = .success([])
-        mock.fetchRecommendedNovelsResult = .success(.novels([]))
-
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        _ = try? await usecase.execute()
-
-        #expect(mock.fetchTodayDiscoveriesCallCount == 1)
-        #expect(mock.fetchTrendingFeedsCallCount == 1)
-        #expect(mock.fetchRecommendedNovelsCallCount == 1)
-    }
-
-    @Test("홈에 섹션이 없는 관심글은 호출하지 않는다")
-    func doesNotCallInterestFeeds() async {
-        let mock = MockRecommendationRepository()
-
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        _ = try? await usecase.execute()
-
-        #expect(mock.fetchInterestFeedsCallCount == 0)
-    }
-
-    // MARK: - 결과 조립
-
-    @Test("모든 데이터를 성공적으로 불러온다")
-    func loadsAllDataSuccessfully() async throws {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
-        mock.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
-        mock.fetchRecommendedNovelsResult = .success(.novels([]))
-
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        let homeData = try await usecase.execute()
-
-        #expect(homeData.todayDiscoveries.count == 1)
-        #expect(homeData.trendingFeeds.count == 1)
-    }
-
-    @Test("로컬에 캐시된 닉네임을 함께 담는다")
+    @Test("로컬에 저장된 닉네임을 함께 담는다")
     func includesCachedNickname() async throws {
-        let mock = MockRecommendationRepository()
-        mock.cachedNickname = "웹소소"
+        let repository = MockRecommendationRepository()
+        repository.cachedNickname = "웹소소"
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        let homeData = try await usecase.execute()
+        let homeData = try await useCase.execute()
 
         #expect(homeData.nickname == "웹소소")
     }
 
-    @Test("캐시된 닉네임이 없으면 nil을 담는다")
-    func includesNilWhenNicknameIsNotCached() async throws {
-        let mock = MockRecommendationRepository()
-        mock.cachedNickname = nil
+    @Test("저장된 닉네임이 없으면 닉네임이 비어 있다")
+    func nicknameIsEmptyWhenNotCached() async throws {
+        let repository = MockRecommendationRepository()
+        repository.cachedNickname = nil
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        let homeData = try await usecase.execute()
+        let homeData = try await useCase.execute()
 
         #expect(homeData.nickname == nil)
     }
 
-    // MARK: - 실패
+    /// ⚠️ 이 UseCase의 퇴행 방지선이다. 세 호출이 순차로 펴진 적이 있는데(c1e19ed0) 그때 아무 테스트도
+    /// 깨지지 않아 홈 로딩이 조용히 2~3배 느려졌다. 시간이 아니라 "같은 시각에 겹친 호출 수"를 세서
+    /// 머신 부하에 흔들리지 않게 한다(병렬이면 3, 순차면 1).
+    @Test("세 가지를 동시에 불러온다")
+    func issuesThreeCallsConcurrently() async throws {
+        let probe = ConcurrencyProbeRepository()
+        let useCase = DefaultLoadHomeDataUseCase(repository: probe)
 
-    @Test("todayDiscoveries 실패 시 전체를 실패로 반환한다")
-    func throwsWhenTodayDiscoveriesFails() async {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .failure(RepositoryError.unknown)
+        _ = try await useCase.execute()
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
+        #expect(probe.peakConcurrentCalls == 3)
+    }
 
-        await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute()
+    /// 홈엔 관심글 섹션이 없다(#179). 관심글까지 부르면 그 하나가 실패할 때 홈 전체가 실패한다.
+    /// 그래서 관심글이 실패하게 해 두고, 홈 데이터가 그래도 오는지로 부르지 않았음을 확인한다.
+    @Test("홈은 관심글을 불러오지 않는다")
+    func doesNotLoadInterestFeeds() async {
+        let repository = MockRecommendationRepository()
+        repository.fetchInterestFeedsResult = .failure(.serverUnavailable)
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
+
+        await #expect(throws: Never.self) {
+            try await useCase.execute()
         }
     }
 
-    @Test("trendingFeeds 실패 시 전체를 실패로 반환한다")
-    func throwsWhenTrendingFeedsFails() async {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
-        mock.fetchTrendingFeedsResult = .failure(RepositoryError.unknown)
-        mock.fetchRecommendedNovelsResult = .success(.noGenreSettings)
+    @Test("오늘의 발견을 불러오지 못하면 그 에러로 실패한다")
+    func failsWhenTodayDiscoveriesFail() async {
+        let repository = MockRecommendationRepository()
+        repository.fetchTodayDiscoveriesResult = .failure(.networkUnavailable)
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-
-        await #expect(throws: RepositoryError.unknown) {
-            try await usecase.execute()
+        await #expect(throws: RepositoryError.networkUnavailable) {
+            try await useCase.execute()
         }
     }
 
-    /// 마지막 호출까지 같은 규칙임을 못 박는다 — 여기만 `try?`로 눙치면 서버 오류가
-    /// "선호 장르 미설정"으로 둔갑해 설정 유도 CTA가 뜬다.
-    @Test("preferenceGenreNovels 실패 시 전체를 실패로 반환한다")
-    func throwsWhenPreferenceGenreNovelsFails() async {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .success([makeTodayDiscovery()])
-        mock.fetchTrendingFeedsResult = .success([makeTrendingFeed()])
-        mock.fetchRecommendedNovelsResult = .failure(RepositoryError.serverUnavailable)
-
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
+    @Test("지금 뜨는 글을 불러오지 못하면 그 에러로 실패한다")
+    func failsWhenTrendingFeedsFail() async {
+        let repository = MockRecommendationRepository()
+        repository.fetchTrendingFeedsResult = .failure(.serverUnavailable)
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
         await #expect(throws: RepositoryError.serverUnavailable) {
-            try await usecase.execute()
+            try await useCase.execute()
         }
     }
 
-    /// 세 호출은 `async let`으로 동시에 나가므로 하나가 실패해도 나머지는 이미 출발해 있다.
-    /// 대신 **닉네임 조회는 세 결과를 다 받은 뒤**라 실패 시 수행되지 않는다 — 로컬 캐시 조회라
-    /// 굳이 당길 이유가 없고, 실패 경로에서 불필요한 부수효과를 남기지 않기 위해서다.
-    @Test("한 호출이 실패해도 나머지는 이미 나가 있고, 닉네임 조회는 하지 않는다")
-    func issuesAllCallsConcurrentlyAndSkipsNicknameOnFailure() async {
-        let mock = MockRecommendationRepository()
-        mock.fetchTodayDiscoveriesResult = .failure(RepositoryError.networkUnavailable)
+    /// 이 실패를 삼키고 빈 값으로 채우면 서버 오류가 "선호 장르 미설정"처럼 보여 설정 유도 카드가 뜬다.
+    @Test("선호 장르 작품을 불러오지 못하면 그 에러로 실패한다")
+    func failsWhenPreferenceGenreNovelsFail() async {
+        let repository = MockRecommendationRepository()
+        repository.fetchRecommendedNovelsResult = .failure(.invalidData)
+        let useCase = DefaultLoadHomeDataUseCase(repository: repository)
 
-        let usecase = DefaultLoadHomeDataUseCase(repository: mock)
-        _ = try? await usecase.execute()
-
-        #expect(mock.fetchTodayDiscoveriesCallCount == 1)
-        #expect(mock.fetchTrendingFeedsCallCount == 1)
-        #expect(mock.fetchRecommendedNovelsCallCount == 1)
-        #expect(mock.fetchCachedNicknameCallCount == 0)
+        await #expect(throws: RepositoryError.invalidData) {
+            try await useCase.execute()
+        }
     }
 }
 
-extension LoadHomeDataUseCaseTests {
+// MARK: - Helper
 
-    private func makeTodayDiscovery() -> TodayDiscovery {
-        TodayDiscovery(
-            novelID: NovelID(1),
-            novelTitle: "오늘의 발견",
-            novelThumbnailImage: nil,
-            novelAuthor: "테스트작가",
-            novelGenre: .romance,
-            publicationStatus: .onGoing,
-            keywords: ["빙의"],
-            content: .novel,
-            contentDescription: "소설 설명"
-        )
-    }
-
-    private func makeTrendingFeed() -> TrendingFeed {
-        TrendingFeed(
-            feedID: FeedID(1),
-            novelTitle: "테스트 작품",
-            novelThumbnailImage: nil,
-            novelGenre: .romance,
-            description: "뜨는 글 내용",
-            isSpoiler: false,
-            likeCount: 10,
-            commentCount: 3
-        )
-    }
+private func novelIDs(in state: PreferenceGenreNovelState) -> [NovelID]? {
+    guard case .novels(let novels) = state else { return nil }
+    return novels.map(\.novelID)
 }
 
-// MARK: - 동시성 계측용 Repository
+private func makeTodayDiscovery(id: Int) -> TodayDiscovery {
+    TodayDiscovery(
+        novelID: NovelID(id),
+        novelTitle: "오늘의 발견",
+        novelThumbnailImage: nil,
+        novelAuthor: "작가",
+        novelGenre: .romance,
+        publicationStatus: .onGoing,
+        keywords: [],
+        content: .novel,
+        contentDescription: "작품 소개"
+    )
+}
 
-/// 호출이 들어오고 나갈 때를 세어 **같은 시각에 몇 개가 겹쳐 있었는지**(`peakConcurrentCalls`)를 남긴다.
-/// 벽시계 시간을 재면 머신 부하에 흔들리지만, 겹친 개수는 병렬이면 3 / 순차면 1로 결정적이다.
+private func makeTrendingFeed(id: Int) -> TrendingFeed {
+    TrendingFeed(
+        feedID: FeedID(id),
+        novelTitle: "작품",
+        novelThumbnailImage: nil,
+        novelGenre: .romance,
+        description: "지금 뜨는 글",
+        isSpoiler: false,
+        likeCount: 0,
+        commentCount: 0
+    )
+}
+
+private func makePreferenceGenreNovel(id: Int) -> PreferenceGenreNovel {
+    PreferenceGenreNovel(
+        novelID: NovelID(id),
+        novelTitle: "선호 장르 작품",
+        novelThumbnailImage: nil,
+        novelAuthors: [],
+        interestCount: 0,
+        ratingCount: 0,
+        rating: 0
+    )
+}
+
+// MARK: - 동시성 계측용 저장소
+
+/// 호출이 들어오고 나갈 때를 세어 같은 시각에 몇 개가 겹쳐 있었는지(`peakConcurrentCalls`)를 남긴다.
+/// 이 테스트 하나만 쓰는 계측 도구라 `Testing/`이 아니라 여기 둔다.
 private final class ConcurrencyProbeRepository: RecommendationRepository, @unchecked Sendable {
 
     private let lock = NSLock()
@@ -222,23 +195,15 @@ private final class ConcurrencyProbeRepository: RecommendationRepository, @unche
 
     func fetchCachedNickname() -> String? { nil }
 
-    /// 겹칠 틈을 만들기 위해 잠깐 머문다 — 이 지연이 없으면 셋 다 시작 전에 끝나버려 겹침이 안 잡힌다.
+    /// 겹칠 틈을 만들려고 잠깐 머문다 — 이 지연이 없으면 다음 호출이 시작되기 전에 끝나 겹침이 안 잡힌다.
     private func overlapping<T>(_ value: T) async -> T {
-        enter()
-        try? await Task.sleep(nanoseconds: 30_000_000)
-        leave()
-        return value
-    }
-
-    private func enter() {
         withLock {
             inFlight += 1
             peak = max(peak, inFlight)
         }
-    }
-
-    private func leave() {
+        try? await Task.sleep(nanoseconds: 30_000_000)
         withLock { inFlight -= 1 }
+        return value
     }
 
     /// `NSLock`은 async 컨텍스트에서 직접 쓸 수 없어 동기 함수로 감싼다.

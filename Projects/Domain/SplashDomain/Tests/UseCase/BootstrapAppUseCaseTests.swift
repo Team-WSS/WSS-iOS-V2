@@ -179,9 +179,9 @@ struct BootstrapAppUseCaseTests {
         #expect(outcome == .main(needsTermsAgreement: false))
     }
 
-    // MARK: - 3. 부수 태스크 4종 — 던지고 진입(fire-and-forget), 실패·지연이 진입을 막지 않는다
+    // MARK: - 3. 부수 태스크 3종 — 던지고 진입(fire-and-forget), 실패·지연이 진입을 막지 않는다
 
-    @Test("세션이 있으면 부수 태스크 4종을 모두 시작한다")
+    @Test("세션이 있으면 부수 태스크 3종을 모두 시작한다")
     func sessionStartsAllLaunchTasks() async {
         let task = MockLaunchTaskRepository()
         let spy = BackgroundWorkSpy()
@@ -191,7 +191,6 @@ struct BootstrapAppUseCaseTests {
         await spy.runAll()
 
         #expect(task.syncUserBasicInfoCallCount == 1)
-        #expect(task.registerDeviceTokenIfNeededCallCount == 1)
         #expect(task.syncKeywordsCallCount == 1)
         #expect(task.prefetchHomeDataCallCount == 1)
     }
@@ -213,7 +212,6 @@ struct BootstrapAppUseCaseTests {
     func launchTaskFailuresDoNotAffectOutcome() async {
         let task = MockLaunchTaskRepository()
         task.syncUserBasicInfoResult = .failure(.serverUnavailable)
-        task.registerDeviceTokenIfNeededResult = .failure(.unknown)
         let spy = BackgroundWorkSpy()
         let sut = makeSUT(task: task, spy: spy)
 

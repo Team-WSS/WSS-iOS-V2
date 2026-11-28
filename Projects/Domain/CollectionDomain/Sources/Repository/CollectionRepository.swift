@@ -41,12 +41,15 @@ public protocol CollectionRepository: Sendable {
         size: Int
     ) async throws(RepositoryError) -> (CursorPaginated<CollectionCard>, Int)
 
-    /// 모든 사용자의 공개 컬렉션 목록. 최초 생성 시점 최신순(수정·좋아요로 순서가 바뀌지 않는다).
+    /// 모든 사용자의 공개 컬렉션 목록.
     ///
     /// 조회자 본인의 비공개 컬렉션은 오지 않고, 로그인 상태면 차단 관계 작성자의 컬렉션이 빠진다.
     /// 서버가 전체 개수를 주지 않아 다른 목록과 달리 커서 페이지만 돌려준다.
-    /// - Parameter cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil.
+    /// - Parameters:
+    ///   - sort: 정렬 기준. `.random`은 한 페이지뿐이라 `hasNext`가 항상 false다.
+    ///   - cursor: 직전 응답의 `nextCursor`. 첫 페이지는 nil. **`.random`이면 반드시 nil**(서버가 400으로 거부).
     func fetchPublicCollections(
+        sort: PublicCollectionSort,
         cursor: String?,
         size: Int
     ) async throws(RepositoryError) -> CursorPaginated<CollectionCard>

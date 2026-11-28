@@ -10,7 +10,6 @@ import Foundation
 
 import BaseDomain
 import BaseData
-import NotificationDomain
 import ProfileDomain
 import RecommendationDomain
 import SettingDomain
@@ -39,16 +38,12 @@ public enum SplashDataFactory {
 
     public static func makeLaunchTaskRepository(
         profileRepository: ProfileRepository,
-        pushSettingRepository: PushSettingRepository,
-        deviceTokenProvider: @escaping @Sendable () async -> DevicePushToken?,
         keywordRepository: KeywordRepository,
         recommendationRepository: RecommendationRepository,
         prefetchStore: HomePrefetchStore
     ) -> LaunchTaskRepository {
         DefaultLaunchTaskRepository(
             profileRepository: profileRepository,
-            pushSettingRepository: pushSettingRepository,
-            deviceTokenProvider: deviceTokenProvider,
             keywordRepository: keywordRepository,
             recommendationRepository: recommendationRepository,
             prefetchStore: prefetchStore

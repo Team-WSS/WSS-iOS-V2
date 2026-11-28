@@ -45,3 +45,6 @@
 - **전체 공개 목록은 `CollectionsResponse`를 재사용하지 않고 `PublicCollectionsResponse`를 따로 둔다** — 같은 `nextCursor`·`hasNext`
   구조지만 `collectionsCount`·`isPublic`·`representativeNovel`이 없고 `owner`가 있어, 공용 DTO에 optional을 늘리면 기존
   두 목록의 필수값 디코딩 검증이 약해진다. 커서는 목록마다 서버가 따로 발급한다(다른 목록 커서를 넣으면 `COLLECTION-007`).
+- **전체 공개 목록 쿼리도 `CollectionsQuery`가 아니라 `PublicCollectionsQuery`다**(#311 — `sort`가 이 API에만 있다).
+  최신순은 서버 기본값이라 `sort`를 **생략**하고(`"latest"` 같은 값을 보내면 `COLLECTION-009`), 랜덤만 `sort=random`을 보낸다.
+  서버가 받는 값은 `random` 하나뿐이다. 그래서 Endpoint `query` switch에서 `.getLikedCollections`와 case를 묶을 수 없다(바인딩 타입이 달라 컴파일 에러).

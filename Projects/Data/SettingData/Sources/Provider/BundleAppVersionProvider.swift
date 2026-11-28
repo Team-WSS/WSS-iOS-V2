@@ -27,7 +27,7 @@ struct BundleAppVersionProvider: AppVersionProviding {
             self.currentVersion = parsed
         } else {
             // 파싱 실패는 사실상 불가(우리가 관리하는 MARKETING_VERSION)지만, 만에 하나 깨져도
-            // `.zero` 폴백이면 최소 버전 비교에서 무조건 지므로 **앱이 강제 업데이트 알럿에 잠긴다**.
+            // 0.0.0으로 폴백하면 최소 버전 비교에서 무조건 지므로 **앱이 강제 업데이트 알럿에 잠긴다**.
             // "정책 조회/판정 실패는 통과" 철학에 맞춰 절대 강제되지 않는 방향으로 폴백한다.
             self.currentVersion = AppVersion(major: .max, minor: 0, patch: 0)
         }

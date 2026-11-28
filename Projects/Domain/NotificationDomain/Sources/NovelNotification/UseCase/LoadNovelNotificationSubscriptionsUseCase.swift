@@ -27,7 +27,7 @@ public final class DefaultLoadNovelNotificationSubscriptionsUseCase: LoadNovelNo
     public func execute(
         type: NovelNotificationType,
         lastSubscriptionID: SubscriptionID?,
-        size: Int = 20
+        size: Int
     ) async throws(RepositoryError) -> PagedNovelNotificationSubscriptions {
         let size = size > 0 ? size : Self.defaultSize
         return try await repository.loadSubscriptions(type: type, lastSubscriptionID: lastSubscriptionID, size: size)

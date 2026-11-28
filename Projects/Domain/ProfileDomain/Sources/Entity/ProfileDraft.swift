@@ -91,9 +91,11 @@ public struct ProfileDraft: Sendable {
 
     /// 저장 직전에만 줄 수를 제한한다(입력 중엔 자유롭게 타이핑하게 두고, 제출 시점에 앞 `maxLineCount`줄만 남긴다).
     public mutating func truncateIntroductionToLineLimit() {
-        let lines = introduction.components(separatedBy: "\n")
-        guard lines.count > Self.maxLineCount else { return }
-        introduction = lines.prefix(Self.maxLineCount).joined(separator: "\n")
+        // 세 줄 이하면 쪼갰다 다시 붙여도 원래 그대로라, 줄 수를 따로 검사하지 않는다(#308 뮤테이션).
+        introduction = introduction
+            .components(separatedBy: "\n")
+            .prefix(Self.maxLineCount)
+            .joined(separator: "\n")
     }
     
     // - genre preferences

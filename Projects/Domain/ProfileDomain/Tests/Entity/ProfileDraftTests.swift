@@ -8,301 +8,234 @@
 
 import Testing
 
-@testable import ProfileDomain
 import BaseDomain
+import ProfileDomain
 
-@Suite("ProfileDraft")
-struct ProfileDraftTests {
+// 프로필 수정 화면은 저장소가 불러온 값으로 시작한다. 장르 개수는 수정 화면에서 쓰지 않아 0으로 채워 온다.
+private let romance = GenrePreference(genre: .romance, count: 0)
+private let fantasy = GenrePreference(genre: .fantasy, count: 0)
 
-    // MARK: - Init
+private func makeDraft() -> ProfileDraft {
+    ProfileDraft(characterID: 1, nickname: "서연", introduction: "반가워요", genrePreferences: [romance])
+}
 
-    @Test("초기화 시 전달한 값으로 생성된다")
-    func initializesWithGivenValues() {
-        let genre = makeGenre()
-        let draft = makeDraft(characterID: 3,
-                              nickname: "서연",
-                              introduction: "반가워요",
-                              genrePreferences: [genre])
+/// 저장 가능 여부를 볼 때 바꿔 볼 항목 하나.
+enum Edit: CaseIterable {
+    case character
+    case nickname
+    case introduction
+    case genre
 
-        #expect(draft.characterID == 3)
-        #expect(draft.nickname.text == "서연")
-        #expect(draft.introduction == "반가워요")
-        #expect(draft.genrePreferences == [genre])
-    }
-
-    // MARK: - Change Detection
-
-    @Test("초기화 직후에는 변경된 항목이 없다")
-    func noChangesRightAfterInit() {
-        let draft = makeDraft()
-
-        #expect(draft.isCharacterChanged == false)
-        #expect(draft.isNicknameChanged == false)
-        #expect(draft.isIntroductionChanged == false)
-        #expect(draft.isGenrePreferencesChanged == false)
-    }
-
-    @Test("다른 캐릭터로 변경하면 isCharacterChanged가 true다")
-    func isCharacterChangedWhenDifferentID() {
-        var draft = makeDraft(characterID: 1)
-        draft.setCharacter(2)
-
-        #expect(draft.isCharacterChanged == true)
-    }
-
-    @Test("동일한 캐릭터로 설정하면 isCharacterChanged가 false다")
-    func isCharacterNotChangedWhenSameID() {
-        var draft = makeDraft(characterID: 1)
-        draft.setCharacter(1)
-
-        #expect(draft.isCharacterChanged == false)
-    }
-
-    @Test("닉네임이 변경되고 중복확인까지 통과하면 isNicknameChanged가 true다")
-    func isNicknameChangedWhenAvailable() {
-        let draft = makeDraftWithAvailableNickname()
-
-        #expect(draft.isNicknameChanged == true)
-    }
-
-    @Test("닉네임이 변경됐지만 중복확인 전이면 isNicknameChanged가 false다")
-    func isNicknameNotChangedBeforeDuplicationCheck() {
-        var draft = makeDraft(nickname: "서연")
-        draft.updateNickname("newNick")
-
-        #expect(draft.isNicknameChanged == false)
-    }
-
-    @Test("소개글을 다른 값으로 변경하면 isIntroductionChanged가 true다")
-    func isIntroductionChangedWhenDifferent() {
-        var draft = makeDraft(introduction: "안녕하세요")
-        draft.updateIntroduction("반가워요")
-
-        #expect(draft.isIntroductionChanged == true)
-    }
-
-    @Test("소개글을 초기값으로 되돌리면 isIntroductionChanged가 false다")
-    func isIntroductionNotChangedWhenReverted() {
-        var draft = makeDraft(introduction: "안녕하세요")
-        draft.updateIntroduction("반가워요")
-        draft.updateIntroduction("안녕하세요")
-
-        #expect(draft.isIntroductionChanged == false)
-    }
-
-    @Test("장르를 추가하면 isGenrePreferencesChanged가 true다")
-    func isGenreChangedAfterAdd() {
-        var draft = makeDraft(genrePreferences: [])
-        draft.addGenrePreference(makeGenre())
-
-        #expect(draft.isGenrePreferencesChanged == true)
-    }
-
-    @Test("장르를 추가했다가 삭제해 초기 상태로 돌아오면 isGenrePreferencesChanged가 false다")
-    func isGenreNotChangedWhenReverted() {
-        let genre = makeGenre()
-        var draft = makeDraft(genrePreferences: [genre])
-        draft.removeGenrePreference(genre)
-        draft.addGenrePreference(genre)
-
-        #expect(draft.isGenrePreferencesChanged == false)
-    }
-
-    // MARK: - isSubmittable
-
-    @Test("아무것도 변경되지 않으면 isSubmittable이 false다")
-    func notSubmittableWhenNothingChanged() {
-        let draft = makeDraft()
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    @Test("캐릭터만 변경해도 isSubmittable이 true다")
-    func submittableWhenOnlyCharacterChanged() {
-        var draft = makeDraft(characterID: 1)
-        draft.setCharacter(2)
-
-        #expect(draft.isSubmittable == true)
-    }
-
-    @Test("닉네임만 변경하고 중복확인까지 통과하면 isSubmittable이 true다")
-    func submittableWhenNicknameAvailable() {
-        let draft = makeDraftWithAvailableNickname()
-
-        #expect(draft.isSubmittable == true)
-    }
-
-    @Test("소개글만 변경해도 isSubmittable이 true다")
-    func submittableWhenOnlyIntroductionChanged() {
-        var draft = makeDraft(introduction: "안녕하세요")
-        draft.updateIntroduction("반가워요")
-
-        #expect(draft.isSubmittable == true)
-    }
-
-    @Test("장르만 변경해도 isSubmittable이 true다")
-    func submittableWhenOnlyGenreChanged() {
-        var draft = makeDraft(genrePreferences: [])
-        draft.addGenrePreference(makeGenre())
-
-        #expect(draft.isSubmittable == true)
-    }
-
-    @Test("닉네임이 중복확인 필요 상태면 다른 필드가 변경되어도 isSubmittable이 false다")
-    func notSubmittableWhenNeedDuplicatedCheck() {
-        var draft = makeDraft(nickname: "서연")
-        draft.updateNickname("newNick") // needDuplicatedCheck
-        draft.setCharacter(2)
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    @Test("닉네임이 중복이면 다른 필드가 변경되어도 isSubmittable이 false다")
-    func notSubmittableWhenNicknameDuplicated() {
-        var draft = makeDraft(nickname: "서연")
-        draft.updateNickname("newNick")
-        draft.applyNicknameDuplicationCheck(.duplicated, checkedText: "newNick")
-        draft.setCharacter(2)
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    @Test("닉네임에 공백이 포함되면 다른 필드가 변경되어도 isSubmittable이 false다")
-    func notSubmittableWhenNicknameHasWhitespace() {
-        var draft = makeDraft(nickname: "서연")
-        draft.updateNickname("new Nick")
-        draft.setCharacter(2)
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    @Test("닉네임이 유효하지 않은 패턴이면 다른 필드가 변경되어도 isSubmittable이 false다")
-    func notSubmittableWhenNicknameInvalidPattern() {
-        var draft = makeDraft(nickname: "서연")
-        draft.updateNickname("ab!cd")
-        draft.setCharacter(2)
-
-        #expect(draft.isSubmittable == false)
-    }
-
-    // MARK: - update Introduction
-
-    @Test("소개글 50자 이하면 그대로 저장된다")
-    func keepsIntroductionUnder50Characters() {
-        var draft = makeDraft()
-        let text = String(repeating: "가", count: 50)
-        draft.updateIntroduction(text)
-
-        #expect(draft.introduction.count == 50)
-    }
-
-    @Test("소개글이 50자를 초과하면 50자까지만 저장된다")
-    func clipsIntroductionTo50Characters() {
-        var draft = makeDraft()
-        let text = String(repeating: "가", count: 60)
-        draft.updateIntroduction(text)
-
-        #expect(draft.introduction.count == 50)
-    }
-
-    @Test("소개글에 앞뒤 공백이 포함되어도 그대로 저장된다")
-    func allowsWhitespaceInIntroduction() {
-        var draft = makeDraft()
-        draft.updateIntroduction("  공백 포함  ")
-
-        #expect(draft.introduction == "  공백 포함  ")
-    }
-
-    @Test("소개글을 빈 문자열로 업데이트할 수 있다")
-    func allowsEmptyIntroduction() {
-        var draft = makeDraft(introduction: "안녕하세요")
-        draft.updateIntroduction("")
-
-        #expect(draft.introduction == "")
-    }
-
-    // MARK: - truncate Introduction To Line Limit
-
-    @Test("소개글이 3줄 이하면 그대로 저장된다")
-    func keeps3LinesExactlyOnTruncate() {
-        var draft = makeDraft()
-        draft.updateIntroduction("1줄\n2줄\n3줄")
-        draft.truncateIntroductionToLineLimit()
-
-        #expect(draft.introduction == "1줄\n2줄\n3줄")
-    }
-
-    @Test("소개글이 3줄을 초과하면 3줄까지만 저장된다")
-    func clipsIntroductionTo3LinesOnTruncate() {
-        var draft = makeDraft()
-        draft.updateIntroduction("1줄\n2줄\n3줄\n4줄")
-        draft.truncateIntroductionToLineLimit()
-
-        #expect(draft.introduction == "1줄\n2줄\n3줄")
-    }
-
-    // MARK: - Genre Preference
-
-    @Test("장르를 추가할 수 있다")
-    func addsGenrePreference() {
-        var draft = makeDraft()
-        let genre = makeGenre(genre: .romance)
-        draft.addGenrePreference(genre)
-
-        #expect(draft.genrePreferences.contains(genre))
-    }
-
-    @Test("장르를 삭제할 수 있다")
-    func removesGenrePreference() {
-        let genre = makeGenre(genre: .romance)
-        var draft = makeDraft(genrePreferences: [genre])
-        draft.removeGenrePreference(genre)
-
-        #expect(draft.genrePreferences.isEmpty)
-    }
-
-    @Test("존재하지 않는 장르를 삭제해도 기존 장르는 유지된다")
-    func removingNonExistentGenreKeepsOthers() {
-        let romance = makeGenre(genre: .romance)
-        let fantasy = makeGenre(genre: .fantasy)
-        var draft = makeDraft(genrePreferences: [romance])
-        draft.removeGenrePreference(fantasy)
-
-        #expect(draft.genrePreferences == [romance])
+    func apply(to draft: inout ProfileDraft) {
+        switch self {
+        case .character:
+            draft.setCharacter(2)
+        case .nickname:
+            draft.updateNickname("새이름")
+            draft.applyNicknameDuplicationCheck(.notDuplicated, checkedText: "새이름")
+        case .introduction:
+            draft.updateIntroduction("새 소개")
+        case .genre:
+            draft.addGenrePreference(fantasy)
+        }
     }
 }
 
-extension ProfileDraftTests {
-    
-    // MARK: - Helpers
+/// 다른 항목을 바꿔도 저장을 막는 닉네임 상태.
+// 빈 닉네임은 여기 없다 — 지금은 다른 항목을 바꾸면 저장되는데, 막아야 할 동작이라 #309에서 고친다.
+enum BlockingNickname: CaseIterable {
+    case notChecked
+    case duplicated
+    case whitespace
+    case invalidPattern
 
-    private func makeDraft(
-        characterID: Int = 1,
-        nickname: String = "서연",
-        introduction: String = "안녕하세요",
-        genrePreferences: [GenrePreference] = []
-    ) -> ProfileDraft {
-        ProfileDraft(
-            characterID: characterID,
-            nickname: nickname,
-            introduction: introduction,
-            genrePreferences: genrePreferences
+    func apply(to draft: inout ProfileDraft) {
+        switch self {
+        case .notChecked:
+            draft.updateNickname("새이름")
+        case .duplicated:
+            draft.updateNickname("새이름")
+            draft.applyNicknameDuplicationCheck(.duplicated, checkedText: "새이름")
+        case .whitespace:
+            draft.updateNickname("새 이름")
+        case .invalidPattern:
+            draft.updateNickname("새이름!")
+        }
+    }
+}
+
+@Suite("프로필 수정")
+struct ProfileDraftTests {
+
+    @Suite("바뀐 것 알아보기")
+    struct ChangeDetection {
+
+        @Test("처음에는 바뀐 것이 없다")
+        func nothingChangedAtFirst() {
+            let draft = makeDraft()
+
+            let changes = [
+                draft.isCharacterChanged,
+                draft.isNicknameChanged,
+                draft.isIntroductionChanged,
+                draft.isGenrePreferencesChanged
+            ]
+
+            #expect(changes == [false, false, false, false])
+        }
+
+        @Test("다른 캐릭터를 고르면 캐릭터가 바뀐 것이다")
+        func otherCharacterIsChanged() {
+            var draft = makeDraft()
+
+            draft.setCharacter(2)
+
+            #expect(draft.isCharacterChanged)
+        }
+
+        @Test("같은 캐릭터를 다시 고르면 캐릭터가 바뀐 것이 아니다")
+        func sameCharacterIsNotChanged() {
+            var draft = makeDraft()
+
+            draft.setCharacter(1)
+
+            #expect(!draft.isCharacterChanged)
+        }
+
+        @Test(
+            "닉네임은 중복 확인까지 통과해야 바뀐 것이다",
+            arguments: [
+                (NicknameDraft.DuplicationCheckState.notYet, false), // 확인 전
+                (.duplicated, false), // 중복
+                (.notDuplicated, true) // 통과
+            ]
         )
+        func nicknameIsChangedOnlyAfterPassingCheck(
+            check: NicknameDraft.DuplicationCheckState,
+            isChanged: Bool
+        ) {
+            var draft = makeDraft()
+            draft.updateNickname("새이름")
+
+            draft.applyNicknameDuplicationCheck(check, checkedText: "새이름")
+
+            #expect(draft.isNicknameChanged == isChanged)
+        }
+
+        @Test("소개글을 고쳤다가 처음대로 되돌리면 바뀐 것이 아니다")
+        func revertedIntroductionIsNotChanged() {
+            var draft = makeDraft()
+            draft.updateIntroduction("새 소개")
+
+            draft.updateIntroduction("반가워요")
+
+            #expect(!draft.isIntroductionChanged)
+        }
+
+        @Test("장르를 넣었다 빼서 처음과 같아지면 바뀐 것이 아니다")
+        func revertedGenresAreNotChanged() {
+            var draft = makeDraft()
+            draft.addGenrePreference(fantasy)
+
+            draft.removeGenrePreference(fantasy)
+
+            #expect(!draft.isGenrePreferencesChanged)
+        }
     }
 
-    private func makeGenre(genre: NovelGenre = .romance) -> GenrePreference {
-        GenrePreference(genre: genre, count: 0)
+    @Suite("저장 가능 여부")
+    struct Submittable {
+
+        @Test("아무것도 안 바꾸면 저장할 수 없다")
+        func cannotSubmitWithoutChanges() {
+            let draft = makeDraft()
+
+            let isSubmittable = draft.isSubmittable
+
+            #expect(!isSubmittable)
+        }
+
+        @Test("캐릭터·닉네임·소개글·장르 중 하나만 바꿔도 저장할 수 있다", arguments: Edit.allCases)
+        func canSubmitWithOneChange(edit: Edit) {
+            var draft = makeDraft()
+
+            edit.apply(to: &draft)
+
+            #expect(draft.isSubmittable)
+        }
+
+        @Test(
+            "닉네임이 확인 전·중복·공백·규칙 위반이면 다른 걸 바꿔도 저장할 수 없다",
+            arguments: BlockingNickname.allCases
+        )
+        func blockingNicknamePreventsSubmit(nickname: BlockingNickname) {
+            var draft = makeDraft()
+            draft.updateIntroduction("새 소개")
+
+            nickname.apply(to: &draft)
+
+            #expect(!draft.isSubmittable)
+        }
     }
 
-    // 닉네임 변경 + 중복확인까지 통과한 draft
-    private func makeDraftWithAvailableNickname(
-        initial: String = "서연",
-        new: String = "newNick"
-    ) -> ProfileDraft {
-        var draft = makeDraft(nickname: initial)
-        draft.updateNickname(new)
-        draft.applyNicknameDuplicationCheck(.notDuplicated, checkedText: new)
-        return draft
+    @Suite("소개글")
+    struct Introduction {
+
+        @Test(
+            "소개글은 50자까지만 입력된다",
+            arguments: [
+                (50, 50), // 딱 50자는 그대로
+                (51, 50) // 넘치면 50자로 자른다
+            ]
+        )
+        func clipsToMaxLength(inputCount: Int, savedCount: Int) {
+            var draft = makeDraft()
+            // 50자를 넘는 글자만 "나"로 둬서, 잘려 나간 쪽이 뒤인지 확인한다.
+            let introduction = String(repeating: "가", count: 50) + String(repeating: "나", count: inputCount - 50)
+
+            draft.updateIntroduction(introduction)
+
+            #expect(draft.introduction == String(repeating: "가", count: savedCount))
+        }
+
+        // 줄 수 판단이 자르기 전 소개글을 봐서, 넷째 줄만 더하면 바뀐 게 없는데 저장할 수 있다 — #309에서 고친다.
+        @Test(
+            "저장 직전에 소개글을 세 줄까지만 남긴다",
+            arguments: [
+                ("하나\n둘\n셋", "하나\n둘\n셋"), // 세 줄은 그대로
+                ("하나\n둘\n셋\n넷", "하나\n둘\n셋") // 넷째 줄부터 버린다
+            ]
+        )
+        func keepsUpToThreeLinesBeforeSaving(typed: String, saved: String) {
+            var draft = makeDraft()
+            draft.updateIntroduction(typed)
+
+            draft.truncateIntroductionToLineLimit()
+
+            #expect(draft.introduction == saved)
+        }
     }
 
+    // 장르는 장르+개수가 모두 같아야 빠지고, 뺐다 다시 넣으면 순서가 바뀌어 바뀐 것으로 본다 — #309에서 고친다.
+    @Suite("선호 장르")
+    struct GenrePreferences {
+
+        @Test("장르를 고르면 담긴다")
+        func addsGenre() {
+            var draft = makeDraft()
+
+            draft.addGenrePreference(fantasy)
+
+            #expect(draft.genrePreferences == [romance, fantasy])
+        }
+
+        @Test("고른 장르를 빼면 사라진다")
+        func removesGenre() {
+            var draft = makeDraft()
+
+            draft.removeGenrePreference(romance)
+
+            #expect(draft.genrePreferences == [])
+        }
+    }
 }

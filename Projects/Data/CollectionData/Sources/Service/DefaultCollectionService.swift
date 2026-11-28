@@ -32,7 +32,7 @@ struct DefaultCollectionService: CollectionService {
         )
     }
 
-    public func getPublicCollections(query: CollectionsQuery) async throws -> PublicCollectionsResponse {
+    public func getPublicCollections(query: PublicCollectionsQuery) async throws -> PublicCollectionsResponse {
         try await network.request(
             CollectionEndpoint.getPublicCollections(query),
             decodeTo: PublicCollectionsResponse.self

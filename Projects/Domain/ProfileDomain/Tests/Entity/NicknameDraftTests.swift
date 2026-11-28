@@ -8,131 +8,161 @@
 
 import Testing
 
-@testable import ProfileDomain
+import ProfileDomain
 
-@Suite("NicknameDraft")
+@Suite("닉네임 입력")
 struct NicknameDraftTests {
 
-    // MARK: - Helpers
+    @Suite("입력 길이")
+    struct Length {
 
-    private func makeDraft(initial: String = "기존닉네임") -> NicknameDraft {
-        NicknameDraft(initial)
+        @Test("닉네임은 10자까지만 입력된다")
+        func clipsToMaxLength() {
+            var draft = NicknameDraft("서연")
+
+            draft.setText(String(repeating: "가", count: 11))
+
+            #expect(draft.text == String(repeating: "가", count: 10))
+        }
+
+        @Test("10자를 넘겨 쳐도 잘린 결과가 같으면 중복 확인 결과가 그대로다")
+        func keepsDuplicationCheckWhenClippedTextIsSame() {
+            let tenLetters = String(repeating: "가", count: 10)
+            var draft = NicknameDraft("서연")
+            draft.setText(tenLetters)
+            draft.applyDuplicationCheckResult(.notDuplicated, checkedText: tenLetters)
+
+            draft.setText(tenLetters + "나")
+
+            #expect(draft.validationState == .available)
+        }
     }
 
-    // MARK: - Init
+    @Suite("입력 상태")
+    struct Validation {
 
-    @Test("초기화 시 text는 초기 닉네임이다")
-    func initSetsTextToInitialName() {
-        let draft = NicknameDraft("윤학")
-        #expect(draft.text == "윤학")
-    }
-    
-    // MARK: - Length clipping
+        @Test("닉네임이 비어 있으면 아직 입력 전 상태다")
+        func emptyIsNotStarted() {
+            var draft = NicknameDraft("서연")
 
-    @Test("닉네임은 최대 10자까지만 입력된다")
-    func clipsToMaxLength10() {
-        var draft = makeDraft()
-        draft.setText("일이삼사오육칠팔구십일") // 11 chars
-        #expect(draft.text == "일이삼사오육칠팔구십")
-    }
+            draft.setText("")
 
-    // MARK: - notAvailable
+            #expect(draft.validationState == .notStarted)
+        }
 
-    @Test("닉네임이 비어있으면 어떠한 검증도 불가하므로 notStarted 상태다")
-    func emptyTextIsNotStarted() {
-        let draft = makeDraft(initial: "")
-        #expect(draft.validationState == .notStarted)
-    }
-    
-    @Test("초기 닉네임과 동일하면 notAvailable(notChanged) 상태다")
-    func initialSameAsLastNicknameIsNotChanged() {
-        let draft = makeDraft(initial: "윤학")
-        #expect(draft.validationState == .notAvailable(reason: .notChanged))
-    }
-    
-    @Test("초기 닉네임으로 되돌리면 notAvailable(notChanged) 상태다")
-    func revertingToLastNicknameIsNotChanged() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd")
-        #expect(draft.validationState == .needDuplicatedCheck)
+        @Test("처음 닉네임과 같으면 바뀌지 않아 쓸 수 없다")
+        func initialNicknameIsNotChanged() {
+            let draft = NicknameDraft("서연")
 
-        draft.setText("윤학")
-        #expect(draft.validationState == .notAvailable(reason: .notChanged))
-    }
+            let state = draft.validationState
 
-    @Test("공백 또는 줄바꿈/탭이 포함되면 notAvailable(whiteSpaceIncluded) 상태다")
-    func whitespaceIncludedIsNotAvailable() {
-        var draft = makeDraft(initial: "윤학")
+            #expect(state == .notAvailable(reason: .notChanged))
+        }
 
-        draft.setText("ab cd")
-        #expect(draft.validationState == .notAvailable(reason: .whiteSpaceIncluded))
+        @Test("다른 닉네임을 쳤다가 처음 닉네임으로 되돌리면 바뀌지 않아 쓸 수 없다")
+        func revertedNicknameIsNotChanged() {
+            var draft = NicknameDraft("서연")
+            draft.setText("새이름")
 
-        draft.setText("ab\tcd")
-        #expect(draft.validationState == .notAvailable(reason: .whiteSpaceIncluded))
+            draft.setText("서연")
 
-        draft.setText("ab\ncd")
-        #expect(draft.validationState == .notAvailable(reason: .whiteSpaceIncluded))
-    }
+            #expect(draft.validationState == .notAvailable(reason: .notChanged))
+        }
 
-    @Test("정규식 조건을 만족하지 않으면 notAvailable(invalidCharacterOrLimitExceeded) 상태다")
-    func invalidPatternIsNotAvailable() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("ab!cd") // '!' not allowed
-        #expect(draft.validationState == .notAvailable(reason: .invalidCharacterOrLimitExceeded))
-    }
+        @Test(
+            "공백·줄바꿈·탭이 들어가면 쓸 수 없다",
+            arguments: [
+                "새 이름", // 가운데 공백
+                "새이름\n", // 줄바꿈
+                "새\t이름" // 탭
+            ]
+        )
+        func whitespaceIsNotAvailable(text: String) {
+            var draft = NicknameDraft("서연")
 
-    // MARK: - Duplication check flow
+            draft.setText(text)
 
-    @Test("유효한 닉네임을 입력했지만 중복 검사 전이면 needDuplicatedCheck 상태다")
-    func validButNotCheckedIsNeedDuplicatedCheck() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd") // valid, changed
-        #expect(draft.validationState == .needDuplicatedCheck)
-    }
+            #expect(draft.validationState == .notAvailable(reason: .whiteSpaceIncluded))
+        }
 
-    @Test("중복 검사 결과가 duplicated면 notAvailable(duplicated) 상태다")
-    func duplicatedResultMakesNotAvailableDuplicated() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd")
+        @Test("공백이 들어가 있으면 처음 닉네임과 같아도 공백 때문에 쓸 수 없다고 알린다")
+        func whitespaceIsReportedBeforeNotChanged() {
+            let draft = NicknameDraft("서 연")
 
-        draft.applyDuplicationCheckResult(.duplicated, checkedText: "abcd")
-        #expect(draft.validationState == .notAvailable(reason: .duplicated))
-    }
+            let state = draft.validationState
 
-    @Test("중복 검사 결과가 notDuplicated면 available 상태다")
-    func notDuplicatedResultMakesAvailable() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd")
+            #expect(state == .notAvailable(reason: .whiteSpaceIncluded))
+        }
 
-        draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "abcd")
-        #expect(draft.validationState == .available)
+        @Test(
+            "한 글자이거나 한글·영문·숫자 말고 다른 문자가 있으면 쓸 수 없다",
+            arguments: [
+                "가", // 한 글자 — 두 글자부터 쓸 수 있다
+                "새이름!", // 특수문자
+                "ㄱㄴㄷ" // 완성되지 않은 한글(자음만)
+            ]
+        )
+        func invalidPatternIsNotAvailable(text: String) {
+            var draft = NicknameDraft("서연")
+
+            draft.setText(text)
+
+            #expect(draft.validationState == .notAvailable(reason: .invalidCharacterOrLimitExceeded))
+        }
+
+        @Test("두 글자이고 규칙에 맞으면 중복 확인이 필요하다")
+        func shortestValidNicknameNeedsDuplicationCheck() {
+            var draft = NicknameDraft("서연")
+
+            draft.setText("Ab")
+
+            #expect(draft.validationState == .needDuplicatedCheck)
+        }
     }
 
-    @Test("중복 검사 결과는 검사를 실행한 checkedText가 현재 text와 다르면 무시된다(비동기 동작 대비)")
-    func ignoresDuplicationResultWhenCheckedTextMismatch() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd")
+    @Suite("중복 확인")
+    struct DuplicationCheck {
 
-        // user typed again before response arrives
-        draft.setText("abcde")
+        @Test("중복이면 쓸 수 없다")
+        func duplicatedIsNotAvailable() {
+            var draft = NicknameDraft("서연")
+            draft.setText("새이름")
 
-        // late response for old text
-        draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "abcd")
+            draft.applyDuplicationCheckResult(.duplicated, checkedText: "새이름")
 
-        // still need check for current text
-        #expect(draft.validationState == .needDuplicatedCheck)
-    }
+            #expect(draft.validationState == .notAvailable(reason: .duplicated))
+        }
 
-    @Test("텍스트가 변경되면 중복 검사 상태는 notYet으로 리셋된다")
-    func changingTextResetsDuplicationState() {
-        var draft = makeDraft(initial: "윤학")
-        draft.setText("abcd")
-        draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "abcd")
-        #expect(draft.validationState == .available)
+        @Test("중복이 아니면 쓸 수 있다")
+        func notDuplicatedIsAvailable() {
+            var draft = NicknameDraft("서연")
+            draft.setText("새이름")
 
-        // change -> should require check again
-        // isValidPattern && notYet -> needDuplicatedCheck
-        draft.setText("abcde")
-        #expect(draft.validationState == .needDuplicatedCheck)
+            draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "새이름")
+
+            #expect(draft.validationState == .available)
+        }
+
+        @Test("확인하는 사이에 닉네임이 바뀌었으면 늦게 온 결과는 버린다")
+        func ignoresResultForOldText() {
+            var draft = NicknameDraft("서연")
+            draft.setText("새이름")
+            draft.setText("새이름1")
+
+            draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "새이름")
+
+            #expect(draft.validationState == .needDuplicatedCheck)
+        }
+
+        @Test("중복 확인 뒤 닉네임을 고치면 다시 확인해야 한다")
+        func editingAfterCheckNeedsCheckAgain() {
+            var draft = NicknameDraft("서연")
+            draft.setText("새이름")
+            draft.applyDuplicationCheckResult(.notDuplicated, checkedText: "새이름")
+
+            draft.setText("새이름1")
+
+            #expect(draft.validationState == .needDuplicatedCheck)
+        }
     }
 }

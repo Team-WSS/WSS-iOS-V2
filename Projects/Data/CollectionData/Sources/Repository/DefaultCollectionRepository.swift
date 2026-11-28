@@ -115,6 +115,7 @@ struct DefaultCollectionRepository: CollectionRepository {
     }
 
     public func fetchPublicCollections(
+        sort: PublicCollectionSort,
         cursor: String?,
         size: Int
     ) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
@@ -122,7 +123,7 @@ struct DefaultCollectionRepository: CollectionRepository {
 
         do {
             let response = try await service.getPublicCollections(
-                query: CollectionsQuery(cursor: cursor, size: size)
+                query: PublicCollectionsQuery(sort: sort, cursor: cursor, size: size)
             )
             let result = CollectionMapper.publicCollectionCards(from: response, myID: myID)
             logger?.logSuccess(action: action.name)

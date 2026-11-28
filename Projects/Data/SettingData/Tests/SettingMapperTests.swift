@@ -67,12 +67,21 @@ struct SettingMapperTests {
         #expect(result.updateDate == DateParser.date(from: "2026-04-20"))
     }
 
-    @Test("minimumVersion 형식이 올바르지 않으면 invalidConversion 에러를 던진다")
-    func throwsInvalidConversionWhenMinimumVersionIsInvalid() async {
-        let response = makeAppMinimumVersionResponse(minimumVersion: "1.2.3.4")
+    // 빈 자리("1.", "1..2")도 형식 오류다(#308) — 끝에 점이 붙은 "2.0."도 2.0.0으로 읽지 않으니, 서버 입력 실수면
+    // 강제 업데이트 판정이 실패해 "실패는 통과" 정책으로 강제 업데이트가 걸리지 않는다.
+    @Test(
+        "minimumVersion 형식이 올바르지 않으면 invalidConversion 에러를 던진다",
+        arguments: [
+            "1.2.3.4", // 자리가 넷
+            "1.",      // 끝에 빈 자리
+            "1..2"     // 가운데 빈 자리
+        ]
+    )
+    func throwsInvalidConversionWhenMinimumVersionIsInvalid(minimumVersion: String) async {
+        let response = makeAppMinimumVersionResponse(minimumVersion: minimumVersion)
 
         await #expect(
-            throws: MappingError.invalidConversion(type: "AppVersion", value: "1.2.3.4")
+            throws: MappingError.invalidConversion(type: "AppVersion", value: minimumVersion)
         ) {
             _ = try SettingMapper.appUpdatePolicy(from: response)
         }

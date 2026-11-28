@@ -139,7 +139,7 @@ private struct DemoRootView: View {
             makeHomeView(
                 loadHomeDataUseCase: DemoLoadHomeDataUseCase(scenario: scenario),
                 loadUnreadNotificationStatusUseCase: DemoLoadUnreadNotificationStatusUseCase(scenario: scenario),
-                loadPublicCollectionsUseCase: DemoLoadPublicCollectionsUseCase(scenario: scenario)
+                loadRandomPublicCollectionsUseCase: DemoLoadRandomPublicCollectionsUseCase(scenario: scenario)
             )
         case .live:
             makeLiveView()
@@ -152,12 +152,12 @@ private struct DemoRootView: View {
     private func makeHomeView(
         loadHomeDataUseCase: LoadHomeDataUseCase,
         loadUnreadNotificationStatusUseCase: LoadUnreadNotificationStatusUseCase,
-        loadPublicCollectionsUseCase: LoadPublicCollectionsUseCase
+        loadRandomPublicCollectionsUseCase: LoadRandomPublicCollectionsUseCase
     ) -> some View {
         HomeFeatureFactory.makeView(
             loadHomeDataUseCase: loadHomeDataUseCase,
             loadUnreadNotificationStatusUseCase: loadUnreadNotificationStatusUseCase,
-            loadPublicCollectionsUseCase: loadPublicCollectionsUseCase,
+            loadRandomPublicCollectionsUseCase: loadRandomPublicCollectionsUseCase,
             pushAuthorizationChecker: DemoPushAuthorizationChecker(status: pushAuthorizationScenario.status),
             logger: consoleLogger,
             onRoute: { route in
@@ -198,7 +198,7 @@ private struct DemoRootView: View {
             loadUnreadNotificationStatusUseCase: DefaultLoadUnreadNotificationStatusUseCase(
                 repository: notificationRepository
             ),
-            loadPublicCollectionsUseCase: DefaultLoadPublicCollectionsUseCase(
+            loadRandomPublicCollectionsUseCase: DefaultLoadRandomPublicCollectionsUseCase(
                 collectionRepository: CollectionDataFactory.makeRepository(
                     network: client,
                     appStorage: UserDefaultsStorage(),
@@ -360,12 +360,12 @@ private enum DemoHomeData {
 
 /// "컬렉션 모음.zip" 섹션 — 정상 시나리오는 10개(작품 수 0~7개로 빈 표지 슬롯 확인), 빈 데이터 시나리오는 0개로
 /// 섹션이 통째로 숨는 레이아웃을 본다. 나머지 실패 시나리오는 홈 전체가 실패 뷰라 무관하다.
-private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
+private struct DemoLoadRandomPublicCollectionsUseCase: LoadRandomPublicCollectionsUseCase {
     let scenario: DemoHomeScenario
 
-    func execute(cursor: String?, size: Int) async throws(RepositoryError) -> CursorPaginated<CollectionCard> {
+    func execute(size: Int) async throws(RepositoryError) -> [CollectionCard] {
         guard scenario != .empty else {
-            return CursorPaginated(items: [], hasNext: false, nextCursor: nil)
+            return []
         }
         let cards = (0..<size).map { index in
             let novelCount = index % 8
@@ -388,6 +388,6 @@ private struct DemoLoadPublicCollectionsUseCase: LoadPublicCollectionsUseCase {
                 owner: Author(userId: UserID(index + 1), nickname: "코띠", profileImage: nil)
             )
         }
-        return CursorPaginated(items: cards, hasNext: true, nextCursor: "next")
+        return cards
     }
 }

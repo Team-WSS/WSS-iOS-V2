@@ -20,7 +20,7 @@ public final class DefaultLoadPagedNotificationsUseCase: LoadPagedNotificationsU
         self.repository = repository
     }
 
-    public func execute(lastNotificationID: NotificationID?, size: Int = 20) async throws(RepositoryError) -> PagedNotifications {
+    public func execute(lastNotificationID: NotificationID?, size: Int) async throws(RepositoryError) -> PagedNotifications {
         let size = size > 0 ? size : Self.defaultSize
         return try await repository.loadNotifications(lastNotificationID: lastNotificationID, size: size)
     }

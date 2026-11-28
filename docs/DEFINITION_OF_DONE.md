@@ -15,8 +15,10 @@
 
 ## Domain 작업 시 (테스트 필수)
 
-- [ ] 새 UseCase·Entity·정책에 **테스트 작성** ([docs/TESTING.md](TESTING.md) 규약).
-- [ ] 커버리지 4종 고려: 정상 / 경계값 / 정책 위반 / 상태 변화.
+- [ ] 판단하는 코드(분기·검증·계산이 있는 Entity·정책·UseCase)에 **테스트 작성** — 목록을 먼저 합의 ([docs/TESTING.md](TESTING.md) 작업 순서).
+- [ ] 경계값은 "딱 그 값"과 "하나 넘는 값"을 둘 다, 에러는 case마다 `#expect(throws:)`.
+- [ ] ArchLint 통과 + 테스트 이름을 바꿨으면 `TEST_SPEC.md` 갱신(`ArchLint --write-test-specs`).
+- [ ] 뮤테이션 도구(`Mutate <모듈>`)의 살아남은 버그를 확인하고 판단을 PR에 남김.
 - [ ] 프로토콜/시그니처를 바꿨다면 **같은 PR에서 Mock·테스트 동기화** (drift 방지).
 
 ## Data 작업 시

@@ -159,6 +159,8 @@ struct UserFeedListView: View {
                 viewModel.handle(.toggleFeedLike(feed.feedId))
             },
             isSpoiler: feed.isSpoiler,
+            // 내 글이면 스포일러여도 본문을 펼치고 작은 표시만 붙인다.
+            revealsSpoiler: feed.isMyFeed,
             isPrivate: !feed.isPublic
         )
     }

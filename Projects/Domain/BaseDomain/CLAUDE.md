@@ -35,12 +35,12 @@
 - **`Author.accessibleUserId`(#197 후속, 2026-08-28)** — 서버는 탈퇴한 유저를 `userId: -1`로 내려준다(피드
   관련 응답 `TotalFeedResponse`/`FeedDetailResponse`/`NovelFeedResponse`가 전부 `userId: Int` non-optional이라
   항상 채워진다 — `Author.userId`가 옵셔널인 건 다른 매퍼가 애초에 안 채우는 경우 대비일 뿐, 이 -1과는
-  무관). 이 센티널 판정을 `Author` 밖으로 새지 않게 캡슐화한 게 `accessibleUserId: UserID?`(nil이면
+  무관). 컬렉션 응답의 `owner`(상세·공개 목록)도 탈퇴 유저면 같은 `-1`이다(dev 서버 실측, 2026-11-27, #311). 이 센티널 판정을 `Author` 밖으로 새지 않게 캡슐화한 게 `accessibleUserId: UserID?`(nil이면
   "이동할 프로필이 없다" — userId 미제공과 탈퇴 유저 둘 다 같은 의미로 묶는다). ⚠️ **`UserID` 자체
   (`IDWrapper<Int>` typealias)를 확장해 `.withdrawn`을 두지 않았다** — `FeedID`/`NovelID` 등 다른 ID도
   전부 같은 `IDWrapper<Int>`라 그렇게 하면 의미 없는 `FeedID.withdrawn`까지 새어버린다. 센티널은
   `Author.swift` 안 `private` 상수로만 존재한다 — 다른 곳에서 `-1` 리터럴로 재판정하지 말고 이 프로퍼티를
-  재사용할 것(Feature 3곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab` — 이 이미 이걸 쓴다).
+  재사용할 것(Feature 4곳 — `SosoFeedView`/`FeedDetailView`/`NovelDetailFeedTab`/`CollectionDetailView`(#311) — 이 이미 이걸 쓴다).
 - `NovelGenre.myFeedFilter`(피드 필터용, 구 `filterGenre`)·`.searchGenre`(검색 화면 장르 그리드용)·`.onboardingGenre`(온보딩 3x3 배지 그리드용, #178)는 **의도적으로 다른 순서**의 별개 목록 — 한쪽을 고친다고 다른 쪽까지 맞추지 말 것.
 - **`KeywordCategory`는 `AttractivePoint`와 동일 패턴**(raw value 없는 순수 enum, `CaseIterable`) — 카테고리명·아이콘 같은 표시값은 도메인에 두지 않고 `WSSComponent`의 `DomainPresentation` 확장이 담당한다.
   - ⚠️ **매력포인트 표시 순서는 `AttractivePoint.allCases`(enum 선언 순서)가 정본이다** — enum 선언 순서 자체를 디자인 정본(**필력이 3번째**)에 맞춰뒀다(2026-09-09, 과거엔 WSSComponent의 `displayOrder` 별도 배열이 이 역할을 했으나 enum 순서를 정본으로 승격하며 제거). 감상평 작성·서재 필터·서재 리스트 셀(사용자 평가 매력포인트 정렬)이 전부 이 단일 순서를 공유한다(NovelGenre가 화면별로 여러 순서를 갖는 것과 달리 매력포인트는 하나). **케이스 선언 순서를 바꾸면 화면 표시 순서가 통째로 바뀌므로** 함부로 재정렬하지 말 것. 서버 응답의 `categoryImage`(카테고리 아이콘 URL)는 **의도적으로 매핑하지 않는다** — 아이콘은 로컬 고정 에셋(카테고리가 5종으로 고정)이라 서버 값을 매번 받을 필요가 없다는 판단.
@@ -68,3 +68,7 @@
   fetchKeywords()`를 직접 부르지 말고 이 UseCase를 재사용할 것(재사용하지 않으면 캐시 미스 시 그
   UseCase만 재시도 없이 조용히 빈 값으로 폴백한다 — 앱 첫 설치 직후처럼 `syncKeywords()`(fire-and-forget,
   `App/CLAUDE.md`)가 아직 안 끝난 시점에 실제로 겪은 증상).
+- **테스트가 일부러 없는 UseCase**(#293): `LoadPopularKeywordsUseCase`·`OnboardingHintUseCase`는 저장소에 넘기기만 해서 지킬 규칙이 없다 — 다시 넣으면 ArchLint `test-passthrough`가 막는다. 그 테스트만 쓰던 `MockOnboardingHintRepository`도 지웠다.
+- **`MockKeywordRepository`는 "동기화했는지"로 답을 바꾼다**(#293) — 조회(`fetchKeywords`·`searchKeywords`)는 호출을 기록하지 않고, 동기화 전엔 `…Result`, 동기화 뒤엔 `…ResultAfterSync`를 돌려준다. 검색은 **검색어마다** 답을 정해 두고(`searchKeywordsResults["회귀"]`), 정해 두지 않은 검색어엔 빈 목록을 준다 — 검색어를 저장소에 제대로 넘기는지가 결과로 드러난다. "캐시 실패 → 동기화 → 다시 조회"는 몇 번 불렀는지가 아니라 **동기화 뒤 값을 받았는지**로 확인한다. 조회 호출 횟수를 다시 세게 만들지 말 것(`test-double-query`). 동기화는 명령이라 `syncKeywordsCallCount`를 센다(BaseDomain·SplashData 테스트가 쓴다).
+- **`MockLoadTotalKeywordsUseCase`**(#308) — 키워드 캐시를 받아 쓰는 다른 모듈 UseCase 테스트용 Stub(`result`만 돌려준다). 프로토콜을 선언한 이 모듈이 가짜 객체도 갖는다는 원칙으로 여기 뒀다. 다른 모듈 테스트는 `MockKeywordRepository`+`DefaultLoadTotalKeywordsUseCase`를 조립하지 말고 이걸 쓴다 — 그래야 동기화·재조회라는 이 UseCase의 속사정에 묶이지 않는다(NovelDomain이 쓴다).
+- **`ReadingPeriod.init`의 `calendar`**(#293)는 테스트용이다 — 미래 날짜 판정이 일 단위라 기기 시간대에 따라 결과가 갈린다. 앱 코드는 기본값(`.current`)을 쓰고, 테스트는 서울 달력을 넘긴다.

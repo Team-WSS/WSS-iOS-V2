@@ -20,6 +20,8 @@
 - **`BirthYear.maxYear`는 하드코딩이 아니라 현재 연도(`Calendar.current...`) 계산값**(#222) — 생년 휠 상한이
   이 값을 그대로 쓴다(`WSSBirthYearWheel`, OnboardingFeature·SettingFeature 공용). 고정값으로 되돌리면 해가
   바뀔 때마다 stale해진다(V1·구 V2가 2025/2024 하드코딩이라 그랬다). `Foundation` import가 이 때문에 필요하다.
+  `init`은 `today`·`calendar`(기본값 지금·`.current`)를 받는다(#308) — 테스트가 올해를 고정하려는 것이다. 테스트 기대값을
+  `BirthYear.maxYear`에서 가져오면 상한 계산이 틀려도 함께 틀려 못 잡으니, 고정 날짜를 넘기고 연도는 리터럴로 쓴다.
 - 본인/타인 로직이 `ProfileTarget`에 숨어있음 — 새 조회 추가 시 두 케이스 모두 고려.
 - userDefaults 저장 책임이 도메인 계약 주석에 박혀있음 (구현은 Data). 어떤 필드가 로컬인지 헷갈리면 `ProfileRepository.swift` 주석 확인.
 - `GenrePreference.genre`는 자유 문자열이 아니라 `BaseDomain.NovelGenre`(9개 케이스) 타입이다 — 서버가 그 9개 밖의 장르 토큰을 내려주면 Data의 `novelGenre(from:)` 매핑이 실패해 `RepositoryError.invalidData`로 전파된다(예전엔 임의 문자열을 그대로 통과시켰음). 표시용 한글 라벨/아이콘은 `WSSComponent`의 `NovelGenre+Presentation`(`displayName`/`iconImage`) 재사용.
@@ -27,4 +29,6 @@
 - `fetchGenrePreferences`가 반환하는 `[GenrePreference]`는 **서버가 이미 개수 내림차순으로 정렬해 내려준다** — 클라이언트(Feature)에서 재정렬하지 않는다. 매핑(`ProfileMapper.genrePreferences`)도 배열 `.map`이라 순서를 그대로 보존한다.
 - `validateNickname(_:)`의 `Bool` 반환은 **`true` = 사용 가능(중복 아님)** 이다("검증 통과"가 아니라 "가용"으로 읽을 것). `ProfileData`의 `NicknameValidationResponse.isValid`를 그대로 전달한다.
 - `ProfileDraft.removeGenrePreference(_:)`는 `GenrePreference`의 **완전 일치(Equatable: genre+count)** 비교로 제거한다 — `GenrePreference(genre: someGenre, count: 0)`처럼 count를 임의로 채운 새 값으로는 지워지지 않고 조용히 실패한다. 토글 등에서 제거하려면 `genrePreferences.first(where: { $0.genre == genre })`로 draft에 실제 들어있는 인스턴스를 찾아 그대로 넘겨야 한다.
+- **`MockProfileRepository`는 #308에서 줄였다** — 선호 작품 조회만 키워드 캐시별 Stub(`novelPreferencesByCachedKeywords`, 정해 두지 않은 캐시면 `.notFound`), 동기화만 호출 횟수 Mock(SplashData 런치 작업 테스트가 씀). 나머지 조회는 `.notFound`를 던지고 명령은 no-op이니, 다른 메서드가 필요한 테스트를 쓰면 그때 답을 더한다.
+- `ProfileDraft`의 빈 닉네임 저장·소개글 줄 수 판단·수정 화면 장르 타입(`GenrePreference` 개수·순서) 문제는 #309로 넘겼다 — 테스트는 이 동작들을 명세로 적지 않았다(고칠 동작을 굳히지 않으려고).
 - `ProfileDraft.updateIntroduction(_:)`은 더 이상 3줄 제한을 하지 않는다(50자 길이만 즉시 clamp). 3줄 제한은 별도 `truncateIntroductionToLineLimit()`로 분리됐고, 호출자(Feature)가 **제출 직전에 직접 호출**해야만 적용된다 — 안 부르면 4줄 이상도 그대로 저장됨. 이 메서드는 `\n` 개수만 세므로 워드랩으로 시각적으로 3줄을 넘는 입력은 걸러내지 못한다(예전 UIKit `NSLayoutManager` 기반 실시간 검증을 걷어내고 단순화한 결과 — Feature `MyPageEditView` 참고).

@@ -6,17 +6,18 @@
 //  Copyright © 2026 kr.websoso.app. All rights reserved.
 //
 
+import Foundation
 import Testing
 
-@testable import BaseDomain
+import BaseDomain
 
-@Suite
+@Suite("작품 관심 등록")
 struct NovelTests {
 
-    // MARK: - markAsInterested
+    // MARK: - 등록
 
-    @Test("관심 없는 작품을 관심 작품으로 등록하면 isInterested가 true가 되고 관심 수가 증가한다")
-    func markAsInterestedFromFalse() {
+    @Test("관심 작품으로 등록하면 관심 수가 하나 늘어난다")
+    func markingAddsInterest() {
         var novel = makeNovel(isInterested: false, interestCount: 10)
 
         novel.markAsInterested()
@@ -25,8 +26,8 @@ struct NovelTests {
         #expect(novel.interestCount == 11)
     }
 
-    @Test("이미 관심 등록된 작품에 markAsInterested를 호출하면 상태가 변하지 않는다")
-    func markAsInterestedWhenAlreadyInterested() {
+    @Test("이미 관심 작품이면 다시 등록해도 그대로다")
+    func markingAgainChangesNothing() {
         var novel = makeNovel(isInterested: true, interestCount: 10)
 
         novel.markAsInterested()
@@ -35,8 +36,8 @@ struct NovelTests {
         #expect(novel.interestCount == 10)
     }
 
-    @Test("isInterested가 nil인 작품에 markAsInterested를 호출하면 상태가 변하지 않는다")
-    func markAsInterestedWhenNil() {
+    @Test("관심 여부를 모르는 작품은 관심 작품으로 등록하지 않는다")
+    func markingUnknownChangesNothing() {
         var novel = makeNovel(isInterested: nil, interestCount: 10)
 
         novel.markAsInterested()
@@ -45,10 +46,10 @@ struct NovelTests {
         #expect(novel.interestCount == 10)
     }
 
-    // MARK: - unmarkAsInterested
+    // MARK: - 해제
 
-    @Test("관심 등록된 작품의 관심을 해제하면 isInterested가 false가 되고 관심 수가 감소한다")
-    func unmarkAsInterestedFromTrue() {
+    @Test("관심을 해제하면 관심 수가 하나 줄어든다")
+    func unmarkingRemovesInterest() {
         var novel = makeNovel(isInterested: true, interestCount: 10)
 
         novel.unmarkAsInterested()
@@ -57,8 +58,8 @@ struct NovelTests {
         #expect(novel.interestCount == 9)
     }
 
-    @Test("관심 없는 작품에 unmarkAsInterested를 호출하면 상태가 변하지 않는다")
-    func unmarkAsInterestedWhenAlreadyFalse() {
+    @Test("관심 작품이 아니면 해제해도 그대로다")
+    func unmarkingNonInterestChangesNothing() {
         var novel = makeNovel(isInterested: false, interestCount: 10)
 
         novel.unmarkAsInterested()
@@ -67,8 +68,8 @@ struct NovelTests {
         #expect(novel.interestCount == 10)
     }
 
-    @Test("관심 수가 0일 때 unmarkAsInterested를 호출하면 관심 수가 0 이하로 내려가지 않는다")
-    func unmarkAsInterestedDoesNotGoBelowZero() {
+    @Test("관심 수가 0이면 해제해도 0 아래로 내려가지 않는다")
+    func unmarkingNeverGoesBelowZero() {
         var novel = makeNovel(isInterested: true, interestCount: 0)
 
         novel.unmarkAsInterested()
@@ -77,10 +78,10 @@ struct NovelTests {
         #expect(novel.interestCount == 0)
     }
 
-    // MARK: - toggleInterest
+    // MARK: - 전환
 
-    @Test("관심 등록된 작품을 토글하면 관심이 해제된다")
-    func toggleInterestFromTrue() {
+    @Test("관심 작품에서 관심을 전환하면 해제된다")
+    func togglingInterestRemovesIt() {
         var novel = makeNovel(isInterested: true, interestCount: 10)
 
         novel.toggleInterest()
@@ -89,8 +90,8 @@ struct NovelTests {
         #expect(novel.interestCount == 9)
     }
 
-    @Test("관심 없는 작품을 토글하면 관심이 등록된다")
-    func toggleInterestFromFalse() {
+    @Test("관심 작품이 아닐 때 관심을 전환하면 등록된다")
+    func togglingNonInterestAddsIt() {
         var novel = makeNovel(isInterested: false, interestCount: 10)
 
         novel.toggleInterest()
@@ -98,22 +99,19 @@ struct NovelTests {
         #expect(novel.isInterested == true)
         #expect(novel.interestCount == 11)
     }
-}
 
-extension NovelTests {
-    private func makeNovel(
-        isInterested: Bool? = nil,
-        interestCount: Int = 0
-    ) -> Novel {
+    // MARK: - Helpers
+
+    private func makeNovel(isInterested: Bool?, interestCount: Int) -> Novel {
         Novel(
             id: NovelID(1),
             thumbnailImage: nil,
-            title: "전지적 독자 시점",
-            authors: ["싱숑"],
-            genres: [.fantasy],
+            title: "작품",
+            authors: ["작가"],
+            genres: [],
             interestCount: interestCount,
             rating: 4.5,
-            ratingCount: 50,
+            ratingCount: 10,
             isInterested: isInterested
         )
     }

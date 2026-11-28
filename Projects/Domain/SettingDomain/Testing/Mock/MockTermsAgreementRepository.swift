@@ -12,7 +12,6 @@ import SettingDomain
 import BaseDomain
 
 public final class MockTermsAgreementRepository: TermsAgreementRepository {
-    public var loadCallCount = 0
     public var saveCallCount = 0
     public var savedDrafts: [TermsAgreementDraft] = []
 
@@ -22,8 +21,7 @@ public final class MockTermsAgreementRepository: TermsAgreementRepository {
     public init() {}
 
     public func loadTermsAgreementDraft() async throws(RepositoryError) -> TermsAgreementDraft {
-        loadCallCount += 1
-        return try loadResult.get()
+        try loadResult.get()
     }
 
     public func save(draft: TermsAgreementDraft) async throws(RepositoryError) {
